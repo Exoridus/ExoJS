@@ -1,0 +1,199 @@
+{
+  "title": "TiledGroupLayer",
+  "description": "A group layer, recursively containing further parsed layers.",
+  "symbol": "TiledGroupLayer",
+  "kind": "class",
+  "subsystem": "tiled",
+  "importPath": "@codexo/exojs-tiled",
+  "tier": "stable",
+  "memberCount": 17,
+  "counts": {
+    "constructors": 1,
+    "methods": 1,
+    "properties": 15,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A group layer, recursively containing further parsed layers."
+      ],
+      "importLine": "import { TiledGroupLayer } from '@codexo/exojs-tiled'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(data: TiledGroupLayerData): TiledGroupLayer",
+          "params": [
+            {
+              "name": "data",
+              "type": "TiledGroupLayerData",
+              "optional": false
+            }
+          ],
+          "returnType": "TiledGroupLayer",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "getProperty",
+          "signature": "getProperty(name: string): TiledPropertyData | undefined",
+          "params": [
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "TiledPropertyData | undefined",
+          "description": "Looks up a custom property by name."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "class",
+          "signature": "class: string",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "id",
+          "signature": "id: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "layers",
+          "signature": "layers: readonly TiledLayer[]",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "name",
+          "signature": "name: string",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "offsetX",
+          "signature": "offsetX: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "offsetY",
+          "signature": "offsetY: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "opacity",
+          "signature": "opacity: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "parallaxX",
+          "signature": "parallaxX: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "parallaxY",
+          "signature": "parallaxY: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "properties",
+          "signature": "properties: readonly TiledPropertyData[]",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "tintColor",
+          "signature": "tintColor: string",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "type",
+          "signature": "type: \"group\"",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "visible",
+          "signature": "visible: boolean",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "x",
+          "signature": "x: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "y",
+          "signature": "y: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-tiled/src/TiledLayer.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tiled/src/TiledLayer.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-tiled/src/TiledLayer.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tiled/src/TiledLayer.ts"
+}

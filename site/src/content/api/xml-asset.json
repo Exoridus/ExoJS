@@ -1,0 +1,58 @@
+{
+  "title": "XmlAsset",
+  "description": "Dispatch token for XML document loading. `loader.load(XmlAsset, 'data.xml')` returns `Promise<Document>`. Throws if the file cannot be parsed as well-formed XML.",
+  "symbol": "XmlAsset",
+  "kind": "class",
+  "subsystem": "resources",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 1,
+  "counts": {
+    "constructors": 1,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Dispatch token for XML document loading.",
+        "`loader.load(XmlAsset, 'data.xml')` returns `Promise<Document>`. Throws if the file cannot be parsed as well-formed XML."
+      ],
+      "importLine": "import { XmlAsset } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(): XmlAsset",
+          "params": [],
+          "returnType": "XmlAsset",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/resources/tokens.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/tokens.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/resources/tokens.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/tokens.ts"
+}

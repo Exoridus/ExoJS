@@ -1,0 +1,86 @@
+{
+  "title": "CacheFirstStrategy",
+  "description": "CacheStrategy that checks every provided CacheStore before falling back to the network. On a cache hit the stored value is fed directly to factory.create; if that throws (stale or corrupt entry) the entry is deleted and the next store is tried. Only once all stores miss does the strategy fetch from the network and write the processed source back to every store. Quota or serialisation errors during write are swallowed silently so that a full storage can never prevent an asset from loading. Returns the fully constructed resource — callers do not need to call AssetFactory.create again.",
+  "symbol": "CacheFirstStrategy",
+  "kind": "class",
+  "subsystem": "resources",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 1,
+    "methods": 1,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "CacheStrategy that checks every provided CacheStore before falling back to the network.",
+        "On a cache hit the stored value is fed directly to factory.create; if that throws (stale or corrupt entry) the entry is deleted and the next store is tried. Only once all stores miss does the strategy fetch from the network and write the processed source back to every store. Quota or serialisation errors during write are swallowed silently so that a full storage can never prevent an asset from loading.",
+        "Returns the fully constructed resource — callers do not need to call AssetFactory.create again."
+      ],
+      "importLine": "import { CacheFirstStrategy } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(): CacheFirstStrategy",
+          "params": [],
+          "returnType": "CacheFirstStrategy",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "resolve",
+          "signature": "resolve(request: CacheRequest, stores: readonly CacheStore[]): Promise<unknown>",
+          "params": [
+            {
+              "name": "request",
+              "type": "CacheRequest",
+              "optional": false
+            },
+            {
+              "name": "stores",
+              "type": "readonly CacheStore[]",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<unknown>",
+          "description": "Resolves a single asset according to the strategy's caching policy and returns the fully constructed resource."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/resources/CacheFirstStrategy.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/CacheFirstStrategy.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/resources/CacheFirstStrategy.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/CacheFirstStrategy.ts"
+}

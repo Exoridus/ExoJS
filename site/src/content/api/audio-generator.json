@@ -1,0 +1,205 @@
+{
+  "title": "AudioGenerator",
+  "description": "Procedural tone generator — produces audio from an `OscillatorNode` without any decoded asset. Good for prototyping, game-jam SFX, retro bleeps, and synth-style tones. `AudioGenerator` is a **data descriptor**: it holds the current synth settings (`frequency`, `type`, `detune`, `envelope`) and default playback parameters. Each `AudioManager.play(generator, options)` snapshots those settings into a fresh AudioGeneratorVoice and returns it. For per-note playback, set `generator.frequency` (or use AudioGenerator.setNote) before playing: ```ts generator.setNote(69); // A4 const voice = app.audio.play(generator); // ...later voice.frequency = 880; // retune the live voice voice.stop(); // triggers the envelope release, if any ``` Routes through the manager's `sound` bus by default.",
+  "symbol": "AudioGenerator",
+  "kind": "class",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 15,
+  "counts": {
+    "constructors": 1,
+    "methods": 5,
+    "properties": 9,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Procedural tone generator — produces audio from an `OscillatorNode` without any decoded asset. Good for prototyping, game-jam SFX, retro bleeps, and synth-style tones.",
+        "`AudioGenerator` is a **data descriptor**: it holds the current synth settings (`frequency`, `type`, `detune`, `envelope`) and default playback parameters. Each `AudioManager.play(generator, options)` snapshots those settings into a fresh AudioGeneratorVoice and returns it. For per-note playback, set `generator.frequency` (or use AudioGenerator.setNote) before playing:",
+        "```ts generator.setNote(69); // A4 const voice = app.audio.play(generator); // ...later voice.frequency = 880; // retune the live voice voice.stop(); // triggers the envelope release, if any ```",
+        "Routes through the manager's `sound` bus by default."
+      ],
+      "importLine": "import { AudioGenerator } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(options: AudioGeneratorOptions): AudioGenerator",
+          "params": [
+            {
+              "name": "options",
+              "type": "AudioGeneratorOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "AudioGenerator",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "_createVoice",
+          "signature": "_createVoice(manager: AudioManager, options: PlayOptions): Voice",
+          "params": [
+            {
+              "name": "manager",
+              "type": "AudioManager",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "PlayOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "Voice",
+          "description": "Implements Playable. Called by AudioManager.play. Snapshots the current synth settings into a new AudioGeneratorVoice. Returns an already-ended NoopVoice when the AudioContext is still locked by the autoplay policy — oscillators are ephemeral and cannot be deferred."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Stop all active voices."
+        },
+        {
+          "name": "setNote",
+          "signature": "setNote(midiNote: number): this",
+          "params": [
+            {
+              "name": "midiNote",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Set AudioGenerator.frequency from a MIDI note number (69 = A4 = 440 Hz)."
+        },
+        {
+          "name": "stopAll",
+          "signature": "stopAll(): this",
+          "params": [],
+          "returnType": "this",
+          "description": "Stop every currently active voice from this generator."
+        },
+        {
+          "name": "midiToFrequency",
+          "signature": "midiToFrequency(midiNote: number): number",
+          "params": [
+            {
+              "name": "midiNote",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": "Frequency in Hz for a MIDI note number, without mutating the generator."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "detune",
+          "signature": "detune: number",
+          "params": [],
+          "returnType": null,
+          "description": "Current pitch detune in cents."
+        },
+        {
+          "name": "envelope",
+          "signature": "envelope: Envelope | null",
+          "params": [],
+          "returnType": null,
+          "description": "Optional ADSR envelope applied to each voice."
+        },
+        {
+          "name": "frequency",
+          "signature": "frequency: number",
+          "params": [],
+          "returnType": null,
+          "description": "Current oscillator frequency in Hz. Snapshotted into each new voice."
+        },
+        {
+          "name": "muted",
+          "signature": "muted: boolean",
+          "params": [],
+          "returnType": null,
+          "description": "Default muted flag (starts a voice at volume 0)."
+        },
+        {
+          "name": "priority",
+          "signature": "priority: number",
+          "params": [],
+          "returnType": null,
+          "description": "Priority for the LowestPriority eviction strategy."
+        },
+        {
+          "name": "type",
+          "signature": "type: OscillatorType",
+          "params": [],
+          "returnType": null,
+          "description": "Current oscillator waveform."
+        },
+        {
+          "name": "volume",
+          "signature": "volume: number",
+          "params": [],
+          "returnType": null,
+          "description": "Default volume for new voices. Range [0, 1]."
+        },
+        {
+          "name": "poolSize",
+          "signature": "poolSize: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "poolStrategy",
+          "signature": "poolStrategy: SoundPoolStrategy",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/audio/AudioGenerator.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioGenerator.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/audio/AudioGenerator.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioGenerator.ts"
+}

@@ -1,0 +1,220 @@
+{
+  "title": "TiledTileLayer",
+  "description": "A tile layer. On a finite map, data holds the flat row-major array of GIDs (`width * height` entries). On an infinite map, chunks holds the sparse list of tile chunks instead; exactly one of the two is defined, matching the owning TiledMap's `infinite` flag.",
+  "symbol": "TiledTileLayer",
+  "kind": "class",
+  "subsystem": "tiled",
+  "importPath": "@codexo/exojs-tiled",
+  "tier": "stable",
+  "memberCount": 20,
+  "counts": {
+    "constructors": 1,
+    "methods": 1,
+    "properties": 18,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A tile layer. On a finite map, data holds the flat row-major array of GIDs (`width * height` entries). On an infinite map, chunks holds the sparse list of tile chunks instead; exactly one of the two is defined, matching the owning TiledMap's `infinite` flag."
+      ],
+      "importLine": "import { TiledTileLayer } from '@codexo/exojs-tiled'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(data: TiledTileLayerData): TiledTileLayer",
+          "params": [
+            {
+              "name": "data",
+              "type": "TiledTileLayerData",
+              "optional": false
+            }
+          ],
+          "returnType": "TiledTileLayer",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "getProperty",
+          "signature": "getProperty(name: string): TiledPropertyData | undefined",
+          "params": [
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "TiledPropertyData | undefined",
+          "description": "Looks up a custom property by name."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "chunks",
+          "signature": "chunks: readonly TiledChunkData[]",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "class",
+          "signature": "class: string",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "data",
+          "signature": "data: readonly number[]",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "height",
+          "signature": "height: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "id",
+          "signature": "id: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "name",
+          "signature": "name: string",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "offsetX",
+          "signature": "offsetX: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "offsetY",
+          "signature": "offsetY: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "opacity",
+          "signature": "opacity: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "parallaxX",
+          "signature": "parallaxX: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "parallaxY",
+          "signature": "parallaxY: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "properties",
+          "signature": "properties: readonly TiledPropertyData[]",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "tintColor",
+          "signature": "tintColor: string",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "type",
+          "signature": "type: \"tilelayer\"",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "visible",
+          "signature": "visible: boolean",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "width",
+          "signature": "width: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "x",
+          "signature": "x: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "y",
+          "signature": "y: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-tiled/src/TiledLayer.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tiled/src/TiledLayer.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-tiled/src/TiledLayer.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tiled/src/TiledLayer.ts"
+}

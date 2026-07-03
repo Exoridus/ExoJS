@@ -1,0 +1,285 @@
+{
+  "title": "Ease",
+  "description": "Standard Robert Penner easing functions as static methods. Each function accepts a normalized time `t` in [0, 1] and returns a value that equals 0 at t=0 and 1 at t=1 (overshoot functions like back/elastic may exceed that range between the endpoints). Usage: `Ease.cubicOut`, `Ease.bounceIn`, etc. Note: only scalar numeric properties are supported in v1. Vector, Color, and Matrix interpolation are out of scope.",
+  "symbol": "Ease",
+  "kind": "class",
+  "subsystem": "animation",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 32,
+  "counts": {
+    "constructors": 1,
+    "methods": 0,
+    "properties": 31,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Standard Robert Penner easing functions as static methods. Each function accepts a normalized time `t` in [0, 1] and returns a value that equals 0 at t=0 and 1 at t=1 (overshoot functions like back/elastic may exceed that range between the endpoints).",
+        "Usage: `Ease.cubicOut`, `Ease.bounceIn`, etc.",
+        "Note: only scalar numeric properties are supported in v1. Vector, Color, and Matrix interpolation are out of scope."
+      ],
+      "importLine": "import { Ease } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(): Ease",
+          "params": [],
+          "returnType": "Ease",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "backIn",
+          "signature": "backIn: EasingFunction",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "backInOut",
+          "signature": "backInOut: EasingFunction",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "backOut",
+          "signature": "backOut: EasingFunction",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "bounceIn",
+          "signature": "bounceIn: EasingFunction",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "bounceInOut",
+          "signature": "bounceInOut: EasingFunction",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "bounceOut",
+          "signature": "bounceOut: EasingFunction",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "circIn",
+          "signature": "circIn: EasingFunction",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "circInOut",
+          "signature": "circInOut: EasingFunction",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "circOut",
+          "signature": "circOut: EasingFunction",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "cubicIn",
+          "signature": "cubicIn: EasingFunction",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "cubicInOut",
+          "signature": "cubicInOut: EasingFunction",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "cubicOut",
+          "signature": "cubicOut: EasingFunction",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "elasticIn",
+          "signature": "elasticIn: EasingFunction",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "elasticInOut",
+          "signature": "elasticInOut: EasingFunction",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "elasticOut",
+          "signature": "elasticOut: EasingFunction",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "expoIn",
+          "signature": "expoIn: EasingFunction",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "expoInOut",
+          "signature": "expoInOut: EasingFunction",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "expoOut",
+          "signature": "expoOut: EasingFunction",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "linear",
+          "signature": "linear: EasingFunction",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "quadIn",
+          "signature": "quadIn: EasingFunction",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "quadInOut",
+          "signature": "quadInOut: EasingFunction",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "quadOut",
+          "signature": "quadOut: EasingFunction",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "quartIn",
+          "signature": "quartIn: EasingFunction",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "quartInOut",
+          "signature": "quartInOut: EasingFunction",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "quartOut",
+          "signature": "quartOut: EasingFunction",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "quintIn",
+          "signature": "quintIn: EasingFunction",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "quintInOut",
+          "signature": "quintInOut: EasingFunction",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "quintOut",
+          "signature": "quintOut: EasingFunction",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "sineIn",
+          "signature": "sineIn: EasingFunction",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "sineInOut",
+          "signature": "sineInOut: EasingFunction",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "sineOut",
+          "signature": "sineOut: EasingFunction",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/animation/Easing.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/animation/Easing.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/animation/Easing.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/animation/Easing.ts"
+}

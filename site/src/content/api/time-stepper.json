@@ -1,0 +1,131 @@
+{
+  "title": "TimeStepper",
+  "description": "Fixed-timestep accumulator (package-owned; no engine clock dependency). Each frame, advance adds the variable frame delta to an internal accumulator and reports how many whole fixed sub-steps to run (`floor(accumulator / fixedDelta)`), clamped to maxSubSteps. When the clamp trips, the backlog beyond the clamp is discarded so a slow frame cannot cascade into an unbounded catch-up (the \"spiral of death\"). alpha is the leftover fraction of a step `[0, 1)`, for interpolating bound transforms between sub-steps. The stepper holds no mutable module-level state — two stepper instances are fully independent (world isolation).",
+  "symbol": "TimeStepper",
+  "kind": "class",
+  "subsystem": "physics",
+  "importPath": "@codexo/exojs-physics",
+  "tier": "stable",
+  "memberCount": 7,
+  "counts": {
+    "constructors": 1,
+    "methods": 2,
+    "properties": 4,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Fixed-timestep accumulator (package-owned; no engine clock dependency). Each frame, advance adds the variable frame delta to an internal accumulator and reports how many whole fixed sub-steps to run (`floor(accumulator / fixedDelta)`), clamped to maxSubSteps. When the clamp trips, the backlog beyond the clamp is discarded so a slow frame cannot cascade into an unbounded catch-up (the \"spiral of death\").",
+        "alpha is the leftover fraction of a step `[0, 1)`, for interpolating bound transforms between sub-steps.",
+        "The stepper holds no mutable module-level state — two stepper instances are fully independent (world isolation)."
+      ],
+      "importLine": "import { TimeStepper } from '@codexo/exojs-physics'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(options: TimeStepperOptions): TimeStepper",
+          "params": [
+            {
+              "name": "options",
+              "type": "TimeStepperOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "TimeStepper",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "advance",
+          "signature": "advance(frameDeltaSeconds: number): number",
+          "params": [
+            {
+              "name": "frameDeltaSeconds",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": "Accumulate frameDeltaSeconds and return the number of fixed sub-steps to run this frame. Non-finite or non-positive deltas contribute nothing and return 0."
+        },
+        {
+          "name": "reset",
+          "signature": "reset(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Clear the accumulator (e.g. after a teleport or a pause)."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "fixedDelta",
+          "signature": "fixedDelta: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "maxSubSteps",
+          "signature": "maxSubSteps: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "accumulator",
+          "signature": "accumulator: number",
+          "params": [],
+          "returnType": null,
+          "description": "Unconsumed accumulated time (seconds) currently held, always < fixedDelta after an advance."
+        },
+        {
+          "name": "alpha",
+          "signature": "alpha: number",
+          "params": [],
+          "returnType": null,
+          "description": "Interpolation fraction in [0, 1) = accumulator / fixedDelta."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-physics/src/TimeStepper.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/TimeStepper.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-physics/src/TimeStepper.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/TimeStepper.ts"
+}

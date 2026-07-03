@@ -1,0 +1,151 @@
+{
+  "title": "Logger",
+  "description": "Engine-wide log dispatcher. Below `LogSeverity.Error`, calls are dropped outright in production builds (`__DEV__` is `false`); `error()` always reaches every registered sink. In development a createConsoleSink is installed by default — see logger.",
+  "symbol": "Logger",
+  "kind": "class",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 6,
+  "counts": {
+    "constructors": 1,
+    "methods": 5,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Engine-wide log dispatcher. Below `LogSeverity.Error`, calls are dropped outright in production builds (`__DEV__` is `false`); `error()` always reaches every registered sink. In development a createConsoleSink is installed by default — see logger."
+      ],
+      "importLine": "import { Logger } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(): Logger",
+          "params": [],
+          "returnType": "Logger",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "addSink",
+          "signature": "addSink(sink: LogSink): object",
+          "params": [
+            {
+              "name": "sink",
+              "type": "LogSink",
+              "optional": false
+            }
+          ],
+          "returnType": "object",
+          "description": "Register a sink; call the returned function to unsubscribe it."
+        },
+        {
+          "name": "debug",
+          "signature": "debug(message: string, options?: LogOptions): void",
+          "params": [
+            {
+              "name": "message",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "LogOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "error",
+          "signature": "error(message: string, options?: LogOptions): void",
+          "params": [
+            {
+              "name": "message",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "LogOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "info",
+          "signature": "info(message: string, options?: LogOptions): void",
+          "params": [
+            {
+              "name": "message",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "LogOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "warn",
+          "signature": "warn(message: string, options?: LogOptions): void",
+          "params": [
+            {
+              "name": "message",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "LogOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "void",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/logging.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/logging.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/logging.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/logging.ts"
+}

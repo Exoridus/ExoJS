@@ -1,0 +1,99 @@
+{
+  "title": "PointerState",
+  "description": "High-level lifecycle state of a Pointer.",
+  "symbol": "PointerState",
+  "kind": "enum",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 7,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "High-level lifecycle state of a Pointer."
+      ],
+      "importLine": "import { PointerState } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "members",
+      "title": "Members",
+      "members": [
+        {
+          "name": "Cancelled",
+          "signature": "Cancelled",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "InsideCanvas",
+          "signature": "InsideCanvas",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Moving",
+          "signature": "Moving",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "OutsideCanvas",
+          "signature": "OutsideCanvas",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Pressed",
+          "signature": "Pressed",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Released",
+          "signature": "Released",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Unknown",
+          "signature": "Unknown",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/Pointer.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/Pointer.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/Pointer.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/Pointer.ts"
+}

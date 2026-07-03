@@ -1,0 +1,155 @@
+{
+  "title": "Flags",
+  "description": "Type-safe bitfield utility for managing sets of numeric enum flags. `T` should be a numeric const-enum or a type whose values are `number`. Internally stores the combined flags as a single 32-bit integer.",
+  "symbol": "Flags",
+  "kind": "class",
+  "subsystem": "math",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 8,
+  "counts": {
+    "constructors": 1,
+    "methods": 6,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Type-safe bitfield utility for managing sets of numeric enum flags.",
+        "`T` should be a numeric const-enum or a type whose values are `number`. Internally stores the combined flags as a single 32-bit integer."
+      ],
+      "importLine": "import { Flags } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(flags: number[]): Flags<T>",
+          "params": [
+            {
+              "name": "flags",
+              "type": "number[]",
+              "optional": false
+            }
+          ],
+          "returnType": "Flags<T>",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "clear",
+          "signature": "clear(): this",
+          "params": [],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "has",
+          "signature": "has(flags: V[]): boolean",
+          "params": [
+            {
+              "name": "flags",
+              "type": "V[]",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Return true when **any** of the supplied flags are currently set (bitwise OR test)."
+        },
+        {
+          "name": "pop",
+          "signature": "pop(flag: V): boolean",
+          "params": [
+            {
+              "name": "flag",
+              "type": "V",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Remove flag and return true if it was active before removal, false otherwise. Useful for one-shot consumption of a flag."
+        },
+        {
+          "name": "push",
+          "signature": "push(flags: V[]): this",
+          "params": [
+            {
+              "name": "flags",
+              "type": "V[]",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Set one or more flags (bitwise OR). Mutates in place and returns this for chaining."
+        },
+        {
+          "name": "remove",
+          "signature": "remove(flags: V[]): this",
+          "params": [
+            {
+              "name": "flags",
+              "type": "V[]",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Clear one or more flags (bitwise AND NOT). Mutates in place and returns this for chaining."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "value",
+          "signature": "value: number",
+          "params": [],
+          "returnType": null,
+          "description": "Current combined bitmask of all active flags."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/math/Flags.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/math/Flags.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/math/Flags.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/math/Flags.ts"
+}

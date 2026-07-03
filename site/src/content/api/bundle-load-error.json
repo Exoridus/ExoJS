@@ -1,0 +1,120 @@
+{
+  "title": "BundleLoadError",
+  "description": "Thrown by Loader.loadBundle when one or more assets in the bundle fail to load. The `failures` array contains every entry that errored, letting callers distinguish individual per-asset failures from a wholesale network outage.",
+  "symbol": "BundleLoadError",
+  "kind": "class",
+  "subsystem": "resources",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 7,
+  "counts": {
+    "constructors": 1,
+    "methods": 0,
+    "properties": 6,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Thrown by Loader.loadBundle when one or more assets in the bundle fail to load.",
+        "The `failures` array contains every entry that errored, letting callers distinguish individual per-asset failures from a wholesale network outage."
+      ],
+      "importLine": "import { BundleLoadError } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(bundle: string, failures: object[]): BundleLoadError",
+          "params": [
+            {
+              "name": "bundle",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "failures",
+              "type": "object[]",
+              "optional": false
+            }
+          ],
+          "returnType": "BundleLoadError",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "bundle",
+          "signature": "bundle: string",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "cause",
+          "signature": "cause: unknown",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "failures",
+          "signature": "failures: object[]",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "message",
+          "signature": "message: string",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "name",
+          "signature": "name: string",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "stack",
+          "signature": "stack: string",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/resources/AssetManifest.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/AssetManifest.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/resources/AssetManifest.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/AssetManifest.ts"
+}

@@ -1,0 +1,58 @@
+{
+  "title": "Json",
+  "description": "Dispatch token for generic JSON loading. `loader.load(Json, 'config.json')` returns `Promise<unknown>`. Narrow via generic: `loader.load<Config>(Json, 'config.json')`. Handles all JSON shapes — objects, arrays, scalars.",
+  "symbol": "Json",
+  "kind": "class",
+  "subsystem": "resources",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 1,
+  "counts": {
+    "constructors": 1,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Dispatch token for generic JSON loading.",
+        "`loader.load(Json, 'config.json')` returns `Promise<unknown>`. Narrow via generic: `loader.load<Config>(Json, 'config.json')`. Handles all JSON shapes — objects, arrays, scalars."
+      ],
+      "importLine": "import { Json } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(): Json",
+          "params": [],
+          "returnType": "Json",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/resources/tokens.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/tokens.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/resources/tokens.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/tokens.ts"
+}

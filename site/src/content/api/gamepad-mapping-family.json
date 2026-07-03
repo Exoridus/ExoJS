@@ -1,0 +1,120 @@
+{
+  "title": "GamepadMappingFamily",
+  "description": "Discriminant tag identifying which device family a GamepadMapping belongs to. Used to select the correct mapping at runtime when a gamepad connects.",
+  "symbol": "GamepadMappingFamily",
+  "kind": "enum",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 10,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Discriminant tag identifying which device family a GamepadMapping belongs to. Used to select the correct mapping at runtime when a gamepad connects."
+      ],
+      "importLine": "import { GamepadMappingFamily } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "members",
+      "title": "Members",
+      "members": [
+        {
+          "name": "ArcadeStick",
+          "signature": "ArcadeStick",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "GameCube",
+          "signature": "GameCube",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "GenericDualAnalog",
+          "signature": "GenericDualAnalog",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "JoyConLeft",
+          "signature": "JoyConLeft",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "JoyConRight",
+          "signature": "JoyConRight",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "PlayStation",
+          "signature": "PlayStation",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "SteamController",
+          "signature": "SteamController",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "SteamDeck",
+          "signature": "SteamDeck",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "SwitchPro",
+          "signature": "SwitchPro",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Xbox",
+          "signature": "Xbox",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/GamepadMapping.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/GamepadMapping.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/GamepadMapping.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/GamepadMapping.ts"
+}

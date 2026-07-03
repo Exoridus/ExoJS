@@ -1,0 +1,185 @@
+{
+  "title": "RenderPassInspectorLayer",
+  "description": "Debug layer that lists every RenderNode with an active filter chain each frame. Renders a compact text panel with per-drawable rows showing the filter sequence, bounding-box dimensions, and mask/cache status. Use during development to answer: - \"Is my filter actually attached?\" → it appears in the list - \"Why does my frame have N render passes?\" → see total pass count - \"Is this drawable being re-rendered or cached?\" → `[cached]` flag For deep per-pass inspection (intermediate render-target contents, GLSL/WGSL source, uniform values), use Spector.js or Chrome DevTools' WebGPU panel — the engine emits debug-group labels around filter and mesh-custom-shader passes so those tools show meaningful pass names.",
+  "symbol": "RenderPassInspectorLayer",
+  "kind": "class",
+  "subsystem": "debug",
+  "importPath": "@codexo/exojs/debug",
+  "tier": "stable",
+  "memberCount": 12,
+  "counts": {
+    "constructors": 1,
+    "methods": 6,
+    "properties": 5,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Debug layer that lists every RenderNode with an active filter chain each frame. Renders a compact text panel with per-drawable rows showing the filter sequence, bounding-box dimensions, and mask/cache status.",
+        "Use during development to answer:",
+        "- \"Is my filter actually attached?\" → it appears in the list - \"Why does my frame have N render passes?\" → see total pass count - \"Is this drawable being re-rendered or cached?\" → `[cached]` flag",
+        "For deep per-pass inspection (intermediate render-target contents, GLSL/WGSL source, uniform values), use Spector.js or Chrome DevTools' WebGPU panel — the engine emits debug-group labels around filter and mesh-custom-shader passes so those tools show meaningful pass names."
+      ],
+      "importLine": "import { RenderPassInspectorLayer } from '@codexo/exojs/debug'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(app: Application): RenderPassInspectorLayer",
+          "params": [
+            {
+              "name": "app",
+              "type": "Application",
+              "optional": false
+            }
+          ],
+          "returnType": "RenderPassInspectorLayer",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Release any scene-graph nodes or resources owned by this layer. Called by DebugOverlay.destroy. The base implementation is a no-op; subclasses override to tear down their Container subtrees."
+        },
+        {
+          "name": "pipelineRows",
+          "signature": "pipelineRows(): RenderPipelineRow[]",
+          "params": [],
+          "returnType": "RenderPipelineRow[]",
+          "description": "Depth-tagged rows for the inspected pipeline (empty if none is set)."
+        },
+        {
+          "name": "render",
+          "signature": "render(backend: RenderBackend): void",
+          "params": [
+            {
+              "name": "backend",
+              "type": "RenderBackend",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Submit the panel's Container subtree to the backend for drawing."
+        },
+        {
+          "name": "setPipeline",
+          "signature": "setPipeline(pipeline: RenderPipeline | null): this",
+          "params": [
+            {
+              "name": "pipeline",
+              "type": "RenderPipeline | null",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Set a RenderPipeline to list beneath the filter chains, or null to clear it."
+        },
+        {
+          "name": "update",
+          "signature": "update(_delta: Time): void",
+          "params": [
+            {
+              "name": "_delta",
+              "type": "Time",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Walk the scene graph and collect filter-chain entries for every RenderNode with at least one filter. Replaces the previous frame's snapshot. The current snapshot is exposed via entries for tests and external consumers."
+        },
+        {
+          "name": "describePipeline",
+          "signature": "describePipeline(pipeline: RenderPipeline): RenderPipelineRow[]",
+          "params": [
+            {
+              "name": "pipeline",
+              "type": "RenderPipeline",
+              "optional": false
+            }
+          ],
+          "returnType": "RenderPipelineRow[]",
+          "description": "Flatten a RenderPipeline into depth-tagged rows, recursing into nested pipelines. Pure and app-independent: identity is the pass object and label is display-only — no names are required."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "visible",
+          "signature": "visible: boolean",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "entries",
+          "signature": "entries: readonly RenderPassInspectorEntry[]",
+          "params": [],
+          "returnType": null,
+          "description": "Read-only snapshot of the entries collected on the most recent update call. Useful for tests and for external tooling that wants to render its own visualisation rather than use the built-in panel."
+        },
+        {
+          "name": "pipeline",
+          "signature": "pipeline: RenderPipeline | null",
+          "params": [],
+          "returnType": null,
+          "description": "The pipeline currently being inspected, or null."
+        },
+        {
+          "name": "totalPasses",
+          "signature": "totalPasses: number",
+          "params": [],
+          "returnType": null,
+          "description": "Total pass count across all collected entries."
+        },
+        {
+          "name": "viewMode",
+          "signature": "viewMode: DebugLayerViewMode",
+          "params": [],
+          "returnType": null,
+          "description": "Whether this layer renders in the scene's world-space view or in a screen-space (canvas-pixel) view. Defaults to 'screen'. Subclasses override to return 'world' when rendering at actual scene positions."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/debug/RenderPassInspectorLayer.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/debug/RenderPassInspectorLayer.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/debug/RenderPassInspectorLayer.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/debug/RenderPassInspectorLayer.ts"
+}

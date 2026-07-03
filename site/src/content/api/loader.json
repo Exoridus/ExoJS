@@ -1,0 +1,787 @@
+{
+  "title": "Loader",
+  "description": "Central asset management hub for ExoJS applications. The `Loader` orchestrates fetching, processing, caching, and retrieval of all engine asset types. It ships with built-in factories for every first-party type (Texture, Sound, AudioStream, Video, FontFace, HTMLImageElement, Json, text, SVG, VTT, binary, and WASM) and allows registering custom factories via register. Assets can be loaded in three ways: - **Direct** — `loader.load(Texture, 'hero.png')` fetches immediately and resolves to the finished asset. - **Bundle** — declare assets in a manifest with registerManifest, then call loadBundle to load groups on demand. - **Background** — call backgroundLoad or loadAll to pre-warm everything registered in the manifest at low priority. Once loaded, assets are stored in memory and returned from cache on subsequent `load` or get calls without re-fetching.",
+  "symbol": "Loader",
+  "kind": "class",
+  "subsystem": "resources",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 50,
+  "counts": {
+    "constructors": 1,
+    "methods": 39,
+    "properties": 2,
+    "events": 8
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Central asset management hub for ExoJS applications.",
+        "The `Loader` orchestrates fetching, processing, caching, and retrieval of all engine asset types. It ships with built-in factories for every first-party type (Texture, Sound, AudioStream, Video, FontFace, HTMLImageElement, Json, text, SVG, VTT, binary, and WASM) and allows registering custom factories via register.",
+        "Assets can be loaded in three ways: - **Direct** — `loader.load(Texture, 'hero.png')` fetches immediately and resolves to the finished asset. - **Bundle** — declare assets in a manifest with registerManifest, then call loadBundle to load groups on demand. - **Background** — call backgroundLoad or loadAll to pre-warm everything registered in the manifest at low priority.",
+        "Once loaded, assets are stored in memory and returned from cache on subsequent `load` or get calls without re-fetching."
+      ],
+      "importLine": "import { Loader } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(options: LoaderOptions): Loader",
+          "params": [
+            {
+              "name": "options",
+              "type": "LoaderOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "Loader",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "add",
+          "signature": "add(type: Loadable, path: string): this",
+          "params": [
+            {
+              "name": "type",
+              "type": "Loadable",
+              "optional": false
+            },
+            {
+              "name": "path",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Registers one or more asset aliases in the manifest without immediately loading them. - Single path: the path is used as both the alias and the URL. - Array of paths: each path becomes its own alias. - Record: keys are aliases, values are URLs. Assets pre-registered here can later be loaded by alias, included in background loads via backgroundLoad, or used as the source of truth when resolving conflicts in registerManifest."
+        },
+        {
+          "name": "add",
+          "signature": "add(type: Loadable, paths: readonly string[]): this",
+          "params": [
+            {
+              "name": "type",
+              "type": "Loadable",
+              "optional": false
+            },
+            {
+              "name": "paths",
+              "type": "readonly string[]",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Registers one or more asset aliases in the manifest without immediately loading them. - Single path: the path is used as both the alias and the URL. - Array of paths: each path becomes its own alias. - Record: keys are aliases, values are URLs. Assets pre-registered here can later be loaded by alias, included in background loads via backgroundLoad, or used as the source of truth when resolving conflicts in registerManifest."
+        },
+        {
+          "name": "add",
+          "signature": "add(type: Loadable, items: Readonly<Record<string, string>>): this",
+          "params": [
+            {
+              "name": "type",
+              "type": "Loadable",
+              "optional": false
+            },
+            {
+              "name": "items",
+              "type": "Readonly<Record<string, string>>",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Registers one or more asset aliases in the manifest without immediately loading them. - Single path: the path is used as both the alias and the URL. - Array of paths: each path becomes its own alias. - Record: keys are aliases, values are URLs. Assets pre-registered here can later be loaded by alias, included in background loads via backgroundLoad, or used as the source of truth when resolving conflicts in registerManifest."
+        },
+        {
+          "name": "backgroundLoad",
+          "signature": "backgroundLoad(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Enqueues all manifest-registered assets that have not yet been loaded into the background fetch queue and begins draining the queue up to concurrency simultaneous connections. Progress is reported via onProgress. In-flight assets and already-loaded assets are skipped automatically. Call loadAll instead if you need to await completion."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Tears down the loader and all resources it owns. Destroys the factory registry (releasing object URLs), destroys every cache store, clears all in-memory assets, manifest entries, bundle definitions, and in-flight tracking, and disconnects all signals. Also calls destroy?.() on every handler registered via bindAsset."
+        },
+        {
+          "name": "get",
+          "signature": "get(type: typeof Json, alias: string): T",
+          "params": [
+            {
+              "name": "type",
+              "type": "typeof Json",
+              "optional": false
+            },
+            {
+              "name": "alias",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "T",
+          "description": "Retrieves a previously loaded asset by type and alias. Throws if the asset has not been loaded. Use peek for a non-throwing alternative, or has to guard the call."
+        },
+        {
+          "name": "get",
+          "signature": "get(type: T, alias: string): LoadReturn<T>",
+          "params": [
+            {
+              "name": "type",
+              "type": "T",
+              "optional": false
+            },
+            {
+              "name": "alias",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "LoadReturn<T>",
+          "description": "Retrieves a previously loaded asset by type and alias. Throws if the asset has not been loaded. Use peek for a non-throwing alternative, or has to guard the call."
+        },
+        {
+          "name": "has",
+          "signature": "has(type: Loadable, alias: string): boolean",
+          "params": [
+            {
+              "name": "type",
+              "type": "Loadable",
+              "optional": false
+            },
+            {
+              "name": "alias",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Returns true if the asset is currently held in the in-memory store."
+        },
+        {
+          "name": "hasAssetType",
+          "signature": "hasAssetType(typeName: string): boolean",
+          "params": [
+            {
+              "name": "typeName",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Returns true if a type-name mapping is already registered."
+        },
+        {
+          "name": "hasBundle",
+          "signature": "hasBundle(name: string): boolean",
+          "params": [
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Returns true if every asset in the named bundle has been loaded and is currently held in the in-memory resource store."
+        },
+        {
+          "name": "hasExtension",
+          "signature": "hasExtension(ext: string): boolean",
+          "params": [
+            {
+              "name": "ext",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Returns true if a file extension is already mapped to an asset type. Extension is normalised (leading dot stripped, lower-cased)."
+        },
+        {
+          "name": "hasLoadable",
+          "signature": "hasLoadable(type: AssetConstructor): boolean",
+          "params": [
+            {
+              "name": "type",
+              "type": "AssetConstructor",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Returns true if a handler or factory is already registered for the given constructor."
+        },
+        {
+          "name": "keyFor",
+          "signature": "keyFor(resource: object): object | null",
+          "params": [
+            {
+              "name": "resource",
+              "type": "object",
+              "optional": false
+            }
+          ],
+          "returnType": "object | null",
+          "description": "Reverse lookup: given a loaded resource object, return the asset type and source key it was first loaded under, or null for runtime-created, unloaded, or non-object resources. When a resource is shared across several aliases, the **first** alias it was stored under is returned (the canonical key). Primitive results (parsed JSON, text, CSV rows) are not keyable. Used by scene serialization to turn a live asset reference back into a portable source key; the contract is that the same asset is pre-loaded under that key before a matching deserialize."
+        },
+        {
+          "name": "load",
+          "signature": "load(type: typeof Json, path: string, options?: unknown): LoadingQueue<T>",
+          "params": [
+            {
+              "name": "type",
+              "type": "typeof Json",
+              "optional": false
+            },
+            {
+              "name": "path",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "unknown",
+              "optional": true
+            }
+          ],
+          "returnType": "LoadingQueue<T>",
+          "description": "Fetches and processes one or more assets of the given type. - **Single path** — resolves with the finished asset. - **Array of paths** — resolves with an ordered array of assets. - **Record** — resolves with a record whose keys match the input keys. - **Asset<T>** — single typed asset reference. - **Assets<M>** — typed asset container; keys become aliases. - **Config map** — inline { alias: { type, source, … } } definition. In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Supply a custom options object to pass factory-specific configuration (e.g. audio decoding hints or image format overrides)."
+        },
+        {
+          "name": "load",
+          "signature": "load(type: typeof Json, paths: readonly string[], options?: unknown): LoadingQueue<T[]>",
+          "params": [
+            {
+              "name": "type",
+              "type": "typeof Json",
+              "optional": false
+            },
+            {
+              "name": "paths",
+              "type": "readonly string[]",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "unknown",
+              "optional": true
+            }
+          ],
+          "returnType": "LoadingQueue<T[]>",
+          "description": "Fetches and processes one or more assets of the given type. - **Single path** — resolves with the finished asset. - **Array of paths** — resolves with an ordered array of assets. - **Record** — resolves with a record whose keys match the input keys. - **Asset<T>** — single typed asset reference. - **Assets<M>** — typed asset container; keys become aliases. - **Config map** — inline { alias: { type, source, … } } definition. In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Supply a custom options object to pass factory-specific configuration (e.g. audio decoding hints or image format overrides)."
+        },
+        {
+          "name": "load",
+          "signature": "load(type: typeof Json, items: Readonly<Record<K, string>>, options?: unknown): LoadingQueue<Record<K, T>>",
+          "params": [
+            {
+              "name": "type",
+              "type": "typeof Json",
+              "optional": false
+            },
+            {
+              "name": "items",
+              "type": "Readonly<Record<K, string>>",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "unknown",
+              "optional": true
+            }
+          ],
+          "returnType": "LoadingQueue<Record<K, T>>",
+          "description": "Fetches and processes one or more assets of the given type. - **Single path** — resolves with the finished asset. - **Array of paths** — resolves with an ordered array of assets. - **Record** — resolves with a record whose keys match the input keys. - **Asset<T>** — single typed asset reference. - **Assets<M>** — typed asset container; keys become aliases. - **Config map** — inline { alias: { type, source, … } } definition. In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Supply a custom options object to pass factory-specific configuration (e.g. audio decoding hints or image format overrides)."
+        },
+        {
+          "name": "load",
+          "signature": "load(asset: Asset<T>): LoadingQueue<T>",
+          "params": [
+            {
+              "name": "asset",
+              "type": "Asset<T>",
+              "optional": false
+            }
+          ],
+          "returnType": "LoadingQueue<T>",
+          "description": "Fetches and processes one or more assets of the given type. - **Single path** — resolves with the finished asset. - **Array of paths** — resolves with an ordered array of assets. - **Record** — resolves with a record whose keys match the input keys. - **Asset<T>** — single typed asset reference. - **Assets<M>** — typed asset container; keys become aliases. - **Config map** — inline { alias: { type, source, … } } definition. In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Supply a custom options object to pass factory-specific configuration (e.g. audio decoding hints or image format overrides)."
+        },
+        {
+          "name": "load",
+          "signature": "load(assets: Assets<M>): LoadingQueue<InferLoadedMap<M>>",
+          "params": [
+            {
+              "name": "assets",
+              "type": "Assets<M>",
+              "optional": false
+            }
+          ],
+          "returnType": "LoadingQueue<InferLoadedMap<M>>",
+          "description": "Fetches and processes one or more assets of the given type. - **Single path** — resolves with the finished asset. - **Array of paths** — resolves with an ordered array of assets. - **Record** — resolves with a record whose keys match the input keys. - **Asset<T>** — single typed asset reference. - **Assets<M>** — typed asset container; keys become aliases. - **Config map** — inline { alias: { type, source, … } } definition. In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Supply a custom options object to pass factory-specific configuration (e.g. audio decoding hints or image format overrides)."
+        },
+        {
+          "name": "load",
+          "signature": "load(config: M): LoadingQueue<InferLoadedMap<M>>",
+          "params": [
+            {
+              "name": "config",
+              "type": "M",
+              "optional": false
+            }
+          ],
+          "returnType": "LoadingQueue<InferLoadedMap<M>>",
+          "description": "Fetches and processes one or more assets of the given type. - **Single path** — resolves with the finished asset. - **Array of paths** — resolves with an ordered array of assets. - **Record** — resolves with a record whose keys match the input keys. - **Asset<T>** — single typed asset reference. - **Assets<M>** — typed asset container; keys become aliases. - **Config map** — inline { alias: { type, source, … } } definition. In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Supply a custom options object to pass factory-specific configuration (e.g. audio decoding hints or image format overrides)."
+        },
+        {
+          "name": "load",
+          "signature": "load(path: PathExtension<S> extends keyof ExtensionTypeMap ? S : never): LoadingQueue<R>",
+          "params": [
+            {
+              "name": "path",
+              "type": "PathExtension<S> extends keyof ExtensionTypeMap ? S : never",
+              "optional": false
+            }
+          ],
+          "returnType": "LoadingQueue<R>",
+          "description": "Fetches an asset by path, inferring the type from the file extension. Built-in extension mappings: - .fnt → BmFont - .woff, .woff2, .ttf, .otf → FontFace (family inferred from filename) Register additional mappings via registerExtension. Extend the return type by augmenting ExtensionTypeMap. Paths whose extension is **not** in ExtensionTypeMap are rejected at compile time — use the token form (load(MyType, path)) for unregistered extensions. ts const font = await loader.load('fonts/ui.fnt'); // BmFont const face = await loader.load('fonts/Roboto.woff2'); // FontFace, family='Roboto' const bm = await loader.load<BmFont>('fonts/ui.fnt'); // validated cast "
+        },
+        {
+          "name": "load",
+          "signature": "load(path: PathExtension<S> extends keyof ExtensionTypeMap ? S : never): LoadingQueue<LoadByPath<S>>",
+          "params": [
+            {
+              "name": "path",
+              "type": "PathExtension<S> extends keyof ExtensionTypeMap ? S : never",
+              "optional": false
+            }
+          ],
+          "returnType": "LoadingQueue<LoadByPath<S>>",
+          "description": "Fetches and processes one or more assets of the given type. - **Single path** — resolves with the finished asset. - **Array of paths** — resolves with an ordered array of assets. - **Record** — resolves with a record whose keys match the input keys. - **Asset<T>** — single typed asset reference. - **Assets<M>** — typed asset container; keys become aliases. - **Config map** — inline { alias: { type, source, … } } definition. In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Supply a custom options object to pass factory-specific configuration (e.g. audio decoding hints or image format overrides)."
+        },
+        {
+          "name": "load",
+          "signature": "load(type: ConstrainedLoadable<T, S>, path: S, options?: unknown): LoadingQueue<LoadReturn<T>>",
+          "params": [
+            {
+              "name": "type",
+              "type": "ConstrainedLoadable<T, S>",
+              "optional": false
+            },
+            {
+              "name": "path",
+              "type": "S",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "unknown",
+              "optional": true
+            }
+          ],
+          "returnType": "LoadingQueue<LoadReturn<T>>",
+          "description": "Fetches and processes one or more assets of the given type. - **Single path** — resolves with the finished asset. - **Array of paths** — resolves with an ordered array of assets. - **Record** — resolves with a record whose keys match the input keys. - **Asset<T>** — single typed asset reference. - **Assets<M>** — typed asset container; keys become aliases. - **Config map** — inline { alias: { type, source, … } } definition. In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Supply a custom options object to pass factory-specific configuration (e.g. audio decoding hints or image format overrides)."
+        },
+        {
+          "name": "load",
+          "signature": "load(type: T, paths: readonly string[], options?: unknown): LoadingQueue<LoadReturn<T>[]>",
+          "params": [
+            {
+              "name": "type",
+              "type": "T",
+              "optional": false
+            },
+            {
+              "name": "paths",
+              "type": "readonly string[]",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "unknown",
+              "optional": true
+            }
+          ],
+          "returnType": "LoadingQueue<LoadReturn<T>[]>",
+          "description": "Fetches and processes one or more assets of the given type. - **Single path** — resolves with the finished asset. - **Array of paths** — resolves with an ordered array of assets. - **Record** — resolves with a record whose keys match the input keys. - **Asset<T>** — single typed asset reference. - **Assets<M>** — typed asset container; keys become aliases. - **Config map** — inline { alias: { type, source, … } } definition. In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Supply a custom options object to pass factory-specific configuration (e.g. audio decoding hints or image format overrides)."
+        },
+        {
+          "name": "load",
+          "signature": "load(type: T, items: Readonly<Record<K, BatchValue>>, options?: unknown): LoadingQueue<Record<K, LoadReturn<T>>>",
+          "params": [
+            {
+              "name": "type",
+              "type": "T",
+              "optional": false
+            },
+            {
+              "name": "items",
+              "type": "Readonly<Record<K, BatchValue>>",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "unknown",
+              "optional": true
+            }
+          ],
+          "returnType": "LoadingQueue<Record<K, LoadReturn<T>>>",
+          "description": "Fetches and processes one or more assets of the given type. - **Single path** — resolves with the finished asset. - **Array of paths** — resolves with an ordered array of assets. - **Record** — resolves with a record whose keys match the input keys. - **Asset<T>** — single typed asset reference. - **Assets<M>** — typed asset container; keys become aliases. - **Config map** — inline { alias: { type, source, … } } definition. In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Supply a custom options object to pass factory-specific configuration (e.g. audio decoding hints or image format overrides)."
+        },
+        {
+          "name": "loadAll",
+          "signature": "loadAll(): Promise<void>",
+          "params": [],
+          "returnType": "Promise<void>",
+          "description": "Starts backgroundLoad and returns a promise that resolves when every queued background asset has finished loading (successfully or not). Individual asset errors are reported via onError but do not reject the returned promise."
+        },
+        {
+          "name": "loadBundle",
+          "signature": "loadBundle(name: string, options: LoadBundleOptions): Promise<void>",
+          "params": [
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "LoadBundleOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<void>",
+          "description": "Loads all assets declared in the named bundle concurrently. Dispatches onBundleProgress (and the optional onProgress callback) after each asset completes. If any assets fail, a BundleLoadError is thrown after all assets have settled, containing every individual failure. Throws immediately if name has not been registered."
+        },
+        {
+          "name": "loadContainer",
+          "signature": "loadContainer(url: string): Promise<void>",
+          "params": [
+            {
+              "name": "url",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<void>",
+          "description": "Load every asset packed into a binary container (.exoa) in a **single request**. Unlike loadBundle (one fetch per entry), a container is one file with an embedded index: its bytes are fetched once (and cached cross-session like any asset), then each slice is unpacked through its type's handler and stored under the entry's alias — retrievable with get exactly as if it had been loaded individually. Each entry's asset type must support byte-source construction (AssetHandler.createFromBytes); the factory-backed core types (textures, audio, JSON, text, binary, …) do. Throws on a malformed container, an unknown type, or a type that cannot be built from bytes."
+        },
+        {
+          "name": "peek",
+          "signature": "peek(type: typeof Json, alias: string): T | null",
+          "params": [
+            {
+              "name": "type",
+              "type": "typeof Json",
+              "optional": false
+            },
+            {
+              "name": "alias",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "T | null",
+          "description": "Returns the loaded asset for alias, or null if it has not been loaded yet. Non-throwing alternative to get."
+        },
+        {
+          "name": "peek",
+          "signature": "peek(type: T, alias: string): LoadReturn<T> | null",
+          "params": [
+            {
+              "name": "type",
+              "type": "T",
+              "optional": false
+            },
+            {
+              "name": "alias",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "LoadReturn<T> | null",
+          "description": "Returns the loaded asset for alias, or null if it has not been loaded yet. Non-throwing alternative to get."
+        },
+        {
+          "name": "register",
+          "signature": "register(type: AssetConstructor<T>, factory: AssetFactory<T>): this",
+          "params": [
+            {
+              "name": "type",
+              "type": "AssetConstructor<T>",
+              "optional": false
+            },
+            {
+              "name": "factory",
+              "type": "AssetFactory<T>",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Registers a custom AssetFactory for type. Registration is prototype-chain aware: the factory will also handle any subclass of type that does not have its own explicit registration. Built-in types can be overridden by registering a replacement factory for the same constructor."
+        },
+        {
+          "name": "registerAssetType",
+          "signature": "registerAssetType(typeName: K, handler: object): this",
+          "params": [
+            {
+              "name": "typeName",
+              "type": "K",
+              "optional": false
+            },
+            {
+              "name": "handler",
+              "type": "object",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Associates a string type name with a simple load handler. The handler's load method receives the full config object (including source and every extra field declared via AssetDefinitions augmentation) plus a AssetLoaderContext containing the loader instance. This form is intended for custom asset types that manage their own network access; the persistent cache layer is bypassed."
+        },
+        {
+          "name": "registerAssetType",
+          "signature": "registerAssetType(typeName: string, ctor: AssetConstructor, factory?: AssetFactory<unknown>): this",
+          "params": [
+            {
+              "name": "typeName",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "ctor",
+              "type": "AssetConstructor",
+              "optional": false
+            },
+            {
+              "name": "factory",
+              "type": "AssetFactory<unknown>",
+              "optional": true
+            }
+          ],
+          "returnType": "this",
+          "description": "Associates a string type name (e.g. 'tileMap') with the constructor used as the asset token and, optionally, registers a factory for it. Required for declaration-merge extensions of AssetDefinitions so that loader.load({ map: { type: 'tileMap', source: '…' } }) works."
+        },
+        {
+          "name": "registerExtension",
+          "signature": "registerExtension(ext: string, type: AssetConstructor): this",
+          "params": [
+            {
+              "name": "ext",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "type",
+              "type": "AssetConstructor",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Associates a file extension with an asset type so that loader.load('path.ext') (the single-string overload) can infer the type automatically. ext is matched case-insensitively and the leading dot is optional. The type must already have a registered factory (via register or registerAssetType). ts loader.registerExtension('tmj', TiledMap); const map = await loader.load('world.tmj'); // TiledMap "
+        },
+        {
+          "name": "registerManifest",
+          "signature": "registerManifest(manifest: AssetManifest): this",
+          "params": [
+            {
+              "name": "manifest",
+              "type": "AssetManifest",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Validates and registers an AssetManifest, making its bundles available to loadBundle. Throws if any bundle name is already registered or if two entries for the same (type, alias) pair have conflicting paths or options. Equivalent definitions (same path, deeply-equal options) are allowed and de-duplicated silently."
+        },
+        {
+          "name": "setConcurrency",
+          "signature": "setConcurrency(n: number): this",
+          "params": [
+            {
+              "name": "n",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Sets the maximum number of simultaneous background-queue fetches. Takes effect on the next backgroundLoad or loadAll call."
+        },
+        {
+          "name": "unload",
+          "signature": "unload(asset: Asset<T>): this",
+          "params": [
+            {
+              "name": "asset",
+              "type": "Asset<T>",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Removes a single asset from the in-memory resource store. If a fetch for this asset is still in flight, the result will be discarded once it arrives rather than written to the store, preventing a stale value from being committed after an explicit unload."
+        },
+        {
+          "name": "unload",
+          "signature": "unload(assets: Assets<M>): this",
+          "params": [
+            {
+              "name": "assets",
+              "type": "Assets<M>",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Removes a single asset from the in-memory resource store. If a fetch for this asset is still in flight, the result will be discarded once it arrives rather than written to the store, preventing a stale value from being committed after an explicit unload."
+        },
+        {
+          "name": "unload",
+          "signature": "unload(type: Loadable, alias: string): this",
+          "params": [
+            {
+              "name": "type",
+              "type": "Loadable",
+              "optional": false
+            },
+            {
+              "name": "alias",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Removes a single asset from the in-memory resource store. If a fetch for this asset is still in flight, the result will be discarded once it arrives rather than written to the store, preventing a stale value from being committed after an explicit unload."
+        },
+        {
+          "name": "unloadAll",
+          "signature": "unloadAll(type?: Loadable): this",
+          "params": [
+            {
+              "name": "type",
+              "type": "Loadable",
+              "optional": true
+            }
+          ],
+          "returnType": "this",
+          "description": "Removes all loaded assets from the in-memory store. If type is provided, only that type's assets are cleared; otherwise all types are flushed. Does not cancel in-flight fetches."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "basePath",
+          "signature": "basePath: string",
+          "params": [],
+          "returnType": null,
+          "description": "Base path prepended to every relative asset URL at fetch time. Absolute URLs (starting with http://, https://, or //) are passed through unchanged."
+        },
+        {
+          "name": "fetchOptions",
+          "signature": "fetchOptions: RequestInit",
+          "params": [],
+          "returnType": null,
+          "description": "Default RequestInit options merged into every fetch call. Override per-load with the options argument of load."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "events",
+      "title": "Events",
+      "members": [
+        {
+          "name": "onBundleProgress",
+          "signature": "onBundleProgress: Signal<[name, loaded, total]>",
+          "params": [],
+          "returnType": null,
+          "description": "Dispatched after each asset within a named bundle completes loading."
+        },
+        {
+          "name": "onError",
+          "signature": "onError: Signal<[type, alias, error]>",
+          "params": [],
+          "returnType": null,
+          "description": "Dispatched when an asset fails to load during background or bundle loading."
+        },
+        {
+          "name": "onLoadComplete",
+          "signature": "onLoadComplete: Signal<[]>",
+          "params": [],
+          "returnType": null,
+          "description": "Fired when all queued assets in the batch have settled."
+        },
+        {
+          "name": "onLoaded",
+          "signature": "onLoaded: Signal<[type, alias, resource]>",
+          "params": [],
+          "returnType": null,
+          "description": "Dispatched when any asset finishes loading and is stored in memory."
+        },
+        {
+          "name": "onLoadError",
+          "signature": "onLoadError: Signal<[key, error]>",
+          "params": [],
+          "returnType": null,
+          "description": "Fired when an asset fails to load. Does NOT prevent onLoadComplete."
+        },
+        {
+          "name": "onLoadProgress",
+          "signature": "onLoadProgress: Signal<[loaded, total, key]>",
+          "params": [],
+          "returnType": null,
+          "description": "Fired after each asset settles (loaded or failed). loaded = resolved count, total = batch size."
+        },
+        {
+          "name": "onLoadStart",
+          "signature": "onLoadStart: Signal<[key, url]>",
+          "params": [],
+          "returnType": null,
+          "description": "Fired when the first asset in a new load batch starts fetching."
+        },
+        {
+          "name": "onProgress",
+          "signature": "onProgress: Signal<[loaded, total]>",
+          "params": [],
+          "returnType": null,
+          "description": "Dispatched after each background-queue item completes, with the running loaded/total counts."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/resources/Loader.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Loader.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/resources/Loader.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Loader.ts"
+}

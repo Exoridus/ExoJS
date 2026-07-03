@@ -3,8 +3,8 @@ import { getCollection } from 'astro:content';
 import type { CollectionEntry } from 'astro:content';
 import DocsLayout from '../../../layouts/DocsLayout.astro';
 import DocsSidebar from '../../../components/DocsSidebar.astro';
-import { API_SUBSYSTEM_META, API_SUBSYSTEM_ORDER, toApiHref, parseSections } from '../../../lib/api-reference';
-import type { ParsedSection } from '../../../lib/api-reference';
+import { API_SUBSYSTEM_META, API_SUBSYSTEM_ORDER, toApiHref } from '../../../lib/api-reference';
+import type { ApiSection } from '../../../lib/api-schema';
 
 type ApiEntry = CollectionEntry<'api'>;
 
@@ -26,29 +26,26 @@ if (!entry) {
     throw new Error(`Unknown API symbol: ${symbol}`);
 }
 
-const parsedSections = parseSections(entry.body ?? '');
-const sectionByTitle = new Map(parsedSections.map(section => [section.title.toLowerCase(), section]));
-const methodsCount = sectionByTitle.get('methods')?.rows.length ?? 0;
-const propertiesCount = sectionByTitle.get('properties')?.rows.length ?? 0;
-const eventsCount = sectionByTitle.get('events')?.rows.length ?? 0;
+const sections = entry.data.sections;
+const { methods: methodsCount, properties: propertiesCount, events: eventsCount } = entry.data.counts;
 const currentSubsystem = entry.data.subsystem as keyof typeof API_SUBSYSTEM_META;
 
 const kindGlyph = entry.data.kind === 'enum' ? 'E' : entry.data.kind === 'class' ? 'C' : entry.data.kind.slice(0, 1).toUpperCase();
 const kindLabel = entry.data.kind.toLowerCase();
 
-const toMobileTabCount = (section: ParsedSection): number | null => {
+const toMobileTabCount = (section: ApiSection): number | null => {
     const sectionKey = section.title.toLowerCase();
-    if (sectionKey === 'constructor' || sectionKey === 'constructors') return section.rows.length;
-    if (sectionKey === 'methods') return section.rows.length;
-    if (sectionKey === 'properties') return section.rows.length;
-    if (sectionKey === 'events') return section.rows.length;
-    if (sectionKey === 'examples') return section.rows.length > 0 ? section.rows.length : null;
-    return section.rows.length > 0 ? section.rows.length : null;
+    if (sectionKey === 'constructor' || sectionKey === 'constructors') return section.members.length;
+    if (sectionKey === 'methods') return section.members.length;
+    if (sectionKey === 'properties') return section.members.length;
+    if (sectionKey === 'events') return section.members.length;
+    if (sectionKey === 'examples') return section.members.length > 0 ? section.members.length : null;
+    return section.members.length > 0 ? section.members.length : null;
 };
 
 const mobileTabs: ApiMobileTab[] = [
     { id: 'overview', title: 'Overview', count: null },
-    ...parsedSections.map(section => ({
+    ...sections.map(section => ({
         id: section.id,
         title: section.title,
         count: toMobileTabCount(section),
@@ -90,7 +87,7 @@ const sidebarGroups = [
         <h6>On this page</h6>
         <ul data-api-toc>
             {
-                parsedSections.map((section, index) => (
+                sections.map((section, index) => (
                     <li>
                         <a href={`#${section.id}`} data-api-toc-link data-active={index === 0 ? 'true' : 'false'}>
                             {section.title}
@@ -167,12 +164,12 @@ const sidebarGroups = [
             </section>
 
             {
-                parsedSections.map(section => (
+                sections.map(section => (
                     <section id={section.id} class="api-section" data-api-mobile-section data-api-mobile-key={section.id}>
                         <div class="api-section-head">
                             <span>{section.title}</span>
                             <span class="line"></span>
-                            <span>{section.rows.length > 0 ? section.rows.length : ''}</span>
+                            <span>{section.members.length > 0 ? section.members.length : ''}</span>
                         </div>
 
                         {section.importLine && (
@@ -181,15 +178,15 @@ const sidebarGroups = [
                             </div>
                         )}
 
-                        {section.rows.length > 0 &&
-                            section.rows.map(row => (
+                        {section.members.length > 0 &&
+                            section.members.map(member => (
                                 <div class="api-row">
                                     <div class="sig">
                                         <div class="name">
-                                            <code>{row.signature}</code>
+                                            <code>{member.signature}</code>
                                         </div>
                                     </div>
-                                    <div class="desc">{row.description}</div>
+                                    <div class="desc">{member.description}</div>
                                 </div>
                             ))}
 

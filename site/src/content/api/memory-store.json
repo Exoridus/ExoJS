@@ -1,0 +1,130 @@
+{
+  "title": "MemoryStore",
+  "description": "In-memory KeyValueStore backed by a `Map`. Holds values **by reference** — no cloning, no serialization — so it accepts any value but does not persist across sessions and does not isolate the caller from later mutation of a stored object. Ideal for tests and ephemeral data, and as a drop-in store when persistence is not needed.",
+  "symbol": "MemoryStore",
+  "kind": "class",
+  "subsystem": "resources",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 6,
+  "counts": {
+    "constructors": 1,
+    "methods": 5,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "In-memory KeyValueStore backed by a `Map`. Holds values **by reference** — no cloning, no serialization — so it accepts any value but does not persist across sessions and does not isolate the caller from later mutation of a stored object. Ideal for tests and ephemeral data, and as a drop-in store when persistence is not needed."
+      ],
+      "importLine": "import { MemoryStore } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(): MemoryStore",
+          "params": [],
+          "returnType": "MemoryStore",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "clear",
+          "signature": "clear(): Promise<boolean>",
+          "params": [],
+          "returnType": "Promise<boolean>",
+          "description": "Remove every entry owned by this store. Resolves true on success."
+        },
+        {
+          "name": "delete",
+          "signature": "delete(key: string): Promise<boolean>",
+          "params": [
+            {
+              "name": "key",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<boolean>",
+          "description": "Remove the entry at key. Resolves true if one existed and was removed."
+        },
+        {
+          "name": "get",
+          "signature": "get(key: string): Promise<T | null>",
+          "params": [
+            {
+              "name": "key",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<T | null>",
+          "description": "Read the value at key, or null when absent."
+        },
+        {
+          "name": "has",
+          "signature": "has(key: string): Promise<boolean>",
+          "params": [
+            {
+              "name": "key",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<boolean>",
+          "description": "Whether an entry exists at key."
+        },
+        {
+          "name": "set",
+          "signature": "set(key: string, value: unknown): Promise<void>",
+          "params": [
+            {
+              "name": "key",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "value",
+              "type": "unknown",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<void>",
+          "description": "Write value at key, replacing any existing entry."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/resources/MemoryStore.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/MemoryStore.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/resources/MemoryStore.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/MemoryStore.ts"
+}

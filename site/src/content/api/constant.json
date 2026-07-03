@@ -1,0 +1,120 @@
+{
+  "title": "Constant",
+  "description": "Distribution that always returns the same value. Implements both Distribution and LifetimeFunction so it can stand in wherever a randomized or time-parameterised value is expected. For mutable types (Vector, Color, ...) the constant value is copied into `out` if provided, otherwise the constructor's value is returned directly. Mutating that returned reference mutates the distribution's source.",
+  "symbol": "Constant",
+  "kind": "class",
+  "subsystem": "particles",
+  "importPath": "@codexo/exojs-particles",
+  "tier": "stable",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 1,
+    "methods": 2,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Distribution that always returns the same value. Implements both Distribution and LifetimeFunction so it can stand in wherever a randomized or time-parameterised value is expected.",
+        "For mutable types (Vector, Color, ...) the constant value is copied into `out` if provided, otherwise the constructor's value is returned directly. Mutating that returned reference mutates the distribution's source."
+      ],
+      "importLine": "import { Constant } from '@codexo/exojs-particles'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(value: T): Constant<T>",
+          "params": [
+            {
+              "name": "value",
+              "type": "T",
+              "optional": false
+            }
+          ],
+          "returnType": "Constant<T>",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "evaluate",
+          "signature": "evaluate(_t: number, out?: T): T",
+          "params": [
+            {
+              "name": "_t",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "out",
+              "type": "T",
+              "optional": true
+            }
+          ],
+          "returnType": "T",
+          "description": ""
+        },
+        {
+          "name": "sample",
+          "signature": "sample(out?: T): T",
+          "params": [
+            {
+              "name": "out",
+              "type": "T",
+              "optional": true
+            }
+          ],
+          "returnType": "T",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "value",
+          "signature": "value: T",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-particles/src/distributions/Constant.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/distributions/Constant.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-particles/src/distributions/Constant.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/distributions/Constant.ts"
+}

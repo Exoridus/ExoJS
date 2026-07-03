@@ -1,0 +1,328 @@
+{
+  "title": "Pointer",
+  "description": "Unified mouse / touch / pen pointer. Wraps a single browser `PointerEvent.pointerId` and writes its state (position, buttons, pressure, tilt, etc.) into the engine's shared channels buffer so it can be polled by Input bindings or read directly by interaction-aware scene nodes. Coordinates are stored in logical/design pixel space — i.e. `app.width`/ `app.height` units (`0..app.width` × `0..app.height`), matching node positions, the 2-argument View.screenToWorld, and the active camera. The CSS-pixel event coordinates are mapped through the application's content viewport, so the value is independent of Application.pixelRatio and of however the canvas is displayed (sizingMode `'fit'`/`'shrink'`/`'letterbox'`, or a CSS transform): a click at the right edge always reads `app.width`. In `'letterbox'` mode the letterbox bars map outside `0..app.width`. The channel writes are normalized to 0..1 (position, size, twist, tilt) for backend-agnostic sampling. Pointers are owned by the InputManager, which assigns them a slot index in 0..15 (see maxPointers) and exposes their per-slot channel offsets via the Pointer class namespace constants.",
+  "symbol": "Pointer",
+  "kind": "class",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 28,
+  "counts": {
+    "constructors": 1,
+    "methods": 7,
+    "properties": 20,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Unified mouse / touch / pen pointer. Wraps a single browser `PointerEvent.pointerId` and writes its state (position, buttons, pressure, tilt, etc.) into the engine's shared channels buffer so it can be polled by Input bindings or read directly by interaction-aware scene nodes.",
+        "Coordinates are stored in logical/design pixel space — i.e. `app.width`/ `app.height` units (`0..app.width` × `0..app.height`), matching node positions, the 2-argument View.screenToWorld, and the active camera. The CSS-pixel event coordinates are mapped through the application's content viewport, so the value is independent of Application.pixelRatio and of however the canvas is displayed (sizingMode `'fit'`/`'shrink'`/`'letterbox'`, or a CSS transform): a click at the right edge always reads `app.width`. In `'letterbox'` mode the letterbox bars map outside `0..app.width`. The channel writes are normalized to 0..1 (position, size, twist, tilt) for backend-agnostic sampling.",
+        "Pointers are owned by the InputManager, which assigns them a slot index in 0..15 (see maxPointers) and exposes their per-slot channel offsets via the Pointer class namespace constants."
+      ],
+      "importLine": "import { Pointer } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(event: PointerEvent, app: Application, canvas: HTMLCanvasElement, channels: Float32Array, slotIndex: number): Pointer",
+          "params": [
+            {
+              "name": "event",
+              "type": "PointerEvent",
+              "optional": false
+            },
+            {
+              "name": "app",
+              "type": "Application",
+              "optional": false
+            },
+            {
+              "name": "canvas",
+              "type": "HTMLCanvasElement",
+              "optional": false
+            },
+            {
+              "name": "channels",
+              "type": "Float32Array",
+              "optional": false
+            },
+            {
+              "name": "slotIndex",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "Pointer",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "handleCancel",
+          "signature": "handleCancel(event: PointerEvent): void",
+          "params": [
+            {
+              "name": "event",
+              "type": "PointerEvent",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "handleEnter",
+          "signature": "handleEnter(event: PointerEvent): void",
+          "params": [
+            {
+              "name": "event",
+              "type": "PointerEvent",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "handleLeave",
+          "signature": "handleLeave(event: PointerEvent): void",
+          "params": [
+            {
+              "name": "event",
+              "type": "PointerEvent",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "handleMove",
+          "signature": "handleMove(event: PointerEvent): void",
+          "params": [
+            {
+              "name": "event",
+              "type": "PointerEvent",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "handlePress",
+          "signature": "handlePress(event: PointerEvent): void",
+          "params": [
+            {
+              "name": "event",
+              "type": "PointerEvent",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "handleRelease",
+          "signature": "handleRelease(event: PointerEvent): void",
+          "params": [
+            {
+              "name": "event",
+              "type": "PointerEvent",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "id",
+          "signature": "id: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "position",
+          "signature": "position: Vector",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "size",
+          "signature": "size: Size",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "startPos",
+          "signature": "startPos: Vector",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "stateFlags",
+          "signature": "stateFlags: Flags<PointerStateFlag>",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "tilt",
+          "signature": "tilt: Vector",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "type",
+          "signature": "type: string",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "buttons",
+          "signature": "buttons: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "currentState",
+          "signature": "currentState: PointerState",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "height",
+          "signature": "height: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "isPrimary",
+          "signature": "isPrimary: boolean",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "pressure",
+          "signature": "pressure: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "rotation",
+          "signature": "rotation: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "slotIndex",
+          "signature": "slotIndex: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "tiltX",
+          "signature": "tiltX: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "tiltY",
+          "signature": "tiltY: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "twist",
+          "signature": "twist: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "width",
+          "signature": "width: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "x",
+          "signature": "x: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "y",
+          "signature": "y: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/Pointer.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/Pointer.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/Pointer.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/Pointer.ts"
+}

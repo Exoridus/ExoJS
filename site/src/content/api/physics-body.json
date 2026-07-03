@@ -1,0 +1,408 @@
+{
+  "title": "PhysicsBody",
+  "description": "A rigid body: a world transform plus mass properties aggregated from its colliders. Dynamic bodies integrate under gravity, accumulated forces/torque and contact impulses each fixed sub-step; static bodies never move; kinematic bodies move by their velocity only and stay immovable under contacts. Drive a body with applyForce, applyTorque and applyImpulse, or set linearVelocityX/linearVelocityY/angularVelocity directly; reposition it (teleport, no velocity) with setTransform.",
+  "symbol": "PhysicsBody",
+  "kind": "class",
+  "subsystem": "physics",
+  "importPath": "@codexo/exojs-physics",
+  "tier": "stable",
+  "memberCount": 39,
+  "counts": {
+    "constructors": 1,
+    "methods": 9,
+    "properties": 29,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A rigid body: a world transform plus mass properties aggregated from its colliders. Dynamic bodies integrate under gravity, accumulated forces/torque and contact impulses each fixed sub-step; static bodies never move; kinematic bodies move by their velocity only and stay immovable under contacts. Drive a body with applyForce, applyTorque and applyImpulse, or set linearVelocityX/linearVelocityY/angularVelocity directly; reposition it (teleport, no velocity) with setTransform."
+      ],
+      "importLine": "import { PhysicsBody } from '@codexo/exojs-physics'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(options: BodyOptions): PhysicsBody",
+          "params": [
+            {
+              "name": "options",
+              "type": "BodyOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "PhysicsBody",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "_markDestroyed",
+          "signature": "_markDestroyed(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Internal: mark destroyed (called by the world)."
+        },
+        {
+          "name": "_removeCollider",
+          "signature": "_removeCollider(collider: Collider): void",
+          "params": [
+            {
+              "name": "collider",
+              "type": "Collider",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Internal: detach a collider (called by the world during destruction)."
+        },
+        {
+          "name": "addCollider",
+          "signature": "addCollider(collider: Collider | ColliderOptions): Collider",
+          "params": [
+            {
+              "name": "collider",
+              "type": "Collider | ColliderOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "Collider",
+          "description": "Attach a collider to this body. Accepts a Collider instance or its ColliderOptions (a convenience that constructs the collider for you). When the body is already in a world, the collider is id-allocated, registered, the mass model is recomputed and the world geometry synchronised immediately; on a free-standing body the collider is simply held until world.add(). Returns the collider."
+        },
+        {
+          "name": "applyForce",
+          "signature": "applyForce(forceX: number, forceY: number): this",
+          "params": [
+            {
+              "name": "forceX",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "forceY",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Accumulate a world-space force at the centre of mass; integrated on the next sub-step and then cleared. No-op on static/kinematic bodies. Returns this."
+        },
+        {
+          "name": "applyImpulse",
+          "signature": "applyImpulse(impulseX: number, impulseY: number, pointX?: number, pointY?: number): this",
+          "params": [
+            {
+              "name": "impulseX",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "impulseY",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "pointX",
+              "type": "number",
+              "optional": true
+            },
+            {
+              "name": "pointY",
+              "type": "number",
+              "optional": true
+            }
+          ],
+          "returnType": "this",
+          "description": "Apply an instantaneous world-space impulse at (pointX, pointY) (world space; defaults to the centre of mass), changing velocity immediately. No-op on static/kinematic bodies (infinite mass). Returns this."
+        },
+        {
+          "name": "applyTorque",
+          "signature": "applyTorque(torque: number): this",
+          "params": [
+            {
+              "name": "torque",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Accumulate a torque; integrated on the next sub-step and then cleared. No-op on static/kinematic bodies (and fixed-rotation bodies). Returns this."
+        },
+        {
+          "name": "setTransform",
+          "signature": "setTransform(position: VectorLike, angle: number): this",
+          "params": [
+            {
+              "name": "position",
+              "type": "VectorLike",
+              "optional": false
+            },
+            {
+              "name": "angle",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Set the body's world transform. Resets the body's cached collider geometry immediately so subsequent queries see the new placement. Returns this."
+        },
+        {
+          "name": "synchronizeColliders",
+          "signature": "synchronizeColliders(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Refresh every collider's world geometry from the current transform."
+        },
+        {
+          "name": "wake",
+          "signature": "wake(): this",
+          "params": [],
+          "returnType": "this",
+          "description": "Wake the body if it is asleep, resetting its sleep timer. The rest of its island wakes with it on the next step (a contact to an awake body keeps the whole island awake). Returns this."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "allowSleep",
+          "signature": "allowSleep: boolean",
+          "params": [],
+          "returnType": null,
+          "description": "When false, this body is never put to sleep. Default true."
+        },
+        {
+          "name": "angularDamping",
+          "signature": "angularDamping: number",
+          "params": [],
+          "returnType": null,
+          "description": "Angular damping applied to the angular velocity each sub-step."
+        },
+        {
+          "name": "angularVelocity",
+          "signature": "angularVelocity: number",
+          "params": [],
+          "returnType": null,
+          "description": "Angular velocity in rad/s."
+        },
+        {
+          "name": "fixedRotation",
+          "signature": "fixedRotation: boolean",
+          "params": [],
+          "returnType": null,
+          "description": "When true, rotational inertia is treated as infinite."
+        },
+        {
+          "name": "gravityScale",
+          "signature": "gravityScale: number",
+          "params": [],
+          "returnType": null,
+          "description": "Per-body multiplier on world gravity (e.g. 0 to ignore gravity)."
+        },
+        {
+          "name": "inertia",
+          "signature": "inertia: number",
+          "params": [],
+          "returnType": null,
+          "description": "Rotational inertia about the centre of mass (0 for static/kinematic or fixed rotation)."
+        },
+        {
+          "name": "invInertia",
+          "signature": "invInertia: number",
+          "params": [],
+          "returnType": null,
+          "description": "Inverse rotational inertia (0 = no angular response)."
+        },
+        {
+          "name": "invMass",
+          "signature": "invMass: number",
+          "params": [],
+          "returnType": null,
+          "description": "Inverse mass (0 = immovable)."
+        },
+        {
+          "name": "isBullet",
+          "signature": "isBullet: boolean",
+          "params": [],
+          "returnType": null,
+          "description": "When true, the body is swept against static geometry each step (CCD) so it cannot tunnel through thin walls."
+        },
+        {
+          "name": "linearDamping",
+          "signature": "linearDamping: number",
+          "params": [],
+          "returnType": null,
+          "description": "Linear damping applied to the velocity each sub-step."
+        },
+        {
+          "name": "linearVelocityX",
+          "signature": "linearVelocityX: number",
+          "params": [],
+          "returnType": null,
+          "description": "Linear velocity X in px/s."
+        },
+        {
+          "name": "linearVelocityY",
+          "signature": "linearVelocityY: number",
+          "params": [],
+          "returnType": null,
+          "description": "Linear velocity Y in px/s."
+        },
+        {
+          "name": "mass",
+          "signature": "mass: number",
+          "params": [],
+          "returnType": null,
+          "description": "Total mass (0 for static/kinematic)."
+        },
+        {
+          "name": "type",
+          "signature": "type: BodyType",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "angle",
+          "signature": "angle: number",
+          "params": [],
+          "returnType": null,
+          "description": "Rotation in radians."
+        },
+        {
+          "name": "attached",
+          "signature": "attached: boolean",
+          "params": [],
+          "returnType": null,
+          "description": "true once the body has been added to a world (guards against double-add)."
+        },
+        {
+          "name": "centerOfMassX",
+          "signature": "centerOfMassX: number",
+          "params": [],
+          "returnType": null,
+          "description": "Centre of mass in body-local space (relative to the body origin)."
+        },
+        {
+          "name": "centerOfMassY",
+          "signature": "centerOfMassY: number",
+          "params": [],
+          "returnType": null,
+          "description": "Centre of mass in body-local space (relative to the body origin)."
+        },
+        {
+          "name": "colliders",
+          "signature": "colliders: readonly Collider[]",
+          "params": [],
+          "returnType": null,
+          "description": "The body's colliders (read-only view)."
+        },
+        {
+          "name": "destroyed",
+          "signature": "destroyed: boolean",
+          "params": [],
+          "returnType": null,
+          "description": "true after the owning world has destroyed this body."
+        },
+        {
+          "name": "id",
+          "signature": "id: number",
+          "params": [],
+          "returnType": null,
+          "description": "Stable id, assigned when the body joins a world via world.add(); -1 until then."
+        },
+        {
+          "name": "isMassReady",
+          "signature": "isMassReady: boolean",
+          "params": [],
+          "returnType": null,
+          "description": "true when the body is ready to simulate. Static/kinematic bodies are always ready (infinite-mass semantics); a dynamic body is ready only once it has at least one positive-density collider."
+        },
+        {
+          "name": "isSleeping",
+          "signature": "isSleeping: boolean",
+          "params": [],
+          "returnType": null,
+          "description": "true when the body is asleep — skipped by the integrator and solver until woken."
+        },
+        {
+          "name": "position",
+          "signature": "position: Vector",
+          "params": [],
+          "returnType": null,
+          "description": "A fresh Vector copy of the body's world position."
+        },
+        {
+          "name": "transform",
+          "signature": "transform: Readonly<Transform>",
+          "params": [],
+          "returnType": null,
+          "description": "The body's world transform (read-only; mutate via setTransform)."
+        },
+        {
+          "name": "worldCenterOfMassX",
+          "signature": "worldCenterOfMassX: number",
+          "params": [],
+          "returnType": null,
+          "description": "World-space centre of mass X (body origin + rotated local centre of mass)."
+        },
+        {
+          "name": "worldCenterOfMassY",
+          "signature": "worldCenterOfMassY: number",
+          "params": [],
+          "returnType": null,
+          "description": "World-space centre of mass Y."
+        },
+        {
+          "name": "x",
+          "signature": "x: number",
+          "params": [],
+          "returnType": null,
+          "description": "World X."
+        },
+        {
+          "name": "y",
+          "signature": "y: number",
+          "params": [],
+          "returnType": null,
+          "description": "World Y."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-physics/src/PhysicsBody.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/PhysicsBody.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-physics/src/PhysicsBody.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/PhysicsBody.ts"
+}

@@ -1,0 +1,138 @@
+{
+  "title": "CircleArea",
+  "description": "Random point on or inside a circle of radius `radius`, centred at `(centerX, centerY)`. With `mode: 'edge'` the result lies exactly on the circumference; with `mode: 'volume'` (default) it lies anywhere in the disk, with uniform area density (sqrt-of-random-radius distribution). Use as a spawn-position distribution for circular emitters.",
+  "symbol": "CircleArea",
+  "kind": "class",
+  "subsystem": "particles",
+  "importPath": "@codexo/exojs-particles",
+  "tier": "stable",
+  "memberCount": 6,
+  "counts": {
+    "constructors": 1,
+    "methods": 1,
+    "properties": 4,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Random point on or inside a circle of radius `radius`, centred at `(centerX, centerY)`. With `mode: 'edge'` the result lies exactly on the circumference; with `mode: 'volume'` (default) it lies anywhere in the disk, with uniform area density (sqrt-of-random-radius distribution).",
+        "Use as a spawn-position distribution for circular emitters."
+      ],
+      "importLine": "import { CircleArea } from '@codexo/exojs-particles'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(centerX: number, centerY: number, radius: number, mode: \"volume\" | \"edge\"): CircleArea",
+          "params": [
+            {
+              "name": "centerX",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "centerY",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "radius",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "mode",
+              "type": "\"volume\" | \"edge\"",
+              "optional": false
+            }
+          ],
+          "returnType": "CircleArea",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "sample",
+          "signature": "sample(out: Vector): Vector",
+          "params": [
+            {
+              "name": "out",
+              "type": "Vector",
+              "optional": false
+            }
+          ],
+          "returnType": "Vector",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "centerX",
+          "signature": "centerX: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "centerY",
+          "signature": "centerY: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "mode",
+          "signature": "mode: \"volume\" | \"edge\"",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "radius",
+          "signature": "radius: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-particles/src/distributions/CircleArea.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/distributions/CircleArea.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-particles/src/distributions/CircleArea.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/distributions/CircleArea.ts"
+}

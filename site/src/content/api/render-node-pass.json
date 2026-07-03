@@ -1,0 +1,139 @@
+{
+  "title": "RenderNodePass",
+  "description": "Renders a scene subtree (a RenderNode) as one pass — into the active target, or off-screen when `options.target` is set. The most common pass: world, HUD overlay, an off-screen scene capture. `view`/`target`/`clear` are fixed at construction; only `enabled`/`label` are mutable. The off-screen redirect is built once and reused every frame (no per-frame allocation). The node and any caller `target` are NOT owned by this pass — `destroy()` never frees them.",
+  "symbol": "RenderNodePass",
+  "kind": "class",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "advanced",
+  "memberCount": 6,
+  "counts": {
+    "constructors": 1,
+    "methods": 3,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Renders a scene subtree (a RenderNode) as one pass — into the active target, or off-screen when `options.target` is set. The most common pass: world, HUD overlay, an off-screen scene capture.",
+        "`view`/`target`/`clear` are fixed at construction; only `enabled`/`label` are mutable. The off-screen redirect is built once and reused every frame (no per-frame allocation). The node and any caller `target` are NOT owned by this pass — `destroy()` never frees them."
+      ],
+      "importLine": "import { RenderNodePass } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(node: RenderNode, options?: RenderNodePassOptions): RenderNodePass",
+          "params": [
+            {
+              "name": "node",
+              "type": "RenderNode",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "RenderNodePassOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "RenderNodePass",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Release resources this pass allocated internally. No-op by default; idempotent. Never frees injected scene nodes or caller-provided RenderTextures — those are owned by the caller / scene."
+        },
+        {
+          "name": "execute",
+          "signature": "execute(context: RenderingContext): void",
+          "params": [
+            {
+              "name": "context",
+              "type": "RenderingContext",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Run this pass against context. The active render target is the canvas unless a parent redirected it. Called directly, this runs **regardless of enabled** — enabled is evaluated by the containing RenderPipeline, not self-checked here. Subclasses must not begin execute with if (!this.enabled)."
+        },
+        {
+          "name": "resize",
+          "signature": "resize(_width: number, _height: number): void",
+          "params": [
+            {
+              "name": "_width",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "_height",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "React to a surface / target size change. No-op by default; size-dependent passes (effects with scratch targets) override. Called by RenderPipeline.resize, which the caller wires to app.onResize."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "enabled",
+          "signature": "enabled: boolean",
+          "params": [],
+          "returnType": null,
+          "description": "When false, the containing RenderPipeline skips this pass during execute. Default true. Evaluated by the parent — a direct execute call runs the pass regardless."
+        },
+        {
+          "name": "label",
+          "signature": "label: string",
+          "params": [],
+          "returnType": null,
+          "description": "Debug label (inspector / logging). Defaults to the constructor name. Display only — not an identity."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/RenderNodePass.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/RenderNodePass.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/RenderNodePass.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/RenderNodePass.ts"
+}

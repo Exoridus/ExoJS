@@ -1,0 +1,76 @@
+{
+  "title": "ApplicationStatus",
+  "description": "",
+  "symbol": "ApplicationStatus",
+  "kind": "enum",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [],
+      "importLine": "import { ApplicationStatus } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "members",
+      "title": "Members",
+      "members": [
+        {
+          "name": "Halting",
+          "signature": "Halting",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Loading",
+          "signature": "Loading",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Running",
+          "signature": "Running",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Stopped",
+          "signature": "Stopped",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/Application.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Application.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/Application.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Application.ts"
+}

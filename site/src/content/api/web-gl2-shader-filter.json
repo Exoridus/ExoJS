@@ -1,0 +1,124 @@
+{
+  "title": "WebGl2ShaderFilter",
+  "description": "A high-level Filter subclass that renders the input texture through a user-provided GLSL fragment shader on the **WebGL2** backend. For the WebGPU backend use WebGpuShaderFilter. ## Usage ```ts const filter = new WebGl2ShaderFilter({ fragmentSource: ` #version 300 es precision mediump float; uniform sampler2D uTexture; uniform vec2 uResolution; uniform float uTime; in vec2 vUv; out vec4 fragColor; void main() { fragColor = texture(uTexture, vUv); } `, uniforms: { uTime: 0.0 }, }); // Update uniforms each frame: filter.uniforms.uTime = performance.now() / 1000; sprite.filters = [filter]; ``` ## Auto-bound uniforms The backend automatically sets `uTexture` (slot 0) and `uResolution` before each draw. User uniforms start at texture slot 1.",
+  "symbol": "WebGl2ShaderFilter",
+  "kind": "class",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 1,
+    "methods": 2,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A high-level Filter subclass that renders the input texture through a user-provided GLSL fragment shader on the **WebGL2** backend.",
+        "For the WebGPU backend use WebGpuShaderFilter.",
+        "## Usage",
+        "```ts const filter = new WebGl2ShaderFilter({ fragmentSource: ` #version 300 es precision mediump float; uniform sampler2D uTexture; uniform vec2 uResolution; uniform float uTime; in vec2 vUv; out vec4 fragColor; void main() { fragColor = texture(uTexture, vUv); } `, uniforms: { uTime: 0.0 }, });",
+        "// Update uniforms each frame: filter.uniforms.uTime = performance.now() / 1000; sprite.filters = [filter]; ```",
+        "## Auto-bound uniforms",
+        "The backend automatically sets `uTexture` (slot 0) and `uResolution` before each draw. User uniforms start at texture slot 1."
+      ],
+      "importLine": "import { WebGl2ShaderFilter } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(options: WebGl2ShaderFilterOptions): WebGl2ShaderFilter",
+          "params": [
+            {
+              "name": "options",
+              "type": "WebGl2ShaderFilterOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "WebGl2ShaderFilter",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "apply",
+          "signature": "apply(backend: RenderBackend, input: RenderTexture, output: RenderTexture): void",
+          "params": [
+            {
+              "name": "backend",
+              "type": "RenderBackend",
+              "optional": false
+            },
+            {
+              "name": "input",
+              "type": "RenderTexture",
+              "optional": false
+            },
+            {
+              "name": "output",
+              "type": "RenderTexture",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Execute the GLSL shader pass: compile the program on first call, bind uniforms, and render the input texture into output. Throws if the active backend is WebGPU — use WebGpuShaderFilter on WebGPU."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Release any GPU-side resources held by this filter (uniform buffers, pipelines, intermediate textures). Default is a no-op for stateless filters; subclasses with state (BlurFilter, ColorFilter) override."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "uniforms",
+          "signature": "uniforms: Record<string, ShaderFilterUniformValue>",
+          "params": [],
+          "returnType": null,
+          "description": "Mutable map of uniform values. Set values via property assignment; they are flushed to the GPU before each apply(). filter.uniforms.uTime = 1.234; filter.uniforms.uColor = [1, 0.5, 0, 1]; // vec4"
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/filters/WebGl2ShaderFilter.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/filters/WebGl2ShaderFilter.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/filters/WebGl2ShaderFilter.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/filters/WebGl2ShaderFilter.ts"
+}

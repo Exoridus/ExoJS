@@ -1,0 +1,103 @@
+{
+  "title": "AudioEffect",
+  "description": "Abstract base for all insertable audio effects in ExoJS. Each effect exposes stable inputNode and outputNode AudioNodes that an AudioBus or Voice connects into the Web Audio graph. Async effects (e.g., worklet-based) expose a ready promise that resolves once the effect is fully initialized.",
+  "symbol": "AudioEffect",
+  "kind": "class",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 5,
+  "counts": {
+    "constructors": 1,
+    "methods": 1,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Abstract base for all insertable audio effects in ExoJS. Each effect exposes stable inputNode and outputNode AudioNodes that an AudioBus or Voice connects into the Web Audio graph. Async effects (e.g., worklet-based) expose a ready promise that resolves once the effect is fully initialized."
+      ],
+      "importLine": "import { AudioEffect } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(): AudioEffect",
+          "params": [],
+          "returnType": "AudioEffect",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Disconnects all audio nodes and releases resources. Must be called when the effect is no longer needed."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "inputNode",
+          "signature": "inputNode: AudioNode",
+          "params": [],
+          "returnType": null,
+          "description": "The node where audio enters this effect."
+        },
+        {
+          "name": "outputNode",
+          "signature": "outputNode: AudioNode",
+          "params": [],
+          "returnType": null,
+          "description": "The node where audio exits this effect."
+        },
+        {
+          "name": "ready",
+          "signature": "ready: Promise<void>",
+          "params": [],
+          "returnType": null,
+          "description": "Resolves when the effect is fully initialized. Defaults to immediately-resolved for sync effects."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/audio/AudioEffect.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioEffect.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/audio/AudioEffect.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioEffect.ts"
+}

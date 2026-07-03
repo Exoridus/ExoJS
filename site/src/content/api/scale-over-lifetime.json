@@ -1,0 +1,163 @@
+{
+  "title": "ScaleOverLifetime",
+  "description": "Sets every live particle's scale to a curve sampled at the particle's current lifetime ratio. Both axes share one curve; non-uniform per-axis scaling isn't supported by this module. Common patterns: shrink-to-zero (start at 1, end at 0), pulse (sine-like curve up to peak then down), slow-grow (linear ramp). GPU-eligible: the curve is uploaded once as a 256-tap 1D R32F texture and sampled with linear filtering on the GPU — no curve evaluation cost in the inner loop.",
+  "symbol": "ScaleOverLifetime",
+  "kind": "class",
+  "subsystem": "particles",
+  "importPath": "@codexo/exojs-particles",
+  "tier": "stable",
+  "memberCount": 7,
+  "counts": {
+    "constructors": 1,
+    "methods": 5,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Sets every live particle's scale to a curve sampled at the particle's current lifetime ratio. Both axes share one curve; non-uniform per-axis scaling isn't supported by this module.",
+        "Common patterns: shrink-to-zero (start at 1, end at 0), pulse (sine-like curve up to peak then down), slow-grow (linear ramp).",
+        "GPU-eligible: the curve is uploaded once as a 256-tap 1D R32F texture and sampled with linear filtering on the GPU — no curve evaluation cost in the inner loop."
+      ],
+      "importLine": "import { ScaleOverLifetime } from '@codexo/exojs-particles'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(curve: Curve): ScaleOverLifetime",
+          "params": [
+            {
+              "name": "curve",
+              "type": "Curve",
+              "optional": false
+            }
+          ],
+          "returnType": "ScaleOverLifetime",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "apply",
+          "signature": "apply(system: ParticleSystem, _dt: number): void",
+          "params": [
+            {
+              "name": "system",
+              "type": "ParticleSystem",
+              "optional": false
+            },
+            {
+              "name": "_dt",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Optional cleanup hook called from ParticleSystem.destroy."
+        },
+        {
+          "name": "uploadTextures",
+          "signature": "uploadTextures(device: GPUDevice, textures: ReadonlyMap<string, GPUTexture>): void",
+          "params": [
+            {
+              "name": "device",
+              "type": "GPUDevice",
+              "optional": false
+            },
+            {
+              "name": "textures",
+              "type": "ReadonlyMap<string, GPUTexture>",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Upload texture data (Curve/ColorGradient lookup tables) to the GPU at compile time. Receives the GPUDevice and a map of texture bindings keyed by the name in WgslContribution.textures. Called once after pipeline creation. Required when wgsl declares textures."
+        },
+        {
+          "name": "wgsl",
+          "signature": "wgsl(): WgslContribution",
+          "params": [],
+          "returnType": "WgslContribution",
+          "description": "Override to declare a GPU contribution. Returning a WgslContribution makes this module GPU-eligible; omitting (or returning undefined) forces CPU mode for any system that uses this module."
+        },
+        {
+          "name": "writeUniforms",
+          "signature": "writeUniforms(view: DataView, byteOffset: number, dt: number): void",
+          "params": [
+            {
+              "name": "view",
+              "type": "DataView",
+              "optional": false
+            },
+            {
+              "name": "byteOffset",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "dt",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Write this module's current uniform values into the shared uniform buffer at byteOffset. Layout must match the field declarations returned by wgsl (in the same order). Receives the current frame dt (seconds). Modules tracking accumulated time (e.g. noise/turbulence) should advance their internal counter here to stay in sync when running in GPU mode (where apply is not called). Required when wgsl declares uniforms. Called every frame by the system before dispatching compute."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "curve",
+          "signature": "curve: Curve",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-particles/src/modules/ScaleOverLifetime.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/modules/ScaleOverLifetime.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-particles/src/modules/ScaleOverLifetime.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/modules/ScaleOverLifetime.ts"
+}

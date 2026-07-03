@@ -1,0 +1,163 @@
+{
+  "title": "Signal",
+  "description": "Lightweight typed event emitter. Each `Signal` represents one named notification channel (e.g. `onResize`, `onFrame`). Listeners are added with Signal.add or Signal.once, removed with Signal.remove, and notified with Signal.dispatch. `Args` is the tuple of arguments passed to listeners — type-checked end to end so a `new Signal<[number, string]>()` enforces both `dispatch(1, 'x')` and the listener signature `(n: number, s: string) => …`. Handlers are stored as direct function references (no wrapper objects). `dispatch` uses a guard flag instead of a snapshot copy, so no allocation occurs per dispatch. Handlers added or removed during dispatch take effect on the next call; a `remove` mid-dispatch defers the splice until after the current iteration finishes. Returning `false` from a handler short-circuits the rest of the dispatch.",
+  "symbol": "Signal",
+  "kind": "class",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 9,
+  "counts": {
+    "constructors": 1,
+    "methods": 7,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Lightweight typed event emitter. Each `Signal` represents one named notification channel (e.g. `onResize`, `onFrame`). Listeners are added with Signal.add or Signal.once, removed with Signal.remove, and notified with Signal.dispatch.",
+        "`Args` is the tuple of arguments passed to listeners — type-checked end to end so a `new Signal<[number, string]>()` enforces both `dispatch(1, 'x')` and the listener signature `(n: number, s: string) => …`.",
+        "Handlers are stored as direct function references (no wrapper objects). `dispatch` uses a guard flag instead of a snapshot copy, so no allocation occurs per dispatch. Handlers added or removed during dispatch take effect on the next call; a `remove` mid-dispatch defers the splice until after the current iteration finishes. Returning `false` from a handler short-circuits the rest of the dispatch."
+      ],
+      "importLine": "import { Signal } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(): Signal<Args>",
+          "params": [],
+          "returnType": "Signal<Args>",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "add",
+          "signature": "add(handler: SignalHandler<Args>): this",
+          "params": [
+            {
+              "name": "handler",
+              "type": "SignalHandler<Args>",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Register a listener. Idempotent — adding the same handler reference twice is a no-op. Use arrow functions or pre-bound methods to ensure correct this inside the handler."
+        },
+        {
+          "name": "clear",
+          "signature": "clear(): this",
+          "params": [],
+          "returnType": "this",
+          "description": "Remove every listener."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "dispatch",
+          "signature": "dispatch(params: Args): this",
+          "params": [
+            {
+              "name": "params",
+              "type": "Args",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Notify every registered listener in registration order. Returning false from a handler stops dispatch to the remaining listeners for this call. Listeners may safely remove themselves or others during dispatch — removals are deferred until after the current iteration completes."
+        },
+        {
+          "name": "has",
+          "signature": "has(handler: SignalHandler<Args>): boolean",
+          "params": [
+            {
+              "name": "handler",
+              "type": "SignalHandler<Args>",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "true when handler is currently registered."
+        },
+        {
+          "name": "once",
+          "signature": "once(handler: SignalHandler<Args>): this",
+          "params": [
+            {
+              "name": "handler",
+              "type": "SignalHandler<Args>",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Register a listener that auto-removes itself after the first dispatch. The internal wrapper reference differs from handler, so calling Signal.remove with the original handler reference does NOT remove it — use Signal.clear to undo a once registration."
+        },
+        {
+          "name": "remove",
+          "signature": "remove(handler: SignalHandler<Args>): this",
+          "params": [
+            {
+              "name": "handler",
+              "type": "SignalHandler<Args>",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Remove a previously registered handler. No-op if absent."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "count",
+          "signature": "count: number",
+          "params": [],
+          "returnType": null,
+          "description": "Number of currently registered listeners."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/Signal.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Signal.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/Signal.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Signal.ts"
+}

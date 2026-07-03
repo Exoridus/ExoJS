@@ -1,0 +1,205 @@
+{
+  "title": "Timer",
+  "description": "Clock variant with a fixed limit. Inherits start/stop/reset/restart semantics; adds Timer.expired (true once `elapsedTime >= limit`) and remaining-time accessors. Useful for cooldowns, delays, and any timed gating logic where you want to ask \"is the duration up?\" each frame.",
+  "symbol": "Timer",
+  "kind": "class",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 18,
+  "counts": {
+    "constructors": 1,
+    "methods": 5,
+    "properties": 12,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Clock variant with a fixed limit. Inherits start/stop/reset/restart semantics; adds Timer.expired (true once `elapsedTime >= limit`) and remaining-time accessors. Useful for cooldowns, delays, and any timed gating logic where you want to ask \"is the duration up?\" each frame."
+      ],
+      "importLine": "import { Timer } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(limit: Time, autoStart: boolean): Timer",
+          "params": [
+            {
+              "name": "limit",
+              "type": "Time",
+              "optional": false
+            },
+            {
+              "name": "autoStart",
+              "type": "boolean",
+              "optional": false
+            }
+          ],
+          "returnType": "Timer",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "reset",
+          "signature": "reset(): this",
+          "params": [],
+          "returnType": "this",
+          "description": "Halt and zero the accumulated time. The clock is left stopped."
+        },
+        {
+          "name": "restart",
+          "signature": "restart(): this",
+          "params": [],
+          "returnType": "this",
+          "description": "Reset accumulated time to zero, then immediately start. Common per-frame pattern."
+        },
+        {
+          "name": "start",
+          "signature": "start(): this",
+          "params": [],
+          "returnType": "this",
+          "description": "Begin accumulating time. No-op when already running."
+        },
+        {
+          "name": "stop",
+          "signature": "stop(): this",
+          "params": [],
+          "returnType": "this",
+          "description": "Halt accumulation. Elapsed time stays at the moment of stopping."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "elapsedHours",
+          "signature": "elapsedHours: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "elapsedMilliseconds",
+          "signature": "elapsedMilliseconds: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "elapsedMinutes",
+          "signature": "elapsedMinutes: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "elapsedSeconds",
+          "signature": "elapsedSeconds: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "elapsedTime",
+          "signature": "elapsedTime: Time",
+          "params": [],
+          "returnType": null,
+          "description": "Total accumulated time since the last Clock.reset. While the clock is running, the value advances on every read by folding in the delta since the previous read; while stopped, the value is fixed at the stop point. Returns the same Time instance — read the scalar fields if you need an unchanging snapshot."
+        },
+        {
+          "name": "expired",
+          "signature": "expired: boolean",
+          "params": [],
+          "returnType": null,
+          "description": "true once the elapsed time has reached or exceeded the configured limit."
+        },
+        {
+          "name": "limit",
+          "signature": "limit: Time",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "remainingHours",
+          "signature": "remainingHours: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "remainingMilliseconds",
+          "signature": "remainingMilliseconds: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "remainingMinutes",
+          "signature": "remainingMinutes: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "remainingSeconds",
+          "signature": "remainingSeconds: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "running",
+          "signature": "running: boolean",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/Timer.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Timer.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/Timer.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Timer.ts"
+}

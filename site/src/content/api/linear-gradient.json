@@ -1,0 +1,267 @@
+{
+  "title": "LinearGradient",
+  "description": "Linear gradient in UV space projected from `start` to `end`.",
+  "symbol": "LinearGradient",
+  "kind": "class",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 15,
+  "counts": {
+    "constructors": 1,
+    "methods": 10,
+    "properties": 4,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Linear gradient in UV space projected from `start` to `end`."
+      ],
+      "importLine": "import { LinearGradient } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(stops: readonly GradientStop[], start: readonly [number, number], end: readonly [number, number]): LinearGradient",
+          "params": [
+            {
+              "name": "stops",
+              "type": "readonly GradientStop[]",
+              "optional": false
+            },
+            {
+              "name": "start",
+              "type": "readonly [number, number]",
+              "optional": false
+            },
+            {
+              "name": "end",
+              "type": "readonly [number, number]",
+              "optional": false
+            }
+          ],
+          "returnType": "LinearGradient",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "_copyGeometry",
+          "signature": "_copyGeometry(source: LinearGradient): void",
+          "params": [
+            {
+              "name": "source",
+              "type": "LinearGradient",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Copy the concrete subclass geometry from a same-type source."
+        },
+        {
+          "name": "_geometryEquals",
+          "signature": "_geometryEquals(other: Gradient): boolean",
+          "params": [
+            {
+              "name": "other",
+              "type": "Gradient",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Compare the concrete subclass geometry against other. Only invoked once Gradient.equals has confirmed both sides share the same GradientType, so implementations may narrow other accordingly."
+        },
+        {
+          "name": "clone",
+          "signature": "clone(): this",
+          "params": [],
+          "returnType": "this",
+          "description": "Deep-clone into a new instance of the same concrete gradient type."
+        },
+        {
+          "name": "copy",
+          "signature": "copy(source: this): this",
+          "params": [
+            {
+              "name": "source",
+              "type": "this",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Copy every value (stops and geometry) from a same-type source into this instance, replacing its current state. Returns this for chaining."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "equals",
+          "signature": "equals(other: Gradient): boolean",
+          "params": [
+            {
+              "name": "other",
+              "type": "Gradient",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Structural value equality: same GradientType, same ordered stops (offset and Color), and same subclass geometry."
+        },
+        {
+          "name": "resolveT",
+          "signature": "resolveT(u: number, v: number): number",
+          "params": [
+            {
+              "name": "u",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "v",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": ""
+        },
+        {
+          "name": "sampleAt",
+          "signature": "sampleAt(t: number, out: Float32Array): void",
+          "params": [
+            {
+              "name": "t",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "out",
+              "type": "Float32Array",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Shared stop sampling logic ported from the legacy GLSL implementation."
+        },
+        {
+          "name": "toTexture",
+          "signature": "toTexture(width: number, height: number, options?: GradientToTextureOptions & object): DataTexture<\"rgba8\">",
+          "params": [
+            {
+              "name": "width",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "height",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "GradientToTextureOptions & object",
+              "optional": true
+            }
+          ],
+          "returnType": "DataTexture<\"rgba8\">",
+          "description": ""
+        },
+        {
+          "name": "toTexture",
+          "signature": "toTexture(width: number, height: number, options: GradientToTextureOptions & object): DataTexture<\"rgba32f\">",
+          "params": [
+            {
+              "name": "width",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "height",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "GradientToTextureOptions & object",
+              "optional": false
+            }
+          ],
+          "returnType": "DataTexture<\"rgba32f\">",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "type",
+          "signature": "type: GradientType",
+          "params": [],
+          "returnType": null,
+          "description": "Concrete gradient kind, e.g. 'linear' or 'radial'."
+        },
+        {
+          "name": "end",
+          "signature": "end: readonly [number, number]",
+          "params": [],
+          "returnType": null,
+          "description": "Projection axis end point in UV space."
+        },
+        {
+          "name": "start",
+          "signature": "start: readonly [number, number]",
+          "params": [],
+          "returnType": null,
+          "description": "Projection axis start point in UV space."
+        },
+        {
+          "name": "stops",
+          "signature": "stops: readonly GradientStop[]",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/gradient/LinearGradient.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/gradient/LinearGradient.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/gradient/LinearGradient.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/gradient/LinearGradient.ts"
+}

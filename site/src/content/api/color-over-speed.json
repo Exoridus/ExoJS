@@ -1,0 +1,182 @@
+{
+  "title": "ColorOverSpeed",
+  "description": "Per-frame, per-particle color sampler driven by velocity magnitude rather than lifetime ratio. Each live particle's tint is set to the gradient evaluated at `clamp((|velocity| - minSpeed) / (maxSpeed - minSpeed), 0, 1)`. Use cases: heat-mapping (slow=blue, fast=red), velocity-tinted trails, speed-gated highlights. GPU-eligible: gradient uploaded as a 256-tap 1D RGBA8 texture, sampled with linear filtering. Replaces the full color word — pair with a separate AlphaFadeOverLifetime after this module if you want to keep alpha controlled by lifetime.",
+  "symbol": "ColorOverSpeed",
+  "kind": "class",
+  "subsystem": "particles",
+  "importPath": "@codexo/exojs-particles",
+  "tier": "stable",
+  "memberCount": 9,
+  "counts": {
+    "constructors": 1,
+    "methods": 5,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Per-frame, per-particle color sampler driven by velocity magnitude rather than lifetime ratio. Each live particle's tint is set to the gradient evaluated at `clamp((|velocity| - minSpeed) / (maxSpeed - minSpeed), 0, 1)`.",
+        "Use cases: heat-mapping (slow=blue, fast=red), velocity-tinted trails, speed-gated highlights.",
+        "GPU-eligible: gradient uploaded as a 256-tap 1D RGBA8 texture, sampled with linear filtering. Replaces the full color word — pair with a separate AlphaFadeOverLifetime after this module if you want to keep alpha controlled by lifetime."
+      ],
+      "importLine": "import { ColorOverSpeed } from '@codexo/exojs-particles'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(gradient: ColorGradient, minSpeed: number, maxSpeed: number): ColorOverSpeed",
+          "params": [
+            {
+              "name": "gradient",
+              "type": "ColorGradient",
+              "optional": false
+            },
+            {
+              "name": "minSpeed",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "maxSpeed",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "ColorOverSpeed",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "apply",
+          "signature": "apply(system: ParticleSystem, _dt: number): void",
+          "params": [
+            {
+              "name": "system",
+              "type": "ParticleSystem",
+              "optional": false
+            },
+            {
+              "name": "_dt",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Optional cleanup hook called from ParticleSystem.destroy."
+        },
+        {
+          "name": "uploadTextures",
+          "signature": "uploadTextures(device: GPUDevice, textures: ReadonlyMap<string, GPUTexture>): void",
+          "params": [
+            {
+              "name": "device",
+              "type": "GPUDevice",
+              "optional": false
+            },
+            {
+              "name": "textures",
+              "type": "ReadonlyMap<string, GPUTexture>",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Upload texture data (Curve/ColorGradient lookup tables) to the GPU at compile time. Receives the GPUDevice and a map of texture bindings keyed by the name in WgslContribution.textures. Called once after pipeline creation. Required when wgsl declares textures."
+        },
+        {
+          "name": "wgsl",
+          "signature": "wgsl(): WgslContribution",
+          "params": [],
+          "returnType": "WgslContribution",
+          "description": "Override to declare a GPU contribution. Returning a WgslContribution makes this module GPU-eligible; omitting (or returning undefined) forces CPU mode for any system that uses this module."
+        },
+        {
+          "name": "writeUniforms",
+          "signature": "writeUniforms(view: DataView, offset: number): void",
+          "params": [
+            {
+              "name": "view",
+              "type": "DataView",
+              "optional": false
+            },
+            {
+              "name": "offset",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Write this module's current uniform values into the shared uniform buffer at byteOffset. Layout must match the field declarations returned by wgsl (in the same order). Receives the current frame dt (seconds). Modules tracking accumulated time (e.g. noise/turbulence) should advance their internal counter here to stay in sync when running in GPU mode (where apply is not called). Required when wgsl declares uniforms. Called every frame by the system before dispatching compute."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "gradient",
+          "signature": "gradient: ColorGradient",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "maxSpeed",
+          "signature": "maxSpeed: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "minSpeed",
+          "signature": "minSpeed: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-particles/src/modules/ColorOverSpeed.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/modules/ColorOverSpeed.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-particles/src/modules/ColorOverSpeed.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/modules/ColorOverSpeed.ts"
+}

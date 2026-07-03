@@ -1,0 +1,134 @@
+{
+  "title": "GamepadButton",
+  "description": "Single mappable button on a physical gamepad. Holds the raw browser `Gamepad.buttons[]` index, the canonical channel the value is written to, and the deadzone/inversion transform applied each frame by transformValue. Used by concrete GamepadMapping subclasses to declare a device's button layout. User code typically constructs these via `new GamepadButton(rawIndex, GamepadButton.South)` only when authoring a custom mapping. The static namespace exports (`GamepadButton.South`, `.East`, ...) carry the canonical channel offsets used to address each button.",
+  "symbol": "GamepadButton",
+  "kind": "class",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 6,
+  "counts": {
+    "constructors": 1,
+    "methods": 1,
+    "properties": 4,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Single mappable button on a physical gamepad. Holds the raw browser `Gamepad.buttons[]` index, the canonical channel the value is written to, and the deadzone/inversion transform applied each frame by transformValue.",
+        "Used by concrete GamepadMapping subclasses to declare a device's button layout. User code typically constructs these via `new GamepadButton(rawIndex, GamepadButton.South)` only when authoring a custom mapping.",
+        "The static namespace exports (`GamepadButton.South`, `.East`, ...) carry the canonical channel offsets used to address each button."
+      ],
+      "importLine": "import { GamepadButton } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(index: number, channel: GamepadButtonChannel, options: GamepadButtonOptions): GamepadButton",
+          "params": [
+            {
+              "name": "index",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "channel",
+              "type": "GamepadButtonChannel",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "GamepadButtonOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "GamepadButton",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "transformValue",
+          "signature": "transformValue(value: number): number",
+          "params": [
+            {
+              "name": "value",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": "Apply the button's transform pipeline to a raw browser button value (typically Gamepad.buttons[i].value, in 0..1). Pipeline: clamp to [0, 1] → optional invert → deadzone (returns 0 when the result is at or below threshold)."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "channel",
+          "signature": "channel: GamepadButtonChannel",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "index",
+          "signature": "index: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "invert",
+          "signature": "invert: boolean",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "threshold",
+          "signature": "threshold: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/GamepadButton.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/GamepadButton.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/GamepadButton.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/GamepadButton.ts"
+}

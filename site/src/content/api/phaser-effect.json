@@ -1,0 +1,154 @@
+{
+  "title": "PhaserEffect",
+  "description": "Phaser effect implemented with native Web Audio nodes (no worklet required). The wet signal passes through a cascade of allpass `BiquadFilterNode`s whose centre frequencies are swept synchronously by a sine LFO. The phase shift produced by each allpass stage creates sweeping notches when summed with the dry signal. An optional feedback path from the last stage back to the first adds resonance and sharpens the effect. Node graph: ``` inputGain ┬── dryGain ───────────────────────────────────────┐ │ ├── outputGain └── allpass[0] ─► … ─► allpass[N-1] ── wetGain ───┘ ▲ │ └── feedbackDelay ◄── feedbackGain ◄─────────┘ lfoOscillator ── lfoGain (depth × baseFrequency Hz) ──► each allpass.frequency ``` Note: `feedbackDelay` is a DelayNode with `delayTime = 0`. Even at zero delay the node itself breaks the zero-latency cycle, which spec-compliant browsers (Chrome, Edge, Safari) would otherwise mute entirely. Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet`; `feedbackGain.gain = feedback`; `lfoGain.gain = depth × baseFrequency`.",
+  "symbol": "PhaserEffect",
+  "kind": "class",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs-audio-fx",
+  "tier": "stable",
+  "memberCount": 11,
+  "counts": {
+    "constructors": 1,
+    "methods": 1,
+    "properties": 9,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Phaser effect implemented with native Web Audio nodes (no worklet required).",
+        "The wet signal passes through a cascade of allpass `BiquadFilterNode`s whose centre frequencies are swept synchronously by a sine LFO. The phase shift produced by each allpass stage creates sweeping notches when summed with the dry signal. An optional feedback path from the last stage back to the first adds resonance and sharpens the effect.",
+        "Node graph: ``` inputGain ┬── dryGain ───────────────────────────────────────┐ │ ├── outputGain └── allpass[0] ─► … ─► allpass[N-1] ── wetGain ───┘ ▲ │ └── feedbackDelay ◄── feedbackGain ◄─────────┘",
+        "lfoOscillator ── lfoGain (depth × baseFrequency Hz) ──► each allpass.frequency ``` Note: `feedbackDelay` is a DelayNode with `delayTime = 0`. Even at zero delay the node itself breaks the zero-latency cycle, which spec-compliant browsers (Chrome, Edge, Safari) would otherwise mute entirely. Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet`; `feedbackGain.gain = feedback`; `lfoGain.gain = depth × baseFrequency`."
+      ],
+      "importLine": "import { PhaserEffect } from '@codexo/exojs-audio-fx'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(options: PhaserEffectOptions): PhaserEffect",
+          "params": [
+            {
+              "name": "options",
+              "type": "PhaserEffectOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "PhaserEffect",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Disconnects all audio nodes and releases resources. Must be called when the effect is no longer needed."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "baseFrequency",
+          "signature": "baseFrequency: number",
+          "params": [],
+          "returnType": null,
+          "description": "Centre frequency of all allpass stages in Hz. Range 50..5000, default 500. Changes are ramped smoothly and update both the filter frequencies and the absolute LFO depth."
+        },
+        {
+          "name": "depth",
+          "signature": "depth: number",
+          "params": [],
+          "returnType": null,
+          "description": "LFO modulation depth as a fraction of baseFrequency. Range 0..1, default 0.6. Changes are ramped smoothly via setTargetAtTime."
+        },
+        {
+          "name": "feedback",
+          "signature": "feedback: number",
+          "params": [],
+          "returnType": null,
+          "description": "Feedback gain from the last stage back to the first. Range 0..0.9, default 0.3. Changes are ramped smoothly via setTargetAtTime."
+        },
+        {
+          "name": "inputNode",
+          "signature": "inputNode: AudioNode",
+          "params": [],
+          "returnType": null,
+          "description": "The node where audio enters this effect. Throws if the audio context is not yet initialized."
+        },
+        {
+          "name": "outputNode",
+          "signature": "outputNode: AudioNode",
+          "params": [],
+          "returnType": null,
+          "description": "The node where audio exits this effect. Throws if the audio context is not yet initialized."
+        },
+        {
+          "name": "rateHz",
+          "signature": "rateHz: number",
+          "params": [],
+          "returnType": null,
+          "description": "LFO sweep rate in Hz. Range 0..20, default 0.5. Changes are ramped smoothly via setTargetAtTime."
+        },
+        {
+          "name": "ready",
+          "signature": "ready: Promise<void>",
+          "params": [],
+          "returnType": null,
+          "description": "Resolves when the effect is fully initialized. Defaults to immediately-resolved for sync effects."
+        },
+        {
+          "name": "stages",
+          "signature": "stages: number",
+          "params": [],
+          "returnType": null,
+          "description": "Number of allpass filter stages (even integer, 2..12). Set at construction time only; read-only at runtime."
+        },
+        {
+          "name": "wet",
+          "signature": "wet: number",
+          "params": [],
+          "returnType": null,
+          "description": "Wet (phased) mix level, 0..1. The dry level is automatically 1 - wet. Changes are ramped smoothly via setTargetAtTime. Default 0.5."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-audio-fx/src/effects/PhaserEffect.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/PhaserEffect.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-audio-fx/src/effects/PhaserEffect.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/PhaserEffect.ts"
+}

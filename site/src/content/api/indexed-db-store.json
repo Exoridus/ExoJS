@@ -1,0 +1,152 @@
+{
+  "title": "IndexedDbStore",
+  "description": "CacheStore implementation that persists processed asset data in an IndexedDB database via IndexedDbDatabase. Pass an instance to LoaderOptions.cache to enable cross-session asset caching with no additional configuration beyond a database name.",
+  "symbol": "IndexedDbStore",
+  "kind": "class",
+  "subsystem": "resources",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 6,
+  "counts": {
+    "constructors": 1,
+    "methods": 5,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "CacheStore implementation that persists processed asset data in an IndexedDB database via IndexedDbDatabase.",
+        "Pass an instance to LoaderOptions.cache to enable cross-session asset caching with no additional configuration beyond a database name."
+      ],
+      "importLine": "import { IndexedDbStore } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(nameOrOptions: string | IndexedDbStoreOptions): IndexedDbStore",
+          "params": [
+            {
+              "name": "nameOrOptions",
+              "type": "string | IndexedDbStoreOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "IndexedDbStore",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "clear",
+          "signature": "clear(storageName: string): Promise<boolean>",
+          "params": [
+            {
+              "name": "storageName",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<boolean>",
+          "description": "Removes all entries within storageName. Returns true on success."
+        },
+        {
+          "name": "delete",
+          "signature": "delete(storageName: string, key: string): Promise<boolean>",
+          "params": [
+            {
+              "name": "storageName",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "key",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<boolean>",
+          "description": "Removes a single entry. Returns true if the entry existed and was removed."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Synchronously releases any open handles held by the store."
+        },
+        {
+          "name": "load",
+          "signature": "load(storageName: string, key: string): Promise<unknown>",
+          "params": [
+            {
+              "name": "storageName",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "key",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<unknown>",
+          "description": "Loads a previously saved value, or null if the entry does not exist."
+        },
+        {
+          "name": "save",
+          "signature": "save(storageName: string, key: string, data: unknown): Promise<void>",
+          "params": [
+            {
+              "name": "storageName",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "key",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "data",
+              "type": "unknown",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<void>",
+          "description": "Persists data under the given namespace and key. Implementations must tolerate failures silently when storage is full."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/resources/IndexedDbStore.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/IndexedDbStore.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/resources/IndexedDbStore.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/IndexedDbStore.ts"
+}

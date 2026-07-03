@@ -1,0 +1,142 @@
+{
+  "title": "WasmFactory",
+  "description": "AssetFactory implementation that loads WebAssembly binary (`.wasm`) files and produces a compiled WebAssembly.Module. The module is compiled but not instantiated — callers receive a reusable `WebAssembly.Module` that can be instantiated multiple times with different import objects via `new WebAssembly.Instance(module, imports)`.",
+  "symbol": "WasmFactory",
+  "kind": "class",
+  "subsystem": "resources",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 7,
+  "counts": {
+    "constructors": 1,
+    "methods": 5,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "AssetFactory implementation that loads WebAssembly binary (`.wasm`) files and produces a compiled WebAssembly.Module.",
+        "The module is compiled but not instantiated — callers receive a reusable `WebAssembly.Module` that can be instantiated multiple times with different import objects via `new WebAssembly.Instance(module, imports)`."
+      ],
+      "importLine": "import { WasmFactory } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(): WasmFactory",
+          "params": [],
+          "returnType": "WasmFactory",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "create",
+          "signature": "create(source: ArrayBuffer): Promise<Module>",
+          "params": [
+            {
+              "name": "source",
+              "type": "ArrayBuffer",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<Module>",
+          "description": "Compiles the Wasm binary asynchronously via WebAssembly.compile and returns the resulting module."
+        },
+        {
+          "name": "createObjectUrl",
+          "signature": "createObjectUrl(blob: Blob): string",
+          "params": [
+            {
+              "name": "blob",
+              "type": "Blob",
+              "optional": false
+            }
+          ],
+          "returnType": "string",
+          "description": "Creates an object URL from blob and registers it for automatic cleanup when destroy is called. Prefer this over calling URL.createObjectURL directly inside a factory subclass so the URL is always tracked."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Revokes every object URL that was created via createObjectUrl and clears the internal tracking pool."
+        },
+        {
+          "name": "process",
+          "signature": "process(response: Response): Promise<ArrayBuffer>",
+          "params": [
+            {
+              "name": "response",
+              "type": "Response",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<ArrayBuffer>",
+          "description": "Reads the full response body as an ArrayBuffer containing the raw Wasm binary."
+        },
+        {
+          "name": "revokeObjectUrl",
+          "signature": "revokeObjectUrl(objectUrl: string): void",
+          "params": [
+            {
+              "name": "objectUrl",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "storageName",
+          "signature": "storageName: \"wasm\"",
+          "params": [],
+          "returnType": null,
+          "description": "Identifier used as the object-store / storage-namespace key when this factory's assets are persisted to a CacheStore."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/resources/factories/WasmFactory.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/WasmFactory.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/resources/factories/WasmFactory.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/WasmFactory.ts"
+}

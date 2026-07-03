@@ -1,0 +1,238 @@
+{
+  "title": "RenderPipeline",
+  "description": "An ordered list of RenderPass steps, played once per frame against a RenderingContext. A `RenderPipeline` is **itself a `RenderPass`**, so pipelines nest freely and a disabled pipeline skips its whole subtree. It **owns** the passes added to it (exclusive ownership — a pass belongs to at most one pipeline): resize and destroy cascade to them. It never owns scene nodes or caller RenderTextures. Adding a pass that would create a direct or indirect cycle throws at add time.",
+  "symbol": "RenderPipeline",
+  "kind": "class",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "advanced",
+  "memberCount": 15,
+  "counts": {
+    "constructors": 1,
+    "methods": 11,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "An ordered list of RenderPass steps, played once per frame against a RenderingContext.",
+        "A `RenderPipeline` is **itself a `RenderPass`**, so pipelines nest freely and a disabled pipeline skips its whole subtree. It **owns** the passes added to it (exclusive ownership — a pass belongs to at most one pipeline): resize and destroy cascade to them. It never owns scene nodes or caller RenderTextures. Adding a pass that would create a direct or indirect cycle throws at add time."
+      ],
+      "importLine": "import { RenderPipeline } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(options?: RenderPassOptions): RenderPipeline",
+          "params": [
+            {
+              "name": "options",
+              "type": "RenderPassOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "RenderPipeline",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "[iterator]",
+          "signature": "[iterator](): IterableIterator<RenderPass>",
+          "params": [],
+          "returnType": "IterableIterator<RenderPass>",
+          "description": "Iterate registered passes in play order."
+        },
+        {
+          "name": "addPass",
+          "signature": "addPass(pass: RenderPass): this",
+          "params": [
+            {
+              "name": "pass",
+              "type": "RenderPass",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Append a pass and take exclusive ownership of it. Throws if the pass already belongs to any pipeline, if adding it would create a direct/indirect cycle, during execute, or after destroy."
+        },
+        {
+          "name": "at",
+          "signature": "at(index: number): RenderPass | undefined",
+          "params": [
+            {
+              "name": "index",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "RenderPass | undefined",
+          "description": "The pass at index in play order, or undefined if out of range."
+        },
+        {
+          "name": "clear",
+          "signature": "clear(): this",
+          "params": [],
+          "returnType": "this",
+          "description": "Remove all passes and release their ownership. Does not destroy them. The pipeline stays usable."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Cascade destroy() to every pass, release their ownership, then clear the list. Idempotent. Throws during execute (before any teardown begins). Best-effort teardown: the pipeline is marked destroyed and detached from its passes up front, so it always ends in a single, consistent destroyed-and-empty state — every child gets a destroy() attempt and has its owner slot released even if an earlier child throws. If one or more children throw, the first error is re-thrown after the cascade completes."
+        },
+        {
+          "name": "execute",
+          "signature": "execute(context: RenderingContext): void",
+          "params": [
+            {
+              "name": "context",
+              "type": "RenderingContext",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Play every enabled pass in order against context. No-op if this.enabled === false (a pipeline is itself a directly-executable pass, so disabling it skips its whole subtree). Not re-entrant. Throws after destroy."
+        },
+        {
+          "name": "hasPass",
+          "signature": "hasPass(pass: RenderPass): boolean",
+          "params": [
+            {
+              "name": "pass",
+              "type": "RenderPass",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Whether pass is registered in this pipeline."
+        },
+        {
+          "name": "indexOf",
+          "signature": "indexOf(pass: RenderPass): number",
+          "params": [
+            {
+              "name": "pass",
+              "type": "RenderPass",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": "Index of pass in play order, or -1 if absent."
+        },
+        {
+          "name": "insertPass",
+          "signature": "insertPass(pass: RenderPass, index: number): this",
+          "params": [
+            {
+              "name": "pass",
+              "type": "RenderPass",
+              "optional": false
+            },
+            {
+              "name": "index",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Insert a pass at index (clamped to [0, size]). Same ownership / cycle / execute / destroy throws as addPass."
+        },
+        {
+          "name": "removePass",
+          "signature": "removePass(pass: RenderPass): boolean",
+          "params": [
+            {
+              "name": "pass",
+              "type": "RenderPass",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Remove a pass by identity and release its ownership. Returns false if absent. Does not destroy it."
+        },
+        {
+          "name": "resize",
+          "signature": "resize(width: number, height: number): void",
+          "params": [
+            {
+              "name": "width",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "height",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Cascade resize(width, height) to every pass (enabled and disabled)."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "enabled",
+          "signature": "enabled: boolean",
+          "params": [],
+          "returnType": null,
+          "description": "When false, the containing RenderPipeline skips this pass during execute. Default true. Evaluated by the parent — a direct execute call runs the pass regardless."
+        },
+        {
+          "name": "label",
+          "signature": "label: string",
+          "params": [],
+          "returnType": null,
+          "description": "Debug label (inspector / logging). Defaults to the constructor name. Display only — not an identity."
+        },
+        {
+          "name": "size",
+          "signature": "size: number",
+          "params": [],
+          "returnType": null,
+          "description": "Number of registered passes (enabled and disabled)."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/RenderPipeline.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/RenderPipeline.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/RenderPipeline.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/RenderPipeline.ts"
+}

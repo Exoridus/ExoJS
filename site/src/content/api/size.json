@@ -1,0 +1,245 @@
+{
+  "title": "Size",
+  "description": "Mutable 2D size (width × height) value type. All arithmetic methods mutate in place and return `this` for chaining. When `height` is omitted from `set`, `add`, `subtract`, `scale`, or `divide` it defaults to the same value as `width` (uniform operation). `Size.temp` provides a shared scratch instance. `Size.zero` is a read-only sentinel.",
+  "symbol": "Size",
+  "kind": "class",
+  "subsystem": "math",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 14,
+  "counts": {
+    "constructors": 1,
+    "methods": 9,
+    "properties": 4,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Mutable 2D size (width × height) value type. All arithmetic methods mutate in place and return `this` for chaining. When `height` is omitted from `set`, `add`, `subtract`, `scale`, or `divide` it defaults to the same value as `width` (uniform operation).",
+        "`Size.temp` provides a shared scratch instance. `Size.zero` is a read-only sentinel."
+      ],
+      "importLine": "import { Size } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(width: number, height: number): Size",
+          "params": [
+            {
+              "name": "width",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "height",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "Size",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "add",
+          "signature": "add(width: number, height: number): this",
+          "params": [
+            {
+              "name": "width",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "height",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "clone",
+          "signature": "clone(): this",
+          "params": [],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "copy",
+          "signature": "copy(size: object): this",
+          "params": [
+            {
+              "name": "size",
+              "type": "object",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "divide",
+          "signature": "divide(width: number, height: number): this",
+          "params": [
+            {
+              "name": "width",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "height",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "equals",
+          "signature": "equals(__namedParameters: Partial<Size>): boolean",
+          "params": [
+            {
+              "name": "__namedParameters",
+              "type": "Partial<Size>",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": ""
+        },
+        {
+          "name": "scale",
+          "signature": "scale(width: number, height: number): this",
+          "params": [
+            {
+              "name": "width",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "height",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "set",
+          "signature": "set(width: number, height: number): this",
+          "params": [
+            {
+              "name": "width",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "height",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "subtract",
+          "signature": "subtract(width: number, height: number): this",
+          "params": [
+            {
+              "name": "width",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "height",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "zero",
+          "signature": "zero: Size",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "height",
+          "signature": "height: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "width",
+          "signature": "width: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "temp",
+          "signature": "temp: Size",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/math/Size.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/math/Size.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/math/Size.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/math/Size.ts"
+}

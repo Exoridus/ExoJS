@@ -1,0 +1,128 @@
+{
+  "title": "LoadingQueue",
+  "description": "An awaitable, progress-aware load operation. Implements `PromiseLike<T>` so it can be `await`ed directly and composed with `Promise.all([queue1, queue2])` without wrapping. Progress is updated as individual items complete via _notifyItem.",
+  "symbol": "LoadingQueue",
+  "kind": "class",
+  "subsystem": "resources",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 5,
+  "counts": {
+    "constructors": 0,
+    "methods": 3,
+    "properties": 1,
+    "events": 1
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "An awaitable, progress-aware load operation.",
+        "Implements `PromiseLike<T>` so it can be `await`ed directly and composed with `Promise.all([queue1, queue2])` without wrapping.",
+        "Progress is updated as individual items complete via _notifyItem."
+      ],
+      "importLine": "import { LoadingQueue } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "catch",
+          "signature": "catch(onrejected?: object | null): Promise<T | Caught>",
+          "params": [
+            {
+              "name": "onrejected",
+              "type": "object | null",
+              "optional": true
+            }
+          ],
+          "returnType": "Promise<T | Caught>",
+          "description": ""
+        },
+        {
+          "name": "finally",
+          "signature": "finally(onfinally?: object | null): Promise<T>",
+          "params": [
+            {
+              "name": "onfinally",
+              "type": "object | null",
+              "optional": true
+            }
+          ],
+          "returnType": "Promise<T>",
+          "description": ""
+        },
+        {
+          "name": "then",
+          "signature": "then(onfulfilled?: object | null, onrejected?: object | null): Promise<Fulfilled | Rejected>",
+          "params": [
+            {
+              "name": "onfulfilled",
+              "type": "object | null",
+              "optional": true
+            },
+            {
+              "name": "onrejected",
+              "type": "object | null",
+              "optional": true
+            }
+          ],
+          "returnType": "Promise<Fulfilled | Rejected>",
+          "description": "Attaches callbacks for the resolution and/or rejection of the Promise."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "progress",
+          "signature": "progress: LoadingProgress",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "events",
+      "title": "Events",
+      "members": [
+        {
+          "name": "onProgress",
+          "signature": "onProgress: Signal<[LoadingProgress]>",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/resources/LoadingQueue.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/LoadingQueue.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/resources/LoadingQueue.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/LoadingQueue.ts"
+}

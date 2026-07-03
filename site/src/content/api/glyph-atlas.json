@@ -1,0 +1,186 @@
+{
+  "title": "GlyphAtlas",
+  "description": "A per-font-variant glyph atlas with automatic multi-page growth. In `'sdf'` mode (default) each atlas page is a single-channel R8 `DataTexture` populated by GlyphSdf. One `GlyphSdf` instance is kept per font size so the atlas can mix sizes efficiently. In `'color'` mode pages are RGBA canvas textures that preserve full glyph colour data for emoji and colour fonts.",
+  "symbol": "GlyphAtlas",
+  "kind": "class",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "advanced",
+  "memberCount": 7,
+  "counts": {
+    "constructors": 1,
+    "methods": 3,
+    "properties": 2,
+    "events": 1
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A per-font-variant glyph atlas with automatic multi-page growth.",
+        "In `'sdf'` mode (default) each atlas page is a single-channel R8 `DataTexture` populated by GlyphSdf. One `GlyphSdf` instance is kept per font size so the atlas can mix sizes efficiently.",
+        "In `'color'` mode pages are RGBA canvas textures that preserve full glyph colour data for emoji and colour fonts."
+      ],
+      "importLine": "import { GlyphAtlas } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(family: string, fontStyle: \"normal\" | \"italic\", fontWeight: string, pageSize: number, mode: AtlasMode, sdfRadius: number): GlyphAtlas",
+          "params": [
+            {
+              "name": "family",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "fontStyle",
+              "type": "\"normal\" | \"italic\"",
+              "optional": false
+            },
+            {
+              "name": "fontWeight",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "pageSize",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "mode",
+              "type": "AtlasMode",
+              "optional": false
+            },
+            {
+              "name": "sdfRadius",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "GlyphAtlas",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "clear",
+          "signature": "clear(): void",
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "getGlyph",
+          "signature": "getGlyph(char: string, size: number): GlyphInfo",
+          "params": [
+            {
+              "name": "char",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "size",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "GlyphInfo",
+          "description": "Return metrics for the given character at the given font size."
+        },
+        {
+          "name": "getKerning",
+          "signature": "getKerning(prev: string, next: string, fontSize: number): number",
+          "params": [
+            {
+              "name": "prev",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "next",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "fontSize",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": "Return the kerning adjustment (in pixels) between two adjacent characters. Positive values add space; negative values pull glyphs together. Optional — callers treat a missing method as zero kerning."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "mode",
+          "signature": "mode: AtlasMode",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "pages",
+          "signature": "pages: readonly AtlasPage[]",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "events",
+      "title": "Events",
+      "members": [
+        {
+          "name": "onPageAdded",
+          "signature": "onPageAdded: Signal<[pageIndex]>",
+          "params": [],
+          "returnType": null,
+          "description": "Dispatched whenever a new atlas page is allocated. Listen here to detect unexpected atlas growth (e.g. many unique CJK glyphs or an oversized font size). The payload is the zero-based page index. ts const atlas = pool.getAtlas('Roboto', 'normal', '400'); atlas.onPageAdded.on(idx => console.warn(Atlas page ${idx} added)); "
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/text/GlyphAtlas.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/GlyphAtlas.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/text/GlyphAtlas.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/GlyphAtlas.ts"
+}

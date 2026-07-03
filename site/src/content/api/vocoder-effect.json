@@ -1,0 +1,136 @@
+{
+  "title": "VocoderEffect",
+  "description": "Phase-vocoder-style effect implemented as a WorkletEffect. Analyzes the spectral envelope of a `modulator` AudioBus across a bank of log-spaced bandpass filters and applies that envelope to the carrier signal (the main input). The result is the classic \"robot voice\" or talking-synth effect. Band count, frequency range, and Q are compile-time parameters set at construction; only `wet` and `envelopeSmoothing` are adjustable at runtime.",
+  "symbol": "VocoderEffect",
+  "kind": "class",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs-audio-fx",
+  "tier": "stable",
+  "memberCount": 8,
+  "counts": {
+    "constructors": 1,
+    "methods": 2,
+    "properties": 5,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Phase-vocoder-style effect implemented as a WorkletEffect. Analyzes the spectral envelope of a `modulator` AudioBus across a bank of log-spaced bandpass filters and applies that envelope to the carrier signal (the main input). The result is the classic \"robot voice\" or talking-synth effect. Band count, frequency range, and Q are compile-time parameters set at construction; only `wet` and `envelopeSmoothing` are adjustable at runtime."
+      ],
+      "importLine": "import { VocoderEffect } from '@codexo/exojs-audio-fx'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(options: VocoderEffectOptions): VocoderEffect",
+          "params": [
+            {
+              "name": "options",
+              "type": "VocoderEffectOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "VocoderEffect",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "_onWorkletReady",
+          "signature": "_onWorkletReady(_audioContext: AudioContext): void",
+          "params": [
+            {
+              "name": "_audioContext",
+              "type": "AudioContext",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Subclass hook — called once the worklet is loaded and inserted into the wet path. Use for additional wiring (e.g. a sidechain input)."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Disconnects all nodes, cancels any pending worklet load, and releases resources."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "envelopeSmoothing",
+          "signature": "envelopeSmoothing: number",
+          "params": [],
+          "returnType": null,
+          "description": "One-pole envelope follower coefficient. Smaller values produce slower, smoother envelope tracking. Range 0.0001..0.1, default 0.005."
+        },
+        {
+          "name": "inputNode",
+          "signature": "inputNode: AudioNode",
+          "params": [],
+          "returnType": null,
+          "description": "The node where audio enters this effect."
+        },
+        {
+          "name": "outputNode",
+          "signature": "outputNode: AudioNode",
+          "params": [],
+          "returnType": null,
+          "description": "The node where audio exits this effect."
+        },
+        {
+          "name": "ready",
+          "signature": "ready: Promise<void>",
+          "params": [],
+          "returnType": null,
+          "description": "Resolves once the worklet is loaded and inserted into the wet path."
+        },
+        {
+          "name": "wet",
+          "signature": "wet: number",
+          "params": [],
+          "returnType": null,
+          "description": "Wet (processed) mix level, 0..1. The dry level is automatically 1 - wet. Ramped smoothly."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-audio-fx/src/effects/VocoderEffect.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/VocoderEffect.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-audio-fx/src/effects/VocoderEffect.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/VocoderEffect.ts"
+}

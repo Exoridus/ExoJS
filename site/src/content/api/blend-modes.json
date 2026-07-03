@@ -1,0 +1,177 @@
+{
+  "title": "BlendModes",
+  "description": "Compositing blend modes applied when drawing a Drawable over the current render target. Modes 0–4 are implemented as fixed-function GPU blend equations (no texture capture required). Modes 5–17 use a backdrop-aware compositor: the content is first rendered off-screen, then composited over the captured backdrop via a W3C-compliant blend shader. Use isAdvancedBlendMode to test whether a mode requires the compositor path.",
+  "symbol": "BlendModes",
+  "kind": "enum",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 18,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Compositing blend modes applied when drawing a Drawable over the current render target.",
+        "Modes 0–4 are implemented as fixed-function GPU blend equations (no texture capture required). Modes 5–17 use a backdrop-aware compositor: the content is first rendered off-screen, then composited over the captured backdrop via a W3C-compliant blend shader. Use isAdvancedBlendMode to test whether a mode requires the compositor path."
+      ],
+      "importLine": "import { BlendModes } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "members",
+      "title": "Members",
+      "members": [
+        {
+          "name": "Additive",
+          "signature": "Additive",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Color",
+          "signature": "Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "ColorBurn",
+          "signature": "ColorBurn",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "ColorDodge",
+          "signature": "ColorDodge",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Darken",
+          "signature": "Darken",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Difference",
+          "signature": "Difference",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Exclusion",
+          "signature": "Exclusion",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "HardLight",
+          "signature": "HardLight",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Hue",
+          "signature": "Hue",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Lighten",
+          "signature": "Lighten",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Luminosity",
+          "signature": "Luminosity",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Multiply",
+          "signature": "Multiply",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Normal",
+          "signature": "Normal",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Overlay",
+          "signature": "Overlay",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Saturation",
+          "signature": "Saturation",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Screen",
+          "signature": "Screen",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "SoftLight",
+          "signature": "SoftLight",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Subtract",
+          "signature": "Subtract",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/types.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/types.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/types.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/types.ts"
+}

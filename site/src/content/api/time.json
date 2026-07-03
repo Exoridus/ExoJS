@@ -1,0 +1,436 @@
+{
+  "title": "Time",
+  "description": "Time-duration value object stored internally in milliseconds. Provides unit-converted accessors (`seconds`, `minutes`, `hours`) and arithmetic helpers (Time.add, Time.subtract, Time.addTime). Constants on the class hold canonical durations: Time.zero, Time.oneSecond, Time.oneMinute, Time.oneHour, plus the TimeInterval multipliers used by the `factor` parameter. `Time.temp` is a shared scratch instance for hot paths — do not store the reference across calls.",
+  "symbol": "Time",
+  "kind": "class",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 34,
+  "counts": {
+    "constructors": 1,
+    "methods": 20,
+    "properties": 13,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Time-duration value object stored internally in milliseconds. Provides unit-converted accessors (`seconds`, `minutes`, `hours`) and arithmetic helpers (Time.add, Time.subtract, Time.addTime).",
+        "Constants on the class hold canonical durations: Time.zero, Time.oneSecond, Time.oneMinute, Time.oneHour, plus the TimeInterval multipliers used by the `factor` parameter.",
+        "`Time.temp` is a shared scratch instance for hot paths — do not store the reference across calls."
+      ],
+      "importLine": "import { Time } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(time: number, factor: TimeInterval): Time",
+          "params": [
+            {
+              "name": "time",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "factor",
+              "type": "TimeInterval",
+              "optional": false
+            }
+          ],
+          "returnType": "Time",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "add",
+          "signature": "add(value: number, factor: TimeInterval): this",
+          "params": [
+            {
+              "name": "value",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "factor",
+              "type": "TimeInterval",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Add value * factor milliseconds in place. Mutates this instance."
+        },
+        {
+          "name": "addTime",
+          "signature": "addTime(time: Time): this",
+          "params": [
+            {
+              "name": "time",
+              "type": "Time",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Add another Time value in place. Mutates this instance."
+        },
+        {
+          "name": "clone",
+          "signature": "clone(): this",
+          "params": [],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "copy",
+          "signature": "copy(time: Time): this",
+          "params": [
+            {
+              "name": "time",
+              "type": "Time",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "equals",
+          "signature": "equals(__namedParameters: Partial<Time>): boolean",
+          "params": [
+            {
+              "name": "__namedParameters",
+              "type": "Partial<Time>",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": ""
+        },
+        {
+          "name": "greaterThan",
+          "signature": "greaterThan(time: Time): boolean",
+          "params": [
+            {
+              "name": "time",
+              "type": "Time",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": ""
+        },
+        {
+          "name": "lessThan",
+          "signature": "lessThan(time: Time): boolean",
+          "params": [
+            {
+              "name": "time",
+              "type": "Time",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": ""
+        },
+        {
+          "name": "set",
+          "signature": "set(time: number, factor: TimeInterval): this",
+          "params": [
+            {
+              "name": "time",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "factor",
+              "type": "TimeInterval",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Replace the stored duration with time * factor milliseconds. Pair with Time.seconds, Time.minutes, or Time.hours as the factor to construct from non-millisecond units."
+        },
+        {
+          "name": "setHours",
+          "signature": "setHours(hours: number): this",
+          "params": [
+            {
+              "name": "hours",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "setMilliseconds",
+          "signature": "setMilliseconds(milliseconds: number): this",
+          "params": [
+            {
+              "name": "milliseconds",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "setMinutes",
+          "signature": "setMinutes(minutes: number): this",
+          "params": [
+            {
+              "name": "minutes",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "setSeconds",
+          "signature": "setSeconds(seconds: number): this",
+          "params": [
+            {
+              "name": "seconds",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "subtract",
+          "signature": "subtract(value: number, factor: TimeInterval): this",
+          "params": [
+            {
+              "name": "value",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "factor",
+              "type": "TimeInterval",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Subtract value * factor milliseconds in place. Mutates this instance."
+        },
+        {
+          "name": "subtractTime",
+          "signature": "subtractTime(time: Time): this",
+          "params": [
+            {
+              "name": "time",
+              "type": "Time",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Subtract another Time value in place. Mutates this instance."
+        },
+        {
+          "name": "fromHours",
+          "signature": "fromHours(value: number): Time",
+          "params": [
+            {
+              "name": "value",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "Time",
+          "description": "Construct a Time from an hour count."
+        },
+        {
+          "name": "fromMilliseconds",
+          "signature": "fromMilliseconds(value: number): Time",
+          "params": [
+            {
+              "name": "value",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "Time",
+          "description": "Construct a Time from a millisecond count."
+        },
+        {
+          "name": "fromMinutes",
+          "signature": "fromMinutes(value: number): Time",
+          "params": [
+            {
+              "name": "value",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "Time",
+          "description": "Construct a Time from a minute count."
+        },
+        {
+          "name": "fromSeconds",
+          "signature": "fromSeconds(value: number): Time",
+          "params": [
+            {
+              "name": "value",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "Time",
+          "description": "Construct a Time from a second count."
+        },
+        {
+          "name": "now",
+          "signature": "now(): Time",
+          "params": [],
+          "returnType": "Time",
+          "description": "Current high-resolution monotonic time (performance.now()) as a Time."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "hours",
+          "signature": "hours: TimeInterval",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "milliseconds",
+          "signature": "milliseconds: TimeInterval",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "minutes",
+          "signature": "minutes: TimeInterval",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "oneHour",
+          "signature": "oneHour: Time",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "oneMillisecond",
+          "signature": "oneMillisecond: Time",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "oneMinute",
+          "signature": "oneMinute: Time",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "oneSecond",
+          "signature": "oneSecond: Time",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "seconds",
+          "signature": "seconds: TimeInterval",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "zero",
+          "signature": "zero: Time",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "hours",
+          "signature": "hours: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "milliseconds",
+          "signature": "milliseconds: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "minutes",
+          "signature": "minutes: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "seconds",
+          "signature": "seconds: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/Time.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Time.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/Time.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Time.ts"
+}

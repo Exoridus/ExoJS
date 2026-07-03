@@ -1,0 +1,250 @@
+{
+  "title": "ObservableSize",
+  "description": "A Size subclass that fires a callback whenever `width` or `height` changes. Used internally by layout-aware types to invalidate cached geometry on dimension mutations. Batch mutations via `set()` fire at most one callback per call.",
+  "symbol": "ObservableSize",
+  "kind": "class",
+  "subsystem": "math",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 14,
+  "counts": {
+    "constructors": 1,
+    "methods": 9,
+    "properties": 4,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A Size subclass that fires a callback whenever `width` or `height` changes. Used internally by layout-aware types to invalidate cached geometry on dimension mutations.",
+        "Batch mutations via `set()` fire at most one callback per call."
+      ],
+      "importLine": "import { ObservableSize } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(callback: object, width: number, height: number): ObservableSize",
+          "params": [
+            {
+              "name": "callback",
+              "type": "object",
+              "optional": false
+            },
+            {
+              "name": "width",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "height",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "ObservableSize",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "add",
+          "signature": "add(x: number, y: number): this",
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "clone",
+          "signature": "clone(): this",
+          "params": [],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "copy",
+          "signature": "copy(size: Size): this",
+          "params": [
+            {
+              "name": "size",
+              "type": "Size",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "divide",
+          "signature": "divide(x: number, y: number): this",
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "equals",
+          "signature": "equals(__namedParameters: Partial<Size>): boolean",
+          "params": [
+            {
+              "name": "__namedParameters",
+              "type": "Partial<Size>",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": ""
+        },
+        {
+          "name": "scale",
+          "signature": "scale(x: number, y: number): this",
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "set",
+          "signature": "set(width: number, height: number): this",
+          "params": [
+            {
+              "name": "width",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "height",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "subtract",
+          "signature": "subtract(x: number, y: number): this",
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "zero",
+          "signature": "zero: Size",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "height",
+          "signature": "height: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "width",
+          "signature": "width: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "temp",
+          "signature": "temp: Size",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/math/ObservableSize.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/math/ObservableSize.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/math/ObservableSize.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/math/ObservableSize.ts"
+}

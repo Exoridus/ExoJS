@@ -1,0 +1,154 @@
+{
+  "title": "BoxShape",
+  "description": "Axis-aligned box of `width × height` centred on the collider's local origin — a convenience over PolygonShape. The result is a regular polygon, so it participates in the polygon narrow phase like any other convex shape.",
+  "symbol": "BoxShape",
+  "kind": "class",
+  "subsystem": "physics",
+  "importPath": "@codexo/exojs-physics",
+  "tier": "stable",
+  "memberCount": 12,
+  "counts": {
+    "constructors": 1,
+    "methods": 0,
+    "properties": 11,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Axis-aligned box of `width × height` centred on the collider's local origin — a convenience over PolygonShape. The result is a regular polygon, so it participates in the polygon narrow phase like any other convex shape."
+      ],
+      "importLine": "import { BoxShape } from '@codexo/exojs-physics'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(width: number, height: number): BoxShape",
+          "params": [
+            {
+              "name": "width",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "height",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "BoxShape",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "area",
+          "signature": "area: number",
+          "params": [],
+          "returnType": null,
+          "description": "Surface area in px². mass = density × area."
+        },
+        {
+          "name": "boundingRadius",
+          "signature": "boundingRadius: number",
+          "params": [],
+          "returnType": null,
+          "description": "Radius of the smallest circle about the local origin enclosing the shape."
+        },
+        {
+          "name": "centroidX",
+          "signature": "centroidX: number",
+          "params": [],
+          "returnType": null,
+          "description": "X of the area centroid in local space."
+        },
+        {
+          "name": "centroidY",
+          "signature": "centroidY: number",
+          "params": [],
+          "returnType": null,
+          "description": "Y of the area centroid in local space."
+        },
+        {
+          "name": "count",
+          "signature": "count: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "height",
+          "signature": "height: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "normals",
+          "signature": "normals: readonly number[]",
+          "params": [],
+          "returnType": null,
+          "description": "Outward unit edge normals (edge i spans vertex i → i+1), flattened."
+        },
+        {
+          "name": "type",
+          "signature": "type: \"polygon\"",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "unitInertia",
+          "signature": "unitInertia: number",
+          "params": [],
+          "returnType": null,
+          "description": "Second moment of area (∫ r² dA) about the centroid; inertia = density × unitInertia."
+        },
+        {
+          "name": "vertices",
+          "signature": "vertices: readonly number[]",
+          "params": [],
+          "returnType": null,
+          "description": "Local-space vertices, CCW, flattened."
+        },
+        {
+          "name": "width",
+          "signature": "width: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-physics/src/shapes/BoxShape.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/shapes/BoxShape.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-physics/src/shapes/BoxShape.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/shapes/BoxShape.ts"
+}

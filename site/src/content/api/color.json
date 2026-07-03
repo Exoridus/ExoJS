@@ -1,0 +1,1221 @@
+{
+  "title": "Color",
+  "description": "32-bit RGBA color value with channel-wise accessors. Red, green, and blue are integers in 0..255; alpha is a float in 0..1. Out-of-range values are saturated on assignment (RGB clamped to 0..255 and truncated to an integer, alpha clamped to 0..1) — values outside the range no longer wrap around. The class predefines every CSS named color as a static readonly instance (`Color.aliceBlue`, `Color.cornflowerBlue`, …). These shared instances are intentionally shared — do not mutate them; clone first if you need to customize a starting color. Internally caches the packed RGBA32 representation and a normalized `Float32Array` for upload to GPU buffers; both are invalidated on channel writes and rebuilt lazily.",
+  "symbol": "Color",
+  "kind": "class",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 155,
+  "counts": {
+    "constructors": 1,
+    "methods": 8,
+    "properties": 146,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "32-bit RGBA color value with channel-wise accessors. Red, green, and blue are integers in 0..255; alpha is a float in 0..1. Out-of-range values are saturated on assignment (RGB clamped to 0..255 and truncated to an integer, alpha clamped to 0..1) — values outside the range no longer wrap around.",
+        "The class predefines every CSS named color as a static readonly instance (`Color.aliceBlue`, `Color.cornflowerBlue`, …). These shared instances are intentionally shared — do not mutate them; clone first if you need to customize a starting color.",
+        "Internally caches the packed RGBA32 representation and a normalized `Float32Array` for upload to GPU buffers; both are invalidated on channel writes and rebuilt lazily."
+      ],
+      "importLine": "import { Color } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(r: number, g: number, b: number, a: number): Color",
+          "params": [
+            {
+              "name": "r",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "g",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "b",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "a",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "Color",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "clone",
+          "signature": "clone(): this",
+          "params": [],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "copy",
+          "signature": "copy(color: Color): this",
+          "params": [
+            {
+              "name": "color",
+              "type": "Color",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "equals",
+          "signature": "equals(__namedParameters: Partial<Color>): boolean",
+          "params": [
+            {
+              "name": "__namedParameters",
+              "type": "Partial<Color>",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": ""
+        },
+        {
+          "name": "set",
+          "signature": "set(r: number, g: number, b: number, a: number): this",
+          "params": [
+            {
+              "name": "r",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "g",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "b",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "a",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Set any subset of channels. Omitted parameters default to the current channel value (use this for \"set red, leave the rest\"). RGB are clamped to 0..255; alpha is clamped to 0..1."
+        },
+        {
+          "name": "toArray",
+          "signature": "toArray(normalized: boolean): Float32Array",
+          "params": [
+            {
+              "name": "normalized",
+              "type": "boolean",
+              "optional": false
+            }
+          ],
+          "returnType": "Float32Array",
+          "description": "Return an RGBA Float32Array view backed by an internal cache. Pass normalized = true to map RGB into 0..1 (typical for shader uploads); default returns 0..255 RGB and 0..1 alpha. The returned array is the same instance across calls — copy it if you need a stable snapshot."
+        },
+        {
+          "name": "toRgba",
+          "signature": "toRgba(): number",
+          "params": [],
+          "returnType": "number",
+          "description": "Return the color packed into a single 32-bit RGBA value (R in low byte, A in high byte). Cached after first call until any channel is written. RGB is preserved at every alpha — a fully transparent red and a fully transparent black pack to different values."
+        },
+        {
+          "name": "toString",
+          "signature": "toString(prefixed: boolean): string",
+          "params": [
+            {
+              "name": "prefixed",
+              "type": "boolean",
+              "optional": false
+            }
+          ],
+          "returnType": "string",
+          "description": "Return the RGB channels as a 6-digit hex string. Pass prefixed = false to omit the leading #. Alpha is not included — use Color.toRgba for the full RGBA32 packed form."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "aliceBlue",
+          "signature": "aliceBlue: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "antiqueWhite",
+          "signature": "antiqueWhite: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "aqua",
+          "signature": "aqua: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "aquamarine",
+          "signature": "aquamarine: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "azure",
+          "signature": "azure: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "beige",
+          "signature": "beige: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "bisque",
+          "signature": "bisque: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "black",
+          "signature": "black: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "blanchedAlmond",
+          "signature": "blanchedAlmond: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "blue",
+          "signature": "blue: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "blueViolet",
+          "signature": "blueViolet: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "brown",
+          "signature": "brown: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "burlyWood",
+          "signature": "burlyWood: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "cadetBlue",
+          "signature": "cadetBlue: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "chartreuse",
+          "signature": "chartreuse: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "chocolate",
+          "signature": "chocolate: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "coral",
+          "signature": "coral: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "cornflowerBlue",
+          "signature": "cornflowerBlue: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "cornsilk",
+          "signature": "cornsilk: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "crimson",
+          "signature": "crimson: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "cyan",
+          "signature": "cyan: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "darkBlue",
+          "signature": "darkBlue: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "darkCyan",
+          "signature": "darkCyan: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "darkGoldenrod",
+          "signature": "darkGoldenrod: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "darkGray",
+          "signature": "darkGray: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "darkGreen",
+          "signature": "darkGreen: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "darkKhaki",
+          "signature": "darkKhaki: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "darkMagenta",
+          "signature": "darkMagenta: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "darkOliveGreen",
+          "signature": "darkOliveGreen: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "darkOrange",
+          "signature": "darkOrange: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "darkOrchid",
+          "signature": "darkOrchid: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "darkRed",
+          "signature": "darkRed: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "darkSalmon",
+          "signature": "darkSalmon: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "darkSeaGreen",
+          "signature": "darkSeaGreen: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "darkSlateBlue",
+          "signature": "darkSlateBlue: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "darkSlateGray",
+          "signature": "darkSlateGray: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "darkTurquoise",
+          "signature": "darkTurquoise: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "darkViolet",
+          "signature": "darkViolet: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "deepPink",
+          "signature": "deepPink: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "deepSkyBlue",
+          "signature": "deepSkyBlue: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "dimGray",
+          "signature": "dimGray: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "dodgerBlue",
+          "signature": "dodgerBlue: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "firebrick",
+          "signature": "firebrick: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "floralWhite",
+          "signature": "floralWhite: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "forestGreen",
+          "signature": "forestGreen: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "fuchsia",
+          "signature": "fuchsia: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "gainsboro",
+          "signature": "gainsboro: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "ghostWhite",
+          "signature": "ghostWhite: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "gold",
+          "signature": "gold: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "goldenrod",
+          "signature": "goldenrod: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "gray",
+          "signature": "gray: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "green",
+          "signature": "green: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "greenYellow",
+          "signature": "greenYellow: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "honeydew",
+          "signature": "honeydew: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "hotPink",
+          "signature": "hotPink: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "indianRed",
+          "signature": "indianRed: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "indigo",
+          "signature": "indigo: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "ivory",
+          "signature": "ivory: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "khaki",
+          "signature": "khaki: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "lavender",
+          "signature": "lavender: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "lavenderBlush",
+          "signature": "lavenderBlush: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "lawnGreen",
+          "signature": "lawnGreen: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "lemonChiffon",
+          "signature": "lemonChiffon: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "lightBlue",
+          "signature": "lightBlue: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "lightCoral",
+          "signature": "lightCoral: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "lightCyan",
+          "signature": "lightCyan: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "lightGoldenrodYellow",
+          "signature": "lightGoldenrodYellow: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "lightGray",
+          "signature": "lightGray: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "lightGreen",
+          "signature": "lightGreen: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "lightPink",
+          "signature": "lightPink: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "lightSalmon",
+          "signature": "lightSalmon: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "lightSeaGreen",
+          "signature": "lightSeaGreen: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "lightSkyBlue",
+          "signature": "lightSkyBlue: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "lightSlateGray",
+          "signature": "lightSlateGray: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "lightSteelBlue",
+          "signature": "lightSteelBlue: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "lightYellow",
+          "signature": "lightYellow: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "lime",
+          "signature": "lime: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "limeGreen",
+          "signature": "limeGreen: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "linen",
+          "signature": "linen: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "magenta",
+          "signature": "magenta: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "maroon",
+          "signature": "maroon: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "mediumAquamarine",
+          "signature": "mediumAquamarine: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "mediumBlue",
+          "signature": "mediumBlue: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "mediumOrchid",
+          "signature": "mediumOrchid: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "mediumPurple",
+          "signature": "mediumPurple: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "mediumSeaGreen",
+          "signature": "mediumSeaGreen: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "mediumSlateBlue",
+          "signature": "mediumSlateBlue: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "mediumSpringGreen",
+          "signature": "mediumSpringGreen: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "mediumTurquoise",
+          "signature": "mediumTurquoise: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "mediumVioletRed",
+          "signature": "mediumVioletRed: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "midnightBlue",
+          "signature": "midnightBlue: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "mintCream",
+          "signature": "mintCream: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "mistyRose",
+          "signature": "mistyRose: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "moccasin",
+          "signature": "moccasin: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "navajoWhite",
+          "signature": "navajoWhite: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "navy",
+          "signature": "navy: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "oldLace",
+          "signature": "oldLace: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "olive",
+          "signature": "olive: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "oliveDrab",
+          "signature": "oliveDrab: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "orange",
+          "signature": "orange: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "orangeRed",
+          "signature": "orangeRed: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "orchid",
+          "signature": "orchid: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "paleGoldenrod",
+          "signature": "paleGoldenrod: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "paleGreen",
+          "signature": "paleGreen: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "paleTurquoise",
+          "signature": "paleTurquoise: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "paleVioletRed",
+          "signature": "paleVioletRed: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "papayaWhip",
+          "signature": "papayaWhip: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "peachPuff",
+          "signature": "peachPuff: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "peru",
+          "signature": "peru: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "pink",
+          "signature": "pink: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "plum",
+          "signature": "plum: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "powderBlue",
+          "signature": "powderBlue: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "purple",
+          "signature": "purple: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "red",
+          "signature": "red: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "rosyBrown",
+          "signature": "rosyBrown: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "royalBlue",
+          "signature": "royalBlue: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "saddleBrown",
+          "signature": "saddleBrown: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "salmon",
+          "signature": "salmon: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "sandyBrown",
+          "signature": "sandyBrown: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "seaGreen",
+          "signature": "seaGreen: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "seaShell",
+          "signature": "seaShell: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "sienna",
+          "signature": "sienna: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "silver",
+          "signature": "silver: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "skyBlue",
+          "signature": "skyBlue: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "slateBlue",
+          "signature": "slateBlue: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "slateGray",
+          "signature": "slateGray: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "snow",
+          "signature": "snow: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "springGreen",
+          "signature": "springGreen: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "steelBlue",
+          "signature": "steelBlue: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "tan",
+          "signature": "tan: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "teal",
+          "signature": "teal: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "thistle",
+          "signature": "thistle: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "tomato",
+          "signature": "tomato: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "transparentBlack",
+          "signature": "transparentBlack: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "transparentWhite",
+          "signature": "transparentWhite: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "turquoise",
+          "signature": "turquoise: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "violet",
+          "signature": "violet: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "wheat",
+          "signature": "wheat: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "white",
+          "signature": "white: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "whiteSmoke",
+          "signature": "whiteSmoke: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "yellow",
+          "signature": "yellow: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "yellowGreen",
+          "signature": "yellowGreen: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "a",
+          "signature": "a: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "b",
+          "signature": "b: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "g",
+          "signature": "g: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "r",
+          "signature": "r: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/Color.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Color.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/Color.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Color.ts"
+}

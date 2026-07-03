@@ -1,0 +1,76 @@
+{
+  "title": "LogSeverity",
+  "description": "",
+  "symbol": "LogSeverity",
+  "kind": "enum",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [],
+      "importLine": "import { LogSeverity } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "members",
+      "title": "Members",
+      "members": [
+        {
+          "name": "Debug",
+          "signature": "Debug",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Error",
+          "signature": "Error",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Info",
+          "signature": "Info",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Warning",
+          "signature": "Warning",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/logging.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/logging.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/logging.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/logging.ts"
+}

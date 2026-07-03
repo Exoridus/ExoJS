@@ -1,0 +1,118 @@
+{
+  "title": "GenericDualAnalogGamepadMapping",
+  "description": "Baseline mapping for dual-analog controllers that follow the standard W3C Gamepad API layout (axes 0–3 for both sticks, axes 4–7 auxiliary). Each signed stick axis is exposed three ways for ergonomic binding: - Two direction-split, non-negative channels (e.g. `LeftStickLeft` / `LeftStickRight`) for \"buttons-style\" subscriptions. - One signed aggregate channel (e.g. `LeftStickX`) for direct -1..1 consumption — useful for movement or aiming. Device-specific subclasses (Xbox, PlayStation, Switch Pro, etc.) inherit this layout and override only GamepadMapping.family.",
+  "symbol": "GenericDualAnalogGamepadMapping",
+  "kind": "class",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 6,
+  "counts": {
+    "constructors": 1,
+    "methods": 2,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Baseline mapping for dual-analog controllers that follow the standard W3C Gamepad API layout (axes 0–3 for both sticks, axes 4–7 auxiliary).",
+        "Each signed stick axis is exposed three ways for ergonomic binding: - Two direction-split, non-negative channels (e.g. `LeftStickLeft` / `LeftStickRight`) for \"buttons-style\" subscriptions. - One signed aggregate channel (e.g. `LeftStickX`) for direct -1..1 consumption — useful for movement or aiming.",
+        "Device-specific subclasses (Xbox, PlayStation, Switch Pro, etc.) inherit this layout and override only GamepadMapping.family."
+      ],
+      "importLine": "import { GenericDualAnalogGamepadMapping } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(): GenericDualAnalogGamepadMapping",
+          "params": [],
+          "returnType": "GenericDualAnalogGamepadMapping",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Releases all button and axis control references held by this mapping. Call when the associated gamepad disconnects to allow garbage collection."
+        },
+        {
+          "name": "hasChannel",
+          "signature": "hasChannel(channel: GamepadButtonChannel | GamepadAxisChannel): boolean",
+          "params": [
+            {
+              "name": "channel",
+              "type": "GamepadButtonChannel | GamepadAxisChannel",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Returns true when this mapping declares at least one button or axis control that writes to channel. Use to detect device-specific capabilities at runtime — e.g. before binding an input to a right-stick channel that may not exist on a single Joy-Con."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "axes",
+          "signature": "axes: readonly GamepadAxis[]",
+          "params": [],
+          "returnType": null,
+          "description": "Ordered list of axes, indexed by the Gamepad API axis index."
+        },
+        {
+          "name": "buttons",
+          "signature": "buttons: readonly GamepadButton[]",
+          "params": [],
+          "returnType": null,
+          "description": "Ordered list of buttons, indexed by the Gamepad API button index."
+        },
+        {
+          "name": "family",
+          "signature": "family: GamepadMappingFamily",
+          "params": [],
+          "returnType": null,
+          "description": "Identifies the device family this mapping targets."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/GenericDualAnalogGamepadMapping.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/GenericDualAnalogGamepadMapping.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/GenericDualAnalogGamepadMapping.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/GenericDualAnalogGamepadMapping.ts"
+}

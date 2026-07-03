@@ -1,0 +1,143 @@
+{
+  "title": "TremoloEffect",
+  "description": "Tremolo effect that amplitude-modulates the signal with a sine LFO using native WebAudio nodes. A sine-wave LFO drives a `GainNode`'s gain to produce the characteristic volume pulsing of tremolo. The base gain is `1 - depth` and the LFO peak deviation is `depth`, so the gain oscillates between `1 - 2 * depth` and `1`. Optionally the same LFO can drive a `StereoPannerNode.pan` for a synchronized auto-pan effect. Node graph (`autoPan = false`): ``` inputGain ┬── dryGain ──────────────────────────┐ │ ├── outputGain └── tremoloGain ── wetGain ─────────────┘ lfoOscillator ── lfoGain (depth) ── tremoloGain.gain ``` Node graph (`autoPan = true`): ``` inputGain ┬── dryGain ──────────────────────────────────┐ │ ├── outputGain └── tremoloGain ── panner ── wetGain ──────────┘ lfoOscillator ── lfoGain (depth) ── tremoloGain.gain lfoOscillator ── panGain (depth) ── panner.pan ``` Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet`; `tremoloGain.gain` base = `1 - depth`.",
+  "symbol": "TremoloEffect",
+  "kind": "class",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs-audio-fx",
+  "tier": "stable",
+  "memberCount": 9,
+  "counts": {
+    "constructors": 1,
+    "methods": 1,
+    "properties": 7,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Tremolo effect that amplitude-modulates the signal with a sine LFO using native WebAudio nodes.",
+        "A sine-wave LFO drives a `GainNode`'s gain to produce the characteristic volume pulsing of tremolo. The base gain is `1 - depth` and the LFO peak deviation is `depth`, so the gain oscillates between `1 - 2 * depth` and `1`. Optionally the same LFO can drive a `StereoPannerNode.pan` for a synchronized auto-pan effect.",
+        "Node graph (`autoPan = false`): ``` inputGain ┬── dryGain ──────────────────────────┐ │ ├── outputGain └── tremoloGain ── wetGain ─────────────┘",
+        "lfoOscillator ── lfoGain (depth) ── tremoloGain.gain ```",
+        "Node graph (`autoPan = true`): ``` inputGain ┬── dryGain ──────────────────────────────────┐ │ ├── outputGain └── tremoloGain ── panner ── wetGain ──────────┘",
+        "lfoOscillator ── lfoGain (depth) ── tremoloGain.gain lfoOscillator ── panGain (depth) ── panner.pan ```",
+        "Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet`; `tremoloGain.gain` base = `1 - depth`."
+      ],
+      "importLine": "import { TremoloEffect } from '@codexo/exojs-audio-fx'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(options: TremoloEffectOptions): TremoloEffect",
+          "params": [
+            {
+              "name": "options",
+              "type": "TremoloEffectOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "TremoloEffect",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Disconnects all audio nodes and releases resources. Must be called when the effect is no longer needed."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "autoPan",
+          "signature": "autoPan: boolean",
+          "params": [],
+          "returnType": null,
+          "description": "Whether auto-pan is enabled. Set at construction time via TremoloEffectOptions.autoPan; read-only at runtime. Default false."
+        },
+        {
+          "name": "depth",
+          "signature": "depth: number",
+          "params": [],
+          "returnType": null,
+          "description": "Modulation depth, 0..1. At 0 the effect is transparent; at 0.5 the gain briefly reaches zero at the trough; at depth>0.5 the gain goes negative (phase inversion). Default 0.7. Ramped via setTargetAtTime."
+        },
+        {
+          "name": "inputNode",
+          "signature": "inputNode: AudioNode",
+          "params": [],
+          "returnType": null,
+          "description": "The node where audio enters this effect. Throws if the audio context is not yet initialized."
+        },
+        {
+          "name": "outputNode",
+          "signature": "outputNode: AudioNode",
+          "params": [],
+          "returnType": null,
+          "description": "The node where audio exits this effect. Throws if the audio context is not yet initialized."
+        },
+        {
+          "name": "rateHz",
+          "signature": "rateHz: number",
+          "params": [],
+          "returnType": null,
+          "description": "LFO oscillation rate in Hz. Range 0..20, default 5. Ramped via setTargetAtTime when changed at runtime."
+        },
+        {
+          "name": "ready",
+          "signature": "ready: Promise<void>",
+          "params": [],
+          "returnType": null,
+          "description": "Resolves when the effect is fully initialized. Defaults to immediately-resolved for sync effects."
+        },
+        {
+          "name": "wet",
+          "signature": "wet: number",
+          "params": [],
+          "returnType": null,
+          "description": "Wet (tremolo) mix level, 0..1. The dry level is automatically 1 - wet. Default 1. Ramped via setTargetAtTime when changed at runtime."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-audio-fx/src/effects/TremoloEffect.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/TremoloEffect.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-audio-fx/src/effects/TremoloEffect.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/TremoloEffect.ts"
+}

@@ -1,0 +1,498 @@
+{
+  "title": "SceneNode",
+  "description": "Transform-bearing leaf in the scene-graph hierarchy. Carries position, rotation, scale, skew, origin, and a 2-component Vector `anchor` used to derive `origin` from the local bounds. Implements Collidable so any node can participate directly in the SAT collision pipeline via its AABB or rotated/skewed quad. Transform state is dirty-flag-cached: position/rotation/scale/skew/origin mutations invalidate the local transform; either kind of mutation also invalidates the global transform (own + descendants) and the bounds rect for this node and every Container ancestor up the parent chain. The caches rebuild lazily on the next read. Collision and hit-testing take the cheaper AABB path when the node's *world* box is axis-aligned (its own and any inherited rotation compose to a multiple of 90° with no skew) and the oriented-quad SAT path otherwise. The public `isAlignedBox` getter reports that predicate for this node's own rotation only. `_invalidate*` methods are exported as `public` for friend-class access from Container and InteractionManager; treat them as `@internal`. Subclasses: Container (carries children), RenderNode (carries draw payloads).",
+  "symbol": "SceneNode",
+  "kind": "class",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 44,
+  "counts": {
+    "constructors": 1,
+    "methods": 25,
+    "properties": 18,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Transform-bearing leaf in the scene-graph hierarchy. Carries position, rotation, scale, skew, origin, and a 2-component Vector `anchor` used to derive `origin` from the local bounds. Implements Collidable so any node can participate directly in the SAT collision pipeline via its AABB or rotated/skewed quad.",
+        "Transform state is dirty-flag-cached: position/rotation/scale/skew/origin mutations invalidate the local transform; either kind of mutation also invalidates the global transform (own + descendants) and the bounds rect for this node and every Container ancestor up the parent chain. The caches rebuild lazily on the next read.",
+        "Collision and hit-testing take the cheaper AABB path when the node's *world* box is axis-aligned (its own and any inherited rotation compose to a multiple of 90° with no skew) and the oriented-quad SAT path otherwise. The public `isAlignedBox` getter reports that predicate for this node's own rotation only.",
+        "`_invalidate*` methods are exported as `public` for friend-class access from Container and InteractionManager; treat them as `@internal`.",
+        "Subclasses: Container (carries children), RenderNode (carries draw payloads)."
+      ],
+      "importLine": "import { SceneNode } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(): SceneNode",
+          "params": [],
+          "returnType": "SceneNode",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "_invalidateBoundsCascade",
+          "signature": "_invalidateBoundsCascade(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Mark own Bounds dirty AND propagate up to Container ancestors' Bounds."
+        },
+        {
+          "name": "_invalidateChildrenTransform",
+          "signature": "_invalidateChildrenTransform(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Hook for Container to override. Default: no-op (leaf node has no children)."
+        },
+        {
+          "name": "_invalidateSubtreeTransform",
+          "signature": "_invalidateSubtreeTransform(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Mark own + all descendants' GlobalTransform + Bounds dirty."
+        },
+        {
+          "name": "collidesWith",
+          "signature": "collidesWith(target: Collidable): CollisionResponse | null",
+          "params": [
+            {
+              "name": "target",
+              "type": "Collidable",
+              "optional": false
+            }
+          ],
+          "returnType": "CollisionResponse | null",
+          "description": "Compute a full CollisionResponse between this shape and target. Returns null in two cases: - the shapes do not overlap, **or** - the specific shape-pair combination does not support response generation (e.g. Line against any shape, Ellipse against Ellipse or Polygon). Use intersectsWith for a universal boolean overlap check that works across all supported shape pairs."
+        },
+        {
+          "name": "contains",
+          "signature": "contains(x: number, y: number): boolean",
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Hit-test the world-space point (x, y) against this node. For world-axis-aligned nodes (own and inherited rotation a multiple of 90° and no skew) the AABB equals the oriented box, so the cheap getBounds test is exact. For rotated or skewed nodes the point is mapped back into local space with the inverse of the global transform and tested against the untransformed getLocalBounds — i.e. a true oriented-box test. This is the exact inverse of the forward map that getBounds and the renderer use to place the node's corners, so picking matches the rendered quad instead of over-reporting hits in the empty AABB corners of a rotated node."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "getBounds",
+          "signature": "getBounds(): Rectangle",
+          "params": [],
+          "returnType": "Rectangle",
+          "description": ""
+        },
+        {
+          "name": "getGlobalTransform",
+          "signature": "getGlobalTransform(): Matrix",
+          "params": [],
+          "returnType": "Matrix",
+          "description": ""
+        },
+        {
+          "name": "getLocalBounds",
+          "signature": "getLocalBounds(): Rectangle",
+          "params": [],
+          "returnType": "Rectangle",
+          "description": ""
+        },
+        {
+          "name": "getNormals",
+          "signature": "getNormals(): Vector[]",
+          "params": [],
+          "returnType": "Vector[]",
+          "description": "Return the outward-facing edge normals used by the SAT solver. The array should be cached and reused across calls."
+        },
+        {
+          "name": "getTransform",
+          "signature": "getTransform(): Matrix",
+          "params": [],
+          "returnType": "Matrix",
+          "description": ""
+        },
+        {
+          "name": "intersectsWith",
+          "signature": "intersectsWith(target: Collidable): boolean",
+          "params": [
+            {
+              "name": "target",
+              "type": "Collidable",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Test whether this shape overlaps target using a fast boolean algorithm (no penetration depth or normal computed). Prefer this over collidesWith when only the yes/no result is needed."
+        },
+        {
+          "name": "inView",
+          "signature": "inView(view: View): boolean",
+          "params": [
+            {
+              "name": "view",
+              "type": "View",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": ""
+        },
+        {
+          "name": "move",
+          "signature": "move(x: number, y: number): this",
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "project",
+          "signature": "project(axis: Vector, result: Interval): Interval",
+          "params": [
+            {
+              "name": "axis",
+              "type": "Vector",
+              "optional": false
+            },
+            {
+              "name": "result",
+              "type": "Interval",
+              "optional": false
+            }
+          ],
+          "returnType": "Interval",
+          "description": "Project this shape onto axis and write the scalar min/max into interval. Used internally by the SAT solver."
+        },
+        {
+          "name": "rotate",
+          "signature": "rotate(degrees: number): this",
+          "params": [
+            {
+              "name": "degrees",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "setAnchor",
+          "signature": "setAnchor(x: number, y: number): this",
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "setOrigin",
+          "signature": "setOrigin(x: number, y: number): this",
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "setPosition",
+          "signature": "setPosition(x: number, y: number): this",
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "setRotation",
+          "signature": "setRotation(degrees: number): this",
+          "params": [
+            {
+              "name": "degrees",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "setScale",
+          "signature": "setScale(x: number, y: number): this",
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "setSkew",
+          "signature": "setSkew(x: number, y: number): this",
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "updateBounds",
+          "signature": "updateBounds(): this",
+          "params": [],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "updateParentTransform",
+          "signature": "updateParentTransform(): this",
+          "params": [],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "updateTransform",
+          "signature": "updateTransform(): this",
+          "params": [],
+          "returnType": "this",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "collisionType",
+          "signature": "collisionType: CollisionType",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "flags",
+          "signature": "flags: Flags<SceneNodeTransformFlags>",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "name",
+          "signature": "name: string | null",
+          "params": [],
+          "returnType": null,
+          "description": "Optional human-readable identity for this node. Defaults to null. Purely a label the engine never interprets: useful for debugging, find-by-name lookups, prefab references, and as a stable key when merging serialized state back onto an existing tree. Not required to be unique."
+        },
+        {
+          "name": "anchor",
+          "signature": "anchor: ObservableVector",
+          "params": [],
+          "returnType": null,
+          "description": "Normalized anchor in 0..1 along each axis that derives origin from the current bounds size. (0, 0) = top-left, (0.5, 0.5) = center, (1, 1) = bottom-right. Updates origin whenever the anchor or the local bounds change."
+        },
+        {
+          "name": "cullable",
+          "signature": "cullable: boolean",
+          "params": [],
+          "returnType": null,
+          "description": "When false, this node is never culled by the viewport check and is always considered in-view. Defaults to true."
+        },
+        {
+          "name": "cullArea",
+          "signature": "cullArea: Rectangle | null",
+          "params": [],
+          "returnType": null,
+          "description": "Custom rectangle used for viewport cull intersection test. When set, replaces the default node bounds in cull checks. Set to null to restore default bounds-based culling."
+        },
+        {
+          "name": "isAlignedBox",
+          "signature": "isAlignedBox: boolean",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "origin",
+          "signature": "origin: ObservableVector",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "parent",
+          "signature": "parent: Container | null",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "position",
+          "signature": "position: ObservableVector",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "rotation",
+          "signature": "rotation: number",
+          "params": [],
+          "returnType": null,
+          "description": "Rotation angle in degrees. Wraps via trimRotation on assignment."
+        },
+        {
+          "name": "scale",
+          "signature": "scale: ObservableVector",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "skewX",
+          "signature": "skewX: number",
+          "params": [],
+          "returnType": null,
+          "description": "Horizontal skew angle in degrees. Shears the node along the X axis (positive values lean the top edge right). Combines correctly with rotation and scale."
+        },
+        {
+          "name": "skewY",
+          "signature": "skewY: number",
+          "params": [],
+          "returnType": null,
+          "description": "Vertical skew angle in degrees. Shears the node along the Y axis (positive values lean the left edge downward). Combines correctly with rotation and scale."
+        },
+        {
+          "name": "visible",
+          "signature": "visible: boolean",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "x",
+          "signature": "x: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "y",
+          "signature": "y: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "zIndex",
+          "signature": "zIndex: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/SceneNode.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneNode.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/SceneNode.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneNode.ts"
+}

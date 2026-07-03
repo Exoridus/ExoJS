@@ -1,0 +1,151 @@
+{
+  "title": "EqualizerEffect",
+  "description": "Three-band equalizer (low shelf / peaking mid / high shelf) built from a series chain of `BiquadFilterNode` instances. Gain values are in dB and clamped to ±40 dB. All six parameters (gains + frequencies) are adjustable at runtime via the corresponding setters; gain changes use a short exponential ramp to avoid clicks.",
+  "symbol": "EqualizerEffect",
+  "kind": "class",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs-audio-fx",
+  "tier": "stable",
+  "memberCount": 11,
+  "counts": {
+    "constructors": 1,
+    "methods": 1,
+    "properties": 9,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Three-band equalizer (low shelf / peaking mid / high shelf) built from a series chain of `BiquadFilterNode` instances. Gain values are in dB and clamped to ±40 dB. All six parameters (gains + frequencies) are adjustable at runtime via the corresponding setters; gain changes use a short exponential ramp to avoid clicks."
+      ],
+      "importLine": "import { EqualizerEffect } from '@codexo/exojs-audio-fx'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(options: EqualizerEffectOptions): EqualizerEffect",
+          "params": [
+            {
+              "name": "options",
+              "type": "EqualizerEffectOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "EqualizerEffect",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Disconnects all audio nodes and releases resources. Must be called when the effect is no longer needed."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "high",
+          "signature": "high: number",
+          "params": [],
+          "returnType": null,
+          "description": "High-shelf gain in dB applied above highFrequency. Range −40..40, default 0."
+        },
+        {
+          "name": "highFrequency",
+          "signature": "highFrequency: number",
+          "params": [],
+          "returnType": null,
+          "description": "Cutoff frequency in Hz of the high-shelf band. Default 6000."
+        },
+        {
+          "name": "inputNode",
+          "signature": "inputNode: AudioNode",
+          "params": [],
+          "returnType": null,
+          "description": "The node where audio enters this effect."
+        },
+        {
+          "name": "low",
+          "signature": "low: number",
+          "params": [],
+          "returnType": null,
+          "description": "Low-shelf gain in dB applied below lowFrequency. Range −40..40, default 0."
+        },
+        {
+          "name": "lowFrequency",
+          "signature": "lowFrequency: number",
+          "params": [],
+          "returnType": null,
+          "description": "Cutoff frequency in Hz of the low-shelf band. Default 250."
+        },
+        {
+          "name": "mid",
+          "signature": "mid: number",
+          "params": [],
+          "returnType": null,
+          "description": "Peaking mid-band gain in dB centered at midFrequency. Range −40..40, default 0."
+        },
+        {
+          "name": "midFrequency",
+          "signature": "midFrequency: number",
+          "params": [],
+          "returnType": null,
+          "description": "Center frequency in Hz of the peaking mid band. Default 1500."
+        },
+        {
+          "name": "outputNode",
+          "signature": "outputNode: AudioNode",
+          "params": [],
+          "returnType": null,
+          "description": "The node where audio exits this effect."
+        },
+        {
+          "name": "ready",
+          "signature": "ready: Promise<void>",
+          "params": [],
+          "returnType": null,
+          "description": "Resolves when the effect is fully initialized. Defaults to immediately-resolved for sync effects."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-audio-fx/src/effects/EqualizerEffect.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/EqualizerEffect.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-audio-fx/src/effects/EqualizerEffect.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/EqualizerEffect.ts"
+}

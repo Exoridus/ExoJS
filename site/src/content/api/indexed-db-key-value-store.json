@@ -1,0 +1,144 @@
+{
+  "title": "IndexedDbKeyValueStore",
+  "description": "KeyValueStore over IndexedDB (via IndexedDbStore), using the **structured-clone** algorithm. Unlike WebStorageStore, values are stored *directly* — no `JSON.stringify`. So `Blob`s, `ArrayBuffer`s, typed arrays and nested objects round-trip natively, and there is no string-size ceiling beyond the (large) IndexedDB quota. Use this for binary or large saves; use `WebStorageStore` for small synchronous JSON.",
+  "symbol": "IndexedDbKeyValueStore",
+  "kind": "class",
+  "subsystem": "resources",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 7,
+  "counts": {
+    "constructors": 1,
+    "methods": 6,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "KeyValueStore over IndexedDB (via IndexedDbStore), using the **structured-clone** algorithm.",
+        "Unlike WebStorageStore, values are stored *directly* — no `JSON.stringify`. So `Blob`s, `ArrayBuffer`s, typed arrays and nested objects round-trip natively, and there is no string-size ceiling beyond the (large) IndexedDB quota. Use this for binary or large saves; use `WebStorageStore` for small synchronous JSON."
+      ],
+      "importLine": "import { IndexedDbKeyValueStore } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(nameOrOptions: string | IndexedDbKeyValueStoreOptions): IndexedDbKeyValueStore",
+          "params": [
+            {
+              "name": "nameOrOptions",
+              "type": "string | IndexedDbKeyValueStoreOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "IndexedDbKeyValueStore",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "clear",
+          "signature": "clear(): Promise<boolean>",
+          "params": [],
+          "returnType": "Promise<boolean>",
+          "description": "Remove every entry owned by this store. Resolves true on success."
+        },
+        {
+          "name": "delete",
+          "signature": "delete(key: string): Promise<boolean>",
+          "params": [
+            {
+              "name": "key",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<boolean>",
+          "description": "Remove the entry at key. Resolves true if one existed and was removed."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Synchronously release the underlying database handle."
+        },
+        {
+          "name": "get",
+          "signature": "get(key: string): Promise<T | null>",
+          "params": [
+            {
+              "name": "key",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<T | null>",
+          "description": "Read the value at key, or null when absent."
+        },
+        {
+          "name": "has",
+          "signature": "has(key: string): Promise<boolean>",
+          "params": [
+            {
+              "name": "key",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<boolean>",
+          "description": "Whether an entry exists at key."
+        },
+        {
+          "name": "set",
+          "signature": "set(key: string, value: unknown): Promise<void>",
+          "params": [
+            {
+              "name": "key",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "value",
+              "type": "unknown",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<void>",
+          "description": "Write value at key, replacing any existing entry."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/resources/IndexedDbKeyValueStore.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/IndexedDbKeyValueStore.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/resources/IndexedDbKeyValueStore.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/IndexedDbKeyValueStore.ts"
+}

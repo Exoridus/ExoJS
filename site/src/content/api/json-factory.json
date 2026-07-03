@@ -1,0 +1,142 @@
+{
+  "title": "JsonFactory",
+  "description": "AssetFactory implementation that parses JSON files and exposes them as plain JavaScript values. The parsed value is typed as `unknown`; callers are expected to narrow or cast the result to their specific schema type.",
+  "symbol": "JsonFactory",
+  "kind": "class",
+  "subsystem": "resources",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 7,
+  "counts": {
+    "constructors": 1,
+    "methods": 5,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "AssetFactory implementation that parses JSON files and exposes them as plain JavaScript values.",
+        "The parsed value is typed as `unknown`; callers are expected to narrow or cast the result to their specific schema type."
+      ],
+      "importLine": "import { JsonFactory } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(): JsonFactory",
+          "params": [],
+          "returnType": "JsonFactory",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "create",
+          "signature": "create(source: unknown): Promise<unknown>",
+          "params": [
+            {
+              "name": "source",
+              "type": "unknown",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<unknown>",
+          "description": "Returns the already-parsed value unchanged."
+        },
+        {
+          "name": "createObjectUrl",
+          "signature": "createObjectUrl(blob: Blob): string",
+          "params": [
+            {
+              "name": "blob",
+              "type": "Blob",
+              "optional": false
+            }
+          ],
+          "returnType": "string",
+          "description": "Creates an object URL from blob and registers it for automatic cleanup when destroy is called. Prefer this over calling URL.createObjectURL directly inside a factory subclass so the URL is always tracked."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Revokes every object URL that was created via createObjectUrl and clears the internal tracking pool."
+        },
+        {
+          "name": "process",
+          "signature": "process(response: Response): Promise<unknown>",
+          "params": [
+            {
+              "name": "response",
+              "type": "Response",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<unknown>",
+          "description": "Parses the response body as JSON and returns the resulting value."
+        },
+        {
+          "name": "revokeObjectUrl",
+          "signature": "revokeObjectUrl(objectUrl: string): void",
+          "params": [
+            {
+              "name": "objectUrl",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "storageName",
+          "signature": "storageName: \"json\"",
+          "params": [],
+          "returnType": null,
+          "description": "Identifier used as the object-store / storage-namespace key when this factory's assets are persisted to a CacheStore."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/resources/factories/JsonFactory.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/JsonFactory.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/resources/factories/JsonFactory.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/JsonFactory.ts"
+}

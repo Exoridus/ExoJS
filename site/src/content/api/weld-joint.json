@@ -1,0 +1,121 @@
+{
+  "title": "WeldJoint",
+  "description": "Rigidly fixes the relative position and orientation of two bodies (they move as one rigid body). A 2-DOF point constraint (like RevoluteJoint) plus a 1-DOF angular constraint, solved in the sub-step loop. Both locks default to rigid; set `linearHertz`/`angularHertz` for a springy weld.",
+  "symbol": "WeldJoint",
+  "kind": "class",
+  "subsystem": "physics",
+  "importPath": "@codexo/exojs-physics",
+  "tier": "stable",
+  "memberCount": 8,
+  "counts": {
+    "constructors": 1,
+    "methods": 0,
+    "properties": 7,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Rigidly fixes the relative position and orientation of two bodies (they move as one rigid body). A 2-DOF point constraint (like RevoluteJoint) plus a 1-DOF angular constraint, solved in the sub-step loop. Both locks default to rigid; set `linearHertz`/`angularHertz` for a springy weld."
+      ],
+      "importLine": "import { WeldJoint } from '@codexo/exojs-physics'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(options: WeldJointOptions): WeldJoint",
+          "params": [
+            {
+              "name": "options",
+              "type": "WeldJointOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "WeldJoint",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "angularHertz",
+          "signature": "angularHertz: number",
+          "params": [],
+          "returnType": null,
+          "description": "Soft frequency for the angle lock (0 = rigid)."
+        },
+        {
+          "name": "bodyA",
+          "signature": "bodyA: PhysicsBody",
+          "params": [],
+          "returnType": null,
+          "description": "First constrained body."
+        },
+        {
+          "name": "bodyB",
+          "signature": "bodyB: PhysicsBody",
+          "params": [],
+          "returnType": null,
+          "description": "Second constrained body."
+        },
+        {
+          "name": "dampingRatio",
+          "signature": "dampingRatio: number",
+          "params": [],
+          "returnType": null,
+          "description": "Soft damping ratio."
+        },
+        {
+          "name": "enabled",
+          "signature": "enabled: boolean",
+          "params": [],
+          "returnType": null,
+          "description": "When false, the joint is skipped by the solver (but still tracked by the world)."
+        },
+        {
+          "name": "linearHertz",
+          "signature": "linearHertz: number",
+          "params": [],
+          "returnType": null,
+          "description": "Soft frequency for the position lock (0 = rigid)."
+        },
+        {
+          "name": "referenceAngle",
+          "signature": "referenceAngle: number",
+          "params": [],
+          "returnType": null,
+          "description": "Locked relative angle angleB − angleA."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-physics/src/joints/WeldJoint.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/joints/WeldJoint.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-physics/src/joints/WeldJoint.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/joints/WeldJoint.ts"
+}

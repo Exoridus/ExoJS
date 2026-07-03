@@ -1,0 +1,401 @@
+{
+  "title": "Matrix",
+  "description": "Mutable 3×3 row-major affine transformation matrix used throughout the rendering and physics pipeline. Layout (row, column): ``` | a b x | | c d y | | e f z | ``` `a`/`d` are the X/Y scale + rotation cosines, `b`/`c` are the shear/rotation sines, `x`/`y` are the translation components, and `e`/`f`/`z` are the homogeneous row (typically `0, 0, 1`). All mutating methods return `this` for chaining. `Matrix.temp` is a shared scratch instance. `Matrix.identity` is a read-only identity constant.",
+  "symbol": "Matrix",
+  "kind": "class",
+  "subsystem": "math",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 23,
+  "counts": {
+    "constructors": 1,
+    "methods": 11,
+    "properties": 11,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Mutable 3×3 row-major affine transformation matrix used throughout the rendering and physics pipeline.",
+        "Layout (row, column): ``` | a b x | | c d y | | e f z | ``` `a`/`d` are the X/Y scale + rotation cosines, `b`/`c` are the shear/rotation sines, `x`/`y` are the translation components, and `e`/`f`/`z` are the homogeneous row (typically `0, 0, 1`).",
+        "All mutating methods return `this` for chaining. `Matrix.temp` is a shared scratch instance. `Matrix.identity` is a read-only identity constant."
+      ],
+      "importLine": "import { Matrix } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(a: number, b: number, x: number, c: number, d: number, y: number, e: number, f: number, z: number): Matrix",
+          "params": [
+            {
+              "name": "a",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "b",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "c",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "d",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "e",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "f",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "z",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "Matrix",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "clone",
+          "signature": "clone(): this",
+          "params": [],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "combine",
+          "signature": "combine(matrix: Matrix): this",
+          "params": [
+            {
+              "name": "matrix",
+              "type": "Matrix",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Post-multiply this matrix by matrix (i.e. this = this × matrix). Applies matrix's transform after this matrix's transform. Mutates in place and returns this for chaining."
+        },
+        {
+          "name": "copy",
+          "signature": "copy(matrix: Matrix): this",
+          "params": [
+            {
+              "name": "matrix",
+              "type": "Matrix",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "equals",
+          "signature": "equals(__namedParameters: Partial<Matrix>): boolean",
+          "params": [
+            {
+              "name": "__namedParameters",
+              "type": "Partial<Matrix>",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": ""
+        },
+        {
+          "name": "getInverse",
+          "signature": "getInverse(result: Matrix): Matrix",
+          "params": [
+            {
+              "name": "result",
+              "type": "Matrix",
+              "optional": false
+            }
+          ],
+          "returnType": "Matrix",
+          "description": "Compute the inverse of this matrix and write it into result. Defaults to this (in-place inversion). When the matrix is singular (determinant = 0) result is set to the identity. Returns result."
+        },
+        {
+          "name": "rotate",
+          "signature": "rotate(angle: number, centerX: number, centerY: number): Matrix",
+          "params": [
+            {
+              "name": "angle",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "centerX",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "centerY",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "Matrix",
+          "description": "Apply a rotation of angle **degrees** around (centerX, centerY) to this matrix. Mutates in place and returns this for chaining."
+        },
+        {
+          "name": "scale",
+          "signature": "scale(scaleX: number, scaleY: number, centerX: number, centerY: number): Matrix",
+          "params": [
+            {
+              "name": "scaleX",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "scaleY",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "centerX",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "centerY",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "Matrix",
+          "description": "Apply a scale of (scaleX, scaleY) around (centerX, centerY) to this matrix. Mutates in place and returns this for chaining."
+        },
+        {
+          "name": "set",
+          "signature": "set(a: number, b: number, x: number, c: number, d: number, y: number, e: number, f: number, z: number): this",
+          "params": [
+            {
+              "name": "a",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "b",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "c",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "d",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "e",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "f",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "z",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "toArray",
+          "signature": "toArray(transpose: boolean): Float32Array",
+          "params": [
+            {
+              "name": "transpose",
+              "type": "boolean",
+              "optional": false
+            }
+          ],
+          "returnType": "Float32Array",
+          "description": "Serialise this matrix into a Float32Array suitable for a WebGL uniform. The internal Float32Array is lazily allocated and reused across calls. When transpose is false (default) the array is in column-major order (as OpenGL expects). When true it is row-major."
+        },
+        {
+          "name": "translate",
+          "signature": "translate(x: number, y: number): Matrix",
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "Matrix",
+          "description": "Apply a translation of (x, y) to this matrix. Mutates in place and returns this for chaining."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "a",
+          "signature": "a: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "b",
+          "signature": "b: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "c",
+          "signature": "c: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "d",
+          "signature": "d: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "e",
+          "signature": "e: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "f",
+          "signature": "f: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "x",
+          "signature": "x: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "y",
+          "signature": "y: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "z",
+          "signature": "z: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "identity",
+          "signature": "identity: Matrix",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "temp",
+          "signature": "temp: Matrix",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/math/Matrix.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/math/Matrix.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/math/Matrix.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/math/Matrix.ts"
+}

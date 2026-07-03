@@ -1,0 +1,120 @@
+{
+  "title": "PolarVector",
+  "description": "A 2D vector expressed in polar coordinates: `radius` (magnitude) and `phi` (angle in radians, measured from the positive X-axis).",
+  "symbol": "PolarVector",
+  "kind": "class",
+  "subsystem": "math",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 5,
+  "counts": {
+    "constructors": 1,
+    "methods": 2,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A 2D vector expressed in polar coordinates: `radius` (magnitude) and `phi` (angle in radians, measured from the positive X-axis)."
+      ],
+      "importLine": "import { PolarVector } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(radius: number, angle: number): PolarVector",
+          "params": [
+            {
+              "name": "radius",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "angle",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "PolarVector",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "toVector",
+          "signature": "toVector(): Vector",
+          "params": [],
+          "returnType": "Vector",
+          "description": "Convert to a Cartesian Vector. Returns Vector.temp — do not store the reference across calls."
+        },
+        {
+          "name": "fromVector",
+          "signature": "fromVector(vector: Vector): PolarVector",
+          "params": [
+            {
+              "name": "vector",
+              "type": "Vector",
+              "optional": false
+            }
+          ],
+          "returnType": "PolarVector",
+          "description": "Create a PolarVector from a Cartesian vector, preserving both magnitude and direction. The roundtrip PolarVector.fromVector(v).toVector() reproduces v (modulo float precision)."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "phi",
+          "signature": "phi: number",
+          "params": [],
+          "returnType": null,
+          "description": "Angle in radians, measured from the positive X-axis."
+        },
+        {
+          "name": "radius",
+          "signature": "radius: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/math/PolarVector.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/math/PolarVector.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/math/PolarVector.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/math/PolarVector.ts"
+}

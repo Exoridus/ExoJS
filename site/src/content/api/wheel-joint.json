@@ -1,0 +1,149 @@
+{
+  "title": "WheelJoint",
+  "description": "A wheel attached to a chassis: free to **spin** (no rotation lock) and sprung along a **suspension axis** (a soft spring), but locked **laterally** (it cannot slide perpendicular to the axis). Optionally driven by a rotation motor and/or bounded by a suspension-travel limit. Used for vehicles. Solved in the sub-step loop, warm-started.",
+  "symbol": "WheelJoint",
+  "kind": "class",
+  "subsystem": "physics",
+  "importPath": "@codexo/exojs-physics",
+  "tier": "stable",
+  "memberCount": 12,
+  "counts": {
+    "constructors": 1,
+    "methods": 0,
+    "properties": 11,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A wheel attached to a chassis: free to **spin** (no rotation lock) and sprung along a **suspension axis** (a soft spring), but locked **laterally** (it cannot slide perpendicular to the axis). Optionally driven by a rotation motor and/or bounded by a suspension-travel limit. Used for vehicles. Solved in the sub-step loop, warm-started."
+      ],
+      "importLine": "import { WheelJoint } from '@codexo/exojs-physics'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(options: WheelJointOptions): WheelJoint",
+          "params": [
+            {
+              "name": "options",
+              "type": "WheelJointOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "WheelJoint",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "bodyA",
+          "signature": "bodyA: PhysicsBody",
+          "params": [],
+          "returnType": null,
+          "description": "First constrained body."
+        },
+        {
+          "name": "bodyB",
+          "signature": "bodyB: PhysicsBody",
+          "params": [],
+          "returnType": null,
+          "description": "Second constrained body."
+        },
+        {
+          "name": "dampingRatio",
+          "signature": "dampingRatio: number",
+          "params": [],
+          "returnType": null,
+          "description": "Suspension spring damping ratio."
+        },
+        {
+          "name": "enabled",
+          "signature": "enabled: boolean",
+          "params": [],
+          "returnType": null,
+          "description": "When false, the joint is skipped by the solver (but still tracked by the world)."
+        },
+        {
+          "name": "enableLimit",
+          "signature": "enableLimit: boolean",
+          "params": [],
+          "returnType": null,
+          "description": "When true, the axis translation is constrained to [lowerTranslation, upperTranslation]."
+        },
+        {
+          "name": "enableMotor",
+          "signature": "enableMotor: boolean",
+          "params": [],
+          "returnType": null,
+          "description": "When true, the motor drives the wheel's spin toward motorSpeed."
+        },
+        {
+          "name": "hertz",
+          "signature": "hertz: number",
+          "params": [],
+          "returnType": null,
+          "description": "Suspension spring frequency in Hz (0 = rigid axis)."
+        },
+        {
+          "name": "lowerTranslation",
+          "signature": "lowerTranslation: number",
+          "params": [],
+          "returnType": null,
+          "description": "Lower suspension-travel limit along the axis."
+        },
+        {
+          "name": "maxMotorTorque",
+          "signature": "maxMotorTorque: number",
+          "params": [],
+          "returnType": null,
+          "description": "Maximum motor torque."
+        },
+        {
+          "name": "motorSpeed",
+          "signature": "motorSpeed: number",
+          "params": [],
+          "returnType": null,
+          "description": "Target relative angular velocity (rad/s) for the motor."
+        },
+        {
+          "name": "upperTranslation",
+          "signature": "upperTranslation: number",
+          "params": [],
+          "returnType": null,
+          "description": "Upper suspension-travel limit along the axis."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-physics/src/joints/WheelJoint.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/joints/WheelJoint.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-physics/src/joints/WheelJoint.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/joints/WheelJoint.ts"
+}

@@ -1,0 +1,153 @@
+{
+  "title": "LimiterEffect",
+  "description": "Brick-wall limiter backed by a Web Audio `DynamicsCompressorNode` configured for hard limiting: a fixed high ratio (~20), zero knee (hard knee), and a fast attack. Use it as a final-chain safety net to prevent clipping and protect downstream output. The compressor `ratio` and `knee` default to brick-wall values (20 and 0 respectively) but remain configurable, unlike a truly fixed limiter, because callers occasionally want a softer, more compressor-like limiting curve (lower ratio) or a gentler transition into limiting (larger knee) without switching to CompressorEffect and losing the dry/wet mix. The effect also exposes a dry/wet mix for API consistency and parallel processing workflows, though a fully-wet signal (`wet = 1`) is the typical configuration. Node graph: ``` input(GainNode) → dryGain → output(GainNode) input → compressor → wetGain → output ``` Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet`.",
+  "symbol": "LimiterEffect",
+  "kind": "class",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs-audio-fx",
+  "tier": "stable",
+  "memberCount": 11,
+  "counts": {
+    "constructors": 1,
+    "methods": 1,
+    "properties": 9,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Brick-wall limiter backed by a Web Audio `DynamicsCompressorNode` configured for hard limiting: a fixed high ratio (~20), zero knee (hard knee), and a fast attack. Use it as a final-chain safety net to prevent clipping and protect downstream output.",
+        "The compressor `ratio` and `knee` default to brick-wall values (20 and 0 respectively) but remain configurable, unlike a truly fixed limiter, because callers occasionally want a softer, more compressor-like limiting curve (lower ratio) or a gentler transition into limiting (larger knee) without switching to CompressorEffect and losing the dry/wet mix. The effect also exposes a dry/wet mix for API consistency and parallel processing workflows, though a fully-wet signal (`wet = 1`) is the typical configuration.",
+        "Node graph: ``` input(GainNode) → dryGain → output(GainNode) input → compressor → wetGain → output ``` Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet`."
+      ],
+      "importLine": "import { LimiterEffect } from '@codexo/exojs-audio-fx'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(options: LimiterEffectOptions): LimiterEffect",
+          "params": [
+            {
+              "name": "options",
+              "type": "LimiterEffectOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "LimiterEffect",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Disconnects all audio nodes and releases resources. Must be called when the effect is no longer needed."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "attack",
+          "signature": "attack: number",
+          "params": [],
+          "returnType": null,
+          "description": "Attack time in seconds for the limiter to engage. Range 0..1, default 0.003. Changes are ramped smoothly via setTargetAtTime."
+        },
+        {
+          "name": "inputNode",
+          "signature": "inputNode: AudioNode",
+          "params": [],
+          "returnType": null,
+          "description": "The node where audio enters this effect. Throws if the audio context is not yet initialized."
+        },
+        {
+          "name": "knee",
+          "signature": "knee: number",
+          "params": [],
+          "returnType": null,
+          "description": "Width in dB of the transition region around the threshold (soft knee). Range 0..40, default 0 (hard knee). Raise for a gentler transition into limiting. Changes are ramped smoothly via setTargetAtTime."
+        },
+        {
+          "name": "outputNode",
+          "signature": "outputNode: AudioNode",
+          "params": [],
+          "returnType": null,
+          "description": "The node where audio exits this effect. Throws if the audio context is not yet initialized."
+        },
+        {
+          "name": "ratio",
+          "signature": "ratio: number",
+          "params": [],
+          "returnType": null,
+          "description": "Input-to-output dB ratio above the threshold. Range 1..20, default 20 (brick-wall). Lower for a softer, more compressor-like limiter. Changes are ramped smoothly via setTargetAtTime."
+        },
+        {
+          "name": "ready",
+          "signature": "ready: Promise<void>",
+          "params": [],
+          "returnType": null,
+          "description": "Resolves when the effect is fully initialized. Defaults to immediately-resolved for sync effects."
+        },
+        {
+          "name": "release",
+          "signature": "release: number",
+          "params": [],
+          "returnType": null,
+          "description": "Release time in seconds for the limiter to disengage. Range 0..1, default 0.25. Changes are ramped smoothly via setTargetAtTime."
+        },
+        {
+          "name": "threshold",
+          "signature": "threshold: number",
+          "params": [],
+          "returnType": null,
+          "description": "Threshold in dBFS above which limiting is applied. Range −60..0, default −3. Changes are ramped smoothly via setTargetAtTime."
+        },
+        {
+          "name": "wet",
+          "signature": "wet: number",
+          "params": [],
+          "returnType": null,
+          "description": "Dry/wet mix level, 0..1. The dry level is automatically 1 - wet. Changes are ramped smoothly via setTargetAtTime. Default 1.0."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-audio-fx/src/effects/LimiterEffect.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/LimiterEffect.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-audio-fx/src/effects/LimiterEffect.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/LimiterEffect.ts"
+}

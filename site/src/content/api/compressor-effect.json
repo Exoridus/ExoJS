@@ -1,0 +1,151 @@
+{
+  "title": "CompressorEffect",
+  "description": "Dynamic-range compressor backed by a Web Audio `DynamicsCompressorNode`. Reduces the volume of loud signals above a threshold, evening out the perceived loudness of a mix. All parameter changes are applied with a short smoothing ramp so they are artifact-free during playback.",
+  "symbol": "CompressorEffect",
+  "kind": "class",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs-audio-fx",
+  "tier": "stable",
+  "memberCount": 11,
+  "counts": {
+    "constructors": 1,
+    "methods": 1,
+    "properties": 9,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Dynamic-range compressor backed by a Web Audio `DynamicsCompressorNode`. Reduces the volume of loud signals above a threshold, evening out the perceived loudness of a mix. All parameter changes are applied with a short smoothing ramp so they are artifact-free during playback."
+      ],
+      "importLine": "import { CompressorEffect } from '@codexo/exojs-audio-fx'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(options: CompressorEffectOptions): CompressorEffect",
+          "params": [
+            {
+              "name": "options",
+              "type": "CompressorEffectOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "CompressorEffect",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Disconnects all audio nodes and releases resources. Must be called when the effect is no longer needed."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "attack",
+          "signature": "attack: number",
+          "params": [],
+          "returnType": null,
+          "description": "Time in seconds for the compressor to engage after the signal exceeds the threshold. Range 0..1, default 0.003."
+        },
+        {
+          "name": "inputNode",
+          "signature": "inputNode: AudioNode",
+          "params": [],
+          "returnType": null,
+          "description": "The node where audio enters this effect."
+        },
+        {
+          "name": "knee",
+          "signature": "knee: number",
+          "params": [],
+          "returnType": null,
+          "description": "Width in dB of the transition region around the threshold (soft knee). Range 0..40, default 30."
+        },
+        {
+          "name": "outputNode",
+          "signature": "outputNode: AudioNode",
+          "params": [],
+          "returnType": null,
+          "description": "The node where audio exits this effect."
+        },
+        {
+          "name": "ratio",
+          "signature": "ratio: number",
+          "params": [],
+          "returnType": null,
+          "description": "Input-to-output dB ratio above the threshold. Range 1..20, default 12."
+        },
+        {
+          "name": "ready",
+          "signature": "ready: Promise<void>",
+          "params": [],
+          "returnType": null,
+          "description": "Resolves when the effect is fully initialized. Defaults to immediately-resolved for sync effects."
+        },
+        {
+          "name": "reduction",
+          "signature": "reduction: number",
+          "params": [],
+          "returnType": null,
+          "description": "Live gain reduction in dB applied by the compressor right now. Always <= 0 (or 0 when the compressor isn't engaging). Read-only — drive input level meters / sidechain visualisations off this value. Returns 0 until the underlying node has been created (before the audio context is ready)."
+        },
+        {
+          "name": "release",
+          "signature": "release: number",
+          "params": [],
+          "returnType": null,
+          "description": "Time in seconds for the compressor to disengage after the signal drops below the threshold. Range 0..1, default 0.25."
+        },
+        {
+          "name": "threshold",
+          "signature": "threshold: number",
+          "params": [],
+          "returnType": null,
+          "description": "Level above which compression begins, in dBFS. Range −100..0, default −24."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-audio-fx/src/effects/CompressorEffect.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/CompressorEffect.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-audio-fx/src/effects/CompressorEffect.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/CompressorEffect.ts"
+}

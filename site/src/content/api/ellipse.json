@@ -1,0 +1,326 @@
+{
+  "title": "Ellipse",
+  "description": "Mutable axis-aligned ellipse shape defined by a centre position and separate horizontal (`rx`) and vertical (`ry`) half-radii. Implements ShapeLike for use in the intersection pipeline. `collidesWith` supports: SceneNode (AABB), Rectangle, Circle, Polygon, and Ellipse. Ellipse-vs-Line always returns `null` — use `intersectsWith`.",
+  "symbol": "Ellipse",
+  "kind": "class",
+  "subsystem": "math",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 21,
+  "counts": {
+    "constructors": 1,
+    "methods": 13,
+    "properties": 7,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Mutable axis-aligned ellipse shape defined by a centre position and separate horizontal (`rx`) and vertical (`ry`) half-radii. Implements ShapeLike for use in the intersection pipeline.",
+        "`collidesWith` supports: SceneNode (AABB), Rectangle, Circle, Polygon, and Ellipse. Ellipse-vs-Line always returns `null` — use `intersectsWith`."
+      ],
+      "importLine": "import { Ellipse } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(x: number, y: number, halfWidth: number, halfHeight: number): Ellipse",
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "halfWidth",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "halfHeight",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "Ellipse",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "clone",
+          "signature": "clone(): this",
+          "params": [],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "collidesWith",
+          "signature": "collidesWith(target: Collidable): CollisionResponse | null",
+          "params": [
+            {
+              "name": "target",
+              "type": "Collidable",
+              "optional": false
+            }
+          ],
+          "returnType": "CollisionResponse | null",
+          "description": "Compute a full CollisionResponse between this shape and target. Returns null in two cases: - the shapes do not overlap, **or** - the specific shape-pair combination does not support response generation (e.g. Line against any shape, Ellipse against Ellipse or Polygon). Use intersectsWith for a universal boolean overlap check that works across all supported shape pairs."
+        },
+        {
+          "name": "contains",
+          "signature": "contains(x: number, y: number): boolean",
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Returns true if the point (x, y) is inside this shape."
+        },
+        {
+          "name": "copy",
+          "signature": "copy(ellipse: Ellipse): this",
+          "params": [
+            {
+              "name": "ellipse",
+              "type": "Ellipse",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "equals",
+          "signature": "equals(__namedParameters: Partial<Ellipse>): boolean",
+          "params": [
+            {
+              "name": "__namedParameters",
+              "type": "Partial<Ellipse>",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": ""
+        },
+        {
+          "name": "getBounds",
+          "signature": "getBounds(): Rectangle",
+          "params": [],
+          "returnType": "Rectangle",
+          "description": ""
+        },
+        {
+          "name": "getNormals",
+          "signature": "getNormals(): Vector[]",
+          "params": [],
+          "returnType": "Vector[]",
+          "description": "Return the outward-facing edge normals used by the SAT solver. The array should be cached and reused across calls."
+        },
+        {
+          "name": "intersectsWith",
+          "signature": "intersectsWith(target: Collidable): boolean",
+          "params": [
+            {
+              "name": "target",
+              "type": "Collidable",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Test whether this shape overlaps target using a fast boolean algorithm (no penetration depth or normal computed). Prefer this over collidesWith when only the yes/no result is needed."
+        },
+        {
+          "name": "project",
+          "signature": "project(axis: Vector, result: Interval): Interval",
+          "params": [
+            {
+              "name": "axis",
+              "type": "Vector",
+              "optional": false
+            },
+            {
+              "name": "result",
+              "type": "Interval",
+              "optional": false
+            }
+          ],
+          "returnType": "Interval",
+          "description": "Project this shape onto axis and write the scalar min/max into interval. Used internally by the SAT solver."
+        },
+        {
+          "name": "set",
+          "signature": "set(x: number, y: number, radiusX: number, radiusY: number): this",
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "radiusX",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "radiusY",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "setPosition",
+          "signature": "setPosition(x: number, y: number): this",
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "setRadius",
+          "signature": "setRadius(radiusX: number, radiusY: number): this",
+          "params": [
+            {
+              "name": "radiusX",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "radiusY",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "collisionType",
+          "signature": "collisionType: CollisionType",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "position",
+          "signature": "position: Vector",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "radius",
+          "signature": "radius: Vector",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "rx",
+          "signature": "rx: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "ry",
+          "signature": "ry: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "x",
+          "signature": "x: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "y",
+          "signature": "y: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/math/Ellipse.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/math/Ellipse.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/math/Ellipse.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/math/Ellipse.ts"
+}

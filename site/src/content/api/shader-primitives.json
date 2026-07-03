@@ -1,0 +1,190 @@
+{
+  "title": "ShaderPrimitives",
+  "description": "GLSL primitive type tokens used to describe ShaderAttribute and ShaderUniform data types. Values are WebGL2 GLenum constants returned by `gl.getActiveAttrib` / `gl.getActiveUniform`.",
+  "symbol": "ShaderPrimitives",
+  "kind": "enum",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 20,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "GLSL primitive type tokens used to describe ShaderAttribute and ShaderUniform data types. Values are WebGL2 GLenum constants returned by `gl.getActiveAttrib` / `gl.getActiveUniform`."
+      ],
+      "importLine": "import { ShaderPrimitives } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "members",
+      "title": "Members",
+      "members": [
+        {
+          "name": "Bool",
+          "signature": "Bool",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "BoolVec2",
+          "signature": "BoolVec2",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "BoolVec3",
+          "signature": "BoolVec3",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "BoolVec4",
+          "signature": "BoolVec4",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Float",
+          "signature": "Float",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "FloatMat2",
+          "signature": "FloatMat2",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "FloatMat3",
+          "signature": "FloatMat3",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "FloatMat4",
+          "signature": "FloatMat4",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "FloatVec2",
+          "signature": "FloatVec2",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "FloatVec3",
+          "signature": "FloatVec3",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "FloatVec4",
+          "signature": "FloatVec4",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Int",
+          "signature": "Int",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "IntVec2",
+          "signature": "IntVec2",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "IntVec3",
+          "signature": "IntVec3",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "IntVec4",
+          "signature": "IntVec4",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Sampler2D",
+          "signature": "Sampler2D",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "UnsignedInt",
+          "signature": "UnsignedInt",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "UnsignedIntVec2",
+          "signature": "UnsignedIntVec2",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "UnsignedIntVec3",
+          "signature": "UnsignedIntVec3",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "UnsignedIntVec4",
+          "signature": "UnsignedIntVec4",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/types.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/types.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/types.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/types.ts"
+}

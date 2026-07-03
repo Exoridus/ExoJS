@@ -2,7 +2,7 @@ import { glob } from 'astro/loaders';
 import { z } from 'astro/zod';
 import { defineCollection } from 'astro:content';
 
-import { API_SUBSYSTEM_ORDER } from './lib/api-reference';
+import { apiSymbolSchema } from './lib/api-schema';
 
 // Guide ordering, grouping, and learning metadata live in
 // src/lib/guide-structure.ts (the single source of truth, reconciled with these
@@ -16,23 +16,13 @@ const guide = defineCollection({
     }),
 });
 
+// The API reference is generated as typed, structured JSON (one file per
+// symbol) by site/scripts/build-api.ts. The schema lives in ./lib/api-schema
+// so the generator validates its own output against the exact shape the pages
+// consume via `entry.data` — no MDX body, no regex re-parse, no escape dance.
 const api = defineCollection({
-    loader: glob({ base: './src/content/api', pattern: '**/*.{md,mdx}' }),
-    schema: z.object({
-        title: z.string(),
-        description: z.string().default(''),
-        symbol: z.string(),
-        kind: z.enum(['class', 'enum', 'interface', 'type']),
-        // Single source of truth: api-reference.ts owns the subsystem list (order
-        // + labels). Deriving the validation enum from it keeps the two in sync,
-        // so adding a package's subsystem there can't silently break the build.
-        subsystem: z.enum(API_SUBSYSTEM_ORDER),
-        importPath: z.string(),
-        memberCount: z.number().int().min(0).default(0),
-        sections: z.array(z.string()).default([]),
-        sourcePath: z.string().optional(),
-        sourceUrl: z.string().optional(),
-    }),
+    loader: glob({ base: './src/content/api', pattern: '**/*.json' }),
+    schema: apiSymbolSchema,
 });
 
 export const collections = { guide, api };

@@ -1,0 +1,99 @@
+{
+  "title": "CollisionType",
+  "description": "Discriminant tag carried by every Collidable so that intersection and collision routines can dispatch to the correct algorithm without `instanceof` checks.",
+  "symbol": "CollisionType",
+  "kind": "enum",
+  "subsystem": "math",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 7,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Discriminant tag carried by every Collidable so that intersection and collision routines can dispatch to the correct algorithm without `instanceof` checks."
+      ],
+      "importLine": "import { CollisionType } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "members",
+      "title": "Members",
+      "members": [
+        {
+          "name": "Circle",
+          "signature": "Circle",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Ellipse",
+          "signature": "Ellipse",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Line",
+          "signature": "Line",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Point",
+          "signature": "Point",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Polygon",
+          "signature": "Polygon",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Rectangle",
+          "signature": "Rectangle",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "SceneNode",
+          "signature": "SceneNode",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/math/Collision.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/math/Collision.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/math/Collision.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/math/Collision.ts"
+}

@@ -1,0 +1,184 @@
+{
+  "title": "Capabilities",
+  "description": "Frozen snapshot of host-environment feature support: which renderer backends are available, which input modalities are present, audio / fullscreen / vibration / OffscreenCanvas / Worker support, max touch points, and the resolved devicePixelRatio. Construction is private — the only public entry is Capabilities.ready, a lazy-cached `Promise<Capabilities>` that fires the (mostly) async probes on first access. The resolved instance is frozen and never mutates. Application.capabilities returns the same instance once `app.start()` has resolved.",
+  "symbol": "Capabilities",
+  "kind": "class",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 19,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 19,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Frozen snapshot of host-environment feature support: which renderer backends are available, which input modalities are present, audio / fullscreen / vibration / OffscreenCanvas / Worker support, max touch points, and the resolved devicePixelRatio.",
+        "Construction is private — the only public entry is Capabilities.ready, a lazy-cached `Promise<Capabilities>` that fires the (mostly) async probes on first access. The resolved instance is frozen and never mutates. Application.capabilities returns the same instance once `app.start()` has resolved."
+      ],
+      "importLine": "import { Capabilities } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "audio",
+          "signature": "audio: boolean",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "deviceMemory",
+          "signature": "deviceMemory: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "devicePixelRatio",
+          "signature": "devicePixelRatio: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "fullscreen",
+          "signature": "fullscreen: boolean",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "gamepad",
+          "signature": "gamepad: boolean",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "imageBitmap",
+          "signature": "imageBitmap: boolean",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "keyboard",
+          "signature": "keyboard: boolean",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "maxTouchPoints",
+          "signature": "maxTouchPoints: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "offscreenCanvas",
+          "signature": "offscreenCanvas: boolean",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "pointer",
+          "signature": "pointer: boolean",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "touch",
+          "signature": "touch: boolean",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "vibration",
+          "signature": "vibration: boolean",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "webgl2",
+          "signature": "webgl2: boolean",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "webgpu",
+          "signature": "webgpu: boolean",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "webgpuAdapter",
+          "signature": "webgpuAdapter: GPUAdapter | null",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "webgpuArchitecture",
+          "signature": "webgpuArchitecture: string | null",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "webgpuVendor",
+          "signature": "webgpuVendor: string | null",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "webWorkers",
+          "signature": "webWorkers: boolean",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "ready",
+          "signature": "ready: Promise<Capabilities>",
+          "params": [],
+          "returnType": null,
+          "description": "Lazy-cached Promise that resolves to a frozen Capabilities instance. The first read kicks off the async probes (currently just the WebGPU adapter request); every subsequent read returns the same Promise. Concurrent callers share the in-flight detection — no double work. Early-warmup pattern for callers who want to overlap detection with other startup work: ts void Capabilities.ready; // fire-and-forget; starts probes now // ... unrelated bootstrap ... const caps = await Capabilities.ready; // typically already resolved "
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/capabilities.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/capabilities.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/capabilities.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/capabilities.ts"
+}

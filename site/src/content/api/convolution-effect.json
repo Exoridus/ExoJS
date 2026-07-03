@@ -1,0 +1,145 @@
+{
+  "title": "ConvolutionEffect",
+  "description": "Convolution effect that convolves the input signal with a user-supplied impulse response (IR). Unlike ReverbEffect, which generates a procedural noise-based IR, `ConvolutionEffect` accepts a *real* decoded IR — enabling convolution reverb from acoustic-space captures, cabinet/speaker simulations, telephone/pipe character filtering, and any other linear time-invariant transformation. Pass the IR as an `AudioBuffer` (typically decoded via `AudioContext.decodeAudioData`) or as a `Sound` (its `audioBuffer` is used). Omitting the IR leaves `convolver.buffer` as `null`, making the wet path silent and the effect act as a passthrough until setImpulse is called — safe to add to a bus before an IR is available. Node graph: ``` input(GainNode) → dryGain → output(GainNode) input → convolver → wetGain → output ``` Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet × gain`.",
+  "symbol": "ConvolutionEffect",
+  "kind": "class",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs-audio-fx",
+  "tier": "stable",
+  "memberCount": 9,
+  "counts": {
+    "constructors": 1,
+    "methods": 2,
+    "properties": 6,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Convolution effect that convolves the input signal with a user-supplied impulse response (IR). Unlike ReverbEffect, which generates a procedural noise-based IR, `ConvolutionEffect` accepts a *real* decoded IR — enabling convolution reverb from acoustic-space captures, cabinet/speaker simulations, telephone/pipe character filtering, and any other linear time-invariant transformation.",
+        "Pass the IR as an `AudioBuffer` (typically decoded via `AudioContext.decodeAudioData`) or as a `Sound` (its `audioBuffer` is used). Omitting the IR leaves `convolver.buffer` as `null`, making the wet path silent and the effect act as a passthrough until setImpulse is called — safe to add to a bus before an IR is available.",
+        "Node graph: ``` input(GainNode) → dryGain → output(GainNode) input → convolver → wetGain → output ``` Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet × gain`."
+      ],
+      "importLine": "import { ConvolutionEffect } from '@codexo/exojs-audio-fx'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(options: ConvolutionEffectOptions): ConvolutionEffect",
+          "params": [
+            {
+              "name": "options",
+              "type": "ConvolutionEffectOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "ConvolutionEffect",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Disconnects all audio nodes and releases resources. Must be called when the effect is no longer needed."
+        },
+        {
+          "name": "setImpulse",
+          "signature": "setImpulse(ir: AudioBuffer | Sound | null): void",
+          "params": [
+            {
+              "name": "ir",
+              "type": "AudioBuffer | Sound | null",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Set or replace the impulse response. Accepts a decoded AudioBuffer, a Sound (its audioBuffer is used), or null to clear the IR (wet path goes silent). Safe to call before the audio context is ready — the impulse is stored and applied once nodes are created. **Web Audio note:** normalize is written to the convolver *before* buffer is assigned, as required by the spec for the value to take effect."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "gain",
+          "signature": "gain: number",
+          "params": [],
+          "returnType": null,
+          "description": "Makeup gain multiplier applied to the wet path. Range 0..4, default 1. Adjusting this changes the wet-path amplitude without altering the dry/wet balance ratio."
+        },
+        {
+          "name": "inputNode",
+          "signature": "inputNode: AudioNode",
+          "params": [],
+          "returnType": null,
+          "description": "The node where audio enters this effect. Throws if the audio context is not yet initialized."
+        },
+        {
+          "name": "normalize",
+          "signature": "normalize: boolean",
+          "params": [],
+          "returnType": null,
+          "description": "Whether the browser normalizes the IR for equal-power loudness. Mirrors ConvolverNode.normalize. Default true. Changing this at runtime re-assigns the current buffer so the new value takes effect (a Web Audio requirement: normalize is only applied on buffer assignment)."
+        },
+        {
+          "name": "outputNode",
+          "signature": "outputNode: AudioNode",
+          "params": [],
+          "returnType": null,
+          "description": "The node where audio exits this effect. Throws if the audio context is not yet initialized."
+        },
+        {
+          "name": "ready",
+          "signature": "ready: Promise<void>",
+          "params": [],
+          "returnType": null,
+          "description": "Resolves when the effect is fully initialized. Defaults to immediately-resolved for sync effects."
+        },
+        {
+          "name": "wet",
+          "signature": "wet: number",
+          "params": [],
+          "returnType": null,
+          "description": "Wet (convolved) mix level, 0..1. The dry level is automatically 1 - wet. Changes are ramped smoothly via setTargetAtTime. Default 1.0."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-audio-fx/src/effects/ConvolutionEffect.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/ConvolutionEffect.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-audio-fx/src/effects/ConvolutionEffect.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/ConvolutionEffect.ts"
+}

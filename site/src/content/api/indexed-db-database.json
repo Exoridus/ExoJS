@@ -1,0 +1,237 @@
+{
+  "title": "IndexedDbDatabase",
+  "description": "Database implementation backed by the browser's IndexedDB API. Each object store is created with a `keyPath` of `\"name\"`, so records are stored as `{ name, data }` objects. By default the database is initialised with stores for every built-in asset type (font, image, sound, etc.); pass a custom `storeNames` list to restrict or extend the set. Schema migrations are handled in two modes: - **Default** — the constructor-supplied `storeNames` list is diff'd against the existing stores and objects stores added/deleted accordingly. - **Explicit** — a `migrations` map keyed by target version runs the corresponding callback for each version between `oldVersion` and `newVersion`, allowing precise schema evolution.",
+  "symbol": "IndexedDbDatabase",
+  "kind": "class",
+  "subsystem": "resources",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 13,
+  "counts": {
+    "constructors": 1,
+    "methods": 9,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Database implementation backed by the browser's IndexedDB API.",
+        "Each object store is created with a `keyPath` of `\"name\"`, so records are stored as `{ name, data }` objects. By default the database is initialised with stores for every built-in asset type (font, image, sound, etc.); pass a custom `storeNames` list to restrict or extend the set.",
+        "Schema migrations are handled in two modes: - **Default** — the constructor-supplied `storeNames` list is diff'd against the existing stores and objects stores added/deleted accordingly. - **Explicit** — a `migrations` map keyed by target version runs the corresponding callback for each version between `oldVersion` and `newVersion`, allowing precise schema evolution."
+      ],
+      "importLine": "import { IndexedDbDatabase } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(name: string, version: number, storeNames: readonly string[], migrations?: Record<number, object>): IndexedDbDatabase",
+          "params": [
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "version",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "storeNames",
+              "type": "readonly string[]",
+              "optional": false
+            },
+            {
+              "name": "migrations",
+              "type": "Record<number, object>",
+              "optional": true
+            }
+          ],
+          "returnType": "IndexedDbDatabase",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "clearStorage",
+          "signature": "clearStorage(type: string): Promise<boolean>",
+          "params": [
+            {
+              "name": "type",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<boolean>",
+          "description": "Removes all entries from the type object store without dropping the store itself. Resolves true on success."
+        },
+        {
+          "name": "connect",
+          "signature": "connect(): Promise<boolean>",
+          "params": [],
+          "returnType": "Promise<boolean>",
+          "description": "Opens the database connection, running any pending schema migrations. Resolves to true when the connection is ready; rejects on error. Calling this when already connected is a no-op that resolves true."
+        },
+        {
+          "name": "delete",
+          "signature": "delete(type: string, name: string): Promise<boolean>",
+          "params": [
+            {
+              "name": "type",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<boolean>",
+          "description": "Deletes the entry with the given name from the type object store. Resolves true on success."
+        },
+        {
+          "name": "deleteStorage",
+          "signature": "deleteStorage(): Promise<boolean>",
+          "params": [],
+          "returnType": "Promise<boolean>",
+          "description": "Disconnects and then permanently deletes the entire database. Resolves true on success."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Synchronously closes any open handles without waiting for pending transactions to complete. Prefer disconnect for graceful teardown."
+        },
+        {
+          "name": "disconnect",
+          "signature": "disconnect(): Promise<boolean>",
+          "params": [],
+          "returnType": "Promise<boolean>",
+          "description": "Closes the live database connection and resets the connected state. Always resolves true; safe to call when not connected."
+        },
+        {
+          "name": "getObjectStore",
+          "signature": "getObjectStore(type: string, transactionMode: IDBTransactionMode): Promise<IDBObjectStore>",
+          "params": [
+            {
+              "name": "type",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "transactionMode",
+              "type": "IDBTransactionMode",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<IDBObjectStore>",
+          "description": "Opens (or re-uses) an IDBObjectStore for type in the given transactionMode. Calls connect automatically if the database is not yet open. Used internally by the load/save/delete methods; protected so subclasses can extend with custom transaction shapes."
+        },
+        {
+          "name": "load",
+          "signature": "load(type: string, name: string): Promise<T | null>",
+          "params": [
+            {
+              "name": "type",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<T | null>",
+          "description": "Retrieves the entry with the given name from the type object store, or null if no such entry exists."
+        },
+        {
+          "name": "save",
+          "signature": "save(type: string, name: string, data: unknown): Promise<void>",
+          "params": [
+            {
+              "name": "type",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "data",
+              "type": "unknown",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<void>",
+          "description": "Persists data under name within the type object store, replacing any existing entry with the same name."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "name",
+          "signature": "name: string",
+          "params": [],
+          "returnType": null,
+          "description": "Human-readable database identifier, typically an application name."
+        },
+        {
+          "name": "version",
+          "signature": "version: number",
+          "params": [],
+          "returnType": null,
+          "description": "Schema version used during upgradeneeded migrations."
+        },
+        {
+          "name": "connected",
+          "signature": "connected: boolean",
+          "params": [],
+          "returnType": null,
+          "description": "Whether a live connection to the underlying database is open."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/resources/IndexedDbDatabase.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/IndexedDbDatabase.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/resources/IndexedDbDatabase.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/IndexedDbDatabase.ts"
+}

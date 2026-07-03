@@ -1,0 +1,147 @@
+{
+  "title": "TextureFactory",
+  "description": "AssetFactory implementation that loads PNG, JPG, WebP, AVIF, and other browser-supported raster image formats and produces a GPU-ready Texture instance. MIME type detection is performed automatically from the buffer's magic bytes; pass an explicit `mimeType` to override. Sampler state (wrap, filter, etc.) can be configured via `samplerOptions`.",
+  "symbol": "TextureFactory",
+  "kind": "class",
+  "subsystem": "resources",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 7,
+  "counts": {
+    "constructors": 1,
+    "methods": 5,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "AssetFactory implementation that loads PNG, JPG, WebP, AVIF, and other browser-supported raster image formats and produces a GPU-ready Texture instance.",
+        "MIME type detection is performed automatically from the buffer's magic bytes; pass an explicit `mimeType` to override. Sampler state (wrap, filter, etc.) can be configured via `samplerOptions`."
+      ],
+      "importLine": "import { TextureFactory } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(): TextureFactory",
+          "params": [],
+          "returnType": "TextureFactory",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "create",
+          "signature": "create(source: ArrayBuffer, options: TextureFactoryOptions): Promise<Texture>",
+          "params": [
+            {
+              "name": "source",
+              "type": "ArrayBuffer",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "TextureFactoryOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<Texture>",
+          "description": "Decodes image bytes and wraps the result in a Texture. Prefers createImageBitmap for a zero-copy GPU-upload path. Falls back to a temporary object URL + <img> element on environments that do not support createImageBitmap."
+        },
+        {
+          "name": "createObjectUrl",
+          "signature": "createObjectUrl(blob: Blob): string",
+          "params": [
+            {
+              "name": "blob",
+              "type": "Blob",
+              "optional": false
+            }
+          ],
+          "returnType": "string",
+          "description": "Creates an object URL from blob and registers it for automatic cleanup when destroy is called. Prefer this over calling URL.createObjectURL directly inside a factory subclass so the URL is always tracked."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Revokes every object URL that was created via createObjectUrl and clears the internal tracking pool."
+        },
+        {
+          "name": "process",
+          "signature": "process(response: Response): Promise<ArrayBuffer>",
+          "params": [
+            {
+              "name": "response",
+              "type": "Response",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<ArrayBuffer>",
+          "description": "Reads the full response body as an ArrayBuffer for MIME-type detection and blob construction."
+        },
+        {
+          "name": "revokeObjectUrl",
+          "signature": "revokeObjectUrl(objectUrl: string): void",
+          "params": [
+            {
+              "name": "objectUrl",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "storageName",
+          "signature": "storageName: \"texture\"",
+          "params": [],
+          "returnType": null,
+          "description": "Identifier used as the object-store / storage-namespace key when this factory's assets are persisted to a CacheStore."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/resources/factories/TextureFactory.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/TextureFactory.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/resources/factories/TextureFactory.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/TextureFactory.ts"
+}

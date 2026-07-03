@@ -1,0 +1,137 @@
+{
+  "title": "LineSegment",
+  "description": "Random point on a line segment between `(x0, y0)` and `(x1, y1)`. Uniform parameter distribution: `t = Math.random()` then `lerp(start, end, t)`.",
+  "symbol": "LineSegment",
+  "kind": "class",
+  "subsystem": "particles",
+  "importPath": "@codexo/exojs-particles",
+  "tier": "stable",
+  "memberCount": 6,
+  "counts": {
+    "constructors": 1,
+    "methods": 1,
+    "properties": 4,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Random point on a line segment between `(x0, y0)` and `(x1, y1)`. Uniform parameter distribution: `t = Math.random()` then `lerp(start, end, t)`."
+      ],
+      "importLine": "import { LineSegment } from '@codexo/exojs-particles'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(x0: number, y0: number, x1: number, y1: number): LineSegment",
+          "params": [
+            {
+              "name": "x0",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y0",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "x1",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y1",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "LineSegment",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "sample",
+          "signature": "sample(out: Vector): Vector",
+          "params": [
+            {
+              "name": "out",
+              "type": "Vector",
+              "optional": false
+            }
+          ],
+          "returnType": "Vector",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "x0",
+          "signature": "x0: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "x1",
+          "signature": "x1: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "y0",
+          "signature": "y0: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "y1",
+          "signature": "y1: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-particles/src/distributions/LineSegment.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/distributions/LineSegment.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-particles/src/distributions/LineSegment.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/distributions/LineSegment.ts"
+}

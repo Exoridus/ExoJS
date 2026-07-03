@@ -1,0 +1,960 @@
+{
+  "title": "UIRoot",
+  "description": "Root of a scene's screen-fixed UI layer. Reached through Scene.ui; you do not construct it directly. Unlike Scene.root, the UI layer is **auto-rendered** by the SceneManager after `Scene.draw()`, through the RenderingContext.screenView — so its children live in screen space (origin top-left, `0..width` × `0..height`) and never scroll with the camera. Pointer hit-testing and keyboard focus are routed to UI nodes in that same screen space, ahead of the world layer. Add widgets with `scene.ui.addChild(...)`. The UIRoot.onResize signal fires whenever the screen size changes, so anchored widgets can re-layout.",
+  "symbol": "UIRoot",
+  "kind": "class",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 95,
+  "counts": {
+    "constructors": 1,
+    "methods": 42,
+    "properties": 38,
+    "events": 14
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Root of a scene's screen-fixed UI layer. Reached through Scene.ui; you do not construct it directly.",
+        "Unlike Scene.root, the UI layer is **auto-rendered** by the SceneManager after `Scene.draw()`, through the RenderingContext.screenView — so its children live in screen space (origin top-left, `0..width` × `0..height`) and never scroll with the camera. Pointer hit-testing and keyboard focus are routed to UI nodes in that same screen space, ahead of the world layer.",
+        "Add widgets with `scene.ui.addChild(...)`. The UIRoot.onResize signal fires whenever the screen size changes, so anchored widgets can re-layout."
+      ],
+      "importLine": "import { UIRoot } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(): UIRoot",
+          "params": [],
+          "returnType": "UIRoot",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "_invalidateBoundsCascade",
+          "signature": "_invalidateBoundsCascade(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Mark own Bounds dirty AND propagate up to Container ancestors' Bounds."
+        },
+        {
+          "name": "_invalidateChildrenTransform",
+          "signature": "_invalidateChildrenTransform(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Hook for Container to override. Default: no-op (leaf node has no children)."
+        },
+        {
+          "name": "_invalidateSubtreeTransform",
+          "signature": "_invalidateSubtreeTransform(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Mark own + all descendants' GlobalTransform + Bounds dirty."
+        },
+        {
+          "name": "addChild",
+          "signature": "addChild(children: RenderNode[]): this",
+          "params": [
+            {
+              "name": "children",
+              "type": "RenderNode[]",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Append one or more children to the end of the child list. Each child is detached from its previous parent (if any) before being added."
+        },
+        {
+          "name": "addChildAt",
+          "signature": "addChildAt(child: RenderNode, index: number): this",
+          "params": [
+            {
+              "name": "child",
+              "type": "RenderNode",
+              "optional": false
+            },
+            {
+              "name": "index",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Insert child at index in the child list. The child is detached from any previous parent first. Throws if index is out of bounds. Self-as-child is a no-op."
+        },
+        {
+          "name": "addFilter",
+          "signature": "addFilter(filter: Filter): this",
+          "params": [
+            {
+              "name": "filter",
+              "type": "Filter",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "blur",
+          "signature": "blur(): this",
+          "params": [],
+          "returnType": "this",
+          "description": "Release keyboard focus from this node if it currently holds it."
+        },
+        {
+          "name": "clearFilters",
+          "signature": "clearFilters(): this",
+          "params": [],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "collidesWith",
+          "signature": "collidesWith(target: Collidable): CollisionResponse | null",
+          "params": [
+            {
+              "name": "target",
+              "type": "Collidable",
+              "optional": false
+            }
+          ],
+          "returnType": "CollisionResponse | null",
+          "description": "Compute a full CollisionResponse between this shape and target. Returns null in two cases: - the shapes do not overlap, **or** - the specific shape-pair combination does not support response generation (e.g. Line against any shape, Ellipse against Ellipse or Polygon). Use intersectsWith for a universal boolean overlap check that works across all supported shape pairs."
+        },
+        {
+          "name": "contains",
+          "signature": "contains(x: number, y: number): boolean",
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Hit-test the world-space point (x, y) against this node. For world-axis-aligned nodes (own and inherited rotation a multiple of 90° and no skew) the AABB equals the oriented box, so the cheap getBounds test is exact. For rotated or skewed nodes the point is mapped back into local space with the inverse of the global transform and tested against the untransformed getLocalBounds — i.e. a true oriented-box test. This is the exact inverse of the forward map that getBounds and the renderer use to place the node's corners, so picking matches the rendered quad instead of over-reporting hits in the empty AABB corners of a rotated node."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "focus",
+          "signature": "focus(): this",
+          "params": [],
+          "returnType": "this",
+          "description": "Request keyboard focus for this node through its owning focus service."
+        },
+        {
+          "name": "getBounds",
+          "signature": "getBounds(): Rectangle",
+          "params": [],
+          "returnType": "Rectangle",
+          "description": ""
+        },
+        {
+          "name": "getChildAt",
+          "signature": "getChildAt(index: number): RenderNode",
+          "params": [
+            {
+              "name": "index",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "RenderNode",
+          "description": ""
+        },
+        {
+          "name": "getChildIndex",
+          "signature": "getChildIndex(child: RenderNode): number",
+          "params": [
+            {
+              "name": "child",
+              "type": "RenderNode",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": ""
+        },
+        {
+          "name": "getGlobalTransform",
+          "signature": "getGlobalTransform(): Matrix",
+          "params": [],
+          "returnType": "Matrix",
+          "description": ""
+        },
+        {
+          "name": "getLocalBounds",
+          "signature": "getLocalBounds(): Rectangle",
+          "params": [],
+          "returnType": "Rectangle",
+          "description": ""
+        },
+        {
+          "name": "getNormals",
+          "signature": "getNormals(): Vector[]",
+          "params": [],
+          "returnType": "Vector[]",
+          "description": "Return the outward-facing edge normals used by the SAT solver. The array should be cached and reused across calls."
+        },
+        {
+          "name": "getTransform",
+          "signature": "getTransform(): Matrix",
+          "params": [],
+          "returnType": "Matrix",
+          "description": ""
+        },
+        {
+          "name": "intersectsWith",
+          "signature": "intersectsWith(target: Collidable): boolean",
+          "params": [
+            {
+              "name": "target",
+              "type": "Collidable",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Test whether this shape overlaps target using a fast boolean algorithm (no penetration depth or normal computed). Prefer this over collidesWith when only the yes/no result is needed."
+        },
+        {
+          "name": "invalidateCache",
+          "signature": "invalidateCache(): this",
+          "params": [],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "inView",
+          "signature": "inView(view: View): boolean",
+          "params": [
+            {
+              "name": "view",
+              "type": "View",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": ""
+        },
+        {
+          "name": "move",
+          "signature": "move(x: number, y: number): this",
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "project",
+          "signature": "project(axis: Vector, result: Interval): Interval",
+          "params": [
+            {
+              "name": "axis",
+              "type": "Vector",
+              "optional": false
+            },
+            {
+              "name": "result",
+              "type": "Interval",
+              "optional": false
+            }
+          ],
+          "returnType": "Interval",
+          "description": "Project this shape onto axis and write the scalar min/max into interval. Used internally by the SAT solver."
+        },
+        {
+          "name": "removeChild",
+          "signature": "removeChild(child: RenderNode): this",
+          "params": [
+            {
+              "name": "child",
+              "type": "RenderNode",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Remove child from this container. No-op if not present."
+        },
+        {
+          "name": "removeChildAt",
+          "signature": "removeChildAt(index: number): this",
+          "params": [
+            {
+              "name": "index",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "removeChildren",
+          "signature": "removeChildren(begin: number, end: number): this",
+          "params": [
+            {
+              "name": "begin",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "end",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Remove children in the half-open range [begin, end). Defaults to the entire child list. Throws if the range is invalid."
+        },
+        {
+          "name": "removeFilter",
+          "signature": "removeFilter(filter: Filter): this",
+          "params": [
+            {
+              "name": "filter",
+              "type": "Filter",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "render",
+          "signature": "render(backend: RenderBackend): this",
+          "params": [
+            {
+              "name": "backend",
+              "type": "RenderBackend",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Raw rendering entry point. Direct backend access — bypasses the RenderPlan pipeline machinery. Prefer the high-level RenderingContext.render path via the owning RenderingContext wherever possible."
+        },
+        {
+          "name": "rotate",
+          "signature": "rotate(degrees: number): this",
+          "params": [
+            {
+              "name": "degrees",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "setAnchor",
+          "signature": "setAnchor(x: number, y: number): this",
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "setChildIndex",
+          "signature": "setChildIndex(child: RenderNode, index: number): this",
+          "params": [
+            {
+              "name": "child",
+              "type": "RenderNode",
+              "optional": false
+            },
+            {
+              "name": "index",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "setOrigin",
+          "signature": "setOrigin(x: number, y: number): this",
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "setPosition",
+          "signature": "setPosition(x: number, y: number): this",
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "setRotation",
+          "signature": "setRotation(degrees: number): this",
+          "params": [
+            {
+              "name": "degrees",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "setScale",
+          "signature": "setScale(x: number, y: number): this",
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "setSkew",
+          "signature": "setSkew(x: number, y: number): this",
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "swapChildren",
+          "signature": "swapChildren(firstChild: RenderNode, secondChild: RenderNode): this",
+          "params": [
+            {
+              "name": "firstChild",
+              "type": "RenderNode",
+              "optional": false
+            },
+            {
+              "name": "secondChild",
+              "type": "RenderNode",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "updateBounds",
+          "signature": "updateBounds(): this",
+          "params": [],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "updateParentTransform",
+          "signature": "updateParentTransform(): this",
+          "params": [],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "updateTransform",
+          "signature": "updateTransform(): this",
+          "params": [],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "setInternalSpriteFactory",
+          "signature": "setInternalSpriteFactory(factory: object | null): void",
+          "params": [
+            {
+              "name": "factory",
+              "type": "object | null",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "clip",
+          "signature": "clip: boolean",
+          "params": [],
+          "returnType": null,
+          "description": "When true, descendants are geometrically clipped to clipShape. Unlike mask (which is alpha/visibility masking), clip is a hard geometric boundary: - clipShape === null — clip to this node's world-space bounds (getBounds), using the GPU scissor fast path. - clipShape is a Rectangle — clip to that world-space rectangle via scissor. - clipShape is a Geometry — clip to the geometry's silhouette via the stencil buffer (WebGL2). Only fragments inside the shape survive. Clipping wraps the node's final (filtered/masked) output and acts as a render barrier: draw commands are never reordered or batched across the clip boundary."
+        },
+        {
+          "name": "clipShape",
+          "signature": "clipShape: Rectangle | Geometry | null",
+          "params": [],
+          "returnType": null,
+          "description": "Clip region used when clip is true. A Rectangle (or null for the node's bounds) maps to the scissor fast path; a Geometry maps to the stencil path. Has no effect while clip is false."
+        },
+        {
+          "name": "collisionType",
+          "signature": "collisionType: CollisionType",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "cursor",
+          "signature": "cursor: string | null",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "draggable",
+          "signature": "draggable: boolean",
+          "params": [],
+          "returnType": null,
+          "description": "When true and interactive is also true, this node will be automatically repositioned to follow the pointer during a drag gesture. The framework captures the pointer offset at drag-start so the node doesn't snap to the cursor position. Both interactive and draggable must be set for dragging to work — a draggable but non-interactive node will never receive pointerdown and therefore cannot start a drag."
+        },
+        {
+          "name": "flags",
+          "signature": "flags: Flags<SceneNodeTransformFlags>",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "focusable",
+          "signature": "focusable: boolean",
+          "params": [],
+          "returnType": null,
+          "description": "When true, this node can receive keyboard focus — via focus, Tab traversal, or app.focus.focus(node) — and is delivered key events through onKeyDown / onKeyUp while focused."
+        },
+        {
+          "name": "name",
+          "signature": "name: string | null",
+          "params": [],
+          "returnType": null,
+          "description": "Optional human-readable identity for this node. Defaults to null. Purely a label the engine never interprets: useful for debugging, find-by-name lookups, prefab references, and as a stable key when merging serialized state back onto an existing tree. Not required to be unique."
+        },
+        {
+          "name": "preserveDrawOrder",
+          "signature": "preserveDrawOrder: boolean",
+          "params": [],
+          "returnType": null,
+          "description": "When true, material-aware overlap reordering is disabled for this node's draw-order scope. Draw commands are submitted in exact document order (after scope-local z-sorting), preserving the painter's guarantee irrespective of material compatibility or AABB safety analysis. Adjacency coalescing of consecutive same-material draws still applies; it does not change visual output order."
+        },
+        {
+          "name": "tabIndex",
+          "signature": "tabIndex: number",
+          "params": [],
+          "returnType": null,
+          "description": "Tab-traversal order among focusable nodes in the same focus scope. Lower values are visited first; equal values keep document (tree) order."
+        },
+        {
+          "name": "anchor",
+          "signature": "anchor: ObservableVector",
+          "params": [],
+          "returnType": null,
+          "description": "Normalized anchor in 0..1 along each axis that derives origin from the current bounds size. (0, 0) = top-left, (0.5, 0.5) = center, (1, 1) = bottom-right. Updates origin whenever the anchor or the local bounds change."
+        },
+        {
+          "name": "bottom",
+          "signature": "bottom: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "cacheAsBitmap",
+          "signature": "cacheAsBitmap: boolean",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "children",
+          "signature": "children: RenderNode[]",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "cullable",
+          "signature": "cullable: boolean",
+          "params": [],
+          "returnType": null,
+          "description": "When false, this node is never culled by the viewport check and is always considered in-view. Defaults to true."
+        },
+        {
+          "name": "cullArea",
+          "signature": "cullArea: Rectangle | null",
+          "params": [],
+          "returnType": null,
+          "description": "Custom rectangle used for viewport cull intersection test. When set, replaces the default node bounds in cull checks. Set to null to restore default bounds-based culling."
+        },
+        {
+          "name": "filters",
+          "signature": "filters: readonly Filter[]",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "height",
+          "signature": "height: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "interactive",
+          "signature": "interactive: boolean",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "isAlignedBox",
+          "signature": "isAlignedBox: boolean",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "left",
+          "signature": "left: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "mask",
+          "signature": "mask: MaskSource",
+          "params": [],
+          "returnType": null,
+          "description": "The mask source that controls visibility of this node's render output. See MaskSource for accepted source types and their semantics. Setting to null removes any active mask. Setting a RenderNode that is this is rejected (a node cannot mask itself); other cycles (mask of mask of self) are not detected."
+        },
+        {
+          "name": "origin",
+          "signature": "origin: ObservableVector",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "parent",
+          "signature": "parent: Container | null",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "position",
+          "signature": "position: ObservableVector",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "right",
+          "signature": "right: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "rotation",
+          "signature": "rotation: number",
+          "params": [],
+          "returnType": null,
+          "description": "Rotation angle in degrees. Wraps via trimRotation on assignment."
+        },
+        {
+          "name": "scale",
+          "signature": "scale: ObservableVector",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "screenHeight",
+          "signature": "screenHeight: number",
+          "params": [],
+          "returnType": null,
+          "description": "Screen height the UI is laid out against, in logical pixels."
+        },
+        {
+          "name": "screenWidth",
+          "signature": "screenWidth: number",
+          "params": [],
+          "returnType": null,
+          "description": "Screen width the UI is laid out against, in logical pixels."
+        },
+        {
+          "name": "skewX",
+          "signature": "skewX: number",
+          "params": [],
+          "returnType": null,
+          "description": "Horizontal skew angle in degrees. Shears the node along the X axis (positive values lean the top edge right). Combines correctly with rotation and scale."
+        },
+        {
+          "name": "skewY",
+          "signature": "skewY: number",
+          "params": [],
+          "returnType": null,
+          "description": "Vertical skew angle in degrees. Shears the node along the Y axis (positive values lean the left edge downward). Combines correctly with rotation and scale."
+        },
+        {
+          "name": "top",
+          "signature": "top: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "visible",
+          "signature": "visible: boolean",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "width",
+          "signature": "width: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "x",
+          "signature": "x: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "y",
+          "signature": "y: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "zIndex",
+          "signature": "zIndex: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "events",
+      "title": "Events",
+      "members": [
+        {
+          "name": "onResize",
+          "signature": "onResize: Signal<[width, height]>",
+          "params": [],
+          "returnType": null,
+          "description": "Fires with (width, height) whenever the screen size changes."
+        },
+        {
+          "name": "onBlur",
+          "signature": "onBlur: Signal<[RenderNode]>",
+          "params": [],
+          "returnType": null,
+          "description": "Fired when this node loses keyboard focus."
+        },
+        {
+          "name": "onDrag",
+          "signature": "onDrag: Signal<[InteractionEvent]>",
+          "params": [],
+          "returnType": null,
+          "description": "Fired on every pointer-move while this node is being dragged. Does not bubble."
+        },
+        {
+          "name": "onDragEnd",
+          "signature": "onDragEnd: Signal<[InteractionEvent]>",
+          "params": [],
+          "returnType": null,
+          "description": "Fired when the drag gesture ends (pointer-up or cancel). Does not bubble."
+        },
+        {
+          "name": "onDragStart",
+          "signature": "onDragStart: Signal<[InteractionEvent]>",
+          "params": [],
+          "returnType": null,
+          "description": "Fired once when a drag gesture begins on this node. Does not bubble."
+        },
+        {
+          "name": "onFocus",
+          "signature": "onFocus: Signal<[RenderNode]>",
+          "params": [],
+          "returnType": null,
+          "description": "Fired when this node gains keyboard focus."
+        },
+        {
+          "name": "onKeyDown",
+          "signature": "onKeyDown: Signal<[KeyEvent]>",
+          "params": [],
+          "returnType": null,
+          "description": "Fired for each key pressed while this node holds focus."
+        },
+        {
+          "name": "onKeyUp",
+          "signature": "onKeyUp: Signal<[KeyEvent]>",
+          "params": [],
+          "returnType": null,
+          "description": "Fired for each key released while this node holds focus."
+        },
+        {
+          "name": "onPointerDown",
+          "signature": "onPointerDown: Signal<[InteractionEvent]>",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "onPointerMove",
+          "signature": "onPointerMove: Signal<[InteractionEvent]>",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "onPointerOut",
+          "signature": "onPointerOut: Signal<[InteractionEvent]>",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "onPointerOver",
+          "signature": "onPointerOver: Signal<[InteractionEvent]>",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "onPointerTap",
+          "signature": "onPointerTap: Signal<[InteractionEvent]>",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "onPointerUp",
+          "signature": "onPointerUp: Signal<[InteractionEvent]>",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/ui/UIRoot.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/UIRoot.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/ui/UIRoot.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/UIRoot.ts"
+}

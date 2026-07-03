@@ -1,0 +1,308 @@
+{
+  "title": "BeatDetector",
+  "description": "Real-time tempo + beat tracker. Splits work between the audio-rendering thread (an AudioWorklet that runs onset detection, tempogram analysis, and parallel 3/4 and 4/4 posterior estimation) and the main thread (this class — receives beats, fires Signals, handles configuration and source routing). Accepts a wide range of BeatDetectorSources — a bus, an individual Voice, a raw MediaStream, or any AudioNode — and exposes a Signal for each notable event: - BeatDetector.onBeat — every detected beat - BeatDetector.onDownbeat — first beat of each bar - BeatDetector.onBarStart — bar boundary - BeatDetector.onTempoChange — when the tracked BPM changes - BeatDetector.onBeatPredicted — look-ahead schedule notice Early beats arrive with low latency tagged `status: 'provisional'` (after a short `minSettlingMs` warm-up, default 400 ms) for snappy visual reactivity, then promote to `status: 'locked'` once the tempo grid is trustworthy — a single BeatDetector.onBeat signal carries both via BeatInfo.status. Set `emitProvisionalBeats: false` to receive only locked beats. Time-signature detection (3/4 vs 4/4) is on by default; lock to 4/4 by setting `enableTimeSignatureDetection: false`.",
+  "symbol": "BeatDetector",
+  "kind": "class",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs-audio-fx",
+  "tier": "stable",
+  "memberCount": 31,
+  "counts": {
+    "constructors": 1,
+    "methods": 2,
+    "properties": 23,
+    "events": 5
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Real-time tempo + beat tracker. Splits work between the audio-rendering thread (an AudioWorklet that runs onset detection, tempogram analysis, and parallel 3/4 and 4/4 posterior estimation) and the main thread (this class — receives beats, fires Signals, handles configuration and source routing).",
+        "Accepts a wide range of BeatDetectorSources — a bus, an individual Voice, a raw MediaStream, or any AudioNode — and exposes a Signal for each notable event: - BeatDetector.onBeat — every detected beat - BeatDetector.onDownbeat — first beat of each bar - BeatDetector.onBarStart — bar boundary - BeatDetector.onTempoChange — when the tracked BPM changes - BeatDetector.onBeatPredicted — look-ahead schedule notice",
+        "Early beats arrive with low latency tagged `status: 'provisional'` (after a short `minSettlingMs` warm-up, default 400 ms) for snappy visual reactivity, then promote to `status: 'locked'` once the tempo grid is trustworthy — a single BeatDetector.onBeat signal carries both via BeatInfo.status. Set `emitProvisionalBeats: false` to receive only locked beats. Time-signature detection (3/4 vs 4/4) is on by default; lock to 4/4 by setting `enableTimeSignatureDetection: false`."
+      ],
+      "importLine": "import { BeatDetector } from '@codexo/exojs-audio-fx'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(options?: BeatDetectorOptions): BeatDetector",
+          "params": [
+            {
+              "name": "options",
+              "type": "BeatDetectorOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "BeatDetector",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "subdivisionPhase",
+          "signature": "subdivisionPhase(division: number): number",
+          "params": [
+            {
+              "name": "division",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": "Phase 0..1 within a subdivision of the current beat. division is the number of subdivisions per beat: 2 for 8th notes, 4 for 16th notes, 3 for triplets. Use to drive sub-beat-resolution effects: const sixteenth = clock.subdivisionPhase(4); if (sixteenth < 0.05) flash();"
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "barPulseHalfLife",
+          "signature": "barPulseHalfLife: number",
+          "params": [],
+          "returnType": null,
+          "description": "Half-life for the barPulse envelope. Mutable; default 0.3."
+        },
+        {
+          "name": "justBeatWindow",
+          "signature": "justBeatWindow: number",
+          "params": [],
+          "returnType": null,
+          "description": "Time window for justBeat. Mutable; default 0.03 (30ms)."
+        },
+        {
+          "name": "pulseHalfLife",
+          "signature": "pulseHalfLife: number",
+          "params": [],
+          "returnType": null,
+          "description": "Half-life in seconds for the pulse envelope. Mutable; default 0.15. Smaller values give a snappier pulse, larger values a longer afterglow."
+        },
+        {
+          "name": "bandEnergy",
+          "signature": "bandEnergy: BandEnergy",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "barLength",
+          "signature": "barLength: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "barPosition",
+          "signature": "barPosition: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "barPulse",
+          "signature": "barPulse: number",
+          "params": [],
+          "returnType": null,
+          "description": "Like pulse but resets on downbeats and decays per barPulseHalfLife. Useful for emphasizing the first beat of each bar (e.g. brighter flash on \"1\" vs \"2,3,4\")."
+        },
+        {
+          "name": "beatPhase",
+          "signature": "beatPhase: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "confidence",
+          "signature": "confidence: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "gridStability",
+          "signature": "gridStability: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "justBeat",
+          "signature": "justBeat: boolean",
+          "params": [],
+          "returnType": null,
+          "description": "True for the visual frame(s) within justBeatWindow seconds of a beat onset. Use for one-shot triggers (strobe flash, particle burst, sample retrigger). Default window 30ms covers a typical 60fps frame."
+        },
+        {
+          "name": "lookahead",
+          "signature": "lookahead: readonly UpcomingBeat[]",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "nextBeatTime",
+          "signature": "nextBeatTime: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "nextDownbeatTime",
+          "signature": "nextDownbeatTime: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "onsetStrength",
+          "signature": "onsetStrength: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "pulse",
+          "signature": "pulse: number",
+          "params": [],
+          "returnType": null,
+          "description": "0..1 envelope, peaks at 1.0 the moment a beat fires and halves every pulseHalfLife seconds. Drives \"pulse on the beat\" visuals with a single multiplication: sprite.scale = 1 + clock.pulse * 0.3."
+        },
+        {
+          "name": "ready",
+          "signature": "ready: Promise<void>",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "rms",
+          "signature": "rms: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "secondsSinceLastBeat",
+          "signature": "secondsSinceLastBeat: number",
+          "params": [],
+          "returnType": null,
+          "description": "Seconds elapsed since the most recent beat, derived from beatPhase and tempo. Returns 0 when the detector hasn't locked yet."
+        },
+        {
+          "name": "source",
+          "signature": "source: BeatDetectorSource",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "tempo",
+          "signature": "tempo: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "tempoCandidates",
+          "signature": "tempoCandidates: readonly TempoCandidate[]",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "timeSignature",
+          "signature": "timeSignature: TimeSignature",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "events",
+      "title": "Events",
+      "members": [
+        {
+          "name": "onBarStart",
+          "signature": "onBarStart: Signal<[BarInfo]>",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "onBeat",
+          "signature": "onBeat: Signal<[BeatInfo]>",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "onBeatPredicted",
+          "signature": "onBeatPredicted: Signal<[UpcomingBeat]>",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "onDownbeat",
+          "signature": "onDownbeat: Signal<[BeatInfo]>",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "onTempoChange",
+          "signature": "onTempoChange: Signal<[number, number]>",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-audio-fx/src/BeatDetector.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/BeatDetector.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-audio-fx/src/BeatDetector.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/BeatDetector.ts"
+}

@@ -1,0 +1,109 @@
+{
+  "title": "Shape",
+  "description": "Immutable local-space collision geometry. A `Shape` carries no transform — a Collider positions it in a body. Shapes also expose the area-based mass properties (`area`, `centroid`, `unitInertia`) the body uses to derive mass and rotational inertia from a density; these are computed once at construction and frozen. `unitInertia` is the second moment of area about the shape's own centroid (∫ r² dA). Multiplying by density yields the rotational inertia contribution of the shape about its centroid.",
+  "symbol": "Shape",
+  "kind": "class",
+  "subsystem": "physics",
+  "importPath": "@codexo/exojs-physics",
+  "tier": "stable",
+  "memberCount": 7,
+  "counts": {
+    "constructors": 1,
+    "methods": 0,
+    "properties": 6,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Immutable local-space collision geometry. A `Shape` carries no transform — a Collider positions it in a body. Shapes also expose the area-based mass properties (`area`, `centroid`, `unitInertia`) the body uses to derive mass and rotational inertia from a density; these are computed once at construction and frozen.",
+        "`unitInertia` is the second moment of area about the shape's own centroid (∫ r² dA). Multiplying by density yields the rotational inertia contribution of the shape about its centroid."
+      ],
+      "importLine": "import { Shape } from '@codexo/exojs-physics'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(): Shape",
+          "params": [],
+          "returnType": "Shape",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "area",
+          "signature": "area: number",
+          "params": [],
+          "returnType": null,
+          "description": "Surface area in px². mass = density × area."
+        },
+        {
+          "name": "boundingRadius",
+          "signature": "boundingRadius: number",
+          "params": [],
+          "returnType": null,
+          "description": "Radius of the smallest circle about the local origin enclosing the shape."
+        },
+        {
+          "name": "centroidX",
+          "signature": "centroidX: number",
+          "params": [],
+          "returnType": null,
+          "description": "X of the area centroid in local space."
+        },
+        {
+          "name": "centroidY",
+          "signature": "centroidY: number",
+          "params": [],
+          "returnType": null,
+          "description": "Y of the area centroid in local space."
+        },
+        {
+          "name": "type",
+          "signature": "type: ShapeType",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "unitInertia",
+          "signature": "unitInertia: number",
+          "params": [],
+          "returnType": null,
+          "description": "Second moment of area (∫ r² dA) about the centroid; inertia = density × unitInertia."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-physics/src/shapes/Shape.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/shapes/Shape.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-physics/src/shapes/Shape.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/shapes/Shape.ts"
+}

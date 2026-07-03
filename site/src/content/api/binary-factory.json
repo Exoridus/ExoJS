@@ -1,0 +1,142 @@
+{
+  "title": "BinaryFactory",
+  "description": "AssetFactory implementation that loads arbitrary binary files and exposes them as raw ArrayBuffer instances. Use this for any binary format that does not have a dedicated factory (e.g. custom data files, packed archives, or proprietary formats).",
+  "symbol": "BinaryFactory",
+  "kind": "class",
+  "subsystem": "resources",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 7,
+  "counts": {
+    "constructors": 1,
+    "methods": 5,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "AssetFactory implementation that loads arbitrary binary files and exposes them as raw ArrayBuffer instances.",
+        "Use this for any binary format that does not have a dedicated factory (e.g. custom data files, packed archives, or proprietary formats)."
+      ],
+      "importLine": "import { BinaryFactory } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(): BinaryFactory",
+          "params": [],
+          "returnType": "BinaryFactory",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "create",
+          "signature": "create(source: ArrayBuffer): Promise<ArrayBuffer>",
+          "params": [
+            {
+              "name": "source",
+              "type": "ArrayBuffer",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<ArrayBuffer>",
+          "description": "Returns the raw buffer unchanged — no further transformation is applied."
+        },
+        {
+          "name": "createObjectUrl",
+          "signature": "createObjectUrl(blob: Blob): string",
+          "params": [
+            {
+              "name": "blob",
+              "type": "Blob",
+              "optional": false
+            }
+          ],
+          "returnType": "string",
+          "description": "Creates an object URL from blob and registers it for automatic cleanup when destroy is called. Prefer this over calling URL.createObjectURL directly inside a factory subclass so the URL is always tracked."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Revokes every object URL that was created via createObjectUrl and clears the internal tracking pool."
+        },
+        {
+          "name": "process",
+          "signature": "process(response: Response): Promise<ArrayBuffer>",
+          "params": [
+            {
+              "name": "response",
+              "type": "Response",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<ArrayBuffer>",
+          "description": "Reads the full response body as an ArrayBuffer."
+        },
+        {
+          "name": "revokeObjectUrl",
+          "signature": "revokeObjectUrl(objectUrl: string): void",
+          "params": [
+            {
+              "name": "objectUrl",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "storageName",
+          "signature": "storageName: \"binary\"",
+          "params": [],
+          "returnType": null,
+          "description": "Identifier used as the object-store / storage-namespace key when this factory's assets are persisted to a CacheStore."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/resources/factories/BinaryFactory.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/BinaryFactory.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/resources/factories/BinaryFactory.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/BinaryFactory.ts"
+}

@@ -1,0 +1,147 @@
+{
+  "title": "BmFontLoaderFactory",
+  "description": "Factory that loads a BmFont bundle: parses the `.fnt` descriptor and loads all referenced page textures via the owning Loader so they benefit from the same caching and IDB strategy as other assets.",
+  "symbol": "BmFontLoaderFactory",
+  "kind": "class",
+  "subsystem": "resources",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 7,
+  "counts": {
+    "constructors": 1,
+    "methods": 5,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Factory that loads a BmFont bundle: parses the `.fnt` descriptor and loads all referenced page textures via the owning Loader so they benefit from the same caching and IDB strategy as other assets."
+      ],
+      "importLine": "import { BmFontLoaderFactory } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(loader: Loader): BmFontLoaderFactory",
+          "params": [
+            {
+              "name": "loader",
+              "type": "Loader",
+              "optional": false
+            }
+          ],
+          "returnType": "BmFontLoaderFactory",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "create",
+          "signature": "create(source: unknown): Promise<BmFont>",
+          "params": [
+            {
+              "name": "source",
+              "type": "unknown",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<BmFont>",
+          "description": "Constructs the final engine asset from the intermediate value produced by process (or retrieved from cache)."
+        },
+        {
+          "name": "createObjectUrl",
+          "signature": "createObjectUrl(blob: Blob): string",
+          "params": [
+            {
+              "name": "blob",
+              "type": "Blob",
+              "optional": false
+            }
+          ],
+          "returnType": "string",
+          "description": "Creates an object URL from blob and registers it for automatic cleanup when destroy is called. Prefer this over calling URL.createObjectURL directly inside a factory subclass so the URL is always tracked."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Revokes every object URL that was created via createObjectUrl and clears the internal tracking pool."
+        },
+        {
+          "name": "process",
+          "signature": "process(response: Response): Promise<object>",
+          "params": [
+            {
+              "name": "response",
+              "type": "Response",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<object>",
+          "description": "Converts a raw HTTP response into a serialisable intermediate value suitable for cache storage and later passed to create."
+        },
+        {
+          "name": "revokeObjectUrl",
+          "signature": "revokeObjectUrl(objectUrl: string): void",
+          "params": [
+            {
+              "name": "objectUrl",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "storageName",
+          "signature": "storageName: \"bmfont\"",
+          "params": [],
+          "returnType": null,
+          "description": "Identifier used as the object-store / storage-namespace key when this factory's assets are persisted to a CacheStore."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/resources/factories/BmFontFactory.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/BmFontFactory.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/resources/factories/BmFontFactory.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/BmFontFactory.ts"
+}

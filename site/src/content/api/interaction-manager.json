@@ -1,0 +1,134 @@
+{
+  "title": "InteractionManager",
+  "description": "Routes pointer events from the InputManager to interactive scene-graph nodes via DOM-style event bubbling. Maintains a persistent quadtree spatial index of interactive RenderNodes for hit-testing and updates it incrementally — nodes notify the manager via the `_notify*` hooks when they enter/leave the scene, change interactivity, or move (causing bounds to dirty). Dispatches InteractionEvents of every type in InteractionEventType: `pointerdown` / `pointerup` / `pointermove` / `pointerover` / `pointerout` / `pointertap` / `dragstart` / `drag` / `dragend`. Drag events are derived from threshold-based pointer movement after a `pointerdown`. Constructed automatically by Application; you do not instantiate this class yourself.",
+  "symbol": "InteractionManager",
+  "kind": "class",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 7,
+  "counts": {
+    "constructors": 1,
+    "methods": 6,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Routes pointer events from the InputManager to interactive scene-graph nodes via DOM-style event bubbling. Maintains a persistent quadtree spatial index of interactive RenderNodes for hit-testing and updates it incrementally — nodes notify the manager via the `_notify*` hooks when they enter/leave the scene, change interactivity, or move (causing bounds to dirty).",
+        "Dispatches InteractionEvents of every type in InteractionEventType: `pointerdown` / `pointerup` / `pointermove` / `pointerover` / `pointerout` / `pointertap` / `dragstart` / `drag` / `dragend`. Drag events are derived from threshold-based pointer movement after a `pointerdown`.",
+        "Constructed automatically by Application; you do not instantiate this class yourself."
+      ],
+      "importLine": "import { InteractionManager } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(app: Application): InteractionManager",
+          "params": [
+            {
+              "name": "app",
+              "type": "Application",
+              "optional": false
+            }
+          ],
+          "returnType": "InteractionManager",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "getCapturedNodes",
+          "signature": "getCapturedNodes(): readonly RenderNode[]",
+          "params": [],
+          "returnType": "readonly RenderNode[]",
+          "description": "Snapshot of nodes that currently have pointer-capture (a pointer pressed inside them and is being dragged). Used internally for drag routing; exposed read-only for diagnostic / debug consumers."
+        },
+        {
+          "name": "getHoveredNode",
+          "signature": "getHoveredNode(pointerId?: number): RenderNode | null",
+          "params": [
+            {
+              "name": "pointerId",
+              "type": "number",
+              "optional": true
+            }
+          ],
+          "returnType": "RenderNode | null",
+          "description": "Return the deepest interactive node currently under the given pointer, or under any active pointer when pointerId is omitted (the first pointer with a hit wins). null when no pointer is hovering an interactive node."
+        },
+        {
+          "name": "popInputCapture",
+          "signature": "popInputCapture(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Release the most recently pushed input capture (see pushInputCapture)."
+        },
+        {
+          "name": "pushInputCapture",
+          "signature": "pushInputCapture(root: RenderNode): void",
+          "params": [
+            {
+              "name": "root",
+              "type": "RenderNode",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Confine pointer hit-testing to root's subtree until a matching popInputCapture. Pointer events outside the subtree hit nothing, so a modal dialog (optionally with a full-screen backdrop to swallow clicks) shields the interactive nodes beneath it. Captures stack — the most recently pushed root wins."
+        },
+        {
+          "name": "update",
+          "signature": "update(_delta: Time): void",
+          "params": [
+            {
+              "name": "_delta",
+              "type": "Time",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Process all pending pointer events accumulated since the last frame. Must be called once per frame from Application.update, after input.update() has run (so signals are already dispatched and queued here) and before game-state updates so that user listeners on onPointerDown etc. fire before per-frame logic mutates state. The dirty flag ensures this is a no-op on frames with no pointer activity; every signal handler that enqueues an event sets _dirty = true, and update() clears it at the top before draining the queue."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/InteractionManager.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/InteractionManager.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/InteractionManager.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/InteractionManager.ts"
+}

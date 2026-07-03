@@ -1,0 +1,743 @@
+{
+  "title": "Keyboard",
+  "description": "Channel indices for keyboard keys, derived from the legacy `KeyboardEvent.keyCode` map. Pass any value to the Input constructor to react to that key.",
+  "symbol": "Keyboard",
+  "kind": "enum",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 99,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Channel indices for keyboard keys, derived from the legacy `KeyboardEvent.keyCode` map. Pass any value to the Input constructor to react to that key."
+      ],
+      "importLine": "import { Keyboard } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "members",
+      "title": "Members",
+      "members": [
+        {
+          "name": "A",
+          "signature": "A",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Alt",
+          "signature": "Alt",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "B",
+          "signature": "B",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Backspace",
+          "signature": "Backspace",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "BackwardSlash",
+          "signature": "BackwardSlash",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "C",
+          "signature": "C",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "CapsLock",
+          "signature": "CapsLock",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Clear",
+          "signature": "Clear",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "ClosedBracket",
+          "signature": "ClosedBracket",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Colon",
+          "signature": "Colon",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Comma",
+          "signature": "Comma",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Control",
+          "signature": "Control",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "D",
+          "signature": "D",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Dash",
+          "signature": "Dash",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Delete",
+          "signature": "Delete",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Down",
+          "signature": "Down",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "E",
+          "signature": "E",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Eight",
+          "signature": "Eight",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "End",
+          "signature": "End",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Enter",
+          "signature": "Enter",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Equals",
+          "signature": "Equals",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Escape",
+          "signature": "Escape",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "F",
+          "signature": "F",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "F1",
+          "signature": "F1",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "F10",
+          "signature": "F10",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "F11",
+          "signature": "F11",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "F12",
+          "signature": "F12",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "F2",
+          "signature": "F2",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "F3",
+          "signature": "F3",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "F4",
+          "signature": "F4",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "F5",
+          "signature": "F5",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "F6",
+          "signature": "F6",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "F7",
+          "signature": "F7",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "F8",
+          "signature": "F8",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "F9",
+          "signature": "F9",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Five",
+          "signature": "Five",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Four",
+          "signature": "Four",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "G",
+          "signature": "G",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "H",
+          "signature": "H",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Help",
+          "signature": "Help",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Home",
+          "signature": "Home",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "I",
+          "signature": "I",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Insert",
+          "signature": "Insert",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "J",
+          "signature": "J",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "K",
+          "signature": "K",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "L",
+          "signature": "L",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Left",
+          "signature": "Left",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "M",
+          "signature": "M",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "N",
+          "signature": "N",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Nine",
+          "signature": "Nine",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "NumLock",
+          "signature": "NumLock",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "NumPad0",
+          "signature": "NumPad0",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "NumPad1",
+          "signature": "NumPad1",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "NumPad2",
+          "signature": "NumPad2",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "NumPad3",
+          "signature": "NumPad3",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "NumPad4",
+          "signature": "NumPad4",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "NumPad5",
+          "signature": "NumPad5",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "NumPad6",
+          "signature": "NumPad6",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "NumPad7",
+          "signature": "NumPad7",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "NumPad8",
+          "signature": "NumPad8",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "NumPad9",
+          "signature": "NumPad9",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "NumPadAdd",
+          "signature": "NumPadAdd",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "NumPadDecimal",
+          "signature": "NumPadDecimal",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "NumPadDivide",
+          "signature": "NumPadDivide",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "NumPadEnter",
+          "signature": "NumPadEnter",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "NumPadMultiply",
+          "signature": "NumPadMultiply",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "NumPadSubtract",
+          "signature": "NumPadSubtract",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "O",
+          "signature": "O",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "One",
+          "signature": "One",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "OpenBracket",
+          "signature": "OpenBracket",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "P",
+          "signature": "P",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "PageDown",
+          "signature": "PageDown",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "PageUp",
+          "signature": "PageUp",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Pause",
+          "signature": "Pause",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Period",
+          "signature": "Period",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Q",
+          "signature": "Q",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "QuestionMark",
+          "signature": "QuestionMark",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Quotes",
+          "signature": "Quotes",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "R",
+          "signature": "R",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Right",
+          "signature": "Right",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "S",
+          "signature": "S",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "ScrollLock",
+          "signature": "ScrollLock",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Seven",
+          "signature": "Seven",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Shift",
+          "signature": "Shift",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Six",
+          "signature": "Six",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Space",
+          "signature": "Space",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "T",
+          "signature": "T",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Tab",
+          "signature": "Tab",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Three",
+          "signature": "Three",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Tilde",
+          "signature": "Tilde",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Two",
+          "signature": "Two",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "U",
+          "signature": "U",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Up",
+          "signature": "Up",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "V",
+          "signature": "V",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "W",
+          "signature": "W",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "X",
+          "signature": "X",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Y",
+          "signature": "Y",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Z",
+          "signature": "Z",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Zero",
+          "signature": "Zero",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/types.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/types.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/types.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/types.ts"
+}

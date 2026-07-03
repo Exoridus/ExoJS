@@ -1,0 +1,117 @@
+{
+  "title": "GameCubeGamepadMapping",
+  "description": "Mapping for Nintendo GameCube controllers (typically connected via a USB adapter such as the official Nintendo adapter for Wii U / Switch). Inherits the full GenericDualAnalogGamepadMapping button and axis layout. Note that the GameCube controller has no right-stick click, no D-pad as discrete buttons on all adapters, and uses analog shoulders — the exact channel availability depends on the adapter's HID report.",
+  "symbol": "GameCubeGamepadMapping",
+  "kind": "class",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 6,
+  "counts": {
+    "constructors": 1,
+    "methods": 2,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Mapping for Nintendo GameCube controllers (typically connected via a USB adapter such as the official Nintendo adapter for Wii U / Switch).",
+        "Inherits the full GenericDualAnalogGamepadMapping button and axis layout. Note that the GameCube controller has no right-stick click, no D-pad as discrete buttons on all adapters, and uses analog shoulders — the exact channel availability depends on the adapter's HID report."
+      ],
+      "importLine": "import { GameCubeGamepadMapping } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(): GameCubeGamepadMapping",
+          "params": [],
+          "returnType": "GameCubeGamepadMapping",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Releases all button and axis control references held by this mapping. Call when the associated gamepad disconnects to allow garbage collection."
+        },
+        {
+          "name": "hasChannel",
+          "signature": "hasChannel(channel: GamepadButtonChannel | GamepadAxisChannel): boolean",
+          "params": [
+            {
+              "name": "channel",
+              "type": "GamepadButtonChannel | GamepadAxisChannel",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Returns true when this mapping declares at least one button or axis control that writes to channel. Use to detect device-specific capabilities at runtime — e.g. before binding an input to a right-stick channel that may not exist on a single Joy-Con."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "axes",
+          "signature": "axes: readonly GamepadAxis[]",
+          "params": [],
+          "returnType": null,
+          "description": "Ordered list of axes, indexed by the Gamepad API axis index."
+        },
+        {
+          "name": "buttons",
+          "signature": "buttons: readonly GamepadButton[]",
+          "params": [],
+          "returnType": null,
+          "description": "Ordered list of buttons, indexed by the Gamepad API button index."
+        },
+        {
+          "name": "family",
+          "signature": "family: GameCube",
+          "params": [],
+          "returnType": null,
+          "description": "Identifies the device family this mapping targets."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/GameCubeGamepadMapping.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/GameCubeGamepadMapping.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/GameCubeGamepadMapping.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/GameCubeGamepadMapping.ts"
+}

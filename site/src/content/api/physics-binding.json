@@ -1,0 +1,107 @@
+{
+  "title": "PhysicsBinding",
+  "description": "A link between a PhysicsBody and a SceneNode. After each PhysicsWorld.step, the body's world position **and rotation** are written onto the node (the body's angle is radians; the node's rotation is degrees). The node must be world-space-rooted; runtime scale is ignored and non-zero skew is rejected at bind time.",
+  "symbol": "PhysicsBinding",
+  "kind": "class",
+  "subsystem": "physics",
+  "importPath": "@codexo/exojs-physics",
+  "tier": "stable",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 1,
+    "methods": 1,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A link between a PhysicsBody and a SceneNode. After each PhysicsWorld.step, the body's world position **and rotation** are written onto the node (the body's angle is radians; the node's rotation is degrees). The node must be world-space-rooted; runtime scale is ignored and non-zero skew is rejected at bind time."
+      ],
+      "importLine": "import { PhysicsBinding } from '@codexo/exojs-physics'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(body: PhysicsBody, node: SceneNode): PhysicsBinding",
+          "params": [
+            {
+              "name": "body",
+              "type": "PhysicsBody",
+              "optional": false
+            },
+            {
+              "name": "node",
+              "type": "SceneNode",
+              "optional": false
+            }
+          ],
+          "returnType": "PhysicsBinding",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "sync",
+          "signature": "sync(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Write the body's current transform (position + rotation) onto the bound node."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "body",
+          "signature": "body: PhysicsBody",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "node",
+          "signature": "node: SceneNode",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-physics/src/binding/PhysicsBinding.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/binding/PhysicsBinding.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-physics/src/binding/PhysicsBinding.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/binding/PhysicsBinding.ts"
+}

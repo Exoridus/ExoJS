@@ -1,0 +1,252 @@
+{
+  "title": "TextStyle",
+  "description": "Describes how a Text node renders its string. Every setter marks the style dirty with a StyleChangeHint so that the owning node can batch-rebuild efficiently on the next frame: - `'tint'` — only updates `Mesh.tint`, no atlas work - `'layout'` — rebuilds the glyph mesh, reuses cached atlas glyphs - `'font'` — atlas lookup + full mesh rebuild Call consumeDirty at the start of each frame to get the accumulated hint and clear the flag.",
+  "symbol": "TextStyle",
+  "kind": "class",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 23,
+  "counts": {
+    "constructors": 1,
+    "methods": 3,
+    "properties": 18,
+    "events": 1
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Describes how a Text node renders its string.",
+        "Every setter marks the style dirty with a StyleChangeHint so that the owning node can batch-rebuild efficiently on the next frame: - `'tint'` — only updates `Mesh.tint`, no atlas work - `'layout'` — rebuilds the glyph mesh, reuses cached atlas glyphs - `'font'` — atlas lookup + full mesh rebuild",
+        "Call consumeDirty at the start of each frame to get the accumulated hint and clear the flag."
+      ],
+      "importLine": "import { TextStyle } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(options: TextStyleOptions): TextStyle",
+          "params": [
+            {
+              "name": "options",
+              "type": "TextStyleOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "TextStyle",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "clone",
+          "signature": "clone(): TextStyle",
+          "params": [],
+          "returnType": "TextStyle",
+          "description": "Return a new TextStyle with all properties copied from this one."
+        },
+        {
+          "name": "consumeDirty",
+          "signature": "consumeDirty(): StyleChangeHint | null",
+          "params": [],
+          "returnType": "StyleChangeHint | null",
+          "description": "Returns the accumulated StyleChangeHint and clears the dirty flag, or null if nothing has changed since the last call. Call this once per frame from the owning node's update() method."
+        },
+        {
+          "name": "copy",
+          "signature": "copy(style: TextStyle): this",
+          "params": [
+            {
+              "name": "style",
+              "type": "TextStyle",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Copy all properties from style into this instance and return this."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "align",
+          "signature": "align: TextAlignment",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "fillColor",
+          "signature": "fillColor: Color",
+          "params": [],
+          "returnType": null,
+          "description": "Runtime fill color applied as Mesh.tint. Glyphs are always rasterized white; this color multiplies them at draw time without touching the atlas."
+        },
+        {
+          "name": "font",
+          "signature": "font: string",
+          "params": [],
+          "returnType": null,
+          "description": "CSS font string used as CanvasRenderingContext2D.font during glyph rasterization. Includes fontStyle so italic fonts render correctly."
+        },
+        {
+          "name": "fontFamily",
+          "signature": "fontFamily: string",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "fontSize",
+          "signature": "fontSize: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "fontStyle",
+          "signature": "fontStyle: \"normal\" | \"italic\"",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "fontWeight",
+          "signature": "fontWeight: FontWeight",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "gradientAxis",
+          "signature": "gradientAxis: GradientAxis",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "gradientColors",
+          "signature": "gradientColors: [Color, Color] | null",
+          "params": [],
+          "returnType": null,
+          "description": "Two-stop fill gradient [top, bottom]. When set, overrides fillColor for the glyph interior. Assign null to disable."
+        },
+        {
+          "name": "leading",
+          "signature": "leading: number",
+          "params": [],
+          "returnType": null,
+          "description": "Extra pixel gap between lines, added on top of lineHeight."
+        },
+        {
+          "name": "lineHeight",
+          "signature": "lineHeight: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "outlineColor",
+          "signature": "outlineColor: Color",
+          "params": [],
+          "returnType": null,
+          "description": "Outline color — used by BitmapText/SDF rendering as a shader uniform."
+        },
+        {
+          "name": "outlineWidth",
+          "signature": "outlineWidth: number",
+          "params": [],
+          "returnType": null,
+          "description": "Outline width in SDF units (0..0.5). 0 disables the outline."
+        },
+        {
+          "name": "shadowAlpha",
+          "signature": "shadowAlpha: number",
+          "params": [],
+          "returnType": null,
+          "description": "Shadow opacity (0..1). 0 disables the shadow."
+        },
+        {
+          "name": "shadowBlur",
+          "signature": "shadowBlur: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "shadowColor",
+          "signature": "shadowColor: Color",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "shadowOffsetX",
+          "signature": "shadowOffsetX: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "shadowOffsetY",
+          "signature": "shadowOffsetY: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "events",
+      "title": "Events",
+      "members": [
+        {
+          "name": "onChange",
+          "signature": "onChange: Signal<[]>",
+          "params": [],
+          "returnType": null,
+          "description": "Fires once per dirty cycle when any property changes."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/text/TextStyle.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/TextStyle.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/text/TextStyle.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/TextStyle.ts"
+}

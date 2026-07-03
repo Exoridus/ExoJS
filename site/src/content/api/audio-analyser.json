@@ -1,0 +1,287 @@
+{
+  "title": "AudioAnalyser",
+  "description": "Lightweight visualisation analyser backed by a Web Audio AnalyserNode. Accepts any of: AudioBus, Voice, MediaStream, AudioNode, or null. The tap is a parallel branch — it does not affect the source's main routing. Tap a bus for a whole submix, or an individual Voice (its `output` node) for a single playing instance.",
+  "symbol": "AudioAnalyser",
+  "kind": "class",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs-audio-fx",
+  "tier": "stable",
+  "memberCount": 19,
+  "counts": {
+    "constructors": 1,
+    "methods": 12,
+    "properties": 6,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Lightweight visualisation analyser backed by a Web Audio AnalyserNode.",
+        "Accepts any of: AudioBus, Voice, MediaStream, AudioNode, or null. The tap is a parallel branch — it does not affect the source's main routing. Tap a bus for a whole submix, or an individual Voice (its `output` node) for a single playing instance."
+      ],
+      "importLine": "import { AudioAnalyser } from '@codexo/exojs-audio-fx'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(options?: AudioAnalyserOptions): AudioAnalyser",
+          "params": [
+            {
+              "name": "options",
+              "type": "AudioAnalyserOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "AudioAnalyser",
+          "description": "Create an AudioAnalyser with the given options. The underlying AnalyserNode is created immediately if the AudioContext is already running, or deferred until onAudioContextReady fires."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Disconnect the analyser tap, release the internal AnalyserNode, and cancel any pending setup callbacks. Call when the analyser is no longer needed to avoid memory leaks."
+        },
+        {
+          "name": "getBandEnergy",
+          "signature": "getBandEnergy(fromHz: number, toHz: number): number",
+          "params": [
+            {
+              "name": "fromHz",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "toHz",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": "Return the mean energy of frequency bins in the given Hz range, normalised 0..1. Uses the byte spectrum (0..255), normalised by dividing by 255."
+        },
+        {
+          "name": "getLowMidHigh",
+          "signature": "getLowMidHigh(): object",
+          "params": [],
+          "returnType": "object",
+          "description": "Return low (0-250 Hz), mid (250-2 kHz), and high (2 k-20 kHz) band energies (0..1 each)."
+        },
+        {
+          "name": "getRms",
+          "signature": "getRms(): number",
+          "params": [],
+          "returnType": "number",
+          "description": "Return overall RMS energy across all bins, normalised 0..1."
+        },
+        {
+          "name": "getSpectrum",
+          "signature": "getSpectrum(into?: Uint8Array<ArrayBuffer>): Uint8Array<ArrayBuffer>",
+          "params": [
+            {
+              "name": "into",
+              "type": "Uint8Array<ArrayBuffer>",
+              "optional": true
+            }
+          ],
+          "returnType": "Uint8Array<ArrayBuffer>",
+          "description": "Fill and return the byte frequency spectrum (0..255 per bin)."
+        },
+        {
+          "name": "getSpectrumFloat",
+          "signature": "getSpectrumFloat(into?: Float32Array<ArrayBuffer>): Float32Array<ArrayBuffer>",
+          "params": [
+            {
+              "name": "into",
+              "type": "Float32Array<ArrayBuffer>",
+              "optional": true
+            }
+          ],
+          "returnType": "Float32Array<ArrayBuffer>",
+          "description": "Fill and return the float frequency spectrum (dB per bin)."
+        },
+        {
+          "name": "getSpectrumLog",
+          "signature": "getSpectrumLog(into?: Uint8Array<ArrayBuffer>, options?: SpectrumMappingOptions): Uint8Array<ArrayBuffer>",
+          "params": [
+            {
+              "name": "into",
+              "type": "Uint8Array<ArrayBuffer>",
+              "optional": true
+            },
+            {
+              "name": "options",
+              "type": "SpectrumMappingOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "Uint8Array<ArrayBuffer>",
+          "description": "Log-scaled spectrum, byte domain (0..255). Output length = bands. Bins are spaced so each output covers an equal fraction of the log2(fMax / fMin) octave range — useful when you want a frequency-axis visualization where each octave gets the same width."
+        },
+        {
+          "name": "getSpectrumLogFloat",
+          "signature": "getSpectrumLogFloat(into?: Float32Array<ArrayBuffer>, options?: SpectrumMappingOptions): Float32Array<ArrayBuffer>",
+          "params": [
+            {
+              "name": "into",
+              "type": "Float32Array<ArrayBuffer>",
+              "optional": true
+            },
+            {
+              "name": "options",
+              "type": "SpectrumMappingOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "Float32Array<ArrayBuffer>",
+          "description": "Log-scaled spectrum, float domain (dBFS values). Output length = bands."
+        },
+        {
+          "name": "getSpectrumMel",
+          "signature": "getSpectrumMel(into?: Uint8Array<ArrayBuffer>, options?: SpectrumMappingOptions): Uint8Array<ArrayBuffer>",
+          "params": [
+            {
+              "name": "into",
+              "type": "Uint8Array<ArrayBuffer>",
+              "optional": true
+            },
+            {
+              "name": "options",
+              "type": "SpectrumMappingOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "Uint8Array<ArrayBuffer>",
+          "description": "Mel-scaled spectrum, byte domain (0..255). Output length = bands. Each output bin is a triangular-weighted sum of the linear FFT bins underneath it, mel-spaced from fMin to fMax."
+        },
+        {
+          "name": "getSpectrumMelFloat",
+          "signature": "getSpectrumMelFloat(into?: Float32Array<ArrayBuffer>, options?: SpectrumMappingOptions): Float32Array<ArrayBuffer>",
+          "params": [
+            {
+              "name": "into",
+              "type": "Float32Array<ArrayBuffer>",
+              "optional": true
+            },
+            {
+              "name": "options",
+              "type": "SpectrumMappingOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "Float32Array<ArrayBuffer>",
+          "description": "Mel-scaled spectrum, float domain (dBFS values). Output length = bands."
+        },
+        {
+          "name": "getWaveform",
+          "signature": "getWaveform(into?: Uint8Array<ArrayBuffer>): Uint8Array<ArrayBuffer>",
+          "params": [
+            {
+              "name": "into",
+              "type": "Uint8Array<ArrayBuffer>",
+              "optional": true
+            }
+          ],
+          "returnType": "Uint8Array<ArrayBuffer>",
+          "description": "Fill and return the byte time-domain waveform (0..255 per sample)."
+        },
+        {
+          "name": "getWaveformFloat",
+          "signature": "getWaveformFloat(into?: Float32Array<ArrayBuffer>): Float32Array<ArrayBuffer>",
+          "params": [
+            {
+              "name": "into",
+              "type": "Float32Array<ArrayBuffer>",
+              "optional": true
+            }
+          ],
+          "returnType": "Float32Array<ArrayBuffer>",
+          "description": "Fill and return the float time-domain waveform (-1..1 per sample)."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "fftSize",
+          "signature": "fftSize: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "frequencyBinCount",
+          "signature": "frequencyBinCount: number",
+          "params": [],
+          "returnType": null,
+          "description": "Number of frequency bins available — half of fftSize."
+        },
+        {
+          "name": "maxDecibels",
+          "signature": "maxDecibels: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "minDecibels",
+          "signature": "minDecibels: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "smoothingTimeConstant",
+          "signature": "smoothingTimeConstant: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "source",
+          "signature": "source: AudioAnalyserSource",
+          "params": [],
+          "returnType": null,
+          "description": "The currently tapped audio source, or null if none is set. Assigning a new value disconnects the previous tap and connects the new source as a parallel branch without affecting the source's main routing."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-audio-fx/src/AudioAnalyser.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/AudioAnalyser.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-audio-fx/src/AudioAnalyser.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/AudioAnalyser.ts"
+}

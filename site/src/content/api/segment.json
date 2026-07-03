@@ -1,0 +1,214 @@
+{
+  "title": "Segment",
+  "description": "Mutable line segment defined by start and end Vectors. Unlike Line this type does not implement ShapeLike — it is a lightweight value type used in path and swept-collision utilities. `Segment.temp` is a shared scratch instance.",
+  "symbol": "Segment",
+  "kind": "class",
+  "subsystem": "math",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 13,
+  "counts": {
+    "constructors": 1,
+    "methods": 5,
+    "properties": 7,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Mutable line segment defined by start and end Vectors. Unlike Line this type does not implement ShapeLike — it is a lightweight value type used in path and swept-collision utilities.",
+        "`Segment.temp` is a shared scratch instance."
+      ],
+      "importLine": "import { Segment } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(startX: number, startY: number, endX: number, endY: number): Segment",
+          "params": [
+            {
+              "name": "startX",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "startY",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "endX",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "endY",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "Segment",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "clone",
+          "signature": "clone(): this",
+          "params": [],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "copy",
+          "signature": "copy(segment: Segment): this",
+          "params": [
+            {
+              "name": "segment",
+              "type": "Segment",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "equals",
+          "signature": "equals(__namedParameters: Partial<Segment>): boolean",
+          "params": [
+            {
+              "name": "__namedParameters",
+              "type": "Partial<Segment>",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": ""
+        },
+        {
+          "name": "set",
+          "signature": "set(startX: number, startY: number, endX: number, endY: number): this",
+          "params": [
+            {
+              "name": "startX",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "startY",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "endX",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "endY",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "endPoint",
+          "signature": "endPoint: Vector",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "endX",
+          "signature": "endX: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "endY",
+          "signature": "endY: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "startPoint",
+          "signature": "startPoint: Vector",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "startX",
+          "signature": "startX: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "startY",
+          "signature": "startY: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "temp",
+          "signature": "temp: Segment",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/math/Segment.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/math/Segment.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/math/Segment.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/math/Segment.ts"
+}

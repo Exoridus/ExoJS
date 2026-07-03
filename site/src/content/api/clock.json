@@ -1,0 +1,164 @@
+{
+  "title": "Clock",
+  "description": "High-precision wall-clock that accumulates elapsed time while running. Reads from performance.now via `getPreciseTime`. Use Clock.start, Clock.stop, Clock.reset, and Clock.restart to control the running state; read elapsed time via Clock.elapsedTime (the Time instance is shared — copy it if you need to keep a snapshot). Use Timer for a clock with a fixed limit and `expired` flag.",
+  "symbol": "Clock",
+  "kind": "class",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 12,
+  "counts": {
+    "constructors": 1,
+    "methods": 5,
+    "properties": 6,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "High-precision wall-clock that accumulates elapsed time while running. Reads from performance.now via `getPreciseTime`. Use Clock.start, Clock.stop, Clock.reset, and Clock.restart to control the running state; read elapsed time via Clock.elapsedTime (the Time instance is shared — copy it if you need to keep a snapshot).",
+        "Use Timer for a clock with a fixed limit and `expired` flag."
+      ],
+      "importLine": "import { Clock } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(startTime: Time, autoStart: boolean): Clock",
+          "params": [
+            {
+              "name": "startTime",
+              "type": "Time",
+              "optional": false
+            },
+            {
+              "name": "autoStart",
+              "type": "boolean",
+              "optional": false
+            }
+          ],
+          "returnType": "Clock",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "reset",
+          "signature": "reset(): this",
+          "params": [],
+          "returnType": "this",
+          "description": "Halt and zero the accumulated time. The clock is left stopped."
+        },
+        {
+          "name": "restart",
+          "signature": "restart(): this",
+          "params": [],
+          "returnType": "this",
+          "description": "Reset accumulated time to zero, then immediately start. Common per-frame pattern."
+        },
+        {
+          "name": "start",
+          "signature": "start(): this",
+          "params": [],
+          "returnType": "this",
+          "description": "Begin accumulating time. No-op when already running."
+        },
+        {
+          "name": "stop",
+          "signature": "stop(): this",
+          "params": [],
+          "returnType": "this",
+          "description": "Halt accumulation. Elapsed time stays at the moment of stopping."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "elapsedHours",
+          "signature": "elapsedHours: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "elapsedMilliseconds",
+          "signature": "elapsedMilliseconds: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "elapsedMinutes",
+          "signature": "elapsedMinutes: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "elapsedSeconds",
+          "signature": "elapsedSeconds: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "elapsedTime",
+          "signature": "elapsedTime: Time",
+          "params": [],
+          "returnType": null,
+          "description": "Total accumulated time since the last Clock.reset. While the clock is running, the value advances on every read by folding in the delta since the previous read; while stopped, the value is fixed at the stop point. Returns the same Time instance — read the scalar fields if you need an unchanging snapshot."
+        },
+        {
+          "name": "running",
+          "signature": "running: boolean",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/Clock.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Clock.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/Clock.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Clock.ts"
+}

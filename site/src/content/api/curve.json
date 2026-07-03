@@ -1,0 +1,86 @@
+{
+  "title": "Curve",
+  "description": "Piecewise-linear keyframe curve sampled by lifetime ratio `t` in `[0, 1]`. Keyframes are stored sorted by `t` and clamped at the endpoints — sampling outside the keyframe range returns the nearest endpoint value. The implementation tracks the last accessed segment so monotonically advancing `t` (the typical case for per-particle lifetime sampling) costs O(1) amortized per call instead of O(log n).",
+  "symbol": "Curve",
+  "kind": "class",
+  "subsystem": "particles",
+  "importPath": "@codexo/exojs-particles",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 1,
+    "methods": 1,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Piecewise-linear keyframe curve sampled by lifetime ratio `t` in `[0, 1]`.",
+        "Keyframes are stored sorted by `t` and clamped at the endpoints — sampling outside the keyframe range returns the nearest endpoint value. The implementation tracks the last accessed segment so monotonically advancing `t` (the typical case for per-particle lifetime sampling) costs O(1) amortized per call instead of O(log n)."
+      ],
+      "importLine": "import { Curve } from '@codexo/exojs-particles'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(keys: readonly CurveKey[]): Curve",
+          "params": [
+            {
+              "name": "keys",
+              "type": "readonly CurveKey[]",
+              "optional": false
+            }
+          ],
+          "returnType": "Curve",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "evaluate",
+          "signature": "evaluate(t: number): number",
+          "params": [
+            {
+              "name": "t",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-particles/src/distributions/Curve.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/distributions/Curve.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-particles/src/distributions/Curve.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/distributions/Curve.ts"
+}

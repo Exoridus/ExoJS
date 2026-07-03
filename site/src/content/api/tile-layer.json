@@ -1,0 +1,504 @@
+{
+  "title": "TileLayer",
+  "description": "A generic, format-independent tile layer with chunk-first storage. Tile data is stored in fixed-size TileChunks indexed by signed chunk coordinates. For finite maps, only chunks that intersect the layer bounds exist. **Mutation must go through the layer's public APIs only.** `setTileAt` / `clearTileAt` validate coordinates, tileset references, and increment revision counters only when the stored value actually changes. Direct chunk mutation is not supported — the layer owns chunk storage and exposes only a ReadonlyTileChunk view. The layer is NOT a SceneNode — that integration lives in import('./TileLayerNode').TileLayerNode.",
+  "symbol": "TileLayer",
+  "kind": "class",
+  "subsystem": "tilemap",
+  "importPath": "@codexo/exojs-tilemap",
+  "tier": "advanced",
+  "memberCount": 38,
+  "counts": {
+    "constructors": 1,
+    "methods": 15,
+    "properties": 22,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A generic, format-independent tile layer with chunk-first storage.",
+        "Tile data is stored in fixed-size TileChunks indexed by signed chunk coordinates. For finite maps, only chunks that intersect the layer bounds exist.",
+        "**Mutation must go through the layer's public APIs only.** `setTileAt` / `clearTileAt` validate coordinates, tileset references, and increment revision counters only when the stored value actually changes. Direct chunk mutation is not supported — the layer owns chunk storage and exposes only a ReadonlyTileChunk view.",
+        "The layer is NOT a SceneNode — that integration lives in import('./TileLayerNode').TileLayerNode."
+      ],
+      "importLine": "import { TileLayer } from '@codexo/exojs-tilemap'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(options: TileLayerOptions): TileLayer",
+          "params": [
+            {
+              "name": "options",
+              "type": "TileLayerOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "TileLayer",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "chunkRange",
+          "signature": "chunkRange(): object",
+          "params": [],
+          "returnType": "object",
+          "description": "Compute the range of chunk coordinates that intersect this layer."
+        },
+        {
+          "name": "clearRect",
+          "signature": "clearRect(x: number, y: number, w: number, h: number): void",
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "w",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "h",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Clear a rectangular region."
+        },
+        {
+          "name": "clearTileAt",
+          "signature": "clearTileAt(tx: number, ty: number): void",
+          "params": [
+            {
+              "name": "tx",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "ty",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Clear (erase) the tile at the given coordinates. No-op if the cell is already empty."
+        },
+        {
+          "name": "countNonEmptyTiles",
+          "signature": "countNonEmptyTiles(): number",
+          "params": [],
+          "returnType": "number",
+          "description": "Total number of non-empty tiles across all chunks. Walk is cheap for dense layers; sparse layers benefit from empty-chunk fast path."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Destroy this layer: clear chunk storage and mark destroyed. Does NOT destroy tileset textures or external resources. Idempotent."
+        },
+        {
+          "name": "fillRect",
+          "signature": "fillRect(x: number, y: number, w: number, h: number, tile: ResolvedTile): void",
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "w",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "h",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "tile",
+              "type": "ResolvedTile",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Fill a rectangular region with a tile."
+        },
+        {
+          "name": "getChunk",
+          "signature": "getChunk(cx: number, cy: number): ReadonlyTileChunk | undefined",
+          "params": [
+            {
+              "name": "cx",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "cy",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "ReadonlyTileChunk | undefined",
+          "description": "Get a readonly view of a chunk by signed chunk coordinates, or undefined if it does not exist (never been touched)."
+        },
+        {
+          "name": "getRawTileAt",
+          "signature": "getRawTileAt(tx: number, ty: number): number",
+          "params": [
+            {
+              "name": "tx",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "ty",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": "Get the raw packed tile word at (tx, ty). Returns 0 for empty or out-of-bounds."
+        },
+        {
+          "name": "getTileAt",
+          "signature": "getTileAt(tx: number, ty: number): ResolvedTile | null",
+          "params": [
+            {
+              "name": "tx",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "ty",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "ResolvedTile | null",
+          "description": "Query a resolved tile at (tx, ty). Returns null for empty or out-of-bounds."
+        },
+        {
+          "name": "inBounds",
+          "signature": "inBounds(tx: number, ty: number): boolean",
+          "params": [
+            {
+              "name": "tx",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "ty",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Check whether a tile coordinate lies within the layer bounds."
+        },
+        {
+          "name": "loadedChunks",
+          "signature": "loadedChunks(): IterableIterator<ReadonlyTileChunk>",
+          "params": [],
+          "returnType": "IterableIterator<ReadonlyTileChunk>",
+          "description": "Iterate over all loaded chunks in deterministic (cy, cx) ascending order. Returns readonly chunk views — callers cannot mutate storage."
+        },
+        {
+          "name": "pixelToTile",
+          "signature": "pixelToTile(px: number, py: number): object",
+          "params": [
+            {
+              "name": "px",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "py",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "object",
+          "description": "Convert a local pixel position to the tile coordinate that contains it. Uses floor, so a point exactly on a tile boundary maps to the tile. May return coordinates outside layer bounds."
+        },
+        {
+          "name": "setTileAt",
+          "signature": "setTileAt(tx: number, ty: number, tile: ResolvedTile): void",
+          "params": [
+            {
+              "name": "tx",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "ty",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "tile",
+              "type": "ResolvedTile",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Set a tile at the given tile coordinates. No-op if the effective value is unchanged."
+        },
+        {
+          "name": "tilesInRect",
+          "signature": "tilesInRect(x: number, y: number, w: number, h: number): Generator<object>",
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "w",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "h",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "Generator<object>",
+          "description": "Iterate non-empty tiles within a rectangular region in row-major order. Yields (tx, ty, resolvedTile) tuples. Skips empty cells."
+        },
+        {
+          "name": "tileToPixel",
+          "signature": "tileToPixel(tx: number, ty: number): object",
+          "params": [
+            {
+              "name": "tx",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "ty",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "object",
+          "description": "Convert a tile coordinate to the pixel position of its top-left corner in the layer's local space."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "chunkHeight",
+          "signature": "chunkHeight: number",
+          "params": [],
+          "returnType": null,
+          "description": "Chunk height (tiles)."
+        },
+        {
+          "name": "chunkWidth",
+          "signature": "chunkWidth: number",
+          "params": [],
+          "returnType": null,
+          "description": "Chunk width (tiles)."
+        },
+        {
+          "name": "class",
+          "signature": "class: string",
+          "params": [],
+          "returnType": null,
+          "description": "Layer class/type string (Tiled class; may be empty)."
+        },
+        {
+          "name": "height",
+          "signature": "height: number",
+          "params": [],
+          "returnType": null,
+          "description": "Height in tiles."
+        },
+        {
+          "name": "id",
+          "signature": "id: number",
+          "params": [],
+          "returnType": null,
+          "description": "Stable unique ID within the map."
+        },
+        {
+          "name": "name",
+          "signature": "name: string",
+          "params": [],
+          "returnType": null,
+          "description": "Display name (may not be unique)."
+        },
+        {
+          "name": "offsetX",
+          "signature": "offsetX: number",
+          "params": [],
+          "returnType": null,
+          "description": "Horizontal pixel offset (mutable)."
+        },
+        {
+          "name": "offsetY",
+          "signature": "offsetY: number",
+          "params": [],
+          "returnType": null,
+          "description": "Vertical pixel offset (mutable)."
+        },
+        {
+          "name": "opacity",
+          "signature": "opacity: number",
+          "params": [],
+          "returnType": null,
+          "description": "Opacity 0..1 (mutable)."
+        },
+        {
+          "name": "parallaxX",
+          "signature": "parallaxX: number",
+          "params": [],
+          "returnType": null,
+          "description": "Parallax scroll factor on the X axis. 1.0 = full camera speed, 0.5 = half speed, 0.0 = stationary."
+        },
+        {
+          "name": "parallaxY",
+          "signature": "parallaxY: number",
+          "params": [],
+          "returnType": null,
+          "description": "Parallax scroll factor on the Y axis. 1.0 = full camera speed, 0.5 = half speed, 0.0 = stationary."
+        },
+        {
+          "name": "properties",
+          "signature": "properties: TileProperties",
+          "params": [],
+          "returnType": null,
+          "description": "Immutable layer properties."
+        },
+        {
+          "name": "tileHeight",
+          "signature": "tileHeight: number",
+          "params": [],
+          "returnType": null,
+          "description": "Tile height in pixels."
+        },
+        {
+          "name": "tilesets",
+          "signature": "tilesets: readonly TileSet[]",
+          "params": [],
+          "returnType": null,
+          "description": "The tilesets available to this layer (shared array reference)."
+        },
+        {
+          "name": "tileWidth",
+          "signature": "tileWidth: number",
+          "params": [],
+          "returnType": null,
+          "description": "Tile width in pixels."
+        },
+        {
+          "name": "tintColor",
+          "signature": "tintColor: number | null",
+          "params": [],
+          "returnType": null,
+          "description": "Multiplicative layer tint as 0xRRGGBB, or null for no tint."
+        },
+        {
+          "name": "visible",
+          "signature": "visible: boolean",
+          "params": [],
+          "returnType": null,
+          "description": "Visibility flag (mutable)."
+        },
+        {
+          "name": "width",
+          "signature": "width: number",
+          "params": [],
+          "returnType": null,
+          "description": "Width in tiles."
+        },
+        {
+          "name": "destroyed",
+          "signature": "destroyed: boolean",
+          "params": [],
+          "returnType": null,
+          "description": "Whether the layer has been destroyed."
+        },
+        {
+          "name": "pixelHeight",
+          "signature": "pixelHeight: number",
+          "params": [],
+          "returnType": null,
+          "description": "Pixel height."
+        },
+        {
+          "name": "pixelWidth",
+          "signature": "pixelWidth: number",
+          "params": [],
+          "returnType": null,
+          "description": "Pixel width."
+        },
+        {
+          "name": "revision",
+          "signature": "revision: number",
+          "params": [],
+          "returnType": null,
+          "description": "Monotonic layer revision counter. Increments on every cell mutation that changes a stored value. No-op writes and failed mutations do NOT increment."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-tilemap/src/TileLayer.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/TileLayer.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-tilemap/src/TileLayer.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/TileLayer.ts"
+}

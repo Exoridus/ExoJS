@@ -1,0 +1,161 @@
+{
+  "title": "Envelope",
+  "description": "ADSR (Attack-Decay-Sustain-Release) envelope generator. Schedules a gain curve on a target `AudioParam`: attack: 0 → 1.0 (peak) over attackMs decay: 1.0 → sustainLevel over decayMs sustain: held at sustainLevel release: current → 0 over releaseMs (triggered by `release()`) Use `trigger()` to start the attack/decay/sustain phase, and `release()` to start the release phase. Multiple envelopes can target the same AudioParam; the latest schedule wins (cancel via `gain.cancelScheduledValues` if needed).",
+  "symbol": "Envelope",
+  "kind": "class",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 9,
+  "counts": {
+    "constructors": 1,
+    "methods": 3,
+    "properties": 5,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "ADSR (Attack-Decay-Sustain-Release) envelope generator. Schedules a gain curve on a target `AudioParam`:",
+        "attack: 0 → 1.0 (peak) over attackMs decay: 1.0 → sustainLevel over decayMs sustain: held at sustainLevel release: current → 0 over releaseMs (triggered by `release()`)",
+        "Use `trigger()` to start the attack/decay/sustain phase, and `release()` to start the release phase. Multiple envelopes can target the same AudioParam; the latest schedule wins (cancel via `gain.cancelScheduledValues` if needed)."
+      ],
+      "importLine": "import { Envelope } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(options: EnvelopeOptions): Envelope",
+          "params": [
+            {
+              "name": "options",
+              "type": "EnvelopeOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "Envelope",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "release",
+          "signature": "release(gainParam: AudioParam, atTime: number): void",
+          "params": [
+            {
+              "name": "gainParam",
+              "type": "AudioParam",
+              "optional": false
+            },
+            {
+              "name": "atTime",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Schedule release → 0 starting at atTime. Call this when the note should stop (e.g., key release, sound dismissed)."
+        },
+        {
+          "name": "trigger",
+          "signature": "trigger(gainParam: AudioParam, atTime: number): void",
+          "params": [
+            {
+              "name": "gainParam",
+              "type": "AudioParam",
+              "optional": false
+            },
+            {
+              "name": "atTime",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Schedule attack → decay → sustain on the target gain parameter starting at atTime (audioContext.currentTime)."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "attackMs",
+          "signature": "attackMs: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "decayMs",
+          "signature": "decayMs: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "releaseMs",
+          "signature": "releaseMs: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "sustainLevel",
+          "signature": "sustainLevel: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "totalDurationMs",
+          "signature": "totalDurationMs: number",
+          "params": [],
+          "returnType": null,
+          "description": "Total time from trigger to fully-released (attack + decay + release)."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/audio/Envelope.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/Envelope.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/audio/Envelope.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/Envelope.ts"
+}

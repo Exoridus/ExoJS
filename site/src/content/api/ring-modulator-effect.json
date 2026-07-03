@@ -1,0 +1,133 @@
+{
+  "title": "RingModulatorEffect",
+  "description": "Ring modulator effect using native Web Audio nodes (no worklet required). A carrier `OscillatorNode` is connected directly to the `gain` AudioParam of a `GainNode` whose base gain value is 0. The carrier's bipolar output (±1) modulates the gain, multiplying the input signal by the instantaneous carrier amplitude — the mathematical definition of ring modulation. The result contains the sum and difference frequencies of the input and carrier but suppresses the original carrier (unlike amplitude modulation, which retains the carrier). At sub-audio carrier frequencies (< 20 Hz) the effect becomes a tremolo. Node graph: ``` input(GainNode) ┬── dryGain ──────────────────────────┐ │ ├── output(GainNode) └── ringGain ── wetGain ────────────────┘ carrierOsc ── ringGain.gain (AudioParam, base = 0) ``` Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet`; `ringGain.gain` base = 0 (carrier provides the ±1 modulation).",
+  "symbol": "RingModulatorEffect",
+  "kind": "class",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs-audio-fx",
+  "tier": "stable",
+  "memberCount": 8,
+  "counts": {
+    "constructors": 1,
+    "methods": 1,
+    "properties": 6,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Ring modulator effect using native Web Audio nodes (no worklet required).",
+        "A carrier `OscillatorNode` is connected directly to the `gain` AudioParam of a `GainNode` whose base gain value is 0. The carrier's bipolar output (±1) modulates the gain, multiplying the input signal by the instantaneous carrier amplitude — the mathematical definition of ring modulation. The result contains the sum and difference frequencies of the input and carrier but suppresses the original carrier (unlike amplitude modulation, which retains the carrier). At sub-audio carrier frequencies (< 20 Hz) the effect becomes a tremolo.",
+        "Node graph: ``` input(GainNode) ┬── dryGain ──────────────────────────┐ │ ├── output(GainNode) └── ringGain ── wetGain ────────────────┘",
+        "carrierOsc ── ringGain.gain (AudioParam, base = 0) ``` Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet`; `ringGain.gain` base = 0 (carrier provides the ±1 modulation)."
+      ],
+      "importLine": "import { RingModulatorEffect } from '@codexo/exojs-audio-fx'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(options: RingModulatorEffectOptions): RingModulatorEffect",
+          "params": [
+            {
+              "name": "options",
+              "type": "RingModulatorEffectOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "RingModulatorEffect",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Disconnects all audio nodes and releases resources. Must be called when the effect is no longer needed."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "frequency",
+          "signature": "frequency: number",
+          "params": [],
+          "returnType": null,
+          "description": "Carrier oscillator frequency in Hz. Range 0..20000, default 440. Changes are ramped smoothly via setTargetAtTime."
+        },
+        {
+          "name": "inputNode",
+          "signature": "inputNode: AudioNode",
+          "params": [],
+          "returnType": null,
+          "description": "The node where audio enters this effect. Throws if the audio context is not yet initialized."
+        },
+        {
+          "name": "outputNode",
+          "signature": "outputNode: AudioNode",
+          "params": [],
+          "returnType": null,
+          "description": "The node where audio exits this effect. Throws if the audio context is not yet initialized."
+        },
+        {
+          "name": "ready",
+          "signature": "ready: Promise<void>",
+          "params": [],
+          "returnType": null,
+          "description": "Resolves when the effect is fully initialized. Defaults to immediately-resolved for sync effects."
+        },
+        {
+          "name": "waveform",
+          "signature": "waveform: OscillatorType",
+          "params": [],
+          "returnType": null,
+          "description": "Carrier oscillator waveform shape. Default 'sine'. Changes take effect immediately (no smoothing; waveform transitions are instantaneous in Web Audio)."
+        },
+        {
+          "name": "wet",
+          "signature": "wet: number",
+          "params": [],
+          "returnType": null,
+          "description": "Wet (ring-modulated) mix level, 0..1. The dry level is automatically 1 - wet. Changes are ramped smoothly via setTargetAtTime. Default 1.0."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-audio-fx/src/effects/RingModulatorEffect.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/RingModulatorEffect.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-audio-fx/src/effects/RingModulatorEffect.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/RingModulatorEffect.ts"
+}

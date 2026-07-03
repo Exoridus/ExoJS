@@ -1,0 +1,169 @@
+{
+  "title": "ApplyForce",
+  "description": "Adds a constant 2D acceleration to every live particle's velocity each frame. Use for gravity (`new ApplyForce(0, 980)`), wind, or any uniform force field. Force is applied to all particles equally — for per-particle variation, layer multiple ApplyForce modules with different gates. GPU-eligible: implements UpdateModule.wgsl so this module runs in the system's compute shader on WebGPU backends with no CPU readback.",
+  "symbol": "ApplyForce",
+  "kind": "class",
+  "subsystem": "particles",
+  "importPath": "@codexo/exojs-particles",
+  "tier": "stable",
+  "memberCount": 8,
+  "counts": {
+    "constructors": 1,
+    "methods": 5,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Adds a constant 2D acceleration to every live particle's velocity each frame. Use for gravity (`new ApplyForce(0, 980)`), wind, or any uniform force field. Force is applied to all particles equally — for per-particle variation, layer multiple ApplyForce modules with different gates.",
+        "GPU-eligible: implements UpdateModule.wgsl so this module runs in the system's compute shader on WebGPU backends with no CPU readback."
+      ],
+      "importLine": "import { ApplyForce } from '@codexo/exojs-particles'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(accelerationX: number, accelerationY: number): ApplyForce",
+          "params": [
+            {
+              "name": "accelerationX",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "accelerationY",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "ApplyForce",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "apply",
+          "signature": "apply(system: ParticleSystem, dt: number): void",
+          "params": [
+            {
+              "name": "system",
+              "type": "ParticleSystem",
+              "optional": false
+            },
+            {
+              "name": "dt",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Optional cleanup hook called from ParticleSystem.destroy."
+        },
+        {
+          "name": "uploadTextures",
+          "signature": "uploadTextures(device: GPUDevice, textures: ReadonlyMap<string, GPUTexture>): void",
+          "params": [
+            {
+              "name": "device",
+              "type": "GPUDevice",
+              "optional": false
+            },
+            {
+              "name": "textures",
+              "type": "ReadonlyMap<string, GPUTexture>",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Upload texture data (Curve/ColorGradient lookup tables) to the GPU at compile time. Receives the GPUDevice and a map of texture bindings keyed by the name in WgslContribution.textures. Called once after pipeline creation. Required when wgsl declares textures."
+        },
+        {
+          "name": "wgsl",
+          "signature": "wgsl(): WgslContribution",
+          "params": [],
+          "returnType": "WgslContribution",
+          "description": "Override to declare a GPU contribution. Returning a WgslContribution makes this module GPU-eligible; omitting (or returning undefined) forces CPU mode for any system that uses this module."
+        },
+        {
+          "name": "writeUniforms",
+          "signature": "writeUniforms(view: DataView, offset: number): void",
+          "params": [
+            {
+              "name": "view",
+              "type": "DataView",
+              "optional": false
+            },
+            {
+              "name": "offset",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Write this module's current uniform values into the shared uniform buffer at byteOffset. Layout must match the field declarations returned by wgsl (in the same order). Receives the current frame dt (seconds). Modules tracking accumulated time (e.g. noise/turbulence) should advance their internal counter here to stay in sync when running in GPU mode (where apply is not called). Required when wgsl declares uniforms. Called every frame by the system before dispatching compute."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "accelerationX",
+          "signature": "accelerationX: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "accelerationY",
+          "signature": "accelerationY: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-particles/src/modules/ApplyForce.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/modules/ApplyForce.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-particles/src/modules/ApplyForce.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/modules/ApplyForce.ts"
+}

@@ -3,6 +3,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Application, ReflectionKind } from 'typedoc';
 
+import { apiSymbolSchema } from '../src/lib/api-schema';
+import type { ApiCounts, ApiMember, ApiSection, ApiSymbolData } from '../src/lib/api-schema';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const siteRoot = path.resolve(__dirname, '..');
@@ -146,10 +149,23 @@ const renderComment = (comment: any): string => {
     return summary;
 };
 
-const toFrontmatterString = (value: string): string => `"${value.replaceAll(/\s+/g, ' ').trim().replaceAll('"', '\\"')}"`;
-const toFrontmatterArray = (values: ReadonlyArray<string>): string =>
-    `[${values.map(value => `"${value.replaceAll('"', '\\"')}"`).join(', ')}]`;
-const escapeMdxText = (value: string): string => value.replaceAll('\\', '\\\\').replaceAll('{', '\\{').replaceAll('}', '\\}').replaceAll('<', '\\<');
+/** Section id / anchor slug, e.g. "Constructors" -> "constructors". */
+const toAnchor = (value: string): string =>
+    value
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .trim()
+        .replace(/\s+/g, '-');
+
+/** Collapse a raw JSDoc summary to a single line (multi-line comments -> one). */
+const toSingleLine = (value: string): string => value.replaceAll(/\s+/g, ' ').trim();
+
+/** Split a raw JSDoc summary into paragraphs on blank lines, each collapsed. */
+const toParagraphs = (value: string): string[] =>
+    value
+        .split(/\n\s*\n/)
+        .map(part => toSingleLine(part))
+        .filter(part => part.length > 0);
 
 const renderType = (type: any): string => {
     if (!type) return 'unknown';
@@ -183,12 +199,24 @@ const renderType = (type: any): string => {
     }
 };
 
+interface ExtractedParam {
+    name: string;
+    type: string;
+    optional: boolean;
+}
+
+const extractParams = (signature: any): ExtractedParam[] =>
+    (signature.parameters ?? []).map((parameter: any) => ({
+        name: parameter.name,
+        type: renderType(parameter.type),
+        optional: Boolean(parameter.flags?.isOptional),
+    }));
+
 const renderSignature = (name: string, signature: any): string => {
-    const params = (signature.parameters ?? [])
-        .map((parameter: any) => `${parameter.name}${parameter.flags?.isOptional ? '?' : ''}: ${renderType(parameter.type)}`)
+    const params = extractParams(signature)
+        .map(parameter => `${parameter.name}${parameter.optional ? '?' : ''}: ${parameter.type}`)
         .join(', ');
-    const returns = renderType(signature.type);
-    return `${name}(${params}): ${returns}`;
+    return `${name}(${params}): ${renderType(signature.type)}`;
 };
 
 const resolvePropertyType = (member: any): any =>
@@ -198,27 +226,52 @@ const resolvePropertyComment = (member: any): any =>
     member.comment ?? member.getSignature?.comment;
 
 /**
- * Render a member's JSDoc summary as a single-line, MDX-safe description
- * suitable for appending to a `- \`<signature>\`` bullet. Collapses
- * multi-line comments to one line (the row regex in the API renderer is
- * per-line), strips inline-code backticks (they would render as literal
- * text inside the description cell), and MDX-escapes the result so
- * characters like `<` or `{` don't break the generated `.mdx`.
+ * A member's JSDoc summary as a single-line description for the row cell.
+ * Collapses multi-line comments to one line and strips inline-code backticks
+ * (they would render as literal text inside the description cell). No MDX
+ * escaping is needed — the value is stored in JSON and rendered as text.
  */
-const toRowDescription = (comment: any): string => {
+const toMemberDescription = (comment: any): string => {
     const raw = renderComment(comment);
     if (!raw) return '';
-    const singleLine = raw.replaceAll(/\s+/g, ' ').trim();
-    const withoutBackticks = singleLine.replaceAll('`', '');
-    return escapeMdxText(withoutBackticks);
+    return toSingleLine(raw).replaceAll('`', '');
 };
 
-const renderMemberBullet = (signatureText: string, comment: any): string => {
-    const description = toRowDescription(comment);
-    return description.length > 0 ? `- \`${signatureText}\` - ${description}` : `- \`${signatureText}\``;
-};
+/** A constructor/method member: structured params + a concrete return type. */
+const buildCallableMember = (name: string, signature: any, fallbackComment: any): ApiMember => ({
+    name,
+    signature: renderSignature(name, signature),
+    params: extractParams(signature),
+    returnType: renderType(signature.type),
+    description: toMemberDescription(signature.comment ?? fallbackComment),
+});
 
-const renderClassMembers = (reflection: any): { body: string; sections: string[]; memberCount: number } => {
+/** A property/event member: no params, no return type. */
+const buildValueMember = (name: string, type: string, comment: any): ApiMember => ({
+    name,
+    signature: `${name}: ${type}`,
+    params: [],
+    returnType: null,
+    description: toMemberDescription(comment),
+});
+
+/** Wrap ordered members into a section with a slug id derived from the title. */
+const toMemberSection = (title: string, members: ApiMember[]): ApiSection => ({
+    id: toAnchor(title),
+    title,
+    members,
+    paragraphs: [],
+    importLine: null,
+    sourceLink: null,
+});
+
+interface ReflectionBody {
+    sections: ApiSection[];
+    counts: ApiCounts;
+    memberCount: number;
+}
+
+const renderClassMembers = (reflection: any): ReflectionBody => {
     const children = reflection.children ?? [];
     const constructors = children.filter((child: any) => (child.kind & ReflectionKind.Constructor) > 0);
     const methods = children.filter((child: any) => (child.kind & ReflectionKind.Method) > 0);
@@ -233,58 +286,55 @@ const renderClassMembers = (reflection: any): { body: string; sections: string[]
     );
     const plainProperties = properties.filter((property: any) => !events.includes(property));
 
-    const blocks: Array<string> = [];
-    const sections: Array<string> = [];
+    const constructorMembers = constructors.flatMap((ctor: any) =>
+        (ctor.signatures ?? []).map((signature: any) => buildCallableMember('new', signature, ctor.comment))
+    );
+    const methodMembers = methods.flatMap((method: any) =>
+        (method.signatures ?? []).map((signature: any) => buildCallableMember(method.name, signature, method.comment))
+    );
+    const propertyMembers = plainProperties.map((property: any) =>
+        buildValueMember(property.name, renderType(resolvePropertyType(property)), resolvePropertyComment(property))
+    );
+    const eventMembers = events.map((event: any) =>
+        buildValueMember(event.name, renderType(resolvePropertyType(event)), resolvePropertyComment(event))
+    );
 
-    if (constructors.length > 0) {
-        const lines = constructors.flatMap((ctor: any) =>
-            (ctor.signatures ?? []).map((signature: any) =>
-                renderMemberBullet(renderSignature('new', signature), signature.comment ?? ctor.comment)
-            )
-        );
-        blocks.push(`## Constructors\n\n${lines.join('\n')}`);
-        sections.push('Constructors');
-    }
+    const sections: ApiSection[] = [];
+    if (constructorMembers.length > 0) sections.push(toMemberSection('Constructors', constructorMembers));
+    if (methodMembers.length > 0) sections.push(toMemberSection('Methods', methodMembers));
+    if (propertyMembers.length > 0) sections.push(toMemberSection('Properties', propertyMembers));
+    if (eventMembers.length > 0) sections.push(toMemberSection('Events', eventMembers));
 
-    if (methods.length > 0) {
-        const lines = methods.flatMap((method: any) =>
-            (method.signatures ?? []).map((signature: any) =>
-                renderMemberBullet(renderSignature(method.name, signature), signature.comment ?? method.comment)
-            )
-        );
-        blocks.push(`## Methods\n\n${lines.join('\n')}`);
-        sections.push('Methods');
-    }
-
-    if (plainProperties.length > 0) {
-        const lines = plainProperties.map((property: any) =>
-            renderMemberBullet(`${property.name}: ${renderType(resolvePropertyType(property))}`, resolvePropertyComment(property))
-        );
-        blocks.push(`## Properties\n\n${lines.join('\n')}`);
-        sections.push('Properties');
-    }
-
-    if (events.length > 0) {
-        const lines = events.map((event: any) =>
-            renderMemberBullet(`${event.name}: ${renderType(resolvePropertyType(event))}`, resolvePropertyComment(event))
-        );
-        blocks.push(`## Events\n\n${lines.join('\n')}`);
-        sections.push('Events');
-    }
+    const counts: ApiCounts = {
+        constructors: constructorMembers.length,
+        methods: methodMembers.length,
+        properties: propertyMembers.length,
+        events: eventMembers.length,
+    };
 
     return {
-        body: blocks.join('\n\n'),
         sections,
-        memberCount: constructors.length + methods.length + plainProperties.length + events.length,
+        counts,
+        memberCount: counts.constructors + counts.methods + counts.properties + counts.events,
     };
 };
 
-const renderReflectionBody = (reflection: any): { body: string; sections: string[]; memberCount: number } => {
+const EMPTY_COUNTS: ApiCounts = { constructors: 0, methods: 0, properties: 0, events: 0 };
+
+const renderReflectionBody = (reflection: any): ReflectionBody => {
     if (isEnum(reflection.kind)) {
-        const members = (reflection.children ?? []).map((member: any) => `- \`${member.name}\``);
+        // Enum members render as a bare name with no description, matching the
+        // prior output — the signature is the member name itself.
+        const members = (reflection.children ?? []).map((member: any): ApiMember => ({
+            name: member.name,
+            signature: member.name,
+            params: [],
+            returnType: null,
+            description: '',
+        }));
         return {
-            body: members.length > 0 ? `## Members\n\n${members.join('\n')}` : '',
-            sections: members.length > 0 ? ['Members'] : [],
+            sections: members.length > 0 ? [toMemberSection('Members', members)] : [],
+            counts: EMPTY_COUNTS,
             memberCount: members.length,
         };
     }
@@ -293,7 +343,7 @@ const renderReflectionBody = (reflection: any): { body: string; sections: string
         return renderClassMembers(reflection);
     }
 
-    return { body: '', sections: [], memberCount: 0 };
+    return { sections: [], counts: EMPTY_COUNTS, memberCount: 0 };
 };
 
 const entryPointTitle = (reflection: any): string => {
@@ -303,7 +353,10 @@ const entryPointTitle = (reflection: any): string => {
 };
 
 const ensureCleanOutput = (): void => {
-    fs.rmSync(outputDir, { recursive: true, force: true });
+    // maxRetries covers the transient Windows EPERM/EBUSY that hits recursive
+    // rmSync when a file indexer or a parallel build step (examples:sync) has
+    // the output directory momentarily open. Node retries these error codes.
+    fs.rmSync(outputDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     fs.mkdirSync(outputDir, { recursive: true });
 };
 
@@ -332,7 +385,7 @@ const emitReflection = (reflection: any, usedSlugs: Set<string>, options: EmitOp
     const importPath = options.importPathOverride ?? entryPointTitle(reflection);
     const description = renderComment(reflection.comment);
     const tier: ApiTier = reflection.comment?.modifierTags?.has('@advanced') ? 'advanced' : 'stable';
-    const { body, sections, memberCount } = renderReflectionBody(reflection);
+    const { sections: memberSections, counts, memberCount } = renderReflectionBody(reflection);
     const kind = toApiKind(reflection.kind);
 
     const baseSlug = slugify(reflection.name);
@@ -353,41 +406,56 @@ const emitReflection = (reflection: any, usedSlugs: Set<string>, options: EmitOp
     // inserted above the symbol, which flips `docs:api:check` on a pure line
     // shift with zero content change. Link to the file itself instead.
     const sourceUrl = sourceRelative ? `https://github.com/Exoridus/ExoJS/blob/main/${sourceRelative}` : undefined;
-    const safeDescriptionBody = description ? escapeMdxText(description) : '';
-    const allSections = ['Import', ...sections, ...(sourceUrl ? ['Source'] : [])];
-    const bodyBlocks: Array<string> = [`## Import\n\n\`import { ${reflection.name} } from '${importPath}'\``];
-    if (safeDescriptionBody.length > 0) {
-        bodyBlocks.push(safeDescriptionBody);
-    }
-    if (body.length > 0) {
-        bodyBlocks.push(body);
-    }
+
+    // The Import section carries the import statement plus the class-level
+    // description (rendered as paragraphs); member sections follow; the Source
+    // section, when present, carries the repo link. This mirrors exactly what
+    // the API page rendered from the old MDX body, now as typed data.
+    const sections: ApiSection[] = [
+        {
+            id: 'import',
+            title: 'Import',
+            members: [],
+            paragraphs: description ? toParagraphs(description) : [],
+            importLine: `import { ${reflection.name} } from '${importPath}'`,
+            sourceLink: null,
+        },
+        ...memberSections,
+    ];
     if (sourceUrl && sourceRelative) {
-        bodyBlocks.push(`## Source\n\n[${sourceRelative}](${sourceUrl})`);
+        sections.push({
+            id: 'source',
+            title: 'Source',
+            members: [],
+            paragraphs: [],
+            importLine: null,
+            sourceLink: { label: sourceRelative, href: sourceUrl },
+        });
     }
-    const composedBody = bodyBlocks.join('\n\n');
 
-    const mdx = [
-        '---',
-        `title: ${toFrontmatterString(reflection.name)}`,
-        `description: ${toFrontmatterString(description)}`,
-        `symbol: ${toFrontmatterString(reflection.name)}`,
-        `kind: ${toFrontmatterString(kind)}`,
-        `subsystem: ${toFrontmatterString(subsystem)}`,
-        `importPath: ${toFrontmatterString(importPath)}`,
-        `memberCount: ${memberCount}`,
-        `tier: ${toFrontmatterString(tier)}`,
-        `sections: ${toFrontmatterArray(allSections)}`,
-        sourceRelative ? `sourcePath: ${toFrontmatterString(sourceRelative)}` : '',
-        sourceUrl ? `sourceUrl: ${toFrontmatterString(sourceUrl)}` : '',
-        '---',
-        '',
-        composedBody,
-    ]
-        .filter(Boolean)
-        .join('\n');
+    const data: ApiSymbolData = {
+        title: reflection.name,
+        description: toSingleLine(description),
+        symbol: reflection.name,
+        kind,
+        subsystem,
+        importPath,
+        tier,
+        memberCount,
+        counts,
+        sections,
+        ...(sourceRelative ? { sourcePath: sourceRelative } : {}),
+        ...(sourceUrl ? { sourceUrl } : {}),
+    };
 
-    fs.writeFileSync(path.resolve(outputDir, `${slug}.mdx`), `${mdx}\n`, 'utf8');
+    // Validate against the shared schema so the generator can never emit data
+    // the collection would reject at build time (fail fast, here, with context).
+    const result = apiSymbolSchema.safeParse(data);
+    if (!result.success) {
+        throw new Error(`Generated API data for "${reflection.name}" is invalid:\n${result.error.toString()}`);
+    }
+
+    fs.writeFileSync(path.resolve(outputDir, `${slug}.json`), `${JSON.stringify(data, null, 2)}\n`, 'utf8');
     return true;
 };
 

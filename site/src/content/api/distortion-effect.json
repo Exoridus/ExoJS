@@ -1,0 +1,139 @@
+{
+  "title": "DistortionEffect",
+  "description": "Distortion effect built from native Web Audio nodes — no worklet required. The input signal is split into a dry path and a wet path. The wet path runs through a `WaveShaperNode` loaded with a tanh-based soft-clip curve, then through a `BiquadFilterNode` (lowpass) acting as a tone control, before being mixed back with the dry signal. The wave-shaper curve is rebuilt any time `drive` changes. Oversampling is delegated directly to `WaveShaperNode.oversample`. Node graph: ``` input(GainNode) ──── dryGain ─────────────────────────── output(GainNode) input ──── waveShaper ── toneFilter ── wetGain ── output ``` Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet`.",
+  "symbol": "DistortionEffect",
+  "kind": "class",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs-audio-fx",
+  "tier": "stable",
+  "memberCount": 9,
+  "counts": {
+    "constructors": 1,
+    "methods": 1,
+    "properties": 7,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Distortion effect built from native Web Audio nodes — no worklet required.",
+        "The input signal is split into a dry path and a wet path. The wet path runs through a `WaveShaperNode` loaded with a tanh-based soft-clip curve, then through a `BiquadFilterNode` (lowpass) acting as a tone control, before being mixed back with the dry signal. The wave-shaper curve is rebuilt any time `drive` changes. Oversampling is delegated directly to `WaveShaperNode.oversample`.",
+        "Node graph: ``` input(GainNode) ──── dryGain ─────────────────────────── output(GainNode) input ──── waveShaper ── toneFilter ── wetGain ── output ``` Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet`."
+      ],
+      "importLine": "import { DistortionEffect } from '@codexo/exojs-audio-fx'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(options: DistortionEffectOptions): DistortionEffect",
+          "params": [
+            {
+              "name": "options",
+              "type": "DistortionEffectOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "DistortionEffect",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Disconnects all audio nodes and releases resources. Must be called when the effect is no longer needed."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "drive",
+          "signature": "drive: number",
+          "params": [],
+          "returnType": null,
+          "description": "Drive amount controlling the soft-clip intensity. Range 0..1, default 0.4. Changing this rebuilds the wave-shaper curve immediately (sample-accurate on the next render quantum)."
+        },
+        {
+          "name": "inputNode",
+          "signature": "inputNode: AudioNode",
+          "params": [],
+          "returnType": null,
+          "description": "The node where audio enters this effect. Throws if the audio context is not yet initialized."
+        },
+        {
+          "name": "outputNode",
+          "signature": "outputNode: AudioNode",
+          "params": [],
+          "returnType": null,
+          "description": "The node where audio exits this effect. Throws if the audio context is not yet initialized."
+        },
+        {
+          "name": "oversample",
+          "signature": "oversample: OverSampleType",
+          "params": [],
+          "returnType": null,
+          "description": "Oversampling mode for the WaveShaperNode. One of 'none', '2x', or '4x'. Higher values reduce aliasing but increase CPU usage. Default '2x'."
+        },
+        {
+          "name": "ready",
+          "signature": "ready: Promise<void>",
+          "params": [],
+          "returnType": null,
+          "description": "Resolves when the effect is fully initialized. Defaults to immediately-resolved for sync effects."
+        },
+        {
+          "name": "tone",
+          "signature": "tone: number",
+          "params": [],
+          "returnType": null,
+          "description": "Tone control: low-pass cutoff on the wet path. 0 = fully dark (~100 Hz), 1 = fully open (~20 kHz). Mapped logarithmically. Default 1. Changes are ramped smoothly via setTargetAtTime."
+        },
+        {
+          "name": "wet",
+          "signature": "wet: number",
+          "params": [],
+          "returnType": null,
+          "description": "Wet (distorted) mix level, 0..1. The dry level is automatically 1 - wet. Changes are ramped smoothly via setTargetAtTime. Default 1.0."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-audio-fx/src/effects/DistortionEffect.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/DistortionEffect.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-audio-fx/src/effects/DistortionEffect.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/DistortionEffect.ts"
+}

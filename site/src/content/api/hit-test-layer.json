@@ -1,0 +1,128 @@
+{
+  "title": "HitTestLayer",
+  "description": "Debug layer that draws outlines around interactive scene nodes. - Magenta: interactive but idle. - Yellow: currently hovered. - Cyan: pointer-captured (drag in progress). - Faint gray quadrant outlines when the spatial index is active (i.e. at least one interactive node is present in the scene). World-space.",
+  "symbol": "HitTestLayer",
+  "kind": "class",
+  "subsystem": "debug",
+  "importPath": "@codexo/exojs/debug",
+  "tier": "stable",
+  "memberCount": 6,
+  "counts": {
+    "constructors": 1,
+    "methods": 3,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Debug layer that draws outlines around interactive scene nodes. - Magenta: interactive but idle. - Yellow: currently hovered. - Cyan: pointer-captured (drag in progress). - Faint gray quadrant outlines when the spatial index is active (i.e. at least one interactive node is present in the scene). World-space."
+      ],
+      "importLine": "import { HitTestLayer } from '@codexo/exojs/debug'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(app: Application): HitTestLayer",
+          "params": [
+            {
+              "name": "app",
+              "type": "Application",
+              "optional": false
+            }
+          ],
+          "returnType": "HitTestLayer",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Release the internal Graphics primitive."
+        },
+        {
+          "name": "render",
+          "signature": "render(backend: RenderBackend): void",
+          "params": [
+            {
+              "name": "backend",
+              "type": "RenderBackend",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Walk the scene tree and draw color-coded outlines around interactive nodes (magenta = idle, yellow = hovered, cyan = pointer-captured). Also draws faint gray quadrant boundaries when the spatial index is active, helping diagnose partitioning behavior."
+        },
+        {
+          "name": "update",
+          "signature": "update(_delta: Time): void",
+          "params": [
+            {
+              "name": "_delta",
+              "type": "Time",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "No per-frame pre-computation required; all state is derived in render."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "visible",
+          "signature": "visible: boolean",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "viewMode",
+          "signature": "viewMode: DebugLayerViewMode",
+          "params": [],
+          "returnType": null,
+          "description": "Renders in world-space so outlines align with interactive node positions."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/debug/HitTestLayer.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/debug/HitTestLayer.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/debug/HitTestLayer.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/debug/HitTestLayer.ts"
+}

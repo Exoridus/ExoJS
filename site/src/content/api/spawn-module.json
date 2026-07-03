@@ -1,0 +1,94 @@
+{
+  "title": "SpawnModule",
+  "description": "Per-frame particle spawner. Subclasses decide how many particles to emit each tick (rate-based, burst, on-demand) and write their initial values directly into the system's typed-array slots. Implementation pattern: ```ts apply(system, dt) { const count = this.computeSpawnCount(dt); for (let i = 0; i < count; i++) { const slot = system.spawn(); if (slot < 0) break; // capacity exhausted system.posX[slot] = ...; system.velX[slot] = ...; system.lifetime[slot] = ...; // ...etc } } ``` Spawn modules run before integration each frame. Multiple modules can be registered on one system and execute in registration order.",
+  "symbol": "SpawnModule",
+  "kind": "class",
+  "subsystem": "particles",
+  "importPath": "@codexo/exojs-particles",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 1,
+    "methods": 2,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Per-frame particle spawner. Subclasses decide how many particles to emit each tick (rate-based, burst, on-demand) and write their initial values directly into the system's typed-array slots.",
+        "Implementation pattern:",
+        "```ts apply(system, dt) { const count = this.computeSpawnCount(dt); for (let i = 0; i < count; i++) { const slot = system.spawn(); if (slot < 0) break; // capacity exhausted system.posX[slot] = ...; system.velX[slot] = ...; system.lifetime[slot] = ...; // ...etc } } ```",
+        "Spawn modules run before integration each frame. Multiple modules can be registered on one system and execute in registration order."
+      ],
+      "importLine": "import { SpawnModule } from '@codexo/exojs-particles'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(): SpawnModule",
+          "params": [],
+          "returnType": "SpawnModule",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "apply",
+          "signature": "apply(system: ParticleSystem, dt: number): void",
+          "params": [
+            {
+              "name": "system",
+              "type": "ParticleSystem",
+              "optional": false
+            },
+            {
+              "name": "dt",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Optional cleanup hook called from ParticleSystem.destroy."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-particles/src/modules/SpawnModule.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/modules/SpawnModule.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-particles/src/modules/SpawnModule.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/modules/SpawnModule.ts"
+}

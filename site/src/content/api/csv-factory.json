@@ -1,0 +1,148 @@
+{
+  "title": "CsvFactory",
+  "description": "AssetFactory implementation that loads CSV (and TSV) files and produces a two-dimensional array of strings. Parsing is RFC 4180-compliant: quoted fields (including fields that contain the delimiter, newlines, or double-quotes) are handled correctly. Line endings are normalised before parsing; empty trailing lines are dropped. The returned `string[][]` is intentionally untyped — callers decide whether to treat the first row as headers, apply type coercions, etc.",
+  "symbol": "CsvFactory",
+  "kind": "class",
+  "subsystem": "resources",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 7,
+  "counts": {
+    "constructors": 1,
+    "methods": 5,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "AssetFactory implementation that loads CSV (and TSV) files and produces a two-dimensional array of strings.",
+        "Parsing is RFC 4180-compliant: quoted fields (including fields that contain the delimiter, newlines, or double-quotes) are handled correctly. Line endings are normalised before parsing; empty trailing lines are dropped.",
+        "The returned `string[][]` is intentionally untyped — callers decide whether to treat the first row as headers, apply type coercions, etc."
+      ],
+      "importLine": "import { CsvFactory } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(): CsvFactory",
+          "params": [],
+          "returnType": "CsvFactory",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "create",
+          "signature": "create(source: string, options: CsvFactoryOptions): Promise<string[][]>",
+          "params": [
+            {
+              "name": "source",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "CsvFactoryOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<string[][]>",
+          "description": "Parses the CSV text into a two-dimensional array of strings. Each element of the outer array is one row; each element of an inner array is one field value with surrounding quotes stripped and escaped double-quotes (\"\") unescaped."
+        },
+        {
+          "name": "createObjectUrl",
+          "signature": "createObjectUrl(blob: Blob): string",
+          "params": [
+            {
+              "name": "blob",
+              "type": "Blob",
+              "optional": false
+            }
+          ],
+          "returnType": "string",
+          "description": "Creates an object URL from blob and registers it for automatic cleanup when destroy is called. Prefer this over calling URL.createObjectURL directly inside a factory subclass so the URL is always tracked."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Revokes every object URL that was created via createObjectUrl and clears the internal tracking pool."
+        },
+        {
+          "name": "process",
+          "signature": "process(response: Response): Promise<string>",
+          "params": [
+            {
+              "name": "response",
+              "type": "Response",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<string>",
+          "description": "Reads the response body as a UTF-8 string."
+        },
+        {
+          "name": "revokeObjectUrl",
+          "signature": "revokeObjectUrl(objectUrl: string): void",
+          "params": [
+            {
+              "name": "objectUrl",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "storageName",
+          "signature": "storageName: \"csv\"",
+          "params": [],
+          "returnType": null,
+          "description": "Identifier used as the object-store / storage-namespace key when this factory's assets are persisted to a CacheStore."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/resources/factories/CsvFactory.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/CsvFactory.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/resources/factories/CsvFactory.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/CsvFactory.ts"
+}

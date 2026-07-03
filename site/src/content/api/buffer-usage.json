@@ -1,0 +1,113 @@
+{
+  "title": "BufferUsage",
+  "description": "Hints describing expected buffer access pattern, allowing the driver to optimise allocation. Values are WebGL2 GLenum constants used when calling `gl.bufferData`.",
+  "symbol": "BufferUsage",
+  "kind": "enum",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 9,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Hints describing expected buffer access pattern, allowing the driver to optimise allocation. Values are WebGL2 GLenum constants used when calling `gl.bufferData`."
+      ],
+      "importLine": "import { BufferUsage } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "members",
+      "title": "Members",
+      "members": [
+        {
+          "name": "DynamicCopy",
+          "signature": "DynamicCopy",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "DynamicDraw",
+          "signature": "DynamicDraw",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "DynamicRead",
+          "signature": "DynamicRead",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "StaticCopy",
+          "signature": "StaticCopy",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "StaticDraw",
+          "signature": "StaticDraw",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "StaticRead",
+          "signature": "StaticRead",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "StreamCopy",
+          "signature": "StreamCopy",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "StreamDraw",
+          "signature": "StreamDraw",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "StreamRead",
+          "signature": "StreamRead",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/types.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/types.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/types.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/types.ts"
+}

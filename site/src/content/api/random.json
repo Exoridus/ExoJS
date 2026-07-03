@@ -1,0 +1,142 @@
+{
+  "title": "Random",
+  "description": "Seedable pseudo-random number generator using the xoshiro128** algorithm. xoshiro128** (Blackman & Vigna, 2018) keeps a compact 128-bit state — four 32-bit words — and produces high-quality 32-bit outputs that clear the full BigCrush / PractRand test batteries. It replaces the previous Mersenne Twister: ~16 bytes of state instead of ~2.5 KB, faster, and entirely 32-bit (no 64-bit arithmetic), which suits JavaScript well. The generator is deterministic: calling `setSeed(s)` followed by the same sequence of `next()` calls always produces the same output. Use `reset()` to replay from the current seed without changing it.",
+  "symbol": "Random",
+  "kind": "class",
+  "subsystem": "math",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 7,
+  "counts": {
+    "constructors": 1,
+    "methods": 4,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Seedable pseudo-random number generator using the xoshiro128** algorithm.",
+        "xoshiro128** (Blackman & Vigna, 2018) keeps a compact 128-bit state — four 32-bit words — and produces high-quality 32-bit outputs that clear the full BigCrush / PractRand test batteries. It replaces the previous Mersenne Twister: ~16 bytes of state instead of ~2.5 KB, faster, and entirely 32-bit (no 64-bit arithmetic), which suits JavaScript well.",
+        "The generator is deterministic: calling `setSeed(s)` followed by the same sequence of `next()` calls always produces the same output. Use `reset()` to replay from the current seed without changing it."
+      ],
+      "importLine": "import { Random } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(seed: number): Random",
+          "params": [
+            {
+              "name": "seed",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "Random",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "next",
+          "signature": "next(min: number, max: number): number",
+          "params": [
+            {
+              "name": "min",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "max",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": "Advance the generator and return a uniformly-distributed float in the half-open interval [min, max). Defaults to [0, 1)."
+        },
+        {
+          "name": "reset",
+          "signature": "reset(): this",
+          "params": [],
+          "returnType": "this",
+          "description": "Reinitialise the generator from the current seed without changing it — equivalent to rewinding to the start of the sequence. Returns this for chaining."
+        },
+        {
+          "name": "setSeed",
+          "signature": "setSeed(seed: number): this",
+          "params": [
+            {
+              "name": "seed",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Set a new seed and reset the generator state. Returns this for chaining."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "seed",
+          "signature": "seed: number",
+          "params": [],
+          "returnType": null,
+          "description": "The seed value currently in use."
+        },
+        {
+          "name": "value",
+          "signature": "value: number",
+          "params": [],
+          "returnType": null,
+          "description": "The last value produced by next, normalised to its requested range."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/math/Random.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/math/Random.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/math/Random.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/math/Random.ts"
+}

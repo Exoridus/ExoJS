@@ -1,0 +1,214 @@
+{
+  "title": "TiledObject",
+  "description": "A parsed Tiled object, placed in an TiledObjectLayer or a tile's collision `objectgroup`. The shape of the object is determined by which of point, ellipse, polygon, polyline, text, or gid is set; if none are set, the object is a plain rectangle spanning `[x, y, width, height]`.",
+  "symbol": "TiledObject",
+  "kind": "class",
+  "subsystem": "tiled",
+  "importPath": "@codexo/exojs-tiled",
+  "tier": "stable",
+  "memberCount": 19,
+  "counts": {
+    "constructors": 1,
+    "methods": 1,
+    "properties": 17,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A parsed Tiled object, placed in an TiledObjectLayer or a tile's collision `objectgroup`.",
+        "The shape of the object is determined by which of point, ellipse, polygon, polyline, text, or gid is set; if none are set, the object is a plain rectangle spanning `[x, y, width, height]`."
+      ],
+      "importLine": "import { TiledObject } from '@codexo/exojs-tiled'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(data: TiledObjectData): TiledObject",
+          "params": [
+            {
+              "name": "data",
+              "type": "TiledObjectData",
+              "optional": false
+            }
+          ],
+          "returnType": "TiledObject",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "getProperty",
+          "signature": "getProperty(name: string): TiledPropertyData | undefined",
+          "params": [
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "TiledPropertyData | undefined",
+          "description": "Looks up a custom property by name."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "ellipse",
+          "signature": "ellipse: boolean",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "gid",
+          "signature": "gid: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "height",
+          "signature": "height: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "id",
+          "signature": "id: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "name",
+          "signature": "name: string",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "point",
+          "signature": "point: boolean",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "polygon",
+          "signature": "polygon: readonly TiledPointData[]",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "polyline",
+          "signature": "polyline: readonly TiledPointData[]",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "properties",
+          "signature": "properties: readonly TiledPropertyData[]",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "rotation",
+          "signature": "rotation: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "template",
+          "signature": "template: string",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "text",
+          "signature": "text: TiledTextData",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "type",
+          "signature": "type: string",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "visible",
+          "signature": "visible: boolean",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "width",
+          "signature": "width: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "x",
+          "signature": "x: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "y",
+          "signature": "y: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-tiled/src/TiledObject.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tiled/src/TiledObject.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-tiled/src/TiledObject.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tiled/src/TiledObject.ts"
+}

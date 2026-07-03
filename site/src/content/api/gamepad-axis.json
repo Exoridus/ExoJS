@@ -1,0 +1,149 @@
+{
+  "title": "GamepadAxis",
+  "description": "Single mappable analog axis on a physical gamepad. Holds the raw browser `Gamepad.axes[]` index, the canonical channel the value is written to, and the transform pipeline applied each frame by transformValue. Direction-split axis channels (e.g. `LeftStickLeft`, `LeftStickRight`) live in the 0..1 range — set `invert: true` on the negative half so it reads positive when pushed in its direction. Aggregate channels (e.g. `LeftStickX`, `LeftStickY`) live in the full -1..1 range — set `bipolar: true` to preserve sign through the pipeline. The static namespace exports (`GamepadAxis.LeftStickLeft`, `.LeftStickX`, ...) carry the canonical channel offsets used to address each axis.",
+  "symbol": "GamepadAxis",
+  "kind": "class",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 8,
+  "counts": {
+    "constructors": 1,
+    "methods": 1,
+    "properties": 6,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Single mappable analog axis on a physical gamepad. Holds the raw browser `Gamepad.axes[]` index, the canonical channel the value is written to, and the transform pipeline applied each frame by transformValue.",
+        "Direction-split axis channels (e.g. `LeftStickLeft`, `LeftStickRight`) live in the 0..1 range — set `invert: true` on the negative half so it reads positive when pushed in its direction.",
+        "Aggregate channels (e.g. `LeftStickX`, `LeftStickY`) live in the full -1..1 range — set `bipolar: true` to preserve sign through the pipeline.",
+        "The static namespace exports (`GamepadAxis.LeftStickLeft`, `.LeftStickX`, ...) carry the canonical channel offsets used to address each axis."
+      ],
+      "importLine": "import { GamepadAxis } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(index: number, channel: GamepadAxisChannel, options: GamepadAxisOptions): GamepadAxis",
+          "params": [
+            {
+              "name": "index",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "channel",
+              "type": "GamepadAxisChannel",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "GamepadAxisOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "GamepadAxis",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "transformValue",
+          "signature": "transformValue(value: number): number",
+          "params": [
+            {
+              "name": "value",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": "Apply the axis transform pipeline to a raw browser axis value (typically Gamepad.axes[i], in -1..1). Pipeline: clamp to [-1, 1] → optional invert → optional normalize to [0, 1] → bipolar passthrough OR deadzone (returns 0 when the absolute value is at or below threshold)."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "bipolar",
+          "signature": "bipolar: boolean",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "channel",
+          "signature": "channel: GamepadAxisChannel",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "index",
+          "signature": "index: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "invert",
+          "signature": "invert: boolean",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "normalize",
+          "signature": "normalize: boolean",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "threshold",
+          "signature": "threshold: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/GamepadAxis.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/GamepadAxis.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/GamepadAxis.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/GamepadAxis.ts"
+}

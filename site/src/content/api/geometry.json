@@ -1,0 +1,186 @@
+{
+  "title": "Geometry",
+  "description": "Non-renderable geometry data object used by advanced rendering paths. Geometry owns only vertex/index data and its layout metadata; it is not a scene node, has no transform state, and cannot render itself.",
+  "symbol": "Geometry",
+  "kind": "class",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "advanced",
+  "memberCount": 15,
+  "counts": {
+    "constructors": 1,
+    "methods": 4,
+    "properties": 10,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Non-renderable geometry data object used by advanced rendering paths.",
+        "Geometry owns only vertex/index data and its layout metadata; it is not a scene node, has no transform state, and cannot render itself."
+      ],
+      "importLine": "import { Geometry } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(options: GeometryOptions): Geometry",
+          "params": [
+            {
+              "name": "options",
+              "type": "GeometryOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "Geometry",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Release backend-owned resources associated with this geometry instance."
+        },
+        {
+          "name": "getLocalBounds",
+          "signature": "getLocalBounds(out: Rectangle): Rectangle",
+          "params": [
+            {
+              "name": "out",
+              "type": "Rectangle",
+              "optional": false
+            }
+          ],
+          "returnType": "Rectangle",
+          "description": "Return local-space bounds; when out is provided it is populated and returned."
+        },
+        {
+          "name": "invalidate",
+          "signature": "invalidate(): this",
+          "params": [],
+          "returnType": "this",
+          "description": "Mark vertex data as mutated in place so backends can re-upload GPU buffers."
+        },
+        {
+          "name": "recomputeLocalBounds",
+          "signature": "recomputeLocalBounds(): this",
+          "params": [],
+          "returnType": "this",
+          "description": "Force local-space AABB recomputation from the current position attribute data."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "attributes",
+          "signature": "attributes: readonly GeometryAttribute[]",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "indices",
+          "signature": "indices: Uint16Array<ArrayBufferLike> | Uint32Array<ArrayBufferLike> | null",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "stride",
+          "signature": "stride: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "topology",
+          "signature": "topology: Topology",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "usage",
+          "signature": "usage: GeometryUsage",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "vertexData",
+          "signature": "vertexData: ArrayBuffer | Float32Array<ArrayBufferLike>",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "id",
+          "signature": "id: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "indexCount",
+          "signature": "indexCount: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "version",
+          "signature": "version: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "vertexCount",
+          "signature": "vertexCount: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/geometry/Geometry.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/geometry/Geometry.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/geometry/Geometry.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/geometry/Geometry.ts"
+}

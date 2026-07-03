@@ -1,0 +1,358 @@
+{
+  "title": "Gamepad",
+  "description": "One of four stable gamepad slots. Lives for the entire `Application` lifetime even when no physical pad is attached — a \"mailbox\" that physical hardware moves into and out of. Subscribe to onConnect / onDisconnect for hardware lifecycle, onButtonDown / onButtonUp / onAxisChange for granular per-event notifications, or call onTrigger / onActive / onStart / onStop to register stateful InputBindings pinned to this slot. Listeners survive disconnect/reconnect cycles — a binding registered when the slot was empty will automatically activate when a pad connects.",
+  "symbol": "Gamepad",
+  "kind": "class",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 25,
+  "counts": {
+    "constructors": 1,
+    "methods": 10,
+    "properties": 8,
+    "events": 6
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "One of four stable gamepad slots. Lives for the entire `Application` lifetime even when no physical pad is attached — a \"mailbox\" that physical hardware moves into and out of.",
+        "Subscribe to onConnect / onDisconnect for hardware lifecycle, onButtonDown / onButtonUp / onAxisChange for granular per-event notifications, or call onTrigger / onActive / onStart / onStop to register stateful InputBindings pinned to this slot.",
+        "Listeners survive disconnect/reconnect cycles — a binding registered when the slot was empty will automatically activate when a pad connects."
+      ],
+      "importLine": "import { Gamepad } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(slot: 0 | 1 | 2 | 3, channels: Float32Array): Gamepad",
+          "params": [
+            {
+              "name": "slot",
+              "type": "0 | 1 | 2 | 3",
+              "optional": false
+            },
+            {
+              "name": "channels",
+              "type": "Float32Array",
+              "optional": false
+            }
+          ],
+          "returnType": "Gamepad",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Tear down this gamepad slot. Called on application shutdown."
+        },
+        {
+          "name": "hasChannel",
+          "signature": "hasChannel(channel: GamepadButtonChannel | GamepadAxisChannel): boolean",
+          "params": [
+            {
+              "name": "channel",
+              "type": "GamepadButtonChannel | GamepadAxisChannel",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Returns true when this pad's mapping declares the requested channel. Use to gate listener registration on optional hardware (e.g. Joy-Con solo lacks a right stick — pad.hasChannel(GamepadAxis.RightStickX) returns false)."
+        },
+        {
+          "name": "onActive",
+          "signature": "onActive(channel: InputChannel | readonly InputChannel[], callback: object, options?: InputBindingOptions): InputBinding",
+          "params": [
+            {
+              "name": "channel",
+              "type": "InputChannel | readonly InputChannel[]",
+              "optional": false
+            },
+            {
+              "name": "callback",
+              "type": "object",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "InputBindingOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "InputBinding",
+          "description": "Register a callback fired every frame while any of channels is active. Receives the channel value (0..1 for buttons, -1..1 for bipolar axes)."
+        },
+        {
+          "name": "onStart",
+          "signature": "onStart(channel: InputChannel | readonly InputChannel[], callback: object, options?: InputBindingOptions): InputBinding",
+          "params": [
+            {
+              "name": "channel",
+              "type": "InputChannel | readonly InputChannel[]",
+              "optional": false
+            },
+            {
+              "name": "callback",
+              "type": "object",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "InputBindingOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "InputBinding",
+          "description": "Register a callback fired once when any of channels becomes active. Listener survives disconnect/reconnect; call .unbind() on the returned InputBinding to detach."
+        },
+        {
+          "name": "onStop",
+          "signature": "onStop(channel: InputChannel | readonly InputChannel[], callback: object, options?: InputBindingOptions): InputBinding",
+          "params": [
+            {
+              "name": "channel",
+              "type": "InputChannel | readonly InputChannel[]",
+              "optional": false
+            },
+            {
+              "name": "callback",
+              "type": "object",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "InputBindingOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "InputBinding",
+          "description": "Register a callback fired once when all of channels become inactive."
+        },
+        {
+          "name": "onTrigger",
+          "signature": "onTrigger(channel: InputChannel | readonly InputChannel[], callback: object, options?: InputBindingOptions): InputBinding",
+          "params": [
+            {
+              "name": "channel",
+              "type": "InputChannel | readonly InputChannel[]",
+              "optional": false
+            },
+            {
+              "name": "callback",
+              "type": "object",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "InputBindingOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "InputBinding",
+          "description": "Register a callback fired when the input is released within InputBindingOptions.threshold ms of activation (a \"tap\")."
+        },
+        {
+          "name": "resolveChannelOffset",
+          "signature": "resolveChannelOffset(channel: GamepadButtonChannel | GamepadAxisChannel): number",
+          "params": [
+            {
+              "name": "channel",
+              "type": "GamepadButtonChannel | GamepadAxisChannel",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": "Convert a slot-relative channel value to its absolute index in the shared channel buffer for this slot."
+        },
+        {
+          "name": "stopVibration",
+          "signature": "stopVibration(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Stop any active rumble on this pad. Silent no-op when unsupported."
+        },
+        {
+          "name": "vibrate",
+          "signature": "vibrate(options: GamepadVibrationOptions): Promise<void>",
+          "params": [
+            {
+              "name": "options",
+              "type": "GamepadVibrationOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<void>",
+          "description": "Trigger a rumble effect on this pad. Resolves when the effect finishes. Silent no-op when the pad is disconnected or the platform does not support haptic feedback. Use canVibrate to detect support."
+        },
+        {
+          "name": "resolveChannelOffset",
+          "signature": "resolveChannelOffset(slot: number, channel: GamepadButtonChannel | GamepadAxisChannel): number",
+          "params": [
+            {
+              "name": "slot",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "channel",
+              "type": "GamepadButtonChannel | GamepadAxisChannel",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": "Static counterpart to Gamepad.resolveChannelOffset — resolves an absolute channel-buffer offset for a given slot index without requiring a Gamepad instance."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "browserGamepad",
+          "signature": "browserGamepad: Gamepad | null",
+          "params": [],
+          "returnType": null,
+          "description": "The underlying browser gamepad object, or null when disconnected."
+        },
+        {
+          "name": "canVibrate",
+          "signature": "canVibrate: boolean",
+          "params": [],
+          "returnType": null,
+          "description": "true when the connected pad supports rumble via the Web Gamepad API."
+        },
+        {
+          "name": "connected",
+          "signature": "connected: boolean",
+          "params": [],
+          "returnType": null,
+          "description": "true while a physical pad is attached to this slot."
+        },
+        {
+          "name": "info",
+          "signature": "info: GamepadInfo | null",
+          "params": [],
+          "returnType": null,
+          "description": "Identity metadata, or null when disconnected."
+        },
+        {
+          "name": "internalIndex",
+          "signature": "internalIndex: number | null",
+          "params": [],
+          "returnType": null,
+          "description": "Browser-assigned hardware index from navigator.getGamepads() (i.e. Gamepad.index), or null when no pad is attached. Stable for the lifetime of a single physical connection but may change across disconnect/reconnect. Low-level escape hatch for advanced consumers that need to correlate slots with the raw browser API; prefer slot for stable per-application pad identity."
+        },
+        {
+          "name": "mapping",
+          "signature": "mapping: GamepadMapping | null",
+          "params": [],
+          "returnType": null,
+          "description": "The active mapping, or null when disconnected."
+        },
+        {
+          "name": "mappingFamily",
+          "signature": "mappingFamily: GamepadMappingFamily | null",
+          "params": [],
+          "returnType": null,
+          "description": "The GamepadMappingFamily, or null when disconnected."
+        },
+        {
+          "name": "slot",
+          "signature": "slot: 0 | 1 | 2 | 3",
+          "params": [],
+          "returnType": null,
+          "description": "This pad's stable slot (0..3)."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "events",
+      "title": "Events",
+      "members": [
+        {
+          "name": "onAxisChange",
+          "signature": "onAxisChange: Signal<[GamepadAxis, number]>",
+          "params": [],
+          "returnType": null,
+          "description": "Fires whenever an axis crosses its activation threshold."
+        },
+        {
+          "name": "onButtonDown",
+          "signature": "onButtonDown: Signal<[GamepadButton, number]>",
+          "params": [],
+          "returnType": null,
+          "description": "Fires for every button transition from inactive to active."
+        },
+        {
+          "name": "onButtonUp",
+          "signature": "onButtonUp: Signal<[GamepadButton, number]>",
+          "params": [],
+          "returnType": null,
+          "description": "Fires for every button transition from active to inactive."
+        },
+        {
+          "name": "onConnect",
+          "signature": "onConnect: Signal<[]>",
+          "params": [],
+          "returnType": null,
+          "description": "Fires when a physical pad connects to this slot."
+        },
+        {
+          "name": "onDisconnect",
+          "signature": "onDisconnect: Signal<[]>",
+          "params": [],
+          "returnType": null,
+          "description": "Fires when the physical pad in this slot disconnects."
+        },
+        {
+          "name": "onPadReassigned",
+          "signature": "onPadReassigned: Signal<[fromSlot]>",
+          "params": [],
+          "returnType": null,
+          "description": "Fires when this slot's physical pad has been replaced by a previously higher-numbered slot's pad, after a 'compact'-strategy disconnect. Dispatched with the source slot index the pad came from. Listeners remain attached and the channel buffer is preserved across the move."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/Gamepad.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/Gamepad.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/Gamepad.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/Gamepad.ts"
+}

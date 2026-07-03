@@ -1,0 +1,93 @@
+{
+  "title": "BmFont",
+  "description": "A loaded BMFont asset: the parsed descriptor plus all page textures. Loaded by the built-in BMFont factory — no extra setup required. Pass directly to BitmapText. ```ts const font = await loader.load('fonts/ui.fnt'); // BmFont via extension const font = await loader.load(BmFont, 'fonts/ui.fnt'); // explicit token const label = new BitmapText('Score: 0', font); ```",
+  "symbol": "BmFont",
+  "kind": "class",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 1,
+    "methods": 0,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A loaded BMFont asset: the parsed descriptor plus all page textures.",
+        "Loaded by the built-in BMFont factory — no extra setup required. Pass directly to BitmapText.",
+        "```ts const font = await loader.load('fonts/ui.fnt'); // BmFont via extension const font = await loader.load(BmFont, 'fonts/ui.fnt'); // explicit token const label = new BitmapText('Score: 0', font); ```"
+      ],
+      "importLine": "import { BmFont } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(fontData: BmFontData, textures: readonly Texture[]): BmFont",
+          "params": [
+            {
+              "name": "fontData",
+              "type": "BmFontData",
+              "optional": false
+            },
+            {
+              "name": "textures",
+              "type": "readonly Texture[]",
+              "optional": false
+            }
+          ],
+          "returnType": "BmFont",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "fontData",
+          "signature": "fontData: BmFontData",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "textures",
+          "signature": "textures: readonly Texture[]",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/text/BmFont.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/BmFont.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/text/BmFont.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/BmFont.ts"
+}

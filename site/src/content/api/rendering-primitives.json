@@ -1,0 +1,99 @@
+{
+  "title": "RenderingPrimitives",
+  "description": "GPU primitive topology used when issuing draw calls. Values are WebGL2 GLenum constants (e.g. `gl.TRIANGLES`).",
+  "symbol": "RenderingPrimitives",
+  "kind": "enum",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 7,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "GPU primitive topology used when issuing draw calls. Values are WebGL2 GLenum constants (e.g. `gl.TRIANGLES`)."
+      ],
+      "importLine": "import { RenderingPrimitives } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "members",
+      "title": "Members",
+      "members": [
+        {
+          "name": "LineLoop",
+          "signature": "LineLoop",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Lines",
+          "signature": "Lines",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "LineStrip",
+          "signature": "LineStrip",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Points",
+          "signature": "Points",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "TriangleFan",
+          "signature": "TriangleFan",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Triangles",
+          "signature": "Triangles",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "TriangleStrip",
+          "signature": "TriangleStrip",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/types.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/types.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/types.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/types.ts"
+}

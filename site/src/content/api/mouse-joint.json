@@ -1,0 +1,121 @@
+{
+  "title": "MouseJoint",
+  "description": "Softly pulls a single body's grab point toward a movable **target** point (typically the mouse cursor). The grab point is fixed on the body at creation; update target each frame to drag. A soft constraint bounded by maxForce — solved in the sub-step loop, warm-started. Internally the \"other\" body is a private static ground sentinel, so this is a single-body constraint that touches only the dragged body.",
+  "symbol": "MouseJoint",
+  "kind": "class",
+  "subsystem": "physics",
+  "importPath": "@codexo/exojs-physics",
+  "tier": "stable",
+  "memberCount": 8,
+  "counts": {
+    "constructors": 1,
+    "methods": 0,
+    "properties": 7,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Softly pulls a single body's grab point toward a movable **target** point (typically the mouse cursor). The grab point is fixed on the body at creation; update target each frame to drag. A soft constraint bounded by maxForce — solved in the sub-step loop, warm-started. Internally the \"other\" body is a private static ground sentinel, so this is a single-body constraint that touches only the dragged body."
+      ],
+      "importLine": "import { MouseJoint } from '@codexo/exojs-physics'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(options: MouseJointOptions): MouseJoint",
+          "params": [
+            {
+              "name": "options",
+              "type": "MouseJointOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "MouseJoint",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "bodyA",
+          "signature": "bodyA: PhysicsBody",
+          "params": [],
+          "returnType": null,
+          "description": "First constrained body."
+        },
+        {
+          "name": "bodyB",
+          "signature": "bodyB: PhysicsBody",
+          "params": [],
+          "returnType": null,
+          "description": "Second constrained body."
+        },
+        {
+          "name": "dampingRatio",
+          "signature": "dampingRatio: number",
+          "params": [],
+          "returnType": null,
+          "description": "Soft-spring damping ratio."
+        },
+        {
+          "name": "enabled",
+          "signature": "enabled: boolean",
+          "params": [],
+          "returnType": null,
+          "description": "When false, the joint is skipped by the solver (but still tracked by the world)."
+        },
+        {
+          "name": "hertz",
+          "signature": "hertz: number",
+          "params": [],
+          "returnType": null,
+          "description": "Soft-spring frequency in Hz."
+        },
+        {
+          "name": "maxForce",
+          "signature": "maxForce: number",
+          "params": [],
+          "returnType": null,
+          "description": "Maximum pulling force."
+        },
+        {
+          "name": "target",
+          "signature": "target: VectorLike",
+          "params": [],
+          "returnType": null,
+          "description": "The world point the body is pulled toward. Reassigning wakes the body so a drag tracks live."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-physics/src/joints/MouseJoint.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/joints/MouseJoint.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-physics/src/joints/MouseJoint.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/joints/MouseJoint.ts"
+}

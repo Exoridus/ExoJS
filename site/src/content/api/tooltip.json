@@ -1,0 +1,86 @@
+{
+  "title": "Tooltip",
+  "description": "Hover tooltip attached to a RenderNode. Shows a small text label near the pointer after a short delay when the pointer enters `target`, and hides it immediately on pointer-out. The tooltip node is parented to the nearest UIRoot ancestor of `target`, so it always renders in screen space above other content. The target must have `interactive = true` for the hover signals to fire.",
+  "symbol": "Tooltip",
+  "kind": "class",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 1,
+    "methods": 1,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Hover tooltip attached to a RenderNode. Shows a small text label near the pointer after a short delay when the pointer enters `target`, and hides it immediately on pointer-out.",
+        "The tooltip node is parented to the nearest UIRoot ancestor of `target`, so it always renders in screen space above other content.",
+        "The target must have `interactive = true` for the hover signals to fire."
+      ],
+      "importLine": "import { Tooltip } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(target: RenderNode, options: TooltipOptions): Tooltip",
+          "params": [
+            {
+              "name": "target",
+              "type": "RenderNode",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "TooltipOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "Tooltip",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Remove the tooltip and clean up all listeners."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/ui/Tooltip.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/Tooltip.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/ui/Tooltip.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/Tooltip.ts"
+}

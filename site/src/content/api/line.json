@@ -1,0 +1,303 @@
+{
+  "title": "Line",
+  "description": "Mutable line segment defined by two endpoint positions. Implements ShapeLike for intersection tests against all shape types. Note: `collidesWith` always returns `null` — lines support boolean intersection only; SAT response is not implemented for line segments. `contains(x, y, threshold)` tests whether `(x, y)` lies on the segment within a configurable threshold (default `0.1`). `Line.temp` is a shared scratch instance.",
+  "symbol": "Line",
+  "kind": "class",
+  "subsystem": "math",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 20,
+  "counts": {
+    "constructors": 1,
+    "methods": 11,
+    "properties": 8,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Mutable line segment defined by two endpoint positions. Implements ShapeLike for intersection tests against all shape types.",
+        "Note: `collidesWith` always returns `null` — lines support boolean intersection only; SAT response is not implemented for line segments. `contains(x, y, threshold)` tests whether `(x, y)` lies on the segment within a configurable threshold (default `0.1`).",
+        "`Line.temp` is a shared scratch instance."
+      ],
+      "importLine": "import { Line } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(x1: number, y1: number, x2: number, y2: number): Line",
+          "params": [
+            {
+              "name": "x1",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y1",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "x2",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y2",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "Line",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "clone",
+          "signature": "clone(): this",
+          "params": [],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "collidesWith",
+          "signature": "collidesWith(_target: Collidable): CollisionResponse | null",
+          "params": [
+            {
+              "name": "_target",
+              "type": "Collidable",
+              "optional": false
+            }
+          ],
+          "returnType": "CollisionResponse | null",
+          "description": "Always returns null. SAT collision response is not defined for line segments — use Line.intersectsWith for boolean intersection tests against any shape."
+        },
+        {
+          "name": "contains",
+          "signature": "contains(x: number, y: number, threshold: number): boolean",
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "threshold",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Returns true if the point (x, y) is inside this shape."
+        },
+        {
+          "name": "copy",
+          "signature": "copy(line: Line): this",
+          "params": [
+            {
+              "name": "line",
+              "type": "Line",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "equals",
+          "signature": "equals(__namedParameters: Partial<Line>): boolean",
+          "params": [
+            {
+              "name": "__namedParameters",
+              "type": "Partial<Line>",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": ""
+        },
+        {
+          "name": "getBounds",
+          "signature": "getBounds(): Rectangle",
+          "params": [],
+          "returnType": "Rectangle",
+          "description": ""
+        },
+        {
+          "name": "getNormals",
+          "signature": "getNormals(): Vector[]",
+          "params": [],
+          "returnType": "Vector[]",
+          "description": "Return the outward-facing edge normals used by the SAT solver. The array should be cached and reused across calls."
+        },
+        {
+          "name": "intersectsWith",
+          "signature": "intersectsWith(target: Collidable): boolean",
+          "params": [
+            {
+              "name": "target",
+              "type": "Collidable",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Test whether this shape overlaps target using a fast boolean algorithm (no penetration depth or normal computed). Prefer this over collidesWith when only the yes/no result is needed."
+        },
+        {
+          "name": "project",
+          "signature": "project(_axis: Vector, result: Interval): Interval",
+          "params": [
+            {
+              "name": "_axis",
+              "type": "Vector",
+              "optional": false
+            },
+            {
+              "name": "result",
+              "type": "Interval",
+              "optional": false
+            }
+          ],
+          "returnType": "Interval",
+          "description": "Project this shape onto axis and write the scalar min/max into interval. Used internally by the SAT solver."
+        },
+        {
+          "name": "set",
+          "signature": "set(x1: number, y1: number, x2: number, y2: number): this",
+          "params": [
+            {
+              "name": "x1",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y1",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "x2",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y2",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "collisionType",
+          "signature": "collisionType: CollisionType",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "fromPosition",
+          "signature": "fromPosition: Vector",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "fromX",
+          "signature": "fromX: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "fromY",
+          "signature": "fromY: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "toPosition",
+          "signature": "toPosition: Vector",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "toX",
+          "signature": "toX: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "toY",
+          "signature": "toY: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "temp",
+          "signature": "temp: Line",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/math/Line.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/math/Line.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/math/Line.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/math/Line.ts"
+}

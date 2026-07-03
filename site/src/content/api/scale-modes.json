@@ -1,0 +1,92 @@
+{
+  "title": "ScaleModes",
+  "description": "Texture magnification and minification filter modes. Values are WebGL2 GLenum constants and are passed directly to the GPU sampler. Mipmap variants require Texture.generateMipMap to be enabled.",
+  "symbol": "ScaleModes",
+  "kind": "enum",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 6,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Texture magnification and minification filter modes. Values are WebGL2 GLenum constants and are passed directly to the GPU sampler. Mipmap variants require Texture.generateMipMap to be enabled."
+      ],
+      "importLine": "import { ScaleModes } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "members",
+      "title": "Members",
+      "members": [
+        {
+          "name": "Linear",
+          "signature": "Linear",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "LinearMipmapLinear",
+          "signature": "LinearMipmapLinear",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "LinearMipmapNearest",
+          "signature": "LinearMipmapNearest",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Nearest",
+          "signature": "Nearest",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "NearestMipmapLinear",
+          "signature": "NearestMipmapLinear",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "NearestMipmapNearest",
+          "signature": "NearestMipmapNearest",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/types.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/types.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/types.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/types.ts"
+}

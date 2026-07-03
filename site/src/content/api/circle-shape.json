@@ -1,0 +1,121 @@
+{
+  "title": "CircleShape",
+  "description": "A circle of the given `radius` centred on the collider's local origin. The cheapest shape for both broad- and narrow-phase.",
+  "symbol": "CircleShape",
+  "kind": "class",
+  "subsystem": "physics",
+  "importPath": "@codexo/exojs-physics",
+  "tier": "stable",
+  "memberCount": 8,
+  "counts": {
+    "constructors": 1,
+    "methods": 0,
+    "properties": 7,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A circle of the given `radius` centred on the collider's local origin. The cheapest shape for both broad- and narrow-phase."
+      ],
+      "importLine": "import { CircleShape } from '@codexo/exojs-physics'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(radius: number): CircleShape",
+          "params": [
+            {
+              "name": "radius",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "CircleShape",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "area",
+          "signature": "area: number",
+          "params": [],
+          "returnType": null,
+          "description": "Surface area in px². mass = density × area."
+        },
+        {
+          "name": "boundingRadius",
+          "signature": "boundingRadius: number",
+          "params": [],
+          "returnType": null,
+          "description": "Radius of the smallest circle about the local origin enclosing the shape."
+        },
+        {
+          "name": "centroidX",
+          "signature": "centroidX: 0",
+          "params": [],
+          "returnType": null,
+          "description": "X of the area centroid in local space."
+        },
+        {
+          "name": "centroidY",
+          "signature": "centroidY: 0",
+          "params": [],
+          "returnType": null,
+          "description": "Y of the area centroid in local space."
+        },
+        {
+          "name": "radius",
+          "signature": "radius: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "type",
+          "signature": "type: \"circle\"",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "unitInertia",
+          "signature": "unitInertia: number",
+          "params": [],
+          "returnType": null,
+          "description": "Second moment of area (∫ r² dA) about the centroid; inertia = density × unitInertia."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-physics/src/shapes/CircleShape.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/shapes/CircleShape.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-physics/src/shapes/CircleShape.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/shapes/CircleShape.ts"
+}

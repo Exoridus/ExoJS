@@ -1,0 +1,392 @@
+{
+  "title": "Rectangle",
+  "description": "Mutable axis-aligned rectangle defined by a top-left origin `(x, y)` and dimensions `(width, height)`. Implements ShapeLike with full SAT collision response for rectangles and polygons, and specialised algorithms for circle and ellipse intersections. `Rectangle.temp` is a shared scratch instance. Edge normals are lazily computed and cached; they are invalidated when position or size mutates.",
+  "symbol": "Rectangle",
+  "kind": "class",
+  "subsystem": "math",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 28,
+  "counts": {
+    "constructors": 1,
+    "methods": 15,
+    "properties": 12,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Mutable axis-aligned rectangle defined by a top-left origin `(x, y)` and dimensions `(width, height)`. Implements ShapeLike with full SAT collision response for rectangles and polygons, and specialised algorithms for circle and ellipse intersections.",
+        "`Rectangle.temp` is a shared scratch instance. Edge normals are lazily computed and cached; they are invalidated when position or size mutates."
+      ],
+      "importLine": "import { Rectangle } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(x: number, y: number, width: number, height: number): Rectangle",
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "width",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "height",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "Rectangle",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "clone",
+          "signature": "clone(): this",
+          "params": [],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "collidesWith",
+          "signature": "collidesWith(target: Collidable): CollisionResponse | null",
+          "params": [
+            {
+              "name": "target",
+              "type": "Collidable",
+              "optional": false
+            }
+          ],
+          "returnType": "CollisionResponse | null",
+          "description": "Compute a full CollisionResponse between this shape and target. Returns null in two cases: - the shapes do not overlap, **or** - the specific shape-pair combination does not support response generation (e.g. Line against any shape, Ellipse against Ellipse or Polygon). Use intersectsWith for a universal boolean overlap check that works across all supported shape pairs."
+        },
+        {
+          "name": "contains",
+          "signature": "contains(x: number, y: number): boolean",
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Returns true if the point (x, y) is inside this shape."
+        },
+        {
+          "name": "containsRect",
+          "signature": "containsRect(rect: Rectangle): boolean",
+          "params": [
+            {
+              "name": "rect",
+              "type": "Rectangle",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Return true when rect is entirely within this rectangle (all four edges inside)."
+        },
+        {
+          "name": "copy",
+          "signature": "copy(rectangle: Rectangle): this",
+          "params": [
+            {
+              "name": "rectangle",
+              "type": "Rectangle",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "equals",
+          "signature": "equals(__namedParameters: Partial<Rectangle>): boolean",
+          "params": [
+            {
+              "name": "__namedParameters",
+              "type": "Partial<Rectangle>",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": ""
+        },
+        {
+          "name": "getBounds",
+          "signature": "getBounds(): Rectangle",
+          "params": [],
+          "returnType": "Rectangle",
+          "description": ""
+        },
+        {
+          "name": "getNormals",
+          "signature": "getNormals(): Vector[]",
+          "params": [],
+          "returnType": "Vector[]",
+          "description": "Return the outward-facing edge normals used by the SAT solver. The array should be cached and reused across calls."
+        },
+        {
+          "name": "intersectsWith",
+          "signature": "intersectsWith(target: Collidable): boolean",
+          "params": [
+            {
+              "name": "target",
+              "type": "Collidable",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Test whether this shape overlaps target using a fast boolean algorithm (no penetration depth or normal computed). Prefer this over collidesWith when only the yes/no result is needed."
+        },
+        {
+          "name": "project",
+          "signature": "project(axis: Vector, result: Interval): Interval",
+          "params": [
+            {
+              "name": "axis",
+              "type": "Vector",
+              "optional": false
+            },
+            {
+              "name": "result",
+              "type": "Interval",
+              "optional": false
+            }
+          ],
+          "returnType": "Interval",
+          "description": "Project this shape onto axis and write the scalar min/max into interval. Used internally by the SAT solver."
+        },
+        {
+          "name": "set",
+          "signature": "set(x: number, y: number, width: number, height: number): this",
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "width",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "height",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "setPosition",
+          "signature": "setPosition(x: number, y: number): this",
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "setSize",
+          "signature": "setSize(width: number, height: number): this",
+          "params": [
+            {
+              "name": "width",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "height",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "transform",
+          "signature": "transform(matrix: Matrix, result: Rectangle): Rectangle",
+          "params": [
+            {
+              "name": "matrix",
+              "type": "Matrix",
+              "optional": false
+            },
+            {
+              "name": "result",
+              "type": "Rectangle",
+              "optional": false
+            }
+          ],
+          "returnType": "Rectangle",
+          "description": "Apply a 3×3 affine matrix to all four corners of this rectangle, then return the axis-aligned bounding box of the transformed corners written into result. Defaults to mutating this in place. Returns result."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "collisionType",
+          "signature": "collisionType: CollisionType",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "bottom",
+          "signature": "bottom: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "height",
+          "signature": "height: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "left",
+          "signature": "left: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "position",
+          "signature": "position: AbstractVector",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "right",
+          "signature": "right: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "size",
+          "signature": "size: Size",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "top",
+          "signature": "top: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "width",
+          "signature": "width: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "x",
+          "signature": "x: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "y",
+          "signature": "y: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "temp",
+          "signature": "temp: Rectangle",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/math/Rectangle.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/math/Rectangle.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/math/Rectangle.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/math/Rectangle.ts"
+}

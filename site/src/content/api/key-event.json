@@ -1,0 +1,127 @@
+{
+  "title": "KeyEvent",
+  "description": "Envelope dispatched by FocusManager to the focused RenderNode for keyboard input. `channel` is the input channel of the key — compare it with the `Keyboard` constants (e.g. `event.channel === Keyboard.Enter`). A handler may call KeyEvent.preventDefault to suppress the FocusManager's built-in handling for this key (currently `Tab` focus traversal), letting the focused widget consume the key itself.",
+  "symbol": "KeyEvent",
+  "kind": "class",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 6,
+  "counts": {
+    "constructors": 1,
+    "methods": 1,
+    "properties": 4,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Envelope dispatched by FocusManager to the focused RenderNode for keyboard input. `channel` is the input channel of the key — compare it with the `Keyboard` constants (e.g. `event.channel === Keyboard.Enter`).",
+        "A handler may call KeyEvent.preventDefault to suppress the FocusManager's built-in handling for this key (currently `Tab` focus traversal), letting the focused widget consume the key itself."
+      ],
+      "importLine": "import { KeyEvent } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(type: KeyEventType, channel: number, target: RenderNode): KeyEvent",
+          "params": [
+            {
+              "name": "type",
+              "type": "KeyEventType",
+              "optional": false
+            },
+            {
+              "name": "channel",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "target",
+              "type": "RenderNode",
+              "optional": false
+            }
+          ],
+          "returnType": "KeyEvent",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "preventDefault",
+          "signature": "preventDefault(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Suppress the FocusManager's built-in handling (e.g. Tab traversal) for this key."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "channel",
+          "signature": "channel: number",
+          "params": [],
+          "returnType": null,
+          "description": "Input channel of the key — compare with the Keyboard.* channel constants."
+        },
+        {
+          "name": "target",
+          "signature": "target: RenderNode",
+          "params": [],
+          "returnType": null,
+          "description": "The focused node this event was delivered to."
+        },
+        {
+          "name": "type",
+          "signature": "type: KeyEventType",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "defaultPrevented",
+          "signature": "defaultPrevented: boolean",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/KeyEvent.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/KeyEvent.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/KeyEvent.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/KeyEvent.ts"
+}

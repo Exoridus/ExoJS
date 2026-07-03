@@ -1,0 +1,150 @@
+{
+  "title": "TextureRegion",
+  "description": "An immutable descriptor for a rectangular sub-region of a Texture. Stores the pixel-space source rectangle, pre-computed normalised UV bounds, and optional extrusion/padding metadata for atlas-safe linear filtering. Constructed once and reused across sprites, tile-sets, atlas lookups, and the scalable-sprite repeat planners. All region descriptor fields are stable after construction. Extrusion metadata is copied and frozen during construction — the caller retains no mutable reference to the stored object. The underlying Texture reference is stable, but the Texture's own lifecycle and sampler state remain owned by Texture. Texture dimensions **must** be known at construction time; a texture with zero dimensions will cause the constructor to throw.",
+  "symbol": "TextureRegion",
+  "kind": "class",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 11,
+  "counts": {
+    "constructors": 1,
+    "methods": 0,
+    "properties": 10,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "An immutable descriptor for a rectangular sub-region of a Texture.",
+        "Stores the pixel-space source rectangle, pre-computed normalised UV bounds, and optional extrusion/padding metadata for atlas-safe linear filtering. Constructed once and reused across sprites, tile-sets, atlas lookups, and the scalable-sprite repeat planners.",
+        "All region descriptor fields are stable after construction. Extrusion metadata is copied and frozen during construction — the caller retains no mutable reference to the stored object. The underlying Texture reference is stable, but the Texture's own lifecycle and sampler state remain owned by Texture.",
+        "Texture dimensions **must** be known at construction time; a texture with zero dimensions will cause the constructor to throw."
+      ],
+      "importLine": "import { TextureRegion } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(texture: Texture, options: TextureRegionOptions): TextureRegion",
+          "params": [
+            {
+              "name": "texture",
+              "type": "Texture",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "TextureRegionOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "TextureRegion",
+          "description": "Create a new immutable region."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "extrusion",
+          "signature": "extrusion: Readonly<TextureRegionInsets>",
+          "params": [],
+          "returnType": null,
+          "description": "Per-edge extrusion/padding metadata (engine-owned, frozen)."
+        },
+        {
+          "name": "height",
+          "signature": "height: number",
+          "params": [],
+          "returnType": null,
+          "description": "Height of the region in texture pixels."
+        },
+        {
+          "name": "texture",
+          "signature": "texture: Texture",
+          "params": [],
+          "returnType": null,
+          "description": "The underlying Texture this region belongs to."
+        },
+        {
+          "name": "u0",
+          "signature": "u0: number",
+          "params": [],
+          "returnType": null,
+          "description": "Normalised left texture coordinate (U-min)."
+        },
+        {
+          "name": "u1",
+          "signature": "u1: number",
+          "params": [],
+          "returnType": null,
+          "description": "Normalised right texture coordinate (U-max)."
+        },
+        {
+          "name": "v0",
+          "signature": "v0: number",
+          "params": [],
+          "returnType": null,
+          "description": "Normalised top texture coordinate (V-min)."
+        },
+        {
+          "name": "v1",
+          "signature": "v1: number",
+          "params": [],
+          "returnType": null,
+          "description": "Normalised bottom texture coordinate (V-max)."
+        },
+        {
+          "name": "width",
+          "signature": "width: number",
+          "params": [],
+          "returnType": null,
+          "description": "Width of the region in texture pixels."
+        },
+        {
+          "name": "x",
+          "signature": "x: number",
+          "params": [],
+          "returnType": null,
+          "description": "Left edge of the region in texture pixels."
+        },
+        {
+          "name": "y",
+          "signature": "y: number",
+          "params": [],
+          "returnType": null,
+          "description": "Top edge of the region in texture pixels."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/texture/TextureRegion.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/texture/TextureRegion.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/texture/TextureRegion.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/texture/TextureRegion.ts"
+}

@@ -1,0 +1,576 @@
+{
+  "title": "View",
+  "description": "2D camera that defines what region of the world is visible on screen. Maintains a center position, a visible area size, a rotation, and an optional zoom level. Provides lazy-evaluated world-to-clip and clip-to-world transform matrices, a follow-target system for tracking scene nodes, and a procedural screen-shake effect. Call update once per frame to advance follow and shake animations.",
+  "symbol": "View",
+  "kind": "class",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 38,
+  "counts": {
+    "constructors": 1,
+    "methods": 29,
+    "properties": 8,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "2D camera that defines what region of the world is visible on screen.",
+        "Maintains a center position, a visible area size, a rotation, and an optional zoom level. Provides lazy-evaluated world-to-clip and clip-to-world transform matrices, a follow-target system for tracking scene nodes, and a procedural screen-shake effect. Call update once per frame to advance follow and shake animations."
+      ],
+      "importLine": "import { View } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(centerX: number, centerY: number, width: number, height: number): View",
+          "params": [
+            {
+              "name": "centerX",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "centerY",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "width",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "height",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "View",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "clearBounds",
+          "signature": "clearBounds(): this",
+          "params": [],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "clearFollow",
+          "signature": "clearFollow(): this",
+          "params": [],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "follow",
+          "signature": "follow(target: ViewFollowTarget, options: ViewFollowOptions): this",
+          "params": [
+            {
+              "name": "target",
+              "type": "ViewFollowTarget",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "ViewFollowOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Track a scene node or world position each frame. The view center is interpolated towards the target using the lerp factor. Call clearFollow to stop tracking."
+        },
+        {
+          "name": "getBounds",
+          "signature": "getBounds(): Rectangle",
+          "params": [],
+          "returnType": "Rectangle",
+          "description": "Return the world-space bounding rectangle of the currently visible area, recalculating if dirty. Used for frustum culling by Drawable.render."
+        },
+        {
+          "name": "getInverseTransform",
+          "signature": "getInverseTransform(): Matrix",
+          "params": [],
+          "returnType": "Matrix",
+          "description": "Return the cached clip-to-world inverse matrix, recalculating it if dirty. Use this to convert screen-space coordinates (e.g. mouse position) to world space."
+        },
+        {
+          "name": "getTransform",
+          "signature": "getTransform(): Matrix",
+          "params": [],
+          "returnType": "Matrix",
+          "description": "Return the cached world-to-clip projection matrix, recalculating it if dirty. The returned matrix is owned by this view — do not store a reference across frames."
+        },
+        {
+          "name": "move",
+          "signature": "move(x: number, y: number): this",
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "reset",
+          "signature": "reset(centerX: number, centerY: number, width: number, height: number): this",
+          "params": [
+            {
+              "name": "centerX",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "centerY",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "width",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "height",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "resize",
+          "signature": "resize(width: number, height: number): this",
+          "params": [
+            {
+              "name": "width",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "height",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Resize the view to the given dimensions and reset zoom to 1. Use this when the canvas or window is resized."
+        },
+        {
+          "name": "rotate",
+          "signature": "rotate(degrees: number): this",
+          "params": [
+            {
+              "name": "degrees",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "screenToWorld",
+          "signature": "screenToWorld(x: number, y: number): PointLike",
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "PointLike",
+          "description": "Convert a logical/design-space pixel coordinate to a world-space position. The 2-argument form treats (x, y) as coordinates in the view's own design space (0..view.width × 0..view.height) — the same space as Pointer.x/Pointer.y and node positions — and applies only the inverse camera transform. The viewport rectangle is intentionally ignored, because design-space input already lives inside the camera's projection (any letterbox offset was removed upstream when the pointer was mapped). At the default centered camera this is the identity."
+        },
+        {
+          "name": "screenToWorld",
+          "signature": "screenToWorld(screenX: number, screenY: number, canvasWidth: number, canvasHeight: number): PointLike",
+          "params": [
+            {
+              "name": "screenX",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "screenY",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "canvasWidth",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "canvasHeight",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "PointLike",
+          "description": "Convert a raw canvas backing-store pixel coordinate to a world-space position. Accounts for the view's viewport rectangle, so it works correctly in multi-view / split-screen and letterboxed setups."
+        },
+        {
+          "name": "setBounds",
+          "signature": "setBounds(bounds: Rectangle | null): this",
+          "params": [
+            {
+              "name": "bounds",
+              "type": "Rectangle | null",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Constrain the camera center so the visible area never extends outside bounds. When the view is larger than the constraint rectangle the camera is clamped to the geometric centre of the rectangle. Pass null to remove the constraint."
+        },
+        {
+          "name": "setCenter",
+          "signature": "setCenter(x: number, y: number): this",
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "setRotation",
+          "signature": "setRotation(degrees: number): this",
+          "params": [
+            {
+              "name": "degrees",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "setViewport",
+          "signature": "setViewport(x: number, y: number, width: number, height: number): this",
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "width",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "height",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Set the normalized (0..1) viewport rectangle fluently. Mirrors the set viewport property setter without allocating a Rectangle — pass the four components directly."
+        },
+        {
+          "name": "setZoom",
+          "signature": "setZoom(zoom: number): this",
+          "params": [
+            {
+              "name": "zoom",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Set an absolute zoom level. A zoom of 2 halves the visible area; 0.5 doubles it. Values are clamped to a minimum of 0.0001 to prevent division by zero."
+        },
+        {
+          "name": "shake",
+          "signature": "shake(intensity: number, durationMs: number, options: ViewShakeOptions): this",
+          "params": [
+            {
+              "name": "intensity",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "durationMs",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "ViewShakeOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Start a procedural camera shake effect. The shake applies a sinusoidal offset to the view's center position, then stops automatically when durationMs elapses. Call stopShake to cancel early."
+        },
+        {
+          "name": "stopShake",
+          "signature": "stopShake(): this",
+          "params": [],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "update",
+          "signature": "update(deltaMilliseconds: number): this",
+          "params": [
+            {
+              "name": "deltaMilliseconds",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "updateBounds",
+          "signature": "updateBounds(): this",
+          "params": [],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "updateTransform",
+          "signature": "updateTransform(): this",
+          "params": [],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "worldToScreen",
+          "signature": "worldToScreen(worldX: number, worldY: number): PointLike",
+          "params": [
+            {
+              "name": "worldX",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "worldY",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "PointLike",
+          "description": "Convert a world-space position to logical/design-space pixel coordinates (0..view.width × 0..view.height). Inverse of the 2-argument screenToWorld; the viewport is ignored. At the default centered camera this is the identity."
+        },
+        {
+          "name": "worldToScreen",
+          "signature": "worldToScreen(worldX: number, worldY: number, canvasWidth: number, canvasHeight: number): PointLike",
+          "params": [
+            {
+              "name": "worldX",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "worldY",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "canvasWidth",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "canvasHeight",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "PointLike",
+          "description": "Convert a world-space position to raw canvas backing-store pixel coordinates. Accounts for the view's viewport rectangle."
+        },
+        {
+          "name": "zoom",
+          "signature": "zoom(factor: number): this",
+          "params": [
+            {
+              "name": "factor",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "zoomIn",
+          "signature": "zoomIn(amount: number): this",
+          "params": [
+            {
+              "name": "amount",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "zoomOut",
+          "signature": "zoomOut(amount: number): this",
+          "params": [
+            {
+              "name": "amount",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "from",
+          "signature": "from(options: ViewOptions): View",
+          "params": [
+            {
+              "name": "options",
+              "type": "ViewOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "View",
+          "description": "Create a View from a ViewOptions bag. All options are optional and default to the same values as a bare new View(0, 0, 0, 0) call with a full-canvas viewport and no rotation or zoom."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "center",
+          "signature": "center: ObservableVector",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "height",
+          "signature": "height: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "rotation",
+          "signature": "rotation: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "size",
+          "signature": "size: ObservableSize",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "updateId",
+          "signature": "updateId: number",
+          "params": [],
+          "returnType": null,
+          "description": "Monotonically increasing counter incremented whenever the view's transform is invalidated. Backends use this to detect when to re-upload the projection matrix."
+        },
+        {
+          "name": "viewport",
+          "signature": "viewport: Rectangle",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "width",
+          "signature": "width: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "zoomLevel",
+          "signature": "zoomLevel: number",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/View.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/View.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/View.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/View.ts"
+}

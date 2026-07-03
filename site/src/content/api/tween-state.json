@@ -1,0 +1,85 @@
+{
+  "title": "TweenState",
+  "description": "Lifecycle states of a Tween. A tween starts in `Idle`, transitions to `Active` once Tween.start is called, and ends in `Complete` (natural finish, all repeats exhausted) or `Stopped` (cancelled via Tween.stop). `Paused` is reachable from `Active` only.",
+  "symbol": "TweenState",
+  "kind": "enum",
+  "subsystem": "animation",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 5,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Lifecycle states of a Tween. A tween starts in `Idle`, transitions to `Active` once Tween.start is called, and ends in `Complete` (natural finish, all repeats exhausted) or `Stopped` (cancelled via Tween.stop). `Paused` is reachable from `Active` only."
+      ],
+      "importLine": "import { TweenState } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "members",
+      "title": "Members",
+      "members": [
+        {
+          "name": "Active",
+          "signature": "Active",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Complete",
+          "signature": "Complete",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Idle",
+          "signature": "Idle",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Paused",
+          "signature": "Paused",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Stopped",
+          "signature": "Stopped",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/animation/types.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/animation/types.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/animation/types.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/animation/types.ts"
+}

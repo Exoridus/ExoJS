@@ -1,0 +1,117 @@
+{
+  "title": "SteamControllerGamepadMapping",
+  "description": "Mapping for the Valve Steam Controller when operating in gamepad-emulation mode (i.e. Steam Input is configured to present it as a standard gamepad). Inherits the full GenericDualAnalogGamepadMapping layout. The right trackpad is surfaced as the right stick; the left trackpad is surfaced as the left stick. Gyro and haptic-only inputs are not represented.",
+  "symbol": "SteamControllerGamepadMapping",
+  "kind": "class",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 6,
+  "counts": {
+    "constructors": 1,
+    "methods": 2,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Mapping for the Valve Steam Controller when operating in gamepad-emulation mode (i.e. Steam Input is configured to present it as a standard gamepad).",
+        "Inherits the full GenericDualAnalogGamepadMapping layout. The right trackpad is surfaced as the right stick; the left trackpad is surfaced as the left stick. Gyro and haptic-only inputs are not represented."
+      ],
+      "importLine": "import { SteamControllerGamepadMapping } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(): SteamControllerGamepadMapping",
+          "params": [],
+          "returnType": "SteamControllerGamepadMapping",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Releases all button and axis control references held by this mapping. Call when the associated gamepad disconnects to allow garbage collection."
+        },
+        {
+          "name": "hasChannel",
+          "signature": "hasChannel(channel: GamepadButtonChannel | GamepadAxisChannel): boolean",
+          "params": [
+            {
+              "name": "channel",
+              "type": "GamepadButtonChannel | GamepadAxisChannel",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Returns true when this mapping declares at least one button or axis control that writes to channel. Use to detect device-specific capabilities at runtime — e.g. before binding an input to a right-stick channel that may not exist on a single Joy-Con."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "axes",
+          "signature": "axes: readonly GamepadAxis[]",
+          "params": [],
+          "returnType": null,
+          "description": "Ordered list of axes, indexed by the Gamepad API axis index."
+        },
+        {
+          "name": "buttons",
+          "signature": "buttons: readonly GamepadButton[]",
+          "params": [],
+          "returnType": null,
+          "description": "Ordered list of buttons, indexed by the Gamepad API button index."
+        },
+        {
+          "name": "family",
+          "signature": "family: SteamController",
+          "params": [],
+          "returnType": null,
+          "description": "Identifies the device family this mapping targets."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/SteamControllerGamepadMapping.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/SteamControllerGamepadMapping.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/SteamControllerGamepadMapping.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/SteamControllerGamepadMapping.ts"
+}

@@ -1,0 +1,149 @@
+{
+  "title": "AutoWahEffect",
+  "description": "Auto-wah effect that uses an amplitude envelope follower to modulate a bandpass filter, creating the characteristic \"wah\" sweep driven by the loudness of the input signal. The envelope follower is built entirely from native Web Audio nodes — no `ScriptProcessor` or `AudioWorklet` required: 1. A `WaveShaperNode` rectifier approximates `|x|` (full-wave rectification), converting the AC audio signal to a unipolar amplitude proxy. 2. A `BiquadFilterNode` (lowpass) smooths the rectified signal. The cutoff is derived from `responseMs` to control attack/release speed. 3. A `GainNode` scales the smoothed envelope by `sensitivity` (Hz/unit) and connects its output directly to the wah filter's `frequency` `AudioParam`, sweeping the filter centre upward with input loudness. Node graph: ``` inputGain ─┬─ dryGain ─────────────────────────────┐ │ ├── outputGain └─ wahFilter(bandpass) ─── wetGain ──────┘ Envelope (control) path — parallel off inputGain, sums into wahFilter.frequency: inputGain → rectifier(WaveShaper,|x|) → smoothingLowpass(BiquadFilter,lowpass) → sensitivityGain → wahFilter.frequency (AudioParam) ``` Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet`.",
+  "symbol": "AutoWahEffect",
+  "kind": "class",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs-audio-fx",
+  "tier": "stable",
+  "memberCount": 10,
+  "counts": {
+    "constructors": 1,
+    "methods": 1,
+    "properties": 8,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Auto-wah effect that uses an amplitude envelope follower to modulate a bandpass filter, creating the characteristic \"wah\" sweep driven by the loudness of the input signal.",
+        "The envelope follower is built entirely from native Web Audio nodes — no `ScriptProcessor` or `AudioWorklet` required:",
+        "1. A `WaveShaperNode` rectifier approximates `|x|` (full-wave rectification), converting the AC audio signal to a unipolar amplitude proxy. 2. A `BiquadFilterNode` (lowpass) smooths the rectified signal. The cutoff is derived from `responseMs` to control attack/release speed. 3. A `GainNode` scales the smoothed envelope by `sensitivity` (Hz/unit) and connects its output directly to the wah filter's `frequency` `AudioParam`, sweeping the filter centre upward with input loudness.",
+        "Node graph: ``` inputGain ─┬─ dryGain ─────────────────────────────┐ │ ├── outputGain └─ wahFilter(bandpass) ─── wetGain ──────┘",
+        "Envelope (control) path — parallel off inputGain, sums into wahFilter.frequency: inputGain → rectifier(WaveShaper,|x|) → smoothingLowpass(BiquadFilter,lowpass) → sensitivityGain → wahFilter.frequency (AudioParam) ```",
+        "Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet`."
+      ],
+      "importLine": "import { AutoWahEffect } from '@codexo/exojs-audio-fx'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(options: AutoWahEffectOptions): AutoWahEffect",
+          "params": [
+            {
+              "name": "options",
+              "type": "AutoWahEffectOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "AutoWahEffect",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Disconnects all audio nodes and releases resources. Must be called when the effect is no longer needed."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "baseFrequency",
+          "signature": "baseFrequency: number",
+          "params": [],
+          "returnType": null,
+          "description": "Centre frequency of the wah filter in Hz. Range 50..2000, default 200. Changes are ramped smoothly via setTargetAtTime."
+        },
+        {
+          "name": "inputNode",
+          "signature": "inputNode: AudioNode",
+          "params": [],
+          "returnType": null,
+          "description": "The node where audio enters this effect. Throws if the audio context is not yet initialized."
+        },
+        {
+          "name": "outputNode",
+          "signature": "outputNode: AudioNode",
+          "params": [],
+          "returnType": null,
+          "description": "The node where audio exits this effect. Throws if the audio context is not yet initialized."
+        },
+        {
+          "name": "q",
+          "signature": "q: number",
+          "params": [],
+          "returnType": null,
+          "description": "Q (resonance) of the bandpass wah filter. Range 0.1..20, default 4. Changes are ramped smoothly via setTargetAtTime."
+        },
+        {
+          "name": "ready",
+          "signature": "ready: Promise<void>",
+          "params": [],
+          "returnType": null,
+          "description": "Resolves when the effect is fully initialized. Defaults to immediately-resolved for sync effects."
+        },
+        {
+          "name": "responseMs",
+          "signature": "responseMs: number",
+          "params": [],
+          "returnType": null,
+          "description": "Envelope smoothing time constant in milliseconds. Range 1..500, default 30. Updating this adjusts the smoothing lowpass cutoff immediately via setTargetAtTime."
+        },
+        {
+          "name": "sensitivity",
+          "signature": "sensitivity: number",
+          "params": [],
+          "returnType": null,
+          "description": "Envelope sensitivity in Hz/unit: the maximum filter sweep above baseFrequency when input is at full amplitude. Range 0..6000, default 3000. Changes are ramped smoothly via setTargetAtTime."
+        },
+        {
+          "name": "wet",
+          "signature": "wet: number",
+          "params": [],
+          "returnType": null,
+          "description": "Wet (wah-filtered) mix level, 0..1. The dry level is automatically 1 - wet. Changes are ramped smoothly via setTargetAtTime. Default 0.7."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-audio-fx/src/effects/AutoWahEffect.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/AutoWahEffect.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-audio-fx/src/effects/AutoWahEffect.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/AutoWahEffect.ts"
+}

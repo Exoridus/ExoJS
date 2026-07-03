@@ -1,0 +1,189 @@
+{
+  "title": "LutFilter",
+  "description": "A Filter that maps every pixel of the input through a Look-Up Table texture. Two storage modes: - **1D LUT** (`N×1`, default `N=256`): indexed by the source's red channel only. Used for palette cycling, indexed-colour effects, and luminance-based recoloring. - **3D LUT** (`N²×N` unwrapped cube): indexed by the full source RGB with trilinear interpolation between slices. Used for cinematic colour grading, tone mapping, film stock emulation, accessibility filters (color-blindness simulation), and similar standard colour-pipeline tasks. `N=17` matches DaVinci/OBS export defaults. ## Quick start ```ts // Color-graded look from a 17³ LUT exported by your DCC/grading tool: const lut = LutFilter.fromImage(myLutImage); // 289×17 PNG const filter = new LutFilter({ mode: '3d', size: 17 }).setLut(lut); sprite.filters = [filter]; // Palette cycling — rotate a 1D palette every frame: const palette = LutFilter.identityLut1D(); const filter = new LutFilter({ mode: '1d' }).setLut(palette); // Replace `palette.source` per frame with a shifted copy. ``` Internally creates a WebGl2ShaderFilter or WebGpuShaderFilter on first apply, depending on the active backend.",
+  "symbol": "LutFilter",
+  "kind": "class",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 10,
+  "counts": {
+    "constructors": 1,
+    "methods": 6,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A Filter that maps every pixel of the input through a Look-Up Table texture.",
+        "Two storage modes: - **1D LUT** (`N×1`, default `N=256`): indexed by the source's red channel only. Used for palette cycling, indexed-colour effects, and luminance-based recoloring. - **3D LUT** (`N²×N` unwrapped cube): indexed by the full source RGB with trilinear interpolation between slices. Used for cinematic colour grading, tone mapping, film stock emulation, accessibility filters (color-blindness simulation), and similar standard colour-pipeline tasks. `N=17` matches DaVinci/OBS export defaults.",
+        "## Quick start",
+        "```ts // Color-graded look from a 17³ LUT exported by your DCC/grading tool: const lut = LutFilter.fromImage(myLutImage); // 289×17 PNG const filter = new LutFilter({ mode: '3d', size: 17 }).setLut(lut); sprite.filters = [filter];",
+        "// Palette cycling — rotate a 1D palette every frame: const palette = LutFilter.identityLut1D(); const filter = new LutFilter({ mode: '1d' }).setLut(palette); // Replace `palette.source` per frame with a shifted copy. ```",
+        "Internally creates a WebGl2ShaderFilter or WebGpuShaderFilter on first apply, depending on the active backend."
+      ],
+      "importLine": "import { LutFilter } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(options: LutFilterOptions): LutFilter",
+          "params": [
+            {
+              "name": "options",
+              "type": "LutFilterOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "LutFilter",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "apply",
+          "signature": "apply(backend: RenderBackend, input: RenderTexture, output: RenderTexture): void",
+          "params": [
+            {
+              "name": "backend",
+              "type": "RenderBackend",
+              "optional": false
+            },
+            {
+              "name": "input",
+              "type": "RenderTexture",
+              "optional": false
+            },
+            {
+              "name": "output",
+              "type": "RenderTexture",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Execute one filter pass: sample from input, write the result to output. Both textures are the same dimensions as the filtered drawable's bounding box."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Release any GPU-side resources held by this filter (uniform buffers, pipelines, intermediate textures). Default is a no-op for stateless filters; subclasses with state (BlurFilter, ColorFilter) override."
+        },
+        {
+          "name": "setLut",
+          "signature": "setLut(lut: Texture): this",
+          "params": [
+            {
+              "name": "lut",
+              "type": "Texture",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Replace the LUT texture. Returns this for chaining."
+        },
+        {
+          "name": "fromImage",
+          "signature": "fromImage(image: HTMLCanvasElement | HTMLImageElement): Texture",
+          "params": [
+            {
+              "name": "image",
+              "type": "HTMLCanvasElement | HTMLImageElement",
+              "optional": false
+            }
+          ],
+          "returnType": "Texture",
+          "description": "Wrap an image element as a LUT texture with the right sampler defaults (linear filtering, clamp-to-edge, no mipmaps). Accepts the standard LUT image conventions exported by Photoshop, DaVinci Resolve, OBS, and similar tools — typically a 289×17 or 1024×32 strip for 3D LUTs, or a 256×1 strip for 1D."
+        },
+        {
+          "name": "identityLut1D",
+          "signature": "identityLut1D(size: number): Texture",
+          "params": [
+            {
+              "name": "size",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "Texture",
+          "description": "Build a 1D identity LUT (N×1 texture with smooth grayscale gradient). Useful as a starting point: applying this LUT is a no-op, mutate texture.source to derive cycling palettes, posterization, sepia, grayscale, etc."
+        },
+        {
+          "name": "identityLut3D",
+          "signature": "identityLut3D(size: number): Texture",
+          "params": [
+            {
+              "name": "size",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "Texture",
+          "description": "Build a 3D identity LUT (N²×N unwrapped cube texture). Applying this LUT is a no-op for any RGB input. Use as a starting point for procedural grading or as a fallback when a real LUT image hasn't loaded yet."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "lut",
+          "signature": "lut: Texture",
+          "params": [],
+          "returnType": null,
+          "description": "The current LUT texture."
+        },
+        {
+          "name": "mode",
+          "signature": "mode: LutMode",
+          "params": [],
+          "returnType": null,
+          "description": "The LUT mode this filter was constructed with."
+        },
+        {
+          "name": "size",
+          "signature": "size: number",
+          "params": [],
+          "returnType": null,
+          "description": "The cube edge size (3D only). For 1D this returns the constructor-time size hint."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/filters/LutFilter.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/filters/LutFilter.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/filters/LutFilter.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/filters/LutFilter.ts"
+}

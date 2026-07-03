@@ -1,0 +1,129 @@
+{
+  "title": "DebugLayer",
+  "description": "Abstract base for a single diagnostic overlay layer. Subclasses produce a visual (outlines, text panels, sparklines, etc.) that DebugOverlay composites each frame when visible is `true`. Concrete layers are tree-shakeable via the `@codexo/exojs/debug` subpath and are not loaded unless explicitly imported.",
+  "symbol": "DebugLayer",
+  "kind": "class",
+  "subsystem": "debug",
+  "importPath": "@codexo/exojs/debug",
+  "tier": "stable",
+  "memberCount": 6,
+  "counts": {
+    "constructors": 1,
+    "methods": 3,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Abstract base for a single diagnostic overlay layer. Subclasses produce a visual (outlines, text panels, sparklines, etc.) that DebugOverlay composites each frame when visible is `true`.",
+        "Concrete layers are tree-shakeable via the `@codexo/exojs/debug` subpath and are not loaded unless explicitly imported."
+      ],
+      "importLine": "import { DebugLayer } from '@codexo/exojs/debug'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(_app: Application): DebugLayer",
+          "params": [
+            {
+              "name": "_app",
+              "type": "Application",
+              "optional": false
+            }
+          ],
+          "returnType": "DebugLayer",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Release any scene-graph nodes or resources owned by this layer. Called by DebugOverlay.destroy. The base implementation is a no-op; subclasses override to tear down their Container subtrees."
+        },
+        {
+          "name": "render",
+          "signature": "render(backend: RenderBackend): void",
+          "params": [
+            {
+              "name": "backend",
+              "type": "RenderBackend",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Render the layer's content using the backend. The DebugOverlay manages the active view based on this layer's viewMode; restore is handled by the overlay. Called only when visible."
+        },
+        {
+          "name": "update",
+          "signature": "update(delta: Time): void",
+          "params": [
+            {
+              "name": "delta",
+              "type": "Time",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Update internal state from this frame's data. Called only when visible."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "visible",
+          "signature": "visible: boolean",
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "viewMode",
+          "signature": "viewMode: DebugLayerViewMode",
+          "params": [],
+          "returnType": null,
+          "description": "Whether this layer renders in the scene's world-space view or in a screen-space (canvas-pixel) view. Defaults to 'screen'. Subclasses override to return 'world' when rendering at actual scene positions."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/debug/DebugLayer.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/debug/DebugLayer.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/debug/DebugLayer.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/debug/DebugLayer.ts"
+}

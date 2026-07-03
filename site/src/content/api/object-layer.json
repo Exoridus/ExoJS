@@ -1,0 +1,242 @@
+{
+  "title": "ObjectLayer",
+  "description": "A data-only layer of TileMapObjects — spawn points, trigger zones, collision regions, markers. Object layers are not rendered by the tile renderer; they are parsed and exposed for gameplay use (e.g. building physics colliders, placing entities). Query with query (untyped, fully back-compatible) or, when an ObjectSchema type argument `S` is supplied, with the typed accessors byType, byKind, and where — these narrow `properties` to the developer-declared shape. The schema is **opt-in**: the default type parameter reproduces the original untyped behaviour, so `new ObjectLayer(options)` and `map.getObjectLayer('x')` are unchanged.",
+  "symbol": "ObjectLayer",
+  "kind": "class",
+  "subsystem": "tilemap",
+  "importPath": "@codexo/exojs-tilemap",
+  "tier": "advanced",
+  "memberCount": 18,
+  "counts": {
+    "constructors": 1,
+    "methods": 6,
+    "properties": 11,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A data-only layer of TileMapObjects — spawn points, trigger zones, collision regions, markers. Object layers are not rendered by the tile renderer; they are parsed and exposed for gameplay use (e.g. building physics colliders, placing entities).",
+        "Query with query (untyped, fully back-compatible) or, when an ObjectSchema type argument `S` is supplied, with the typed accessors byType, byKind, and where — these narrow `properties` to the developer-declared shape. The schema is **opt-in**: the default type parameter reproduces the original untyped behaviour, so `new ObjectLayer(options)` and `map.getObjectLayer('x')` are unchanged."
+      ],
+      "importLine": "import { ObjectLayer } from '@codexo/exojs-tilemap'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(options: ObjectLayerOptions): ObjectLayer<S>",
+          "params": [
+            {
+              "name": "options",
+              "type": "ObjectLayerOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "ObjectLayer<S>",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "byKind",
+          "signature": "byKind(kind: K): Extract<RectangleObject<TileProperties>, object> | Extract<EllipseObject<TileProperties>, object> | Extract<PointObject<TileProperties>, object> | Extract<PolygonObject<TileProperties>, object> | Extract<PolylineObject<TileProperties>, object> | Extract<TileObject<TileProperties>, object> | Extract<TextObject<TileProperties>, object>[]",
+          "params": [
+            {
+              "name": "kind",
+              "type": "K",
+              "optional": false
+            }
+          ],
+          "returnType": "Extract<RectangleObject<TileProperties>, object> | Extract<EllipseObject<TileProperties>, object> | Extract<PointObject<TileProperties>, object> | Extract<PolygonObject<TileProperties>, object> | Extract<PolylineObject<TileProperties>, object> | Extract<TileObject<TileProperties>, object> | Extract<TextObject<TileProperties>, object>[]",
+          "description": "Objects of the given geometry ObjectKind, narrowed to that geometry's member type (e.g. byKind(ObjectKind.Polygon) yields PolygonObjects with their points). Returns a fresh array."
+        },
+        {
+          "name": "byType",
+          "signature": "byType(type: T): TypedObject<S, T>[]",
+          "params": [
+            {
+              "name": "type",
+              "type": "T",
+              "optional": false
+            }
+          ],
+          "returnType": "TypedObject<S, T>[]",
+          "description": "Objects whose type equals type, with properties narrowed to the schema shape S[T]. Returns a fresh array (insertion order). The narrowing is a static convenience only — no runtime validation is performed (see ObjectSchema). On an unschematised layer this behaves like query({ type }) with TileProperties properties."
+        },
+        {
+          "name": "getObjectById",
+          "signature": "getObjectById(id: number): TileMapObject<TileProperties> | undefined",
+          "params": [
+            {
+              "name": "id",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "TileMapObject<TileProperties> | undefined",
+          "description": "First object with the given id, or undefined."
+        },
+        {
+          "name": "getObjectByName",
+          "signature": "getObjectByName(name: string): TileMapObject<TileProperties> | undefined",
+          "params": [
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "TileMapObject<TileProperties> | undefined",
+          "description": "First object with the given name, or undefined."
+        },
+        {
+          "name": "query",
+          "signature": "query(filter: ObjectQuery): TileMapObject<TileProperties>[]",
+          "params": [
+            {
+              "name": "filter",
+              "type": "ObjectQuery",
+              "optional": false
+            }
+          ],
+          "returnType": "TileMapObject<TileProperties>[]",
+          "description": "Objects matching every specified criterion of filter. Returns a fresh array."
+        },
+        {
+          "name": "where",
+          "signature": "where(type: T, predicate: object): TypedObject<S, T>[]",
+          "params": [
+            {
+              "name": "type",
+              "type": "T",
+              "optional": false
+            },
+            {
+              "name": "predicate",
+              "type": "object",
+              "optional": false
+            }
+          ],
+          "returnType": "TypedObject<S, T>[]",
+          "description": "Objects of type (typed as in byType) that also satisfy predicate. A convenience combination of byType and Array.filter that keeps the narrowed properties type inside the predicate. Returns a fresh array."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "class",
+          "signature": "class: string",
+          "params": [],
+          "returnType": null,
+          "description": "Layer class string."
+        },
+        {
+          "name": "drawOrder",
+          "signature": "drawOrder: \"index\" | \"topdown\"",
+          "params": [],
+          "returnType": null,
+          "description": "Draw order for the objects (Tiled draworder). Informational."
+        },
+        {
+          "name": "id",
+          "signature": "id: number",
+          "params": [],
+          "returnType": null,
+          "description": "Layer id (unique within the map)."
+        },
+        {
+          "name": "kind",
+          "signature": "kind: \"object\"",
+          "params": [],
+          "returnType": null,
+          "description": "Layer-kind discriminant (distinguishes object layers from tile layers)."
+        },
+        {
+          "name": "name",
+          "signature": "name: string",
+          "params": [],
+          "returnType": null,
+          "description": "Layer name."
+        },
+        {
+          "name": "objects",
+          "signature": "objects: readonly TileMapObject<TileProperties>[]",
+          "params": [],
+          "returnType": null,
+          "description": "The objects in this layer (insertion order)."
+        },
+        {
+          "name": "offsetX",
+          "signature": "offsetX: number",
+          "params": [],
+          "returnType": null,
+          "description": "Layer pixel offset X."
+        },
+        {
+          "name": "offsetY",
+          "signature": "offsetY: number",
+          "params": [],
+          "returnType": null,
+          "description": "Layer pixel offset Y."
+        },
+        {
+          "name": "opacity",
+          "signature": "opacity: number",
+          "params": [],
+          "returnType": null,
+          "description": "Layer opacity in [0, 1]."
+        },
+        {
+          "name": "properties",
+          "signature": "properties: TileProperties",
+          "params": [],
+          "returnType": null,
+          "description": "Immutable layer-level properties."
+        },
+        {
+          "name": "visible",
+          "signature": "visible: boolean",
+          "params": [],
+          "returnType": null,
+          "description": "Whether the layer is visible."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-tilemap/src/ObjectLayer.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/ObjectLayer.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-tilemap/src/ObjectLayer.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/ObjectLayer.ts"
+}

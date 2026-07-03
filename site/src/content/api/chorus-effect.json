@@ -1,0 +1,140 @@
+{
+  "title": "ChorusEffect",
+  "description": "Chorus effect using native WebAudio nodes (no worklet required). The signal splits into a dry path and a wet path. The wet path passes through a DelayNode whose delay time is modulated by a sine-wave LFO, producing the characteristic pitch-wobble / thickening of chorus. Node graph: ``` inputGain ┬── dryGain ────────────────┐ │ ├── outputGain └── delayNode ── wetGain ────┘ lfoOscillator ── lfoGain (depth) ── delayNode.delayTime ```",
+  "symbol": "ChorusEffect",
+  "kind": "class",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs-audio-fx",
+  "tier": "stable",
+  "memberCount": 9,
+  "counts": {
+    "constructors": 1,
+    "methods": 1,
+    "properties": 7,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Chorus effect using native WebAudio nodes (no worklet required).",
+        "The signal splits into a dry path and a wet path. The wet path passes through a DelayNode whose delay time is modulated by a sine-wave LFO, producing the characteristic pitch-wobble / thickening of chorus.",
+        "Node graph: ``` inputGain ┬── dryGain ────────────────┐ │ ├── outputGain └── delayNode ── wetGain ────┘",
+        "lfoOscillator ── lfoGain (depth) ── delayNode.delayTime ```"
+      ],
+      "importLine": "import { ChorusEffect } from '@codexo/exojs-audio-fx'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(options: ChorusEffectOptions): ChorusEffect",
+          "params": [
+            {
+              "name": "options",
+              "type": "ChorusEffectOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "ChorusEffect",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "params": [],
+          "returnType": "void",
+          "description": "Disconnects all audio nodes and releases resources. Must be called when the effect is no longer needed."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "delayMs",
+          "signature": "delayMs: number",
+          "params": [],
+          "returnType": null,
+          "description": "Base delay time in milliseconds. Default 25."
+        },
+        {
+          "name": "depthMs",
+          "signature": "depthMs: number",
+          "params": [],
+          "returnType": null,
+          "description": "LFO modulation depth in milliseconds (peak deviation from base delay). Default 5."
+        },
+        {
+          "name": "inputNode",
+          "signature": "inputNode: AudioNode",
+          "params": [],
+          "returnType": null,
+          "description": "The node where audio enters this effect."
+        },
+        {
+          "name": "outputNode",
+          "signature": "outputNode: AudioNode",
+          "params": [],
+          "returnType": null,
+          "description": "The node where audio exits this effect."
+        },
+        {
+          "name": "rateHz",
+          "signature": "rateHz: number",
+          "params": [],
+          "returnType": null,
+          "description": "LFO oscillation rate in Hz. Typical chorus range is 0.1–5 Hz; 5–15 Hz produces a vibrato effect. Default 1.5."
+        },
+        {
+          "name": "ready",
+          "signature": "ready: Promise<void>",
+          "params": [],
+          "returnType": null,
+          "description": "Resolves when the effect is fully initialized. Defaults to immediately-resolved for sync effects."
+        },
+        {
+          "name": "wet",
+          "signature": "wet: number",
+          "params": [],
+          "returnType": null,
+          "description": "Wet (modulated) mix level, 0..1. The dry level is automatically 1 - wet. Default 0.5."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-audio-fx/src/effects/ChorusEffect.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/ChorusEffect.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-audio-fx/src/effects/ChorusEffect.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/ChorusEffect.ts"
+}
