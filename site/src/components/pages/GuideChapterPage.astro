@@ -365,56 +365,10 @@ const sidebarParts = GUIDE_PARTS.map(part => ({
         text-decoration-color: var(--accent);
     }
 
-    .toc h6 {
-        margin: 0;
-        font-family: var(--f-mono);
-        font-size: 11px;
-        font-weight: 600;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        color: var(--fg-faint);
-    }
-
-    .toc ul {
-        list-style: none;
-        margin: var(--s-3) 0 0;
-        padding: 0;
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-    }
-
-    .toc a {
-        display: block;
-        border-left: 2px solid transparent;
-        padding: 4px 0 4px var(--s-3);
-        margin-left: -10px;
-        color: var(--fg-muted);
-        text-decoration: none;
-        font-size: 13px;
-    }
-
     .toc a.lvl-3 {
         padding-left: var(--s-5);
         font-size: 12.5px;
         color: var(--fg-faint);
-    }
-
-    .toc a:hover,
-    .toc a:focus-visible {
-        color: var(--fg);
-        outline: none;
-    }
-
-    .toc a[data-active='true'] {
-        color: var(--accent);
-        border-left-color: var(--accent);
-    }
-
-    .toc__resources {
-        margin-top: 1.5rem;
-        padding-top: 0.75rem;
-        border-top: 1px solid var(--line-soft);
     }
 
     /* Spine-curated apiLinks, surfaced as a compact chip row below the chapter

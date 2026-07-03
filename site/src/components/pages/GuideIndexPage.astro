@@ -49,7 +49,7 @@ const sidebarParts = GUIDE_PARTS.map(part => ({
     <aside slot="rail" class="toc" aria-label="Guide index shortcuts">
         <h6>On this page</h6>
         <ul>
-            <li><a href="#start">Start here</a></li>
+            <li><a href="#start" data-active="true">Start here</a></li>
             <li><a href="#path">Learning path</a></li>
             <li><a href="#topics">Browse by topic</a></li>
             <li><a href="#all">All chapters</a></li>
@@ -492,52 +492,6 @@ const sidebarParts = GUIDE_PARTS.map(part => ({
         line-height: 1.5;
         color: var(--fg-muted);
         max-width: none;
-    }
-
-    .toc h6 {
-        margin: 0;
-        font-family: var(--f-mono);
-        font-size: 11px;
-        font-weight: 600;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        color: var(--fg-faint);
-    }
-
-    .toc ul {
-        list-style: none;
-        margin: var(--s-3) 0 0;
-        padding: 0;
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-    }
-
-    .toc a {
-        display: block;
-        border-left: 2px solid transparent;
-        padding: 4px 0 4px var(--s-3);
-        margin-left: -10px;
-        color: var(--fg-muted);
-        text-decoration: none;
-        font-size: 13px;
-    }
-
-    .toc a:hover,
-    .toc a:focus-visible {
-        color: var(--fg);
-        outline: none;
-    }
-
-    .toc ul li:first-child a {
-        color: var(--accent);
-        border-left-color: var(--accent);
-    }
-
-    .toc__resources {
-        margin-top: 1.5rem;
-        padding-top: 0.75rem;
-        border-top: 1px solid var(--line-soft);
     }
 
     @media (max-width: 900px) {

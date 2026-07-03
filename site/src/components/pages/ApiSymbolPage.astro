@@ -457,23 +457,6 @@ const sidebarGroups = [
         max-width: none;
     }
 
-    .api-head {
-        margin-bottom: var(--s-5);
-    }
-
-    .api-head h1 {
-        margin: 0 0 4px;
-        font-size: 32px;
-        font-weight: 600;
-        letter-spacing: -0.02em;
-    }
-
-    .api-head p {
-        margin: 0;
-        color: var(--fg-muted);
-        max-width: 72ch;
-    }
-
     .api-mobile-tabs {
         display: none;
     }
@@ -578,20 +561,6 @@ const sidebarGroups = [
 
     .api-section-head {
         padding: var(--s-3) var(--s-6);
-        font-size: 11px;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        color: var(--fg-faint);
-        font-weight: 600;
-        display: flex;
-        align-items: center;
-        gap: var(--s-2);
-    }
-
-    .api-section-head .line {
-        flex: 1;
-        height: 1px;
-        background: var(--line-soft);
     }
 
     .api-inline-code {
@@ -667,51 +636,6 @@ const sidebarGroups = [
         font-size: 12.5px;
     }
 
-    .toc h6 {
-        margin: 0;
-        font-family: var(--f-mono);
-        font-size: 11px;
-        font-weight: 600;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        color: var(--fg-faint);
-    }
-
-    .toc ul {
-        list-style: none;
-        margin: var(--s-3) 0 0;
-        padding: 0;
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-    }
-
-    .toc a {
-        display: block;
-        border-left: 2px solid transparent;
-        padding: 4px 0 4px var(--s-3);
-        margin-left: -10px;
-        color: var(--fg-muted);
-        text-decoration: none;
-        font-size: 13px;
-    }
-
-    .toc a:hover,
-    .toc a:focus-visible {
-        color: var(--fg);
-        outline: none;
-    }
-
-    .toc a[data-active='true'] {
-        color: var(--accent);
-        border-left-color: var(--accent);
-    }
-
-    .toc__resources {
-        margin-top: 1.5rem;
-        padding-top: 0.75rem;
-        border-top: 1px solid var(--line-soft);
-    }
 
     @media (max-width: 1120px) {
         .api-row {
