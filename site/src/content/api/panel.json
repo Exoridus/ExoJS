@@ -3,7 +3,7 @@
   "description": "Rectangular background container with rounded corners and an optional border. The base building block for HUD boxes, dialogs, and menus — add content with `panel.addChild(...)`.",
   "symbol": "Panel",
   "kind": "class",
-  "subsystem": "core",
+  "subsystem": "ui",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 105,

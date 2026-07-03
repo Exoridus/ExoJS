@@ -27,7 +27,8 @@ type Subsystem =
     | 'rendering'
     | 'resources'
     | 'tiled'
-    | 'tilemap';
+    | 'tilemap'
+    | 'ui';
 type ApiKind = 'class' | 'enum' | 'interface' | 'type';
 type ApiTier = 'stable' | 'advanced';
 
@@ -46,6 +47,7 @@ const SUBSYSTEMS: ReadonlyArray<Subsystem> = [
     'resources',
     'tiled',
     'tilemap',
+    'ui',
 ];
 
 /**
@@ -502,6 +504,8 @@ interface EmitOptions {
     subsystemOverride?: Subsystem;
     /** When set, only emit symbols whose source path contains this marker. */
     sourceMarker?: string;
+    /** A same-named namespace reflection whose constants merge onto this page. */
+    mergeNamespace?: any;
 }
 
 const emitReflection = (reflection: any, usedSlugs: Set<string>, options: EmitOptions): boolean => {
@@ -544,6 +548,10 @@ const emitReflection = (reflection: any, usedSlugs: Set<string>, options: EmitOp
     // description (rendered as paragraphs); member sections follow; the Source
     // section, when present, carries the repo link. This mirrors exactly what
     // the API page rendered from the old MDX body, now as typed data.
+    // A merged same-named namespace contributes a Constants section (e.g. the
+    // GamepadButton.South / Pointer.X channel identifiers alongside the class).
+    const constantsSection = options.mergeNamespace ? buildConstantsSection(options.mergeNamespace) : null;
+
     const sections: ApiSection[] = [
         {
             id: 'import',
@@ -554,6 +562,7 @@ const emitReflection = (reflection: any, usedSlugs: Set<string>, options: EmitOp
             sourceLink: null,
         },
         ...memberSections,
+        ...(constantsSection ? [constantsSection] : []),
     ];
     if (sourceUrl && sourceRelative) {
         sections.push({
@@ -574,7 +583,7 @@ const emitReflection = (reflection: any, usedSlugs: Set<string>, options: EmitOp
         subsystem,
         importPath,
         tier,
-        memberCount,
+        memberCount: memberCount + (constantsSection?.members.length ?? 0),
         counts,
         sections,
         ...(sourceRelative ? { sourcePath: sourceRelative } : {}),
@@ -612,6 +621,41 @@ const collectSymbols = (project: any): any[] => {
     return out;
 };
 
+const isNamespace = (kind: ReflectionKind): boolean => (kind & ReflectionKind.Namespace) > 0;
+
+/**
+ * Collect top-level namespace reflections (flattening the single- vs
+ * multi-entry-point shapes like collectSymbols). Several engine symbols are a
+ * class merged with a same-named namespace holding channel/id constants
+ * (GamepadButton.South, Pointer.X, …); those constants are merged onto the
+ * class page rather than emitted as a separate page.
+ */
+const collectNamespaces = (project: any): any[] => {
+    const out: any[] = [];
+    for (const child of project.children ?? []) {
+        if (isNamespace(child.kind)) {
+            out.push(child);
+        } else if (Array.isArray(child.children) && (child.kind & ReflectionKind.Module) > 0) {
+            for (const sub of child.children) {
+                if (isNamespace(sub.kind)) out.push(sub);
+            }
+        }
+    }
+    return out;
+};
+
+/**
+ * A "Constants" section from a namespace's members (each a named constant with
+ * its type and JSDoc), reusing the value-member shape used for properties.
+ */
+const buildConstantsSection = (namespaceReflection: any): ApiSection | null => {
+    const members: ApiMember[] = (namespaceReflection.children ?? [])
+        .filter((child: any) => !child.name.startsWith('_'))
+        .map((child: any) => buildValueMember(child.name, child.type ?? child.getSignature?.type, child.comment));
+    if (members.length === 0) return null;
+    return { id: 'constants', title: 'Constants', members, paragraphs: [], importLine: null, sourceLink: null };
+};
+
 const convertEntryPoints = async (entryPoints: ReadonlyArray<string>, tsconfig: string): Promise<any> => {
     const app = await Application.bootstrapWithPlugins({
         entryPoints: entryPoints.map(entry => toPosix(path.resolve(repoRoot, entry))),
@@ -639,9 +683,10 @@ const build = async (): Promise<void> => {
 
     // 1. Core (+ debug subpath).
     const coreProject = await convertEntryPoints(['src/index.ts', 'src/debug/index.ts'], 'tsconfig.json');
+    const coreNamespaces = new Map<string, any>(collectNamespaces(coreProject).map((ns: any) => [ns.name, ns]));
     let coreCount = 0;
     for (const reflection of collectSymbols(coreProject)) {
-        if (emitReflection(reflection, usedSlugs, {})) coreCount += 1;
+        if (emitReflection(reflection, usedSlugs, { mergeNamespace: coreNamespaces.get(reflection.name) })) coreCount += 1;
     }
 
     if (coreCount === 0) {
@@ -652,6 +697,7 @@ const build = async (): Promise<void> => {
     const packageCounts: Array<{ importPath: string; count: number }> = [];
     for (const pkg of EXTENSION_PACKAGES) {
         const project = await convertEntryPoints([pkg.entryPoint], pkg.tsconfig);
+        const namespaces = new Map<string, any>(collectNamespaces(project).map((ns: any) => [ns.name, ns]));
         let count = 0;
         for (const reflection of collectSymbols(project)) {
             if (
@@ -659,6 +705,7 @@ const build = async (): Promise<void> => {
                     importPathOverride: pkg.importPath,
                     subsystemOverride: pkg.subsystem,
                     sourceMarker: pkg.sourceMarker,
+                    mergeNamespace: namespaces.get(reflection.name),
                 })
             ) {
                 count += 1;

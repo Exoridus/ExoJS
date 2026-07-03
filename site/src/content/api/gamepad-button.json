@@ -6,7 +6,7 @@
   "subsystem": "input",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 6,
+  "memberCount": 30,
   "counts": {
     "constructors": 1,
     "methods": 1,
@@ -267,6 +267,519 @@
           "params": [],
           "returnType": null,
           "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "constants",
+      "title": "Constants",
+      "members": [
+        {
+          "name": "Capture",
+          "signature": "Capture: GamepadButtonChannel",
+          "signatureTokens": [
+            {
+              "text": "Capture",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadButtonChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Capture / Screenshot button (Switch, Xbox Series)."
+        },
+        {
+          "name": "DPadDown",
+          "signature": "DPadDown: GamepadButtonChannel",
+          "signatureTokens": [
+            {
+              "text": "DPadDown",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadButtonChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "DPadLeft",
+          "signature": "DPadLeft: GamepadButtonChannel",
+          "signatureTokens": [
+            {
+              "text": "DPadLeft",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadButtonChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "DPadRight",
+          "signature": "DPadRight: GamepadButtonChannel",
+          "signatureTokens": [
+            {
+              "text": "DPadRight",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadButtonChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "DPadUp",
+          "signature": "DPadUp: GamepadButtonChannel",
+          "signatureTokens": [
+            {
+              "text": "DPadUp",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadButtonChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "East",
+          "signature": "East: GamepadButtonChannel",
+          "signatureTokens": [
+            {
+              "text": "East",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadButtonChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Right face button. Xbox=B, PlayStation=○, Switch=A. Conventional usage: cancel / back / secondary."
+        },
+        {
+          "name": "Guide",
+          "signature": "Guide: GamepadButtonChannel",
+          "signatureTokens": [
+            {
+              "text": "Guide",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadButtonChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Home / Guide / PS button."
+        },
+        {
+          "name": "LeftShoulder",
+          "signature": "LeftShoulder: GamepadButtonChannel",
+          "signatureTokens": [
+            {
+              "text": "LeftShoulder",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadButtonChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "LeftStick",
+          "signature": "LeftStick: GamepadButtonChannel",
+          "signatureTokens": [
+            {
+              "text": "LeftStick",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadButtonChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Left analog stick click (L3)."
+        },
+        {
+          "name": "LeftTrigger",
+          "signature": "LeftTrigger: GamepadButtonChannel",
+          "signatureTokens": [
+            {
+              "text": "LeftTrigger",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadButtonChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Left trigger as a button (analog 0..1 reported through the same channel)."
+        },
+        {
+          "name": "North",
+          "signature": "North: GamepadButtonChannel",
+          "signatureTokens": [
+            {
+              "text": "North",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadButtonChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Top face button. Xbox=Y, PlayStation=△, Switch=X. Conventional usage: quaternary action."
+        },
+        {
+          "name": "Paddle1",
+          "signature": "Paddle1: GamepadButtonChannel",
+          "signatureTokens": [
+            {
+              "text": "Paddle1",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadButtonChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "First paddle / extra button (Xbox Elite, Steam Controller, PS5 Edge, Steam Deck L4)."
+        },
+        {
+          "name": "Paddle2",
+          "signature": "Paddle2: GamepadButtonChannel",
+          "signatureTokens": [
+            {
+              "text": "Paddle2",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadButtonChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Second paddle / extra button (Xbox Elite, Steam Deck R4, PS5 Edge)."
+        },
+        {
+          "name": "Paddle3",
+          "signature": "Paddle3: GamepadButtonChannel",
+          "signatureTokens": [
+            {
+              "text": "Paddle3",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadButtonChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Third paddle / extra button (Xbox Elite, Steam Deck L5)."
+        },
+        {
+          "name": "Paddle4",
+          "signature": "Paddle4: GamepadButtonChannel",
+          "signatureTokens": [
+            {
+              "text": "Paddle4",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadButtonChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fourth paddle / extra button (Xbox Elite, Steam Deck R5)."
+        },
+        {
+          "name": "RightShoulder",
+          "signature": "RightShoulder: GamepadButtonChannel",
+          "signatureTokens": [
+            {
+              "text": "RightShoulder",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadButtonChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "RightStick",
+          "signature": "RightStick: GamepadButtonChannel",
+          "signatureTokens": [
+            {
+              "text": "RightStick",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadButtonChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Right analog stick click (R3)."
+        },
+        {
+          "name": "RightTrigger",
+          "signature": "RightTrigger: GamepadButtonChannel",
+          "signatureTokens": [
+            {
+              "text": "RightTrigger",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadButtonChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Right trigger as a button."
+        },
+        {
+          "name": "Select",
+          "signature": "Select: GamepadButtonChannel",
+          "signatureTokens": [
+            {
+              "text": "Select",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadButtonChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Select / Back / Minus button."
+        },
+        {
+          "name": "Share",
+          "signature": "Share: GamepadButtonChannel",
+          "signatureTokens": [
+            {
+              "text": "Share",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadButtonChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Share / Create button (PS4/PS5, Xbox Series)."
+        },
+        {
+          "name": "South",
+          "signature": "South: GamepadButtonChannel",
+          "signatureTokens": [
+            {
+              "text": "South",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadButtonChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Bottom face button. Xbox=A, PlayStation=✕, Switch (horizontal Joy-Con)=B. Conventional usage: confirm / primary action / jump."
+        },
+        {
+          "name": "Start",
+          "signature": "Start: GamepadButtonChannel",
+          "signatureTokens": [
+            {
+              "text": "Start",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadButtonChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Start / Options / Plus button."
+        },
+        {
+          "name": "Touchpad",
+          "signature": "Touchpad: GamepadButtonChannel",
+          "signatureTokens": [
+            {
+              "text": "Touchpad",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadButtonChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Touchpad click (PlayStation)."
+        },
+        {
+          "name": "West",
+          "signature": "West: GamepadButtonChannel",
+          "signatureTokens": [
+            {
+              "text": "West",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadButtonChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Left face button. Xbox=X, PlayStation=□, Switch=Y. Conventional usage: tertiary action."
         }
       ],
       "paragraphs": [],

@@ -3,7 +3,7 @@
   "description": "Linear layout container that flows its children in a row or column with even spacing and optional padding, then sizes itself to fit. Call Stack.layout after mutating children added with `addChild`, or use Stack.addItem to add and re-flow in one step.",
   "symbol": "Stack",
   "kind": "class",
-  "subsystem": "core",
+  "subsystem": "ui",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 105,

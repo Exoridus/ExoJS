@@ -3,7 +3,7 @@
   "description": "Text label widget. Wraps a Text node and keeps the widget's layout size in sync with the measured text, so it anchors and stacks correctly.",
   "symbol": "Label",
   "kind": "class",
-  "subsystem": "core",
+  "subsystem": "ui",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 102,

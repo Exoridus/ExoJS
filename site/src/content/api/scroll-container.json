@@ -3,7 +3,7 @@
   "description": "Clipped container that scrolls its content via the mouse wheel. Add child nodes to ScrollContainer.content rather than to the `ScrollContainer` itself. The content container is offset as the user scrolls, while the outer widget is clipped to its declared `width` × `height`. Mouse-wheel events from the global InputManager are consumed only when the pointer is within the widget's bounds. The container subscribes to the app's `onMouseWheel` signal when it enters the scene tree, and unsubscribes on detach.",
   "symbol": "ScrollContainer",
   "kind": "class",
-  "subsystem": "core",
+  "subsystem": "ui",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 105,

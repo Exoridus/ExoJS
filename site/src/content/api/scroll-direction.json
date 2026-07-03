@@ -3,7 +3,7 @@
   "description": "Direction(s) in which a ScrollContainer can scroll.",
   "symbol": "ScrollDirection",
   "kind": "type",
-  "subsystem": "core",
+  "subsystem": "ui",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 0,

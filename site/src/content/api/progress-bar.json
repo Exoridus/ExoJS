@@ -3,7 +3,7 @@
   "description": "Horizontal progress / health bar. ProgressBar.value is the fill fraction in `[0, 1]`; setting it redraws only the fill.",
   "symbol": "ProgressBar",
   "kind": "class",
-  "subsystem": "core",
+  "subsystem": "ui",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 104,

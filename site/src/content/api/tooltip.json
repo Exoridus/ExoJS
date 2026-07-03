@@ -3,7 +3,7 @@
   "description": "Hover tooltip attached to a RenderNode. Shows a small text label near the pointer after a short delay when the pointer enters `target`, and hides it immediately on pointer-out. The tooltip node is parented to the nearest UIRoot ancestor of `target`, so it always renders in screen space above other content. The target must have `interactive = true` for the hover signals to fire.",
   "symbol": "Tooltip",
   "kind": "class",
-  "subsystem": "core",
+  "subsystem": "ui",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 2,

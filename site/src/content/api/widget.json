@@ -3,7 +3,7 @@
   "description": "Base class for UI widgets — a Container with an explicit layout size (independent of child bounds / scale), an `enabled` flag, and optional screen-edge anchoring that re-applies on resize. Subclasses redraw size-dependent content in Widget._relayout and react to enable/disable in Widget._onEnabledChanged.",
   "symbol": "Widget",
   "kind": "class",
-  "subsystem": "core",
+  "subsystem": "ui",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 100,

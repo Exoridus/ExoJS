@@ -3,7 +3,7 @@
   "description": "Anchor position of a widget within its container's box.",
   "symbol": "WidgetAnchor",
   "kind": "type",
-  "subsystem": "core",
+  "subsystem": "ui",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 0,

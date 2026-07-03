@@ -3,7 +3,7 @@
   "description": "",
   "symbol": "StackDirection",
   "kind": "type",
-  "subsystem": "core",
+  "subsystem": "ui",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 0,

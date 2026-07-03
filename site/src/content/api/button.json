@@ -3,7 +3,7 @@
   "description": "Clickable button with a rounded background, a centered label, hover/pressed visual states, and keyboard activation (Enter / Space while focused). Listen to Button.onClick for activation.",
   "symbol": "Button",
   "kind": "class",
-  "subsystem": "core",
+  "subsystem": "ui",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 106,

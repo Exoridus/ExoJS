@@ -2,7 +2,7 @@ import type { CollectionEntry } from 'astro:content';
 
 export type ApiEntry = CollectionEntry<'api'>;
 
-export const API_SUBSYSTEM_ORDER = ['core', 'rendering', 'input', 'audio', 'animation', 'resources', 'math', 'debug', 'particles', 'tilemap', 'tiled', 'physics', 'aseprite', 'ldtk'] as const;
+export const API_SUBSYSTEM_ORDER = ['core', 'rendering', 'ui', 'input', 'audio', 'animation', 'resources', 'math', 'debug', 'particles', 'tilemap', 'tiled', 'physics', 'aseprite', 'ldtk'] as const;
 
 export type ApiSubsystem = (typeof API_SUBSYSTEM_ORDER)[number];
 
@@ -14,6 +14,10 @@ export const API_SUBSYSTEM_META: Record<ApiSubsystem, { label: string; descripti
     rendering: {
         label: 'Drawing / Rendering',
         description: 'Drawables, renderer backends, views, and filter systems.',
+    },
+    ui: {
+        label: 'UI',
+        description: 'Widgets, layout, and interface primitives.',
     },
     input: {
         label: 'Input',

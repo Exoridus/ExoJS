@@ -3,7 +3,7 @@
   "description": "",
   "symbol": "ButtonOptions",
   "kind": "interface",
-  "subsystem": "core",
+  "subsystem": "ui",
   "importPath": "@codexo/exojs",
   "tier": "stable",
   "memberCount": 10,
