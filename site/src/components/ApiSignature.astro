@@ -51,34 +51,34 @@ const { tokens, links } = Astro.props;
         white-space: normal;
     }
 
+    /* Colors come from the central API palette in styles/global.scss
+       (--api-token-*); restyle signatures there, not here. */
     .tok-name {
-        color: var(--fg);
+        color: var(--api-token-name);
     }
 
     .tok-param {
-        color: var(--fg-muted);
+        color: var(--api-token-param);
         font-style: italic;
     }
 
     .tok-keyword {
-        /* Muted accent tint using only defined tokens (the palette has no
-           standalone --sky/--rose custom properties). */
-        color: color-mix(in oklab, var(--accent), var(--fg-faint) 42%);
+        color: var(--api-token-keyword);
     }
 
     .tok-type {
-        color: var(--fg);
+        color: var(--api-token-type);
     }
 
     .tok-punctuation {
-        color: var(--fg-faint);
+        color: var(--api-token-punctuation);
     }
 
     .tok-link {
         position: relative;
-        color: var(--accent);
+        color: var(--api-token-link);
         text-decoration: none;
-        border-bottom: 1px dotted var(--accent-line);
+        border-bottom: 1px dotted var(--api-token-link-line);
         cursor: pointer;
     }
 

@@ -475,28 +475,29 @@ const sidebarGroups = [
         line-height: 1.3;
     }
 
+    /* Badge hues come from the central API palette in styles/global.scss (--api-kind-*). */
     .api-kind.kind-class {
-        color: var(--accent);
-        border-color: var(--accent-line);
-        background: var(--accent-soft);
-    }
-
-    .api-kind.kind-enum {
-        color: var(--rose);
-        border-color: color-mix(in oklab, var(--rose), transparent 65%);
-        background: color-mix(in oklab, var(--rose), transparent 88%);
+        color: var(--api-kind-class);
+        border-color: color-mix(in oklab, var(--api-kind-class), transparent 65%);
+        background: color-mix(in oklab, var(--api-kind-class), transparent 88%);
     }
 
     .api-kind.kind-interface {
-        color: #5aa9e6;
-        border-color: color-mix(in oklab, #5aa9e6, transparent 62%);
-        background: color-mix(in oklab, #5aa9e6, transparent 88%);
+        color: var(--api-kind-interface);
+        border-color: color-mix(in oklab, var(--api-kind-interface), transparent 62%);
+        background: color-mix(in oklab, var(--api-kind-interface), transparent 88%);
+    }
+
+    .api-kind.kind-enum {
+        color: var(--api-kind-enum);
+        border-color: color-mix(in oklab, var(--api-kind-enum), transparent 65%);
+        background: color-mix(in oklab, var(--api-kind-enum), transparent 88%);
     }
 
     .api-kind.kind-type {
-        color: #b58cf0;
-        border-color: color-mix(in oklab, #b58cf0, transparent 62%);
-        background: color-mix(in oklab, #b58cf0, transparent 88%);
+        color: var(--api-kind-type);
+        border-color: color-mix(in oklab, var(--api-kind-type), transparent 62%);
+        background: color-mix(in oklab, var(--api-kind-type), transparent 88%);
     }
 
     .toc h6 {
