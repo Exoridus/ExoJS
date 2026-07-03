@@ -87,6 +87,24 @@ export default defineConfig({
       reporter: ['lcov', 'clover', 'text-summary'],
       include: ['src/**/*.ts'],
       exclude: ['src/**/*.d.ts'],
+      // Hard regression gate for the `unit-tests` job (already required in
+      // `_ci-checks.yml`) — `.codecov.yml` posts project/patch coverage statuses
+      // but they are NOT wired up as required checks, so a coverage drop
+      // currently merges silently. These thresholds fail `pnpm test:coverage`
+      // itself (the exact command the CI job runs) below the floor.
+      //
+      // A ratchet floor, not a target: set a few points below the measured
+      // baseline (statements 75.34%, branches 65.43%, functions 74.23%, lines
+      // 75.81% as of 2026-07-03) so normal test-suite churn doesn't flake the
+      // gate, while still catching a real regression. Raise the floor as
+      // coverage grows — never lower it without an explicit reason recorded
+      // here.
+      thresholds: {
+        statements: 73,
+        branches: 63,
+        functions: 72,
+        lines: 73,
+      },
     },
     projects: [
       // ── jsdom unit/integration projects (Core + extensions) ──────────────
