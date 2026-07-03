@@ -4,6 +4,7 @@ description: 'Validate collision flow and response with interactive shapes.'
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import Callout from '../../../components/Callout.astro';
 
 # Collision detection
 
@@ -24,6 +25,10 @@ Five concrete shapes implement `Collidable`:
 | [`Line`](/ExoJS/en/api/line/) | `new Line(x1, y1, x2, y2)` | Segment |
 
 All shapes carry a `position` (`Vector`) and expose `collisionType` for dispatch. `intersectsWith` is broadly available across shape pairs; `collidesWith` (penetration response) is implemented for a subset of pairs.
+
+<Callout type="pitfall" title="A null collidesWith is ambiguous">
+`collidesWith` returns `null` both when the shapes miss and when the pair has no response implementation (any `Line`, `Ellipse` against `Ellipse`, `Ellipse` against `Polygon`). When a pair might be unsupported, gate on `intersectsWith` first so you can tell "no contact" apart from "not implemented".
+</Callout>
 
 ## Boolean overlap: intersectsWith
 
@@ -119,6 +124,10 @@ if (response) {
 ```
 
 The sign convention: `projectionN` points **from shapeB toward shapeA** (away from the surface the caller is being pushed out of).
+
+<Callout type="info" title="Discrete checks tunnel past fast movers">
+`intersectsWith` and `collidesWith` only test the shapes at their current position, so a fast mover can pass straight through a thin wall between frames. For high speeds, sweep the motion with the `Sweep.*` helpers instead of a point-in-time overlap test.
+</Callout>
 
 ## Point containment: contains
 

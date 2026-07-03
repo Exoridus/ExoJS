@@ -6,6 +6,7 @@ description: 'Build a complete small game from scratch: player movement, spawnin
 import ExamplePreview from '../../../components/ExamplePreview.astro';
 import SourceSnippet from '../../../components/SourceSnippet.astro';
 import TryIt from '../../../components/TryIt.astro';
+import Callout from '../../../components/Callout.astro';
 
 # Build Orb Dodge
 
@@ -80,6 +81,10 @@ init() {
     // ... A/D and Left/Right similarly
 }
 ```
+
+<Callout type="hint" title="Bind input in init, not once globally">
+Bindings registered through `this.inputs` auto-dispose when the scene is destroyed, and `init` runs again on every restart. Re-bind there each time rather than once at module load, and input survives restarts with no leaks or manual cleanup.
+</Callout>
 
 In `update`, normalize the direction vector so diagonal movement is not faster than cardinal movement, then clamp the position inside the canvas:
 

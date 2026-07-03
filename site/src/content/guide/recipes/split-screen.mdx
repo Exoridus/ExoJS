@@ -4,6 +4,7 @@ description: 'Render multiple viewpoints in a shared scene timeline.'
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import Callout from '../../../components/Callout.astro';
 
 # Split screen
 
@@ -66,6 +67,10 @@ draw(context) {
     context.render(this._divider);
 }
 ```
+
+<Callout type="pitfall" title="Reset the viewport for anything after the split">
+Each split view leaves a half-screen scissor rect behind. A later pass — a HUD, a full-screen flash — inherits it and gets clipped to one side unless you reset the viewport to full first.
+</Callout>
 
 The viewport values are normalised 0..1 fractions of the render target size. `viewport.set(0, 0, 0.5, 1)` means the left view occupies `x: 0..50%`, `y: 0..100%` of the canvas. `viewport.set(0.5, 0, 0.5, 1)` means the right view occupies `x: 50%..100%`, `y: 0..100%`.
 

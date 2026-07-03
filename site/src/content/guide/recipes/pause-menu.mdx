@@ -4,6 +4,7 @@ description: 'Pause scene updates while keeping clear visual context for players
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import Callout from '../../../components/Callout.astro';
 
 # Pause menu
 
@@ -12,6 +13,10 @@ A pause menu can freeze the game, display a menu overlay, and resume cleanly whe
 ## Approach
 
 One scene, one UI layer. The pause overlay (a `Panel` + `Label`) lives on `scene.ui` and is hidden until paused. Toggling `scene.paused` stops `update()` and all scene systems while the scene keeps drawing — so the world stays visible behind the overlay. A `BlurFilter` on `scene.root` provides visual separation.
+
+<Callout type="info" title="Tweens keep running while paused">
+`app.tweens` keeps advancing even when `scene.paused` is `true` — only `update()` and scene-level systems freeze. That is what lets a blur ramp or menu transition animate smoothly over the frozen world.
+</Callout>
 
 ```js
 class GameScene extends Scene {
@@ -68,6 +73,10 @@ class GameScene extends Scene {
 
 await app.start(new GameScene());
 ```
+
+<Callout type="warning" title="Clear filters in destroy">
+Any filter you set in `init` or `togglePause` — the `BlurFilter` here — must be cleared in `destroy`. Otherwise it stays attached to `scene.root` and bleeds into the next scene after `app.scene.setScene(...)`.
+</Callout>
 
 ## How `scene.paused` works
 
