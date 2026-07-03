@@ -15,15 +15,22 @@
 
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { allFixtures, type BeatFixture,SAMPLE_RATE } from './fixtures/beat-fixtures';
 import { type BeatMetrics,computeMetrics, formatMetrics } from './harness/beat-metrics';
 import { runDetector } from './harness/beat-sandbox';
 
 // ── Snapshot path ──────────────────────────────────────────────────────────────
-// pnpm runs test scripts from the package directory, so process.cwd() =
-// packages/exojs-audio-fx when this test runs.
-const SNAPSHOT_PATH = resolve(process.cwd(), 'test/__snapshots__/beat-baseline.json');
+// Resolved relative to this file (not process.cwd()): vitest may run from the
+// repo root (root `pnpm test`, cwd = repo root) or from the package directory
+// (package-local invocation, cwd = packages/exojs-audio-fx). A cwd-relative
+// path produced two divergent tracked copies depending on which invocation ran
+// last. File-relative resolution always lands on the single canonical,
+// committed copy regardless of vitest's cwd/`--root`.
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const SNAPSHOT_PATH = resolve(__dirname, '__snapshots__/beat-baseline.json');
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -509,9 +516,14 @@ describe('BeatDetector Stage-1 baseline', { timeout: 300_000 }, () => {
   }
 
   // ── Write committed baseline snapshot ──
+  // Opt-in only: set UPDATE_BASELINE=1 to regenerate the committed snapshot.
+  // A normal `pnpm test` run still exercises detection and assertions above,
+  // but must never touch the tracked file — otherwise every run rewrites
+  // `generatedAt` and leaves the tree permanently dirty.
 
   afterAll(() => {
     if (allMetrics.size === 0) return;
+    if (!process.env.UPDATE_BASELINE) return;
 
     const snapshot = {
       generatedAt: new Date().toISOString(),
