@@ -315,7 +315,10 @@ const emitReflection = (reflection: any, usedSlugs: Set<string>, options: EmitOp
     const sourceRelative = sourcePath
         ? (sourcePath.match(/(?:^|\/)(packages\/[^/]+\/src\/.*)$/)?.[1] ?? sourcePath.match(/(?:^|\/)(src\/.*)$/)?.[1])
         : undefined;
-    const sourceUrl = sourceRelative && source?.line ? `https://github.com/Exoridus/ExoJS/blob/main/${sourceRelative}#L${source.line}` : undefined;
+    // No `#L<line>` anchor: a line number shifts whenever unrelated code is
+    // inserted above the symbol, which flips `docs:api:check` on a pure line
+    // shift with zero content change. Link to the file itself instead.
+    const sourceUrl = sourceRelative ? `https://github.com/Exoridus/ExoJS/blob/main/${sourceRelative}` : undefined;
     const safeDescriptionBody = description ? escapeMdxText(description) : '';
     const allSections = ['Import', ...sections, ...(sourceUrl ? ['Source'] : [])];
     const bodyBlocks: Array<string> = [`## Import\n\n\`import { ${reflection.name} } from '${importPath}'\``];
