@@ -27,7 +27,7 @@ import { Clock } from './Clock';
 import { Color } from './Color';
 import { FixedTimestep } from './FixedTimestep';
 import { computeLetterboxLayout } from './letterbox';
-import { logger } from './logging';
+import { hello, logger } from './logging';
 import type { Scene } from './Scene';
 import { SceneManager } from './SceneManager';
 import { defaultSerializationRegistry, SerializationRegistry } from './serialization/SerializationRegistry';
@@ -113,6 +113,13 @@ export interface ApplicationOptions {
   input?: InputApplicationOptions;
   /** Seed for the per-Application {@link Application.random} RNG. Omit for a non-deterministic seed. */
   seed?: number;
+  /**
+   * Print the one-time `ExoJS v{version}` startup banner to the console on
+   * {@link Application.start}. Development-only (no-op in production
+   * builds) and printed at most once per process regardless of how many
+   * `Application`s are constructed. Default `true`.
+   */
+  hello?: boolean;
   /**
    * Fixed-timestep size in **seconds** for {@link Scene.fixedUpdate} / {@link Application.onFixedFrame}.
    * Default `1 / 60`. Must be positive.
@@ -346,6 +353,7 @@ export class Application {
         gamepadSlotStrategy: inputOptions.gamepadSlotStrategy ?? defaultInputSettings.gamepadSlotStrategy,
         pointerDistanceThreshold: inputOptions.pointerDistanceThreshold ?? defaultInputSettings.pointerDistanceThreshold,
       },
+      hello: appSettings.hello ?? true,
     };
 
     // Capture extension snapshot before constructing extension-sensitive subsystems.
@@ -598,6 +606,11 @@ export class Application {
 
       try {
         await this.initializeBackend();
+
+        if (this.options.hello) {
+          hello({ backend: this._backendType });
+        }
+
         this._capabilities = await capabilitiesPromise;
         await this.scene.setScene(scene);
         this._frameRequest = requestAnimationFrame(this._updateHandler);
@@ -691,7 +704,7 @@ export class Application {
       this._status = ApplicationStatus.Halting;
       cancelAnimationFrame(this._frameRequest);
       void this.scene.setScene(null).catch((error: unknown) => {
-        logger.error('core', 'Application.stop() failed to unload the active scene.', error instanceof Error ? error : undefined);
+        logger.error('Application.stop() failed to unload the active scene.', { source: 'Application', ...(error instanceof Error && { error }) });
         this.onError?.dispatch(error instanceof Error ? error : new Error(String(error)));
       });
       this._activeClock.stop();

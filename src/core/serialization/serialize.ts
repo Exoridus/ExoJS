@@ -1,4 +1,4 @@
-import { warnOnce } from '#core/dev';
+import { logger } from '#core/logging';
 import type { SceneNode } from '#core/SceneNode';
 import type { Container } from '#rendering/Container';
 import type { RenderNode } from '#rendering/RenderNode';
@@ -57,9 +57,12 @@ function createSerializeContext(loader: Loader | null, registry: SerializationRe
       const key = loader.keyFor(resource);
 
       if (key === null) {
-        warnOnce(
-          'serialize:unkeyed-asset',
+        logger.warn(
           'An asset referenced by a node has no Loader key (runtime-created, or not loaded through the Loader). The reference is omitted from serialization.',
+          {
+            source: 'serialize',
+            once: 'serialize:unkeyed-asset',
+          },
         );
 
         return null;
@@ -85,10 +88,10 @@ function createDeserializeContext(loader: Loader | null, version: number, regist
       const resource = loader.peek(type as unknown as Loadable, source) as T | null;
 
       if (resource === null) {
-        warnOnce(
-          'serialize:missing-asset',
-          `An asset referenced by a node was not pre-loaded into the Loader before deserialize (e.g. "${source}"); it resolves to null.`,
-        );
+        logger.warn(`An asset referenced by a node was not pre-loaded into the Loader before deserialize (e.g. "${source}"); it resolves to null.`, {
+          source: 'serialize',
+          once: 'serialize:missing-asset',
+        });
       }
 
       return resource;

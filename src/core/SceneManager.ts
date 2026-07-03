@@ -152,8 +152,8 @@ export class SceneManager {
         if (!this._asyncUpdateWarned.has(scene) && (updateResult as unknown) instanceof Promise) {
           this._asyncUpdateWarned.add(scene);
           logger.warn(
-            'scene',
             `Scene.update() returned a Promise. update() must be synchronous — async logic here breaks frame timing and silently drops errors. Move async work into load() or init() instead.`,
+            { source: 'SceneManager' },
           );
         }
 
@@ -166,10 +166,9 @@ export class SceneManager {
 
       if (!this._asyncDrawWarned.has(scene) && (drawResult as unknown) instanceof Promise) {
         this._asyncDrawWarned.add(scene);
-        logger.warn(
-          'scene',
-          `Scene.draw() returned a Promise. draw() must be synchronous — an async draw() produces incomplete frames and silently drops errors.`,
-        );
+        logger.warn(`Scene.draw() returned a Promise. draw() must be synchronous — an async draw() produces incomplete frames and silently drops errors.`, {
+          source: 'SceneManager',
+        });
       }
 
       // Auto-render the scene's screen-fixed UI layer above its content.
@@ -232,8 +231,8 @@ export class SceneManager {
 
       if (scene.root.children.length > 0 && scene.draw === Scene.prototype.draw) {
         logger.warn(
-          'scene',
           `Scene.root has ${scene.root.children.length} child(ren) after init() but draw() is not overridden. Scene.root is not auto-rendered — call context.render(this.root) inside draw().`,
+          { source: 'SceneManager' },
         );
       }
 
@@ -307,7 +306,7 @@ export class SceneManager {
     try {
       await this._disposeScene(scene);
     } catch (error) {
-      logger.error('scene', 'SceneManager.destroy() failed to unload the active scene.', error instanceof Error ? error : undefined);
+      logger.error('SceneManager.destroy() failed to unload the active scene.', { source: 'SceneManager', ...(error instanceof Error && { error }) });
     }
   }
 

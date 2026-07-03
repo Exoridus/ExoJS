@@ -1,4 +1,4 @@
-import { warnOnce } from '#core/dev';
+import { logger } from '#core/logging';
 import type { RepeatFit, RepeatMode } from '#rendering/texture/repeat';
 import { planRepeat } from '#rendering/texture/repeat';
 import type { TextureRegion } from '#rendering/texture/TextureRegion';
@@ -304,14 +304,14 @@ function compressBorders(border: NineSliceInsets, width: number, height: number)
   let bb = border.bottom;
 
   if (bl + br > width && bl + br > 0) {
-    warnOnce('nine-slice:h-compress', 'NineSliceSprite: horizontal borders exceed destination width; proportionally compressing.');
+    logger.warn('horizontal borders exceed destination width; proportionally compressing.', { source: 'NineSliceSprite', once: 'nine-slice:h-compress' });
     const k = width / (bl + br);
     bl *= k;
     br *= k;
   }
 
   if (bt + bb > height && bt + bb > 0) {
-    warnOnce('nine-slice:v-compress', 'NineSliceSprite: vertical borders exceed destination height; proportionally compressing.');
+    logger.warn('vertical borders exceed destination height; proportionally compressing.', { source: 'NineSliceSprite', once: 'nine-slice:v-compress' });
     const k = height / (bt + bb);
     bt *= k;
     bb *= k;

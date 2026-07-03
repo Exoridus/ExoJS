@@ -1,4 +1,4 @@
-import { warnOnce } from '#core/dev';
+import { logger } from '#core/logging';
 import type { Rectangle } from '#math/Rectangle';
 import { Drawable } from '#rendering/Drawable';
 import { buildPixelSnapContext, type RenderQuad, snapQuadsInto } from '#rendering/pixelSnap';
@@ -237,10 +237,10 @@ export class NineSliceSprite extends Drawable {
     const ctx = buildPixelSnapContext(this.getGlobalTransform(), view, targetPxWidth, targetPxHeight);
 
     if (!ctx.axisAligned) {
-      warnOnce(
-        'pixel-snap:geometry-downgrade',
-        'pixelSnapMode "geometry" downgraded to "position" for a rotated/skewed transform; rendered geometry is not boundary-snapped this frame.',
-      );
+      logger.warn('pixelSnapMode "geometry" downgraded to "position" for a rotated/skewed transform; rendered geometry is not boundary-snapped this frame.', {
+        source: 'NineSliceSprite',
+        once: 'pixel-snap:geometry-downgrade',
+      });
 
       return base;
     }

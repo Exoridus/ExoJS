@@ -1,19 +1,24 @@
 ---
 title: "Logger"
-description: ""
+description: "Engine-wide log dispatcher. Below `LogSeverity.Error`, calls are dropped outright in production builds (`__DEV__` is `false`); `error()` always reaches every registered sink. In development a createConsoleSink is installed by default — see logger."
 symbol: "Logger"
 kind: "class"
 subsystem: "core"
 importPath: "@codexo/exojs"
-memberCount: 8
+memberCount: 6
 tier: "stable"
 sections: ["Import", "Constructors", "Methods", "Source"]
 sourcePath: "src/core/logging.ts"
-sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/core/logging.ts#L20"
+sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/core/logging.ts#L43"
 ---
 ## Import
 
 `import { Logger } from '@codexo/exojs'`
+
+Engine-wide log dispatcher. Below `LogSeverity.Error`, calls are dropped
+outright in production builds (`__DEV__` is `false`); `error()` always
+reaches every registered sink. In development a createConsoleSink
+is installed by default — see logger.
 
 ## Constructors
 
@@ -21,14 +26,12 @@ sourceUrl: "https://github.com/Exoridus/ExoJS/blob/main/src/core/logging.ts#L20"
 
 ## Methods
 
-- `addHandler(handler: LogHandler): object`
-- `debug(channel: LogChannel, message: string, data?: Record<string, unknown>): void`
-- `error(channel: LogChannel, message: string, error?: Error): void`
-- `info(channel: LogChannel, message: string, data?: Record<string, unknown>): void`
-- `log(severity: LogSeverity, channel: LogChannel, message: string, options?: object): void`
-- `warn(channel: LogChannel, message: string, data?: Record<string, unknown>): void`
-- `warnOnce(key: string, channel: LogChannel, message: string): void`
+- `addSink(sink: LogSink): object`
+- `debug(message: string, options?: LogOptions): void`
+- `error(message: string, options?: LogOptions): void`
+- `info(message: string, options?: LogOptions): void`
+- `warn(message: string, options?: LogOptions): void`
 
 ## Source
 
-[src/core/logging.ts](https://github.com/Exoridus/ExoJS/blob/main/src/core/logging.ts#L20)
+[src/core/logging.ts](https://github.com/Exoridus/ExoJS/blob/main/src/core/logging.ts#L43)

@@ -78,29 +78,29 @@ Debug layers have zero overhead when their `visible` flag is `false` — `DebugO
 
 ## Logging
 
-Separately from the visual overlays above, ExoJS ships a channel-based [`Logger`](/ExoJS/en/api/logger/) in the core module — no special entrypoint required. The engine uses it internally (for example, `Application` logs unexpected failures on the `'core'` channel), and it's available for your own code too. A ready-to-use default instance, `logger`, is exported alongside the class:
+Separately from the visual overlays above, ExoJS ships a message-first [`Logger`](/ExoJS/en/api/logger/) in the core module — no special entrypoint required. The engine uses it internally (for example, `Application` logs unexpected failures with `source: 'Application'`), and it's available for your own code too. A ready-to-use default instance, `logger`, is exported alongside the class:
 
 ```js
 import { logger } from '@codexo/exojs';
 
-logger.debug('assets', 'Bundle "level-1" queued');
-logger.info('scene', 'Entered gameplay scene');
-logger.warn('audio', 'AudioContext resumed after a user gesture');
-logger.error('physics', 'Simulation step threw', new Error('physics step failed'));
+logger.debug('Bundle "level-1" queued', { source: 'assets' });
+logger.info('Entered gameplay scene', { source: 'scene' });
+logger.warn('AudioContext resumed after a user gesture', { source: 'audio' });
+logger.error('Simulation step threw', { source: 'physics', error: new Error('physics step failed') });
 ```
 
-Each call takes a `channel` — one of the built-in channels (`'core'`, `'rendering'`, `'audio'`, `'input'`, `'assets'`, `'physics'`, `'ui'`, `'animation'`, `'scene'`) or any custom string — plus a `message`, and either an optional `data` object (`debug`/`info`/`warn`) or an optional `Error` (`error`). Filter or route by channel in your own tooling to focus on one subsystem at a time.
+Each call takes a `message` plus an optional options bag: `source` (rendered as `[ExoJS][source]`, or a bare `[ExoJS]` when omitted), `data` for structured context, and `error` for `error()` calls. Use `source` to identify the subsystem or class emitting the entry so your own tooling can filter by it.
 
-Severity follows `LogSeverity`: `Debug < Info < Warning < Error`. In production builds, `Debug`/`Info`/`Warning` calls are compiled out entirely — only `Error` survives — so it's safe to leave `logger.debug`/`logger.info` calls in shipped code without gating them yourself. In development builds, a console handler is registered by default and prefixes every line with `[ExoJS:<channel>]`.
+Severity follows `LogSeverity`: `Debug < Info < Warning < Error`. In production builds, `Debug`/`Info`/`Warning` calls are compiled out entirely — only `Error` survives — so it's safe to leave `logger.debug`/`logger.info` calls in shipped code without gating them yourself. In development builds, a console sink is registered by default and prefixes every line with a styled `[ExoJS]` (or `[ExoJS][source]`) badge.
 
-To capture log entries yourself — for an in-game console, telemetry, or a custom debug panel — register a handler with `addHandler`. It returns an unsubscribe function:
+To capture log entries yourself — for an in-game console, telemetry, or a custom debug panel — register a sink with `addSink`. It returns an unsubscribe function:
 
 ```js
 import { logger, LogSeverity } from '@codexo/exojs';
 
-const unsubscribe = logger.addHandler((entry) => {
+const unsubscribe = logger.addSink((entry) => {
     if (entry.severity >= LogSeverity.Warning) {
-        console.warn(entry.channel, entry.message, entry.data ?? entry.error);
+        console.warn(entry.source, entry.message, entry.data ?? entry.error);
     }
 });
 
@@ -108,12 +108,12 @@ const unsubscribe = logger.addHandler((entry) => {
 unsubscribe();
 ```
 
-For warnings that could otherwise repeat every frame (a stale asset reference checked in `update`, say), use `warnOnce` — it logs the first time for a given key and silently skips every call after:
+For warnings that could otherwise repeat every frame (a stale asset reference checked in `update`, say), pass `once` — the entry is dropped after the first call for a given key, at any severity:
 
 ```js
 update(delta) {
     if (this.texture.width > 4096) {
-        logger.warnOnce('huge-texture', 'rendering', 'Texture exceeds 4096px — this may hurt performance on mobile GPUs.');
+        logger.warn('Texture exceeds 4096px — this may hurt performance on mobile GPUs.', { source: 'rendering', once: 'huge-texture' });
     }
 }
 ```

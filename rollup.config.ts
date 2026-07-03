@@ -48,13 +48,14 @@ const constantReplacementPlugin = replace({
   values: defines,
 });
 
-// In production, drop dev-only diagnostic calls (assert/assertDefined/invariant/
-// warnOnce) from the single-file bundles and minify them. `__DEV__` is already
-// replaced with `false` here, so the helper bodies are empty — `pure_funcs`
-// removes the now side-effect-free callsites (and their argument allocations)
-// outright. The modular `dist/esm` tree is intentionally left unminified so
-// consumers can tree-shake it themselves.
-const productionMinifyPlugins = buildMode === 'production' ? [terser({ compress: { pure_funcs: ['assert', 'assertDefined', 'invariant', 'warnOnce'] } })] : [];
+// In production, drop dev-only diagnostic calls (assert/assertDefined) from
+// the single-file bundles and minify them. `__DEV__` is already replaced with
+// `false` here, so the helper bodies are empty — `pure_funcs` removes the now
+// side-effect-free callsites (and their argument allocations) outright.
+// `invariant` is deliberately NOT listed here: it is an always-on contract
+// check that must survive into production. The modular `dist/esm` tree is
+// intentionally left unminified so consumers can tree-shake it themselves.
+const productionMinifyPlugins = buildMode === 'production' ? [terser({ compress: { pure_funcs: ['assert', 'assertDefined'] } })] : [];
 
 const bundled: RollupOptions = {
   input: 'src/index.ts',
@@ -112,7 +113,7 @@ const iifeMin: RollupOptions = {
       compilerOptions: { incremental: false },
       outputToFilesystem: false,
     }),
-    terser({ compress: { pure_funcs: ['assert', 'assertDefined', 'invariant', 'warnOnce'] } }),
+    terser({ compress: { pure_funcs: ['assert', 'assertDefined'] } }),
   ],
 };
 
@@ -208,7 +209,7 @@ const iifeFullMin: RollupOptions = {
       outputToFilesystem: false,
       include: ['src/**/*.ts', 'packages/*/src/**/*.ts', 'scripts/exo-full.entry.ts'],
     }),
-    terser({ compress: { pure_funcs: ['assert', 'assertDefined', 'invariant', 'warnOnce'] } }),
+    terser({ compress: { pure_funcs: ['assert', 'assertDefined'] } }),
   ],
 };
 

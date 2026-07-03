@@ -1,4 +1,4 @@
-import { warnOnce } from '#core/dev';
+import { logger } from '#core/logging';
 
 import { Ease } from './Easing';
 import type { TweenManager } from './TweenManager';
@@ -361,10 +361,10 @@ export class Tween<T extends object = object> {
       const val = this._target[key];
 
       if (typeof val !== 'number') {
-        warnOnce(
-          `tween:non-numeric-prop:${String(key)}`,
-          `Tween: property "${String(key)}" is not a number on target (got ${typeof val}). It will be skipped.`,
-        );
+        logger.warn(`property "${String(key)}" is not a number on target (got ${typeof val}). It will be skipped.`, {
+          source: 'Tween',
+          once: `tween:non-numeric-prop:${String(key)}`,
+        });
         continue;
       }
 

@@ -5,12 +5,12 @@
  * These tests verify that:
  *   - buildInfo.development === true
  *   - assertions execute and throw
- *   - warnOnce executes and can be reset
+ *   - invariant executes and throws unconditionally (always-on, not __DEV__-gated)
  *   - no ReferenceError for compile-time globals (they exist as literals)
  */
 import { describe, expect, it } from 'vitest';
 
-import { _resetWarnOnce, assert, assertDefined, invariant, warnOnce } from '../../src/core/dev';
+import { assert, assertDefined, invariant } from '../../src/core/dev';
 
 describe('buildInfo in test/development mode', () => {
   it('buildInfo.development is true', async () => {
@@ -66,43 +66,8 @@ describe('assertDefined() in development mode', () => {
 });
 
 describe('invariant() in development mode', () => {
-  it('is an alias for assert', () => {
+  it('is an always-on check, not gated by __DEV__', () => {
     expect(() => invariant(true, 'ok')).not.toThrow();
     expect(() => invariant(false, 'bad')).toThrow('[ExoJS] bad');
-  });
-});
-
-describe('warnOnce() in development mode', () => {
-  it('emits one warning per unique key', () => {
-    _resetWarnOnce();
-    const warnings: string[] = [];
-    const originalWarn = console.warn;
-    console.warn = (...args: unknown[]) => warnings.push(args.join(' '));
-
-    warnOnce('test:a', 'First warning');
-    warnOnce('test:a', 'Duplicate — should be silenced');
-    warnOnce('test:b', 'Second warning');
-
-    console.warn = originalWarn;
-    expect(warnings).toHaveLength(2);
-    expect(warnings[0]).toContain('[ExoJS] First warning');
-    expect(warnings[1]).toContain('[ExoJS] Second warning');
-  });
-
-  it('_resetWarnOnce clears the set', () => {
-    _resetWarnOnce();
-    const warnings: string[] = [];
-    const originalWarn = console.warn;
-    console.warn = (...args: unknown[]) => warnings.push(args.join(' '));
-
-    warnOnce('reset:a', 'First');
-    expect(warnings).toHaveLength(1);
-
-    _resetWarnOnce();
-
-    warnOnce('reset:a', 'After reset — should fire again');
-    expect(warnings).toHaveLength(2);
-
-    console.warn = originalWarn;
   });
 });
