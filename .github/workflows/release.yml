@@ -42,7 +42,7 @@ jobs:
       ref: ${{ github.event.inputs.tag || github.ref_name }}
 
   # ── Stage 1: PREPARE/VERIFY ────────────────────────────────────────────────
-  # Build the four official packages exactly once, then pack/hash/attw/
+  # Build every lockstep package exactly once, then pack/hash/attw/
   # external-consumer/full-zip WITHOUT rebuilding them, and upload the resulting
   # artifacts. Any failure here means no publish, no latest, no tag, no release.
   prepare:
@@ -91,7 +91,7 @@ jobs:
           pnpm verify:release-matrix
 
       # Build core + extensions exactly once. `release:prepare --build` invokes
-      # `pnpm build` + the four extension builds, then packs WITHOUT rebuilding.
+      # `pnpm build` + the extension builds, then packs WITHOUT rebuilding.
       - name: Build site (vendored ESM for the Full ZIP)
         env:
           EXOJS_PACKAGE_PATH: ..
@@ -137,9 +137,9 @@ jobs:
   # ── Stage 2: PUBLISH ───────────────────────────────────────────────────────
   # Consumes ONLY the artifacts built by `prepare`. Never builds or repacks: the
   # release:publish step re-hashes the downloaded tarballs against the manifest
-  # (build-once guard) and aborts on any drift. Publishes Core -> Particles ->
-  # Tilemap -> Tiled to a version-specific temporary dist-tag, then promotes all
-  # four to `latest` only after every publish succeeds.
+  # (build-once guard) and aborts on any drift. Publishes each package straight to
+  # `latest` in lockstep order (Core first, then the extensions); a partial failure
+  # stops the chain and is safe to re-run (already-published versions are skipped).
   publish:
     name: Publish to npm (build-once artifacts)
     needs: prepare
@@ -178,9 +178,9 @@ jobs:
           name: release-artifacts
           path: .release
 
-      # Re-hash guard + ordered publish (Core -> Particles -> Tilemap -> Tiled) to
-      # the temporary dist-tag, then promote all four to `latest`. Idempotent: a
-      # re-run skips versions already on npm; a partial failure promotes nothing.
+      # Re-hash guard + ordered publish straight to `latest` (Core first, then the
+      # extensions). Idempotent: a re-run skips versions already on npm; a partial
+      # failure stops the chain and publishes nothing further.
       - name: Publish coordinated release (build-once, dist-tag -> latest)
         run: pnpm release:publish --execute
 

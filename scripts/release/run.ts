@@ -8,7 +8,7 @@
  *   tsx scripts/release/run.ts publish   [--execute] [--no-check-existing]
  *
  * `prepare` builds (optionally), freezes the exact source revision (failing on
- * a dirty tree or unknown revision), packs exactly six tarballs WITHOUT
+ * a dirty tree or unknown revision), packs one tarball per lockstep package WITHOUT
  * rebuilding them, hashes them into `release-manifest.json` + `checksums.sha256`,
  * runs attw and the external-consumer smoke against those exact tarballs, and
  * assembles the Full GitHub Release ZIP. `publish` consumes only the prepared
@@ -101,7 +101,7 @@ const doPrepare = (): void => {
 
   const revision = freezeRevision();
 
-  log('\n→ Packing six tarballs (no rebuild) + manifest + checksums…');
+  log('\n→ Packing lockstep tarballs (no rebuild) + manifest + checksums…');
   const prepared = prepareRelease(runner, { rootDir: repoRoot, stagingDir, revision });
   let manifest = prepared.manifest;
   log(`  packed: ${manifest.packages.map(p => `${p.name}@${p.version} (${p.bytes}B)`).join(', ')}`);
