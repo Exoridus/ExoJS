@@ -1,6 +1,5 @@
 ---
-import { getCollection } from 'astro:content';
-import type { CollectionEntry } from 'astro:content';
+import GuidePartRedirect from '../../../../components/pages/GuidePartRedirect.astro';
 import { GUIDE_PARTS } from '../../../../lib/guide-structure';
 
 export function getStaticPaths() {
@@ -8,39 +7,6 @@ export function getStaticPaths() {
 }
 
 const partSlug = (Astro.params as Record<string, string | undefined>).part ?? '';
-const part = GUIDE_PARTS.find(entry => entry.slug === partSlug);
-
-if (!part) {
-    throw new Error(`Unknown guide part: ${partSlug}`);
-}
-
-const firstChapter = part.chapters[0];
-if (!firstChapter) {
-    throw new Error(`Guide part has no chapters: ${partSlug}`);
-}
-
-const guideEntries = await getCollection('guide');
-const firstChapterTitle =
-    guideEntries.find((entry: CollectionEntry<'guide'>) => entry.id.replace(/\.(md|mdx)$/, '') === firstChapter.path)?.data
-        .title ?? firstChapter.slug;
-
-const targetHref = `${import.meta.env.BASE_URL}de/guide/${part.slug}/${firstChapter.slug}/`;
 ---
 
-<!doctype html>
-<html lang="de">
-    <head>
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>{part.title} | ExoJS Guide</title>
-        <script is:inline define:vars={{ targetHref }}>
-            window.location.replace(targetHref);
-        </script>
-        <noscript>
-            <meta http-equiv="refresh" content={`0;url=${targetHref}`} />
-        </noscript>
-    </head>
-    <body>
-        <p>Weiterleitung zu <a href={targetHref}>{firstChapterTitle}</a>...</p>
-    </body>
-</html>
+<GuidePartRedirect locale="de" partSlug={partSlug} />

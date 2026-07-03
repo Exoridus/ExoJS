@@ -1,0 +1,895 @@
+---
+import { getCollection } from 'astro:content';
+import type { CollectionEntry } from 'astro:content';
+import DocsLayout from '../../layouts/DocsLayout.astro';
+import DocsSidebar from '../DocsSidebar.astro';
+import EnglishFallbackNotice from '../EnglishFallbackNotice.astro';
+import { API_SUBSYSTEM_META, API_SUBSYSTEM_ORDER, toApiHref } from '../../lib/api-reference';
+
+interface Props {
+    locale: 'en' | 'de';
+    symbol: string;
+}
+
+type ApiEntry = CollectionEntry<'api'>;
+
+type ApiRow = {
+    signature: string;
+    description: string;
+};
+
+type ParsedSection = {
+    id: string;
+    title: string;
+    rows: ApiRow[];
+    paragraphs: string[];
+    importLine: string | null;
+    sourceLink: { label: string; href: string } | null;
+};
+
+type ApiMobileTab = {
+    id: string;
+    title: string;
+    count: number | null;
+};
+
+const toAnchor = (value: string): string =>
+    value
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .trim()
+        .replace(/\s+/g, '-');
+
+const cleanText = (value: string): string => value.replace(/\\([{}])/g, '$1');
+
+const parseParagraphs = (lines: string[]): string[] => {
+    const paragraphs: string[] = [];
+    let buffer: string[] = [];
+
+    const flush = () => {
+        if (buffer.length === 0) return;
+        paragraphs.push(cleanText(buffer.join(' ').trim()));
+        buffer = [];
+    };
+
+    for (const rawLine of lines) {
+        const line = rawLine.trim();
+        if (!line) {
+            flush();
+            continue;
+        }
+        if (line.startsWith('- `')) {
+            flush();
+            continue;
+        }
+        if (/^`[^`]+`$/.test(line)) {
+            flush();
+            continue;
+        }
+        if (/^\[[^\]]+\]\(([^)]+)\)$/.test(line)) {
+            flush();
+            continue;
+        }
+        buffer.push(line);
+    }
+
+    flush();
+    return paragraphs;
+};
+
+const parseSections = (body: string): ParsedSection[] => {
+    const sections: Array<{ title: string; lines: string[] }> = [];
+    let active: { title: string; lines: string[] } | null = null;
+
+    for (const rawLine of body.split('\n')) {
+        const headingMatch = /^##\s+(.+)$/.exec(rawLine.trim());
+        if (headingMatch) {
+            if (active) sections.push(active);
+            active = { title: headingMatch[1].trim(), lines: [] };
+            continue;
+        }
+        if (active) active.lines.push(rawLine);
+    }
+
+    if (active) sections.push(active);
+
+    return sections.map(section => {
+        const rows: ApiRow[] = [];
+        let importLine: string | null = null;
+        let sourceLink: { label: string; href: string } | null = null;
+
+        for (const rawLine of section.lines) {
+            const line = rawLine.trim();
+            if (!line) continue;
+
+            if (!importLine) {
+                const importMatch = /^`([^`]+)`$/.exec(line);
+                if (importMatch) {
+                    importLine = cleanText(importMatch[1]);
+                    continue;
+                }
+            }
+
+            if (!sourceLink) {
+                const sourceMatch = /^\[([^\]]+)\]\(([^)]+)\)$/.exec(line);
+                if (sourceMatch) {
+                    sourceLink = { label: cleanText(sourceMatch[1]), href: sourceMatch[2] };
+                    continue;
+                }
+            }
+
+            const rowMatch = /^-\s+`([^`]+)`(?:\s*[-:]\s*(.+))?$/.exec(line);
+            if (rowMatch) {
+                rows.push({
+                    signature: cleanText(rowMatch[1]),
+                    description: cleanText(rowMatch[2] ?? ''),
+                });
+            }
+        }
+
+        return {
+            id: toAnchor(section.title),
+            title: section.title,
+            rows,
+            paragraphs: parseParagraphs(section.lines),
+            importLine,
+            sourceLink,
+        };
+    });
+};
+
+const { locale, symbol } = Astro.props;
+const apiEntries = await getCollection('api');
+const entry = apiEntries.find((item: ApiEntry) => item.id === symbol);
+if (!entry) {
+    throw new Error(`Unknown API symbol: ${symbol}`);
+}
+
+const parsedSections = parseSections(entry.body ?? '');
+const sectionByTitle = new Map(parsedSections.map(section => [section.title.toLowerCase(), section]));
+const methodsCount = sectionByTitle.get('methods')?.rows.length ?? 0;
+const propertiesCount = sectionByTitle.get('properties')?.rows.length ?? 0;
+const eventsCount = sectionByTitle.get('events')?.rows.length ?? 0;
+const currentSubsystem = entry.data.subsystem as keyof typeof API_SUBSYSTEM_META;
+
+const kindGlyph = entry.data.kind === 'enum' ? 'E' : entry.data.kind === 'class' ? 'C' : entry.data.kind.slice(0, 1).toUpperCase();
+const kindLabel = entry.data.kind.toLowerCase();
+
+const toMobileTabCount = (section: ParsedSection): number | null => {
+    const sectionKey = section.title.toLowerCase();
+    if (sectionKey === 'constructor' || sectionKey === 'constructors') return section.rows.length;
+    if (sectionKey === 'methods') return section.rows.length;
+    if (sectionKey === 'properties') return section.rows.length;
+    if (sectionKey === 'events') return section.rows.length;
+    if (sectionKey === 'examples') return section.rows.length > 0 ? section.rows.length : null;
+    return section.rows.length > 0 ? section.rows.length : null;
+};
+
+const mobileTabs: ApiMobileTab[] = [
+    { id: 'overview', title: 'Overview', count: null },
+    ...parsedSections.map(section => ({
+        id: section.id,
+        title: section.title,
+        count: toMobileTabCount(section),
+    })),
+];
+
+const currentSubsystemEntries = apiEntries
+    .filter((item: ApiEntry) => item.data.subsystem === currentSubsystem)
+    .sort((a: ApiEntry, b: ApiEntry) => a.data.title.localeCompare(b.data.title));
+
+const sidebarGroups = [
+    {
+        title: 'API',
+        items: [
+            { href: `${import.meta.env.BASE_URL}${locale}/api/`, label: 'Overview' },
+            { href: `${import.meta.env.BASE_URL}${locale}/api/all/`, label: 'All symbols A-Z' },
+        ],
+    },
+    {
+        title: 'Subsystems',
+        items: API_SUBSYSTEM_ORDER.map(subsystem => ({
+            href: `${import.meta.env.BASE_URL}${locale}/api/#subsystem-${subsystem}`,
+            label: API_SUBSYSTEM_META[subsystem].label,
+        })),
+    },
+    {
+        title: `${API_SUBSYSTEM_META[currentSubsystem].label}`,
+        items: currentSubsystemEntries.map((item: ApiEntry) => ({
+            href: toApiHref(import.meta.env.BASE_URL, item.id, locale),
+            label: item.data.title,
+        })),
+    },
+];
+---
+
+<DocsLayout title={`${entry.data.title} | ExoJS API`} description={entry.data.description} variant="api">
+    <DocsSidebar slot="sidebar" groups={sidebarGroups} />
+    <aside slot="rail" class="toc" aria-label="API symbol page table of contents">
+        <h6>On this page</h6>
+        <ul data-api-toc>
+            {
+                parsedSections.map((section, index) => (
+                    <li>
+                        <a href={`#${section.id}`} data-api-toc-link data-active={index === 0 ? 'true' : 'false'}>
+                            {section.title}
+                        </a>
+                    </li>
+                ))
+            }
+        </ul>
+        <div class="toc__resources">
+            <h6>Tools</h6>
+            <ul>
+                <li><a href={`${import.meta.env.BASE_URL}${locale}/api/`}>API index</a></li>
+                <li><a href={`${import.meta.env.BASE_URL}${locale}/api/all/`}>All symbols A-Z</a></li>
+                <li><a href={`${import.meta.env.BASE_URL}${locale}/guide/`}>Read Guide</a></li>
+                <li><a href={`${import.meta.env.BASE_URL}${locale}/playground/`}>Try Playground</a></li>
+                {entry.data.sourceUrl && <li><a href={entry.data.sourceUrl} rel="noreferrer noopener" target="_blank">Source link</a></li>}
+            </ul>
+        </div>
+    </aside>
+
+    <div class="prose api-prose">
+        {locale === 'de' && <EnglishFallbackNotice />}
+        <div class="api-head">
+            <div>
+                <h1>API reference</h1>
+                <p>
+                    Every public class, method, and event in <code class="inline">@codexo/exojs</code>. Generated from source.
+                </p>
+            </div>
+        </div>
+
+        <nav class="api-mobile-tabs" data-api-mobile-tabs aria-label="API detail sections">
+            {mobileTabs.map((tab, index) => (
+                <button
+                    type="button"
+                    class="api-mobile-tabs__tab"
+                    data-api-mobile-tab={tab.id}
+                    data-active={index === 0 ? 'true' : 'false'}
+                    aria-current={index === 0 ? 'true' : undefined}
+                >
+                    <span>{tab.title}</span>
+                    {tab.count !== null && <span class="count">{tab.count}</span>}
+                </button>
+            ))}
+        </nav>
+
+        <article class="api-class">
+            <section id="overview" class="api-section api-section--overview" data-api-mobile-section data-api-mobile-key="overview">
+                <header class="api-class-head">
+                    <span class="icon">{kindGlyph}</span>
+                    <div class="api-class-head__main">
+                        <h2><span class="keyword">{kindLabel}</span>{entry.data.title}</h2>
+                        <div class="extends">
+                            <span>{entry.data.importPath}</span>
+                            <span> / {entry.data.subsystem}</span>
+                            <span> / stable</span>
+                        </div>
+                        <p>{entry.data.description}</p>
+                    </div>
+                    <div class="stats">
+                        <div class="s">
+                            <div class="n">{propertiesCount}</div>
+                            <div class="l">props</div>
+                        </div>
+                        <div class="s">
+                            <div class="n">{methodsCount}</div>
+                            <div class="l">methods</div>
+                        </div>
+                        <div class="s">
+                            <div class="n">{eventsCount}</div>
+                            <div class="l">events</div>
+                        </div>
+                    </div>
+                </header>
+            </section>
+
+            {
+                parsedSections.map(section => (
+                    <section id={section.id} class="api-section" data-api-mobile-section data-api-mobile-key={section.id}>
+                        <div class="api-section-head">
+                            <span>{section.title}</span>
+                            <span class="line"></span>
+                            <span>{section.rows.length > 0 ? section.rows.length : ''}</span>
+                        </div>
+
+                        {section.importLine && (
+                            <div class="api-inline-code">
+                                <code>{section.importLine}</code>
+                            </div>
+                        )}
+
+                        {section.rows.length > 0 &&
+                            section.rows.map(row => (
+                                <div class="api-row">
+                                    <div class="sig">
+                                        <div class="name">
+                                            <code>{row.signature}</code>
+                                        </div>
+                                    </div>
+                                    <div class="desc">{row.description}</div>
+                                </div>
+                            ))}
+
+                        {section.paragraphs.length > 0 && (
+                            <div class="api-paragraphs">
+                                {section.paragraphs.map(paragraph => (
+                                    <p>{paragraph}</p>
+                                ))}
+                            </div>
+                        )}
+
+                        {section.sourceLink && (
+                            <div class="api-source">
+                                <a href={section.sourceLink.href} rel="noreferrer noopener" target="_blank">
+                                    {section.sourceLink.label}
+                                </a>
+                            </div>
+                        )}
+                    </section>
+                ))
+            }
+        </article>
+    </div>
+
+    <script is:inline>
+        (() => {
+            const links = Array.from(document.querySelectorAll('[data-api-toc-link]'));
+            const mobileTabs = Array.from(document.querySelectorAll('[data-api-mobile-tab]'));
+            const mobileSections = Array.from(document.querySelectorAll('[data-api-mobile-section]'));
+            const mobileMediaQuery = window.matchMedia('(max-width: 760px)');
+            const reduceMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+            const revealAllMobileSections = () => {
+                for (const section of mobileSections) {
+                    if (section instanceof HTMLElement) {
+                        section.hidden = false;
+                    }
+                }
+            };
+
+            const setActiveMobileTab = id => {
+                for (const button of mobileTabs) {
+                    if (!(button instanceof HTMLButtonElement)) continue;
+                    const isActive = (button.dataset.apiMobileTab ?? '') === id;
+                    button.setAttribute('data-active', isActive ? 'true' : 'false');
+                    if (isActive) button.setAttribute('aria-current', 'true');
+                    else button.removeAttribute('aria-current');
+                }
+            };
+
+            const setMobileSection = (id, options = {}) => {
+                const sectionId = typeof id === 'string' && id.length > 0 ? id : 'overview';
+                const shouldScroll = options.scroll === true;
+                setActiveMobileTab(sectionId);
+
+                if (!mobileMediaQuery.matches) {
+                    revealAllMobileSections();
+                    return;
+                }
+
+                for (const section of mobileSections) {
+                    if (!(section instanceof HTMLElement)) continue;
+                    section.hidden = (section.dataset.apiMobileKey ?? '') !== sectionId;
+                }
+
+                if (!shouldScroll) return;
+                const target = mobileSections.find(node => node instanceof HTMLElement && (node.dataset.apiMobileKey ?? '') === sectionId);
+                if (!(target instanceof HTMLElement)) return;
+                target.scrollIntoView({
+                    block: 'start',
+                    behavior: reduceMotionQuery.matches ? 'auto' : 'smooth',
+                });
+            };
+
+            mobileTabs.forEach(button => {
+                if (!(button instanceof HTMLButtonElement)) return;
+                button.addEventListener('click', () => {
+                    const id = button.dataset.apiMobileTab ?? 'overview';
+                    setMobileSection(id, { scroll: true });
+                });
+            });
+
+            mobileMediaQuery.addEventListener('change', event => {
+                if (event.matches) {
+                    const active = mobileTabs.find(node => node instanceof HTMLButtonElement && node.getAttribute('data-active') === 'true');
+                    const id = active instanceof HTMLButtonElement ? (active.dataset.apiMobileTab ?? 'overview') : 'overview';
+                    setMobileSection(id, { scroll: false });
+                    return;
+                }
+                revealAllMobileSections();
+            });
+
+            if (mobileMediaQuery.matches) {
+                setMobileSection('overview', { scroll: false });
+            } else {
+                revealAllMobileSections();
+            }
+
+            if (links.length === 0) return;
+
+            const targets = links
+                .map(link => {
+                    if (!(link instanceof HTMLAnchorElement)) return null;
+                    const id = link.getAttribute('href')?.replace(/^#/, '');
+                    if (!id) return null;
+                    const target = document.getElementById(id);
+                    if (!(target instanceof HTMLElement)) return null;
+                    return { link, target };
+                })
+                .filter(Boolean);
+
+            if (targets.length === 0) return;
+
+            const setActive = activeLink => {
+                for (const node of links) {
+                    if (node instanceof HTMLAnchorElement) node.setAttribute('data-active', node === activeLink ? 'true' : 'false');
+                }
+            };
+
+            const observer = new IntersectionObserver(
+                entries => {
+                    const visible = entries
+                        .filter(entry => entry.isIntersecting)
+                        .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+                    const first = visible[0];
+                    if (!first) return;
+                    const match = targets.find(item => item.target === first.target);
+                    if (!match) return;
+                    setActive(match.link);
+                    if (mobileMediaQuery.matches) {
+                        setActiveMobileTab(match.target.id);
+                    }
+                },
+                { rootMargin: '-20% 0px -65% 0px', threshold: [0, 1] },
+            );
+
+            for (const item of targets) observer.observe(item.target);
+            setActive(targets[0].link);
+        })();
+    </script>
+</DocsLayout>
+
+<style>
+    .api-prose {
+        max-width: none;
+    }
+
+    .api-head {
+        margin-bottom: var(--s-5);
+    }
+
+    .api-head h1 {
+        margin: 0 0 4px;
+        font-size: 32px;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+    }
+
+    .api-head p {
+        margin: 0;
+        color: var(--fg-muted);
+        max-width: 72ch;
+    }
+
+    .api-mobile-tabs {
+        display: none;
+    }
+
+    .api-class {
+        background: var(--bg-elevated);
+        border: 1px solid var(--line-soft);
+        border-radius: var(--r-4);
+        overflow: hidden;
+    }
+
+    .api-class-head {
+        padding: var(--s-5) var(--s-6);
+        border-bottom: 1px solid var(--line-soft);
+        display: flex;
+        gap: var(--s-4);
+        align-items: start;
+        background: var(--bg-elevated);
+    }
+
+    .api-class-head .icon {
+        width: 36px;
+        height: 36px;
+        flex-shrink: 0;
+        display: grid;
+        place-items: center;
+        border-radius: var(--r-2);
+        background: var(--accent-soft);
+        color: var(--accent);
+        font-family: var(--f-mono);
+        font-weight: 600;
+        font-size: 14px;
+    }
+
+    .api-class-head__main {
+        min-width: 0;
+        flex: 1;
+    }
+
+    .api-class-head h2 {
+        margin: 0;
+        font-size: 20px;
+        font-family: var(--f-mono);
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        overflow-wrap: anywhere;
+    }
+
+    .api-class-head h2 .keyword {
+        color: var(--fg-faint);
+        font-weight: 400;
+        margin-right: 6px;
+        text-transform: lowercase;
+    }
+
+    .api-class-head .extends {
+        font-family: var(--f-mono);
+        font-size: 12.5px;
+        color: var(--fg-muted);
+        margin-top: 2px;
+        overflow-wrap: anywhere;
+    }
+
+    .api-class-head p {
+        margin: 6px 0 0;
+        color: var(--fg-muted);
+        font-size: 14px;
+        max-width: 760px;
+    }
+
+    .api-class-head .stats {
+        display: flex;
+        gap: var(--s-4);
+        margin-left: auto;
+        flex-shrink: 0;
+    }
+
+    .api-class-head .stats .s {
+        text-align: right;
+    }
+
+    .api-class-head .stats .s .n {
+        font-family: var(--f-mono);
+        font-size: 14px;
+        color: var(--fg);
+    }
+
+    .api-class-head .stats .s .l {
+        font-size: 10.5px;
+        color: var(--fg-faint);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+    }
+
+    .api-section {
+        padding: var(--s-3) 0;
+    }
+
+    .api-section + .api-section {
+        margin-top: var(--s-7);
+    }
+
+    .api-section-head {
+        padding: var(--s-3) var(--s-6);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--fg-faint);
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: var(--s-2);
+    }
+
+    .api-section-head .line {
+        flex: 1;
+        height: 1px;
+        background: var(--line-soft);
+    }
+
+    .api-inline-code {
+        padding: 0 var(--s-6) var(--s-3);
+    }
+
+    .api-inline-code code {
+        display: inline-flex;
+        align-items: center;
+        border-radius: var(--r-2);
+        border: 1px solid var(--line-soft);
+        background: var(--bg-canvas);
+        font-family: var(--f-mono);
+        font-size: 12.5px;
+        color: var(--fg);
+        padding: 4px 9px;
+        overflow-wrap: anywhere;
+    }
+
+    .api-row {
+        display: grid;
+        grid-template-columns: 320px minmax(0, 1fr);
+        gap: var(--s-5);
+        padding: var(--s-4) var(--s-6);
+        border-top: 1px dashed var(--line-soft);
+        align-items: start;
+    }
+
+    .api-row .sig {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+    }
+
+    .api-row .sig .name code {
+        font-family: var(--f-mono);
+        font-size: 13.5px;
+        color: var(--fg);
+        line-height: 1.7;
+        overflow-wrap: anywhere;
+        white-space: normal;
+    }
+
+    .api-row .desc {
+        color: var(--fg-muted);
+        font-size: 14px;
+        line-height: 1.65;
+        max-width: 64ch;
+    }
+
+    .api-paragraphs {
+        padding: 0 var(--s-6);
+        margin-top: var(--s-2);
+    }
+
+    .api-paragraphs p {
+        margin: var(--s-3) 0;
+        color: var(--fg-muted);
+        line-height: 1.65;
+        max-width: 74ch;
+    }
+
+    .api-source {
+        padding: var(--s-3) var(--s-6) 0;
+    }
+
+    .api-source a {
+        color: var(--accent);
+        text-decoration: none;
+        border-bottom: 1px solid var(--accent-line);
+        font-family: var(--f-mono);
+        font-size: 12.5px;
+    }
+
+    .toc h6 {
+        margin: 0;
+        font-family: var(--f-mono);
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--fg-faint);
+    }
+
+    .toc ul {
+        list-style: none;
+        margin: var(--s-3) 0 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .toc a {
+        display: block;
+        border-left: 2px solid transparent;
+        padding: 4px 0 4px var(--s-3);
+        margin-left: -10px;
+        color: var(--fg-muted);
+        text-decoration: none;
+        font-size: 13px;
+    }
+
+    .toc a:hover,
+    .toc a:focus-visible {
+        color: var(--fg);
+        outline: none;
+    }
+
+    .toc a[data-active='true'] {
+        color: var(--accent);
+        border-left-color: var(--accent);
+    }
+
+    .toc__resources {
+        margin-top: 1.5rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid var(--line-soft);
+    }
+
+    @media (max-width: 1120px) {
+        .api-row {
+            grid-template-columns: 1fr;
+            gap: var(--s-2);
+        }
+    }
+
+    @media (max-width: 760px) {
+        .api-head {
+            margin-bottom: var(--s-3);
+        }
+
+        .api-head h1 {
+            font-size: 1.7rem;
+            line-height: 1.14;
+        }
+
+        .api-mobile-tabs {
+            display: flex;
+            gap: 0.4rem;
+            overflow-x: auto;
+            overflow-y: hidden;
+            position: sticky;
+            top: calc(3.2rem + env(safe-area-inset-top));
+            z-index: 9;
+            margin: 0 0 var(--s-3);
+            padding: 0.4rem 0 0.25rem;
+            background: color-mix(in oklab, var(--bg-canvas), transparent 8%);
+            scrollbar-width: thin;
+            -webkit-overflow-scrolling: touch;
+            backdrop-filter: blur(6px);
+            border-bottom: 1px solid var(--line-soft);
+        }
+
+        .api-mobile-tabs__tab {
+            min-height: 44px;
+            flex: 0 0 auto;
+            border: 1px solid var(--line-soft);
+            border-radius: var(--r-pill);
+            background: var(--bg-elevated);
+            color: var(--fg-muted);
+            padding: 0 0.75rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.42rem;
+            font-size: 0.74rem;
+            font-family: var(--f-mono);
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .api-mobile-tabs__tab .count {
+            color: var(--fg-faint);
+        }
+
+        .api-mobile-tabs__tab[data-active='true'] {
+            border-color: var(--accent-line);
+            background: var(--accent-soft);
+            color: var(--accent);
+            box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--accent-line), transparent 35%);
+        }
+
+        .api-mobile-tabs__tab[data-active='true'] .count {
+            color: var(--accent);
+        }
+
+        .api-mobile-tabs__tab:focus-visible {
+            outline: 2px solid var(--focus-ring);
+            outline-offset: 2px;
+        }
+
+        .api-class-head {
+            padding: var(--s-4) var(--s-3);
+            gap: var(--s-3);
+            flex-wrap: wrap;
+        }
+
+        .api-class-head .icon {
+            width: 32px;
+            height: 32px;
+            font-size: 13px;
+        }
+
+        .api-class-head h2 {
+            font-size: 1.02rem;
+        }
+
+        .api-class-head .extends {
+            font-size: 0.7rem;
+            overflow-wrap: anywhere;
+        }
+
+        .api-class-head p {
+            margin-top: 0.45rem;
+            font-size: 0.84rem;
+            line-height: 1.62;
+        }
+
+        .api-class-head .stats {
+            gap: var(--s-3);
+            margin-left: 0;
+            width: 100%;
+            justify-content: flex-start;
+            padding-top: 0.1rem;
+        }
+
+        .api-class-head .stats .s {
+            text-align: left;
+        }
+
+        .api-section {
+            padding: var(--s-2) 0;
+            scroll-margin-top: calc(4.2rem + env(safe-area-inset-top));
+        }
+
+        .api-section + .api-section {
+            margin-top: var(--s-4);
+        }
+
+        .api-section-head {
+            padding: var(--s-2) var(--s-3);
+            font-size: 0.64rem;
+        }
+
+        .api-inline-code {
+            padding: 0 var(--s-3) var(--s-2);
+            overflow-x: auto;
+        }
+
+        .api-inline-code code {
+            min-height: 36px;
+            white-space: nowrap;
+            max-width: max-content;
+            min-width: max-content;
+        }
+
+        .api-row {
+            padding: var(--s-3) var(--s-3);
+            gap: var(--s-1);
+        }
+
+        .api-row .sig .name {
+            overflow-x: auto;
+            overflow-y: hidden;
+            scrollbar-width: thin;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .api-row .sig .name code {
+            display: inline-block;
+            min-width: max-content;
+            white-space: nowrap;
+            font-size: 0.78rem;
+            line-height: 1.5;
+        }
+
+        .api-row .desc {
+            font-size: 0.82rem;
+            line-height: 1.6;
+            max-width: none;
+            overflow-wrap: anywhere;
+        }
+
+        .api-paragraphs {
+            padding: 0 var(--s-3);
+            margin-top: var(--s-1);
+        }
+
+        .api-paragraphs p {
+            margin: var(--s-2) 0;
+            font-size: 0.83rem;
+            line-height: 1.68;
+            max-width: none;
+        }
+
+        .api-source {
+            padding: var(--s-2) var(--s-3) 0;
+        }
+    }
+</style>
