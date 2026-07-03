@@ -1,0 +1,118 @@
+{
+  "title": "GradientToTextureOptions",
+  "description": "",
+  "symbol": "GradientToTextureOptions",
+  "kind": "interface",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [],
+      "importLine": "import { GradientToTextureOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "format",
+          "signature": "format?: \"rgba8\" | \"rgba32f\"",
+          "signatureTokens": [
+            {
+              "text": "format",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"rgba8\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"rgba32f\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "samplerOptions",
+          "signature": "samplerOptions?: Partial<SamplerOptions>",
+          "signatureTokens": [
+            {
+              "text": "samplerOptions",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Partial",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SamplerOptions",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/gradient/Gradient.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/gradient/Gradient.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/gradient/Gradient.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/gradient/Gradient.ts"
+}

@@ -1,0 +1,71 @@
+{
+  "title": "TiledTilesetRefData",
+  "description": "One entry of TiledMapData.tilesets — either external (`source`) or embedded.",
+  "symbol": "TiledTilesetRefData",
+  "kind": "type",
+  "subsystem": "tiled",
+  "importPath": "@codexo/exojs-tiled",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "One entry of TiledMapData.tilesets — either external (`source`) or embedded."
+      ],
+      "importLine": "import { TiledTilesetRefData } from '@codexo/exojs-tiled'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "TiledTilesetRefData",
+          "signature": "TiledExternalTilesetRefData | TiledEmbeddedTilesetRefData",
+          "signatureTokens": [
+            {
+              "text": "TiledExternalTilesetRefData",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TiledEmbeddedTilesetRefData",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-tiled/src/data.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tiled/src/data.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-tiled/src/data.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tiled/src/data.ts"
+}

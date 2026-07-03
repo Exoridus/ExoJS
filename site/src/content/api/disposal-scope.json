@@ -1,0 +1,313 @@
+{
+  "title": "DisposalScope",
+  "description": "Ownership container for Destroyable resources. Items registered with track are destroyed in reverse registration order when the scope itself is destroyed — the spine of ExoJS's ownership-driven cleanup. A Scene owns one (exposed via `Scene.track`); an `Application` owns one for app-scoped services. `track` is idempotent and returns its argument for fluent capture: ```ts const world = scope.track(new PhysicsWorld()); ``` destroy is idempotent and tolerant: every tracked item's `destroy()` is attempted even if an earlier one throws, so a single failure cannot leak the rest. In development the collected errors are rethrown as an `AggregateError` once teardown completes; in production they are swallowed. A `DisposalScope` is itself Destroyable, so scopes can nest.",
+  "symbol": "DisposalScope",
+  "kind": "class",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 7,
+  "counts": {
+    "constructors": 1,
+    "methods": 4,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Ownership container for Destroyable resources. Items registered with track are destroyed in reverse registration order when the scope itself is destroyed — the spine of ExoJS's ownership-driven cleanup. A Scene owns one (exposed via `Scene.track`); an `Application` owns one for app-scoped services.",
+        "`track` is idempotent and returns its argument for fluent capture:",
+        "```ts const world = scope.track(new PhysicsWorld()); ```",
+        "destroy is idempotent and tolerant: every tracked item's `destroy()` is attempted even if an earlier one throws, so a single failure cannot leak the rest. In development the collected errors are rethrown as an `AggregateError` once teardown completes; in production they are swallowed.",
+        "A `DisposalScope` is itself Destroyable, so scopes can nest."
+      ],
+      "importLine": "import { DisposalScope } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(): DisposalScope",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "DisposalScope",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "DisposalScope",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Destroy every tracked item in reverse registration order, then clear the scope. Idempotent. Continues past a throwing item; in development the collected errors are rethrown as an AggregateError after teardown."
+        },
+        {
+          "name": "has",
+          "signature": "has(item: Destroyable): boolean",
+          "signatureTokens": [
+            {
+              "text": "has",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "item",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Destroyable",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "item",
+              "type": "Destroyable",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Whether item is currently tracked."
+        },
+        {
+          "name": "track",
+          "signature": "track(item: T): T",
+          "signatureTokens": [
+            {
+              "text": "track",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "item",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "item",
+              "type": "T",
+              "optional": false
+            }
+          ],
+          "returnType": "T",
+          "description": "Register item for destruction with this scope. No-op when item is already tracked or the scope is already disposed. Returns item so it can be captured inline: const x = scope.track(new Thing())."
+        },
+        {
+          "name": "untrack",
+          "signature": "untrack(item: Destroyable): boolean",
+          "signatureTokens": [
+            {
+              "text": "untrack",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "item",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Destroyable",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "item",
+              "type": "Destroyable",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Stop tracking item without destroying it (ownership returns to the caller). Returns true if it was tracked. No-op after the scope is disposed."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "disposed",
+          "signature": "disposed: boolean",
+          "signatureTokens": [
+            {
+              "text": "disposed",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether destroy has already run. A disposed scope tracks nothing further."
+        },
+        {
+          "name": "size",
+          "signature": "size: number",
+          "signatureTokens": [
+            {
+              "text": "size",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Number of items currently tracked."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/DisposalScope.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/DisposalScope.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/DisposalScope.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/DisposalScope.ts"
+}

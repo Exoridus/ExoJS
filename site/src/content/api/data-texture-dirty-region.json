@@ -1,0 +1,155 @@
+{
+  "title": "DataTextureDirtyRegion",
+  "description": "A region of the buffer marked for upload by the next backend sync. Bounds are pixel coordinates with origin at the top-left.",
+  "symbol": "DataTextureDirtyRegion",
+  "kind": "interface",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 5,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 5,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A region of the buffer marked for upload by the next backend sync. Bounds are pixel coordinates with origin at the top-left."
+      ],
+      "importLine": "import { DataTextureDirtyRegion } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "full",
+          "signature": "full: boolean",
+          "signatureTokens": [
+            {
+              "text": "full",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether the whole texture should be re-uploaded (covers initial alloc and full DataTexture.commit)."
+        },
+        {
+          "name": "height",
+          "signature": "height: number",
+          "signatureTokens": [
+            {
+              "text": "height",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "width",
+          "signature": "width: number",
+          "signatureTokens": [
+            {
+              "text": "width",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "x",
+          "signature": "x: number",
+          "signatureTokens": [
+            {
+              "text": "x",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "y",
+          "signature": "y: number",
+          "signatureTokens": [
+            {
+              "text": "y",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/texture/DataTexture.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/texture/DataTexture.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/texture/DataTexture.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/texture/DataTexture.ts"
+}

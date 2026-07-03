@@ -1,0 +1,314 @@
+{
+  "title": "PolylineObject",
+  "description": "An open polyline; `points` are relative to the object origin.",
+  "symbol": "PolylineObject",
+  "kind": "interface",
+  "subsystem": "tilemap",
+  "importPath": "@codexo/exojs-tilemap",
+  "tier": "stable",
+  "memberCount": 12,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 12,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "An open polyline; `points` are relative to the object origin."
+      ],
+      "importLine": "import { PolylineObject } from '@codexo/exojs-tilemap'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "height",
+          "signature": "height: number",
+          "signatureTokens": [
+            {
+              "text": "height",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Bounding height in px (0 for points)."
+        },
+        {
+          "name": "id",
+          "signature": "id: number",
+          "signatureTokens": [
+            {
+              "text": "id",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Source-unique object id."
+        },
+        {
+          "name": "kind",
+          "signature": "kind: \"polyline\"",
+          "signatureTokens": [
+            {
+              "text": "kind",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"polyline\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "name",
+          "signature": "name: string",
+          "signatureTokens": [
+            {
+              "text": "name",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Object name (may be empty; not unique)."
+        },
+        {
+          "name": "points",
+          "signature": "points: readonly ObjectPoint[]",
+          "signatureTokens": [
+            {
+              "text": "points",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ObjectPoint",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "properties",
+          "signature": "properties: P",
+          "signatureTokens": [
+            {
+              "text": "properties",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "P",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Immutable custom properties."
+        },
+        {
+          "name": "rotation",
+          "signature": "rotation: number",
+          "signatureTokens": [
+            {
+              "text": "rotation",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Rotation in degrees, clockwise, about the object origin."
+        },
+        {
+          "name": "type",
+          "signature": "type: string",
+          "signatureTokens": [
+            {
+              "text": "type",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Object class/type string (Tiled type/class; may be empty)."
+        },
+        {
+          "name": "visible",
+          "signature": "visible: boolean",
+          "signatureTokens": [
+            {
+              "text": "visible",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether the object is marked visible."
+        },
+        {
+          "name": "width",
+          "signature": "width: number",
+          "signatureTokens": [
+            {
+              "text": "width",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Bounding width in px (0 for points)."
+        },
+        {
+          "name": "x",
+          "signature": "x: number",
+          "signatureTokens": [
+            {
+              "text": "x",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "X of the object origin in object-layer pixel space."
+        },
+        {
+          "name": "y",
+          "signature": "y: number",
+          "signatureTokens": [
+            {
+              "text": "y",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Y of the object origin in object-layer pixel space."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-tilemap/src/ObjectLayer.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/ObjectLayer.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-tilemap/src/ObjectLayer.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/ObjectLayer.ts"
+}

@@ -1,0 +1,315 @@
+{
+  "title": "TileAnimator",
+  "description": "Drives per-tile animations on one or more TileLayers, RPG-Maker style. On construction it scans the given layer(s) once and registers every cell whose tile carries an `animation` (see import('./types').TileDefinition). Each update advances a shared clock and rewrites **only** the registered animated cells, and **only** when a cell crosses a frame boundary — static tiles are never touched. Because a tile rewrite goes through `layer.setTileAt`, only the chunks that actually contain animated cells rebuild their geometry, and only on the (infrequent) frames where a boundary is crossed. The large static body of the map never rebuilds. Tick it from your update loop, like `TweenSequencer`: ```ts const animator = new TileAnimator(map.layers); scene.systems.add({ update: (t) => animator.update(t.deltaSeconds) }); ``` The animator references — but never owns — the layers and their tilesets; destroy only drops its own cell registry.",
+  "symbol": "TileAnimator",
+  "kind": "class",
+  "subsystem": "tilemap",
+  "importPath": "@codexo/exojs-tilemap",
+  "tier": "advanced",
+  "memberCount": 7,
+  "counts": {
+    "constructors": 1,
+    "methods": 4,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Drives per-tile animations on one or more TileLayers, RPG-Maker style.",
+        "On construction it scans the given layer(s) once and registers every cell whose tile carries an `animation` (see import('./types').TileDefinition). Each update advances a shared clock and rewrites **only** the registered animated cells, and **only** when a cell crosses a frame boundary — static tiles are never touched. Because a tile rewrite goes through `layer.setTileAt`, only the chunks that actually contain animated cells rebuild their geometry, and only on the (infrequent) frames where a boundary is crossed. The large static body of the map never rebuilds.",
+        "Tick it from your update loop, like `TweenSequencer`:",
+        "```ts const animator = new TileAnimator(map.layers); scene.systems.add({ update: (t) => animator.update(t.deltaSeconds) }); ```",
+        "The animator references — but never owns — the layers and their tilesets; destroy only drops its own cell registry."
+      ],
+      "importLine": "import { TileAnimator } from '@codexo/exojs-tilemap'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(layers: TileLayer | readonly TileLayer[]): TileAnimator",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "layers",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileLayer",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileLayer",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileAnimator",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "layers",
+              "type": "TileLayer | readonly TileLayer[]",
+              "optional": false
+            }
+          ],
+          "returnType": "TileAnimator",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Drop the cell registry. Does not modify the layers or tilesets."
+        },
+        {
+          "name": "rescan",
+          "signature": "rescan(): void",
+          "signatureTokens": [
+            {
+              "text": "rescan",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Re-scan the layers for animated cells. Call after structural edits that add or remove animated tiles. Resets all currently-tracked cells to frame 0 first so the rescan starts from a clean, deterministic state."
+        },
+        {
+          "name": "reset",
+          "signature": "reset(): void",
+          "signatureTokens": [
+            {
+              "text": "reset",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Restore every animated cell to its first frame and reset the clock. Useful before serialising or pausing."
+        },
+        {
+          "name": "update",
+          "signature": "update(deltaSeconds: number): void",
+          "signatureTokens": [
+            {
+              "text": "update",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "deltaSeconds",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "deltaSeconds",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Advance all registered animations by deltaSeconds and write the current frame into any cell that crossed a frame boundary. Cells that did not change frame are not touched, so their chunks do not rebuild."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "animatedCellCount",
+          "signature": "animatedCellCount: number",
+          "signatureTokens": [
+            {
+              "text": "animatedCellCount",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Number of animated cells currently registered across all layers."
+        },
+        {
+          "name": "elapsedMs",
+          "signature": "elapsedMs: number",
+          "signatureTokens": [
+            {
+              "text": "elapsedMs",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Total elapsed animation time in milliseconds since construction/reset."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-tilemap/src/TileAnimator.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/TileAnimator.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-tilemap/src/TileAnimator.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/TileAnimator.ts"
+}

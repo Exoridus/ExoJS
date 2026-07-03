@@ -1,0 +1,537 @@
+{
+  "title": "SceneManager",
+  "description": "Single-active-scene controller owned by Application. Holds at most one active Scene (the current \"screen\"); SceneManager.setScene switches to a new scene — unloading the previous one — with an optional fade transition. There is no scene stack: overlays, HUDs and pause menus belong on Scene.ui (the screen-fixed UI layer), and \"freeze the game but keep drawing it\" is `scene.paused = true` (skips the scene's `update` + systems while it keeps rendering).",
+  "symbol": "SceneManager",
+  "kind": "class",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 10,
+  "counts": {
+    "constructors": 1,
+    "methods": 4,
+    "properties": 1,
+    "events": 4
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Single-active-scene controller owned by Application. Holds at most one active Scene (the current \"screen\"); SceneManager.setScene switches to a new scene — unloading the previous one — with an optional fade transition.",
+        "There is no scene stack: overlays, HUDs and pause menus belong on Scene.ui (the screen-fixed UI layer), and \"freeze the game but keep drawing it\" is `scene.paused = true` (skips the scene's `update` + systems while it keeps rendering)."
+      ],
+      "importLine": "import { SceneManager } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(app: Application): SceneManager",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "app",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Application",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneManager",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "app",
+              "type": "Application",
+              "optional": false
+            }
+          ],
+          "returnType": "SceneManager",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "fixedUpdate",
+          "signature": "fixedUpdate(delta: Time): this",
+          "signatureTokens": [
+            {
+              "text": "fixedUpdate",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "delta",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Time",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "delta",
+              "type": "Time",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Drive one fixed-timestep step on the active scene (unless paused). Called zero or more times per frame by the Application loop, ahead of SceneManager.update. No drawing or transition advance happens here — those are per-frame, not per fixed step."
+        },
+        {
+          "name": "setScene",
+          "signature": "setScene(scene: Scene | null, options: SetSceneOptions): Promise<SceneManager>",
+          "signatureTokens": [
+            {
+              "text": "setScene",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "scene",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Scene",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SetSceneOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneManager",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "scene",
+              "type": "Scene | null",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "SetSceneOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<SceneManager>",
+          "description": "Switch to scene (or clear to null), unloading the previously active scene. No-op when scene is already active. An optional fade transition runs the swap at full opacity. The new scene is loaded before the old one is torn down, so there is no blank frame between them."
+        },
+        {
+          "name": "update",
+          "signature": "update(delta: Time): this",
+          "signatureTokens": [
+            {
+              "text": "update",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "delta",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Time",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "delta",
+              "type": "Time",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Per-frame entry point called by Application.update. Advances any active fade transition, then — for the active scene — runs update and ticks its systems (unless Scene.paused), draws it, and renders its UI layer on top."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "currentScene",
+          "signature": "currentScene: Scene | null",
+          "signatureTokens": [
+            {
+              "text": "currentScene",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Scene",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The active scene, or null when none is set."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "events",
+      "title": "Events",
+      "members": [
+        {
+          "name": "onChangeScene",
+          "signature": "onChangeScene: Signal<[Scene | null]>",
+          "signatureTokens": [
+            {
+              "text": "onChangeScene",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Scene",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fires whenever the active scene changes (set or clear). Payload is the new scene, or null when cleared."
+        },
+        {
+          "name": "onStartScene",
+          "signature": "onStartScene: Signal<[Scene]>",
+          "signatureTokens": [
+            {
+              "text": "onStartScene",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Scene",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fires after a scene's init resolves and it becomes active."
+        },
+        {
+          "name": "onStopScene",
+          "signature": "onStopScene: Signal<[Scene]>",
+          "signatureTokens": [
+            {
+              "text": "onStopScene",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Scene",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fires just before a scene is unloaded (unload then destroy)."
+        },
+        {
+          "name": "onUpdateScene",
+          "signature": "onUpdateScene: Signal<[Scene]>",
+          "signatureTokens": [
+            {
+              "text": "onUpdateScene",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Scene",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fires once per frame for the active scene after its update ran."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/SceneManager.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneManager.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/SceneManager.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneManager.ts"
+}

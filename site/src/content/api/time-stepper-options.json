@@ -1,0 +1,100 @@
+{
+  "title": "TimeStepperOptions",
+  "description": "Construction options for TimeStepper.",
+  "symbol": "TimeStepperOptions",
+  "kind": "interface",
+  "subsystem": "physics",
+  "importPath": "@codexo/exojs-physics",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Construction options for TimeStepper."
+      ],
+      "importLine": "import { TimeStepperOptions } from '@codexo/exojs-physics'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "fixedDelta",
+          "signature": "fixedDelta?: number",
+          "signatureTokens": [
+            {
+              "text": "fixedDelta",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fixed simulation timestep in seconds. Default 1 / 60. Must be > 0."
+        },
+        {
+          "name": "maxSubSteps",
+          "signature": "maxSubSteps?: number",
+          "signatureTokens": [
+            {
+              "text": "maxSubSteps",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Maximum sub-steps consumed per advance call (spiral-of-death guard). Default 8. Must be ≥ 1."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-physics/src/TimeStepper.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/TimeStepper.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-physics/src/TimeStepper.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/TimeStepper.ts"
+}

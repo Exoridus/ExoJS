@@ -1,0 +1,573 @@
+{
+  "title": "PassContext",
+  "description": "Pass-scoped DrawContext: the active render target and view for a CallbackRenderPass callback. `clear`/`render`/`renderTo` route through the owning RenderingContext (and its pass coordinator), so they act on THIS pass's target and never reset the active view or leak onto another target. Default view for `render`/`draw*` is the pass view — not the world view — so a callback inside an off-screen redirect renders correctly without passing `{ view }` explicitly. Use backend only for raw draws or GPU state; switching target / view / clear through it bypasses the coordinator (the leak this type prevents).",
+  "symbol": "PassContext",
+  "kind": "class",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "advanced",
+  "memberCount": 9,
+  "counts": {
+    "constructors": 1,
+    "methods": 5,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Pass-scoped DrawContext: the active render target and view for a CallbackRenderPass callback. `clear`/`render`/`renderTo` route through the owning RenderingContext (and its pass coordinator), so they act on THIS pass's target and never reset the active view or leak onto another target. Default view for `render`/`draw*` is the pass view — not the world view — so a callback inside an off-screen redirect renders correctly without passing `{ view }` explicitly.",
+        "Use backend only for raw draws or GPU state; switching target / view / clear through it bypasses the coordinator (the leak this type prevents)."
+      ],
+      "importLine": "import { PassContext } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(_context: RenderingContext, target: RenderTarget, view: View): PassContext",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "_context",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderingContext",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "target",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderTarget",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "view",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "View",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PassContext",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "_context",
+              "type": "RenderingContext",
+              "optional": false
+            },
+            {
+              "name": "target",
+              "type": "RenderTarget",
+              "optional": false
+            },
+            {
+              "name": "view",
+              "type": "View",
+              "optional": false
+            }
+          ],
+          "returnType": "PassContext",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "clear",
+          "signature": "clear(color: Color): void",
+          "signatureTokens": [
+            {
+              "text": "clear",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "color",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "color",
+              "type": "Color",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Clear the active target to color (coordinator-routed; no leak)."
+        },
+        {
+          "name": "drawBatch",
+          "signature": "drawBatch(batch: RenderBatch, options?: DrawBatchOptions): void",
+          "signatureTokens": [
+            {
+              "text": "drawBatch",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "batch",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderBatch",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "DrawBatchOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "batch",
+              "type": "RenderBatch",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "DrawBatchOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "void",
+          "description": "Immediately draw an instanced batch."
+        },
+        {
+          "name": "drawGeometry",
+          "signature": "drawGeometry(geometry: Geometry, transform: Matrix, options?: DrawGeometryOptions): void",
+          "signatureTokens": [
+            {
+              "text": "drawGeometry",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "geometry",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Geometry",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "transform",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Matrix",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "DrawGeometryOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "geometry",
+              "type": "Geometry",
+              "optional": false
+            },
+            {
+              "name": "transform",
+              "type": "Matrix",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "DrawGeometryOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "void",
+          "description": "Immediately draw a single geometry with transform as its world matrix."
+        },
+        {
+          "name": "render",
+          "signature": "render(node: RenderNode, options?: RenderOptions): void",
+          "signatureTokens": [
+            {
+              "text": "render",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "node",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderNode",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "node",
+              "type": "RenderNode",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "RenderOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "void",
+          "description": "Render node into the active target with options.view (default: the active view)."
+        },
+        {
+          "name": "renderTo",
+          "signature": "renderTo(node: RenderNode, options: RenderToOptions): void",
+          "signatureTokens": [
+            {
+              "text": "renderTo",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "node",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderNode",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderToOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "node",
+              "type": "RenderNode",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "RenderToOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Render node into a caller-owned off-screen target (nested when called inside a pass)."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "target",
+          "signature": "target: RenderTarget",
+          "signatureTokens": [
+            {
+              "text": "target",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderTarget",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The target this pass draws into (read-only)."
+        },
+        {
+          "name": "view",
+          "signature": "view: View",
+          "signatureTokens": [
+            {
+              "text": "view",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "View",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The view this pass renders with (read-only)."
+        },
+        {
+          "name": "backend",
+          "signature": "backend: RenderBackend",
+          "signatureTokens": [
+            {
+              "text": "backend",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderBackend",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Raw backend — draws/state only; do NOT switch target/view/clear here."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/PassContext.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/PassContext.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/PassContext.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/PassContext.ts"
+}

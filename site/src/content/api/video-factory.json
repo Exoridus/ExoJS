@@ -1,0 +1,381 @@
+{
+  "title": "VideoFactory",
+  "description": "AssetFactory implementation that loads video files (MP4, WebM, OGG, and other browser-supported container formats) and produces a Video instance suitable for use as a dynamic texture source in the rendering pipeline. Video data is buffered via a `<video>` element rather than decoded up-front. The `'stalled'` event is intentionally not treated as an error because it fires transiently during normal buffering on slow connections. All `<video>` elements are paused and detached when VideoFactory.destroy is called.",
+  "symbol": "VideoFactory",
+  "kind": "class",
+  "subsystem": "resources",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 7,
+  "counts": {
+    "constructors": 1,
+    "methods": 5,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "AssetFactory implementation that loads video files (MP4, WebM, OGG, and other browser-supported container formats) and produces a Video instance suitable for use as a dynamic texture source in the rendering pipeline.",
+        "Video data is buffered via a `<video>` element rather than decoded up-front. The `'stalled'` event is intentionally not treated as an error because it fires transiently during normal buffering on slow connections. All `<video>` elements are paused and detached when VideoFactory.destroy is called."
+      ],
+      "importLine": "import { VideoFactory } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(): VideoFactory",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "VideoFactory",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "VideoFactory",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "create",
+          "signature": "create(source: ArrayBuffer, options: VideoFactoryOptions): Promise<Video>",
+          "signatureTokens": [
+            {
+              "text": "create",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ArrayBuffer",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "VideoFactoryOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Video",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "source",
+              "type": "ArrayBuffer",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "VideoFactoryOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<Video>",
+          "description": "Wraps video bytes in a <video> element and resolves with a Video instance once the configured loadEvent fires. Rejects if the element emits error, abort, or emptied before the load event is received."
+        },
+        {
+          "name": "createObjectUrl",
+          "signature": "createObjectUrl(blob: Blob): string",
+          "signatureTokens": [
+            {
+              "text": "createObjectUrl",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "blob",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Blob",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "blob",
+              "type": "Blob",
+              "optional": false
+            }
+          ],
+          "returnType": "string",
+          "description": "Creates an object URL from blob and registers it for automatic cleanup when destroy is called. Prefer this over calling URL.createObjectURL directly inside a factory subclass so the URL is always tracked."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Pauses and resets all <video> elements created by this factory to release media resources, then delegates to the base AbstractAssetFactory.destroy to revoke any object URLs."
+        },
+        {
+          "name": "process",
+          "signature": "process(response: Response): Promise<ArrayBuffer>",
+          "signatureTokens": [
+            {
+              "text": "process",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "response",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Response",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ArrayBuffer",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "response",
+              "type": "Response",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<ArrayBuffer>",
+          "description": "Reads the full response body as an ArrayBuffer for blob construction."
+        },
+        {
+          "name": "revokeObjectUrl",
+          "signature": "revokeObjectUrl(objectUrl: string): void",
+          "signatureTokens": [
+            {
+              "text": "revokeObjectUrl",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "objectUrl",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "objectUrl",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "storageName",
+          "signature": "storageName: \"video\"",
+          "signatureTokens": [
+            {
+              "text": "storageName",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"video\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Identifier used as the object-store / storage-namespace key when this factory's assets are persisted to a CacheStore."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/resources/factories/VideoFactory.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/VideoFactory.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/resources/factories/VideoFactory.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/VideoFactory.ts"
+}

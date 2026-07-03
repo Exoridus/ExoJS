@@ -1,0 +1,117 @@
+{
+  "title": "MeshGeometryData",
+  "description": "Raw mesh data produced by geometry builders. `vertices` is a flat `Float32Array` of `(x, y)` pairs, `indices` is a triangle list for indexed rendering, and `points` is the original outline/perimeter path as a flat number array.",
+  "symbol": "MeshGeometryData",
+  "kind": "interface",
+  "subsystem": "math",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Raw mesh data produced by geometry builders. `vertices` is a flat `Float32Array` of `(x, y)` pairs, `indices` is a triangle list for indexed rendering, and `points` is the original outline/perimeter path as a flat number array."
+      ],
+      "importLine": "import { MeshGeometryData } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "indices",
+          "signature": "indices: Uint16Array",
+          "signatureTokens": [
+            {
+              "text": "indices",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Uint16Array",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "points",
+          "signature": "points: number[]",
+          "signatureTokens": [
+            {
+              "text": "points",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "vertices",
+          "signature": "vertices: Float32Array",
+          "signatureTokens": [
+            {
+              "text": "vertices",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Float32Array",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/math/geometry.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/math/geometry.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/math/geometry.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/math/geometry.ts"
+}

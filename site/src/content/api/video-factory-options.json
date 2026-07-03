@@ -1,0 +1,199 @@
+{
+  "title": "VideoFactoryOptions",
+  "description": "Construction options for VideoFactory.create.",
+  "symbol": "VideoFactoryOptions",
+  "kind": "interface",
+  "subsystem": "resources",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 5,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 5,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Construction options for VideoFactory.create."
+      ],
+      "importLine": "import { VideoFactoryOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "loadEvent",
+          "signature": "loadEvent?: StreamingLoadEvent",
+          "signatureTokens": [
+            {
+              "text": "loadEvent",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "StreamingLoadEvent",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The HTMLVideoElement event that signals the asset is ready for playback. Defaults to 'canplaythrough'. Use 'loadedmetadata' for faster (dimensions-only) readiness."
+        },
+        {
+          "name": "mimeType",
+          "signature": "mimeType?: string",
+          "signatureTokens": [
+            {
+              "text": "mimeType",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "MIME type for the video blob. Inferred from magic bytes when omitted."
+        },
+        {
+          "name": "playbackOptions",
+          "signature": "playbackOptions?: Partial<PlaybackOptions>",
+          "signatureTokens": [
+            {
+              "text": "playbackOptions",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Partial",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PlaybackOptions",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Initial playback settings forwarded to the Video instance."
+        },
+        {
+          "name": "samplerOptions",
+          "signature": "samplerOptions?: Partial<SamplerOptions>",
+          "signatureTokens": [
+            {
+              "text": "samplerOptions",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Partial",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SamplerOptions",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Sampler parameters forwarded to the Video instance's texture."
+        },
+        {
+          "name": "stallTimeout",
+          "signature": "stallTimeout?: number",
+          "signatureTokens": [
+            {
+              "text": "stallTimeout",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Milliseconds to wait after a stalled event before rejecting the load promise. When omitted no timeout is applied and a stalled load will wait indefinitely. Each subsequent stalled event resets the timer."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/resources/factories/VideoFactory.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/VideoFactory.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/resources/factories/VideoFactory.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/VideoFactory.ts"
+}

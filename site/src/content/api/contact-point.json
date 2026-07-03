@@ -1,0 +1,113 @@
+{
+  "title": "ContactPoint",
+  "description": "A single contact point on a CollisionEvent. World space.",
+  "symbol": "ContactPoint",
+  "kind": "interface",
+  "subsystem": "physics",
+  "importPath": "@codexo/exojs-physics",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A single contact point on a CollisionEvent. World space."
+      ],
+      "importLine": "import { ContactPoint } from '@codexo/exojs-physics'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "penetration",
+          "signature": "penetration: number",
+          "signatureTokens": [
+            {
+              "text": "penetration",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Penetration depth in px (≥ 0)."
+        },
+        {
+          "name": "x",
+          "signature": "x: number",
+          "signatureTokens": [
+            {
+              "text": "x",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "y",
+          "signature": "y: number",
+          "signatureTokens": [
+            {
+              "text": "y",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-physics/src/events.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/events.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-physics/src/events.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/events.ts"
+}

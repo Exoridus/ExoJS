@@ -1,0 +1,200 @@
+{
+  "title": "PhaserEffectOptions",
+  "description": "Construction options for PhaserEffect.",
+  "symbol": "PhaserEffectOptions",
+  "kind": "interface",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs-audio-fx",
+  "tier": "stable",
+  "memberCount": 6,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 6,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Construction options for PhaserEffect."
+      ],
+      "importLine": "import { PhaserEffectOptions } from '@codexo/exojs-audio-fx'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "baseFrequency",
+          "signature": "baseFrequency?: number",
+          "signatureTokens": [
+            {
+              "text": "baseFrequency",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Centre frequency of all allpass stages in Hz. Range 50..5000, default 500."
+        },
+        {
+          "name": "depth",
+          "signature": "depth?: number",
+          "signatureTokens": [
+            {
+              "text": "depth",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "LFO modulation depth as a fraction of baseFrequency. Range 0..1, default 0.6. The LFO peak deviation equals depth × baseFrequency Hz, so the filter frequencies sweep between baseFrequency ± depth × baseFrequency."
+        },
+        {
+          "name": "feedback",
+          "signature": "feedback?: number",
+          "signatureTokens": [
+            {
+              "text": "feedback",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Feedback gain from the last stage back to the first stage. Range 0..0.9, default 0.3. Higher values add resonance and sharpen the notch sweep."
+        },
+        {
+          "name": "rateHz",
+          "signature": "rateHz?: number",
+          "signatureTokens": [
+            {
+              "text": "rateHz",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "LFO sweep rate in Hz. Range 0..20, default 0.5."
+        },
+        {
+          "name": "stages",
+          "signature": "stages?: number",
+          "signatureTokens": [
+            {
+              "text": "stages",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Number of allpass filter stages. Must be an even integer in the range 2..12. Odd values are rounded up to the next even number. Default 4."
+        },
+        {
+          "name": "wet",
+          "signature": "wet?: number",
+          "signatureTokens": [
+            {
+              "text": "wet",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Dry/wet mix, 0..1. The dry level is automatically 1 - wet. Default 0.5."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-audio-fx/src/effects/PhaserEffect.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/PhaserEffect.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-audio-fx/src/effects/PhaserEffect.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/PhaserEffect.ts"
+}

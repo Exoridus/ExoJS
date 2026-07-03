@@ -1,0 +1,2226 @@
+{
+  "title": "PhysicsWorld",
+  "description": "The collision/query world: owns bodies, colliders, the detection backend, bindings, the query engine and the fixed-step accumulator. Stepped by the caller (commonly from a `Scene.update`), each fixed sub-step it integrates body velocities, runs broad- and narrow-phase detection, solves contacts and integrates positions, then fires immutable contact/sensor events and writes bound node transforms. It holds **no module-level state**, so any number of worlds run in isolation. The dynamics are a native, warm-started **TGS-Soft** solver (Box2D-v3 \"soft step\"): each fixed step runs detection once, then several sub-steps, each integrating gravity over the sub-step and solving contacts with a soft position bias plus a bias-free relax pass; a 2-point block normal solve propagates stack loads, and restitution is a separate final pass. Decoupling stiffness from the iteration count keeps tall towers stable. The detection backend sits behind an internal seam, so the solver is swappable without touching this public surface. **Operating envelope.** The soft solver trades a little accuracy for robustness, so it has a few documented limits — each stays finite/stable and each is pinned by a gate in `dynamics.test.ts`: - **Mass ratio** — resting stacks are slop-accurate up to ~100:1. Beyond that the velocity-capped soft push-out (`maxBiasVelocity`) lets the lighter body settle progressively deeper (≈6px at 500:1, fully through a thin floor by ~5000:1) — always finite, never exploding. - **No CCD** — detection runs once per fixed step with no swept test, so a body that travels farther than an obstacle's thickness in one step tunnels straight through it (it stays finite). Reliably stopping fast projectiles is a future bullet-mode feature. - **PhysicsWorldOptions.subStepCount** — the default `4` is load-bearing for tall-stack stability; lowering it below `2` visibly degrades stacking, so do not reduce it for performance.",
+  "symbol": "PhysicsWorld",
+  "kind": "class",
+  "subsystem": "physics",
+  "importPath": "@codexo/exojs-physics",
+  "tier": "stable",
+  "memberCount": 36,
+  "counts": {
+    "constructors": 1,
+    "methods": 18,
+    "properties": 13,
+    "events": 4
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "The collision/query world: owns bodies, colliders, the detection backend, bindings, the query engine and the fixed-step accumulator. Stepped by the caller (commonly from a `Scene.update`), each fixed sub-step it integrates body velocities, runs broad- and narrow-phase detection, solves contacts and integrates positions, then fires immutable contact/sensor events and writes bound node transforms. It holds **no module-level state**, so any number of worlds run in isolation.",
+        "The dynamics are a native, warm-started **TGS-Soft** solver (Box2D-v3 \"soft step\"): each fixed step runs detection once, then several sub-steps, each integrating gravity over the sub-step and solving contacts with a soft position bias plus a bias-free relax pass; a 2-point block normal solve propagates stack loads, and restitution is a separate final pass. Decoupling stiffness from the iteration count keeps tall towers stable. The detection backend sits behind an internal seam, so the solver is swappable without touching this public surface.",
+        "**Operating envelope.** The soft solver trades a little accuracy for robustness, so it has a few documented limits — each stays finite/stable and each is pinned by a gate in `dynamics.test.ts`: - **Mass ratio** — resting stacks are slop-accurate up to ~100:1. Beyond that the velocity-capped soft push-out (`maxBiasVelocity`) lets the lighter body settle progressively deeper (≈6px at 500:1, fully through a thin floor by ~5000:1) — always finite, never exploding. - **No CCD** — detection runs once per fixed step with no swept test, so a body that travels farther than an obstacle's thickness in one step tunnels straight through it (it stays finite). Reliably stopping fast projectiles is a future bullet-mode feature. - **PhysicsWorldOptions.subStepCount** — the default `4` is load-bearing for tall-stack stability; lowering it below `2` visibly degrades stacking, so do not reduce it for performance."
+      ],
+      "importLine": "import { PhysicsWorld } from '@codexo/exojs-physics'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(options: PhysicsWorldOptions): PhysicsWorld",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PhysicsWorldOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PhysicsWorld",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "options",
+              "type": "PhysicsWorldOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "PhysicsWorld",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "_allocateColliderId",
+          "signature": "_allocateColliderId(): number",
+          "signatureTokens": [
+            {
+              "text": "_allocateColliderId",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "number",
+          "description": ""
+        },
+        {
+          "name": "_registerCollider",
+          "signature": "_registerCollider(collider: Collider): void",
+          "signatureTokens": [
+            {
+              "text": "_registerCollider",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "collider",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Collider",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "collider",
+              "type": "Collider",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "add",
+          "signature": "add(body: PhysicsBody): PhysicsBody",
+          "signatureTokens": [
+            {
+              "text": "add",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "body",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PhysicsBody",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PhysicsBody",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "body",
+              "type": "PhysicsBody",
+              "optional": false
+            }
+          ],
+          "returnType": "PhysicsBody",
+          "description": "Add a body to the world: allocates the body and its collider ids, registers the colliders, computes the mass model and tracks the body for stepping. Construct the body freely first (new PhysicsBody({ … })), then add it. Safe to call inside an event callback — the body push is deferred to the end of the step, exactly like collider registration. Returns the body."
+        },
+        {
+          "name": "addJoint",
+          "signature": "addJoint(joint: T): T",
+          "signatureTokens": [
+            {
+              "text": "addJoint",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "joint",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "joint",
+              "type": "T",
+              "optional": false
+            }
+          ],
+          "returnType": "T",
+          "description": "Add a constraint joint. Construct it first (new DistanceJoint({ … })), then add it. Wakes both bodies; safe inside a callback (registration is deferred). Returns the joint."
+        },
+        {
+          "name": "attach",
+          "signature": "attach(node: SceneNode, options: AttachOptions): PhysicsBody",
+          "signatureTokens": [
+            {
+              "text": "attach",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "node",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneNode",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AttachOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PhysicsBody",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "node",
+              "type": "SceneNode",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "AttachOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "PhysicsBody",
+          "description": "Convenience: create a body carrying a single collider, add it to the world and bind it to node in one call. The node tracks body.position after each step. Returns the body. Equivalent to new PhysicsBody(...) + add + bind."
+        },
+        {
+          "name": "bind",
+          "signature": "bind(body: PhysicsBody, node: SceneNode): PhysicsBinding",
+          "signatureTokens": [
+            {
+              "text": "bind",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "body",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PhysicsBody",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "node",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneNode",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PhysicsBinding",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "body",
+              "type": "PhysicsBody",
+              "optional": false
+            },
+            {
+              "name": "node",
+              "type": "SceneNode",
+              "optional": false
+            }
+          ],
+          "returnType": "PhysicsBinding",
+          "description": "Link a body to a scene node; the node tracks the body after each step."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Release every body, collider, binding and backend resource."
+        },
+        {
+          "name": "destroyBody",
+          "signature": "destroyBody(body: PhysicsBody): void",
+          "signatureTokens": [
+            {
+              "text": "destroyBody",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "body",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PhysicsBody",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "body",
+              "type": "PhysicsBody",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Destroy a body and its colliders. Deferred when called inside a callback."
+        },
+        {
+          "name": "destroyCollider",
+          "signature": "destroyCollider(collider: Collider): void",
+          "signatureTokens": [
+            {
+              "text": "destroyCollider",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "collider",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Collider",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "collider",
+              "type": "Collider",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Destroy a single collider, recomputing its body's mass. Deferred when called inside a callback."
+        },
+        {
+          "name": "forEachAabbHit",
+          "signature": "forEachAabbHit(bounds: Aabb, filter: Partial<{ category: number; group: number; mask: number }> | undefined, callback: (collider: Collider) => void): void",
+          "signatureTokens": [
+            {
+              "text": "forEachAabbHit",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "bounds",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Aabb",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "filter",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Partial",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "category",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "group",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "mask",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "callback",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "collider",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Collider",
+              "kind": "type"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "bounds",
+              "type": "Aabb",
+              "optional": false
+            },
+            {
+              "name": "filter",
+              "type": "Partial<{ category: number; group: number; mask: number }> | undefined",
+              "optional": false
+            },
+            {
+              "name": "callback",
+              "type": "(collider: Collider) => void",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Invoke callback for each collider whose AABB overlaps bounds. Allocation-free."
+        },
+        {
+          "name": "overlapShape",
+          "signature": "overlapShape(shape: AnyShape, position: VectorLike, filter?: Partial<{ category: number; group: number; mask: number }>, angle?: number): Collider[]",
+          "signatureTokens": [
+            {
+              "text": "overlapShape",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "shape",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AnyShape",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "position",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "VectorLike",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "filter",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Partial",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "category",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "group",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "mask",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "angle",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Collider",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "shape",
+              "type": "AnyShape",
+              "optional": false
+            },
+            {
+              "name": "position",
+              "type": "VectorLike",
+              "optional": false
+            },
+            {
+              "name": "filter",
+              "type": "Partial<{ category: number; group: number; mask: number }>",
+              "optional": true
+            },
+            {
+              "name": "angle",
+              "type": "number",
+              "optional": true
+            }
+          ],
+          "returnType": "Collider[]",
+          "description": "Colliders overlapping shape placed at position/angle. Fresh array."
+        },
+        {
+          "name": "queryAabb",
+          "signature": "queryAabb(bounds: Aabb, filter?: Partial<{ category: number; group: number; mask: number }>, out?: Collider[]): Collider[]",
+          "signatureTokens": [
+            {
+              "text": "queryAabb",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "bounds",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Aabb",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "filter",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Partial",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "category",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "group",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "mask",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "out",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Collider",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Collider",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "bounds",
+              "type": "Aabb",
+              "optional": false
+            },
+            {
+              "name": "filter",
+              "type": "Partial<{ category: number; group: number; mask: number }>",
+              "optional": true
+            },
+            {
+              "name": "out",
+              "type": "Collider[]",
+              "optional": true
+            }
+          ],
+          "returnType": "Collider[]",
+          "description": "Colliders whose AABB overlaps bounds. Writes into out (cleared) if given."
+        },
+        {
+          "name": "queryPoint",
+          "signature": "queryPoint(point: VectorLike, filter?: Partial<{ category: number; group: number; mask: number }>): Collider[]",
+          "signatureTokens": [
+            {
+              "text": "queryPoint",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "point",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "VectorLike",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "filter",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Partial",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "category",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "group",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "mask",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Collider",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "point",
+              "type": "VectorLike",
+              "optional": false
+            },
+            {
+              "name": "filter",
+              "type": "Partial<{ category: number; group: number; mask: number }>",
+              "optional": true
+            }
+          ],
+          "returnType": "Collider[]",
+          "description": "Colliders containing point. Fresh array."
+        },
+        {
+          "name": "rayCast",
+          "signature": "rayCast(origin: VectorLike, direction: VectorLike, filter?: Partial<{ category: number; group: number; mask: number }>, maxDistance?: number): RayHit | null",
+          "signatureTokens": [
+            {
+              "text": "rayCast",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "origin",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "VectorLike",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "direction",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "VectorLike",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "filter",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Partial",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "category",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "group",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "mask",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "maxDistance",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RayHit",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "origin",
+              "type": "VectorLike",
+              "optional": false
+            },
+            {
+              "name": "direction",
+              "type": "VectorLike",
+              "optional": false
+            },
+            {
+              "name": "filter",
+              "type": "Partial<{ category: number; group: number; mask: number }>",
+              "optional": true
+            },
+            {
+              "name": "maxDistance",
+              "type": "number",
+              "optional": true
+            }
+          ],
+          "returnType": "RayHit | null",
+          "description": "Nearest collider hit by the ray, or null."
+        },
+        {
+          "name": "rayCastAll",
+          "signature": "rayCastAll(origin: VectorLike, direction: VectorLike, filter?: Partial<{ category: number; group: number; mask: number }>, out?: RayHit[], maxDistance?: number): RayHit[]",
+          "signatureTokens": [
+            {
+              "text": "rayCastAll",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "origin",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "VectorLike",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "direction",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "VectorLike",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "filter",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Partial",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "category",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "group",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "mask",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "out",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RayHit",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "maxDistance",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RayHit",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "origin",
+              "type": "VectorLike",
+              "optional": false
+            },
+            {
+              "name": "direction",
+              "type": "VectorLike",
+              "optional": false
+            },
+            {
+              "name": "filter",
+              "type": "Partial<{ category: number; group: number; mask: number }>",
+              "optional": true
+            },
+            {
+              "name": "out",
+              "type": "RayHit[]",
+              "optional": true
+            },
+            {
+              "name": "maxDistance",
+              "type": "number",
+              "optional": true
+            }
+          ],
+          "returnType": "RayHit[]",
+          "description": "All collider hits along the ray, sorted by distance. Writes into out (cleared) if given."
+        },
+        {
+          "name": "removeJoint",
+          "signature": "removeJoint(joint: Joint): void",
+          "signatureTokens": [
+            {
+              "text": "removeJoint",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "joint",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Joint",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "joint",
+              "type": "Joint",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Remove a joint, waking both bodies so they respond to the lost constraint. Deferred when called inside a callback."
+        },
+        {
+          "name": "step",
+          "signature": "step(frameDeltaSeconds: number): void",
+          "signatureTokens": [
+            {
+              "text": "step",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "frameDeltaSeconds",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "frameDeltaSeconds",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Advance the world by frameDeltaSeconds. Accumulates into fixed steps; each fixed step runs detection once, then a TGS-Soft sub-step loop (integrate gravity, solve contacts with a soft bias, integrate positions, relax) and a restitution pass, then writes the accumulated motion into each body. Finally dispatches events and writes bound node transforms."
+        },
+        {
+          "name": "unbind",
+          "signature": "unbind(body: PhysicsBody): void",
+          "signatureTokens": [
+            {
+              "text": "unbind",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "body",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PhysicsBody",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "body",
+              "type": "PhysicsBody",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Remove a body↔node link."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "contactHertz",
+          "signature": "contactHertz: number",
+          "signatureTokens": [
+            {
+              "text": "contactHertz",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Soft-contact stiffness in Hz."
+        },
+        {
+          "name": "dampingRatio",
+          "signature": "dampingRatio: number",
+          "signatureTokens": [
+            {
+              "text": "dampingRatio",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Soft-contact damping ratio."
+        },
+        {
+          "name": "enableSleeping",
+          "signature": "enableSleeping: boolean",
+          "signatureTokens": [
+            {
+              "text": "enableSleeping",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether resting bodies are put to sleep."
+        },
+        {
+          "name": "gravity",
+          "signature": "gravity: Vector",
+          "signatureTokens": [
+            {
+              "text": "gravity",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Vector",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "World gravity (px/s², +Y down). Integrated each sub-step."
+        },
+        {
+          "name": "sleepAngularVelocity",
+          "signature": "sleepAngularVelocity: number",
+          "signatureTokens": [
+            {
+              "text": "sleepAngularVelocity",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Angular sleep threshold (rad/s)."
+        },
+        {
+          "name": "sleepLinearVelocity",
+          "signature": "sleepLinearVelocity: number",
+          "signatureTokens": [
+            {
+              "text": "sleepLinearVelocity",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Linear sleep threshold (px/s)."
+        },
+        {
+          "name": "subStepCount",
+          "signature": "subStepCount: number",
+          "signatureTokens": [
+            {
+              "text": "subStepCount",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "TGS-Soft sub-steps per fixed step."
+        },
+        {
+          "name": "timeStepper",
+          "signature": "timeStepper: TimeStepper",
+          "signatureTokens": [
+            {
+              "text": "timeStepper",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TimeStepper",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The fixed-step accumulator."
+        },
+        {
+          "name": "timeToSleep",
+          "signature": "timeToSleep: number",
+          "signatureTokens": [
+            {
+              "text": "timeToSleep",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Seconds below the thresholds before a body sleeps."
+        },
+        {
+          "name": "backend",
+          "signature": "backend: PhysicsBackend",
+          "signatureTokens": [
+            {
+              "text": "backend",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PhysicsBackend",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The detection backend (internal; consumed by the debug draw layer)."
+        },
+        {
+          "name": "bodies",
+          "signature": "bodies: readonly PhysicsBody[]",
+          "signatureTokens": [
+            {
+              "text": "bodies",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PhysicsBody",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Live bodies (read-only view)."
+        },
+        {
+          "name": "colliders",
+          "signature": "colliders: readonly Collider[]",
+          "signatureTokens": [
+            {
+              "text": "colliders",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Collider",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Live colliders (read-only view)."
+        },
+        {
+          "name": "joints",
+          "signature": "joints: readonly Joint[]",
+          "signatureTokens": [
+            {
+              "text": "joints",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Joint",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Live joints (read-only view)."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "events",
+      "title": "Events",
+      "members": [
+        {
+          "name": "onCollisionEnd",
+          "signature": "onCollisionEnd: Signal<[CollisionEvent]>",
+          "signatureTokens": [
+            {
+              "text": "onCollisionEnd",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CollisionEvent",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fires when two solid colliders stop touching (or one is destroyed)."
+        },
+        {
+          "name": "onCollisionStart",
+          "signature": "onCollisionStart: Signal<[CollisionEvent]>",
+          "signatureTokens": [
+            {
+              "text": "onCollisionStart",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CollisionEvent",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fires when two solid colliders begin touching. Argument is an immutable snapshot."
+        },
+        {
+          "name": "onSensorEnter",
+          "signature": "onSensorEnter: Signal<[SensorEvent]>",
+          "signatureTokens": [
+            {
+              "text": "onSensorEnter",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SensorEvent",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fires when a collider enters a sensor."
+        },
+        {
+          "name": "onSensorExit",
+          "signature": "onSensorExit: Signal<[SensorEvent]>",
+          "signatureTokens": [
+            {
+              "text": "onSensorExit",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SensorEvent",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fires when a collider leaves a sensor."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-physics/src/PhysicsWorld.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/PhysicsWorld.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-physics/src/PhysicsWorld.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/PhysicsWorld.ts"
+}

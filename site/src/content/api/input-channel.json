@@ -1,0 +1,79 @@
+{
+  "title": "InputChannel",
+  "description": "Channel a single InputBinding can subscribe to.",
+  "symbol": "InputChannel",
+  "kind": "type",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Channel a single InputBinding can subscribe to."
+      ],
+      "importLine": "import { InputChannel } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "InputChannel",
+          "signature": "GamepadButtonChannel | GamepadAxisChannel | Keyboard",
+          "signatureTokens": [
+            {
+              "text": "GamepadButtonChannel",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadAxisChannel",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Keyboard",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/InputBinding.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/InputBinding.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/InputBinding.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/InputBinding.ts"
+}

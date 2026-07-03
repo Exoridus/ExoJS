@@ -1,0 +1,154 @@
+{
+  "title": "GamepadDefinition",
+  "description": "A rule that matches one or more physical gamepads and produces a GamepadMapping. `ids` is an optional allow-list of vendor IDs (`\"045e\"`) or `vendorId:productId` pairs (`\"045e:028e\"`); when omitted the definition matches every device. `resolve` is called with the parsed GamepadDescriptor and must return a GamepadDefinitionResult — `null`/`undefined` to skip, a mapping otherwise.",
+  "symbol": "GamepadDefinition",
+  "kind": "interface",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A rule that matches one or more physical gamepads and produces a GamepadMapping.",
+        "`ids` is an optional allow-list of vendor IDs (`\"045e\"`) or `vendorId:productId` pairs (`\"045e:028e\"`); when omitted the definition matches every device. `resolve` is called with the parsed GamepadDescriptor and must return a GamepadDefinitionResult — `null`/`undefined` to skip, a mapping otherwise."
+      ],
+      "importLine": "import { GamepadDefinition } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "ids",
+          "signature": "ids?: string | string[]",
+          "signatureTokens": [
+            {
+              "text": "ids",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "name",
+          "signature": "name?: string",
+          "signatureTokens": [
+            {
+              "text": "name",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "resolve",
+          "signature": "resolve: (descriptor: GamepadDescriptor) => GamepadDefinitionResult",
+          "signatureTokens": [
+            {
+              "text": "resolve",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "descriptor",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadDescriptor",
+              "kind": "type"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadDefinitionResult",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/GamepadDefinitions.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/GamepadDefinitions.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/GamepadDefinitions.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/GamepadDefinitions.ts"
+}

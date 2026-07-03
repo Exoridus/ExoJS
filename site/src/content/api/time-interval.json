@@ -1,0 +1,87 @@
+{
+  "title": "TimeInterval",
+  "description": "Multiplier converting a unit-typed time value to milliseconds. Pair with Time.set / Time.add as the `factor` argument; canonical values are exposed on the `Time` class as `Time.milliseconds`, `Time.seconds`, `Time.minutes`, `Time.hours`.",
+  "symbol": "TimeInterval",
+  "kind": "type",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Multiplier converting a unit-typed time value to milliseconds. Pair with Time.set / Time.add as the `factor` argument; canonical values are exposed on the `Time` class as `Time.milliseconds`, `Time.seconds`, `Time.minutes`, `Time.hours`."
+      ],
+      "importLine": "import { TimeInterval } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "TimeInterval",
+          "signature": "1 | 1000 | 60000 | 3600000",
+          "signatureTokens": [
+            {
+              "text": "1",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "1000",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "60000",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "3600000",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/types.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/types.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/types.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/types.ts"
+}

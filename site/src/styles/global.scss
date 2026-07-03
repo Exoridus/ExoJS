@@ -1,5 +1,27 @@
 @use './tokens';
 
+/* ──────────────────────────────────────────────────────────────────────
+   API reference palette — the single place to restyle every API signature
+   token and symbol kind badge. Signature-token colors reference the core
+   theme tokens, so they track light/dark and the active accent automatically.
+   Kind-badge hues are fixed values chosen to read on both themes. Change a
+   line here and every API page updates; nothing below hardcodes these.
+   ────────────────────────────────────────────────────────────────────── */
+:root {
+    --api-token-name: var(--fg);
+    --api-token-param: var(--fg-muted);
+    --api-token-keyword: color-mix(in oklab, var(--accent), var(--fg-faint) 42%);
+    --api-token-type: var(--fg);
+    --api-token-link: var(--accent);
+    --api-token-link-line: var(--accent-line);
+    --api-token-punctuation: var(--fg-faint);
+
+    --api-kind-class: var(--accent);
+    --api-kind-interface: var(--sky);
+    --api-kind-enum: var(--rose);
+    --api-kind-type: var(--violet);
+}
+
 *,
 *::before,
 *::after {
@@ -357,16 +379,29 @@ h4 :where(code) {
     line-height: 1.3;
 }
 
+/* Badge hues come from the central API palette above (--api-kind-*). */
 .api-kind.kind-class {
-    color: var(--accent);
-    border-color: var(--accent-line);
-    background: var(--accent-soft);
+    color: var(--api-kind-class);
+    border-color: color-mix(in oklab, var(--api-kind-class), transparent 65%);
+    background: color-mix(in oklab, var(--api-kind-class), transparent 88%);
+}
+
+.api-kind.kind-interface {
+    color: var(--api-kind-interface);
+    border-color: color-mix(in oklab, var(--api-kind-interface), transparent 62%);
+    background: color-mix(in oklab, var(--api-kind-interface), transparent 88%);
 }
 
 .api-kind.kind-enum {
-    color: var(--rose);
-    border-color: color-mix(in oklab, var(--rose), transparent 65%);
-    background: color-mix(in oklab, var(--rose), transparent 88%);
+    color: var(--api-kind-enum);
+    border-color: color-mix(in oklab, var(--api-kind-enum), transparent 65%);
+    background: color-mix(in oklab, var(--api-kind-enum), transparent 88%);
+}
+
+.api-kind.kind-type {
+    color: var(--api-kind-type);
+    border-color: color-mix(in oklab, var(--api-kind-type), transparent 62%);
+    background: color-mix(in oklab, var(--api-kind-type), transparent 88%);
 }
 
 .api-search {

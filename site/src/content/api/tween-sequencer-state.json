@@ -1,0 +1,115 @@
+{
+  "title": "TweenSequencerState",
+  "description": "Lifecycle states of a TweenSequencer. Mirrors TweenState semantics: starts `Idle`, becomes `Active` on TweenSequencer.start, and ends in `Complete` (all stages exhausted) or `Stopped` (cancelled via TweenSequencer.stop). `Paused` is reachable from `Active` only.",
+  "symbol": "TweenSequencerState",
+  "kind": "enum",
+  "subsystem": "animation",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 5,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Lifecycle states of a TweenSequencer. Mirrors TweenState semantics: starts `Idle`, becomes `Active` on TweenSequencer.start, and ends in `Complete` (all stages exhausted) or `Stopped` (cancelled via TweenSequencer.stop). `Paused` is reachable from `Active` only."
+      ],
+      "importLine": "import { TweenSequencerState } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "members",
+      "title": "Members",
+      "members": [
+        {
+          "name": "Active",
+          "signature": "Active",
+          "signatureTokens": [
+            {
+              "text": "Active",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Complete",
+          "signature": "Complete",
+          "signatureTokens": [
+            {
+              "text": "Complete",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Idle",
+          "signature": "Idle",
+          "signatureTokens": [
+            {
+              "text": "Idle",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Paused",
+          "signature": "Paused",
+          "signatureTokens": [
+            {
+              "text": "Paused",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Stopped",
+          "signature": "Stopped",
+          "signatureTokens": [
+            {
+              "text": "Stopped",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/animation/TweenSequencer.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/animation/TweenSequencer.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/animation/TweenSequencer.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/animation/TweenSequencer.ts"
+}

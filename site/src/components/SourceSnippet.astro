@@ -24,6 +24,7 @@
 
 import { Code } from 'astro:components';
 import { extractSnippetRegion } from '../lib/source-snippets';
+import { SHIKI_THEMES } from '../lib/shiki-theme';
 
 /** The syntax-highlighting language union accepted by Astro's <Code> component. */
 type CodeLang = NonNullable<Parameters<typeof Code>[0]['lang']>;
@@ -55,7 +56,7 @@ try {
 
 <figure class="source-snippet">
     {title && <figcaption class="source-snippet__title">{title}</figcaption>}
-    <Code code={code} lang={language} themes={{ light: 'github-light', dark: 'github-dark' }} />
+    <Code code={code} lang={language} themes={SHIKI_THEMES} />
 </figure>
 
 <style>

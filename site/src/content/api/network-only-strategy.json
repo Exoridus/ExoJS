@@ -1,0 +1,182 @@
+{
+  "title": "NetworkOnlyStrategy",
+  "description": "CacheStrategy that always fetches from the network and never reads from or writes to any CacheStore. Useful for assets that must always be fresh (e.g. live configuration files) or for environments where persistent storage is unavailable. The `stores` argument is accepted but intentionally ignored. Returns the fully constructed resource — callers do not need to call AssetFactory.create again.",
+  "symbol": "NetworkOnlyStrategy",
+  "kind": "class",
+  "subsystem": "resources",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 1,
+    "methods": 1,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "CacheStrategy that always fetches from the network and never reads from or writes to any CacheStore.",
+        "Useful for assets that must always be fresh (e.g. live configuration files) or for environments where persistent storage is unavailable. The `stores` argument is accepted but intentionally ignored.",
+        "Returns the fully constructed resource — callers do not need to call AssetFactory.create again."
+      ],
+      "importLine": "import { NetworkOnlyStrategy } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(): NetworkOnlyStrategy",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NetworkOnlyStrategy",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "NetworkOnlyStrategy",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "resolve",
+          "signature": "resolve(request: CacheRequest, _stores: readonly CacheStore[]): Promise<unknown>",
+          "signatureTokens": [
+            {
+              "text": "resolve",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "request",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CacheRequest",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "_stores",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CacheStore",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "request",
+              "type": "CacheRequest",
+              "optional": false
+            },
+            {
+              "name": "_stores",
+              "type": "readonly CacheStore[]",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<unknown>",
+          "description": "Resolves a single asset according to the strategy's caching policy and returns the fully constructed resource."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/resources/NetworkOnlyStrategy.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/NetworkOnlyStrategy.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/resources/NetworkOnlyStrategy.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/NetworkOnlyStrategy.ts"
+}

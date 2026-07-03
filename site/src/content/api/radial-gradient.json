@@ -1,0 +1,953 @@
+{
+  "title": "RadialGradient",
+  "description": "Radial gradient in UV space around `center` with normalized radius.",
+  "symbol": "RadialGradient",
+  "kind": "class",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 15,
+  "counts": {
+    "constructors": 1,
+    "methods": 10,
+    "properties": 4,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Radial gradient in UV space around `center` with normalized radius."
+      ],
+      "importLine": "import { RadialGradient } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(stops: readonly GradientStop[], center: readonly [number, number], radius: number): RadialGradient",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "stops",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GradientStop",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "center",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "radius",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RadialGradient",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "stops",
+              "type": "readonly GradientStop[]",
+              "optional": false
+            },
+            {
+              "name": "center",
+              "type": "readonly [number, number]",
+              "optional": false
+            },
+            {
+              "name": "radius",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "RadialGradient",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "_copyGeometry",
+          "signature": "_copyGeometry(source: RadialGradient): void",
+          "signatureTokens": [
+            {
+              "text": "_copyGeometry",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RadialGradient",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "source",
+              "type": "RadialGradient",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Copy the concrete subclass geometry from a same-type source."
+        },
+        {
+          "name": "_geometryEquals",
+          "signature": "_geometryEquals(other: Gradient): boolean",
+          "signatureTokens": [
+            {
+              "text": "_geometryEquals",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "other",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Gradient",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "other",
+              "type": "Gradient",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Compare the concrete subclass geometry against other. Only invoked once Gradient.equals has confirmed both sides share the same GradientType, so implementations may narrow other accordingly."
+        },
+        {
+          "name": "clone",
+          "signature": "clone(): this",
+          "signatureTokens": [
+            {
+              "text": "clone",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "this",
+          "description": "Deep-clone into a new instance of the same concrete gradient type."
+        },
+        {
+          "name": "copy",
+          "signature": "copy(source: this): this",
+          "signatureTokens": [
+            {
+              "text": "copy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "source",
+              "type": "this",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Copy every value (stops and geometry) from a same-type source into this instance, replacing its current state. Returns this for chaining."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "equals",
+          "signature": "equals(other: Gradient): boolean",
+          "signatureTokens": [
+            {
+              "text": "equals",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "other",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Gradient",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "other",
+              "type": "Gradient",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Structural value equality: same GradientType, same ordered stops (offset and Color), and same subclass geometry."
+        },
+        {
+          "name": "resolveT",
+          "signature": "resolveT(u: number, v: number): number",
+          "signatureTokens": [
+            {
+              "text": "resolveT",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "u",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "v",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "u",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "v",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": ""
+        },
+        {
+          "name": "sampleAt",
+          "signature": "sampleAt(t: number, out: Float32Array): void",
+          "signatureTokens": [
+            {
+              "text": "sampleAt",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "t",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "out",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Float32Array",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "t",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "out",
+              "type": "Float32Array",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Shared stop sampling logic ported from the legacy GLSL implementation."
+        },
+        {
+          "name": "toTexture",
+          "signature": "toTexture(width: number, height: number, options?: GradientToTextureOptions & { format?: \"rgba8\" }): DataTexture<\"rgba8\">",
+          "signatureTokens": [
+            {
+              "text": "toTexture",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "width",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "height",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GradientToTextureOptions",
+              "kind": "type"
+            },
+            {
+              "text": " & ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "format",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"rgba8\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "DataTexture",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"rgba8\"",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "width",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "height",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "GradientToTextureOptions & { format?: \"rgba8\" }",
+              "optional": true
+            }
+          ],
+          "returnType": "DataTexture<\"rgba8\">",
+          "description": ""
+        },
+        {
+          "name": "toTexture",
+          "signature": "toTexture(width: number, height: number, options: GradientToTextureOptions & { format: \"rgba32f\" }): DataTexture<\"rgba32f\">",
+          "signatureTokens": [
+            {
+              "text": "toTexture",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "width",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "height",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GradientToTextureOptions",
+              "kind": "type"
+            },
+            {
+              "text": " & ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "format",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"rgba32f\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "DataTexture",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"rgba32f\"",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "width",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "height",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "GradientToTextureOptions & { format: \"rgba32f\" }",
+              "optional": false
+            }
+          ],
+          "returnType": "DataTexture<\"rgba32f\">",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "type",
+          "signature": "type: GradientType",
+          "signatureTokens": [
+            {
+              "text": "type",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GradientType",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Concrete gradient kind, e.g. 'linear' or 'radial'."
+        },
+        {
+          "name": "center",
+          "signature": "center: readonly [number, number]",
+          "signatureTokens": [
+            {
+              "text": "center",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Gradient center in UV space."
+        },
+        {
+          "name": "radius",
+          "signature": "radius: number",
+          "signatureTokens": [
+            {
+              "text": "radius",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Normalized radius (UV units, clamped to be non-negative)."
+        },
+        {
+          "name": "stops",
+          "signature": "stops: readonly GradientStop[]",
+          "signatureTokens": [
+            {
+              "text": "stops",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GradientStop",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/gradient/RadialGradient.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/gradient/RadialGradient.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/gradient/RadialGradient.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/gradient/RadialGradient.ts"
+}

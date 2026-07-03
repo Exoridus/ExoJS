@@ -4,7 +4,10 @@ import type { CollectionEntry } from 'astro:content';
 import DocsLayout from '../../layouts/DocsLayout.astro';
 import DocsSidebar from '../DocsSidebar.astro';
 import EnglishFallbackNotice from '../EnglishFallbackNotice.astro';
-import { API_SUBSYSTEM_META, API_SUBSYSTEM_ORDER, toApiHref } from '../../lib/api-reference';
+import ApiSignature from '../ApiSignature.astro';
+import type { SignatureLink } from '../ApiSignature.astro';
+import { API_SUBSYSTEM_META, API_SUBSYSTEM_ORDER, compactDescription, toApiHref } from '../../lib/api-reference';
+import type { ApiSection } from '../../lib/api-schema';
 
 interface Props {
     locale: 'en' | 'de';
@@ -13,129 +16,10 @@ interface Props {
 
 type ApiEntry = CollectionEntry<'api'>;
 
-type ApiRow = {
-    signature: string;
-    description: string;
-};
-
-type ParsedSection = {
-    id: string;
-    title: string;
-    rows: ApiRow[];
-    paragraphs: string[];
-    importLine: string | null;
-    sourceLink: { label: string; href: string } | null;
-};
-
 type ApiMobileTab = {
     id: string;
     title: string;
     count: number | null;
-};
-
-const toAnchor = (value: string): string =>
-    value
-        .toLowerCase()
-        .replace(/[^a-z0-9\s-]/g, '')
-        .trim()
-        .replace(/\s+/g, '-');
-
-const cleanText = (value: string): string => value.replace(/\\([{}])/g, '$1');
-
-const parseParagraphs = (lines: string[]): string[] => {
-    const paragraphs: string[] = [];
-    let buffer: string[] = [];
-
-    const flush = () => {
-        if (buffer.length === 0) return;
-        paragraphs.push(cleanText(buffer.join(' ').trim()));
-        buffer = [];
-    };
-
-    for (const rawLine of lines) {
-        const line = rawLine.trim();
-        if (!line) {
-            flush();
-            continue;
-        }
-        if (line.startsWith('- `')) {
-            flush();
-            continue;
-        }
-        if (/^`[^`]+`$/.test(line)) {
-            flush();
-            continue;
-        }
-        if (/^\[[^\]]+\]\(([^)]+)\)$/.test(line)) {
-            flush();
-            continue;
-        }
-        buffer.push(line);
-    }
-
-    flush();
-    return paragraphs;
-};
-
-const parseSections = (body: string): ParsedSection[] => {
-    const sections: Array<{ title: string; lines: string[] }> = [];
-    let active: { title: string; lines: string[] } | null = null;
-
-    for (const rawLine of body.split('\n')) {
-        const headingMatch = /^##\s+(.+)$/.exec(rawLine.trim());
-        if (headingMatch) {
-            if (active) sections.push(active);
-            active = { title: headingMatch[1].trim(), lines: [] };
-            continue;
-        }
-        if (active) active.lines.push(rawLine);
-    }
-
-    if (active) sections.push(active);
-
-    return sections.map(section => {
-        const rows: ApiRow[] = [];
-        let importLine: string | null = null;
-        let sourceLink: { label: string; href: string } | null = null;
-
-        for (const rawLine of section.lines) {
-            const line = rawLine.trim();
-            if (!line) continue;
-
-            if (!importLine) {
-                const importMatch = /^`([^`]+)`$/.exec(line);
-                if (importMatch) {
-                    importLine = cleanText(importMatch[1]);
-                    continue;
-                }
-            }
-
-            if (!sourceLink) {
-                const sourceMatch = /^\[([^\]]+)\]\(([^)]+)\)$/.exec(line);
-                if (sourceMatch) {
-                    sourceLink = { label: cleanText(sourceMatch[1]), href: sourceMatch[2] };
-                    continue;
-                }
-            }
-
-            const rowMatch = /^-\s+`([^`]+)`(?:\s*[-:]\s*(.+))?$/.exec(line);
-            if (rowMatch) {
-                rows.push({
-                    signature: cleanText(rowMatch[1]),
-                    description: cleanText(rowMatch[2] ?? ''),
-                });
-            }
-        }
-
-        return {
-            id: toAnchor(section.title),
-            title: section.title,
-            rows,
-            paragraphs: parseParagraphs(section.lines),
-            importLine,
-            sourceLink,
-        };
-    });
 };
 
 const { locale, symbol } = Astro.props;
@@ -145,29 +29,38 @@ if (!entry) {
     throw new Error(`Unknown API symbol: ${symbol}`);
 }
 
-const parsedSections = parseSections(entry.body ?? '');
-const sectionByTitle = new Map(parsedSections.map(section => [section.title.toLowerCase(), section]));
-const methodsCount = sectionByTitle.get('methods')?.rows.length ?? 0;
-const propertiesCount = sectionByTitle.get('properties')?.rows.length ?? 0;
-const eventsCount = sectionByTitle.get('events')?.rows.length ?? 0;
+const sections: ReadonlyArray<ApiSection> = entry.data.sections;
+const { methods: methodsCount, properties: propertiesCount, events: eventsCount } = entry.data.counts;
 const currentSubsystem = entry.data.subsystem as keyof typeof API_SUBSYSTEM_META;
+
+// Build-time cross-link map: a documented symbol name -> its page + summary.
+// Signature `type` tokens whose text is a key become links with a hover
+// preview. Exclude this page's own symbol so it doesn't self-link.
+const typeLinks = new Map<string, SignatureLink>(
+    apiEntries
+        .filter((item: ApiEntry) => item.id !== entry.id)
+        .map((item: ApiEntry) => [
+            item.data.symbol,
+            { href: toApiHref(import.meta.env.BASE_URL, item.id, locale), summary: compactDescription(item.data.description ?? '', 160) },
+        ]),
+);
 
 const kindGlyph = entry.data.kind === 'enum' ? 'E' : entry.data.kind === 'class' ? 'C' : entry.data.kind.slice(0, 1).toUpperCase();
 const kindLabel = entry.data.kind.toLowerCase();
 
-const toMobileTabCount = (section: ParsedSection): number | null => {
+const toMobileTabCount = (section: ApiSection): number | null => {
     const sectionKey = section.title.toLowerCase();
-    if (sectionKey === 'constructor' || sectionKey === 'constructors') return section.rows.length;
-    if (sectionKey === 'methods') return section.rows.length;
-    if (sectionKey === 'properties') return section.rows.length;
-    if (sectionKey === 'events') return section.rows.length;
-    if (sectionKey === 'examples') return section.rows.length > 0 ? section.rows.length : null;
-    return section.rows.length > 0 ? section.rows.length : null;
+    if (sectionKey === 'constructor' || sectionKey === 'constructors') return section.members.length;
+    if (sectionKey === 'methods') return section.members.length;
+    if (sectionKey === 'properties') return section.members.length;
+    if (sectionKey === 'events') return section.members.length;
+    if (sectionKey === 'examples') return section.members.length > 0 ? section.members.length : null;
+    return section.members.length > 0 ? section.members.length : null;
 };
 
 const mobileTabs: ApiMobileTab[] = [
     { id: 'overview', title: 'Overview', count: null },
-    ...parsedSections.map(section => ({
+    ...sections.map(section => ({
         id: section.id,
         title: section.title,
         count: toMobileTabCount(section),
@@ -209,7 +102,7 @@ const sidebarGroups = [
         <h6>On this page</h6>
         <ul data-api-toc>
             {
-                parsedSections.map((section, index) => (
+                sections.map((section, index) => (
                     <li>
                         <a href={`#${section.id}`} data-api-toc-link data-active={index === 0 ? 'true' : 'false'}>
                             {section.title}
@@ -293,12 +186,12 @@ const sidebarGroups = [
             </section>
 
             {
-                parsedSections.map(section => (
+                sections.map(section => (
                     <section id={section.id} class="api-section" data-api-mobile-section data-api-mobile-key={section.id}>
                         <div class="api-section-head">
                             <span>{section.title}</span>
                             <span class="line"></span>
-                            <span>{section.rows.length > 0 ? section.rows.length : ''}</span>
+                            <span>{section.members.length > 0 ? section.members.length : ''}</span>
                         </div>
 
                         {section.importLine && (
@@ -307,15 +200,15 @@ const sidebarGroups = [
                             </div>
                         )}
 
-                        {section.rows.length > 0 &&
-                            section.rows.map(row => (
+                        {section.members.length > 0 &&
+                            section.members.map(member => (
                                 <div class="api-row">
                                     <div class="sig">
                                         <div class="name">
-                                            <code>{row.signature}</code>
+                                            <ApiSignature tokens={member.signatureTokens} links={typeLinks} />
                                         </div>
                                     </div>
-                                    <div class="desc">{row.description}</div>
+                                    <div class="desc">{member.description}</div>
                                 </div>
                             ))}
 
@@ -641,7 +534,6 @@ const sidebarGroups = [
         font-family: var(--f-mono);
         font-size: 12.5px;
     }
-
 
     @media (max-width: 1120px) {
         .api-row {

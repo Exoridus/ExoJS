@@ -1,0 +1,407 @@
+{
+  "title": "FocusManager",
+  "description": "Per-Application keyboard-focus service. Tracks the single focused RenderNode, routes keyboard input from the InputManager to it, and provides Tab-order traversal across the focusable nodes of the active focus scope. A node reaches this service through its Stage (`stage.focus`); app code reaches it through `app.focus`. Constructed automatically by Application; you do not instantiate this class yourself. Built-in key handling: `Tab` / `Shift+Tab` move focus to the next / previous focusable node. A focused node can call KeyEvent.preventDefault on its `onKeyDown` event to opt out of this and consume the key itself.",
+  "symbol": "FocusManager",
+  "kind": "class",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 9,
+  "counts": {
+    "constructors": 1,
+    "methods": 7,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Per-Application keyboard-focus service. Tracks the single focused RenderNode, routes keyboard input from the InputManager to it, and provides Tab-order traversal across the focusable nodes of the active focus scope.",
+        "A node reaches this service through its Stage (`stage.focus`); app code reaches it through `app.focus`. Constructed automatically by Application; you do not instantiate this class yourself.",
+        "Built-in key handling: `Tab` / `Shift+Tab` move focus to the next / previous focusable node. A focused node can call KeyEvent.preventDefault on its `onKeyDown` event to opt out of this and consume the key itself."
+      ],
+      "importLine": "import { FocusManager } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(app: Application): FocusManager",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "app",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Application",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "FocusManager",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "app",
+              "type": "Application",
+              "optional": false
+            }
+          ],
+          "returnType": "FocusManager",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "blur",
+          "signature": "blur(node?: RenderNode): void",
+          "signatureTokens": [
+            {
+              "text": "blur",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "node",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderNode",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "node",
+              "type": "RenderNode",
+              "optional": true
+            }
+          ],
+          "returnType": "void",
+          "description": "Clear focus, or only clear it when node currently holds it. Fires onBlur."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "focus",
+          "signature": "focus(node: RenderNode): void",
+          "signatureTokens": [
+            {
+              "text": "focus",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "node",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderNode",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "node",
+              "type": "RenderNode",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Move keyboard focus to node. No-op when node is already focused or is not RenderNode.focusable. Fires onBlur on the previously focused node, then onFocus on node."
+        },
+        {
+          "name": "focusNext",
+          "signature": "focusNext(): void",
+          "signatureTokens": [
+            {
+              "text": "focusNext",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Move focus to the next focusable node in the active scope (Tab order)."
+        },
+        {
+          "name": "focusPrevious",
+          "signature": "focusPrevious(): void",
+          "signatureTokens": [
+            {
+              "text": "focusPrevious",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Move focus to the previous focusable node in the active scope (Shift+Tab order)."
+        },
+        {
+          "name": "popScope",
+          "signature": "popScope(): void",
+          "signatureTokens": [
+            {
+              "text": "popScope",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Pop the most recently pushed focus scope."
+        },
+        {
+          "name": "pushScope",
+          "signature": "pushScope(root: RenderNode): void",
+          "signatureTokens": [
+            {
+              "text": "pushScope",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "root",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderNode",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "root",
+              "type": "RenderNode",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Push a subtree root that bounds subsequent Tab traversal (e.g. a modal dialog)."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "focused",
+          "signature": "focused: RenderNode | null",
+          "signatureTokens": [
+            {
+              "text": "focused",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderNode",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The node that currently holds keyboard focus, or null."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/FocusManager.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/FocusManager.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/FocusManager.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/FocusManager.ts"
+}

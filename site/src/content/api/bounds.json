@@ -1,0 +1,409 @@
+{
+  "title": "Bounds",
+  "description": "Mutable axis-aligned bounding box accumulator. Starts as the empty bounds (`-Infinity..Infinity` reversed) and grows monotonically as points or rectangles are merged in via Bounds.addCoords and Bounds.addRect. Used during scene-graph traversal to accumulate a subtree's combined extent for culling and hit-testing. The Bounds.getRect accessor lazily folds the current min/max into a shared Rectangle — copy the result if you need to retain it across further accumulation.",
+  "symbol": "Bounds",
+  "kind": "class",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 10,
+  "counts": {
+    "constructors": 1,
+    "methods": 5,
+    "properties": 4,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Mutable axis-aligned bounding box accumulator. Starts as the empty bounds (`-Infinity..Infinity` reversed) and grows monotonically as points or rectangles are merged in via Bounds.addCoords and Bounds.addRect. Used during scene-graph traversal to accumulate a subtree's combined extent for culling and hit-testing.",
+        "The Bounds.getRect accessor lazily folds the current min/max into a shared Rectangle — copy the result if you need to retain it across further accumulation."
+      ],
+      "importLine": "import { Bounds } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(): Bounds",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Bounds",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "Bounds",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "addCoords",
+          "signature": "addCoords(x: number, y: number): this",
+          "signatureTokens": [
+            {
+              "text": "addCoords",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Expand the bounds to include (x, y)."
+        },
+        {
+          "name": "addRect",
+          "signature": "addRect(rectangle: Rectangle, transform?: Matrix): this",
+          "signatureTokens": [
+            {
+              "text": "addRect",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "rectangle",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Rectangle",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "transform",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Matrix",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "rectangle",
+              "type": "Rectangle",
+              "optional": false
+            },
+            {
+              "name": "transform",
+              "type": "Matrix",
+              "optional": true
+            }
+          ],
+          "returnType": "this",
+          "description": "Expand the bounds to include rectangle. When transform is provided the rectangle's corners are transformed into the bounds' coordinate space first (via Rectangle.temp — does not mutate rectangle)."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "getRect",
+          "signature": "getRect(): Rectangle",
+          "signatureTokens": [
+            {
+              "text": "getRect",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Rectangle",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "Rectangle",
+          "description": "Materialize the accumulated min/max as a Rectangle. Returns the same instance across calls — copy if you need to retain it past the next mutation."
+        },
+        {
+          "name": "reset",
+          "signature": "reset(): this",
+          "signatureTokens": [
+            {
+              "text": "reset",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "this",
+          "description": "Restore the empty-bounds state for reuse across frames."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "maxX",
+          "signature": "maxX: number",
+          "signatureTokens": [
+            {
+              "text": "maxX",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "maxY",
+          "signature": "maxY: number",
+          "signatureTokens": [
+            {
+              "text": "maxY",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "minX",
+          "signature": "minX: number",
+          "signatureTokens": [
+            {
+              "text": "minX",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "minY",
+          "signature": "minY: number",
+          "signatureTokens": [
+            {
+              "text": "minY",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/Bounds.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Bounds.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/Bounds.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Bounds.ts"
+}

@@ -1,0 +1,169 @@
+{
+  "title": "AudioInput",
+  "description": "A live audio capture source — a microphone or WebRTC `MediaStream` obtained via `getUserMedia`. **Not a Playable**: you don't \"play\" a mic, you *open* it. Pass it to AudioManager.open to get an InputVoice for monitoring, analysis, or recording. ```ts const mic = await AudioInput.open({ echoCancellation: true }); const input = app.audio.open(mic); new AudioAnalyser({ source: input }); // visualise / beat-detect (no feedback) const clip = await input.record(2000); // capture 2s -> Sound mic.close(); // release the device ```",
+  "symbol": "AudioInput",
+  "kind": "class",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 2,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A live audio capture source — a microphone or WebRTC `MediaStream` obtained via `getUserMedia`. **Not a Playable**: you don't \"play\" a mic, you *open* it. Pass it to AudioManager.open to get an InputVoice for monitoring, analysis, or recording.",
+        "```ts const mic = await AudioInput.open({ echoCancellation: true }); const input = app.audio.open(mic); new AudioAnalyser({ source: input }); // visualise / beat-detect (no feedback) const clip = await input.record(2000); // capture 2s -> Sound mic.close(); // release the device ```"
+      ],
+      "importLine": "import { AudioInput } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "close",
+          "signature": "close(): void",
+          "signatureTokens": [
+            {
+              "text": "close",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Stop every track in the stream, releasing the input device."
+        },
+        {
+          "name": "open",
+          "signature": "open(options: AudioInputOptions): Promise<AudioInput>",
+          "signatureTokens": [
+            {
+              "text": "open",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioInputOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioInput",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "options",
+              "type": "AudioInputOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<AudioInput>",
+          "description": "Request microphone access and resolve with an AudioInput. Throws / rejects if the user denies permission or no input device is available."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "stream",
+          "signature": "stream: MediaStream",
+          "signatureTokens": [
+            {
+              "text": "stream",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MediaStream",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The underlying MediaStream."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/audio/AudioInput.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioInput.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/audio/AudioInput.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/AudioInput.ts"
+}

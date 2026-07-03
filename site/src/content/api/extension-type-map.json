@@ -1,0 +1,156 @@
+{
+  "title": "ExtensionTypeMap",
+  "description": "Maps file extensions (without leading dot, lower-case) to the asset type returned by Loader.load when called with a plain path string. Extend via declaration merging to register custom extension → type mappings: ```ts declare module 'exojs' { interface ExtensionTypeMap { tmj: TiledMap; } } ```",
+  "symbol": "ExtensionTypeMap",
+  "kind": "interface",
+  "subsystem": "resources",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 5,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 5,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Maps file extensions (without leading dot, lower-case) to the asset type returned by Loader.load when called with a plain path string.",
+        "Extend via declaration merging to register custom extension → type mappings: ```ts declare module 'exojs' { interface ExtensionTypeMap { tmj: TiledMap; } } ```"
+      ],
+      "importLine": "import { ExtensionTypeMap } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "fnt",
+          "signature": "fnt: BmFont",
+          "signatureTokens": [
+            {
+              "text": "fnt",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BmFont",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "otf",
+          "signature": "otf: FontFace",
+          "signatureTokens": [
+            {
+              "text": "otf",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "FontFace",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "ttf",
+          "signature": "ttf: FontFace",
+          "signatureTokens": [
+            {
+              "text": "ttf",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "FontFace",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "woff",
+          "signature": "woff: FontFace",
+          "signatureTokens": [
+            {
+              "text": "woff",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "FontFace",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "woff2",
+          "signature": "woff2: FontFace",
+          "signatureTokens": [
+            {
+              "text": "woff2",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "FontFace",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/resources/Loader.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Loader.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/resources/Loader.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Loader.ts"
+}

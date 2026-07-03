@@ -1,0 +1,283 @@
+{
+  "title": "PingPongDelayEffect",
+  "description": "Stereo ping-pong delay effect using two cross-fed DelayNodes that bounce the signal alternately between left and right channels. The input feeds only the left delay; cross-feedback (L→R and R→L) then causes the signal to alternate channels on every tap, producing the characteristic L↔R slapback cascade. Each tap is routed through a StereoPannerNode panned hard left or right, maintaining hard-left / hard-right stereo separation throughout the feedback tail. Node graph: ``` input(GainNode) → dryGain ────────────────────────────────── output(GainNode) input → delayL → feedbackGainA → delayR ↑ delayR → feedbackGainB → delayL │ delayL → pannerL (pan = -1, hard left) → wetGain ─────────┘ delayR → pannerR (pan = +1, hard right) → wetGain ``` Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet`.",
+  "symbol": "PingPongDelayEffect",
+  "kind": "class",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs-audio-fx",
+  "tier": "stable",
+  "memberCount": 8,
+  "counts": {
+    "constructors": 1,
+    "methods": 1,
+    "properties": 6,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Stereo ping-pong delay effect using two cross-fed DelayNodes that bounce the signal alternately between left and right channels. The input feeds only the left delay; cross-feedback (L→R and R→L) then causes the signal to alternate channels on every tap, producing the characteristic L↔R slapback cascade. Each tap is routed through a StereoPannerNode panned hard left or right, maintaining hard-left / hard-right stereo separation throughout the feedback tail.",
+        "Node graph: ``` input(GainNode) → dryGain ────────────────────────────────── output(GainNode) input → delayL → feedbackGainA → delayR ↑ delayR → feedbackGainB → delayL │ delayL → pannerL (pan = -1, hard left) → wetGain ─────────┘ delayR → pannerR (pan = +1, hard right) → wetGain ``` Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet`."
+      ],
+      "importLine": "import { PingPongDelayEffect } from '@codexo/exojs-audio-fx'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(options: PingPongDelayEffectOptions): PingPongDelayEffect",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PingPongDelayEffectOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PingPongDelayEffect",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "options",
+              "type": "PingPongDelayEffectOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "PingPongDelayEffect",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Disconnects all audio nodes and releases resources. Must be called when the effect is no longer needed."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "delayTime",
+          "signature": "delayTime: number",
+          "signatureTokens": [
+            {
+              "text": "delayTime",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Delay time per tap in seconds. Both the left and right delay nodes share the same delay time. Range 0.01..2, default 0.25. Changes are ramped smoothly via setTargetAtTime."
+        },
+        {
+          "name": "feedback",
+          "signature": "feedback: number",
+          "signatureTokens": [
+            {
+              "text": "feedback",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Cross-channel feedback fraction. Each delayed tap feeds this fraction of its signal into the opposite channel's delay, sustaining the L↔R bounce. Range 0..0.9, default 0.4. Changes are ramped smoothly via setTargetAtTime."
+        },
+        {
+          "name": "inputNode",
+          "signature": "inputNode: AudioNode",
+          "signatureTokens": [
+            {
+              "text": "inputNode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioNode",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The node where audio enters this effect. Throws if the audio context is not yet initialized."
+        },
+        {
+          "name": "outputNode",
+          "signature": "outputNode: AudioNode",
+          "signatureTokens": [
+            {
+              "text": "outputNode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioNode",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The node where audio exits this effect. Throws if the audio context is not yet initialized."
+        },
+        {
+          "name": "ready",
+          "signature": "ready: Promise<void>",
+          "signatureTokens": [
+            {
+              "text": "ready",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Resolves when the effect is fully initialized. Defaults to immediately-resolved for sync effects."
+        },
+        {
+          "name": "wet",
+          "signature": "wet: number",
+          "signatureTokens": [
+            {
+              "text": "wet",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Wet (ping-pong) mix level, 0..1. The dry level is automatically 1 - wet. Changes are ramped smoothly via setTargetAtTime. Default 0.4."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-audio-fx/src/effects/PingPongDelayEffect.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/PingPongDelayEffect.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-audio-fx/src/effects/PingPongDelayEffect.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/PingPongDelayEffect.ts"
+}

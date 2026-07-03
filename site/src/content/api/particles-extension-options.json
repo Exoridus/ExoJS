@@ -1,0 +1,75 @@
+{
+  "title": "ParticlesExtensionOptions",
+  "description": "Options for createParticlesExtension.",
+  "symbol": "ParticlesExtensionOptions",
+  "kind": "interface",
+  "subsystem": "particles",
+  "importPath": "@codexo/exojs-particles",
+  "tier": "stable",
+  "memberCount": 1,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Options for createParticlesExtension."
+      ],
+      "importLine": "import { ParticlesExtensionOptions } from '@codexo/exojs-particles'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "batchSize",
+          "signature": "batchSize?: number",
+          "signatureTokens": [
+            {
+              "text": "batchSize",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "WebGL2 particle renderer batch size. Default: 8192."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-particles/src/particlesExtension.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/particlesExtension.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-particles/src/particlesExtension.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/particlesExtension.ts"
+}

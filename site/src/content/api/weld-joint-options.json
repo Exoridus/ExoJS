@@ -1,0 +1,217 @@
+{
+  "title": "WeldJointOptions",
+  "description": "Construction options for a WeldJoint.",
+  "symbol": "WeldJointOptions",
+  "kind": "interface",
+  "subsystem": "physics",
+  "importPath": "@codexo/exojs-physics",
+  "tier": "stable",
+  "memberCount": 7,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 7,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Construction options for a WeldJoint."
+      ],
+      "importLine": "import { WeldJointOptions } from '@codexo/exojs-physics'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "anchor",
+          "signature": "anchor?: VectorLike",
+          "signatureTokens": [
+            {
+              "text": "anchor",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "VectorLike",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "World-space anchor the linear constraint acts at. Default: the midpoint of the two bodies."
+        },
+        {
+          "name": "angularHertz",
+          "signature": "angularHertz?: number",
+          "signatureTokens": [
+            {
+              "text": "angularHertz",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Soft frequency (Hz) for the angle lock; 0 (default) is rigid."
+        },
+        {
+          "name": "bodyA",
+          "signature": "bodyA: PhysicsBody",
+          "signatureTokens": [
+            {
+              "text": "bodyA",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PhysicsBody",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "First body."
+        },
+        {
+          "name": "bodyB",
+          "signature": "bodyB: PhysicsBody",
+          "signatureTokens": [
+            {
+              "text": "bodyB",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PhysicsBody",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Second body."
+        },
+        {
+          "name": "dampingRatio",
+          "signature": "dampingRatio?: number",
+          "signatureTokens": [
+            {
+              "text": "dampingRatio",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Soft damping ratio (used when a hertz is > 0). Default 1."
+        },
+        {
+          "name": "linearHertz",
+          "signature": "linearHertz?: number",
+          "signatureTokens": [
+            {
+              "text": "linearHertz",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Soft frequency (Hz) for the position lock; 0 (default) is rigid."
+        },
+        {
+          "name": "referenceAngle",
+          "signature": "referenceAngle?: number",
+          "signatureTokens": [
+            {
+              "text": "referenceAngle",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Locked relative angle angleB − angleA. Default: the current relative angle at creation."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-physics/src/joints/WeldJoint.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/joints/WeldJoint.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-physics/src/joints/WeldJoint.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/joints/WeldJoint.ts"
+}

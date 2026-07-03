@@ -1,0 +1,71 @@
+{
+  "title": "GradientType",
+  "description": "Discriminant identifying the concrete gradient kind (`gradient.type`).",
+  "symbol": "GradientType",
+  "kind": "type",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Discriminant identifying the concrete gradient kind (`gradient.type`)."
+      ],
+      "importLine": "import { GradientType } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "GradientType",
+          "signature": "\"linear\" | \"radial\"",
+          "signatureTokens": [
+            {
+              "text": "\"linear\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"radial\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/gradient/Gradient.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/gradient/Gradient.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/gradient/Gradient.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/gradient/Gradient.ts"
+}

@@ -1,0 +1,319 @@
+{
+  "title": "SpawnOnDeath",
+  "description": "Sub-emitter: triggers a child SpawnModule on a target system at the dying particle's position. Use for explosion-on-impact, sparks at end-of-life, multi-stage VFX. The child module receives a synthesized `dt` of 0 — it must spawn immediately rather than rely on rate accumulation. BurstSpawn works naturally; RateSpawn is the wrong fit here. Position is the only field forwarded — child distributions decide everything else. To keep child particles riding the parent's velocity, configure the child's velocity distribution to match.",
+  "symbol": "SpawnOnDeath",
+  "kind": "class",
+  "subsystem": "particles",
+  "importPath": "@codexo/exojs-particles",
+  "tier": "stable",
+  "memberCount": 6,
+  "counts": {
+    "constructors": 1,
+    "methods": 2,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Sub-emitter: triggers a child SpawnModule on a target system at the dying particle's position. Use for explosion-on-impact, sparks at end-of-life, multi-stage VFX.",
+        "The child module receives a synthesized `dt` of 0 — it must spawn immediately rather than rely on rate accumulation. BurstSpawn works naturally; RateSpawn is the wrong fit here.",
+        "Position is the only field forwarded — child distributions decide everything else. To keep child particles riding the parent's velocity, configure the child's velocity distribution to match."
+      ],
+      "importLine": "import { SpawnOnDeath } from '@codexo/exojs-particles'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(targetSystem: ParticleSystem, spawner: SpawnModule, count: number): SpawnOnDeath",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "targetSystem",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ParticleSystem",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "spawner",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SpawnModule",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "count",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SpawnOnDeath",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "targetSystem",
+              "type": "ParticleSystem",
+              "optional": false
+            },
+            {
+              "name": "spawner",
+              "type": "SpawnModule",
+              "optional": false
+            },
+            {
+              "name": "count",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "SpawnOnDeath",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Optional cleanup hook called from ParticleSystem.destroy."
+        },
+        {
+          "name": "onDeath",
+          "signature": "onDeath(parent: ParticleSystem, slot: number): void",
+          "signatureTokens": [
+            {
+              "text": "onDeath",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "parent",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ParticleSystem",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "slot",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "parent",
+              "type": "ParticleSystem",
+              "optional": false
+            },
+            {
+              "name": "slot",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "count",
+          "signature": "count: number",
+          "signatureTokens": [
+            {
+              "text": "count",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Number of times to invoke the spawner per dying particle. Default 1."
+        },
+        {
+          "name": "spawner",
+          "signature": "spawner: SpawnModule",
+          "signatureTokens": [
+            {
+              "text": "spawner",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SpawnModule",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "targetSystem",
+          "signature": "targetSystem: ParticleSystem",
+          "signatureTokens": [
+            {
+              "text": "targetSystem",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ParticleSystem",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-particles/src/modules/SpawnOnDeath.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/modules/SpawnOnDeath.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-particles/src/modules/SpawnOnDeath.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/modules/SpawnOnDeath.ts"
+}

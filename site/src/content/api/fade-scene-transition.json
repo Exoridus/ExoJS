@@ -1,0 +1,121 @@
+{
+  "title": "FadeSceneTransition",
+  "description": "Fade-to-color scene transition. The screen fades to `color` (default black) over `duration` ms (default 220), the scene change happens at full opacity, then the screen fades back in.",
+  "symbol": "FadeSceneTransition",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Fade-to-color scene transition. The screen fades to `color` (default black) over `duration` ms (default 220), the scene change happens at full opacity, then the screen fades back in."
+      ],
+      "importLine": "import { FadeSceneTransition } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "color",
+          "signature": "color?: Color",
+          "signatureTokens": [
+            {
+              "text": "color",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "duration",
+          "signature": "duration?: number",
+          "signatureTokens": [
+            {
+              "text": "duration",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "type",
+          "signature": "type: \"fade\"",
+          "signatureTokens": [
+            {
+              "text": "type",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"fade\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/SceneManager.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneManager.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/SceneManager.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneManager.ts"
+}

@@ -1,0 +1,151 @@
+{
+  "title": "DataTextureBuffer",
+  "description": "Buffer typed-array kind for a given format.",
+  "symbol": "DataTextureBuffer",
+  "kind": "type",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Buffer typed-array kind for a given format."
+      ],
+      "importLine": "import { DataTextureBuffer } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "DataTextureBuffer",
+          "signature": "F extends \"r8\" | \"rgba8\" ? Uint8Array : F extends \"r32f\" | \"rgba32f\" ? Float32Array : Uint8Array | Float32Array",
+          "signatureTokens": [
+            {
+              "text": "F",
+              "kind": "type"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "extends",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"r8\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"rgba8\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " ? ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Uint8Array",
+              "kind": "type"
+            },
+            {
+              "text": " : ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "F",
+              "kind": "type"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "extends",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"r32f\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"rgba32f\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " ? ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Float32Array",
+              "kind": "type"
+            },
+            {
+              "text": " : ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Uint8Array",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Float32Array",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/texture/DataTexture.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/texture/DataTexture.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/texture/DataTexture.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/texture/DataTexture.ts"
+}

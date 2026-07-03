@@ -1,0 +1,846 @@
+{
+  "title": "GamepadAxis",
+  "description": "Single mappable analog axis on a physical gamepad. Holds the raw browser `Gamepad.axes[]` index, the canonical channel the value is written to, and the transform pipeline applied each frame by transformValue. Direction-split axis channels (e.g. `LeftStickLeft`, `LeftStickRight`) live in the 0..1 range — set `invert: true` on the negative half so it reads positive when pushed in its direction. Aggregate channels (e.g. `LeftStickX`, `LeftStickY`) live in the full -1..1 range — set `bipolar: true` to preserve sign through the pipeline. The static namespace exports (`GamepadAxis.LeftStickLeft`, `.LeftStickX`, ...) carry the canonical channel offsets used to address each axis.",
+  "symbol": "GamepadAxis",
+  "kind": "class",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 32,
+  "counts": {
+    "constructors": 1,
+    "methods": 1,
+    "properties": 6,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Single mappable analog axis on a physical gamepad. Holds the raw browser `Gamepad.axes[]` index, the canonical channel the value is written to, and the transform pipeline applied each frame by transformValue.",
+        "Direction-split axis channels (e.g. `LeftStickLeft`, `LeftStickRight`) live in the 0..1 range — set `invert: true` on the negative half so it reads positive when pushed in its direction.",
+        "Aggregate channels (e.g. `LeftStickX`, `LeftStickY`) live in the full -1..1 range — set `bipolar: true` to preserve sign through the pipeline.",
+        "The static namespace exports (`GamepadAxis.LeftStickLeft`, `.LeftStickX`, ...) carry the canonical channel offsets used to address each axis."
+      ],
+      "importLine": "import { GamepadAxis } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(index: number, channel: GamepadAxisChannel, options: GamepadAxisOptions): GamepadAxis",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "index",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "channel",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadAxisChannel",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadAxisOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadAxis",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "index",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "channel",
+              "type": "GamepadAxisChannel",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "GamepadAxisOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "GamepadAxis",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "transformValue",
+          "signature": "transformValue(value: number): number",
+          "signatureTokens": [
+            {
+              "text": "transformValue",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "value",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "value",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": "Apply the axis transform pipeline to a raw browser axis value (typically Gamepad.axes[i], in -1..1). Pipeline: clamp to [-1, 1] → optional invert → optional normalize to [0, 1] → bipolar passthrough OR deadzone (returns 0 when the absolute value is at or below threshold)."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "bipolar",
+          "signature": "bipolar: boolean",
+          "signatureTokens": [
+            {
+              "text": "bipolar",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "channel",
+          "signature": "channel: GamepadAxisChannel",
+          "signatureTokens": [
+            {
+              "text": "channel",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadAxisChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "index",
+          "signature": "index: number",
+          "signatureTokens": [
+            {
+              "text": "index",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "invert",
+          "signature": "invert: boolean",
+          "signatureTokens": [
+            {
+              "text": "invert",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "normalize",
+          "signature": "normalize: boolean",
+          "signatureTokens": [
+            {
+              "text": "normalize",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "threshold",
+          "signature": "threshold: number",
+          "signatureTokens": [
+            {
+              "text": "threshold",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "constants",
+      "title": "Constants",
+      "members": [
+        {
+          "name": "AuxiliaryAxis0Negative",
+          "signature": "AuxiliaryAxis0Negative: GamepadAxisChannel",
+          "signatureTokens": [
+            {
+              "text": "AuxiliaryAxis0Negative",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadAxisChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "AuxiliaryAxis0Positive",
+          "signature": "AuxiliaryAxis0Positive: GamepadAxisChannel",
+          "signatureTokens": [
+            {
+              "text": "AuxiliaryAxis0Positive",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadAxisChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "AuxiliaryAxis1Negative",
+          "signature": "AuxiliaryAxis1Negative: GamepadAxisChannel",
+          "signatureTokens": [
+            {
+              "text": "AuxiliaryAxis1Negative",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadAxisChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "AuxiliaryAxis1Positive",
+          "signature": "AuxiliaryAxis1Positive: GamepadAxisChannel",
+          "signatureTokens": [
+            {
+              "text": "AuxiliaryAxis1Positive",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadAxisChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "AuxiliaryAxis2Negative",
+          "signature": "AuxiliaryAxis2Negative: GamepadAxisChannel",
+          "signatureTokens": [
+            {
+              "text": "AuxiliaryAxis2Negative",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadAxisChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "AuxiliaryAxis2Positive",
+          "signature": "AuxiliaryAxis2Positive: GamepadAxisChannel",
+          "signatureTokens": [
+            {
+              "text": "AuxiliaryAxis2Positive",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadAxisChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "AuxiliaryAxis3Negative",
+          "signature": "AuxiliaryAxis3Negative: GamepadAxisChannel",
+          "signatureTokens": [
+            {
+              "text": "AuxiliaryAxis3Negative",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadAxisChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "AuxiliaryAxis3Positive",
+          "signature": "AuxiliaryAxis3Positive: GamepadAxisChannel",
+          "signatureTokens": [
+            {
+              "text": "AuxiliaryAxis3Positive",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadAxisChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "LeftStickDown",
+          "signature": "LeftStickDown: GamepadAxisChannel",
+          "signatureTokens": [
+            {
+              "text": "LeftStickDown",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadAxisChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "LeftStickLeft",
+          "signature": "LeftStickLeft: GamepadAxisChannel",
+          "signatureTokens": [
+            {
+              "text": "LeftStickLeft",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadAxisChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "LeftStickRight",
+          "signature": "LeftStickRight: GamepadAxisChannel",
+          "signatureTokens": [
+            {
+              "text": "LeftStickRight",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadAxisChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "LeftStickUp",
+          "signature": "LeftStickUp: GamepadAxisChannel",
+          "signatureTokens": [
+            {
+              "text": "LeftStickUp",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadAxisChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "LeftStickX",
+          "signature": "LeftStickX: GamepadAxisChannel",
+          "signatureTokens": [
+            {
+              "text": "LeftStickX",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadAxisChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Signed left-stick X axis (-1..1). Negative = left, positive = right."
+        },
+        {
+          "name": "LeftStickY",
+          "signature": "LeftStickY: GamepadAxisChannel",
+          "signatureTokens": [
+            {
+              "text": "LeftStickY",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadAxisChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Signed left-stick Y axis (-1..1). Negative = up (screen-up), positive = down."
+        },
+        {
+          "name": "RightStickDown",
+          "signature": "RightStickDown: GamepadAxisChannel",
+          "signatureTokens": [
+            {
+              "text": "RightStickDown",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadAxisChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "RightStickLeft",
+          "signature": "RightStickLeft: GamepadAxisChannel",
+          "signatureTokens": [
+            {
+              "text": "RightStickLeft",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadAxisChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "RightStickRight",
+          "signature": "RightStickRight: GamepadAxisChannel",
+          "signatureTokens": [
+            {
+              "text": "RightStickRight",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadAxisChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "RightStickUp",
+          "signature": "RightStickUp: GamepadAxisChannel",
+          "signatureTokens": [
+            {
+              "text": "RightStickUp",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadAxisChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "RightStickX",
+          "signature": "RightStickX: GamepadAxisChannel",
+          "signatureTokens": [
+            {
+              "text": "RightStickX",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadAxisChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Signed right-stick X axis (-1..1)."
+        },
+        {
+          "name": "RightStickY",
+          "signature": "RightStickY: GamepadAxisChannel",
+          "signatureTokens": [
+            {
+              "text": "RightStickY",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadAxisChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Signed right-stick Y axis (-1..1)."
+        },
+        {
+          "name": "Touchpad2X",
+          "signature": "Touchpad2X: GamepadAxisChannel",
+          "signatureTokens": [
+            {
+              "text": "Touchpad2X",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadAxisChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Secondary touchpad X (0..1). Steam Deck (right pad), other dual-touchpad hardware."
+        },
+        {
+          "name": "Touchpad2Y",
+          "signature": "Touchpad2Y: GamepadAxisChannel",
+          "signatureTokens": [
+            {
+              "text": "Touchpad2Y",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadAxisChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Secondary touchpad Y (0..1)."
+        },
+        {
+          "name": "TouchpadX",
+          "signature": "TouchpadX: GamepadAxisChannel",
+          "signatureTokens": [
+            {
+              "text": "TouchpadX",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadAxisChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Primary touchpad X (0..1, left to right). PlayStation, Steam Deck (left pad), Steam Controller."
+        },
+        {
+          "name": "TouchpadY",
+          "signature": "TouchpadY: GamepadAxisChannel",
+          "signatureTokens": [
+            {
+              "text": "TouchpadY",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadAxisChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Primary touchpad Y (0..1, top to bottom)."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/GamepadAxis.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/GamepadAxis.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/GamepadAxis.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/GamepadAxis.ts"
+}

@@ -1,0 +1,87 @@
+{
+  "title": "Loadable",
+  "description": "Any abstract or concrete constructor that can be used as an asset type token with Loader.load and related methods.",
+  "symbol": "Loadable",
+  "kind": "type",
+  "subsystem": "resources",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Any abstract or concrete constructor that can be used as an asset type token with Loader.load and related methods."
+      ],
+      "importLine": "import { Loadable } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "Loadable",
+          "signature": "(args: any[]) => unknown",
+          "signatureTokens": [
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "args",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "any",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/resources/Loader.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Loader.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/resources/Loader.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Loader.ts"
+}

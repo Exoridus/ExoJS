@@ -1,0 +1,99 @@
+{
+  "title": "TilePropertyKind",
+  "description": "Structured-value discriminant for TilePropertyValue.",
+  "symbol": "TilePropertyKind",
+  "kind": "type",
+  "subsystem": "tilemap",
+  "importPath": "@codexo/exojs-tilemap",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Structured-value discriminant for TilePropertyValue."
+      ],
+      "importLine": "import { TilePropertyKind } from '@codexo/exojs-tilemap'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "TilePropertyKind",
+          "signature": "typeof TilePropertyKind[keyof typeof TilePropertyKind]",
+          "signatureTokens": [
+            {
+              "text": "typeof",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TilePropertyKind",
+              "kind": "type"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "keyof",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "typeof",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TilePropertyKind",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-tilemap/src/types.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/types.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-tilemap/src/types.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/types.ts"
+}

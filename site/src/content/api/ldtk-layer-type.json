@@ -1,0 +1,87 @@
+{
+  "title": "LdtkLayerType",
+  "description": "Discriminant string for a layer instance type.",
+  "symbol": "LdtkLayerType",
+  "kind": "type",
+  "subsystem": "ldtk",
+  "importPath": "@codexo/exojs-ldtk",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Discriminant string for a layer instance type."
+      ],
+      "importLine": "import { LdtkLayerType } from '@codexo/exojs-ldtk'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "LdtkLayerType",
+          "signature": "\"Tiles\" | \"IntGrid\" | \"Entities\" | \"AutoLayer\"",
+          "signatureTokens": [
+            {
+              "text": "\"Tiles\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"IntGrid\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"Entities\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"AutoLayer\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-ldtk/src/LdtkData.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-ldtk/src/LdtkData.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-ldtk/src/LdtkData.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-ldtk/src/LdtkData.ts"
+}

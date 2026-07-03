@@ -2,11 +2,11 @@
 /**
  * Callout — a labelled aside for the eight Guide Companion states.
  *
- * Each state pairs the painterly companion sprite (a trailing-edge badge, sliced
- * and chroma-keyed from the 8-state sheet) with a state-coloured icon chip +
- * label. The icon and label carry the meaning, so the callout reads for
- * colour-blind readers and in high-contrast modes; the sprite and its
- * state-coloured screen-glow are enrichment.
+ * The painterly companion sprite sits on the leading (left) edge as the anchor
+ * — it faces right into the text and carries the state through its face glyph +
+ * state-coloured screen glow. A state-coloured border + title reinforce it; the
+ * title and body text carry the meaning for colour-blind / high-contrast modes,
+ * so the callout never relies on colour alone.
  *
  * Usage in MDX:
  *   import Callout from '../../../components/Callout.astro';
@@ -20,7 +20,8 @@
  *   </Callout>
  *
  * Colour exclusivity: amber=warning, mint=success, gray=invalid, red=broken;
- * info/hint/pitfall/debug share the companion cyan and are told apart by icon.
+ * info/hint/pitfall/debug share the companion cyan and are told apart by the
+ * companion's face glyph.
  */
 
 type CalloutType = 'info' | 'hint' | 'warning' | 'pitfall' | 'success' | 'debug' | 'invalid' | 'broken';
@@ -29,6 +30,8 @@ interface Props {
     type?: CalloutType;
     /** Optional heading. Falls back to the state's default label. */
     title?: string;
+    /** Which edge the companion sits on. Alternate down a page to keep it lively. */
+    side?: 'left' | 'right';
 }
 
 const LABELS: Record<CalloutType, string> = {
@@ -42,101 +45,101 @@ const LABELS: Record<CalloutType, string> = {
     broken: 'Runtime error',
 };
 
-// Lucide-style line icons (24 viewBox, currentColor), one per state.
-const ICONS: Record<CalloutType, string> = {
-    info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 8h.01"/>',
-    hint: '<path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.3 1 2.5h6c0-1.2.3-1.8 1-2.5A6 6 0 0 0 12 3Z"/>',
-    warning: '<path d="m10.3 4 -8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3l-8-14a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
-    pitfall: '<circle cx="12" cy="12" r="9"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>',
-    success: '<circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/>',
-    debug: '<path d="m15 8 4 4-4 4"/><path d="m9 8-4 4 4 4"/>',
-    invalid: '<circle cx="12" cy="12" r="9"/><path d="m5.6 5.6 12.8 12.8"/>',
-    broken: '<circle cx="12" cy="12" r="9"/><path d="m14.5 9.5-5 5"/><path d="m9.5 9.5 5 5"/>',
-};
-
-const { type = 'info', title } = Astro.props;
+const { type = 'info', title, side = 'left' } = Astro.props;
 const heading = title ?? LABELS[type];
 const base = import.meta.env.BASE_URL;
+// On the right, the companion is flipped to face left. Pitfall's `?` speech
+// bubble mustn't mirror, so it swaps to a pre-flipped sprite instead of a CSS flip.
+const spriteFile = side === 'right' && type === 'pitfall' ? 'pitfall-flipped' : type;
 ---
 
-<aside class="callout" data-callout={type} role="note">
-    <div class="callout__main">
-        <p class="callout__head">
-            <span class="callout__icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" set:html={ICONS[type]}></svg>
-            </span>
-            <span class="callout__label">{heading}</span>
-        </p>
-        <div class="callout__body">
-            <slot />
-        </div>
-    </div>
+<aside class="callout" data-callout={type} data-side={side} role="note">
     <img
         class="callout__companion"
-        src={`${base}brand/companion/${type}.webp`}
+        src={`${base}brand/companion/${spriteFile}.webp`}
         alt=""
         aria-hidden="true"
-        width="168"
-        height="138"
+        width="138"
         loading="lazy"
         decoding="async"
     />
+    <div class="callout__main">
+        <p class="callout__label">{heading}</p>
+        <div class="callout__body"><slot /></div>
+    </div>
 </aside>
 
 <style>
     .callout {
-        /* Default state = info (companion cyan). Each state below overrides the
-           accent; the soft background is always a faint tint of that accent.
-           State colours are fixed (not derived from --accent) so they stay
-           stable across the user-selectable accent themes. */
-        --callout-accent: oklch(80% 0.1 195);
-        --callout-bg: color-mix(in oklab, var(--callout-accent), transparent 92%);
+        /* State colour (fixed hues — not the user-selectable --accent — so they
+           stay stable across accent themes and keep carrying meaning). */
+        --ca: oklch(80% 0.1 195); /* companion cyan #52D9D4 */
         display: flex;
         align-items: stretch;
-        gap: var(--s-3);
+        gap: var(--s-4);
+        min-height: 118px;
         margin: var(--s-5) 0;
-        padding: var(--s-3) var(--s-4);
-        border: 1px solid var(--line-soft);
-        border-left: 3px solid var(--callout-accent);
-        border-radius: var(--r-3);
-        background: var(--callout-bg);
-        /* The companion is an upper-body crop seated on the bottom edge; clip
-           whatever extends past the rounded box so it reads as rising from it. */
-        overflow: hidden;
+        padding: 17px 22px;
+        border: 1.5px solid color-mix(in oklab, var(--ca), transparent 46%);
+        border-radius: var(--r-4);
+        background: color-mix(in oklab, var(--ca), var(--bg-elevated) 91%);
+        /* companion sits on the bottom edge and rises past the top; overflow
+           visible keeps its head + props (bulb, sparks) uncropped. */
+        overflow: visible;
     }
+
+    /* Companion is the leading anchor: left, native orientation (faces right,
+       into the text), cropped at the belly so the head + props read large. */
+    .callout__companion {
+        flex: 0 0 auto;
+        align-self: flex-end;
+        width: 138px;
+        height: auto;
+        margin: 0 0 -18px 0;
+        object-fit: contain;
+        object-position: bottom;
+        filter: drop-shadow(0 5px 15px color-mix(in oklab, var(--ca), transparent 52%));
+        -webkit-user-select: none;
+        user-select: none;
+        pointer-events: none;
+    }
+
+    /* side="right": companion moves to the trailing edge and flips to face left
+       into the text. Pitfall keeps its transform none — it uses a pre-flipped
+       sprite (its `?` bubble must not mirror). */
+    .callout[data-side='right'] .callout__companion {
+        order: 1;
+        transform: scaleX(-1);
+    }
+
+    .callout[data-side='right'][data-callout='pitfall'] .callout__companion {
+        transform: none;
+    }
+
+    /* Broken uses the full seated (powered-off) sprite instead of a belly crop,
+       so its posture reads; it keeps the same width + seating as the others. */
 
     .callout__main {
         flex: 1 1 auto;
         min-width: 0;
-        align-self: center;
-    }
-
-    .callout__head {
         display: flex;
-        align-items: center;
-        gap: var(--s-2);
-        margin: 0 0 var(--s-2);
-        font-size: 13px;
+        flex-direction: column;
+        justify-content: flex-start;
+        padding-top: 3px;
+    }
+
+    .callout__label {
+        margin: 0 0 8px;
+        font-size: 18.5px;
         font-weight: 600;
-        letter-spacing: 0.02em;
-        color: var(--callout-accent);
+        letter-spacing: -0.01em;
+        color: var(--ca);
     }
 
-    .callout__icon {
-        display: inline-grid;
-        place-items: center;
-        flex: 0 0 auto;
-        width: 26px;
-        height: 26px;
-        border-radius: var(--r-pill);
-        background: color-mix(in oklab, var(--callout-accent), transparent 84%);
-        color: var(--callout-accent);
-    }
-
-    .callout__icon svg {
-        width: 16px;
-        height: 16px;
-        display: block;
+    .callout__body {
+        color: var(--fg-muted);
+        font-size: 14.5px;
+        line-height: 1.6;
     }
 
     .callout__body :global(p) {
@@ -151,58 +154,31 @@ const base = import.meta.env.BASE_URL;
         margin-bottom: 0;
     }
 
-    /* Trailing-edge companion badge. The sprite is delivered transparent, so it
-       sits on both themes with no card behind it; a state-coloured glow stands
-       in for the screen-glow that carries meaning at small sizes. */
-    .callout__companion {
-        flex: 0 0 auto;
-        align-self: flex-end;
-        width: 168px;
-        height: auto;
-        /* Reach the right + bottom edges; overflow:hidden crops the cut base so
-           the companion sits in the callout. scaleX flips it to face the text. */
-        margin: 0 calc(-1 * var(--s-4)) calc(-1 * var(--s-3));
-        object-fit: contain;
-        object-position: bottom;
-        /* Flip to face the text. pitfall/debug carry an asymmetric face glyph
-           (? and [ ]) that would mirror, so they keep their native orientation. */
-        transform: scaleX(-1);
-        filter: drop-shadow(0 0 16px color-mix(in oklab, var(--callout-accent), transparent 50%));
-    }
-
-    .callout[data-callout='pitfall'] .callout__companion,
-    .callout[data-callout='debug'] .callout__companion {
-        transform: none;
-        /* native orientation seats props on the right, so nudge it to that edge */
-        margin-right: calc(-1 * var(--s-2));
-    }
-
-    .callout[data-callout='info'],
-    .callout[data-callout='hint'],
-    .callout[data-callout='pitfall'],
-    .callout[data-callout='debug'] {
-        --callout-accent: oklch(80% 0.1 195); /* companion cyan #52D9D4 */
-    }
-
+    /* State colours. */
     .callout[data-callout='warning'] {
-        --callout-accent: oklch(78% 0.14 75); /* amber #F2A93B */
+        --ca: oklch(78% 0.14 75); /* amber #F2A93B */
     }
 
     .callout[data-callout='success'] {
-        --callout-accent: oklch(78% 0.12 162); /* mint-green #62D29A */
+        --ca: oklch(78% 0.12 162); /* mint-green #62D29A */
     }
 
     .callout[data-callout='invalid'] {
-        --callout-accent: oklch(70% 0.01 195); /* neutral gray #9AA1A1 */
+        --ca: oklch(70% 0.02 210); /* neutral gray #9AA1A1 */
     }
 
     .callout[data-callout='broken'] {
-        --callout-accent: oklch(62% 0.2 27); /* red #E0463B */
+        --ca: oklch(64% 0.19 27); /* red #E0463B */
     }
 
     @media (max-width: 560px) {
+        .callout {
+            gap: var(--s-3);
+            padding: 14px 16px 14px 10px;
+        }
+
         .callout__companion {
-            width: 116px;
+            width: 104px;
         }
     }
 </style>

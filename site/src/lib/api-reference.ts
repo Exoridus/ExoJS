@@ -2,7 +2,7 @@ import type { CollectionEntry } from 'astro:content';
 
 export type ApiEntry = CollectionEntry<'api'>;
 
-export const API_SUBSYSTEM_ORDER = ['core', 'rendering', 'input', 'audio', 'animation', 'resources', 'math', 'debug', 'particles', 'tilemap', 'tiled', 'physics', 'aseprite', 'ldtk'] as const;
+export const API_SUBSYSTEM_ORDER = ['core', 'rendering', 'ui', 'input', 'audio', 'animation', 'resources', 'math', 'debug', 'particles', 'tilemap', 'tiled', 'physics', 'aseprite', 'ldtk'] as const;
 
 export type ApiSubsystem = (typeof API_SUBSYSTEM_ORDER)[number];
 
@@ -14,6 +14,10 @@ export const API_SUBSYSTEM_META: Record<ApiSubsystem, { label: string; descripti
     rendering: {
         label: 'Drawing / Rendering',
         description: 'Drawables, renderer backends, views, and filter systems.',
+    },
+    ui: {
+        label: 'UI',
+        description: 'Widgets, layout, and interface primitives.',
     },
     input: {
         label: 'Input',
@@ -66,36 +70,6 @@ export const API_SUBSYSTEM_META: Record<ApiSubsystem, { label: string; descripti
 };
 
 export const FEATURED_SYMBOLS = ['application', 'scene', 'sprite', 'texture'] as const;
-
-export type MemberCounts = {
-    constructors: number;
-    methods: number;
-    properties: number;
-    events: number;
-};
-
-export const parseMemberCounts = (body: string): MemberCounts => {
-    let section = '';
-    const counts: MemberCounts = { constructors: 0, methods: 0, properties: 0, events: 0 };
-
-    for (const rawLine of body.split('\n')) {
-        const line = rawLine.trim();
-        const headingMatch = /^##\s+(.+)$/.exec(line);
-        if (headingMatch) {
-            section = headingMatch[1].toLowerCase();
-            continue;
-        }
-
-        if (!line.startsWith('- `')) continue;
-
-        if (section === 'constructors') counts.constructors += 1;
-        else if (section === 'methods') counts.methods += 1;
-        else if (section === 'properties') counts.properties += 1;
-        else if (section === 'events') counts.events += 1;
-    }
-
-    return counts;
-};
 
 export const compactDescription = (value: string, maxLength = 140): string => {
     const normalized = value.replace(/\s+/g, ' ').trim();

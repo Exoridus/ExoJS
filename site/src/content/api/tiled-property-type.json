@@ -1,0 +1,119 @@
+{
+  "title": "TiledPropertyType",
+  "description": "The `type` discriminant of a Tiled custom property.",
+  "symbol": "TiledPropertyType",
+  "kind": "type",
+  "subsystem": "tiled",
+  "importPath": "@codexo/exojs-tiled",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "The `type` discriminant of a Tiled custom property."
+      ],
+      "importLine": "import { TiledPropertyType } from '@codexo/exojs-tiled'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "TiledPropertyType",
+          "signature": "\"string\" | \"int\" | \"float\" | \"bool\" | \"color\" | \"file\" | \"object\" | \"class\"",
+          "signatureTokens": [
+            {
+              "text": "\"string\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"int\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"float\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"bool\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"color\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"file\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"object\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"class\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-tiled/src/data.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tiled/src/data.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-tiled/src/data.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tiled/src/data.ts"
+}

@@ -1,0 +1,116 @@
+{
+  "title": "BatchValue",
+  "description": "Accepted value types in the homogeneous batch load API. Either a raw source string or a flat config object containing at least `source` plus any type-specific extra fields.",
+  "symbol": "BatchValue",
+  "kind": "type",
+  "subsystem": "resources",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Accepted value types in the homogeneous batch load API.",
+        "Either a raw source string or a flat config object containing at least `source` plus any type-specific extra fields."
+      ],
+      "importLine": "import { BatchValue } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "BatchValue",
+          "signature": "string | { source: string } & Record<string, unknown>",
+          "signatureTokens": [
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            },
+            {
+              "text": " & ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/resources/Loader.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Loader.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/resources/Loader.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Loader.ts"
+}

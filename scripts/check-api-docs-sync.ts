@@ -31,7 +31,7 @@ function collectFiles(dir: string): string[] {
   const out: string[] = [];
   if (!fs.existsSync(dir)) return out;
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (entry.isFile() && entry.name.endsWith('.mdx')) {
+    if (entry.isFile() && entry.name.endsWith('.json')) {
       out.push(entry.name);
     }
   }

@@ -1,0 +1,75 @@
+{
+  "title": "DrawBatchOptions",
+  "description": "Options for RenderingContext.drawBatch.",
+  "symbol": "DrawBatchOptions",
+  "kind": "interface",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 1,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Options for RenderingContext.drawBatch."
+      ],
+      "importLine": "import { DrawBatchOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "view",
+          "signature": "view?: View",
+          "signatureTokens": [
+            {
+              "text": "view",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "View",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Override the view used for this draw. Defaults to the context's active camera."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/RenderingContext.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/RenderingContext.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/RenderingContext.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/RenderingContext.ts"
+}

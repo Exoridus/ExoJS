@@ -1,0 +1,1852 @@
+{
+  "title": "TileMap",
+  "description": "A generic, format-independent tile map. Owns a finite grid of TileLayers and a shared set of TileSets. Tile data is stored in compact chunked arrays — no per-tile heap objects. The map does NOT own tileset textures (those are Loader-owned) and does NOT own SceneNode children — see import('./TileMapNode').TileMapNode, which owns those. Multiple tilesets are supported: each cell stores a packed tileset index and local tile ID, so different tilesets may have different tile dimensions.",
+  "symbol": "TileMap",
+  "kind": "class",
+  "subsystem": "tilemap",
+  "importPath": "@codexo/exojs-tilemap",
+  "tier": "advanced",
+  "memberCount": 40,
+  "counts": {
+    "constructors": 1,
+    "methods": 20,
+    "properties": 19,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A generic, format-independent tile map.",
+        "Owns a finite grid of TileLayers and a shared set of TileSets. Tile data is stored in compact chunked arrays — no per-tile heap objects.",
+        "The map does NOT own tileset textures (those are Loader-owned) and does NOT own SceneNode children — see import('./TileMapNode').TileMapNode, which owns those.",
+        "Multiple tilesets are supported: each cell stores a packed tileset index and local tile ID, so different tilesets may have different tile dimensions."
+      ],
+      "importLine": "import { TileMap } from '@codexo/exojs-tilemap'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(options: TileMapOptions): TileMap",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileMapOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileMap",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "options",
+              "type": "TileMapOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "TileMap",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "addLayer",
+          "signature": "addLayer(layer: TileLayer): void",
+          "signatureTokens": [
+            {
+              "text": "addLayer",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "layer",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileLayer",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "layer",
+              "type": "TileLayer",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Add a layer after construction."
+        },
+        {
+          "name": "addObjectLayer",
+          "signature": "addObjectLayer(layer: ObjectLayer): void",
+          "signatureTokens": [
+            {
+              "text": "addObjectLayer",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "layer",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ObjectLayer",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "layer",
+              "type": "ObjectLayer",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Add an object layer after construction."
+        },
+        {
+          "name": "addTileset",
+          "signature": "addTileset(tileset: TileSet): void",
+          "signatureTokens": [
+            {
+              "text": "addTileset",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "tileset",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileSet",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "tileset",
+              "type": "TileSet",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Add a tileset. Tilesets must have unique names."
+        },
+        {
+          "name": "clearTileAt",
+          "signature": "clearTileAt(layerId: number, tx: number, ty: number): void",
+          "signatureTokens": [
+            {
+              "text": "clearTileAt",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "layerId",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "tx",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ty",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "layerId",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "tx",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "ty",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Clear a tile on a given layer at tile coordinates. Convenience for map.getTileLayerById(id)?.clearTileAt(tx, ty)."
+        },
+        {
+          "name": "createView",
+          "signature": "createView(options?: TileMapViewOptions): TileMapView",
+          "signatureTokens": [
+            {
+              "text": "createView",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileMapViewOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileMapView",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "options",
+              "type": "TileMapViewOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "TileMapView",
+          "description": "Create a new TileMapView that groups this map's layers into independently placeable band / layer scene nodes for interleaving application actors between tile layers. Each call returns a fresh, independent view — the map does **not** cache a single global view, so multiple coexisting views of the same map are allowed. The view references this map but never owns it: destroying the view frees only its generated layer/band nodes — never the map, its layers, tileset textures, or any application actors."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Destroy the map and all owned layers and chunk storage. Is idempotent. Does NOT destroy tileset textures (Loader-owned) or any SceneNodes (those do not exist yet in this slice)."
+        },
+        {
+          "name": "getImageLayer",
+          "signature": "getImageLayer(name: string): ImageLayer | undefined",
+          "signatureTokens": [
+            {
+              "text": "getImageLayer",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "name",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ImageLayer",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "ImageLayer | undefined",
+          "description": "Get an image layer by name (first match in insertion order), or undefined."
+        },
+        {
+          "name": "getImageLayerById",
+          "signature": "getImageLayerById(id: number): ImageLayer | undefined",
+          "signatureTokens": [
+            {
+              "text": "getImageLayerById",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "id",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ImageLayer",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "id",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "ImageLayer | undefined",
+          "description": "Get an image layer by ID."
+        },
+        {
+          "name": "getObjectLayer",
+          "signature": "getObjectLayer(name: string): ObjectLayer<S> | undefined",
+          "signatureTokens": [
+            {
+              "text": "getObjectLayer",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "name",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ObjectLayer",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "S",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "ObjectLayer<S> | undefined",
+          "description": "Get an object layer by name (first match in insertion order), or undefined. Supply an ObjectSchema type argument S to obtain a typed view of the layer — getObjectLayer<LevelObjects>('Entities') returns an ObjectLayer<LevelObjects> whose ObjectLayer.byType / ObjectLayer.where accessors narrow properties. The schema is a static developer promise only; no runtime validation is performed and the call remains fully back-compatible when omitted."
+        },
+        {
+          "name": "getObjectLayerById",
+          "signature": "getObjectLayerById(id: number): ObjectLayer<S> | undefined",
+          "signatureTokens": [
+            {
+              "text": "getObjectLayerById",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "id",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ObjectLayer",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "S",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "id",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "ObjectLayer<S> | undefined",
+          "description": "Get an object layer by ID. Supply an ObjectSchema type argument S to obtain a typed view of the layer, as with getObjectLayer."
+        },
+        {
+          "name": "getTileAt",
+          "signature": "getTileAt(layerId: number, tx: number, ty: number): ResolvedTile | null",
+          "signatureTokens": [
+            {
+              "text": "getTileAt",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "layerId",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "tx",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ty",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ResolvedTile",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "layerId",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "tx",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "ty",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "ResolvedTile | null",
+          "description": "Get a resolved tile from a given layer at tile coordinates. Convenience for map.getTileLayerById(id)?.getTileAt(tx, ty). Returns null for an empty cell, out-of-bounds, or missing layer."
+        },
+        {
+          "name": "getTileLayer",
+          "signature": "getTileLayer(name: string): TileLayer | undefined",
+          "signatureTokens": [
+            {
+              "text": "getTileLayer",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "name",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileLayer",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "TileLayer | undefined",
+          "description": "Get a tile layer by name. Returns the first match in insertion order."
+        },
+        {
+          "name": "getTileLayerById",
+          "signature": "getTileLayerById(id: number): TileLayer | undefined",
+          "signatureTokens": [
+            {
+              "text": "getTileLayerById",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "id",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileLayer",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "id",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "TileLayer | undefined",
+          "description": "Get a tile layer by ID."
+        },
+        {
+          "name": "getTileset",
+          "signature": "getTileset(name: string): TileSet | undefined",
+          "signatureTokens": [
+            {
+              "text": "getTileset",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "name",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileSet",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "TileSet | undefined",
+          "description": "Get a tileset by name, or undefined."
+        },
+        {
+          "name": "pixelToTile",
+          "signature": "pixelToTile(px: number, py: number): { tx: number; ty: number }",
+          "signatureTokens": [
+            {
+              "text": "pixelToTile",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "px",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "py",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "tx",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ty",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "px",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "py",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "{ tx: number; ty: number }",
+          "description": "Convert a pixel position in map-local space to the tile coordinate that contains it. Uses floor. May return coordinates outside map bounds."
+        },
+        {
+          "name": "removeImageLayer",
+          "signature": "removeImageLayer(id: number): boolean",
+          "signatureTokens": [
+            {
+              "text": "removeImageLayer",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "id",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "id",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Remove an image layer by ID."
+        },
+        {
+          "name": "removeLayer",
+          "signature": "removeLayer(id: number): boolean",
+          "signatureTokens": [
+            {
+              "text": "removeLayer",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "id",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "id",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Remove a layer by ID. The layer is destroyed."
+        },
+        {
+          "name": "removeObjectLayer",
+          "signature": "removeObjectLayer(id: number): boolean",
+          "signatureTokens": [
+            {
+              "text": "removeObjectLayer",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "id",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "id",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Remove an object layer by ID."
+        },
+        {
+          "name": "setTileAt",
+          "signature": "setTileAt(layerId: number, tx: number, ty: number, tile: ResolvedTile): void",
+          "signatureTokens": [
+            {
+              "text": "setTileAt",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "layerId",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "tx",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ty",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "tile",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ResolvedTile",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "layerId",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "tx",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "ty",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "tile",
+              "type": "ResolvedTile",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Set a tile on a given layer at tile coordinates. Convenience for map.getTileLayerById(id)?.setTileAt(tx, ty, tile)."
+        },
+        {
+          "name": "tileToPixel",
+          "signature": "tileToPixel(tx: number, ty: number): { x: number; y: number }",
+          "signatureTokens": [
+            {
+              "text": "tileToPixel",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "tx",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ty",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "tx",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "ty",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "{ x: number; y: number }",
+          "description": "Convert a tile coordinate to the pixel position of its top-left corner in map-local space (ignoring layer offsets)."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "backgroundColor",
+          "signature": "backgroundColor: number | null",
+          "signatureTokens": [
+            {
+              "text": "backgroundColor",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Map background colour as 0xRRGGBB, or null. Informational."
+        },
+        {
+          "name": "chunkHeight",
+          "signature": "chunkHeight: number",
+          "signatureTokens": [
+            {
+              "text": "chunkHeight",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Default chunk height for layers."
+        },
+        {
+          "name": "chunkWidth",
+          "signature": "chunkWidth: number",
+          "signatureTokens": [
+            {
+              "text": "chunkWidth",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Default chunk width for layers."
+        },
+        {
+          "name": "class",
+          "signature": "class: string",
+          "signatureTokens": [
+            {
+              "text": "class",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Map class/type string (Tiled class; may be empty)."
+        },
+        {
+          "name": "height",
+          "signature": "height: number",
+          "signatureTokens": [
+            {
+              "text": "height",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Map height in tiles."
+        },
+        {
+          "name": "name",
+          "signature": "name: string",
+          "signatureTokens": [
+            {
+              "text": "name",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Map name (debug)."
+        },
+        {
+          "name": "properties",
+          "signature": "properties: TileProperties",
+          "signatureTokens": [
+            {
+              "text": "properties",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileProperties",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Map-level properties (immutable)."
+        },
+        {
+          "name": "renderOrder",
+          "signature": "renderOrder: string",
+          "signatureTokens": [
+            {
+              "text": "renderOrder",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Tile draw order (Tiled renderorder). Informational."
+        },
+        {
+          "name": "tileHeight",
+          "signature": "tileHeight: number",
+          "signatureTokens": [
+            {
+              "text": "tileHeight",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Tile height in pixels."
+        },
+        {
+          "name": "tileWidth",
+          "signature": "tileWidth: number",
+          "signatureTokens": [
+            {
+              "text": "tileWidth",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Tile width in pixels."
+        },
+        {
+          "name": "width",
+          "signature": "width: number",
+          "signatureTokens": [
+            {
+              "text": "width",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Map width in tiles."
+        },
+        {
+          "name": "destroyed",
+          "signature": "destroyed: boolean",
+          "signatureTokens": [
+            {
+              "text": "destroyed",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether the map has been destroyed."
+        },
+        {
+          "name": "imageLayers",
+          "signature": "imageLayers: readonly ImageLayer[]",
+          "signatureTokens": [
+            {
+              "text": "imageLayers",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ImageLayer",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Immutable snapshot of image layers (insertion order)."
+        },
+        {
+          "name": "layers",
+          "signature": "layers: readonly TileLayer[]",
+          "signatureTokens": [
+            {
+              "text": "layers",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileLayer",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Immutable snapshot of layers (ordered)."
+        },
+        {
+          "name": "objectLayers",
+          "signature": "objectLayers: readonly ObjectLayer<ObjectSchema>[]",
+          "signatureTokens": [
+            {
+              "text": "objectLayers",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ObjectLayer",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ObjectSchema",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Immutable snapshot of object layers (insertion order)."
+        },
+        {
+          "name": "pixelHeight",
+          "signature": "pixelHeight: number",
+          "signatureTokens": [
+            {
+              "text": "pixelHeight",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Pixel height."
+        },
+        {
+          "name": "pixelWidth",
+          "signature": "pixelWidth: number",
+          "signatureTokens": [
+            {
+              "text": "pixelWidth",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Pixel width."
+        },
+        {
+          "name": "revision",
+          "signature": "revision: number",
+          "signatureTokens": [
+            {
+              "text": "revision",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Monotonic map revision counter. Increments on structural changes only (add/remove layer, add tileset). Cell mutations are tracked per-chunk and per-layer; the renderer reads chunk-level revisions directly."
+        },
+        {
+          "name": "tilesets",
+          "signature": "tilesets: readonly TileSet[]",
+          "signatureTokens": [
+            {
+              "text": "tilesets",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileSet",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Immutable list of tilesets available to this map."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-tilemap/src/TileMap.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/TileMap.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-tilemap/src/TileMap.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/TileMap.ts"
+}

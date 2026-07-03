@@ -1,0 +1,143 @@
+{
+  "title": "FontFamily",
+  "description": "A CSS font-family string. When FontRegistry has entries the type narrows to registered names ∪ arbitrary strings (for unregistered fonts); without registry entries it falls back to plain `string`.",
+  "symbol": "FontFamily",
+  "kind": "type",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A CSS font-family string. When FontRegistry has entries the type narrows to registered names ∪ arbitrary strings (for unregistered fonts); without registry entries it falls back to plain `string`."
+      ],
+      "importLine": "import { FontFamily } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "FontFamily",
+          "signature": "[keyof FontRegistry] extends [never] ? string : keyof FontRegistry | string & object",
+          "signatureTokens": [
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "keyof",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "FontRegistry",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "extends",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "never",
+              "kind": "keyword"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": " ? ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": " : ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "keyof",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "FontRegistry",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": " & ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "object",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/text/TextStyle.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/TextStyle.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/text/TextStyle.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/text/TextStyle.ts"
+}

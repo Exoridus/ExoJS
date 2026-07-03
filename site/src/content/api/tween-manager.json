@@ -1,0 +1,542 @@
+{
+  "title": "TweenManager",
+  "description": "Owns and advances a collection of Tween instances, driving them once per frame from Application.update. Created tweens are tracked automatically; manually constructed tweens can be opted in via TweenManager.add. Custom updatables (such as TweenSequencer) can be registered via TweenManager.addTicker so they share the same frame tick. Update iteration uses a snapshot so callbacks may freely add or remove tweens during the same frame without corrupting the loop. Completed and stopped tweens are evicted automatically.",
+  "symbol": "TweenManager",
+  "kind": "class",
+  "subsystem": "animation",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 11,
+  "counts": {
+    "constructors": 1,
+    "methods": 10,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Owns and advances a collection of Tween instances, driving them once per frame from Application.update. Created tweens are tracked automatically; manually constructed tweens can be opted in via TweenManager.add.",
+        "Custom updatables (such as TweenSequencer) can be registered via TweenManager.addTicker so they share the same frame tick.",
+        "Update iteration uses a snapshot so callbacks may freely add or remove tweens during the same frame without corrupting the loop. Completed and stopped tweens are evicted automatically."
+      ],
+      "importLine": "import { TweenManager } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(): TweenManager",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TweenManager",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "TweenManager",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "add",
+          "signature": "add(tween: Tween): this",
+          "signatureTokens": [
+            {
+              "text": "add",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "tween",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Tween",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "tween",
+              "type": "Tween",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Explicitly add a stand-alone Tween (created via new Tween(target)) to this manager so it participates in the update loop."
+        },
+        {
+          "name": "addTicker",
+          "signature": "addTicker(ticker: Ticker): this",
+          "signatureTokens": [
+            {
+              "text": "addTicker",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ticker",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Ticker",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "ticker",
+              "type": "Ticker",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Register a custom updatable so it is driven each frame alongside tweens. Idempotent — registering the same ticker twice is a no-op. Used internally by TweenSequencer."
+        },
+        {
+          "name": "clear",
+          "signature": "clear(): this",
+          "signatureTokens": [
+            {
+              "text": "clear",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "this",
+          "description": "Remove all tweens and tickers immediately. No callbacks fire. The tweens' states are left as-is; they are simply evicted from the list."
+        },
+        {
+          "name": "create",
+          "signature": "create(target: T): Tween<T>",
+          "signatureTokens": [
+            {
+              "text": "create",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "target",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Tween",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "target",
+              "type": "T",
+              "optional": false
+            }
+          ],
+          "returnType": "Tween<T>",
+          "description": "Create a new Tween targeting target, register it with this manager, and return it. Call .to(...).start() on the result to begin animating."
+        },
+        {
+          "name": "createSequencer",
+          "signature": "createSequencer(): TweenSequencer",
+          "signatureTokens": [
+            {
+              "text": "createSequencer",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TweenSequencer",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "TweenSequencer",
+          "description": "Create a new TweenSequencer bound to this manager and return it. The sequencer registers itself automatically when TweenSequencer.start is called, so no manual wiring is needed."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Tear down the manager. Clears tweens and tickers and makes subsequent updates no-ops."
+        },
+        {
+          "name": "remove",
+          "signature": "remove(tween: Tween): this",
+          "signatureTokens": [
+            {
+              "text": "remove",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "tween",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Tween",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "tween",
+              "type": "Tween",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Remove a tween from the manager. Called automatically on stop/complete."
+        },
+        {
+          "name": "removeTicker",
+          "signature": "removeTicker(ticker: Ticker): this",
+          "signatureTokens": [
+            {
+              "text": "removeTicker",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ticker",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Ticker",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "ticker",
+              "type": "Ticker",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Remove a previously registered ticker. Called automatically by TweenSequencer when it completes or is stopped."
+        },
+        {
+          "name": "sequence",
+          "signature": "sequence(tweens: readonly Tween<object>[]): Tween",
+          "signatureTokens": [
+            {
+              "text": "sequence",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "tweens",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Tween",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "object",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Tween",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "tweens",
+              "type": "readonly Tween<object>[]",
+              "optional": false
+            }
+          ],
+          "returnType": "Tween",
+          "description": "Chain tweens in sequence: each tween starts automatically when the previous one completes. Returns the first tween; call .start() on it to kick off the whole sequence. All tweens are registered with this manager (idempotent — already-added tweens are not double-added)."
+        },
+        {
+          "name": "update",
+          "signature": "update(delta: Time): void",
+          "signatureTokens": [
+            {
+              "text": "update",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "delta",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Time",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "delta",
+              "type": "Time",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Advance all active tweens by the frame delta (read as seconds), then advance all registered tickers. Ticked once per frame via Application.systems. Uses snapshots so callbacks that add or remove tweens/tickers do not corrupt mid-iteration."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/animation/TweenManager.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/animation/TweenManager.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/animation/TweenManager.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/animation/TweenManager.ts"
+}

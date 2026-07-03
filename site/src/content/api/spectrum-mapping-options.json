@@ -1,0 +1,125 @@
+{
+  "title": "SpectrumMappingOptions",
+  "description": "Mapping options for AudioAnalyser.getSpectrumMel and AudioAnalyser.getSpectrumLog.",
+  "symbol": "SpectrumMappingOptions",
+  "kind": "interface",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs-audio-fx",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Mapping options for AudioAnalyser.getSpectrumMel and AudioAnalyser.getSpectrumLog."
+      ],
+      "importLine": "import { SpectrumMappingOptions } from '@codexo/exojs-audio-fx'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "bands",
+          "signature": "bands?: number",
+          "signatureTokens": [
+            {
+              "text": "bands",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Number of output bands. Default 32."
+        },
+        {
+          "name": "fMax",
+          "signature": "fMax?: number",
+          "signatureTokens": [
+            {
+              "text": "fMax",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Upper frequency bound in Hz. Default 20000 (clamped to nyquist at runtime)."
+        },
+        {
+          "name": "fMin",
+          "signature": "fMin?: number",
+          "signatureTokens": [
+            {
+              "text": "fMin",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Lower frequency bound in Hz. Default 20."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-audio-fx/src/AudioAnalyser.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/AudioAnalyser.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-audio-fx/src/AudioAnalyser.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/AudioAnalyser.ts"
+}

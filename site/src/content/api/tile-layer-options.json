@@ -1,0 +1,492 @@
+{
+  "title": "TileLayerOptions",
+  "description": "Options for constructing a TileLayer.",
+  "symbol": "TileLayerOptions",
+  "kind": "interface",
+  "subsystem": "tilemap",
+  "importPath": "@codexo/exojs-tilemap",
+  "tier": "advanced",
+  "memberCount": 18,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 18,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Options for constructing a TileLayer."
+      ],
+      "importLine": "import { TileLayerOptions } from '@codexo/exojs-tilemap'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "chunkHeight",
+          "signature": "chunkHeight?: number",
+          "signatureTokens": [
+            {
+              "text": "chunkHeight",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Chunk height in tiles (default 32)."
+        },
+        {
+          "name": "chunkWidth",
+          "signature": "chunkWidth?: number",
+          "signatureTokens": [
+            {
+              "text": "chunkWidth",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Chunk width in tiles (default 32)."
+        },
+        {
+          "name": "class",
+          "signature": "class?: string",
+          "signatureTokens": [
+            {
+              "text": "class",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Layer class/type string (Tiled class). Defaults to ''."
+        },
+        {
+          "name": "height",
+          "signature": "height: number",
+          "signatureTokens": [
+            {
+              "text": "height",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Layer height in tiles."
+        },
+        {
+          "name": "id",
+          "signature": "id: number",
+          "signatureTokens": [
+            {
+              "text": "id",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Stable layer ID (unique within the map)."
+        },
+        {
+          "name": "name",
+          "signature": "name: string",
+          "signatureTokens": [
+            {
+              "text": "name",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Display name (need not be unique)."
+        },
+        {
+          "name": "offsetX",
+          "signature": "offsetX?: number",
+          "signatureTokens": [
+            {
+              "text": "offsetX",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Layer pixel offset X. Default 0."
+        },
+        {
+          "name": "offsetY",
+          "signature": "offsetY?: number",
+          "signatureTokens": [
+            {
+              "text": "offsetY",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Layer pixel offset Y. Default 0."
+        },
+        {
+          "name": "opacity",
+          "signature": "opacity?: number",
+          "signatureTokens": [
+            {
+              "text": "opacity",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Opacity 0..1. Default 1."
+        },
+        {
+          "name": "parallaxX",
+          "signature": "parallaxX?: number",
+          "signatureTokens": [
+            {
+              "text": "parallaxX",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Parallax scroll factor on the X axis. 1.0 = full camera speed (normal), 0.5 = half speed (farther away), 0.0 = stationary. Default 1."
+        },
+        {
+          "name": "parallaxY",
+          "signature": "parallaxY?: number",
+          "signatureTokens": [
+            {
+              "text": "parallaxY",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Parallax scroll factor on the Y axis. 1.0 = full camera speed (normal), 0.5 = half speed (farther away), 0.0 = stationary. Default 1."
+        },
+        {
+          "name": "properties",
+          "signature": "properties?: TileProperties",
+          "signatureTokens": [
+            {
+              "text": "properties",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileProperties",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Layer properties (copied and frozen)."
+        },
+        {
+          "name": "tileHeight",
+          "signature": "tileHeight: number",
+          "signatureTokens": [
+            {
+              "text": "tileHeight",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Tile height in pixels (for coordinate conversion)."
+        },
+        {
+          "name": "tilesets",
+          "signature": "tilesets: readonly TileSet[]",
+          "signatureTokens": [
+            {
+              "text": "tilesets",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileSet",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Tilesets available to this layer (shared with the map)."
+        },
+        {
+          "name": "tileWidth",
+          "signature": "tileWidth: number",
+          "signatureTokens": [
+            {
+              "text": "tileWidth",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Tile width in pixels (for coordinate conversion)."
+        },
+        {
+          "name": "tintColor",
+          "signature": "tintColor?: number | null",
+          "signatureTokens": [
+            {
+              "text": "tintColor",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Multiplicative layer tint as a 0xRRGGBB integer, or null for none (Tiled tintcolor). Applied to every chunk's render tint. Default null."
+        },
+        {
+          "name": "visible",
+          "signature": "visible?: boolean",
+          "signatureTokens": [
+            {
+              "text": "visible",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Initial visibility. Default true."
+        },
+        {
+          "name": "width",
+          "signature": "width: number",
+          "signatureTokens": [
+            {
+              "text": "width",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Layer width in tiles."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-tilemap/src/TileLayer.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/TileLayer.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-tilemap/src/TileLayer.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/TileLayer.ts"
+}

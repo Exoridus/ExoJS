@@ -4,7 +4,8 @@ import type { CollectionEntry } from 'astro:content';
 import DocsLayout from '../../layouts/DocsLayout.astro';
 import DocsSidebar from '../DocsSidebar.astro';
 import EnglishFallbackNotice from '../EnglishFallbackNotice.astro';
-import { API_SUBSYSTEM_META, API_SUBSYSTEM_ORDER, compactDescription, parseMemberCounts, toApiHref } from '../../lib/api-reference';
+import { API_SUBSYSTEM_META, API_SUBSYSTEM_ORDER, compactDescription, toApiHref } from '../../lib/api-reference';
+import type { ApiCounts } from '../../lib/api-schema';
 
 interface Props {
     locale: 'en' | 'de';
@@ -20,14 +21,14 @@ type ApiListItem = {
     searchText: string;
     subsystemKey: keyof typeof API_SUBSYSTEM_META;
     subsystemLabel: string;
-    counts: ReturnType<typeof parseMemberCounts>;
+    counts: ApiCounts;
 };
 
 const apiEntries = await getCollection('api');
 const sortedEntries = [...apiEntries].sort((a, b) => a.data.title.localeCompare(b.data.title));
 
 const items: ApiListItem[] = sortedEntries.map(entry => {
-    const counts = parseMemberCounts(entry.body ?? '');
+    const counts = entry.data.counts;
     return {
         entry,
         href: toApiHref(import.meta.env.BASE_URL, entry.id, locale),
@@ -58,7 +59,9 @@ const groupedSubsystems = API_SUBSYSTEM_ORDER.map(subsystem => ({
 
 const totalSymbols = items.length;
 const classCount = items.filter(item => item.kind === 'class').length;
+const interfaceCount = items.filter(item => item.kind === 'interface').length;
 const enumCount = items.filter(item => item.kind === 'enum').length;
+const typeCount = items.filter(item => item.kind === 'type').length;
 const hasMethodsCount = items.filter(item => item.counts.methods > 0).length;
 const hasPropertiesCount = items.filter(item => item.counts.properties > 0).length;
 const hasEventsCount = items.filter(item => item.counts.events > 0).length;
@@ -110,7 +113,9 @@ const sidebarGroups = [
             <div class="api-filters" role="toolbar" aria-label="Symbol filters">
                 <button type="button" data-api-kind-filter="all" data-active="true">All <span class="n">{totalSymbols}</span></button>
                 <button type="button" data-api-kind-filter="class">Classes <span class="n">{classCount}</span></button>
+                <button type="button" data-api-kind-filter="interface">Interfaces <span class="n">{interfaceCount}</span></button>
                 <button type="button" data-api-kind-filter="enum">Enums <span class="n">{enumCount}</span></button>
+                <button type="button" data-api-kind-filter="type">Types <span class="n">{typeCount}</span></button>
                 <button type="button" data-api-kind-filter="has-methods">Has methods <span class="n">{hasMethodsCount}</span></button>
                 <button type="button" data-api-kind-filter="has-properties">Has properties <span class="n">{hasPropertiesCount}</span></button>
                 <button type="button" data-api-kind-filter="has-events">Has events <span class="n">{hasEventsCount}</span></button>
@@ -176,7 +181,9 @@ const sidebarGroups = [
                 const kind = item.dataset.apiKind ?? '';
                 if (activeFilter === 'all') return true;
                 if (activeFilter === 'class') return kind === 'class';
+                if (activeFilter === 'interface') return kind === 'interface';
                 if (activeFilter === 'enum') return kind === 'enum';
+                if (activeFilter === 'type') return kind === 'type';
                 if (activeFilter === 'has-methods') return item.dataset.apiHasMethods === 'true';
                 if (activeFilter === 'has-properties') return item.dataset.apiHasProperties === 'true';
                 if (activeFilter === 'has-events') return item.dataset.apiHasEvents === 'true';
@@ -209,7 +216,7 @@ const sidebarGroups = [
             const initialKind = params.get('kind') ?? 'all';
 
             input.value = initialQuery;
-            activeFilter = ['all', 'class', 'enum', 'has-methods', 'has-properties', 'has-events'].includes(initialKind) ? initialKind : 'all';
+            activeFilter = ['all', 'class', 'interface', 'enum', 'type', 'has-methods', 'has-properties', 'has-events'].includes(initialKind) ? initialKind : 'all';
 
             for (const button of filterButtons) {
                 if (!(button instanceof HTMLButtonElement)) continue;

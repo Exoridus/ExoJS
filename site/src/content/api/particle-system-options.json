@@ -1,0 +1,100 @@
+{
+  "title": "ParticleSystemOptions",
+  "description": "Options for ParticleSystem's constructor — orthogonal config that's independent of the texture source. Texture / frames / spritesheet live in positional arguments to enforce mutual exclusivity at the type level (you can't pass both a texture and a spritesheet by accident).",
+  "symbol": "ParticleSystemOptions",
+  "kind": "interface",
+  "subsystem": "particles",
+  "importPath": "@codexo/exojs-particles",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Options for ParticleSystem's constructor — orthogonal config that's independent of the texture source. Texture / frames / spritesheet live in positional arguments to enforce mutual exclusivity at the type level (you can't pass both a texture and a spritesheet by accident)."
+      ],
+      "importLine": "import { ParticleSystemOptions } from '@codexo/exojs-particles'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "capacity",
+          "signature": "capacity?: number",
+          "signatureTokens": [
+            {
+              "text": "capacity",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Maximum particle count. Fixed at construction. Default 4096."
+        },
+        {
+          "name": "device",
+          "signature": "device?: GPUDevice",
+          "signatureTokens": [
+            {
+              "text": "device",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GPUDevice",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Direct GPU device. Lets advanced consumers wire a GPUDevice owned outside an Application (or a mock device in tests). When omitted, the backend reference is captured automatically on the first ParticleSystem.render call — WebGpuBackend ⇒ GPU mode, anything else (incl. WebGL2) ⇒ CPU mode."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-particles/src/ParticleSystem.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/ParticleSystem.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-particles/src/ParticleSystem.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/ParticleSystem.ts"
+}

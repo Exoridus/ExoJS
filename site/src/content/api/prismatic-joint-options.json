@@ -1,0 +1,284 @@
+{
+  "title": "PrismaticJointOptions",
+  "description": "Construction options for a PrismaticJoint.",
+  "symbol": "PrismaticJointOptions",
+  "kind": "interface",
+  "subsystem": "physics",
+  "importPath": "@codexo/exojs-physics",
+  "tier": "stable",
+  "memberCount": 10,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 10,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Construction options for a PrismaticJoint."
+      ],
+      "importLine": "import { PrismaticJointOptions } from '@codexo/exojs-physics'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "anchor",
+          "signature": "anchor: VectorLike",
+          "signatureTokens": [
+            {
+              "text": "anchor",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "VectorLike",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Shared world-space anchor at creation."
+        },
+        {
+          "name": "axis",
+          "signature": "axis: VectorLike",
+          "signatureTokens": [
+            {
+              "text": "axis",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "VectorLike",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Slide axis in world space at creation (normalised internally). The body may only translate along this axis."
+        },
+        {
+          "name": "bodyA",
+          "signature": "bodyA: PhysicsBody",
+          "signatureTokens": [
+            {
+              "text": "bodyA",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PhysicsBody",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "First body (often a static rail anchor)."
+        },
+        {
+          "name": "bodyB",
+          "signature": "bodyB: PhysicsBody",
+          "signatureTokens": [
+            {
+              "text": "bodyB",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PhysicsBody",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Second body (the slider)."
+        },
+        {
+          "name": "enableLimit",
+          "signature": "enableLimit?: boolean",
+          "signatureTokens": [
+            {
+              "text": "enableLimit",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Enable the translation limit (keeps the axis translation in [lowerTranslation, upperTranslation]). Default false."
+        },
+        {
+          "name": "enableMotor",
+          "signature": "enableMotor?: boolean",
+          "signatureTokens": [
+            {
+              "text": "enableMotor",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Enable the linear motor (drives translation along the axis toward motorSpeed). Default false."
+        },
+        {
+          "name": "lowerTranslation",
+          "signature": "lowerTranslation?: number",
+          "signatureTokens": [
+            {
+              "text": "lowerTranslation",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Lower translation limit along the axis (relative to the creation position). Default 0."
+        },
+        {
+          "name": "maxMotorForce",
+          "signature": "maxMotorForce?: number",
+          "signatureTokens": [
+            {
+              "text": "maxMotorForce",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Maximum motor force — clamps the per-step motor impulse. Default 0."
+        },
+        {
+          "name": "motorSpeed",
+          "signature": "motorSpeed?: number",
+          "signatureTokens": [
+            {
+              "text": "motorSpeed",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Target translation speed along the axis (px/s). Default 0."
+        },
+        {
+          "name": "upperTranslation",
+          "signature": "upperTranslation?: number",
+          "signatureTokens": [
+            {
+              "text": "upperTranslation",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Upper translation limit along the axis. Default 0."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-physics/src/joints/PrismaticJoint.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/joints/PrismaticJoint.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-physics/src/joints/PrismaticJoint.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/joints/PrismaticJoint.ts"
+}

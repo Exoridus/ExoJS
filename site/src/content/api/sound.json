@@ -1,0 +1,952 @@
+{
+  "title": "Sound",
+  "description": "Pre-decoded short audio clip backed by an `AudioBuffer`. Sound is a **data descriptor** — it holds the decoded audio buffer, sprite definitions, default playback parameters, and spatial configuration but does NOT start playback itself. Playback is driven by `AudioManager.play(sound, options)` which returns a Voice handle. Multiple concurrent plays of the same Sound are supported up to `poolSize`. When the pool is full the configured SoundPoolStrategy decides which active voice to evict. Use AudioStream for long-form streaming audio (single source, decoded lazily) — `Sound` is best for short, frequently-triggered clips.",
+  "symbol": "Sound",
+  "kind": "class",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 25,
+  "counts": {
+    "constructors": 1,
+    "methods": 9,
+    "properties": 15,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Pre-decoded short audio clip backed by an `AudioBuffer`.",
+        "Sound is a **data descriptor** — it holds the decoded audio buffer, sprite definitions, default playback parameters, and spatial configuration but does NOT start playback itself. Playback is driven by `AudioManager.play(sound, options)` which returns a Voice handle.",
+        "Multiple concurrent plays of the same Sound are supported up to `poolSize`. When the pool is full the configured SoundPoolStrategy decides which active voice to evict.",
+        "Use AudioStream for long-form streaming audio (single source, decoded lazily) — `Sound` is best for short, frequently-triggered clips."
+      ],
+      "importLine": "import { Sound } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(audioBuffer: AudioBuffer, options: SoundOptions): Sound",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "audioBuffer",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioBuffer",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SoundOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Sound",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "audioBuffer",
+              "type": "AudioBuffer",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "SoundOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "Sound",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "_createVoice",
+          "signature": "_createVoice(manager: AudioManager, options: PlayOptions): Voice",
+          "signatureTokens": [
+            {
+              "text": "_createVoice",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "manager",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioManager",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PlayOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Voice",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "manager",
+              "type": "AudioManager",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "PlayOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "Voice",
+          "description": "Implements Playable. Called by AudioManager.play; do not call directly — use manager.play(sound, options) instead. Creates one SoundVoice backed by a single AudioBufferSourceNode. Pool limits are enforced: if the pool is full the configured eviction strategy picks a victim to stop before the new voice starts."
+        },
+        {
+          "name": "_stopAllVoices",
+          "signature": "_stopAllVoices(): void",
+          "signatureTokens": [
+            {
+              "text": "_stopAllVoices",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Stop all currently active voices (e.g. for replace mode)."
+        },
+        {
+          "name": "clip",
+          "signature": "clip(offset: number, duration: number): Sound",
+          "signatureTokens": [
+            {
+              "text": "clip",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "offset",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "duration",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Sound",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "offset",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "duration",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "Sound",
+          "description": "Return a new Sound that plays only the [offset, offset + duration] sub-range (seconds) of this sound's buffer — an audio atlas / sprite-sheet clip. The clip shares the same decoded AudioBuffer (no extra memory) and inherits this sound's default playback + spatial settings, including its own independent voice pool."
+        },
+        {
+          "name": "defineSprite",
+          "signature": "defineSprite(name: string, clip: AudioSpriteClip): this",
+          "signatureTokens": [
+            {
+              "text": "defineSprite",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "name",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "clip",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioSpriteClip",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "clip",
+              "type": "AudioSpriteClip",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "hasSprite",
+          "signature": "hasSprite(name: string): boolean",
+          "signatureTokens": [
+            {
+              "text": "hasSprite",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "name",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": ""
+        },
+        {
+          "name": "removeSprite",
+          "signature": "removeSprite(name: string): this",
+          "signatureTokens": [
+            {
+              "text": "removeSprite",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "name",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "setPoolSize",
+          "signature": "setPoolSize(poolSize: number): this",
+          "signatureTokens": [
+            {
+              "text": "setPoolSize",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "poolSize",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "poolSize",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "setSprites",
+          "signature": "setSprites(sprites: Readonly<Record<string, AudioSpriteClip>>): this",
+          "signatureTokens": [
+            {
+              "text": "setSprites",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "sprites",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioSpriteClip",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "sprites",
+              "type": "Readonly<Record<string, AudioSpriteClip>>",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "loop",
+          "signature": "loop: boolean",
+          "signatureTokens": [
+            {
+              "text": "loop",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Default loop flag applied to new voices."
+        },
+        {
+          "name": "muted",
+          "signature": "muted: boolean",
+          "signatureTokens": [
+            {
+              "text": "muted",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Default muted flag applied to new voices."
+        },
+        {
+          "name": "playbackRate",
+          "signature": "playbackRate: number",
+          "signatureTokens": [
+            {
+              "text": "playbackRate",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Default playback rate applied to new voices."
+        },
+        {
+          "name": "volume",
+          "signature": "volume: number",
+          "signatureTokens": [
+            {
+              "text": "volume",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Default volume applied to new voices."
+        },
+        {
+          "name": "audioBuffer",
+          "signature": "audioBuffer: AudioBuffer",
+          "signatureTokens": [
+            {
+              "text": "audioBuffer",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioBuffer",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The underlying decoded audio data. Useful for sharing a single decoded buffer across multiple Sound instances."
+        },
+        {
+          "name": "distanceModel",
+          "signature": "distanceModel: DistanceModel",
+          "signatureTokens": [
+            {
+              "text": "distanceModel",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "DistanceModel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Distance-attenuation model."
+        },
+        {
+          "name": "duration",
+          "signature": "duration: number",
+          "signatureTokens": [
+            {
+              "text": "duration",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Playable duration in seconds — the full buffer, or the clip span for a Sound.clip."
+        },
+        {
+          "name": "maxDistance",
+          "signature": "maxDistance: number",
+          "signatureTokens": [
+            {
+              "text": "maxDistance",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Maximum distance for the 'linear' model — volume reaches zero here."
+        },
+        {
+          "name": "poolSize",
+          "signature": "poolSize: number",
+          "signatureTokens": [
+            {
+              "text": "poolSize",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "poolStrategy",
+          "signature": "poolStrategy: SoundPoolStrategy",
+          "signatureTokens": [
+            {
+              "text": "poolStrategy",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SoundPoolStrategy",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The eviction strategy used when the pool is at capacity."
+        },
+        {
+          "name": "position",
+          "signature": "position: Vector | null",
+          "signatureTokens": [
+            {
+              "text": "position",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Vector",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "priority",
+          "signature": "priority: number",
+          "signatureTokens": [
+            {
+              "text": "priority",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Sound priority. Used by the LowestPriority pool strategy. Higher values indicate higher priority (less likely to be evicted)."
+        },
+        {
+          "name": "refDistance",
+          "signature": "refDistance: number",
+          "signatureTokens": [
+            {
+              "text": "refDistance",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Reference distance — volume is at full strength at and below this distance."
+        },
+        {
+          "name": "rolloffFactor",
+          "signature": "rolloffFactor: number",
+          "signatureTokens": [
+            {
+              "text": "rolloffFactor",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Falloff steepness. Higher values attenuate faster with distance."
+        },
+        {
+          "name": "velocity",
+          "signature": "velocity: Vector | null",
+          "signatureTokens": [
+            {
+              "text": "velocity",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Vector",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/audio/Sound.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/Sound.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/audio/Sound.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/Sound.ts"
+}

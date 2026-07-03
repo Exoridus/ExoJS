@@ -1,0 +1,121 @@
+{
+  "title": "LdtkIntGridValueDef",
+  "description": "An IntGrid value definition (maps a raw int to a named, coloured entry).",
+  "symbol": "LdtkIntGridValueDef",
+  "kind": "interface",
+  "subsystem": "ldtk",
+  "importPath": "@codexo/exojs-ldtk",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "An IntGrid value definition (maps a raw int to a named, coloured entry)."
+      ],
+      "importLine": "import { LdtkIntGridValueDef } from '@codexo/exojs-ldtk'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "color",
+          "signature": "color: string",
+          "signatureTokens": [
+            {
+              "text": "color",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "identifier",
+          "signature": "identifier: string | null",
+          "signatureTokens": [
+            {
+              "text": "identifier",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "value",
+          "signature": "value: number",
+          "signatureTokens": [
+            {
+              "text": "value",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-ldtk/src/LdtkData.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-ldtk/src/LdtkData.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-ldtk/src/LdtkData.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-ldtk/src/LdtkData.ts"
+}

@@ -1,0 +1,444 @@
+{
+  "title": "ColorOverLifetime",
+  "description": "Per-frame, per-particle color sampler. Each live particle's tint is set to the gradient evaluated at the particle's current `elapsed / lifetime` ratio, packed RGBA. Replaces the per-particle blend of `ColorAffector` (legacy) with a multi-keyframe gradient. GPU-eligible: the gradient is uploaded once as a 256-tap 1D RGBA8 texture and sampled with linear filtering on the GPU.",
+  "symbol": "ColorOverLifetime",
+  "kind": "class",
+  "subsystem": "particles",
+  "importPath": "@codexo/exojs-particles",
+  "tier": "stable",
+  "memberCount": 7,
+  "counts": {
+    "constructors": 1,
+    "methods": 5,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Per-frame, per-particle color sampler. Each live particle's tint is set to the gradient evaluated at the particle's current `elapsed / lifetime` ratio, packed RGBA. Replaces the per-particle blend of `ColorAffector` (legacy) with a multi-keyframe gradient.",
+        "GPU-eligible: the gradient is uploaded once as a 256-tap 1D RGBA8 texture and sampled with linear filtering on the GPU."
+      ],
+      "importLine": "import { ColorOverLifetime } from '@codexo/exojs-particles'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(gradient: ColorGradient): ColorOverLifetime",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "gradient",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ColorGradient",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ColorOverLifetime",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "gradient",
+              "type": "ColorGradient",
+              "optional": false
+            }
+          ],
+          "returnType": "ColorOverLifetime",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "apply",
+          "signature": "apply(system: ParticleSystem, _dt: number): void",
+          "signatureTokens": [
+            {
+              "text": "apply",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "system",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ParticleSystem",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "_dt",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "system",
+              "type": "ParticleSystem",
+              "optional": false
+            },
+            {
+              "name": "_dt",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Optional cleanup hook called from ParticleSystem.destroy."
+        },
+        {
+          "name": "uploadTextures",
+          "signature": "uploadTextures(device: GPUDevice, textures: ReadonlyMap<string, GPUTexture>): void",
+          "signatureTokens": [
+            {
+              "text": "uploadTextures",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "device",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GPUDevice",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "textures",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ReadonlyMap",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GPUTexture",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "device",
+              "type": "GPUDevice",
+              "optional": false
+            },
+            {
+              "name": "textures",
+              "type": "ReadonlyMap<string, GPUTexture>",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Upload texture data (Curve/ColorGradient lookup tables) to the GPU at compile time. Receives the GPUDevice and a map of texture bindings keyed by the name in WgslContribution.textures. Called once after pipeline creation. Required when wgsl declares textures."
+        },
+        {
+          "name": "wgsl",
+          "signature": "wgsl(): WgslContribution",
+          "signatureTokens": [
+            {
+              "text": "wgsl",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "WgslContribution",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "WgslContribution",
+          "description": "Override to declare a GPU contribution. Returning a WgslContribution makes this module GPU-eligible; omitting (or returning undefined) forces CPU mode for any system that uses this module."
+        },
+        {
+          "name": "writeUniforms",
+          "signature": "writeUniforms?(view: DataView, byteOffset: number, dt: number): void",
+          "signatureTokens": [
+            {
+              "text": "writeUniforms",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "view",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "DataView",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "byteOffset",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "dt",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "view",
+              "type": "DataView",
+              "optional": false
+            },
+            {
+              "name": "byteOffset",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "dt",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Write this module's current uniform values into the shared uniform buffer at byteOffset. Layout must match the field declarations returned by wgsl (in the same order). Receives the current frame dt (seconds). Modules tracking accumulated time (e.g. noise/turbulence) should advance their internal counter here to stay in sync when running in GPU mode (where apply is not called). Required when wgsl declares uniforms. Called every frame by the system before dispatching compute."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "gradient",
+          "signature": "gradient: ColorGradient",
+          "signatureTokens": [
+            {
+              "text": "gradient",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ColorGradient",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-particles/src/modules/ColorOverLifetime.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/modules/ColorOverLifetime.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-particles/src/modules/ColorOverLifetime.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/modules/ColorOverLifetime.ts"
+}

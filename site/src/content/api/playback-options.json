@@ -1,0 +1,155 @@
+{
+  "title": "PlaybackOptions",
+  "description": "Common playback configuration for Sound and AudioStream.",
+  "symbol": "PlaybackOptions",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 5,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 5,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Common playback configuration for Sound and AudioStream."
+      ],
+      "importLine": "import { PlaybackOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "loop",
+          "signature": "loop: boolean",
+          "signatureTokens": [
+            {
+              "text": "loop",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "muted",
+          "signature": "muted: boolean",
+          "signatureTokens": [
+            {
+              "text": "muted",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "playbackRate",
+          "signature": "playbackRate: number",
+          "signatureTokens": [
+            {
+              "text": "playbackRate",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "time",
+          "signature": "time: number",
+          "signatureTokens": [
+            {
+              "text": "time",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "volume",
+          "signature": "volume: number",
+          "signatureTokens": [
+            {
+              "text": "volume",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/types.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/types.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/types.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/types.ts"
+}

@@ -1,0 +1,161 @@
+{
+  "title": "System",
+  "description": "A per-frame unit of simulation owned by a Scene (for example a physics world). Added via `scene.systems.add(...)`, ticked once per frame after the scene's `update()` and before its `draw()`, and destroyed with the scene. A system owns its own timestep policy — it receives the frame delta and decides how to integrate (fixed-step, variable, etc.). Extends Destroyable so a system fits the ownership model uniformly: the scene's registry destroys its systems when the scene is destroyed.",
+  "symbol": "System",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 2,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A per-frame unit of simulation owned by a Scene (for example a physics world). Added via `scene.systems.add(...)`, ticked once per frame after the scene's `update()` and before its `draw()`, and destroyed with the scene. A system owns its own timestep policy — it receives the frame delta and decides how to integrate (fixed-step, variable, etc.).",
+        "Extends Destroyable so a system fits the ownership model uniformly: the scene's registry destroys its systems when the scene is destroyed."
+      ],
+      "importLine": "import { System } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "update",
+          "signature": "update(delta: Time): void",
+          "signatureTokens": [
+            {
+              "text": "update",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "delta",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Time",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "delta",
+              "type": "Time",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Advance the system by the frame delta."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "order",
+          "signature": "order?: number",
+          "signatureTokens": [
+            {
+              "text": "order",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Tick order within the scene (ascending; default 0). Systems sharing an order tick in insertion order. Read when the registry next sorts."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/System.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/System.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/System.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/System.ts"
+}

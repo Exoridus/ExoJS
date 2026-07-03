@@ -1,0 +1,927 @@
+{
+  "title": "Scene",
+  "description": "A scene's lifecycle host. Subclass to define scene behavior: class GameScene extends Scene { override init(loader: Loader): void { ... } override update(delta: Time): void { ... } override draw(context: RenderingContext): void { ... } } app.start(new GameScene()); For one-off scenes, an anonymous subclass works just as well: app.start(new class extends Scene { override update(delta) { ... } override draw(context) { ... } });",
+  "symbol": "Scene",
+  "kind": "class",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 22,
+  "counts": {
+    "constructors": 1,
+    "methods": 12,
+    "properties": 7,
+    "events": 2
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A scene's lifecycle host. Subclass to define scene behavior:",
+        "class GameScene extends Scene { override init(loader: Loader): void { ... } override update(delta: Time): void { ... } override draw(context: RenderingContext): void { ... } }",
+        "app.start(new GameScene());",
+        "For one-off scenes, an anonymous subclass works just as well:",
+        "app.start(new class extends Scene { override update(delta) { ... } override draw(context) { ... } });"
+      ],
+      "importLine": "import { Scene } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(): Scene",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Scene",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "Scene",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "addChild",
+          "signature": "addChild(child: RenderNode): this",
+          "signatureTokens": [
+            {
+              "text": "addChild",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "child",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderNode",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "child",
+              "type": "RenderNode",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "deserialize",
+          "signature": "deserialize(data: SerializedScene): this",
+          "signatureTokens": [
+            {
+              "text": "deserialize",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "data",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SerializedScene",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "data",
+              "type": "SerializedScene",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Rebuild this scene's root subtree from a SerializedScene produced by Scene.serialize. Existing root children are removed first, then the descriptor's children are reconstructed under Scene.root. Assets referenced by the data must already be loaded into the application's Loader (pre-load contract). Older documents are migrated to the current format; documents newer than the running engine throw. Returns this."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "draw",
+          "signature": "draw(_context: RenderingContext): void",
+          "signatureTokens": [
+            {
+              "text": "draw",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "_context",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderingContext",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "_context",
+              "type": "RenderingContext",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Explicit per-frame rendering entry point. Override to choose what gets rendered. The default body is intentionally empty: Scene does not automatically traverse Scene.root. Auto-rendering the full hierarchy would conflict with ExoJS's \"explicit instead of implicit\" identity. Users decide which subtree(s) render each frame — context.render(this.root) is the recommended high-level path, but selective rendering (e.g. context.render(world) while skipping ui for a given frame) is equally valid and intentionally supported."
+        },
+        {
+          "name": "fixedUpdate",
+          "signature": "fixedUpdate(_delta: Time): void",
+          "signatureTokens": [
+            {
+              "text": "fixedUpdate",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "_delta",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Time",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "_delta",
+              "type": "Time",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Fixed-timestep logic hook. Called zero or more times per frame with a constant delta (Application.fixedTimeStep) before Scene.update, so physics and deterministic gameplay advance at a frame-rate-independent rate. Put physicsWorld.step(delta) and movement here; leave camera, UI and purely visual work in Scene.update. Default is a no-op. Override in subclass."
+        },
+        {
+          "name": "init",
+          "signature": "init(_loader: Loader): void | Promise<void>",
+          "signatureTokens": [
+            {
+              "text": "init",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "_loader",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Loader",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "_loader",
+              "type": "Loader",
+              "optional": false
+            }
+          ],
+          "returnType": "void | Promise<void>",
+          "description": "One-shot setup hook. Called after Scene.load resolves, before the first update. Build the scene-graph subtree, register signal handlers, etc. Override in subclass."
+        },
+        {
+          "name": "load",
+          "signature": "load(_loader: Loader): void | Promise<void>",
+          "signatureTokens": [
+            {
+              "text": "load",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "_loader",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Loader",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "_loader",
+              "type": "Loader",
+              "optional": false
+            }
+          ],
+          "returnType": "void | Promise<void>",
+          "description": "Async asset preload hook. Called once before Scene.init the first time the scene is pushed. Use the loader to register and resolve assets needed by the scene; await any returned promise from loader.load()."
+        },
+        {
+          "name": "removeChild",
+          "signature": "removeChild(child: RenderNode): this",
+          "signatureTokens": [
+            {
+              "text": "removeChild",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "child",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderNode",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "child",
+              "type": "RenderNode",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "serialize",
+          "signature": "serialize(): SerializedScene",
+          "signatureTokens": [
+            {
+              "text": "serialize",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SerializedScene",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "SerializedScene",
+          "description": "Serialize this scene's structural root subtree to a plain, JSON-able SerializedScene descriptor. Captures **data, not behaviour**: structure, transforms, visuals and asset references — never update logic, signal handlers, tweens or systems. When the scene is attached to an Application, texture/asset references resolve to their Loader source keys. Reattach behaviour in code after Scene.deserialize."
+        },
+        {
+          "name": "track",
+          "signature": "track(item: T): T",
+          "signatureTokens": [
+            {
+              "text": "track",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "item",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "item",
+              "type": "T",
+              "optional": false
+            }
+          ],
+          "returnType": "T",
+          "description": "Register a Destroyable to be destroyed automatically when this scene is destroyed (reverse registration order). Returns its argument for fluent capture: const world = this.track(new PhysicsWorld()). The scene-bound tweens and inputs registries are tracked the same way."
+        },
+        {
+          "name": "unload",
+          "signature": "unload(_loader: Loader): void | Promise<void>",
+          "signatureTokens": [
+            {
+              "text": "unload",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "_loader",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Loader",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "_loader",
+              "type": "Loader",
+              "optional": false
+            }
+          ],
+          "returnType": "void | Promise<void>",
+          "description": "Async asset teardown hook. Called when the scene is finally popped off the stack. Use the loader to release assets that are scene-private and not shared with another scene still on the stack."
+        },
+        {
+          "name": "update",
+          "signature": "update(_delta: Time): void",
+          "signatureTokens": [
+            {
+              "text": "update",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "_delta",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Time",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "_delta",
+              "type": "Time",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Per-frame logic hook. Receives the time elapsed since the previous frame. The scene-graph transforms are still authoritative — mutate positions, advance timers, drive AI here. Override in subclass."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "paused",
+          "signature": "paused: boolean",
+          "signatureTokens": [
+            {
+              "text": "paused",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "When true, the scene's update and systems are skipped each frame while it keeps drawing — the simple way to freeze gameplay behind a pause menu (show a panel on scene.ui, then set scene.paused = true)."
+        },
+        {
+          "name": "app",
+          "signature": "app: Application | null",
+          "signatureTokens": [
+            {
+              "text": "app",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Application",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "inputs",
+          "signature": "inputs: SceneInputs",
+          "signatureTokens": [
+            {
+              "text": "inputs",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneInputs",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Scene-bound input registry. Bindings created via this.inputs.onTrigger(...) etc. are automatically unbound when the scene is destroyed — no manual cleanup required. Throws if accessed before the scene is attached to an Application."
+        },
+        {
+          "name": "root",
+          "signature": "root: Container",
+          "signatureTokens": [
+            {
+              "text": "root",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Container",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Structural root container for this scene's hierarchy. Scene.root is an **ownership and traversal anchor**, not an automatic render-authoritative root. The framework never calls root.render(backend) for you. Scene.draw(context) is the explicit orchestration point — see Scene.draw. The root exists eagerly so addChild / removeChild can proxy to a known container, and so transform/bounds traversal has a stable parent. Selecting what to render each frame remains the scene's responsibility."
+        },
+        {
+          "name": "systems",
+          "signature": "systems: SystemRegistry",
+          "signatureTokens": [
+            {
+              "text": "systems",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SystemRegistry",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Scene-bound system registry. Add tickable Systems (e.g. a physics world) via this.systems.add(world); each is updated once per frame after Scene.update (ascending order) and destroyed with the scene — no manual step() / destroy() wiring. Available before the scene is attached to an Application (systems tick only while the scene is active)."
+        },
+        {
+          "name": "tweens",
+          "signature": "tweens: SceneTweens",
+          "signatureTokens": [
+            {
+              "text": "tweens",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneTweens",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Scene-bound tween registry. Tweens created via this.tweens.create(...) are automatically stopped when the scene is destroyed — no manual cleanup required. Throws if accessed before the scene is attached to an Application."
+        },
+        {
+          "name": "ui",
+          "signature": "ui: UIRoot",
+          "signatureTokens": [
+            {
+              "text": "ui",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UIRoot",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Scene-bound UI layer, rendered screen-fixed on top of the scene content (after Scene.draw). Lazily created and destroyed with the scene; add widgets via this.ui.addChild(...). Unlike Scene.root, the UI layer **is** auto-rendered each frame — a first-class overlay that always sits above the world. Its children live in screen space (origin top-left, 0..width × 0..height); pointer and keyboard input route to them ahead of the world layer."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "events",
+      "title": "Events",
+      "members": [
+        {
+          "name": "onLoad",
+          "signature": "onLoad: Signal<[]>",
+          "signatureTokens": [
+            {
+              "text": "onLoad",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Dispatched after the scene finishes loading (after load() and init() complete)."
+        },
+        {
+          "name": "onUnload",
+          "signature": "onUnload: Signal<[]>",
+          "signatureTokens": [
+            {
+              "text": "onUnload",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Dispatched when the scene is about to be unloaded."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/Scene.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Scene.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/Scene.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Scene.ts"
+}

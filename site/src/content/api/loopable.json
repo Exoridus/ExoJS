@@ -1,0 +1,71 @@
+{
+  "title": "Loopable",
+  "description": "A voice whose source can loop.",
+  "symbol": "Loopable",
+  "kind": "interface",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 1,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A voice whose source can loop."
+      ],
+      "importLine": "import { Loopable } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "loop",
+          "signature": "loop: boolean",
+          "signatureTokens": [
+            {
+              "text": "loop",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/audio/Playable.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/Playable.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/audio/Playable.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/Playable.ts"
+}

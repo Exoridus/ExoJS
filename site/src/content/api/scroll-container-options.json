@@ -1,0 +1,117 @@
+{
+  "title": "ScrollContainerOptions",
+  "description": "Options for ScrollContainer.",
+  "symbol": "ScrollContainerOptions",
+  "kind": "interface",
+  "subsystem": "ui",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Options for ScrollContainer."
+      ],
+      "importLine": "import { ScrollContainerOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "direction",
+          "signature": "direction?: ScrollDirection",
+          "signatureTokens": [
+            {
+              "text": "direction",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ScrollDirection",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Scroll axis. Default 'vertical'."
+        },
+        {
+          "name": "height",
+          "signature": "height: number",
+          "signatureTokens": [
+            {
+              "text": "height",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Visible height in pixels."
+        },
+        {
+          "name": "width",
+          "signature": "width: number",
+          "signatureTokens": [
+            {
+              "text": "width",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Visible width in pixels."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/ui/ScrollContainer.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/ScrollContainer.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/ui/ScrollContainer.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/ui/ScrollContainer.ts"
+}

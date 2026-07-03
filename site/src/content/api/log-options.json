@@ -1,0 +1,171 @@
+{
+  "title": "LogOptions",
+  "description": "Per-call metadata for Logger.debug/Logger.info/Logger.warn/Logger.error. - `source` renders as `[ExoJS][source]` in the default console sink (omit it for a bare `[ExoJS]` prefix). - `once` deduplicates by key: the second and later calls sharing the same key are dropped before severity filtering or sink dispatch, so pass a stable per-callsite key (e.g. `` `bitmaptext:${fontId}:${codepoint}` ``) to avoid per-frame spam.",
+  "symbol": "LogOptions",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 4,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Per-call metadata for Logger.debug/Logger.info/Logger.warn/Logger.error.",
+        "- `source` renders as `[ExoJS][source]` in the default console sink (omit it for a bare `[ExoJS]` prefix). - `once` deduplicates by key: the second and later calls sharing the same key are dropped before severity filtering or sink dispatch, so pass a stable per-callsite key (e.g. `` `bitmaptext:${fontId}:${codepoint}` ``) to avoid per-frame spam."
+      ],
+      "importLine": "import { LogOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "data",
+          "signature": "data?: Record<string, unknown>",
+          "signatureTokens": [
+            {
+              "text": "data",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "error",
+          "signature": "error?: Error",
+          "signatureTokens": [
+            {
+              "text": "error",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Error",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "once",
+          "signature": "once?: string",
+          "signatureTokens": [
+            {
+              "text": "once",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "source",
+          "signature": "source?: string",
+          "signatureTokens": [
+            {
+              "text": "source",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/logging.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/logging.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/logging.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/logging.ts"
+}

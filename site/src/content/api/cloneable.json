@@ -1,0 +1,126 @@
+{
+  "title": "Cloneable",
+  "description": "Structural interface for value types that support a deep clone and an in-place copy from a same-type source. Implemented by Color, Time, Vector, Matrix, Rectangle, and other ExoJS value classes.",
+  "symbol": "Cloneable",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 2,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Structural interface for value types that support a deep clone and an in-place copy from a same-type source. Implemented by Color, Time, Vector, Matrix, Rectangle, and other ExoJS value classes."
+      ],
+      "importLine": "import { Cloneable } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "clone",
+          "signature": "clone(): this",
+          "signatureTokens": [
+            {
+              "text": "clone",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "copy",
+          "signature": "copy(source: this): this",
+          "signatureTokens": [
+            {
+              "text": "copy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "source",
+              "type": "this",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/types.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/types.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/types.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/types.ts"
+}

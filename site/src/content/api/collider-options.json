@@ -1,0 +1,258 @@
+{
+  "title": "ColliderOptions",
+  "description": "Construction options for a collider.",
+  "symbol": "ColliderOptions",
+  "kind": "interface",
+  "subsystem": "physics",
+  "importPath": "@codexo/exojs-physics",
+  "tier": "stable",
+  "memberCount": 8,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 8,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Construction options for a collider."
+      ],
+      "importLine": "import { ColliderOptions } from '@codexo/exojs-physics'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "density",
+          "signature": "density?: number",
+          "signatureTokens": [
+            {
+              "text": "density",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Density (mass per px²) for the owning body's mass; ignored for static/kinematic. Default 1."
+        },
+        {
+          "name": "filter",
+          "signature": "filter?: Partial<CollisionFilter>",
+          "signatureTokens": [
+            {
+              "text": "filter",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Partial",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CollisionFilter",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Category/mask/group filter; partials merge over the defaults."
+        },
+        {
+          "name": "friction",
+          "signature": "friction?: number",
+          "signatureTokens": [
+            {
+              "text": "friction",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Coulomb friction coefficient (used by the solver once dynamics ship). Default 0.2."
+        },
+        {
+          "name": "isSensor",
+          "signature": "isSensor?: boolean",
+          "signatureTokens": [
+            {
+              "text": "isSensor",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "When true, generates overlap events but no contact response. Default false."
+        },
+        {
+          "name": "offset",
+          "signature": "offset?: VectorLike",
+          "signatureTokens": [
+            {
+              "text": "offset",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "VectorLike",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Body-local offset of the shape origin. Default (0, 0)."
+        },
+        {
+          "name": "restitution",
+          "signature": "restitution?: number",
+          "signatureTokens": [
+            {
+              "text": "restitution",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Restitution / bounciness in [0, 1] (used by the solver once dynamics ship). Default 0."
+        },
+        {
+          "name": "rotation",
+          "signature": "rotation?: number",
+          "signatureTokens": [
+            {
+              "text": "rotation",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Body-local rotation of the shape in radians (compound colliders). Default 0."
+        },
+        {
+          "name": "shape",
+          "signature": "shape: AnyShape",
+          "signatureTokens": [
+            {
+              "text": "shape",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AnyShape",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The collision geometry."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-physics/src/Collider.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/Collider.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-physics/src/Collider.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/Collider.ts"
+}

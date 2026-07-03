@@ -1,0 +1,806 @@
+{
+  "title": "SpriteMaterial",
+  "description": "Material specialization for Sprite drawables. API shell for the sprite custom-material path; the renderer integration and instancing contract are added in a later phase. The base texture stays on the sprite — this material supplies the fragment program, uniforms, and additional texture bindings.",
+  "symbol": "SpriteMaterial",
+  "kind": "class",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "advanced",
+  "memberCount": 14,
+  "counts": {
+    "constructors": 1,
+    "methods": 5,
+    "properties": 8,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Material specialization for Sprite drawables.",
+        "API shell for the sprite custom-material path; the renderer integration and instancing contract are added in a later phase. The base texture stays on the sprite — this material supplies the fragment program, uniforms, and additional texture bindings."
+      ],
+      "importLine": "import { SpriteMaterial } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(options: MaterialOptions): SpriteMaterial",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MaterialOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SpriteMaterial",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "options",
+              "type": "MaterialOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "SpriteMaterial",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Release GPU resources cached against this material on every backend that has compiled it. Safe to call multiple times. After destroy, the material can still be re-used — renderers recompile on next draw — but typical usage is to drop the reference."
+        },
+        {
+          "name": "setTexture",
+          "signature": "setTexture(name: string, texture: Texture | RenderTexture): this",
+          "signatureTokens": [
+            {
+              "text": "setTexture",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "name",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "texture",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderTexture",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "texture",
+              "type": "Texture | RenderTexture",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Bind a named texture. Equivalent to material.textures[name] = texture, returned this for chaining."
+        },
+        {
+          "name": "setUniform",
+          "signature": "setUniform(name: string, value: UniformValue): this",
+          "signatureTokens": [
+            {
+              "text": "setUniform",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "name",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "value",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UniformValue",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "value",
+              "type": "UniformValue",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Set a uniform value. Equivalent to material.uniforms[name] = value, returned this for chaining."
+        },
+        {
+          "name": "from",
+          "signature": "from(source: ShaderSource, options?: Omit<MaterialOptions, \"shader\">): SpriteMaterial",
+          "signatureTokens": [
+            {
+              "text": "from",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ShaderSource",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Omit",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MaterialOptions",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"shader\"",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SpriteMaterial",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "source",
+              "type": "ShaderSource",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "Omit<MaterialOptions, \"shader\">",
+              "optional": true
+            }
+          ],
+          "returnType": "SpriteMaterial",
+          "description": "Build a SpriteMaterial from an existing ShaderSource. Equivalent to new SpriteMaterial({ shader, ...options })."
+        },
+        {
+          "name": "from",
+          "signature": "from(glslVertex: string, glslFragment: string, options?: { blendMode?: BlendModes; sampler?: SamplerOptions | null; uniforms?: Record<string, UniformValue>; wgsl?: string }): SpriteMaterial",
+          "signatureTokens": [
+            {
+              "text": "from",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "glslVertex",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "glslFragment",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "blendMode",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BlendModes",
+              "kind": "type"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "sampler",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SamplerOptions",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "uniforms",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UniformValue",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "wgsl",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SpriteMaterial",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "glslVertex",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "glslFragment",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "{ blendMode?: BlendModes; sampler?: SamplerOptions | null; uniforms?: Record<string, UniformValue>; wgsl?: string }",
+              "optional": true
+            }
+          ],
+          "returnType": "SpriteMaterial",
+          "description": "Build a SpriteMaterial from raw GLSL vertex and fragment source strings. Wraps them in a new ShaderSource; pass options.wgsl to also cover the WebGPU backend."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "blendMode",
+          "signature": "blendMode: BlendModes",
+          "signatureTokens": [
+            {
+              "text": "blendMode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BlendModes",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Compositing blend mode applied when drawing with this material."
+        },
+        {
+          "name": "sampler",
+          "signature": "sampler: SamplerOptions | null",
+          "signatureTokens": [
+            {
+              "text": "sampler",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SamplerOptions",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Backend-agnostic sampling state descriptor, or null for the default."
+        },
+        {
+          "name": "shader",
+          "signature": "shader: ShaderSource",
+          "signatureTokens": [
+            {
+              "text": "shader",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ShaderSource",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "GLSL/WGSL source pair backing this material."
+        },
+        {
+          "name": "target",
+          "signature": "target: \"sprite\"",
+          "signatureTokens": [
+            {
+              "text": "target",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"sprite\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Which drawable class this material can serve; renderers check compatibility."
+        },
+        {
+          "name": "textures",
+          "signature": "textures: Record<string, Texture | RenderTexture>",
+          "signatureTokens": [
+            {
+              "text": "textures",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderTexture",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Named texture bindings claimed in addition to the drawable's own texture."
+        },
+        {
+          "name": "uniforms",
+          "signature": "uniforms: Record<string, UniformValue>",
+          "signatureTokens": [
+            {
+              "text": "uniforms",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UniformValue",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Mutable user uniform values. Mutate between frames to drive animated effects; the renderer reads from this map every draw. material.uniforms.u_time = performance.now() / 1000; material.uniforms.u_color = [1, 0.5, 0, 1];"
+        },
+        {
+          "name": "bindKey",
+          "signature": "bindKey: number",
+          "signatureTokens": [
+            {
+              "text": "bindKey",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Stable bind key: identical ⇒ same bindings (textures unchanged). Derived from this material's identity and the identities of its bound textures. Changes when a texture is swapped; drives bind-group/slot reuse."
+        },
+        {
+          "name": "pipelineKey",
+          "signature": "pipelineKey: number",
+          "signatureTokens": [
+            {
+              "text": "pipelineKey",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Stable pipeline key: identical ⇒ same GPU pipeline/program can be used. Derived from shader identity, blend mode, and sampler state, and is independent of the owning material instance so identically configured materials share a pipeline. Drives grouping and the pipeline cache."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/material/SpriteMaterial.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/material/SpriteMaterial.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/material/SpriteMaterial.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/material/SpriteMaterial.ts"
+}

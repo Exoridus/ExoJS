@@ -1,0 +1,893 @@
+{
+  "title": "Texture",
+  "description": "A static GPU texture sourced from an image, canvas, or video element. Holds the pixel source and sampling parameters (ScaleModes, WrapModes, mip generation, alpha premultiplication). A `version` counter is incremented on every mutation so backends can detect stale GPU uploads without polling. Static helpers Texture.black, Texture.white, and Texture.empty provide ready-made placeholder textures. Default sampler options are configurable via Texture.defaultSamplerOptions.",
+  "symbol": "Texture",
+  "kind": "class",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 25,
+  "counts": {
+    "constructors": 1,
+    "methods": 9,
+    "properties": 15,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A static GPU texture sourced from an image, canvas, or video element.",
+        "Holds the pixel source and sampling parameters (ScaleModes, WrapModes, mip generation, alpha premultiplication). A `version` counter is incremented on every mutation so backends can detect stale GPU uploads without polling.",
+        "Static helpers Texture.black, Texture.white, and Texture.empty provide ready-made placeholder textures. Default sampler options are configurable via Texture.defaultSamplerOptions."
+      ],
+      "importLine": "import { Texture } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(source: TextureSource, options?: Partial<SamplerOptions>): Texture",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextureSource",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Partial",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SamplerOptions",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "source",
+              "type": "TextureSource",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "Partial<SamplerOptions>",
+              "optional": true
+            }
+          ],
+          "returnType": "Texture",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "addDestroyListener",
+          "signature": "addDestroyListener(listener: () => void): this",
+          "signatureTokens": [
+            {
+              "text": "addDestroyListener",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "listener",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "listener",
+              "type": "() => void",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Register a callback to be invoked just before this texture is destroyed. Useful for backends to release their GPU-side texture objects."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "removeDestroyListener",
+          "signature": "removeDestroyListener(listener: () => void): this",
+          "signatureTokens": [
+            {
+              "text": "removeDestroyListener",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "listener",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "listener",
+              "type": "() => void",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "setPremultiplyAlpha",
+          "signature": "setPremultiplyAlpha(premultiplyAlpha: boolean): this",
+          "signatureTokens": [
+            {
+              "text": "setPremultiplyAlpha",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "premultiplyAlpha",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "premultiplyAlpha",
+              "type": "boolean",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "setScaleMode",
+          "signature": "setScaleMode(scaleMode: ScaleModes): this",
+          "signatureTokens": [
+            {
+              "text": "setScaleMode",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "scaleMode",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ScaleModes",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "scaleMode",
+              "type": "ScaleModes",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "setSize",
+          "signature": "setSize(width: number, height: number): this",
+          "signatureTokens": [
+            {
+              "text": "setSize",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "width",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "height",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "width",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "height",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "setSource",
+          "signature": "setSource(source: TextureSource): this",
+          "signatureTokens": [
+            {
+              "text": "setSource",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextureSource",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "source",
+              "type": "TextureSource",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "setWrapMode",
+          "signature": "setWrapMode(wrapMode: WrapModes): this",
+          "signatureTokens": [
+            {
+              "text": "setWrapMode",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "wrapMode",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "WrapModes",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "wrapMode",
+              "type": "WrapModes",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "updateSource",
+          "signature": "updateSource(): this",
+          "signatureTokens": [
+            {
+              "text": "updateSource",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "this",
+          "description": "Refresh the size from the current source and bump the version. Call after mutating the source's pixel data in place (e.g. drawing to a canvas) to notify backends that a re-upload is needed."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "defaultSamplerOptions",
+          "signature": "defaultSamplerOptions: SamplerOptions",
+          "signatureTokens": [
+            {
+              "text": "defaultSamplerOptions",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SamplerOptions",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "empty",
+          "signature": "empty: Texture",
+          "signatureTokens": [
+            {
+              "text": "empty",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "flipY",
+          "signature": "flipY: boolean",
+          "signatureTokens": [
+            {
+              "text": "flipY",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "generateMipMap",
+          "signature": "generateMipMap: boolean",
+          "signatureTokens": [
+            {
+              "text": "generateMipMap",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "height",
+          "signature": "height: number",
+          "signatureTokens": [
+            {
+              "text": "height",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "powerOfTwo",
+          "signature": "powerOfTwo: boolean",
+          "signatureTokens": [
+            {
+              "text": "powerOfTwo",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether both dimensions are powers of two. Non-power-of-two textures may have limited wrap-mode support on some hardware."
+        },
+        {
+          "name": "premultiplyAlpha",
+          "signature": "premultiplyAlpha: boolean",
+          "signatureTokens": [
+            {
+              "text": "premultiplyAlpha",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "scaleMode",
+          "signature": "scaleMode: ScaleModes",
+          "signatureTokens": [
+            {
+              "text": "scaleMode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ScaleModes",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "size",
+          "signature": "size: Size",
+          "signatureTokens": [
+            {
+              "text": "size",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Size",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "source",
+          "signature": "source: TextureSource",
+          "signatureTokens": [
+            {
+              "text": "source",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextureSource",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "version",
+          "signature": "version: number",
+          "signatureTokens": [
+            {
+              "text": "version",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Monotonically increasing version counter. Incremented by any mutation that requires a GPU re-upload (source change, size change, or sampler parameter change). Backends compare this value to their cached version to decide whether to re-upload the texture."
+        },
+        {
+          "name": "width",
+          "signature": "width: number",
+          "signatureTokens": [
+            {
+              "text": "width",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "wrapMode",
+          "signature": "wrapMode: WrapModes",
+          "signatureTokens": [
+            {
+              "text": "wrapMode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "WrapModes",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "black",
+          "signature": "black: Texture",
+          "signatureTokens": [
+            {
+              "text": "black",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "white",
+          "signature": "white: Texture",
+          "signatureTokens": [
+            {
+              "text": "white",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/texture/Texture.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/texture/Texture.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/texture/Texture.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/texture/Texture.ts"
+}

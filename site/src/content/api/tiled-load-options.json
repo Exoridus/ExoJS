@@ -1,0 +1,75 @@
+{
+  "title": "TiledLoadOptions",
+  "description": "Options accepted by both the runtime (`TileMap`) and source (`TiledMap`) asset bindings when loading a Tiled map.",
+  "symbol": "TiledLoadOptions",
+  "kind": "interface",
+  "subsystem": "tiled",
+  "importPath": "@codexo/exojs-tiled",
+  "tier": "advanced",
+  "memberCount": 1,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Options accepted by both the runtime (`TileMap`) and source (`TiledMap`) asset bindings when loading a Tiled map."
+      ],
+      "importLine": "import { TiledLoadOptions } from '@codexo/exojs-tiled'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "format",
+          "signature": "format?: \"tiled\"",
+          "signatureTokens": [
+            {
+              "text": "format",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"tiled\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Explicit format hint for ambiguous file extensions. .tmj/.tsj paths are recognised by extension and need no hint. Provide format: 'tiled' when loading Tiled map data from a generic .json path: loader.load(TileMap, 'world.json', { format: 'tiled' }). 'tiled' is the only accepted value, so a foreign format (e.g. 'ldtk') is a compile error rather than a silent runtime fall-through. The hint participates in the asset identity key, so the same source loaded under different (future) formats resolves to distinct cache entries."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-tiled/src/tiledOptions.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tiled/src/tiledOptions.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-tiled/src/tiledOptions.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tiled/src/tiledOptions.ts"
+}

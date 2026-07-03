@@ -1,0 +1,280 @@
+{
+  "title": "PointerStackLayer",
+  "description": "Debug layer that shows a screen-space panel (top-right corner) listing all RenderNodes under the current pointer position, sorted by zIndex descending. Screen-space.",
+  "symbol": "PointerStackLayer",
+  "kind": "class",
+  "subsystem": "debug",
+  "importPath": "@codexo/exojs/debug",
+  "tier": "stable",
+  "memberCount": 6,
+  "counts": {
+    "constructors": 1,
+    "methods": 3,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Debug layer that shows a screen-space panel (top-right corner) listing all RenderNodes under the current pointer position, sorted by zIndex descending. Screen-space."
+      ],
+      "importLine": "import { PointerStackLayer } from '@codexo/exojs/debug'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(app: Application): PointerStackLayer",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "app",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Application",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointerStackLayer",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "app",
+              "type": "Application",
+              "optional": false
+            }
+          ],
+          "returnType": "PointerStackLayer",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Destroy the panel's Container subtree and release all child references."
+        },
+        {
+          "name": "render",
+          "signature": "render(backend: RenderBackend): void",
+          "signatureTokens": [
+            {
+              "text": "render",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "backend",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderBackend",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "backend",
+              "type": "RenderBackend",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Submit the panel's Container subtree to the backend for drawing."
+        },
+        {
+          "name": "update",
+          "signature": "update(_delta: Time): void",
+          "signatureTokens": [
+            {
+              "text": "update",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "_delta",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Time",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "_delta",
+              "type": "Time",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Lazily initialize the panel on first call, reposition it to the top-right corner, and populate text lines with the current pointer stack (up to 10 entries, sorted by zIndex descending)."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "visible",
+          "signature": "visible: boolean",
+          "signatureTokens": [
+            {
+              "text": "visible",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "viewMode",
+          "signature": "viewMode: DebugLayerViewMode",
+          "signatureTokens": [
+            {
+              "text": "viewMode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "DebugLayerViewMode",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Renders in screen-space so the panel stays fixed in the top-right corner."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/debug/PointerStackLayer.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/debug/PointerStackLayer.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/debug/PointerStackLayer.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/debug/PointerStackLayer.ts"
+}

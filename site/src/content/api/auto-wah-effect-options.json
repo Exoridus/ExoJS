@@ -1,0 +1,175 @@
+{
+  "title": "AutoWahEffectOptions",
+  "description": "Construction options for AutoWahEffect.",
+  "symbol": "AutoWahEffectOptions",
+  "kind": "interface",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs-audio-fx",
+  "tier": "stable",
+  "memberCount": 5,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 5,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Construction options for AutoWahEffect."
+      ],
+      "importLine": "import { AutoWahEffectOptions } from '@codexo/exojs-audio-fx'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "baseFrequency",
+          "signature": "baseFrequency?: number",
+          "signatureTokens": [
+            {
+              "text": "baseFrequency",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Centre frequency of the wah bandpass filter in Hz. The envelope control signal sweeps the filter upward from this base. Range 50..2000, default 200."
+        },
+        {
+          "name": "q",
+          "signature": "q?: number",
+          "signatureTokens": [
+            {
+              "text": "q",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Q (resonance) of the bandpass wah filter. Higher values produce a narrower, more pronounced peak. Range 0.1..20, default 4."
+        },
+        {
+          "name": "responseMs",
+          "signature": "responseMs?: number",
+          "signatureTokens": [
+            {
+              "text": "responseMs",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Envelope smoothing time constant in milliseconds. Longer values make the wah react slowly (legato); shorter values produce a snappier attack (percussive). Translated to the smoothing lowpass cutoff as 1000 / (2π × responseMs) Hz. Range 1..500, default 30."
+        },
+        {
+          "name": "sensitivity",
+          "signature": "sensitivity?: number",
+          "signatureTokens": [
+            {
+              "text": "sensitivity",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Envelope sensitivity: Hz of filter-frequency sweep added per unit of rectified envelope amplitude. At full signal amplitude the filter shifts up by this amount above baseFrequency. Range 0..6000, default 3000."
+        },
+        {
+          "name": "wet",
+          "signature": "wet?: number",
+          "signatureTokens": [
+            {
+              "text": "wet",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Dry/wet mix, 0..1. The dry level is automatically 1 - wet. Default 0.7."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-audio-fx/src/effects/AutoWahEffect.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/AutoWahEffect.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-audio-fx/src/effects/AutoWahEffect.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/AutoWahEffect.ts"
+}

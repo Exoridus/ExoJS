@@ -1,0 +1,100 @@
+{
+  "title": "TextureFactoryOptions",
+  "description": "Construction options for TextureFactory.create.",
+  "symbol": "TextureFactoryOptions",
+  "kind": "interface",
+  "subsystem": "resources",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Construction options for TextureFactory.create."
+      ],
+      "importLine": "import { TextureFactoryOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "mimeType",
+          "signature": "mimeType?: string",
+          "signatureTokens": [
+            {
+              "text": "mimeType",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "MIME type for the intermediate blob. Inferred from magic bytes when omitted."
+        },
+        {
+          "name": "samplerOptions",
+          "signature": "samplerOptions?: SamplerOptions",
+          "signatureTokens": [
+            {
+              "text": "samplerOptions",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SamplerOptions",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Sampler parameters (wrap mode, filter, etc.) forwarded to the Texture constructor."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/resources/factories/TextureFactory.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/TextureFactory.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/resources/factories/TextureFactory.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/factories/TextureFactory.ts"
+}

@@ -1,0 +1,125 @@
+{
+  "title": "PingPongDelayEffectOptions",
+  "description": "Construction options for PingPongDelayEffect.",
+  "symbol": "PingPongDelayEffectOptions",
+  "kind": "interface",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs-audio-fx",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Construction options for PingPongDelayEffect."
+      ],
+      "importLine": "import { PingPongDelayEffectOptions } from '@codexo/exojs-audio-fx'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "delayTime",
+          "signature": "delayTime?: number",
+          "signatureTokens": [
+            {
+              "text": "delayTime",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Delay time per tap in seconds. Range 0.01..2, default 0.25."
+        },
+        {
+          "name": "feedback",
+          "signature": "feedback?: number",
+          "signatureTokens": [
+            {
+              "text": "feedback",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Cross-channel feedback fraction — the portion of each delayed tap routed into the opposite channel's delay input. Range 0..0.9, default 0.4."
+        },
+        {
+          "name": "wet",
+          "signature": "wet?: number",
+          "signatureTokens": [
+            {
+              "text": "wet",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Dry/wet mix, 0..1. The dry level is automatically 1 - wet. Default 0.4."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-audio-fx/src/effects/PingPongDelayEffect.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/PingPongDelayEffect.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-audio-fx/src/effects/PingPongDelayEffect.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-audio-fx/src/effects/PingPongDelayEffect.ts"
+}

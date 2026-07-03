@@ -1,0 +1,310 @@
+{
+  "title": "ApplicationOptions",
+  "description": "",
+  "symbol": "ApplicationOptions",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 10,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 10,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [],
+      "importLine": "import { ApplicationOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "backend",
+          "signature": "backend?: BackendConfig",
+          "signatureTokens": [
+            {
+              "text": "backend",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BackendConfig",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "canvas",
+          "signature": "canvas?: CanvasApplicationOptions",
+          "signatureTokens": [
+            {
+              "text": "canvas",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CanvasApplicationOptions",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "clearColor",
+          "signature": "clearColor?: Color",
+          "signatureTokens": [
+            {
+              "text": "clearColor",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "extensions",
+          "signature": "extensions?: readonly Extension[]",
+          "signatureTokens": [
+            {
+              "text": "extensions",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Extension",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Extension selection. undefined → Core + globally registered extensions. [] → Core only. [a, b, …] → Core + exactly these; global registry not consulted. Captured once at construction; later registrations do not affect already-constructed Applications."
+        },
+        {
+          "name": "fixedTimeStep",
+          "signature": "fixedTimeStep?: number",
+          "signatureTokens": [
+            {
+              "text": "fixedTimeStep",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fixed-timestep size in **seconds** for Scene.fixedUpdate / Application.onFixedFrame. Default 1 / 60. Must be positive."
+        },
+        {
+          "name": "hello",
+          "signature": "hello?: boolean",
+          "signatureTokens": [
+            {
+              "text": "hello",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Print the one-time ExoJS v{version} startup banner to the console on Application.start. Development-only (no-op in production builds) and printed at most once per process regardless of how many Applications are constructed. Default true."
+        },
+        {
+          "name": "input",
+          "signature": "input?: InputApplicationOptions",
+          "signatureTokens": [
+            {
+              "text": "input",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "InputApplicationOptions",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "loader",
+          "signature": "loader?: LoaderOptions",
+          "signatureTokens": [
+            {
+              "text": "loader",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LoaderOptions",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "rendering",
+          "signature": "rendering?: RenderingApplicationOptions",
+          "signatureTokens": [
+            {
+              "text": "rendering",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderingApplicationOptions",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "seed",
+          "signature": "seed?: number",
+          "signatureTokens": [
+            {
+              "text": "seed",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Seed for the per-Application Application.random RNG. Omit for a non-deterministic seed."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/Application.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Application.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/Application.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Application.ts"
+}

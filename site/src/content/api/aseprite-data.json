@@ -1,0 +1,72 @@
+{
+  "title": "AsepriteData",
+  "description": "Union of both Aseprite JSON export formats. Use isAsepriteArrayData to discriminate between array and hash mode.",
+  "symbol": "AsepriteData",
+  "kind": "type",
+  "subsystem": "aseprite",
+  "importPath": "@codexo/exojs-aseprite",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Union of both Aseprite JSON export formats.",
+        "Use isAsepriteArrayData to discriminate between array and hash mode."
+      ],
+      "importLine": "import { AsepriteData } from '@codexo/exojs-aseprite'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "AsepriteData",
+          "signature": "AsepriteArrayData | AsepriteHashData",
+          "signatureTokens": [
+            {
+              "text": "AsepriteArrayData",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AsepriteHashData",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-aseprite/src/AsepriteData.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-aseprite/src/AsepriteData.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-aseprite/src/AsepriteData.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-aseprite/src/AsepriteData.ts"
+}

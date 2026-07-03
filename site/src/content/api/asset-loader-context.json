@@ -1,0 +1,279 @@
+{
+  "title": "AssetLoaderContext",
+  "description": "Context object passed to custom asset-type load handlers registered via Loader.registerAssetType. The `fetch*` helpers route through the loader's configured cache strategy and IDB stores, giving custom handlers the same caching behaviour as built-in asset types.",
+  "symbol": "AssetLoaderContext",
+  "kind": "interface",
+  "subsystem": "resources",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 5,
+  "counts": {
+    "constructors": 0,
+    "methods": 3,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Context object passed to custom asset-type load handlers registered via Loader.registerAssetType.",
+        "The `fetch*` helpers route through the loader's configured cache strategy and IDB stores, giving custom handlers the same caching behaviour as built-in asset types."
+      ],
+      "importLine": "import { AssetLoaderContext } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "fetchArrayBuffer",
+          "signature": "fetchArrayBuffer(source: string): Promise<ArrayBuffer>",
+          "signatureTokens": [
+            {
+              "text": "fetchArrayBuffer",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ArrayBuffer",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "source",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<ArrayBuffer>",
+          "description": "Fetches source as an ArrayBuffer, routing through the loader's cache/IDB."
+        },
+        {
+          "name": "fetchJson",
+          "signature": "fetchJson(source: string): Promise<T>",
+          "signatureTokens": [
+            {
+              "text": "fetchJson",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "source",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<T>",
+          "description": "Fetches source as parsed JSON, routing through the loader's cache/IDB. Supply T to narrow the return type at the call site."
+        },
+        {
+          "name": "fetchText",
+          "signature": "fetchText(source: string): Promise<string>",
+          "signatureTokens": [
+            {
+              "text": "fetchText",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "source",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<string>",
+          "description": "Fetches source as UTF-8 text, routing through the loader's cache/IDB."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "identityKey",
+          "signature": "identityKey: string",
+          "signatureTokens": [
+            {
+              "text": "identityKey",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The identity key for this load — id:<typeId>:<discriminator>. Useful for diagnostics; also equals the key used for in-flight dedup."
+        },
+        {
+          "name": "loader",
+          "signature": "loader: Loader",
+          "signatureTokens": [
+            {
+              "text": "loader",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Loader",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The owning Loader instance."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/resources/Loader.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Loader.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/resources/Loader.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Loader.ts"
+}

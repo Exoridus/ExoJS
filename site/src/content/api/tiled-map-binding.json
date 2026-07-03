@@ -1,0 +1,175 @@
+{
+  "title": "tiledMapBinding",
+  "description": "Declarative asset binding for TiledMap. Token-only: `loader.load(TiledMap, 'world.tmj')` resolves through this binding, but no `extensions` are claimed, so a plain `loader.load('world.tmj')` does not resolve to `TiledMap`. The `.tmj` extension (and generic `.json` Tiled loading) is reserved for the format-independent `TileMap` runtime asset binding.",
+  "symbol": "tiledMapBinding",
+  "kind": "namespace",
+  "subsystem": "tiled",
+  "importPath": "@codexo/exojs-tiled",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 1,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Declarative asset binding for TiledMap.",
+        "Token-only: `loader.load(TiledMap, 'world.tmj')` resolves through this binding, but no `extensions` are claimed, so a plain `loader.load('world.tmj')` does not resolve to `TiledMap`. The `.tmj` extension (and generic `.json` Tiled loading) is reserved for the format-independent `TileMap` runtime asset binding."
+      ],
+      "importLine": "import { tiledMapBinding } from '@codexo/exojs-tiled'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "create",
+          "signature": "create(): { getIdentityKey: unknown; load: unknown }",
+          "signatureTokens": [
+            {
+              "text": "create",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "getIdentityKey",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "load",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": "{ getIdentityKey: unknown; load: unknown }",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "type",
+          "signature": "type: typeof TiledMap",
+          "signatureTokens": [
+            {
+              "text": "type",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "typeof",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TiledMap",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "typeNames",
+          "signature": "typeNames: string[]",
+          "signatureTokens": [
+            {
+              "text": "typeNames",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-tiled/src/tiledMapBinding.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tiled/src/tiledMapBinding.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-tiled/src/tiledMapBinding.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tiled/src/tiledMapBinding.ts"
+}
