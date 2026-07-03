@@ -4,6 +4,7 @@ description: 'How the application owns canvas, render backend, resources, input,
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import Callout from '../../../components/Callout.astro';
 
 # Application
 
@@ -66,6 +67,10 @@ You can also mutate the existing instance in place instead of allocating a new `
 ```js
 app.clearColor.set(20, 20, 40, 1); // dusk
 ```
+
+<Callout type="hint" title="clearColor stays live">
+`app.clearColor` is the backend's live `Color`, not just a startup value. Assign a new one or mutate it in place at any time to react to game state — no draw-code changes needed.
+</Callout>
 
 ## Choosing the canvas
 
@@ -184,6 +189,10 @@ app.pauseOnHidden = true;
 ```
 
 Tools and background-active simulations should leave it off; games and animated demos should turn it on.
+
+<Callout type="info" title="Pause hidden tabs for games">
+Background tabs throttle to ~1fps, which surfaces as motion artifacts when the player returns. Set `app.pauseOnHidden = true` for games and demos; leave it off for tools and background simulations.
+</Callout>
 
 ## Examples
 

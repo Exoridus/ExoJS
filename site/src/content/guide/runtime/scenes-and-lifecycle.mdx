@@ -5,6 +5,7 @@ description: 'How scenes split runtime work, switch with transitions, layer a UI
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
 import TryIt from '../../../components/TryIt.astro';
+import Callout from '../../../components/Callout.astro';
 
 # Scenes & lifecycle
 
@@ -201,6 +202,10 @@ At 60 fps, that is one `fixedUpdate` call per frame, tracking `update` one-to-on
 
 Because the step size never changes, `fixedUpdate` is the right place for anything that must behave identically regardless of frame rate — physics stepping is the headline case; see [Physics basics](/ExoJS/en/guide/physics/physics-basics/) for a full `world.step(delta.seconds)` walkthrough. Leave camera movement, UI, and anything purely visual in `update`: running those at a fixed rate would make them look choppy on high-refresh-rate displays instead of smoother.
 
+<Callout type="info" title="Which hook for what">
+Deterministic simulation — physics, anything that must behave identically across frame rates — belongs in `fixedUpdate`. Keep camera, UI and purely visual motion in `update`; a fixed rate makes those look choppy on high-refresh displays.
+</Callout>
+
 ### frameAlpha: smoothing between steps
 
 Because `fixedUpdate` calls don't line up one-to-one with rendered frames, there is always a small unrendered remainder — the fraction of the current fixed step already elapsed since the last one ran. The application exposes it as `app.frameAlpha`, a value in `[0, 1)`.
@@ -249,6 +254,10 @@ draw(context) {
 
 The `this.root` container is the scene's structural anchor — every node you add via `this.addChild(...)` is reachable from there. Calling `context.render(this.root)` walks the tree and draws every visible node in order.
 
+<Callout type="pitfall" title="An empty draw draws nothing">
+ExoJS never auto-renders the tree. If `draw` is missing or omits `context.render(this.root)`, the frame clears to a blank canvas — with no error to point you at the cause.
+</Callout>
+
 The trade-off is that you can render selectively when you need to:
 
 ```js
@@ -289,6 +298,10 @@ Bindings created on `this.inputs` are automatically disposed when the scene is d
 The `unload` hook runs when the scene is replaced by `setScene` or when the application shuts down. Use it to release assets the scene was holding that no other scene needs.
 
 The `destroy` hook is the synchronous final step after `unload`. The default cleanup path disposes scene-owned bindings and graph references. Override only when you have additional cleanup, and keep the built-in cleanup behavior intact.
+
+<Callout type="warning" title="Keep the built-in cleanup when you override destroy">
+The default `destroy` disposes scene-owned input bindings and graph references. Override it without running that built-in path and those bindings and references leak. Add your own cleanup, but keep the default.
+</Callout>
 
 ## Examples
 
