@@ -91,7 +91,12 @@ export class PrismaticJoint extends Joint {
     this._localAnchorBx = scratch.x;
     this._localAnchorBy = scratch.y;
 
-    const axisLength = Math.hypot(options.axis.x, options.axis.y) || 1;
+    const axisLength = Math.hypot(options.axis.x, options.axis.y);
+
+    if (!Number.isFinite(axisLength) || axisLength === 0) {
+      throw new RangeError(`PrismaticJoint: axis must be a non-zero finite vector, received (${options.axis.x}, ${options.axis.y}).`);
+    }
+
     applyInverseRotation(options.bodyA.transform, options.axis.x / axisLength, options.axis.y / axisLength, scratch);
     this._localAxisAx = scratch.x;
     this._localAxisAy = scratch.y;

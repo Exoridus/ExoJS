@@ -779,18 +779,15 @@ describe('TiledMap — defensive coverage of otherwise-unreachable branches', ()
     expect(() => new TiledMap('holeobjects.tmj', data, [])).not.toThrow();
   });
 
-  test('BUG: an object gid of 0 is rejected as "not covered by any tileset" instead of being treated as the empty-cell sentinel like tile-layer GIDs', () => {
-    // EXPECTED: findTilesetForGid's own doc comment states gid 0 is "the empty-cell
-    // sentinel". checkGidArray (used for tile-layer data/chunks) special-cases
-    // `gid !== 0` accordingly. checkGidCoverage's object-layer branch has no such
-    // guard, so a (Tiled never emits this) object with gid: 0 is rejected instead
-    // of being silently accepted as "no tile", unlike its tile-layer counterpart.
+  test('an object gid of 0 is accepted as the empty-cell sentinel, like tile-layer GIDs', () => {
+    // findTilesetForGid documents gid 0 as "the empty-cell sentinel" and
+    // checkGidArray (tile-layer data/chunks) special-cases it; the object-layer
+    // coverage check treats it the same way.
     const layer: TiledLayerData = {
       type: 'objectgroup', id: 1, name: 'Objs', visible: true, opacity: 1, x: 0, y: 0,
       objects: [{ id: 1, name: '', type: '', x: 0, y: 0, width: 0, height: 0, rotation: 0, visible: true, gid: 0 }],
     };
     const data = makeBareMapData({ layers: [layer] });
-    expect(() => new TiledMap('objgid0.tmj', data, [])).toThrow(TiledFormatError);
-    expect(() => new TiledMap('objgid0.tmj', data, [])).toThrow(/gid 0.*is not covered/);
+    expect(() => new TiledMap('objgid0.tmj', data, [])).not.toThrow();
   });
 });

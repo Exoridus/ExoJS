@@ -439,24 +439,15 @@ describe('joints', () => {
     expect(body.x).toBeGreaterThan(20); // still converges toward the target with the defaults
   });
 
-  it('BUG: a zero-length axis in a prismatic joint yields a degenerate joint with no lock in any direction', () => {
-    // `Math.hypot(0, 0) || 1` (PrismaticJoint.ts, constructor) only guards the division
-    // — it does not turn (0,0) into a *unit* vector. The local axis stays (0,0), so both
-    // the axis and its perpendicular end up as zero vectors in `_prepare`; `_applyAxial`/
-    // `_applyBlock` scale every impulse by axisX/axisY/perpX/perpY (all 0), so no force is
-    // ever applied in any direction. Expected correct behavior: reject a zero-length axis
-    // (throw) or fall back to a sane default unit axis (e.g. (1, 0)) instead of silently
-    // creating a no-op joint.
+  it('a zero-length axis in a prismatic joint is rejected at construction', () => {
+    // A (0,0) axis cannot be normalized into a direction — silently creating a
+    // joint that constrains nothing would let the body free-fall.
     const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
     const anchor = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
     const slider = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(20, 20) }] }));
 
-    world.addJoint(new PrismaticJoint({ bodyA: anchor, bodyB: slider, anchor: { x: 0, y: 0 }, axis: { x: 0, y: 0 } }));
-
-    advance(world, 1);
-
-    // Current (buggy) behavior: free fall under gravity — the joint constrained nothing.
-    expect(slider.y).toBeGreaterThan(400);
+    expect(() => new PrismaticJoint({ bodyA: anchor, bodyB: slider, anchor: { x: 0, y: 0 }, axis: { x: 0, y: 0 } })).toThrow(RangeError);
+    expect(() => new PrismaticJoint({ bodyA: anchor, bodyB: slider, anchor: { x: 0, y: 0 }, axis: { x: Number.NaN, y: 0 } })).toThrow(RangeError);
   });
 
   it('a prismatic joint with a fixed-rotation slider keeps the perpendicular lock solvable (k22 fallback)', () => {
@@ -548,21 +539,14 @@ describe('joints', () => {
     expect(box.angle).toBe(0); // fixed rotation — never rotates regardless of the angular constraint
   });
 
-  it('BUG: a zero-length axis in a wheel joint yields a degenerate joint with no suspension or lateral lock', () => {
-    // Same root cause as the prismatic joint above: `Math.hypot(0, 0) || 1` only guards
-    // the division — the local axis stays (0,0), so the axis, its perpendicular, the
-    // suspension spring and the lateral lock all end up applying zero force. Expected
-    // correct behavior: reject a zero-length axis (throw) or default to a unit axis.
+  it('a zero-length axis in a wheel joint is rejected at construction', () => {
+    // Same rationale as the prismatic joint above: a (0,0) axis cannot be
+    // normalized, so suspension spring and lateral lock would apply zero force.
     const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
     const chassis = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
     const wheel = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 30 }, colliders: [{ shape: new CircleShape(10) }] }));
 
-    world.addJoint(new WheelJoint({ bodyA: chassis, bodyB: wheel, anchor: { x: 0, y: 30 }, axis: { x: 0, y: 0 }, hertz: 5, dampingRatio: 1 }));
-
-    advance(world, 1);
-
-    // Current (buggy) behavior: free fall under gravity — nothing was constrained.
-    expect(wheel.y).toBeGreaterThan(400);
+    expect(() => new WheelJoint({ bodyA: chassis, bodyB: wheel, anchor: { x: 0, y: 30 }, axis: { x: 0, y: 0 }, hertz: 5, dampingRatio: 1 })).toThrow(RangeError);
   });
 
   it('a wheel motor on a fixed-rotation wheel does nothing (zero angular effective mass)', () => {
