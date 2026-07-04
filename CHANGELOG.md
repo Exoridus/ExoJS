@@ -4,6 +4,49 @@ All notable changes to ExoJS are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.2] - 2026-07-04
+
+Bugfix release. Ten defects found by the coverage-fleet passes on the v0.16
+line, back-ported: seven in the engine, three in the extension packages.
+
+### Fixed
+
+- **`Application` dropped the `seed` option.** The constructor's options
+  literal omitted the field, so deterministic seeding of the per-Application
+  RNG was a documented no-op.
+- **`Application` dropped `fixedTimeStep`.** Same root cause: the options
+  literal omitted the field, so the fixed-step loop always ran at the 60 Hz
+  default regardless of configuration.
+- **`Loader.backgroundLoad()` re-entrancy.** Calling it again while a
+  background load was in flight double-queued not-yet-started entries,
+  letting `onProgress` report `loaded > total`.
+- **`Loader.registerManifest()` option comparison.** Re-registering a manifest
+  with deeply-equal options of a shared class prototype was rejected,
+  contradicting the documented contract. The structural compare now covers
+  same-prototype instances and compares `Date`s by timestamp; exotic
+  containers stay reference-compared.
+- **`Tween` repeat overshoot dropped.** `update()` clamped elapsed time before
+  computing cycle overflow, so overshoot past a cycle boundary was silently
+  discarded instead of carrying into the next cycle.
+- **`AudioManager.onUnlock` never fired for late-constructed managers.** When
+  the shared `AudioContext` was already running at construction time, the
+  manager's own buses consumed the one-shot ready signal first; the unlock
+  signal is now dispatched on a microtask in that case.
+- **Gamepad ghost slot on double disconnect.** With the compact slot strategy,
+  two disconnects in a single poll used a stale snapshot and left a ghost
+  `connected` pad; the sweep now resolves browser indices against the live map.
+- **`PrismaticJoint` accepted a zero-length axis.** `Math.hypot(0, 0) || 1`
+  only guarded the division; the local axis stayed `(0, 0)` and the joint
+  constrained nothing (the body free-fell). A zero-length or non-finite axis
+  now throws a `RangeError`, matching the package's config-validation
+  convention.
+- **`WheelJoint` accepted a zero-length axis.** Same root cause and fix as
+  `PrismaticJoint` (no suspension, no lateral lock).
+- **`TiledMap` rejected objects with gid 0.** Gid 0 is the documented
+  empty-cell sentinel and tile-layer data already treats it that way, but the
+  object-layer coverage check reported it as "not covered by any tileset". The
+  check now masks the flip bits and accepts 0 as "no tile".
+
 ## [0.15.1] - 2026-07-04
 
 Bugfix release. Twelve engine defects back-ported from the v0.16 line —

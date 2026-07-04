@@ -346,6 +346,8 @@ export class Application {
         gamepadSlotStrategy: inputOptions.gamepadSlotStrategy ?? defaultInputSettings.gamepadSlotStrategy,
         pointerDistanceThreshold: inputOptions.pointerDistanceThreshold ?? defaultInputSettings.pointerDistanceThreshold,
       },
+      ...(appSettings.seed !== undefined && { seed: appSettings.seed }),
+      ...(appSettings.fixedTimeStep !== undefined && { fixedTimeStep: appSettings.fixedTimeStep }),
     };
 
     // Capture extension snapshot before constructing extension-sensitive subsystems.
