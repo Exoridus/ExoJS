@@ -20,7 +20,7 @@ const changelog = readFileSync(resolve(repoRoot, 'CHANGELOG.md'), 'utf8');
 // hard-coded, so this release gate never goes stale on a bump. A non-dated
 // heading (a placeholder / "Unreleased") must never reach a tag — release:notes
 // hard-fails on it in the publish job, after npm has already published.
-const heading = changelog.match(/^## \[(\d+\.\d+\.\d+)\] - \d{4}-\d{2}-\d{2}$/m);
+const heading = /^## \[(\d+\.\d+\.\d+)\] - \d{4}-\d{2}-\d{2}$/m.exec(changelog);
 const releaseVersion = heading?.[1] ?? '';
 const peerRange = `${releaseVersion.split('.').slice(0, 2).join('.')}.x`;
 
