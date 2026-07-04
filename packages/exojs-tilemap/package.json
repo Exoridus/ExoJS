@@ -1,6 +1,6 @@
 {
   "name": "@codexo/exojs-tilemap",
-  "version": "0.15.1",
+  "version": "0.15.2",
   "description": "Generic, format-independent tilemap runtime for ExoJS.",
   "repository": {
     "type": "git",
