@@ -1,7 +1,15 @@
 // Auto-generated from video-drawable.ts — edit the .ts source, not this file.
-import { Application, Color, Scene, Sprite, Texture, Video } from '@codexo/exojs';
+import { Application, Color, Keyboard, Scene, Sprite, Texture, Video } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
-const VIDEO_URL = assets.demo.video.demoLoop;
+// Every video in the asset catalog, switchable at runtime with the number
+// keys. Only the first entry is fetched up front — the others lazy-load on
+// first selection so startup stays fast.
+const VIDEOS = [
+    { name: 'demoLoop', label: 'Demo loop (webm)', url: assets.demo.video.demoLoop },
+    { name: 'highRes', label: 'High-res (mp4)', url: assets.demo.video.highRes },
+    { name: 'highFps', label: 'High-fps (webm)', url: assets.demo.video.highFps },
+    { name: 'hdr10', label: 'HDR10 (webm)', url: assets.demo.video.hdr10 },
+];
 const app = new Application({
     canvas: {
         width: 1280,
@@ -16,18 +24,20 @@ class VideoDrawableScene extends Scene {
     overlay;
     elapsed = 0;
     hud;
+    assetLoader = null;
+    videoIdx = 0;
+    loadedVideos = new Set();
+    switching = false;
     async load(loader) {
-        await loader.load(Video, { demo: VIDEO_URL });
+        this.assetLoader = loader;
+        await loader.load(Video, { [VIDEOS[0].name]: VIDEOS[0].url });
+        this.loadedVideos.add(VIDEOS[0].name);
         await loader.load(Texture, { ship: assets.demo.textures.shipA });
     }
     init(loader) {
         const { width, height } = this.app.canvas;
-        this.video = loader.get(Video, 'demo');
-        this.video.width = width;
-        this.video.height = height;
-        // Muted playback autoplays reliably under browser autoplay policy without
-        // requiring a user gesture first.
-        this.video.applyOptions({ loop: true, muted: true, volume: 0.5 });
+        this.video = loader.get(Video, VIDEOS[0].name);
+        this.configureVideo();
         // A sprite composited on top of the live video texture — the same scene
         // graph draws video frames and regular sprites side by side.
         this.overlay = new Sprite(loader.get(Texture, 'ship'));
@@ -36,15 +46,57 @@ class VideoDrawableScene extends Scene {
         this.overlay.setPosition(width / 2, height / 2);
         this.hud = mountControls({
             title: 'Video Drawable',
-            controls: [{ keys: 'Tap', action: 'play / pause' }],
-            status: 'Playing',
+            controls: [
+                { keys: 'Tap', action: 'play / pause' },
+                { keys: '1–4', action: 'switch video' },
+            ],
+            status: `Playing — ${VIDEOS[0].label}`,
             hint: 'The video streams as a live GPU texture with a sprite composited over it.',
         });
         this.app.input.onPointerTap.add(() => {
             this.video.toggle();
-            this.hud.setStatus(this.video.playing ? 'Playing' : 'Paused');
+            this.hud.setStatus(this.video.playing ? `Playing — ${VIDEOS[this.videoIdx].label}` : 'Paused');
+        });
+        this.app.input.onKeyDown.add(channel => {
+            const idx = [Keyboard.One, Keyboard.Two, Keyboard.Three, Keyboard.Four].indexOf(channel);
+            if (idx !== -1)
+                void this.switchVideo(idx);
         });
         this.video.play();
+    }
+    /** Sizing + playback options shared by every video the example swaps in. */
+    configureVideo() {
+        const { width, height } = this.app.canvas;
+        this.video.width = width;
+        this.video.height = height;
+        // Muted playback autoplays reliably under browser autoplay policy without
+        // requiring a user gesture first.
+        this.video.applyOptions({ loop: true, muted: true, volume: 0.5 });
+    }
+    async switchVideo(idx) {
+        if (idx === this.videoIdx || this.switching)
+            return;
+        const entry = VIDEOS[idx];
+        this.switching = true;
+        this.hud.setStatus(`Loading — ${entry.label}…`);
+        try {
+            if (!this.loadedVideos.has(entry.name)) {
+                await this.assetLoader.load(Video, { [entry.name]: entry.url });
+                this.loadedVideos.add(entry.name);
+            }
+            this.video.pause();
+            this.videoIdx = idx;
+            this.video = this.assetLoader.get(Video, entry.name);
+            this.configureVideo();
+            this.video.play();
+            this.hud.setStatus(`Playing — ${entry.label}`);
+        }
+        catch {
+            this.hud.setStatus(`Failed to load — ${entry.label}`);
+        }
+        finally {
+            this.switching = false;
+        }
     }
     update(delta) {
         this.elapsed += delta.seconds;
