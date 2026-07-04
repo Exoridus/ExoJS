@@ -92,6 +92,14 @@ describe('tiledWangSetToWangSet — corner type', () => {
     expect(result.isMember(11)).toBe(true);
     expect(result.isMember(12)).toBe(true);
   });
+
+  it('treats missing wangid indices as unset rather than throwing', () => {
+    // A wangid array shorter than 8 entries leaves the corner indices (1, 3, 5, 7)
+    // undefined; the `?? 0` fallback must treat all of them as "not this terrain".
+    const shortSet = makeWangSet('corner', [{ tileid: 30, wangid: [] }]);
+    const result = tiledWangSetToWangSet(shortSet, TILESET_INDEX)!;
+    expect(result.getTileId(0)).toBe(30);
+  });
 });
 
 describe('tiledWangSetToWangSet — edge type', () => {
@@ -130,6 +138,14 @@ describe('tiledWangSetToWangSet — edge type', () => {
     const result = tiledWangSetToWangSet(edgeSet, 0)!;
     // right(2) | left(8) = 10
     expect(result.getTileId(10)).toBe(22);
+  });
+
+  it('treats missing wangid indices as unset rather than throwing', () => {
+    // A wangid array shorter than 8 entries leaves the edge indices (0, 2, 4, 6)
+    // undefined; the `?? 0` fallback must treat all of them as "not this terrain".
+    const shortSet = makeWangSet('edge', [{ tileid: 40, wangid: [] }]);
+    const result = tiledWangSetToWangSet(shortSet, 0)!;
+    expect(result.getTileId(0)).toBe(40);
   });
 });
 

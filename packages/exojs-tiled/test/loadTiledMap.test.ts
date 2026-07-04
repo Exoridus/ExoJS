@@ -153,6 +153,31 @@ describe('loadTiledMap — collection-of-images tileset', () => {
   });
 });
 
+describe('loadTiledMap — image layer nested inside a group layer', () => {
+  const { context, loaderLoad } = makeContext({
+    'nested-image.tmj': {
+      type: 'map', version: '1.10', orientation: 'orthogonal', renderorder: 'right-down',
+      width: 1, height: 1, tilewidth: 16, tileheight: 16, infinite: false,
+      layers: [{
+        id: 1, name: 'Group', type: 'group', visible: true, x: 0, y: 0, opacity: 1,
+        layers: [{ id: 2, name: 'Bg', type: 'imagelayer', visible: true, x: 0, y: 0, opacity: 1, image: 'bg.png' }],
+      }],
+      tilesets: [],
+    },
+  });
+
+  it('loads the texture for an image layer nested inside a group layer', async () => {
+    await loadTiledMap('nested-image.tmj', context);
+    expect(loaderLoad).toHaveBeenCalledWith(Texture, 'bg.png');
+  });
+
+  it('attaches the preloaded texture to the nested image layer via toTileMap()', async () => {
+    const map = await loadTiledMap('nested-image.tmj', context);
+    const runtime = map.toTileMap();
+    expect(runtime.imageLayers[0]!.texture).toBeInstanceOf(Texture);
+  });
+});
+
 describe('loadTiledMap — error propagation', () => {
   it('propagates TiledFormatError for invalid TMJ', async () => {
     const { context } = makeContext({

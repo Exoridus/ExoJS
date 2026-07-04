@@ -82,6 +82,18 @@ describe('ObjectLayer', () => {
     expect(layer.query({ type: 'nope' })).toHaveLength(0);
   });
 
+  it('copies and freezes the layer-level properties option when provided', () => {
+    const mutable = { region: 'overworld' };
+    const layer = new ObjectLayer({ id: 1, properties: mutable });
+
+    expect(layer.properties.region).toBe('overworld');
+    expect(Object.isFrozen(layer.properties)).toBe(true);
+    expect(layer.properties).not.toBe(mutable);
+
+    mutable.region = 'changed';
+    expect(layer.properties.region).toBe('overworld'); // defensive copy
+  });
+
   it('getObjectById / getObjectByName resolve the first match or undefined', () => {
     const layer = new ObjectLayer({ id: 1, objects: [rectangle(7, 'hero', 'spawn')] });
 

@@ -8,6 +8,7 @@ import { TileChunk } from '../src/TileChunk';
 import { TileLayer } from '../src/TileLayer';
 import { TileMap } from '../src/TileMap';
 import { TileSet } from '../src/TileSet';
+import type { ResolvedTile } from '../src/types';
 import {
   packTile,
   TILE_TRANSFORM_IDENTITY,
@@ -15,6 +16,8 @@ import {
   tileToLocalInChunk,
   tileTransformLabel,
   unpackTile,
+  validateNonNegativeInteger,
+  validatePositiveInteger,
 } from '../src/types';
 
 // ── helpers ────────────────────────────────────────────────────────────
@@ -119,6 +122,20 @@ describe('tileTransformLabel', () => {
   });
   it('diag+flipX+flipY', () => {
     expect(tileTransformLabel({ flipX: true, flipY: true, diagonal: true })).toBe('diag+flipX+flipY');
+  });
+});
+
+describe('validatePositiveInteger / validateNonNegativeInteger', () => {
+  it('validatePositiveInteger rejects a value beyond Number.MAX_SAFE_INTEGER', () => {
+    // Finite, integer, and positive — passes the first guard — but unsafe.
+    expect(() => validatePositiveInteger(Number.MAX_SAFE_INTEGER * 2, 'x')).toThrow(/exceeds safe integer range/);
+  });
+
+  it('validateNonNegativeInteger rejects negative, non-finite, and non-integer values', () => {
+    expect(() => validateNonNegativeInteger(-1, 'x')).toThrow(/non-negative integer/);
+    expect(() => validateNonNegativeInteger(NaN, 'x')).toThrow(/non-negative integer/);
+    expect(() => validateNonNegativeInteger(1.5, 'x')).toThrow(/non-negative integer/);
+    expect(() => validateNonNegativeInteger(0, 'x')).not.toThrow();
   });
 });
 
@@ -403,6 +420,33 @@ describe('TileChunk', () => {
     expect(() => new TileChunk(Number.MAX_SAFE_INTEGER + 1, 0, 2, 2)).toThrow();
   });
 
+  it('rejects non-finite or non-integer cy', () => {
+    expect(() => new TileChunk(0, NaN, 2, 2)).toThrow();
+    expect(() => new TileChunk(0, Infinity, 2, 2)).toThrow();
+    expect(() => new TileChunk(0, 1.5, 2, 2)).toThrow();
+  });
+
+  it('rejects non-safe-integer dimensions', () => {
+    // Positive but non-integer — passes the `<= 0` guard, fails isSafeInteger.
+    expect(() => new TileChunk(0, 0, 1.5, 2)).toThrow();
+    expect(() => new TileChunk(0, 0, 2, 1.5)).toThrow();
+  });
+
+  it('rejects a size exceeding the TypedArray maximum length', () => {
+    // 100000 * 50000 = 5e9, a safe integer but > 0xFFFFFFFF.
+    expect(() => new TileChunk(0, 0, 100000, 50000)).toThrow();
+  });
+
+  it('_getRawStorage exposes the live backing array (package-internal)', () => {
+    const chunk = new TileChunk(0, 0, 2, 2);
+    chunk._setRawAt(0, 0, 42);
+    const storage = chunk._getRawStorage();
+    expect(storage[0]).toBe(42);
+    // It is the SAME array (not a clone) — mutating it affects the chunk.
+    storage[1] = 7;
+    expect(chunk.getRawAt(1, 0)).toBe(7);
+  });
+
   it('getRawAt validates local coordinates', () => {
     const chunk = new TileChunk(0, 0, 8, 8);
     expect(() => chunk.getRawAt(-1, 0)).toThrow();
@@ -500,6 +544,53 @@ describe('TileLayer', () => {
       id: 0, name: 'l', width: 0, height: 64,
       tileWidth: 16, tileHeight: 16, tilesets: [ts],
     })).toThrow();
+  });
+
+  it('rejects a missing or empty name', () => {
+    expect(() => new TileLayer({
+      id: 0, name: '', width: 4, height: 4,
+      tileWidth: 16, tileHeight: 16, tilesets: [ts],
+    })).toThrow(/name must be a non-empty string/);
+  });
+
+  it('rejects a tilesets option that is not an array', () => {
+    expect(() => new TileLayer({
+      id: 0, name: 'l', width: 4, height: 4,
+      tileWidth: 16, tileHeight: 16, tilesets: null as unknown as TileSet[],
+    })).toThrow(/tilesets must be an array/);
+  });
+
+  it('rejects opacity outside 0..1', () => {
+    expect(() => new TileLayer({
+      id: 0, name: 'l', width: 4, height: 4,
+      tileWidth: 16, tileHeight: 16, tilesets: [ts], opacity: 1.5,
+    })).toThrow(/opacity must be 0\.\.1/);
+    expect(() => new TileLayer({
+      id: 0, name: 'l', width: 4, height: 4,
+      tileWidth: 16, tileHeight: 16, tilesets: [ts], opacity: -0.1,
+    })).toThrow(/opacity must be 0\.\.1/);
+  });
+
+  it('rejects non-finite offsets', () => {
+    expect(() => new TileLayer({
+      id: 0, name: 'l', width: 4, height: 4,
+      tileWidth: 16, tileHeight: 16, tilesets: [ts], offsetX: NaN,
+    })).toThrow(/offset must be finite/);
+    expect(() => new TileLayer({
+      id: 0, name: 'l', width: 4, height: 4,
+      tileWidth: 16, tileHeight: 16, tilesets: [ts], offsetY: Infinity,
+    })).toThrow(/offset must be finite/);
+  });
+
+  it('rejects non-finite parallax factors', () => {
+    expect(() => new TileLayer({
+      id: 0, name: 'l', width: 4, height: 4,
+      tileWidth: 16, tileHeight: 16, tilesets: [ts], parallaxX: NaN,
+    })).toThrow(/parallax must be finite/);
+    expect(() => new TileLayer({
+      id: 0, name: 'l', width: 4, height: 4,
+      tileWidth: 16, tileHeight: 16, tilesets: [ts], parallaxY: Infinity,
+    })).toThrow(/parallax must be finite/);
   });
 
   it('inBounds check', () => {
@@ -713,6 +804,16 @@ describe('TileLayer', () => {
     expect(raw).not.toBe(0);
   });
 
+  it('setTileAt / fillRect reject an invalid tile reference', () => {
+    const layer = new TileLayer({
+      id: 0, name: 'l', width: 16, height: 16,
+      tileWidth: 16, tileHeight: 16, tilesets: [ts],
+    });
+    expect(() => layer.setTileAt(0, 0, {} as unknown as ResolvedTile)).toThrow(/valid ResolvedTile/);
+    expect(() => layer.setTileAt(0, 0, null as unknown as ResolvedTile)).toThrow(/valid ResolvedTile/);
+    expect(() => layer.fillRect(0, 0, 2, 2, {} as unknown as ResolvedTile)).toThrow(/valid ResolvedTile/);
+  });
+
   it('fillRect fills a region', () => {
     const layer = new TileLayer({
       id: 0, name: 'l', width: 16, height: 16,
@@ -724,6 +825,84 @@ describe('TileLayer', () => {
     expect(layer.getTileAt(5, 5)).not.toBeNull();
     expect(layer.getTileAt(1, 1)).toBeNull();
     expect(layer.getTileAt(6, 2)).toBeNull();
+  });
+
+  it('fillRect skips out-of-bounds cells and is a no-op when nothing changes', () => {
+    const layer = new TileLayer({
+      id: 0, name: 'l', width: 8, height: 8,
+      tileWidth: 16, tileHeight: 16, tilesets: [ts],
+    });
+    const ref = { tileset: ts, localTileId: 2, transform: TILE_TRANSFORM_IDENTITY };
+
+    // Rect extends past every edge — only the in-bounds cells are touched.
+    layer.fillRect(-2, -2, 4, 4, ref);
+    expect(layer.getTileAt(0, 0)).not.toBeNull();
+    expect(layer.revision).toBe(1);
+
+    // Filling the exact same region with the same tile is a full no-op:
+    // every cell write is rejected as unchanged, so the revision never bumps.
+    layer.fillRect(-2, -2, 4, 4, ref);
+    expect(layer.revision).toBe(1);
+  });
+
+  it('clearRect clears a filled region and is a no-op on untouched chunks', () => {
+    const layer = new TileLayer({
+      id: 0, name: 'l', width: 16, height: 16,
+      tileWidth: 16, tileHeight: 16, tilesets: [ts],
+    });
+    const ref = { tileset: ts, localTileId: 2, transform: TILE_TRANSFORM_IDENTITY };
+
+    // No chunk has been created yet anywhere — clearRect must skip cleanly.
+    layer.clearRect(0, 0, 4, 4);
+    expect(layer.revision).toBe(0);
+
+    layer.fillRect(2, 2, 4, 4, ref);
+    const revAfterFill = layer.revision;
+
+    // Clear a region that partially extends out of bounds.
+    layer.clearRect(2, 2, 20, 4);
+    expect(layer.getTileAt(2, 2)).toBeNull();
+    expect(layer.getTileAt(5, 5)).toBeNull();
+    expect(layer.revision).toBeGreaterThan(revAfterFill);
+
+    const revAfterClear = layer.revision;
+    // Clearing the already-cleared region again changes nothing.
+    layer.clearRect(2, 2, 20, 4);
+    expect(layer.revision).toBe(revAfterClear);
+  });
+
+  it('getTileAt treats a cell referencing an out-of-range tileset or local tile id as empty', () => {
+    const smallTs = makeTileset('small', 4);
+    const layer = new TileLayer({
+      id: 0, name: 'l', width: 8, height: 8,
+      tileWidth: 16, tileHeight: 16, tilesets: [smallTs],
+    });
+
+    // Directly corrupt the raw storage — bypasses setTileAt's validation, which
+    // can never itself produce these out-of-range packed values.
+    const chunk = layer._ensureChunk(0, 0);
+    chunk._setRawAt(0, 0, packTile(5, 0, TILE_TRANSFORM_IDENTITY)); // tilesetIndex 5 doesn't exist
+    chunk._setRawAt(1, 0, packTile(0, 99, TILE_TRANSFORM_IDENTITY)); // localTileId 99 exceeds tileCount 4
+
+    expect(layer.getTileAt(0, 0)).toBeNull();
+    expect(layer.getTileAt(1, 0)).toBeNull();
+  });
+
+  it('tilesInRect skips cells referencing an out-of-range tileset or local tile id', () => {
+    const smallTs = makeTileset('small', 4);
+    const layer = new TileLayer({
+      id: 0, name: 'l', width: 8, height: 8,
+      tileWidth: 16, tileHeight: 16, tilesets: [smallTs],
+    });
+
+    const chunk = layer._ensureChunk(0, 0);
+    chunk._setRawAt(0, 0, packTile(5, 0, TILE_TRANSFORM_IDENTITY)); // out-of-range tileset
+    chunk._setRawAt(1, 0, packTile(0, 99, TILE_TRANSFORM_IDENTITY)); // out-of-range local id
+    chunk._setRawAt(2, 0, packTile(0, 1, TILE_TRANSFORM_IDENTITY)); // valid
+
+    const tiles = [...layer.tilesInRect(0, 0, 8, 8)];
+    expect(tiles).toHaveLength(1);
+    expect(tiles[0]!.tx).toBe(2);
   });
 
   it('tilesInRect iterates non-empty tiles', () => {
@@ -1075,6 +1254,20 @@ describe('TileMap', () => {
     expect(map.getImageLayerById(999)).toBeUndefined();
   });
 
+  it('getImageLayer finds the first image layer matching the name', () => {
+    const map = new TileMap({
+      width: 64, height: 64,
+      tileWidth: 32, tileHeight: 32,
+      imageLayers: [
+        new ImageLayer({ id: 1, name: 'bg', image: 'bg.png' }),
+        new ImageLayer({ id: 2, name: 'fg', image: 'fg.png' }),
+      ],
+    });
+    expect(map.getImageLayer('bg')!.id).toBe(1);
+    expect(map.getImageLayer('fg')!.id).toBe(2);
+    expect(map.getImageLayer('missing')).toBeUndefined();
+  });
+
   it('removeImageLayer removes the layer by ID', () => {
     const layer = new ImageLayer({ id: 1, name: 'removable', image: 'bg.png' });
     const map = new TileMap({
@@ -1149,6 +1342,23 @@ describe('TileMap', () => {
       tileWidth: 32, tileHeight: 32,
     });
     expect(() => map.clearTileAt(999, 0, 0)).toThrow();
+  });
+
+  it('clearTileAt convenience clears the tile on an existing layer', () => {
+    const map = new TileMap({
+      width: 64, height: 64,
+      tileWidth: 32, tileHeight: 32,
+      tilesets: [ts],
+      layers: [
+        new TileLayer({ id: 1, name: 'l', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] }),
+      ],
+    });
+    const ref = { tileset: ts, localTileId: 2, transform: TILE_TRANSFORM_IDENTITY };
+    map.setTileAt(1, 3, 3, ref);
+    expect(map.getTileAt(1, 3, 3)).not.toBeNull();
+
+    map.clearTileAt(1, 3, 3);
+    expect(map.getTileAt(1, 3, 3)).toBeNull();
   });
 
   it('multiple tilesets', () => {

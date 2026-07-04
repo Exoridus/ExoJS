@@ -54,4 +54,36 @@ describe('tilemap serialization', () => {
 
     expect(() => Prefab.fromJSON({ type: 'TileMapNode', map: 'missing.tmj' }).instantiate(emptyLoader)).toThrow(/pre-loaded/);
   });
+
+  it('throws when no map field is present at all (procedural map, never given a source key)', () => {
+    const emptyLoader = { keyFor: () => null, peek: () => null } as unknown as Loader;
+
+    expect(() => Prefab.fromJSON({ type: 'TileMapNode' }).instantiate(emptyLoader)).toThrow(/pre-loaded/);
+  });
+
+  it('omits the map/pixelSnapMode keys entirely for a procedural map with default pixelSnapMode', () => {
+    const map = new TileMap({ name: 'procedural', width: 4, height: 4, tileWidth: 32, tileHeight: 32 });
+    const node = new TileMapNode(map); // pixelSnapMode stays 'none'
+    const loaderWithoutSourceKey = { keyFor: () => null, peek: () => null } as unknown as Loader;
+
+    const data = Prefab.from(node, loaderWithoutSourceKey).toJSON();
+
+    expect(data.map).toBeUndefined();
+    expect(data.pixelSnapMode).toBeUndefined();
+
+    node.destroy();
+    map.destroy();
+  });
+
+  it('read() leaves pixelSnapMode at its default when the field is absent from the data', () => {
+    const map = new TileMap({ name: 'world', width: 4, height: 4, tileWidth: 32, tileHeight: 32 });
+    const loader = fakeLoader(map, 'world.tmj');
+
+    const restored = Prefab.fromJSON({ type: 'TileMapNode', map: 'world.tmj' }).instantiate(loader) as TileMapNode;
+
+    expect(restored.pixelSnapMode).toBe('none');
+
+    restored.destroy();
+    map.destroy();
+  });
 });

@@ -288,6 +288,13 @@ describe('TileMapView bands', () => {
     expect(() => view.band('missing')).toThrow(/"ground"/);
   });
 
+  it('band() lists "(none)" when the view has no bands defined at all', () => {
+    const { map } = makeWorldMap();
+    const view = map.createView(); // no bands option
+
+    expect(() => view.band('missing')).toThrow(/\(none\)/);
+  });
+
   it('throws at construction for an unknown layer id', () => {
     const { map } = makeWorldMap();
 
@@ -890,6 +897,94 @@ describe('TileMapBand bounds', () => {
     const rect = band.getBounds();
 
     expect([rect.x, rect.y, rect.width, rect.height]).toEqual([50, 60, 256, 256]);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+// TileMapBand — internal membership operations (direct, bypassing TileMapView)
+// ═══════════════════════════════════════════════════════════════════════
+
+describe('TileMapBand internal membership operations', () => {
+  it('updateBounds collapses to a degenerate rect when every child is invisible', () => {
+    const tileset = makeTileset();
+    const node = new TileLayerNode(makeLayer(tileset));
+    const band = new TileMapBand('b', [node]);
+
+    node.visible = false;
+    band.setPosition(9, 4);
+
+    const rect = band.getBounds();
+    expect([rect.x, rect.y, rect.width, rect.height]).toEqual([9, 4, 0, 0]);
+  });
+
+  it('_adopt is a no-op when the node is already a member (no duplicate membership)', () => {
+    const tileset = makeTileset();
+    const node = new TileLayerNode(makeLayer(tileset));
+    const band = new TileMapBand('b', [node]);
+
+    expect(band.layerNodes).toHaveLength(1);
+
+    band._adopt(node); // already a member
+
+    expect(band.layerNodes).toHaveLength(1);
+    expect(band.layerNodes[0]).toBe(node);
+  });
+
+  it('_release is a no-op for a node that was never a member', () => {
+    const tileset = makeTileset();
+    const memberNode = new TileLayerNode(makeLayer(tileset, { id: 1 }));
+    const strangerNode = new TileLayerNode(makeLayer(tileset, { id: 2 }));
+    const band = new TileMapBand('b', [memberNode]);
+
+    expect(() => band._release(strangerNode)).not.toThrow();
+    expect(band.layerNodes).toEqual([memberNode]);
+  });
+
+  it('_release does not attempt to detach a member node that was already reparented elsewhere', () => {
+    const tileset = makeTileset();
+    const node = new TileLayerNode(makeLayer(tileset));
+    const band = new TileMapBand('b', [node]);
+    const otherContainer = new Container();
+
+    otherContainer.addChild(node); // reparent away from the band
+
+    band._release(node); // still band membership, but node.parent !== band
+
+    expect(band.layerNodes).toHaveLength(0);
+    expect(node.parent).toBe(otherContainer); // untouched by _release
+  });
+
+  it('_reorder falls back to index 0 for either member id missing from the document map', () => {
+    const tileset = makeTileset();
+    const nodeA = new TileLayerNode(makeLayer(tileset, { id: 1 }));
+    const nodeB = new TileLayerNode(makeLayer(tileset, { id: 2 }));
+    const band = new TileMapBand('b', [nodeA, nodeB]);
+
+    // Only nodeB's id is present in the document index map; nodeA falls back to 0
+    // (covers the fallback for the comparator's first operand, the defined
+    // value for its second).
+    expect(() => band._reorder(new Map([[2, 5]]))).not.toThrow();
+    expect(band.layerNodes).toHaveLength(2);
+
+    // Swap which id is present, so the opposite operand hits the fallback and
+    // the previously-fallback operand now resolves a defined value.
+    expect(() => band._reorder(new Map([[1, 3]]))).not.toThrow();
+    expect(band.layerNodes).toHaveLength(2);
+  });
+
+  it('_reorder skips re-adding a member node that is no longer parented to the band', () => {
+    const tileset = makeTileset();
+    const nodeA = new TileLayerNode(makeLayer(tileset, { id: 1 }));
+    const nodeB = new TileLayerNode(makeLayer(tileset, { id: 2 }));
+    const band = new TileMapBand('b', [nodeA, nodeB]);
+    const otherContainer = new Container();
+
+    otherContainer.addChild(nodeA); // reparent away, but membership is kept
+
+    expect(() => band._reorder(new Map([[1, 0], [2, 1]]))).not.toThrow();
+    expect(band.layerNodes).toEqual([nodeA, nodeB]); // membership unaffected
+    expect(nodeA.parent).toBe(otherContainer); // not re-adopted by the band
+    expect(band.children).toContain(nodeB);
   });
 });
 

@@ -165,6 +165,19 @@ describe('Distribution', () => {
     expect(g.evaluateRgba(0)).toBe(0);
   });
 
+  test('BoxArea defaults to volume mode when no mode is given', () => {
+    const box = new BoxArea(10, 20, -5, 5);
+
+    expect(box.mode).toBe('volume');
+
+    for (let i = 0; i < 50; i++) {
+      const v = box.sample();
+
+      expect(v.x).toBeGreaterThanOrEqual(10);
+      expect(v.x).toBeLessThanOrEqual(20);
+    }
+  });
+
   test('BoxArea volume mode stays within the box', () => {
     const box = new BoxArea(10, 20, -5, 5, 'volume');
 
@@ -190,6 +203,19 @@ describe('Distribution', () => {
       expect(v.x).toBeLessThanOrEqual(10);
       expect(v.y).toBeGreaterThanOrEqual(0);
       expect(v.y).toBeLessThanOrEqual(20);
+    }
+  });
+
+  test('CircleArea defaults to volume mode when no mode is given', () => {
+    const circle = new CircleArea(100, 50, 25);
+
+    expect(circle.mode).toBe('volume');
+
+    for (let i = 0; i < 50; i++) {
+      const v = circle.sample();
+      const dist = Math.hypot(v.x - 100, v.y - 50);
+
+      expect(dist).toBeLessThanOrEqual(25);
     }
   });
 
@@ -256,6 +282,39 @@ describe('Distribution', () => {
 });
 
 describe('SpawnModule', () => {
+  test('RateSpawn skips spawning while the accumulated fraction is below one whole particle', () => {
+    const system = new ParticleSystem(makeTexture(), { capacity: 8 });
+
+    system.addSpawnModule(
+      new RateSpawn({
+        rate: new Constant(1),
+        lifetime: new Constant(10),
+      }),
+    );
+
+    // 1 particle/s * 0.01s = 0.01 accumulated — rounds down to 0, so the
+    // module must return early without spawning or throwing.
+    system.update(tick(0.01));
+
+    expect(system.liveCount).toBe(0);
+  });
+
+  test('RateSpawn defaults spawned particles to a 1-second lifetime when omitted', () => {
+    const system = new ParticleSystem(makeTexture(), { capacity: 8 });
+
+    system.addSpawnModule(new RateSpawn({ rate: new Constant(100) }));
+
+    // A short tick — a full 1s tick would make elapsed (integrated in the
+    // same frame) equal the default lifetime, expiring particles instantly.
+    system.update(tick(0.1));
+
+    expect(system.liveCount).toBeGreaterThan(0);
+
+    for (let i = 0; i < system.liveCount; i++) {
+      expect(system.lifetime[i]).toBe(1);
+    }
+  });
+
   test('RateSpawn emits at configured rate', () => {
     const system = new ParticleSystem(makeTexture(), { capacity: 1024 });
 
@@ -298,6 +357,30 @@ describe('SpawnModule', () => {
       expect(system.scaleX[i]).toBeCloseTo(2);
       // rotation = rotationSpeed * dt = 45 * 0.1 = 4.5
       expect(system.rotations[i]).toBeCloseTo(4.5);
+    }
+  });
+
+  test('BurstSpawn with an empty schedule never fires and never throws', () => {
+    const system = new ParticleSystem(makeTexture(), { capacity: 8 });
+
+    system.addSpawnModule(new BurstSpawn({ schedule: [], lifetime: new Constant(10) }));
+
+    system.update(tick(1));
+
+    expect(system.liveCount).toBe(0);
+  });
+
+  test('BurstSpawn defaults spawned particles to a 1-second lifetime when omitted', () => {
+    const system = new ParticleSystem(makeTexture(), { capacity: 8 });
+
+    system.addSpawnModule(new BurstSpawn({ schedule: [{ time: 0, count: 3 }] }));
+
+    system.update(tick(0.1));
+
+    expect(system.liveCount).toBe(3);
+
+    for (let i = 0; i < system.liveCount; i++) {
+      expect(system.lifetime[i]).toBe(1);
     }
   });
 
@@ -534,6 +617,30 @@ describe('UpdateModule', () => {
     expect(Math.abs(system.velX[slot])).toBeGreaterThan(20);
   });
 
+  test('VelocityOverLifetime treats an exact-zero curve sample as a near-zero sentinel', () => {
+    const system = new ParticleSystem(makeTexture(), { capacity: 4 });
+    const slot = system.spawn();
+
+    system.lifetime[slot] = 1;
+    system.velX[slot] = 100;
+    system.velY[slot] = 0;
+    system.addUpdateModule(
+      new VelocityOverLifetime(
+        new Curve([
+          { t: 0, v: 1 },
+          { t: 1, v: 0 },
+        ]),
+      ),
+    );
+
+    // A single 1s tick advances elapsed to exactly lifetime (t=1), where the
+    // curve evaluates to exactly 0 — the module must not store a literal 0
+    // (which would divide-by-zero on a later frame) but a tiny sentinel.
+    system.update(tick(1));
+
+    expect(system.velX[slot]).toBeCloseTo(0);
+  });
+
   test('AttractToPoint pulls particle toward target', () => {
     const system = new ParticleSystem(makeTexture(), { capacity: 4 });
     const slot = system.spawn();
@@ -579,6 +686,62 @@ describe('UpdateModule', () => {
     expect(unsoftened.velX[unsoftenedSlot]).toBeCloseTo(1000);
     expect(softened.velX[softenedSlot]).toBeCloseTo(200);
     expect(softened.velX[softenedSlot]).toBeLessThan(unsoftened.velX[unsoftenedSlot]);
+  });
+
+  test('AttractToPoint ignores a particle sitting exactly on the target (avoids a divide-by-zero)', () => {
+    const system = new ParticleSystem(makeTexture(), { capacity: 4 });
+    const slot = system.spawn();
+
+    system.lifetime[slot] = 10;
+    system.posX[slot] = 100;
+    system.posY[slot] = 0;
+    // Zero velocity so integration doesn't move the particle off the exact
+    // target position before the module runs.
+    system.velX[slot] = 0;
+    system.velY[slot] = 0;
+    system.addUpdateModule(new AttractToPoint(100, 0, 1000));
+
+    system.update(tick(1));
+
+    // dist === 0 < epsilon guard — the module must skip this particle
+    // entirely rather than dividing by zero (which would produce NaN/Infinity).
+    expect(system.velX[slot]).toBe(0);
+    expect(system.velY[slot]).toBe(0);
+  });
+
+  test('RepelFromPoint ignores a particle sitting exactly on the source (avoids a divide-by-zero)', () => {
+    const system = new ParticleSystem(makeTexture(), { capacity: 4 });
+    const slot = system.spawn();
+
+    system.lifetime[slot] = 10;
+    system.posX[slot] = 0;
+    system.posY[slot] = 0;
+    system.velX[slot] = 0;
+    system.velY[slot] = 0;
+    system.addUpdateModule(new RepelFromPoint(0, 0, 500));
+
+    system.update(tick(1));
+
+    expect(system.velX[slot]).toBe(0);
+    expect(system.velY[slot]).toBe(0);
+  });
+
+  test('RepelFromPoint softens the push with a linear falloff inside the radius', () => {
+    const system = new ParticleSystem(makeTexture(), { capacity: 4 });
+    const slot = system.spawn();
+
+    system.lifetime[slot] = 10;
+    system.posX[slot] = 10;
+    system.posY[slot] = 0;
+    system.velX[slot] = 0;
+    system.velY[slot] = 0;
+    // dist=10, radius=50 (in range) -> falloff = 1 - 10/50 = 0.8
+    // a = strength * falloff * dt / dist = 1000 * 0.8 * 1 / 10 = 80
+    system.addUpdateModule(new RepelFromPoint(0, 0, 1000, 50));
+
+    system.update(tick(1));
+
+    expect(system.velX[slot]).toBeCloseTo(800);
   });
 
   test('RepelFromPoint pushes particle away from source', () => {
@@ -630,6 +793,13 @@ describe('UpdateModule', () => {
     expect(Math.abs(system.velX[slot])).toBeLessThan(0.001);
   });
 
+  test('Turbulence defaults frequency and timeScale when omitted', () => {
+    const turbulence = new Turbulence(50);
+
+    expect(turbulence.frequency).toBe(0.01);
+    expect(turbulence.timeScale).toBe(1);
+  });
+
   test('Turbulence perturbs particle velocity', () => {
     const system = new ParticleSystem(makeTexture(), { capacity: 4 });
     const slot = system.spawn();
@@ -676,6 +846,15 @@ describe('UpdateModule', () => {
 });
 
 describe('DeathModule', () => {
+  test('SpawnOnDeath defaults count to 1 when omitted', () => {
+    const child = new ParticleSystem(makeTexture(), { capacity: 4 });
+    const burst = new BurstSpawn({ schedule: [{ time: 0, count: 1 }], lifetime: new Constant(5) });
+
+    const death = new SpawnOnDeath(child, burst);
+
+    expect(death.count).toBe(1);
+  });
+
   test('SpawnOnDeath fires when particle expires and copies position', () => {
     const parent = new ParticleSystem(makeTexture(), { capacity: 4 });
     const child = new ParticleSystem(makeTexture(), { capacity: 16 });

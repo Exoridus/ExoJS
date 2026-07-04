@@ -367,6 +367,61 @@ describe('loadLdtkMap — external levels (.ldtkl)', () => {
   });
 });
 
+describe('loadLdtkMap — external level omits fieldInstances entirely', () => {
+  // Distinct from the "prefers the external fieldInstances" case above: here the
+  // external payload does not carry the key at all (undefined, not `[]`), so
+  // loadExternalLevel's `external.fieldInstances ?? level.fieldInstances` must
+  // fall back to the root level's own fieldInstances rather than dropping them.
+  const EXTERNAL_URL = 'https://example.com/maps/levels/Level_0.ldtkl';
+
+  const rootFixture: LdtkData = {
+    jsonVersion: '1.5.3',
+    defaultGridSize: 16,
+    defs: {
+      tilesets: [],
+      layers: [{ uid: 101, identifier: 'Entities', type: 'Entities', gridSize: 16 }],
+    },
+    levels: [
+      {
+        identifier: 'Level_0',
+        uid: 1,
+        iid: 'iid-1',
+        worldX: 0,
+        worldY: 0,
+        pxWid: 64,
+        pxHei: 16,
+        layerInstances: null,
+        externalRelPath: 'levels/Level_0.ldtkl',
+        fieldInstances: [{ __identifier: 'kept', __type: 'String', __value: 'root-value' }],
+      },
+    ],
+  };
+
+  const externalFixture = {
+    identifier: 'Level_0',
+    uid: 1,
+    iid: 'iid-1',
+    worldX: 0,
+    worldY: 0,
+    pxWid: 64,
+    pxHei: 16,
+    // fieldInstances intentionally omitted (not even an empty array).
+    layerInstances: [],
+  };
+
+  function context() {
+    return makeContext({
+      [ABS_SOURCE]: rootFixture,
+      [EXTERNAL_URL]: externalFixture,
+    });
+  }
+
+  it("falls back to the root level's fieldInstances when the external payload has none", async () => {
+    const map = await loadLdtkMap(ABS_SOURCE, context().context);
+    expect(map.levels[0]!.properties['kept']).toBe('root-value');
+  });
+});
+
 describe('loadLdtkMap — tilesets without an atlas image', () => {
   // relPath: null → the tileset is skipped entirely; tiles cannot render.
   const fixture: LdtkData = {

@@ -1,7 +1,8 @@
 import { Texture } from '@codexo/exojs';
 import { TileLayer, TileMap, TileSet } from '@codexo/exojs-tilemap';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, test } from 'vitest';
 
+import type { TiledChunkData, TiledLayerData, TiledMapData, TiledObjectData, TiledPropertyData } from '../src/data';
 import { TiledTileLayer } from '../src/TiledLayer';
 import { TiledMap } from '../src/TiledMap';
 import { TiledTileset } from '../src/TiledTileset';
@@ -447,5 +448,349 @@ describe('TiledMap.toTileMap — error cases', () => {
     const map = new TiledMap('col.tmj', data, [collectionTs]);
     expect(() => map.toTileMap()).toThrow(TiledFormatError);
     expect(() => map.toTileMap()).toThrow(/collection-of-images/);
+  });
+});
+
+// ── Object-kind conversion breadth (ellipse/polygon/polyline/dropped-tile) ──────
+
+describe('TiledMap.toTileMap — object kind conversion', () => {
+  function makeObjectKindMap(objectOverrides: Record<string, unknown>): TileMap {
+    const data = validateTiledMapData({
+      type: 'map', version: '1.10', orientation: 'orthogonal', renderorder: 'right-down',
+      width: 1, height: 1, tilewidth: 16, tileheight: 16, infinite: false,
+      layers: [{
+        id: 1, name: 'Objects', type: 'objectgroup', visible: true, x: 0, y: 0, opacity: 1,
+        objects: [{ id: 1, name: 'obj', type: '', x: 0, y: 0, width: 16, height: 16, rotation: 0, visible: true, ...objectOverrides }],
+      }],
+      tilesets: [],
+    }, 'objkind.tmj');
+    return new TiledMap('objkind.tmj', data, []).toTileMap();
+  }
+
+  it('maps an ellipse object to kind "ellipse"', () => {
+    const obj = makeObjectKindMap({ ellipse: true }).objectLayers[0]!.objects[0]!;
+    expect(obj.kind).toBe('ellipse');
+  });
+
+  it('maps a polygon object to kind "polygon" with converted points', () => {
+    const points = [{ x: 0, y: 0 }, { x: 8, y: 0 }, { x: 8, y: 8 }];
+    const obj = makeObjectKindMap({ polygon: points }).objectLayers[0]!.objects[0]!;
+    expect(obj.kind).toBe('polygon');
+    if (obj.kind === 'polygon') expect(obj.points).toEqual(points);
+  });
+
+  it('maps a polyline object to kind "polyline" with converted points', () => {
+    const points = [{ x: 0, y: 0 }, { x: 4, y: 4 }];
+    const obj = makeObjectKindMap({ polyline: points }).objectLayers[0]!.objects[0]!;
+    expect(obj.kind).toBe('polyline');
+    if (obj.kind === 'polyline') expect(obj.points).toEqual(points);
+  });
+
+  it('drops a tile object whose tileset has no atlas image (skipped at conversion)', () => {
+    const noImageTs = new TiledTileset({ name: 'no-image', tilewidth: 16, tileheight: 16, tilecount: 1, columns: 1 }, 1);
+    const data = validateTiledMapData({
+      type: 'map', version: '1.10', orientation: 'orthogonal', renderorder: 'right-down',
+      width: 1, height: 1, tilewidth: 16, tileheight: 16, infinite: false,
+      layers: [{
+        id: 1, name: 'Objects', type: 'objectgroup', visible: true, x: 0, y: 0, opacity: 1,
+        objects: [{ id: 1, name: 'obj', type: '', x: 0, y: 0, width: 16, height: 16, rotation: 0, visible: true, gid: 1 }],
+      }],
+      tilesets: [{ firstgid: 1, name: 'no-image', tilewidth: 16, tileheight: 16, tilecount: 1, columns: 1 }],
+    }, 'noimg.tmj');
+    const tm = new TiledMap('noimg.tmj', data, [noImageTs]).toTileMap();
+    expect(tm.objectLayers[0]!.objects).toHaveLength(0);
+  });
+});
+
+// ── Text-object TextStyle field breadth ─────────────────────────────────────────
+
+describe('TiledMap.toTileMap — text object style conversion', () => {
+  function makeTextObjectMap(textData: Record<string, unknown>): TileMap {
+    const data = validateTiledMapData({
+      type: 'map', version: '1.10', orientation: 'orthogonal', renderorder: 'right-down',
+      width: 1, height: 1, tilewidth: 16, tileheight: 16, infinite: false,
+      layers: [{
+        id: 1, name: 'Objects', type: 'objectgroup', visible: true, x: 0, y: 0, opacity: 1,
+        objects: [{ id: 1, name: 'label', type: '', x: 0, y: 0, width: 16, height: 16, rotation: 0, visible: true, text: textData }],
+      }],
+      tilesets: [],
+    }, 'text.tmj');
+    return new TiledMap('text.tmj', data, []).toTileMap();
+  }
+
+  it('omits optional TextStyle fields entirely when absent from the source text object', () => {
+    const obj = makeTextObjectMap({ text: 'plain' }).objectLayers[0]!.objects[0]!;
+    expect(obj.kind).toBe('text');
+    if (obj.kind === 'text') expect(obj.text).toEqual({ text: 'plain' });
+  });
+
+  it('includes fontFamily, italic, underline, strikeout, halign, and valign when present', () => {
+    const obj = makeTextObjectMap({
+      text: 'styled', fontfamily: 'Arial', italic: true, underline: true, strikeout: true, halign: 'right', valign: 'bottom',
+    }).objectLayers[0]!.objects[0]!;
+    expect(obj.kind).toBe('text');
+    if (obj.kind === 'text') {
+      expect(obj.text.fontFamily).toBe('Arial');
+      expect(obj.text.italic).toBe(true);
+      expect(obj.text.underline).toBe(true);
+      expect(obj.text.strikeout).toBe(true);
+      expect(obj.text.halign).toBe('right');
+      expect(obj.text.valign).toBe('bottom');
+    }
+  });
+});
+
+// ── Per-tile collision shape kind breadth ───────────────────────────────────────
+
+describe('TiledMap.toTileMap — per-tile collision shape kinds', () => {
+  it('converts point, ellipse, polygon, and polyline collision shapes; drops text and gid shapes', () => {
+    const ts = new TiledTileset(
+      {
+        name: 'collide', tilewidth: 16, tileheight: 16, tilecount: 1, columns: 1,
+        imagewidth: 16, imageheight: 16,
+        tiles: [{
+          id: 0,
+          objectgroup: {
+            id: 1, name: '', type: 'objectgroup', visible: true, opacity: 1, x: 0, y: 0,
+            draworder: 'topdown',
+            objects: [
+              { id: 1, name: '', type: '', x: 0, y: 0, width: 0, height: 0, rotation: 0, visible: true, text: { text: 'dropped' } },
+              { id: 2, name: '', type: '', x: 0, y: 0, width: 0, height: 0, rotation: 0, visible: true, gid: 1 },
+              { id: 3, name: '', type: '', x: 1, y: 1, width: 0, height: 0, rotation: 0, visible: true, point: true },
+              { id: 4, name: '', type: '', x: 2, y: 2, width: 4, height: 4, rotation: 0, visible: true, ellipse: true },
+              { id: 5, name: '', type: '', x: 0, y: 0, width: 0, height: 0, rotation: 0, visible: true, polygon: [{ x: 0, y: 0 }, { x: 2, y: 0 }, { x: 2, y: 2 }] },
+              { id: 6, name: '', type: '', x: 0, y: 0, width: 0, height: 0, rotation: 0, visible: true, polyline: [{ x: 0, y: 0 }, { x: 3, y: 3 }] },
+            ],
+          },
+        }],
+      },
+      1,
+      { imageUrl: 'collide.png', texture: makeTexture(16, 16) },
+    );
+    const data = validateTiledMapData({ ...RAW_MINIMAL, layers: [] }, 'collide.tmj');
+    const tm = new TiledMap('collide.tmj', data, [ts]).toTileMap();
+    const collision = tm.tilesets[0]!.getTileDefinition(0)?.collision;
+    expect(collision).toHaveLength(4);
+    expect(collision?.map(shape => shape.kind)).toEqual(['point', 'ellipse', 'polygon', 'polyline']);
+  });
+});
+
+// ── buildTileDefinitions edge cases ──────────────────────────────────────────────
+
+describe('TiledMap.toTileMap — buildTileDefinitions edge cases', () => {
+  it('skips an out-of-range tile id and a tile whose animation/collision fully filter to empty', () => {
+    const ts = new TiledTileset(
+      {
+        name: 'edge', tilewidth: 16, tileheight: 16, tilecount: 2, columns: 2,
+        imagewidth: 32, imageheight: 16,
+        tiles: [
+          { id: 5 }, // out of range for tilecount: 2
+          {
+            id: 0,
+            animation: [{ tileid: 99, duration: 100 }], // out-of-range frame, filtered to empty
+            objectgroup: {
+              id: 1, name: '', type: 'objectgroup', visible: true, opacity: 1, x: 0, y: 0,
+              draworder: 'topdown',
+              objects: [{ id: 1, name: '', type: '', x: 0, y: 0, width: 0, height: 0, rotation: 0, visible: true, text: { text: 'x' } }],
+            },
+          },
+        ],
+      },
+      1,
+      { imageUrl: 'edge.png', texture: makeTexture(32, 16) },
+    );
+    const data = validateTiledMapData({ ...RAW_MINIMAL, layers: [] }, 'edgeTiles.tmj');
+    const tm = new TiledMap('edgeTiles.tmj', data, [ts]).toTileMap();
+    const runtimeTs = tm.tilesets[0]!;
+    expect(runtimeTs.getTileDefinition(0)).toBeUndefined();
+    expect(runtimeTs.getTileDefinition(5)).toBeUndefined();
+  });
+});
+
+// ── parseTiledColor breadth (AARRGGBB, malformed length, invalid hex digits) ────
+
+describe('TiledMap.toTileMap — background colour parsing edge cases', () => {
+  it('parses an 8-digit AARRGGBB colour, dropping the leading alpha', () => {
+    const data = validateTiledMapData({ ...RAW_MINIMAL, backgroundcolor: '#ff112233' }, 'argb.tmj');
+    const tm = new TiledMap('argb.tmj', data, [ATLAS_TILESET]).toTileMap();
+    expect(tm.backgroundColor).toBe(0x112233);
+  });
+
+  it('returns null for a malformed-length colour string', () => {
+    const data = validateTiledMapData({ ...RAW_MINIMAL, backgroundcolor: '#1234' }, 'shortcolor.tmj');
+    const tm = new TiledMap('shortcolor.tmj', data, [ATLAS_TILESET]).toTileMap();
+    expect(tm.backgroundColor).toBeNull();
+  });
+
+  it('returns null for invalid hex digits', () => {
+    const data = validateTiledMapData({ ...RAW_MINIMAL, backgroundcolor: '#zzzzzz' }, 'badhex.tmj');
+    const tm = new TiledMap('badhex.tmj', data, [ATLAS_TILESET]).toTileMap();
+    expect(tm.backgroundColor).toBeNull();
+  });
+
+  it('accepts a colour string without a leading "#"', () => {
+    const data = validateTiledMapData({ ...RAW_MINIMAL, backgroundcolor: '112233' }, 'nohash.tmj');
+    const tm = new TiledMap('nohash.tmj', data, [ATLAS_TILESET]).toTileMap();
+    expect(tm.backgroundColor).toBe(0x112233);
+  });
+});
+
+// ── Property conversion edge cases ──────────────────────────────────────────────
+
+describe('TiledMap.toTileMap — property conversion edge cases', () => {
+  it('converts float, color, and file property types to their raw values', () => {
+    const data = validateTiledMapData({
+      ...RAW_MINIMAL,
+      properties: [
+        { name: 'speed', type: 'float', value: 2.5 },
+        { name: 'tint', type: 'color', value: '#ff0000ff' },
+        { name: 'sfx', type: 'file', value: 'sounds/hit.wav' },
+      ],
+    }, 'floatcolorfile.tmj');
+    const tm = new TiledMap('floatcolorfile.tmj', data, [ATLAS_TILESET]).toTileMap();
+    expect(tm.properties['speed']).toBe(2.5);
+    expect(tm.properties['tint']).toBe('#ff0000ff');
+    expect(tm.properties['sfx']).toBe('sounds/hit.wav');
+  });
+
+  it('omits a property whose converted value is undefined (defensive; requires bypassing validate.ts, whose `value` field is never undefined)', () => {
+    const data = validateTiledMapData({ ...RAW_MINIMAL, layers: [] }, 'ghost.tmj');
+    const bogusProp = { name: 'ghost', type: 'string', propertytype: undefined, value: undefined } as unknown as TiledPropertyData;
+    const dataWithGhost: TiledMapData = { ...data, properties: [bogusProp] };
+    const tm = new TiledMap('ghost.tmj', dataWithGhost, [ATLAS_TILESET]).toTileMap();
+    expect(tm.properties).toEqual({});
+  });
+
+  it('throws when converting a property with an unrecognised type (defensive; validate.ts normally restricts property.type to 8 known values)', () => {
+    const data = validateTiledMapData({
+      ...RAW_MINIMAL,
+      properties: [{ name: 'weird', type: 'string', value: 'x' }],
+    }, 'weird.tmj');
+    // Mutate the already-parsed property to simulate an invariant violation that
+    // validate.ts's own type restriction would normally prevent.
+    (data.properties![0] as { type: string }).type = 'vector3';
+    const map = new TiledMap('weird.tmj', data, [ATLAS_TILESET]);
+    expect(() => map.toTileMap()).toThrow(/unrecognised Tiled property type "vector3"/);
+  });
+});
+
+// ── Defensive coverage of otherwise-unreachable branches ────────────────────────
+//
+// The tests below intentionally bypass validate.ts's invariants (which a
+// TiledMap built via loadTiledMap() always upholds) by either constructing
+// TiledMapData by hand or tampering with an already-validated map's internal
+// state. TiledMap's own constructor does not re-run validate.ts, so these are
+// legitimate (if unusual) call shapes for a caller that skips loadTiledMap.
+
+function makeBareMapData(overrides: Partial<TiledMapData> & { layers: TiledMapData['layers'] }): TiledMapData {
+  return {
+    type: 'map',
+    version: '1.10',
+    orientation: 'orthogonal',
+    renderorder: 'right-down',
+    width: 1,
+    height: 1,
+    tilewidth: 16,
+    tileheight: 16,
+    infinite: false,
+    tilesets: [],
+    properties: [],
+    ...overrides,
+  };
+}
+
+describe('TiledMap — defensive coverage of otherwise-unreachable branches', () => {
+  it('tolerates an explicit undefined entry in the tilesets array (sort() never invokes the comparator on it)', () => {
+    const data = validateTiledMapData({ ...RAW_MINIMAL, layers: [] }, 'holetilesets.tmj');
+    const map = new TiledMap('holetilesets.tmj', data, [TILESET, undefined as unknown as TiledTileset]);
+    expect(map.tilesets).toHaveLength(2);
+    const tm = map.toTileMap();
+    // TILESET has no texture (skipped) and the hole is skipped too → no runtime tilesets.
+    expect(tm.tilesets).toHaveLength(0);
+  });
+
+  it('resolveGid returns null when no tileset covers the masked gid (requires clearing tilesets after construction, since valid construction always guarantees coverage)', () => {
+    const map = makeAtlasMap();
+    (map as unknown as { tilesets: TiledTileset[] }).tilesets = [];
+    const tm = map.toTileMap();
+    expect(tm.layers[0]!.getTileAt(0, 0)).toBeNull();
+  });
+
+  it('skips a hole in a tile layer\'s raw data array (defensive; requires a genuine sparse hole, which JSON parsing never produces)', () => {
+    const holedData: number[] = new Array(3) as number[];
+    holedData[0] = 0;
+    holedData[2] = 0;
+    const layer: TiledLayerData = {
+      type: 'tilelayer', id: 1, name: 'HoleData', visible: true, opacity: 1, x: 0, y: 0,
+      width: 3, height: 1, data: holedData,
+    };
+    const data = makeBareMapData({ width: 3, height: 1, layers: [layer] });
+    const map = new TiledMap('holedata.tmj', data, []);
+    const tm = map.toTileMap();
+    expect(tm.layers[0]!.getTileAt(1, 0)).toBeNull();
+  });
+
+  it('silently ignores a layer of an unrecognised type end-to-end (defensive; bypasses validate.ts\'s restriction of layer.type to 4 known values)', () => {
+    const bogusLayer = { type: 'unknown-layer-type', id: 1, name: 'Bogus', visible: true, opacity: 1, x: 0, y: 0 } as unknown as TiledLayerData;
+    const data = makeBareMapData({ layers: [bogusLayer] });
+    const map = new TiledMap('bogus.tmj', data, []);
+    const tm = map.toTileMap();
+    expect(tm.layers).toHaveLength(0);
+    expect(tm.objectLayers).toHaveLength(0);
+    expect(tm.imageLayers).toHaveLength(0);
+  });
+
+  it('skips tile-layer population when both data and chunks are undefined (defensive; bypasses validate.ts\'s "exactly one of data/chunks" check)', () => {
+    const layer: TiledLayerData = {
+      type: 'tilelayer', id: 1, name: 'Bare', visible: true, opacity: 1, x: 0, y: 0, width: 1, height: 1,
+    };
+    const data = makeBareMapData({ layers: [layer] });
+    const map = new TiledMap('bare.tmj', data, []);
+    const tm = map.toTileMap();
+    expect(tm.layers[0]!.getTileAt(0, 0)).toBeNull();
+  });
+
+  it('defaults an image layer texture to null when no texture was preloaded for its id', () => {
+    const layer: TiledLayerData = {
+      type: 'imagelayer', id: 1, name: 'Bg', visible: true, opacity: 1, x: 0, y: 0, image: 'bg.png',
+    };
+    const data = makeBareMapData({ layers: [layer] });
+    const tm = new TiledMap('imgnotex.tmj', data, []).toTileMap(); // no imageTextures map passed → defaults to empty
+    expect(tm.imageLayers[0]!.texture).toBeNull();
+  });
+
+  it('skips a hole in an infinite tile layer\'s chunks array during GID-coverage validation', () => {
+    const chunks: TiledChunkData[] = new Array(2) as TiledChunkData[];
+    chunks[1] = { x: 0, y: 0, width: 1, height: 1, data: [0] };
+    const layer: TiledLayerData = {
+      type: 'tilelayer', id: 1, name: 'Inf', visible: true, opacity: 1, x: 0, y: 0, width: 0, height: 0, chunks,
+    };
+    const data = makeBareMapData({ infinite: true, layers: [layer] });
+    expect(() => new TiledMap('holechunks.tmj', data, [])).not.toThrow();
+  });
+
+  it('skips a hole in an object layer\'s objects array during GID-coverage validation', () => {
+    const objects: TiledObjectData[] = new Array(2) as TiledObjectData[];
+    objects[1] = { id: 1, name: '', type: '', x: 0, y: 0, width: 0, height: 0, rotation: 0, visible: true };
+    const layer: TiledLayerData = {
+      type: 'objectgroup', id: 1, name: 'Objs', visible: true, opacity: 1, x: 0, y: 0, objects,
+    };
+    const data = makeBareMapData({ layers: [layer] });
+    expect(() => new TiledMap('holeobjects.tmj', data, [])).not.toThrow();
+  });
+
+  test('BUG: an object gid of 0 is rejected as "not covered by any tileset" instead of being treated as the empty-cell sentinel like tile-layer GIDs', () => {
+    // EXPECTED: findTilesetForGid's own doc comment states gid 0 is "the empty-cell
+    // sentinel". checkGidArray (used for tile-layer data/chunks) special-cases
+    // `gid !== 0` accordingly. checkGidCoverage's object-layer branch has no such
+    // guard, so a (Tiled never emits this) object with gid: 0 is rejected instead
+    // of being silently accepted as "no tile", unlike its tile-layer counterpart.
+    const layer: TiledLayerData = {
+      type: 'objectgroup', id: 1, name: 'Objs', visible: true, opacity: 1, x: 0, y: 0,
+      objects: [{ id: 1, name: '', type: '', x: 0, y: 0, width: 0, height: 0, rotation: 0, visible: true, gid: 0 }],
+    };
+    const data = makeBareMapData({ layers: [layer] });
+    expect(() => new TiledMap('objgid0.tmj', data, [])).toThrow(TiledFormatError);
+    expect(() => new TiledMap('objgid0.tmj', data, [])).toThrow(/gid 0.*is not covered/);
   });
 });
