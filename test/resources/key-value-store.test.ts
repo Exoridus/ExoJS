@@ -261,4 +261,31 @@ describe('IndexedDbKeyValueStore', () => {
     expect(read!.level).toBe(3);
     expect(read!.pixels).toEqual(new Uint8Array([9, 8, 7]));
   });
+
+  test('constructor default: no argument falls back to the default database/store names', async () => {
+    const store = new IndexedDbKeyValueStore();
+
+    // Exercised end-to-end: the default names are internal, but a working
+    // round-trip proves the fallback constructed a usable store.
+    await store.set('k', { v: 1 });
+    await expect(store.get('k')).resolves.toEqual({ v: 1 });
+  });
+
+  test('constructor accepts an options object with storeName/version/migrations', async () => {
+    const store = new IndexedDbKeyValueStore({
+      name: 'custom-db',
+      storeName: 'custom-store',
+      version: 2,
+      migrations: { 1: () => true },
+    });
+
+    await store.set('k', { v: 1 });
+    await expect(store.get('k')).resolves.toEqual({ v: 1 });
+  });
+
+  test('destroy() releases the underlying store handle without throwing', () => {
+    const store = new IndexedDbKeyValueStore('test-kv-store');
+
+    expect(() => store.destroy()).not.toThrow();
+  });
 });

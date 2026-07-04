@@ -149,6 +149,51 @@ Text`;
       expect(cues[0]!.positionAlign).toBe('auto');
     });
 
+    test('applies "vertical:lr" and skips an invalid vertical/lineAlign/position/size/align value', async () => {
+      const factory = new SubtitleFactory();
+      const withSettings = `WEBVTT
+
+00:00:01.000 --> 00:00:02.000 vertical:lr
+First
+
+00:00:03.000 --> 00:00:04.000 vertical:bogus line:notanumber position:notanumber size:notanumber align:bogus
+Second`;
+
+      const cues = (await factory.create({ fmt: 'vtt', text: withSettings })) as unknown as MockVTTCue[];
+
+      // First cue: "lr" is a valid vertical value.
+      expect(cues[0]!.vertical).toBe('lr');
+
+      // Second cue: every setting is malformed/invalid, so all are silently skipped
+      // and every property keeps its constructor default.
+      expect(cues[1]!.vertical).toBe('');
+      expect(cues[1]!.line).toBe('auto');
+      expect(cues[1]!.lineAlign).toBe('start');
+      expect(cues[1]!.position).toBe('auto');
+      expect(cues[1]!.size).toBe(100);
+      expect(cues[1]!.align).toBe('center');
+    });
+
+    test('applies "line" with a valid lineAlign and skips when lineAlign is missing or invalid', async () => {
+      const factory = new SubtitleFactory();
+      const withSettings = `WEBVTT
+
+00:00:01.000 --> 00:00:02.000 line:10%,start
+First
+
+00:00:03.000 --> 00:00:04.000 line:20%
+Second`;
+
+      const cues = (await factory.create({ fmt: 'vtt', text: withSettings })) as unknown as MockVTTCue[];
+
+      expect(cues[0]!.line).toBe(10);
+      expect(cues[0]!.lineAlign).toBe('start');
+
+      // No comma segment => alignPart is undefined => lineAlign keeps its default.
+      expect(cues[1]!.line).toBe(20);
+      expect(cues[1]!.lineAlign).toBe('start');
+    });
+
     test('parses HH:MM:SS.mmm timestamps with an hours component', async () => {
       const factory = new SubtitleFactory();
       const withHours = `WEBVTT
@@ -228,6 +273,36 @@ Text only`;
 
       expect(cues).toHaveLength(1);
       expect(cues[0]!.text).toBe('Text only');
+    });
+
+    test('skips a trailing block with fewer than 2 lines', async () => {
+      const factory = new SubtitleFactory();
+      const withStrayBlock = `1
+00:00:01,000 --> 00:00:02,000
+Hello
+
+3`;
+
+      const cues = (await factory.create({ fmt: 'srt', text: withStrayBlock })) as unknown as MockVTTCue[];
+
+      expect(cues).toHaveLength(1);
+      expect(cues[0]!.text).toBe('Hello');
+    });
+
+    test('skips a block whose timing line does not contain "-->"', async () => {
+      const factory = new SubtitleFactory();
+      const withMalformedTiming = `1
+00:00:01,000 --> 00:00:02,000
+Hello
+
+4
+00:00:05,000 not-an-arrow
+Ignored`;
+
+      const cues = (await factory.create({ fmt: 'srt', text: withMalformedTiming })) as unknown as MockVTTCue[];
+
+      expect(cues).toHaveLength(1);
+      expect(cues[0]!.text).toBe('Hello');
     });
   });
 });

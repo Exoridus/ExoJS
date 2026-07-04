@@ -111,6 +111,73 @@ describe('asset container format', () => {
 
     expect(() => parseContainer(buffer)).toThrow(/index is not an array/);
   });
+
+  // -------------------------------------------------------------------------
+  // Raw (hand-built) index buffers — exercises readEntry()'s field-level
+  // validation guards directly, bypassing encodeContainer's own type safety.
+  // -------------------------------------------------------------------------
+
+  /** Builds a container buffer (header + index) with an arbitrary raw index value, and no data section. */
+  function encodeRawIndexBuffer(indexBytes: Uint8Array): ArrayBuffer {
+    const buffer = new ArrayBuffer(CONTAINER_HEADER_SIZE + indexBytes.byteLength);
+    const bytes = new Uint8Array(buffer);
+    const view = new DataView(buffer);
+
+    for (let i = 0; i < CONTAINER_MAGIC.length; i++) {
+      bytes[i] = CONTAINER_MAGIC.charCodeAt(i);
+    }
+    view.setUint32(4, 1, true);
+    view.setUint32(8, indexBytes.byteLength, true);
+    bytes.set(indexBytes, CONTAINER_HEADER_SIZE);
+
+    return buffer;
+  }
+
+  function encodeRawIndex(index: unknown): ArrayBuffer {
+    return encodeRawIndexBuffer(utf8(JSON.stringify(index)));
+  }
+
+  test('rejects an index entry that is not an object', () => {
+    expect(() => parseContainer(encodeRawIndex([42]))).toThrow(/index entry 0 is not an object/);
+  });
+
+  test('rejects an entry with a non-string alias', () => {
+    expect(() => parseContainer(encodeRawIndex([{ alias: 42, type: 'text', offset: 0, length: 0 }]))).toThrow(/non-string "alias"/);
+  });
+
+  test('rejects an entry with a non-string type', () => {
+    expect(() => parseContainer(encodeRawIndex([{ alias: 'a', type: 42, offset: 0, length: 0 }]))).toThrow(/non-string "type"/);
+  });
+
+  test('rejects an entry with an invalid (negative) offset', () => {
+    expect(() => parseContainer(encodeRawIndex([{ alias: 'a', type: 'text', offset: -1, length: 0 }]))).toThrow(/invalid "offset"/);
+  });
+
+  test('rejects an entry with an invalid (non-numeric) length', () => {
+    expect(() => parseContainer(encodeRawIndex([{ alias: 'a', type: 'text', offset: 0, length: 'x' }]))).toThrow(/invalid "length"/);
+  });
+
+  test('rejects an entry with a non-string mime', () => {
+    expect(() => parseContainer(encodeRawIndex([{ alias: 'a', type: 'text', offset: 0, length: 0, mime: 123 }]))).toThrow(/non-string "mime"/);
+  });
+
+  test('rejects an index region that is not valid JSON', () => {
+    expect(() => parseContainer(encodeRawIndexBuffer(utf8('{not valid json')))).toThrow(/index is not valid JSON/);
+  });
+
+  test('an entry carrying "options" round-trips through the raw index', () => {
+    const { entries } = parseContainer(encodeRawIndex([{ alias: 'a', type: 'text', offset: 0, length: 0, options: { mode: 'fast' } }]));
+
+    expect(entries[0]).toMatchObject({ options: { mode: 'fast' } });
+  });
+
+  test('encodeContainer round-trips per-asset "options"', () => {
+    const inputs: ContainerInput[] = [{ alias: 'a', type: 'json', bytes: utf8('{}'), options: { strict: true } }];
+
+    const { entries } = parseContainer(encodeContainer(inputs));
+
+    expect(entries[0]).toMatchObject({ options: { strict: true } });
+  });
 });
 
 describe('Loader.loadContainer', () => {

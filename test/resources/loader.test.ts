@@ -1,12 +1,14 @@
-﻿import { materializeAssetBindings } from '#extensions/materialize';
+﻿import type { AssetHandler } from '#extensions/Extension';
+import { materializeAssetBindings } from '#extensions/materialize';
 import { Asset } from '#resources/Asset';
+import { encodeContainer } from '#resources/AssetContainer';
 import type { AssetFactory } from '#resources/AssetFactory';
 import { BundleLoadError, defineAssetManifest } from '#resources/AssetManifest';
 import { Assets } from '#resources/Assets';
 import type { CacheStore } from '#resources/CacheStore';
 import { coreAssetBindings } from '#resources/coreAssetBindings';
 import { Loader } from '#resources/Loader';
-import { Json, TextAsset } from '#resources/tokens';
+import { BinaryAsset, FontAsset, Json, TextAsset } from '#resources/tokens';
 
 /** Create a Loader with all core asset bindings pre-installed. */
 function createCoreLoader(options?: ConstructorParameters<typeof Loader>[0]): Loader {
@@ -20,6 +22,7 @@ declare module '#resources/AssetDefinitions' {
   interface AssetDefinitions {
     mockAsset: { resource: string; config: { source: string } };
     richAsset: { resource: string; config: { source: string; format: string } };
+    boundAsset: { resource: unknown; config: { source: string; scale?: number } };
   }
 }
 
@@ -1614,5 +1617,1318 @@ describe('unload(asset) + getIdentityKey — identity discrimination (Fix 2 regr
 
     expect(loader.has(ctor, 'tmxA')).toBe(true); // untouched
     expect(loader.has(ctor, 'rpgA')).toBe(false);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Coverage sweep — registerExtension() + extension-based load('path.ext')
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('registerExtension() + extension-based load(path)', () => {
+  const originalFetch = global.fetch;
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  function mockFetch(): void {
+    global.fetch = vi.fn(
+      async (): Promise<Response> =>
+        ({
+          ok: true,
+          status: 200,
+          statusText: 'OK',
+          text: async () => 'raw',
+          json: async () => ({}),
+          arrayBuffer: async () => new ArrayBuffer(0),
+        }) as unknown as Response,
+    );
+  }
+
+  test('load(path) infers the type from a registered extension', async () => {
+    const factory = new MockTextFactory();
+    const loader = new Loader({ basePath: '/' });
+
+    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
+    loader.registerExtension('txt', TextAsset);
+    mockFetch();
+
+    const result = await loader.load<string>('notes.txt');
+
+    expect(result).toBe('resource:fresh-source');
+  });
+
+  test('registerExtension() normalizes a leading dot and casing', async () => {
+    const factory = new MockTextFactory();
+    const loader = new Loader({ basePath: '/' });
+
+    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
+    loader.registerExtension('.TXT', TextAsset);
+    mockFetch();
+
+    await expect(loader.load<string>('notes.txt')).resolves.toBe('resource:fresh-source');
+  });
+
+  test('FontAsset infers the "family" option from the filename when loaded by path', async () => {
+    const receivedOptions: unknown[] = [];
+    const factory: AssetFactory<FontFace> = {
+      storageName: 'font',
+      process: vi.fn(async () => 'raw'),
+      create: vi.fn(async (_source: unknown, options?: unknown) => {
+        receivedOptions.push(options);
+        return {} as FontFace;
+      }),
+      destroy: vi.fn(),
+    };
+    const loader = new Loader({ basePath: '/' });
+
+    loader.register(FontAsset, factory);
+    loader.registerExtension('woff2', FontAsset);
+    mockFetch();
+
+    await loader.load('fonts/Roboto.woff2');
+
+    expect(receivedOptions[0]).toMatchObject({ family: 'Roboto' });
+  });
+
+  test('throws a clear error for an unregistered extension', () => {
+    const loader = new Loader({ basePath: '/' });
+
+    expect(() => loader.load('mystery.foo')).toThrow(/no type registered for extension ".foo"/);
+  });
+
+  test('throws a clear error for a path with no extension at all', () => {
+    const loader = new Loader({ basePath: '/' });
+
+    expect(() => loader.load('no-extension-here')).toThrow(/no type registered for extension ".\?"/);
+  });
+
+  test('rejects when the extension-inferred load fails', async () => {
+    const factory = new MockTextFactory();
+    const loader = new Loader({ basePath: '/' });
+
+    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
+    loader.registerExtension('txt', TextAsset);
+    mockFetch();
+    factory.create.mockImplementationOnce(async () => {
+      throw new Error('extension-load-broken');
+    });
+
+    await expect(loader.load('broken.txt')).rejects.toThrow('extension-load-broken');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Coverage sweep — add() single-string and array forms
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('add() — single string and array-of-paths forms', () => {
+  const originalFetch = global.fetch;
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  function mockFetch(): void {
+    global.fetch = vi.fn(
+      async (): Promise<Response> =>
+        ({
+          ok: true,
+          status: 200,
+          statusText: 'OK',
+          text: async () => 'raw',
+          json: async () => ({}),
+          arrayBuffer: async () => new ArrayBuffer(0),
+        }) as unknown as Response,
+    );
+  }
+
+  test('add(type, path) registers the path as both its own alias and URL', async () => {
+    const factory = new MockTextFactory();
+    const loader = new Loader({ basePath: '/' });
+
+    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
+    mockFetch();
+
+    loader.add(TextAsset, 'solo.txt');
+    const result = await loader.load(TextAsset, 'solo.txt');
+
+    expect(result).toBe('resource:fresh-source');
+    expect(global.fetch).toHaveBeenCalledWith('/solo.txt', expect.anything());
+  });
+
+  test('add(type, [paths]) registers every path as its own alias', async () => {
+    const factory = new MockTextFactory();
+    const loader = new Loader({ basePath: '/' });
+
+    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
+    mockFetch();
+
+    loader.add(TextAsset, ['one.txt', 'two.txt']);
+
+    await expect(loader.load(TextAsset, 'one.txt')).resolves.toBe('resource:fresh-source');
+    await expect(loader.load(TextAsset, 'two.txt')).resolves.toBe('resource:fresh-source');
+    expect(global.fetch).toHaveBeenCalledWith('/one.txt', expect.anything());
+    expect(global.fetch).toHaveBeenCalledWith('/two.txt', expect.anything());
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Coverage sweep — legacy batch load() failure branches (array / record forms)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('load(Type, ...) legacy batch forms — per-item failure branches', () => {
+  const originalFetch = global.fetch;
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  function mockFetch(): void {
+    global.fetch = vi.fn(
+      async (): Promise<Response> =>
+        ({
+          ok: true,
+          status: 200,
+          statusText: 'OK',
+          text: async () => 'raw',
+          json: async () => ({}),
+          arrayBuffer: async () => new ArrayBuffer(0),
+        }) as unknown as Response,
+    );
+  }
+
+  test('load(Type, [paths]) rejects when one array item fails', async () => {
+    const factory = new MockTextFactory();
+    const loader = new Loader({ basePath: '/' });
+
+    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
+    mockFetch();
+    factory.create.mockImplementationOnce(async () => 'ok');
+    factory.create.mockImplementationOnce(async () => {
+      throw new Error('array-item-broken');
+    });
+
+    await expect(loader.load(TextAsset, ['good-array.txt', 'bad-array.txt'])).rejects.toThrow('array-item-broken');
+  });
+
+  test('load(Type, { alias: BatchValue }) rejects when one record item fails', async () => {
+    const factory = new MockTextFactory();
+    const loader = new Loader({ basePath: '/' });
+
+    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
+    mockFetch();
+    factory.create.mockImplementationOnce(async () => 'ok');
+    factory.create.mockImplementationOnce(async () => {
+      throw new Error('record-item-broken');
+    });
+
+    await expect(loader.load(TextAsset, { good: 'good-rec.txt', bad: 'bad-rec.txt' })).rejects.toThrow('record-item-broken');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Coverage sweep — backgroundLoad() re-scan skip branches, loadAll() early exit,
+// setConcurrency()
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('backgroundLoad() re-scan skip branches', () => {
+  const originalFetch = global.fetch;
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  function mockFetch(): void {
+    global.fetch = vi.fn(
+      async (): Promise<Response> =>
+        ({
+          ok: true,
+          status: 200,
+          statusText: 'OK',
+          text: async () => 'raw',
+          json: async () => ({}),
+          arrayBuffer: async () => new ArrayBuffer(0),
+        }) as unknown as Response,
+    );
+  }
+
+  test('skips manifest entries that are already resolved', async () => {
+    const factory = new MockTextFactory();
+    const loader = new Loader({ basePath: '/' });
+
+    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
+    loader.add(TextAsset, { a: 'a.txt' });
+    mockFetch();
+
+    await loader.load(TextAsset, 'a');
+    (global.fetch as MockInstance).mockClear();
+
+    loader.backgroundLoad();
+
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  test('skips manifest entries that are already in flight', () => {
+    const factory = new MockTextFactory();
+    const loader = new Loader({ basePath: '/' });
+    const deferred = createDeferred<Response>();
+
+    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
+    loader.add(TextAsset, { a: 'a.txt' });
+    global.fetch = vi.fn((): Promise<Response> => deferred.promise);
+
+    void loader.load(TextAsset, 'a');
+    loader.backgroundLoad();
+
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+
+    deferred.resolve({ ok: true, status: 200, statusText: 'OK' } as Response);
+  });
+});
+
+describe('loadAll() early exit', () => {
+  test('resolves immediately when nothing is queued', async () => {
+    const loader = new Loader({ basePath: '/' });
+    const fetchSpy = vi.fn();
+
+    global.fetch = fetchSpy as unknown as typeof fetch;
+
+    await expect(loader.loadAll()).resolves.toBeUndefined();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe('setConcurrency()', () => {
+  test('is chainable and limits how many background fetches start immediately', () => {
+    const factory = new MockTextFactory();
+    const loader = new Loader({ basePath: '/', concurrency: 6 });
+
+    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
+    loader.add(TextAsset, { a: 'a.txt', b: 'b.txt', c: 'c.txt' });
+
+    expect(loader.setConcurrency(1)).toBe(loader);
+
+    const deferred = createDeferred<Response>();
+    global.fetch = vi.fn((): Promise<Response> => deferred.promise);
+
+    loader.backgroundLoad();
+
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Coverage sweep — keyFor()
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('keyFor()', () => {
+  const originalFetch = global.fetch;
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  function mockFetch(): void {
+    global.fetch = vi.fn(async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', text: async () => 'raw' }) as unknown as Response);
+  }
+
+  test('returns the type + first alias for a loaded object resource', async () => {
+    const factory = new DummyFactory();
+    const loader = new Loader({ basePath: '/' });
+
+    loader.register(DummyAsset, factory);
+    mockFetch();
+
+    const result = await loader.load(DummyAsset, 'thing.dat');
+
+    expect(loader.keyFor(result)).toEqual({ type: DummyAsset, source: 'thing.dat' });
+  });
+
+  test('returns null for a resource object that was never loaded', () => {
+    const loader = new Loader({ basePath: '/' });
+
+    expect(loader.keyFor({})).toBeNull();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Coverage sweep — unload() edge cases: unregistered type, never-loaded fallback
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('unload() edge cases', () => {
+  test('unload(asset) is a no-op when the asset type was never registered', () => {
+    const loader = new Loader({ basePath: '/' });
+    const orphan = new Asset({ type: 'mockAsset', source: 'x.dat' });
+
+    expect(() => loader.unload(orphan)).not.toThrow();
+  });
+
+  test('unload(asset) falls back to source-as-alias when the asset was never loaded', () => {
+    const factory = new MockAssetFactory();
+    const loader = new Loader({ basePath: '/' });
+
+    loader.registerAssetType('mockAsset', MockAssetType as never, factory as AssetFactory<MockAssetType>);
+
+    const neverLoaded = new Asset({ type: 'mockAsset', source: 'never.dat' });
+
+    expect(() => loader.unload(neverLoaded)).not.toThrow();
+    expect(loader.has(MockAssetType, 'never.dat')).toBe(false);
+  });
+
+  test('unload(assets) skips container entries whose asset type was never registered', () => {
+    const loader = new Loader({ basePath: '/' });
+    const container = new Assets({ orphan: { type: 'mockAsset', source: 'x.dat' } });
+
+    expect(() => loader.unload(container)).not.toThrow();
+  });
+
+  test('unload(assets) falls back to per-alias unload when identity was never tracked', () => {
+    const factory = new MockAssetFactory();
+    const loader = new Loader({ basePath: '/' });
+
+    loader.registerAssetType('mockAsset', MockAssetType as never, factory as AssetFactory<MockAssetType>);
+
+    const container = new Assets({ orphan: { type: 'mockAsset', source: 'never.dat' } });
+
+    expect(() => loader.unload(container)).not.toThrow();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Coverage sweep — basePath / fetchOptions property accessors
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('basePath / fetchOptions property accessors', () => {
+  test('basePath getter/setter takes effect on subsequent loads', async () => {
+    const factory = new MockTextFactory();
+    const loader = new Loader({ basePath: '/a/' });
+
+    expect(loader.basePath).toBe('/a/');
+
+    loader.basePath = '/b/';
+    expect(loader.basePath).toBe('/b/');
+
+    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
+    global.fetch = vi.fn(async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', text: async () => 'raw' }) as unknown as Response);
+
+    await loader.load(TextAsset, 'demo.txt');
+
+    expect(global.fetch).toHaveBeenCalledWith('/b/demo.txt', expect.anything());
+  });
+
+  test('fetchOptions getter/setter takes effect on subsequent loads', async () => {
+    const factory = new MockTextFactory();
+    const loader = new Loader({ basePath: '/', fetchOptions: { mode: 'cors' } });
+
+    expect(loader.fetchOptions).toEqual({ mode: 'cors' });
+
+    loader.fetchOptions = { mode: 'no-cors' };
+    expect(loader.fetchOptions).toEqual({ mode: 'no-cors' });
+
+    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
+    global.fetch = vi.fn(async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', text: async () => 'raw' }) as unknown as Response);
+
+    await loader.load(TextAsset, 'demo.txt');
+
+    expect(global.fetch).toHaveBeenCalledWith('/demo.txt', { mode: 'no-cors' });
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Coverage sweep — _resolveUrl absolute-URL passthrough
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('absolute URL passthrough', () => {
+  test('an absolute https:// path bypasses basePath prefixing', async () => {
+    const factory = new MockTextFactory();
+    const loader = new Loader({ basePath: '/assets/' });
+
+    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
+    global.fetch = vi.fn(async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', text: async () => 'raw' }) as unknown as Response);
+
+    await loader.load(TextAsset, 'https://cdn.example.com/x.txt');
+
+    expect(global.fetch).toHaveBeenCalledWith('https://cdn.example.com/x.txt', expect.anything());
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Coverage sweep — hasLoadable() / hasAssetType() / hasExtension()
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('hasLoadable() / hasAssetType() / hasExtension()', () => {
+  test('reflect factory, type-name, and extension registrations', () => {
+    class ProbeAsset {}
+    const loader = new Loader({ basePath: '/' });
+
+    expect(loader.hasLoadable(ProbeAsset)).toBe(false);
+    loader.register(ProbeAsset, new DummyFactory() as unknown as AssetFactory<ProbeAsset>);
+    expect(loader.hasLoadable(ProbeAsset)).toBe(true);
+
+    expect(loader.hasAssetType('probeType')).toBe(false);
+    loader.registerAssetType('probeType', ProbeAsset);
+    expect(loader.hasAssetType('probeType')).toBe(true);
+
+    expect(loader.hasExtension('probe')).toBe(false);
+    loader.registerExtension('.PROBE', ProbeAsset);
+    expect(loader.hasExtension('probe')).toBe(true);
+    expect(loader.hasExtension('.probe')).toBe(true);
+  });
+
+  test('hasLoadable() is true for a handler-based registerAssetType() registration', () => {
+    const loader = new Loader({ basePath: '/' });
+    class HandlerAsset {}
+
+    expect(loader.hasLoadable(HandlerAsset)).toBe(false);
+    loader.registerAssetType('handlerType', {
+      load: async () => 'ok',
+    });
+    const ctor = loader['_assetTypeMap'].get('handlerType')!;
+
+    expect(loader.hasLoadable(ctor)).toBe(true);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Coverage sweep — bindAsset() direct handler binding
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('bindAsset() — direct handler binding', () => {
+  class BoundAsset {
+    public constructor(public readonly value: string) {}
+  }
+  class OtherBoundAsset {}
+
+  const originalFetch = global.fetch;
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  test('binds by type token: load(Type, path) resolves via the handler', async () => {
+    const loader = new Loader({ basePath: '/' });
+
+    loader.bindAsset<BoundAsset>({ type: BoundAsset }, { load: async request => new BoundAsset(request.source) });
+
+    const result = await loader.load(BoundAsset, 'thing.bin');
+
+    expect(result).toBeInstanceOf(BoundAsset);
+    expect(result.value).toBe('thing.bin');
+  });
+
+  test('load(Type, path, options) forwards an options object into the handler request', async () => {
+    const loader = new Loader({ basePath: '/' });
+    let receivedConfig: unknown;
+
+    loader.bindAsset<BoundAsset, { scale: number }>(
+      { type: BoundAsset },
+      {
+        load: async request => {
+          receivedConfig = request;
+          return new BoundAsset(request.source);
+        },
+      },
+    );
+
+    await loader.load(BoundAsset, 'thing.bin', { scale: 3 });
+
+    expect(receivedConfig).toMatchObject({ source: 'thing.bin', options: { scale: 3 } });
+  });
+
+  test('binds by typeName: config-map load resolves via the handler', async () => {
+    const loader = new Loader({ basePath: '/' });
+
+    loader.bindAsset<BoundAsset>({ type: BoundAsset, typeNames: ['boundAsset'] }, { load: async request => new BoundAsset(request.source) });
+
+    const result = await loader.load(new Asset({ type: 'boundAsset', source: 'level.dat' }));
+
+    expect(result).toBeInstanceOf(BoundAsset);
+  });
+
+  test('binds by extension: load(path) resolves via the handler', async () => {
+    const loader = new Loader({ basePath: '/' });
+
+    loader.bindAsset<BoundAsset>({ type: BoundAsset, extensions: ['bnd'] }, { load: async request => new BoundAsset(request.source) });
+
+    const result = await loader.load<BoundAsset>('thing.bnd');
+
+    expect(result).toBeInstanceOf(BoundAsset);
+  });
+
+  test('getIdentityKey is forwarded and deduplicates in-flight loads', async () => {
+    const loader = new Loader({ basePath: '/' });
+    let calls = 0;
+
+    loader.bindAsset<BoundAsset, { scale: number }>(
+      { type: BoundAsset, typeNames: ['boundAsset'] },
+      {
+        getIdentityKey: request => `${request.source}:${request.options?.scale ?? 1}`,
+        load: async request => {
+          calls++;
+          return new BoundAsset(request.source);
+        },
+      },
+    );
+
+    const a = new Asset({ type: 'boundAsset', source: 'shared.dat', scale: 2 });
+    const b = new Asset({ type: 'boundAsset', source: 'shared.dat', scale: 2 });
+
+    await Promise.all([loader.load(a), loader.load(b)]);
+
+    expect(calls).toBe(1);
+  });
+
+  test('createFromBytes is forwarded and powers loadContainer() for the bound type', async () => {
+    const loader = new Loader({ basePath: '/' });
+
+    loader.bindAsset<BoundAsset>(
+      { type: BoundAsset, typeNames: ['boundAsset'] },
+      {
+        load: async request => new BoundAsset(request.source),
+        createFromBytes: async bytes => new BoundAsset(new TextDecoder().decode(bytes)),
+      },
+    );
+
+    const container = encodeContainer([{ alias: 'x', type: 'boundAsset', bytes: new TextEncoder().encode('hi') }]);
+
+    global.fetch = vi.fn(
+      async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', arrayBuffer: async () => container }) as unknown as Response,
+    );
+
+    await loader.loadContainer('pack.exoa');
+
+    expect((loader.get(BoundAsset, 'x') as BoundAsset).value).toBe('hi');
+  });
+
+  test('throws on a duplicate extension within the same bindAsset() call', () => {
+    const loader = new Loader({ basePath: '/' });
+    const handler: AssetHandler<BoundAsset> = { load: async request => new BoundAsset(request.source) };
+
+    expect(() => loader.bindAsset<BoundAsset>({ type: BoundAsset, extensions: ['bnd', 'BND'] }, handler)).toThrow(/Duplicate extension key/);
+  });
+
+  test('throws when a handler is already registered for the type', () => {
+    const loader = new Loader({ basePath: '/' });
+    const handler: AssetHandler<BoundAsset> = { load: async request => new BoundAsset(request.source) };
+
+    loader.bindAsset<BoundAsset>({ type: BoundAsset }, handler);
+
+    expect(() => loader.bindAsset<BoundAsset>({ type: BoundAsset }, handler)).toThrow(/already registered/);
+  });
+
+  test('throws when a typeName is already registered', () => {
+    const loader = new Loader({ basePath: '/' });
+    const handlerA: AssetHandler<BoundAsset> = { load: async request => new BoundAsset(request.source) };
+    const handlerB: AssetHandler<OtherBoundAsset> = { load: async () => new OtherBoundAsset() };
+
+    loader.bindAsset<BoundAsset>({ type: BoundAsset, typeNames: ['dupName'] }, handlerA);
+
+    expect(() => loader.bindAsset<OtherBoundAsset>({ type: OtherBoundAsset, typeNames: ['dupName'] }, handlerB)).toThrow(/already registered/);
+  });
+
+  test('throws when an extension is already mapped to another type', () => {
+    const loader = new Loader({ basePath: '/' });
+    const handlerA: AssetHandler<BoundAsset> = { load: async request => new BoundAsset(request.source) };
+    const handlerB: AssetHandler<OtherBoundAsset> = { load: async () => new OtherBoundAsset() };
+
+    loader.bindAsset<BoundAsset>({ type: BoundAsset, extensions: ['dupext'] }, handlerA);
+
+    expect(() => loader.bindAsset<OtherBoundAsset>({ type: OtherBoundAsset, extensions: ['dupext'] }, handlerB)).toThrow(/already mapped/);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Coverage sweep — Loader.loadContainer() (exercised from within loader.test.ts's
+// own coverage scope; a broader format/roundtrip suite lives in
+// test/resources/asset-container.test.ts)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('loadContainer()', () => {
+  const originalFetch = global.fetch;
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  function createCoreLoaderLocal(): Loader {
+    const loader = new Loader({ basePath: '/' });
+    materializeAssetBindings(loader, coreAssetBindings);
+
+    return loader;
+  }
+
+  function mockContainerFetch(container: ArrayBuffer): void {
+    global.fetch = vi.fn(
+      async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', arrayBuffer: async () => container }) as unknown as Response,
+    );
+  }
+
+  test('loads N assets from one container in a single request', async () => {
+    const container = encodeContainer([
+      { alias: 'level', type: 'json', bytes: new TextEncoder().encode('{"score":42}') },
+      { alias: 'readme', type: 'text', bytes: new TextEncoder().encode('hello world') },
+      { alias: 'blob', type: 'binary', bytes: new Uint8Array([1, 2, 3, 4]) },
+    ]);
+    mockContainerFetch(container);
+
+    const loader = createCoreLoaderLocal();
+    await loader.loadContainer('assets/pack.exoa');
+
+    expect(loader.get(Json, 'level')).toEqual({ score: 42 });
+    expect(loader.get(TextAsset, 'readme')).toBe('hello world');
+    expect(new Uint8Array(loader.get(BinaryAsset, 'blob') as ArrayBuffer)).toEqual(new Uint8Array([1, 2, 3, 4]));
+  });
+
+  test('throws on an unknown asset type and stores nothing', async () => {
+    const container = encodeContainer([{ alias: 'x', type: 'nonsense', bytes: new TextEncoder().encode('x') }]);
+    mockContainerFetch(container);
+
+    const loader = createCoreLoaderLocal();
+
+    await expect(loader.loadContainer('x.exoa')).rejects.toThrow(/unknown asset type "nonsense"/);
+  });
+
+  test('uses a register()/registerAssetType-based factory when no createFromBytes handler is bound', async () => {
+    const factory = new DummyFactory();
+    const loader = new Loader({ basePath: '/' });
+
+    loader.registerAssetType('dummy', DummyAsset, factory);
+
+    const container = encodeContainer([{ alias: 'x', type: 'dummy', bytes: new TextEncoder().encode('raw-bytes') }]);
+    mockContainerFetch(container);
+
+    await loader.loadContainer('pack.exoa');
+
+    expect(loader.get(DummyAsset, 'x')).toBeInstanceOf(DummyAsset);
+  });
+
+  test('rejects when the resolved type supports neither createFromBytes nor a registered factory', async () => {
+    class BareAsset {}
+    const loader = new Loader({ basePath: '/' });
+
+    loader.registerAssetType('bare', BareAsset);
+
+    const container = encodeContainer([{ alias: 'x', type: 'bare', bytes: new Uint8Array([1]) }]);
+    mockContainerFetch(container);
+
+    await expect(loader.loadContainer('pack.exoa')).rejects.toThrow(/cannot be built from container bytes/);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Coverage sweep — destroy()
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('destroy()', () => {
+  test('destroys cache stores, calls destroy() on bound handlers, and clears signals', () => {
+    class DestroyAsset {}
+    const store = createCacheStoreMock();
+    const handlerDestroy = vi.fn();
+    const loader = new Loader({ basePath: '/', cache: store });
+
+    loader.bindAsset<unknown>({ type: DestroyAsset }, { load: async () => 'x', destroy: handlerDestroy });
+    loader.onLoaded.add(() => {});
+
+    loader.destroy();
+
+    expect(store.destroy).toHaveBeenCalledTimes(1);
+    expect(handlerDestroy).toHaveBeenCalledTimes(1);
+    expect(loader.onLoaded.count).toBe(0);
+  });
+
+  test('deduplicates destroy() calls when the same handler instance is bound under multiple types', () => {
+    class DestroyAssetA {}
+    class DestroyAssetB {}
+    const destroy = vi.fn();
+    const handler: AssetHandler<unknown> = { load: async () => 'x', destroy };
+    const loader = new Loader({ basePath: '/' });
+
+    loader.bindAsset({ type: DestroyAssetA }, handler);
+    loader.bindAsset({ type: DestroyAssetB }, handler);
+
+    loader.destroy();
+
+    expect(destroy).toHaveBeenCalledTimes(1);
+  });
+
+  test('does not throw when a bound handler has no destroy() method', () => {
+    class NoDestroyAsset {}
+    const loader = new Loader({ basePath: '/' });
+
+    loader.bindAsset({ type: NoDestroyAsset }, { load: async () => 'x' });
+
+    expect(() => loader.destroy()).not.toThrow();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Coverage sweep — _fetchWithHandler error wrapping
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('handler load() rejection is wrapped with url + cause', () => {
+  test('wraps a thrown Error from a registerAssetType() handler', async () => {
+    const loader = new Loader({ basePath: '/assets/' });
+
+    loader.registerAssetType('richAsset', {
+      load: async () => {
+        throw new Error('handler exploded');
+      },
+    });
+
+    const asset = new Asset({ type: 'richAsset', source: 'x.json', format: 'x' });
+    const error: Error = await loader.load(asset).catch((e: unknown) => e as Error);
+
+    expect(error.message).toMatch(/Failed to load "x\.json" from "\/assets\/x\.json": handler exploded/);
+    expect(error.cause).toBeInstanceOf(Error);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Coverage sweep — _loadSingleAsset non-handler branch: extra config fields
+// forwarded as fetch options for a plain register()/registerAssetType() factory
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('Asset-based load() without a handler — extra config fields as options', () => {
+  const originalFetch = global.fetch;
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  test('extra config fields are forwarded to factory.create() as options', async () => {
+    const factory = new MockAssetFactory();
+    const loader = new Loader({ basePath: '/' });
+
+    loader.registerAssetType('richAsset', MockAssetType as never, factory as AssetFactory<MockAssetType>);
+    global.fetch = vi.fn(async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', text: async () => 'raw' }) as unknown as Response);
+
+    const receivedOptions: unknown[] = [];
+    factory.create.mockImplementation(async (source: string, options?: unknown) => {
+      receivedOptions.push(options);
+      return `loaded:${source}`;
+    });
+
+    const asset = new Asset({ type: 'richAsset', source: 'extra.dat', format: 'tiled' });
+    await loader.load(asset);
+
+    expect(receivedOptions[0]).toMatchObject({ format: 'tiled' });
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Coverage sweep — _describeType() anonymous-constructor fallback
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('registerManifest() conflict message — anonymous constructor', () => {
+  test('falls back to "(anonymous type)" for an unnamed constructor', () => {
+    const loader = new Loader({ basePath: '/' });
+    const Anon = class {};
+
+    Object.defineProperty(Anon, 'name', { value: '' });
+
+    loader.registerManifest(
+      defineAssetManifest({
+        bundles: { boot: [{ type: Anon, alias: 'x', path: 'a.txt' }] },
+      }),
+    );
+
+    expect(() =>
+      loader.registerManifest(
+        defineAssetManifest({
+          bundles: { other: [{ type: Anon, alias: 'x', path: 'b.txt' }] },
+        }),
+      ),
+    ).toThrow('(anonymous type)');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Coverage sweep — _areOptionsEquivalent() full branch matrix
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('registerManifest() option-equivalence branch matrix', () => {
+  function registerTwice(firstOptions: unknown, secondOptions: unknown): () => void {
+    const loader = new Loader({ basePath: '/' });
+
+    loader.registerManifest(
+      defineAssetManifest({
+        bundles: { boot: [{ type: TextAsset, alias: 'x', path: 'a.txt', options: firstOptions }] },
+      }),
+    );
+
+    return () =>
+      loader.registerManifest(
+        defineAssetManifest({
+          bundles: { other: [{ type: TextAsset, alias: 'x', path: 'a.txt', options: secondOptions }] },
+        }),
+      );
+  }
+
+  test('rejects when one side has options and the other has none (typeof mismatch)', () => {
+    expect(registerTwice(undefined, {})).toThrow('Conflicting asset definition');
+  });
+
+  test('rejects when one options value is null and the other a non-null object', () => {
+    expect(registerTwice(null, {})).toThrow('Conflicting asset definition');
+  });
+
+  test('rejects when both options are non-object primitives with different values', () => {
+    expect(registerTwice(1, 2)).toThrow('Conflicting asset definition');
+  });
+
+  test('allows deeply-equal nested plain-object and array options', () => {
+    expect(registerTwice({ nested: { a: [1, 2, { b: 3 }] } }, { nested: { a: [1, 2, { b: 3 }] } })).not.toThrow();
+  });
+
+  test('rejects arrays of different lengths', () => {
+    expect(registerTwice({ list: [1, 2] }, { list: [1] })).toThrow('Conflicting asset definition');
+  });
+
+  test('rejects options objects with a different number of keys', () => {
+    expect(registerTwice({ a: 1 }, { a: 1, b: 2 })).toThrow('Conflicting asset definition');
+  });
+
+  test('rejects options objects with the same key count but different key names', () => {
+    expect(registerTwice({ a: 1 }, { b: 1 })).toThrow('Conflicting asset definition');
+  });
+
+  test('rejects options with matching keys but a differing nested value', () => {
+    expect(registerTwice({ a: { b: 1 } }, { a: { b: 2 } })).toThrow('Conflicting asset definition');
+  });
+
+  test('rejects when options prototypes differ (plain object vs. class instance)', () => {
+    class OptionsBox {
+      public constructor(public readonly value: number) {}
+    }
+
+    expect(registerTwice(new OptionsBox(1), { value: 1 })).toThrow('Conflicting asset definition');
+  });
+
+  test('BUG: treats two structurally-identical custom-class option instances as conflicting', () => {
+    // registerManifest()'s JSDoc promises: "Equivalent definitions (same path,
+    // deeply-equal options) are allowed and de-duplicated silently." _areOptionsEquivalent
+    // only performs structural (key-by-key) comparison when both sides are plain objects
+    // (Object.prototype) or arrays; any other shared non-null prototype — e.g. two
+    // instances of the same user-defined class — is treated as unconditionally
+    // non-equivalent, even when every field matches. Expected: two deeply-equal
+    // instances of the same class should be treated as equivalent, exactly like the
+    // documented plain-object case.
+    class OptionsBox {
+      public constructor(public readonly value: number) {}
+    }
+
+    expect(registerTwice(new OptionsBox(1), new OptionsBox(1))).toThrow('Conflicting asset definition');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Coverage sweep — background bundle loading: cache-hit / in-flight shortcuts in
+// _loadSingleBackground, _isQueuedInBackground dedup, and _waitForBackgroundEntry's
+// onLoaded/onError mismatch-ignore branches
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('background bundle loading — _loadSingleBackground shortcuts', () => {
+  const originalFetch = global.fetch;
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  function mockFetch(): void {
+    global.fetch = vi.fn(async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', text: async () => 'raw' }) as unknown as Response);
+  }
+
+  test('background bundle load resolves instantly for an alias already in memory', async () => {
+    const factory = new MockTextFactory();
+    const loader = new Loader({ basePath: '/' });
+
+    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
+    loader.registerManifest(
+      defineAssetManifest({
+        bundles: { boot: [{ type: TextAsset, alias: 'preloaded', path: 'preloaded.txt' }] },
+      }),
+    );
+    mockFetch();
+
+    await loader.load(TextAsset, 'preloaded');
+    (global.fetch as MockInstance).mockClear();
+
+    await loader.loadBundle('boot', { background: true });
+
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  test('background bundle load attaches to an already-in-flight foreground fetch', async () => {
+    const factory = new MockTextFactory();
+    const loader = new Loader({ basePath: '/' });
+    const deferred = createDeferred<Response>();
+
+    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
+    loader.registerManifest(
+      defineAssetManifest({
+        bundles: { boot: [{ type: TextAsset, alias: 'shared', path: 'shared.txt' }] },
+      }),
+    );
+
+    global.fetch = vi.fn((): Promise<Response> => deferred.promise);
+
+    const foreground = loader.load(TextAsset, 'shared');
+    const bundlePromise = loader.loadBundle('boot', { background: true });
+
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+
+    deferred.resolve({ ok: true, status: 200, statusText: 'OK' } as Response);
+
+    await foreground;
+    await bundlePromise;
+
+    expect(loader.has(TextAsset, 'shared')).toBe(true);
+  });
+
+  test('two overlapping background bundle loads for the same not-yet-started alias dedupe via _isQueuedInBackground', async () => {
+    const factory = new MockTextFactory();
+    const loader = new Loader({ basePath: '/', concurrency: 1 });
+    const blocker = createDeferred<Response>();
+    const shared = createDeferred<Response>();
+
+    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
+    loader.registerManifest(
+      defineAssetManifest({
+        bundles: {
+          first: [
+            { type: TextAsset, alias: 'blocker', path: 'blocker.txt' },
+            { type: TextAsset, alias: 'shared', path: 'shared2.txt' },
+          ],
+          second: [{ type: TextAsset, alias: 'shared', path: 'shared2.txt' }],
+        },
+      }),
+    );
+
+    global.fetch = vi.fn((input: RequestInfo | URL): Promise<Response> => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+
+      if (url.endsWith('/blocker.txt')) return blocker.promise;
+      if (url.endsWith('/shared2.txt')) return shared.promise;
+      throw new Error(`Unexpected fetch url: ${url}`);
+    });
+
+    const firstBundle = loader.loadBundle('first', { background: true });
+    const secondBundle = loader.loadBundle('second', { background: true });
+
+    blocker.resolve({ ok: true, status: 200, statusText: 'OK' } as Response);
+    shared.resolve({ ok: true, status: 200, statusText: 'OK' } as Response);
+
+    await Promise.all([firstBundle, secondBundle]);
+
+    expect(global.fetch).toHaveBeenCalledTimes(2); // blocker.txt + shared2.txt only — no duplicate fetch for "shared"
+  });
+
+  test('_waitForBackgroundEntry ignores onLoaded/onError events for other aliases while waiting for its own', async () => {
+    const factory = new MockTextFactory();
+    const loader = new Loader({ basePath: '/', concurrency: 2 });
+
+    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
+    loader.registerManifest(
+      defineAssetManifest({
+        bundles: {
+          boot: [
+            { type: TextAsset, alias: 'first', path: 'first.txt' },
+            { type: TextAsset, alias: 'second', path: 'second.txt' },
+            { type: TextAsset, alias: 'third', path: 'third.txt' },
+          ],
+        },
+      }),
+    );
+
+    global.fetch = vi.fn(async (input: RequestInfo | URL): Promise<Response> => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+
+      if (url.endsWith('/second.txt')) {
+        return { ok: false, status: 404, statusText: 'Not Found' } as Response;
+      }
+
+      return { ok: true, status: 200, statusText: 'OK' } as Response;
+    });
+
+    await expect(loader.loadBundle('boot', { background: true })).rejects.toBeInstanceOf(BundleLoadError);
+
+    expect(loader.has(TextAsset, 'first')).toBe(true);
+    expect(loader.has(TextAsset, 'third')).toBe(true);
+    expect(loader.has(TextAsset, 'second')).toBe(false);
+  });
+
+  test('_waitForBackgroundEntry rejects when the entry it is waiting for itself fails', async () => {
+    const factory = new MockTextFactory();
+    const loader = new Loader({ basePath: '/', concurrency: 1 });
+
+    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
+    loader.registerManifest(
+      defineAssetManifest({
+        bundles: {
+          boot: [
+            { type: TextAsset, alias: 'first', path: 'first.txt' },
+            { type: TextAsset, alias: 'waiting', path: 'waiting.txt' },
+          ],
+        },
+      }),
+    );
+
+    global.fetch = vi.fn(async (input: RequestInfo | URL): Promise<Response> => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+
+      if (url.endsWith('/waiting.txt')) {
+        return { ok: false, status: 404, statusText: 'Not Found' } as Response;
+      }
+
+      return { ok: true, status: 200, statusText: 'OK' } as Response;
+    });
+
+    // concurrency: 1 -> 'first' starts immediately, 'waiting' sits in the queue and
+    // is only observed via `_waitForBackgroundEntry`'s onLoaded/onError listeners.
+    await expect(loader.loadBundle('boot', { background: true })).rejects.toBeInstanceOf(BundleLoadError);
+
+    expect(loader.has(TextAsset, 'first')).toBe(true);
+    expect(loader.has(TextAsset, 'waiting')).toBe(false);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BUG pin — backgroundLoad() re-entrancy duplicates not-yet-started queue entries
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('backgroundLoad() re-entrancy', () => {
+  const originalFetch = global.fetch;
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  test('BUG: calling backgroundLoad() again before the queue drains double-queues a not-yet-started entry, corrupting onProgress totals', async () => {
+    // EXPECTED correct behavior: backgroundLoad() should skip manifest entries that
+    // are already sitting in `_backgroundQueue` — mirroring `_isQueuedInBackground`,
+    // which `_loadSingleBackground` already uses for this exact purpose — instead of
+    // only checking `_hasResource`/`_inFlight`. As written, calling it again before
+    // the first pass has fully drained re-pushes any alias that hasn't started yet,
+    // producing a duplicate queue entry. `_drainBackground`'s hasResource guard (the
+    // `continue` branch under the `while` loop) stops the duplicate from being
+    // re-fetched, but it still counts the duplicate as a completed item, so
+    // `onProgress` can report `loaded` exceeding `total`.
+    const factory = new MockTextFactory();
+    const loader = new Loader({ basePath: '/', concurrency: 1 });
+    const deferredA = createDeferred<Response>();
+    const deferredB = createDeferred<Response>();
+    const progress: Array<[number, number]> = [];
+
+    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
+    loader.add(TextAsset, { a: 'a.txt', b: 'b.txt' });
+
+    const done = new Promise<void>(resolve => {
+      loader.onProgress.add((loaded, total) => {
+        progress.push([loaded, total]);
+        if (progress.length === 3) resolve();
+      });
+    });
+
+    global.fetch = vi.fn((input: RequestInfo | URL): Promise<Response> => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+
+      if (url.endsWith('/a.txt')) return deferredA.promise;
+      if (url.endsWith('/b.txt')) return deferredB.promise;
+      throw new Error(`Unexpected fetch url: ${url}`);
+    });
+
+    loader.backgroundLoad(); // queue=[a,b] -> starts 'a' (active=1), 'b' stays queued
+    loader.backgroundLoad(); // 'a' is in-flight -> skipped; 'b' is only queued (not in-flight) -> pushed again
+
+    deferredA.resolve({ ok: true, status: 200, statusText: 'OK' } as Response);
+    deferredB.resolve({ ok: true, status: 200, statusText: 'OK' } as Response);
+
+    await done;
+
+    expect(global.fetch).toHaveBeenCalledTimes(2); // a.txt + b.txt fetched only once each despite the duplicate queue entry
+    expect(progress[2]).toEqual([3, 2]); // loaded (3) exceeds total (2) — the corrupted-progress symptom
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Coverage sweep — remaining small branch gaps
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('Loader constructor — cache option as an array of stores', () => {
+  test('accepts an array of CacheStore instances', async () => {
+    const factory = new MockTextFactory();
+    const storeA = createCacheStoreMock();
+    const storeB = createCacheStoreMock();
+    const loader = new Loader({ basePath: '/', cache: [storeA, storeB] });
+
+    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
+    global.fetch = vi.fn(async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', text: async () => 'raw' }) as unknown as Response);
+
+    await loader.load(TextAsset, 'demo.txt');
+
+    expect(storeA.load).toHaveBeenCalledWith('text', 'demo.txt');
+    expect(storeB.load).toHaveBeenCalledWith('text', 'demo.txt');
+  });
+});
+
+describe('unload()-during-in-flight identity cleanup on rejection', () => {
+  test('does not throw when the identity tracking was already cleared before the fetch rejects', async () => {
+    const loader = new Loader({ basePath: '/' });
+    const deferred = createDeferred<unknown>();
+
+    loader.registerAssetType('richAsset', {
+      load: async () => deferred.promise,
+    });
+
+    const asset = new Asset({ type: 'richAsset', source: 'x.dat', format: 'x' });
+    const pending = loader.load(asset);
+
+    // Unload while still in flight: this clears `_identityKeyToAliases` for this
+    // identity synchronously, before the underlying load settles.
+    loader.unload(asset);
+
+    deferred.reject(new Error('boom'));
+
+    await expect(pending).rejects.toThrow('boom');
+  });
+});
+
+describe('loadBundle() with an empty bundle', () => {
+  test('resolves immediately and reports zero/zero progress', async () => {
+    const loader = new Loader({ basePath: '/' });
+    const signalProgress: Array<[string, number, number]> = [];
+
+    loader.registerManifest(defineAssetManifest({ bundles: { empty: [] } }));
+    loader.onBundleProgress.add((name, loaded, total) => {
+      signalProgress.push([name, loaded, total]);
+    });
+
+    const callbackProgress: Array<[number, number]> = [];
+
+    await expect(
+      loader.loadBundle('empty', {
+        onProgress: (loaded, total) => {
+          callbackProgress.push([loaded, total]);
+        },
+      }),
+    ).resolves.toBeUndefined();
+
+    expect(signalProgress).toContainEqual(['empty', 0, 0]);
+    expect(callbackProgress).toContainEqual([0, 0]);
+  });
+});
+
+describe('unloadAll() with no type argument', () => {
+  test('clears every loaded type', async () => {
+    const textFactory = new MockTextFactory();
+    const dummyFactory = new DummyFactory();
+    const loader = new Loader({ basePath: '/' });
+
+    loader.register(TextAsset, textFactory as AssetFactory<TextAsset>);
+    loader.register(DummyAsset, dummyFactory);
+    global.fetch = vi.fn(async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', text: async () => 'raw' }) as unknown as Response);
+
+    await loader.load(TextAsset, 'a.txt');
+    await loader.load(DummyAsset, 'b.dat');
+
+    expect(loader.has(TextAsset, 'a.txt')).toBe(true);
+    expect(loader.has(DummyAsset, 'b.dat')).toBe(true);
+
+    loader.unloadAll();
+
+    expect(loader.has(TextAsset, 'a.txt')).toBe(false);
+    expect(loader.has(DummyAsset, 'b.dat')).toBe(false);
+  });
+});
+
+describe('legacy Record<string, BatchValue> — third-argument options merge', () => {
+  test('merges third-argument options into an object-shaped BatchValue', async () => {
+    const factory = new MockAssetFactory();
+    const loader = new Loader({ basePath: '/' });
+
+    loader.register(MockAssetType, factory as AssetFactory<MockAssetType>);
+    global.fetch = vi.fn(async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', text: async () => 'raw' }) as unknown as Response);
+
+    const receivedOptions: unknown[] = [];
+    factory.create.mockImplementation(async (source: string, options?: unknown) => {
+      receivedOptions.push(options);
+      return `loaded:${source}`;
+    });
+
+    await loader.load(MockAssetType, { hero: { source: 'images/hero.png', scale: 2 } }, { locale: 'en' });
+
+    expect(receivedOptions[0]).toMatchObject({ source: 'images/hero.png', scale: 2, locale: 'en' });
+  });
+});
+
+describe('load({ alias: config }) — plain object values are auto-wrapped in an Asset', () => {
+  test('a plain (non-Asset) config object value loads correctly', async () => {
+    const factory = new MockAssetFactory();
+    const loader = new Loader({ basePath: '/' });
+
+    loader.registerAssetType('mockAsset', MockAssetType as never, factory as AssetFactory<MockAssetType>);
+    global.fetch = vi.fn(async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', text: async () => 'raw' }) as unknown as Response);
+
+    await loader.load({ hero: { type: 'mockAsset', source: 'hero.dat' } });
+
+    expect(loader.has(MockAssetType, 'hero')).toBe(true);
+  });
+});
+
+describe('non-Error throws are stringified when wrapping fetch/handler failures', () => {
+  const originalFetch = global.fetch;
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  test('_fetchWithHandler wraps a thrown non-Error value from a handler', async () => {
+    const loader = new Loader({ basePath: '/assets/' });
+
+    loader.registerAssetType('richAsset', {
+      load: async () => {
+        // eslint-disable-next-line @typescript-eslint/only-throw-error
+        throw 'plain string failure';
+      },
+    });
+
+    const asset = new Asset({ type: 'richAsset', source: 'y.json', format: 'y' });
+
+    await expect(loader.load(asset)).rejects.toThrow(/Failed to load "y\.json" from "\/assets\/y\.json": plain string failure/);
+  });
+
+  test('_fetch wraps a thrown non-Error value from a factory', async () => {
+    const factory = new MockTextFactory();
+    const loader = new Loader({ basePath: '/' });
+
+    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
+    global.fetch = vi.fn(async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', text: async () => 'raw' }) as unknown as Response);
+    factory.create.mockImplementationOnce(async () => {
+      // eslint-disable-next-line @typescript-eslint/only-throw-error
+      throw 'raw string boom';
+    });
+
+    await expect(loader.load(TextAsset, 'boom.txt')).rejects.toThrow(/raw string boom/);
+  });
+});
+
+describe('registerManifest() option-equivalence — array element mismatch (same length)', () => {
+  test('rejects same-length arrays with a differing element', () => {
+    const loader = new Loader({ basePath: '/' });
+
+    loader.registerManifest(
+      defineAssetManifest({
+        bundles: { boot: [{ type: TextAsset, alias: 'x', path: 'a.txt', options: { list: [1, 2, 3] } }] },
+      }),
+    );
+
+    expect(() =>
+      loader.registerManifest(
+        defineAssetManifest({
+          bundles: { other: [{ type: TextAsset, alias: 'x', path: 'a.txt', options: { list: [1, 2, 4] } }] },
+        }),
+      ),
+    ).toThrow('Conflicting asset definition');
   });
 });

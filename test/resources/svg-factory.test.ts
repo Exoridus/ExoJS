@@ -133,6 +133,48 @@ describe('SvgFactory', () => {
     expect(text).toBe(source);
   });
 
+  test('create() applies only width when height is omitted', async () => {
+    const factory = new SvgFactory();
+
+    const promise = factory.create('<svg viewBox="0 0 10 10"></svg>', { width: 42 });
+    lastImage().dispatchEvent(new Event('load'));
+    await promise;
+
+    const blob = createObjectUrlSpy.mock.calls[0]?.[0] as Blob;
+    const text = await blob.text();
+
+    expect(text).toContain('width="42"');
+    expect(text).not.toContain('height=');
+  });
+
+  test('create() applies only height when width is omitted', async () => {
+    const factory = new SvgFactory();
+
+    const promise = factory.create('<svg viewBox="0 0 10 10"></svg>', { height: 24 });
+    lastImage().dispatchEvent(new Event('load'));
+    await promise;
+
+    const blob = createObjectUrlSpy.mock.calls[0]?.[0] as Blob;
+    const text = await blob.text();
+
+    expect(text).toContain('height="24"');
+    expect(text).not.toContain('width=');
+  });
+
+  test('create() leaves the source untouched when width/height are requested but no <svg tag is present', async () => {
+    const factory = new SvgFactory();
+    const source = 'not an svg document';
+
+    const promise = factory.create(source, { width: 10, height: 10 });
+    lastImage().dispatchEvent(new Event('load'));
+    await promise;
+
+    const blob = createObjectUrlSpy.mock.calls[0]?.[0] as Blob;
+    const text = await blob.text();
+
+    expect(text).toBe(source);
+  });
+
   test('create() revokes the object URL once loading settles', async () => {
     const factory = new SvgFactory();
 
