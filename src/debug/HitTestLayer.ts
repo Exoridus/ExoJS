@@ -9,10 +9,10 @@ import type { DebugLayerViewMode } from './DebugLayer';
 import { DebugLayer } from './DebugLayer';
 
 // Color constants (created once, reused).
-const colorIdle = new Color(1, 0, 1, 0.6); // magenta
-const colorHovered = new Color(1, 1, 0, 0.9); // yellow
-const colorCaptured = new Color(0, 1, 1, 0.9); // cyan
-const colorQuadrant = new Color(0.5, 0.5, 0.5, 0.3); // faint gray
+const colorIdle = new Color(255, 0, 255, 0.6); // magenta
+const colorHovered = new Color(255, 255, 0, 0.9); // yellow
+const colorCaptured = new Color(0, 255, 255, 0.9); // cyan
+const colorQuadrant = new Color(128, 128, 128, 0.3); // faint gray
 
 /**
  * Debug layer that draws outlines around interactive scene nodes.
