@@ -108,18 +108,19 @@ export default defineConfig({
       // itself (the exact command the CI job runs) below the floor.
       //
       // A ratchet floor, not a target: set a few points below the measured
-      // baseline (statements 84.80%, branches 77.92%, functions 88.55%, lines
-      // 85.08% as of 2026-07-04 after the fleet-3 coverage pass over
-      // core/resources, ui/debug, non-GPU rendering, and audio/input, core +
-      // all extension packages) so normal test-suite churn doesn't flake the
+      // baseline (statements 86.61%, branches 81.95%, functions 90.31%, lines
+      // 86.73% as of 2026-07-04 after the fleet-4 pass over the extension
+      // packages — physics/audio-fx/tilemap/particles/tiled/ldtk/aseprite/
+      // react; remaining gaps are almost entirely GPU renderer files covered
+      // by the browser lanes) so normal test-suite churn doesn't flake the
       // gate, while still catching a real regression. Raise the floor as
       // coverage grows — never lower it without an explicit reason recorded
       // here.
       thresholds: {
-        statements: 82,
-        branches: 75,
-        functions: 86,
-        lines: 82,
+        statements: 84,
+        branches: 79,
+        functions: 88,
+        lines: 84,
       },
     },
     projects: [
