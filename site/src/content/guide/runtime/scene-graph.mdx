@@ -4,6 +4,7 @@ description: 'Parent-child structure, transform inheritance, render order, masks
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import Callout from '../../../components/Callout.astro';
 
 # Scene graph
 
@@ -100,6 +101,10 @@ this.world.addChild(this.foreground); // drawn over player
 
 For dynamic z-order — characters that need to layer correctly based on their y position — assign `zIndex` to each child. ExoJS resolves sibling order from `zIndex` during render-plan playback (tie-breaker: child list order), without mutating `container.children`.
 
+<Callout type="info" title="Add order is paint order">
+Children paint in the order you add them — last added sits on top. For depth that changes at runtime (a character stepping behind a wall), set `zIndex` rather than reordering the child list.
+</Callout>
+
 ## Adding, removing, and rearranging
 
 The container API covers the common cases:
@@ -115,6 +120,10 @@ parent.setChildIndex(child, index);  // move a child to a new position
 ```
 
 Removing a child doesn't destroy it — you can keep the reference and re-add it later. Destroy the node separately when it should no longer own resources or participate in the scene at all.
+
+<Callout type="pitfall" title="removeChild doesn't free the node">
+`removeChild` only detaches — the node keeps its textures, listeners and children in memory, ready to re-add. When you're done with it for good, call `destroy()` too, or it lingers as a leak.
+</Callout>
 
 ## Why this stays composable
 

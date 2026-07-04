@@ -5,6 +5,7 @@ description: 'Read controller input and support multiple connected gamepads.'
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
 import TryIt from '../../../components/TryIt.astro';
+import Callout from '../../../components/Callout.astro';
 
 # Gamepad
 
@@ -29,6 +30,10 @@ app.input.connectedGamepadCount    // how many slots are occupied
 app.input.firstConnectedGamepad    // first in slot order, or null
 app.input.connectedGamepads        // subset of gamepads[] that are connected
 ```
+
+<Callout type="warning" title="A gamepad is invisible until its first button press">
+On most browsers a connected controller isn't reported until the user presses a button — a security restriction. Don't assume `gamepads` is populated in `init`; check `app.input.connectedGamepads`, and if it's empty, wire your setup to run from the `onGamepadConnected` signal instead.
+</Callout>
 
 ## Lifecycle: connect and disconnect
 
@@ -108,6 +113,10 @@ The buttons you usually reach for:
 | `Select / Start` | Menu / pause buttons |
 
 The [`GamepadButton` API reference](/ExoJS/en/api/gamepad-button/) lists the full 24-button namespace including `Guide`, `Share`, `Capture`, `Touchpad`, and `Paddle1–Paddle4` for Elite/Edge/Steam Deck controllers.
+
+<Callout type="invalid" title="Not every pad has every input">
+Paddles, a second stick, touchpads and rumble are all controller-specific — a detached Joy-Con has no right stick, a basic pad has no paddles or actuators. Gate optional inputs with `pad.hasChannel(channel)` and rumble with `pad.canVibrate` before wiring them, so absent hardware fails gracefully rather than silently.
+</Callout>
 
 ## Axes
 

@@ -5,6 +5,7 @@ description: 'Find your way around a create-exo-app project: the entry point, sc
 
 import SourceSnippet from '../../../components/SourceSnippet.astro';
 import NextStep from '../../../components/NextStep.astro';
+import Callout from '../../../components/Callout.astro';
 
 # Project structure
 
@@ -55,6 +56,10 @@ The application owns runtime configuration — canvas size, clear color, render 
 ## Where assets go
 
 Files under `public/assets/` are served as-is and addressed by path at runtime — for example `loader.load(Texture, { hero: 'assets/hero.png' })`. The [Loading and resources](/ExoJS/en/guide/assets/loading-and-resources/) chapter covers the loader in detail.
+
+<Callout type="pitfall" title="Drop the public/ prefix in asset paths">
+`public/` is the folder the dev server serves from, not part of the URL. A file at `public/assets/hero.png` is loaded as `assets/hero.png` — keeping the `public/` prefix in the path gives you a 404 at runtime.
+</Callout>
 
 ## Scripts
 

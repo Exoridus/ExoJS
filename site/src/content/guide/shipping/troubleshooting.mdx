@@ -4,6 +4,7 @@ description: 'Diagnose and fix the most common ExoJS problems: blank canvas, API
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import Callout from '../../../components/Callout.astro';
 
 # Troubleshooting
 
@@ -25,6 +26,10 @@ Start here. Find the symptom that matches what you see, then jump to the section
 | Low FPS or stutter | Too many drawables, filters, or per-frame allocations | [Performance problems](#performance-problems) |
 
 ## Canvas shows nothing
+
+<Callout type="broken" title="Rule this out first">
+A blank canvas is most often a missing `context.render(this.root)` in `draw` — the frame clears, but nothing is drawn. Check that before working down the list below.
+</Callout>
 
 A blank or black canvas usually means one of the following:
 
@@ -76,6 +81,10 @@ The `Application` constructor options also changed shape in 0.9.0. See the [v0.8
 
 ## WebGPU unavailable
 
+<Callout type="invalid" title="This is expected, not a bug">
+Running on WebGL2 instead of WebGPU is normal — ExoJS falls back automatically and the visuals are identical. Only particle GPU compute actually needs WebGPU.
+</Callout>
+
 WebGPU is not available in all environments. Availability depends on the browser, OS, GPU driver, and whether the hardware accelerated path is enabled.
 
 Current availability (as of 2025):
@@ -95,6 +104,10 @@ If you need WebGPU specifically:
 4. Open `chrome://gpu` (Chrome) or `about:support` (Firefox) to see the active graphics backend.
 
 ## Assets not loading
+
+<Callout type="pitfall" title="Works locally, breaks on deploy">
+Two traps pass every local test and then fail in production: a leftover `public/` prefix in the path, and filename casing — Linux hosts read `Bunny.png` and `bunny.png` as different files.
+</Callout>
 
 Asset load failures typically produce network errors in the browser's developer console. Common causes:
 

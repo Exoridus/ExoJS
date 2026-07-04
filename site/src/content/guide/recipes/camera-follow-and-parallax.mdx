@@ -4,6 +4,7 @@ description: 'Create depth and motion parallax from camera and pointer movement.
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import Callout from '../../../components/Callout.astro';
 
 # Camera follow & parallax
 
@@ -12,6 +13,10 @@ Parallax means layers at different depths move at different rates relative to th
 ## Camera follow
 
 A `View` controls what portion of the world is visible. To make the camera follow a player, update `view.setCenter(player.x, player.y)` each frame in `update` before `draw`:
+
+<Callout type="hint" title="Lerp the camera centre for a smooth follow">
+Snapping `view.setCenter` onto the player every frame feels rigid. Ease it instead — `cur += (target - cur) * k * dt` — so the camera trails slightly and catches up smoothly, no tween needed.
+</Callout>
 
 ```js
 init(loader) {
@@ -73,6 +78,10 @@ draw(context) {
 ```
 
 The speed multiplier per layer creates the illusion of depth. A background layer with `speed = 0.15` moves slowly — it feels far away. A foreground layer with `speed = 0.6` moves quickly — it feels close. The pointer offset from center (`(400 - x)`) gives direction: moving the mouse right shifts layers left, as if the "camera" moved right.
+
+<Callout type="pitfall" title="Parallax layers need margin past the viewport">
+A layer that only fills the viewport shows its edge the moment parallax shifts it. Extend each layer beyond the view by at least its maximum parallax offset so the seam never scrolls into frame.
+</Callout>
 
 ## Scrolling parallax
 

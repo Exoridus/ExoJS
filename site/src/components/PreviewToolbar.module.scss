@@ -81,6 +81,12 @@
     cursor: pointer;
 }
 
+.button--icon {
+    width: 25px;
+    padding: 0;
+    flex: 0 0 auto;
+}
+
 .button--primary {
     border-color: oklch(60% 0.18 142 / 0.4);
     background: oklch(22% 0.014 142 / 0.3);
@@ -99,6 +105,14 @@
 .button[disabled] {
     opacity: 0.45;
     cursor: default;
+}
+
+@media (max-width: 1119px) {
+    // Below the desktop breakpoint the editor always stacks; the layout
+    // toggle would be a no-op there.
+    .button--layout {
+        display: none;
+    }
 }
 
 @media (max-width: 760px) {

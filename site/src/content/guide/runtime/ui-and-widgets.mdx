@@ -5,6 +5,7 @@ description: 'Build HUDs and menus on scene.ui with Panel, Button, Label, and Pr
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
 import TryIt from '../../../components/TryIt.astro';
+import Callout from '../../../components/Callout.astro';
 
 # UI & widgets
 
@@ -55,6 +56,10 @@ class HudScene extends Scene {
 
 The anchor accepts `'top-left'`, `'top'`, `'top-right'`, `'left'`, `'center'`, `'right'`, `'bottom-left'`, `'bottom'`, and `'bottom-right'`.
 
+<Callout type="hint" title="Anchored widgets need no resize handler">
+`anchorIn` re-pins the widget every time the canvas resizes, so a HUD laid out with it never needs a resize handler of your own — set the anchor once and the position tracks the viewport for you.
+</Callout>
+
 ## Stacking widgets
 
 A `Stack` flows its children in a row or column with even spacing and sizes itself to fit. Use it for menus and button groups:
@@ -102,6 +107,10 @@ class InventoryScene extends Scene {
 ```
 
 `scroll.scrollTo(x, y)` and `scroll.scrollBy(dx, dy)` move the content programmatically, clamped so it never scrolls past its edges; `direction` restricts the wheel to `'vertical'`, `'horizontal'`, or `'both'`.
+
+<Callout type="pitfall" title="Items go on scroll.content, not the container">
+Parent scrollable items to `scroll.content`, never to the `ScrollContainer` itself. Children added straight to the container sit outside the clipped, scrolling region — they render at a fixed spot and ignore the wheel.
+</Callout>
 
 ## Clicks and keyboard focus
 

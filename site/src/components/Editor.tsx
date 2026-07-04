@@ -1,4 +1,4 @@
-import { forwardRef, lazy, Suspense, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { forwardRef, lazy, type Ref, Suspense, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 
 import { loadExampleSource } from '../lib/example-store';
 import { getExampleAvailability } from '../lib/runtime-support';
@@ -27,13 +27,24 @@ export interface EditorHandle {
     triggerReload(): void;
 }
 
+export type EditorLayout = 'split' | 'stacked';
+
+const LAYOUT_STORAGE_KEY = 'exo-playground-layout';
+
 export interface EditorProps {
     activeExample: Example | null;
     catalogLoadError: string | null;
     selectedVersionId: string;
+    showSidebarToggle: boolean;
+    sidebarOpen: boolean;
+    sidebarToggleRef: Ref<HTMLButtonElement>;
+    onToggleSidebar(): void;
 }
 
-export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({ activeExample, catalogLoadError, selectedVersionId }, ref) {
+export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
+    { activeExample, catalogLoadError, selectedVersionId, showSidebarToggle, sidebarOpen, sidebarToggleRef, onToggleSidebar },
+    ref,
+) {
     const [sourceCode, setSourceCode] = useState<string | null>(null);
     const [originalSourceCode, setOriginalSourceCode] = useState<string | null>(null);
     const [executionCode, setExecutionCode] = useState<string | null>(null);
@@ -49,6 +60,10 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({ ac
     const [selectionLength, setSelectionLength] = useState(0);
     const [dirty, setDirty] = useState(false);
     const [diagnostics, setDiagnostics] = useState<ReadonlyArray<EditorDiagnostic>>([]);
+    // Split (editor left, preview right) is the desktop default; the stored
+    // preference is applied after mount so SSR and first client render match.
+    // Below 1120px the CSS ignores the mode and always stacks.
+    const [layout, setLayout] = useState<EditorLayout>('split');
     const codeEditorRef = useRef<EditorCodeHandle | null>(null);
     const previewRef = useRef<EditorPreviewHandle | null>(null);
     const previewFrameRef = useRef<HTMLElement | null>(null);
@@ -127,16 +142,40 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({ ac
         };
     }, [activeExample, selectedVersionId]);
 
+    useEffect(() => {
+        const stored = window.localStorage.getItem(LAYOUT_STORAGE_KEY);
+        // Applying a stored preference is the canonical "sync with external
+        // store on mount" effect.
+        // eslint-disable-next-line @eslint-react/set-state-in-effect
+        if (stored === 'split' || stored === 'stacked') setLayout(stored);
+    }, []);
+
+    const toggleLayout = (): void => {
+        setLayout(current => {
+            const next: EditorLayout = current === 'split' ? 'stacked' : 'split';
+            try {
+                window.localStorage.setItem(LAYOUT_STORAGE_KEY, next);
+            } catch {
+                // localStorage disabled — the toggle still works for the session.
+            }
+            return next;
+        });
+    };
+
+    // The in-flow expand only exists in the stacked layout; split already
+    // dedicates a full column to the preview.
+    const expandedActive = previewExpanded && layout === 'stacked';
+
     const syncExpandedWidth = useCallback((): void => {
         const frame = previewFrameRef.current;
         if (!frame) return;
         frame.style.removeProperty('margin-right');
-        if (!previewExpanded) return;
+        if (!expandedActive) return;
         const rect = frame.getBoundingClientRect();
         const gap = 16;
         const extend = Math.max(0, window.innerWidth - rect.right - gap);
         frame.style.marginRight = `${-extend}px`;
-    }, [previewExpanded]);
+    }, [expandedActive]);
 
     useEffect(() => {
         syncExpandedWidth();
@@ -188,10 +227,10 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({ ac
     const displayPath = getDisplayPath(activeExample);
 
     return (
-        <section className={css(styles, 'root')}>
+        <section className={css(styles, 'root')} data-layout={layout}>
             <section
                 ref={previewFrameRef}
-                className={cx(css(styles, 'preview-frame'), previewExpanded && css(styles, 'preview-frame--expanded'))}
+                className={cx(css(styles, 'preview-frame'), expandedActive && css(styles, 'preview-frame--expanded'))}
                 aria-label="Example preview"
             >
                 <PreviewToolbar
@@ -202,10 +241,16 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({ ac
                     zoom={previewZoom}
                     selectedVersionId={selectedVersionId}
                     disabled={!sourceCode}
-                    expanded={previewExpanded}
+                    expanded={expandedActive}
+                    layout={layout}
+                    showSidebarToggle={showSidebarToggle}
+                    sidebarOpen={sidebarOpen}
+                    sidebarToggleRef={sidebarToggleRef}
                     onReload={() => codeEditorRef.current?.triggerRefresh()}
                     onOpenTab={() => previewRef.current?.openPreviewInTab()}
                     onToggleExpand={() => setPreviewExpanded(value => !value)}
+                    onToggleLayout={toggleLayout}
+                    onToggleSidebar={onToggleSidebar}
                 />
                 <div className={css(styles, 'preview-surface')} data-preview-surface>
                     <div className={css(styles, 'preview-component')}>
@@ -230,8 +275,10 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor({ ac
                     )}
                 </div>
             </section>
-            <DiagnosticsStrip diagnostics={diagnostics} onDiagnosticJump={onDiagnosticJump} />
-            {renderErrors(combinedErrors)}
+            <div className={css(styles, 'diagnostics-slot')}>
+                <DiagnosticsStrip diagnostics={diagnostics} onDiagnosticJump={onDiagnosticJump} />
+            </div>
+            <div className={css(styles, 'errors-slot')}>{renderErrors(combinedErrors)}</div>
             <section className={css(styles, 'editor-frame')} aria-label="Source editor">
                 <Suspense fallback={<LoadingSpinner centered />}>
                     <EditorCode

@@ -3,6 +3,8 @@ title: 'Deployment'
 description: 'Build and host an ExoJS app: local production build, Vite base path, static hosting, assets, CDN bundles, and browser support.'
 ---
 
+import Callout from '../../../components/Callout.astro';
+
 # Deployment
 
 ExoJS apps built with `create-exo-app` use Vite and produce a fully static output. The build step compiles, bundles, and copies all required files into a `dist/` directory. That directory is everything you need to host.
@@ -26,6 +28,10 @@ npm run preview
 Do not open `dist/index.html` directly with `file://`. Browsers apply strict origin restrictions to `file://` requests that break module loading and asset fetching. Always use a proper HTTP server.
 
 ## Vite base path
+
+<Callout type="pitfall" title="Subpath deploys need a base or every asset 404s">
+Deploying under a subpath — GitHub Pages at `https://username.github.io/repo-name/`, for instance — without setting Vite's `base` makes every bundled asset resolve against the domain root and 404, leaving a blank canvas. Set `base: '/repo-name/'` in `vite.config.ts` and rebuild.
+</Callout>
 
 By default Vite assumes your app is hosted at the root of a domain (`/`). If you deploy to a subpath — for example GitHub Pages at `https://username.github.io/repo-name/` — you must set the `base` option in `vite.config.ts`:
 
@@ -177,6 +183,10 @@ There is no `import` statement anywhere in this path — `Exo` is already in sco
 Prefer the ES module bundle when your host supports import maps and you want the browser to load only what you use. Prefer the IIFE bundle when you need a true zero-build setup — for example a single static HTML file, a CMS or forum post that only allows pasting a `<script>` tag, or any environment without import-map support.
 
 ## MIME types
+
+<Callout type="broken" title="file:// and wrong MIME both kill module loading">
+Opening `dist/index.html` over `file://`, or hosting where `.js` is sent as `text/plain`, makes the browser refuse the module scripts — you get a blank page and a MIME error in the console, not an ExoJS error. Serve `dist/` over HTTP with `.js` typed as `application/javascript`.
+</Callout>
 
 JavaScript files (`.js`, `.mjs`) must be served with the `application/javascript` content type. Most web servers do this automatically. If you're using a custom server configuration or object storage, verify the content type header.
 

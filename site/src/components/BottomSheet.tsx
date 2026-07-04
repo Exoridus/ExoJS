@@ -1,4 +1,5 @@
-import { type ReactNode,useEffect, useId, useRef } from 'react';
+import { type ReactNode,useEffect, useId, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 import styles from './BottomSheet.module.scss';
 import { css } from './react-utils';
@@ -26,6 +27,9 @@ export interface BottomSheetProps {
 export function BottomSheet({ children, open, title, opener, onOpenChange }: BottomSheetProps): JSX.Element {
     const titleId = useId();
     const sheetRef = useRef<HTMLElement | null>(null);
+    // Portal target only exists in the browser; render nothing during SSR.
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => setMounted(true), []);
 
     useEffect(() => {
         if (!open) return;
@@ -102,7 +106,12 @@ export function BottomSheet({ children, open, title, opener, onOpenChange }: Bot
         };
     }, [onOpenChange, open, opener]);
 
-    return (
+    if (!mounted) return <></>;
+
+    // Portaled to <body>: the sticky header uses backdrop-filter, which makes
+    // it the containing block for fixed-position descendants — rendered in
+    // place, the sheet would be trapped inside the 62px header strip.
+    return createPortal(
         <div className={css(styles, 'host')} data-open={open ? 'true' : undefined}>
             <div className={css(styles, 'root')} aria-hidden={open ? 'false' : 'true'}>
                 <button className={css(styles, 'backdrop')} type="button" aria-label="Close" onClick={() => onOpenChange(false)} />
@@ -119,7 +128,8 @@ export function BottomSheet({ children, open, title, opener, onOpenChange }: Bot
                     <div className={css(styles, 'body')}>{children}</div>
                 </section>
             </div>
-        </div>
+        </div>,
+        document.body,
     );
 }
 

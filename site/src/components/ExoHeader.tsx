@@ -3,8 +3,9 @@ import { type MouseEvent,useState } from 'react';
 import { appInfo } from '../lib/app-info';
 import { BottomSheet } from './BottomSheet';
 import styles from './ExoHeader.module.scss';
+import { GlobalSearch, GlobalSearchPanel } from './GlobalSearch';
 import { LanguagePicker } from './LanguagePicker';
-import { css, cx } from './react-utils';
+import { css } from './react-utils';
 import { ThemeToggle } from './ThemeToggle';
 
 export interface ExoHeaderProps {
@@ -22,7 +23,6 @@ export function ExoHeader({ baseUrl, currentPath, locale }: ExoHeaderProps): JSX
     const guideHref = `${baseUrl}${normalizedLocale}/guide/`;
     const playgroundHref = `${baseUrl}${normalizedLocale}/playground/`;
     const apiHref = `${baseUrl}${normalizedLocale}/api/`;
-    const allApiHref = `${baseUrl}${normalizedLocale}/api/all/`;
     const npmUrl = appInfo.packageName ? `https://www.npmjs.com/package/${appInfo.packageName}` : '';
 
     const openMenu = (event: MouseEvent<HTMLButtonElement>): void => {
@@ -71,7 +71,9 @@ export function ExoHeader({ baseUrl, currentPath, locale }: ExoHeaderProps): JSX
                 </nav>
                 <div className={css(styles, 'spacer')} />
                 <div className={css(styles, 'tools')}>
-                    <div className={css(styles, 'search-slot')} aria-hidden="true" />
+                    <div className={css(styles, 'search-slot')}>
+                        <GlobalSearch baseUrl={baseUrl} />
+                    </div>
                     <ThemeToggle />
                     <LanguagePicker baseUrl={baseUrl} currentPath={currentPath} locale={normalizedLocale} />
                 </div>
@@ -109,16 +111,7 @@ export function ExoHeader({ baseUrl, currentPath, locale }: ExoHeaderProps): JSX
             </header>
             <BottomSheet open={searchOpen} title="Search" opener={sheetOpener} onOpenChange={setSearchOpen}>
                 <div id="global-search-sheet" className={css(styles, 'sheet-block')}>
-                    <p className={css(styles, 'sheet-note')}>Global search is not wired yet on mobile.</p>
-                    <p className={cx(css(styles, 'sheet-note'), css(styles, 'sheet-note--muted'))}>Use the existing search surfaces until command search lands:</p>
-                    <div className={css(styles, 'sheet-links')}>
-                        <a href={allApiHref} onClick={dismissSheets}>
-                            Search API symbols
-                        </a>
-                        <a href={playgroundHref} onClick={dismissSheets}>
-                            Search Playground examples
-                        </a>
-                    </div>
+                    {searchOpen && <GlobalSearchPanel baseUrl={baseUrl} onNavigate={dismissSheets} />}
                 </div>
             </BottomSheet>
             <BottomSheet open={menuOpen} title="Menu" opener={sheetOpener} onOpenChange={setMenuOpen}>

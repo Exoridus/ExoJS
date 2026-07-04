@@ -85,6 +85,10 @@ document.getElementById('scene').append(app.canvas);
 
 For the smallest possible test page, appending to `document.body` is fine. Either way, the canvas needs to be mounted somewhere in the DOM before frames become visible.
 
+<Callout type="broken" title="A canvas outside the DOM shows nothing">
+If `app.canvas` is never appended to the page, the scene still loads, updates, and draws — you just see a blank page with no error to explain why. Append it before you expect a frame.
+</Callout>
+
 ## The full thing running
 
 <ExamplePreview chapter="getting-started" slug="hello-world" />

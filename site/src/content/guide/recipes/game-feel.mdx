@@ -4,6 +4,7 @@ description: 'Add feedback cues that make interaction feel responsive.'
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import Callout from '../../../components/Callout.astro';
 
 # Game feel
 
@@ -12,6 +13,10 @@ Game feel is the layer of feedback that makes actions feel tangible: a flash whe
 ## Damage flash
 
 When the player takes damage, flash the sprite red for a fraction of a second and tween back to normal. Use a `ColorFilter` on the sprite and animate its color with a tween:
+
+<Callout type="hint" title="Tween the ColorFilter's live Color directly">
+`ColorFilter.color` is the filter's live `Color`, not a constructor snapshot. Mutate or tween it in place for a damage flash — set it red, tween back to white — with no filter rebuild.
+</Callout>
 
 ```js
 import { ColorFilter, Signal } from '@codexo/exojs';

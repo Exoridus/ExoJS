@@ -4,6 +4,7 @@ description: 'Coordinate timing, camera, and audio for scripted scene beats.'
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import Callout from '../../../components/Callout.astro';
 
 # Cinematics
 
@@ -152,6 +153,10 @@ Use `scene.ui` for any overlay that must remain fixed to the screen — subtitle
 ## Skip support
 
 Add a skip mechanism — press any confirm key (Space, Enter, gamepad Start) to jump to the end and switch scenes:
+
+<Callout type="hint" title="delay() builds the timeline, clear() skips it">
+Staggering tweens with `Tween.delay()` is what turns independent animations into a timeline — no sequencer needed. To skip the whole cutscene, `app.tweens.clear()` stops every active tween at once so you can snap straight to the end state.
+</Callout>
 
 ```js
 init(loader) {

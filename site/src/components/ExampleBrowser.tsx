@@ -26,7 +26,6 @@ import {
     onVersionsLoaded,
     type VersionInfo,
 } from '../lib/versions';
-import { AppHeader, type AppHeaderHandle } from './AppHeader';
 import { BottomSheet } from './BottomSheet';
 import { Editor, type EditorHandle } from './Editor';
 import styles from './ExampleBrowser.module.scss';
@@ -42,7 +41,6 @@ export function ExampleBrowser({ baseUrl }: ExampleBrowserProps): JSX.Element {
     const [examples, setExamples] = useState<ExamplesMap>(() => new Map());
     const [activeExample, setActiveExample] = useState<Example | null>(null);
     const [availableTags, setAvailableTags] = useState<string[]>([]);
-    const [versions, setVersions] = useState<ReadonlyArray<VersionInfo>>([]);
     const [selectedVersion, setSelectedVersion] = useState<VersionInfo | null>(null);
     const [loaded, setLoaded] = useState(false);
     const [loadError, setLoadError] = useState<string | null>(null);
@@ -50,7 +48,7 @@ export function ExampleBrowser({ baseUrl }: ExampleBrowserProps): JSX.Element {
     const [isCompactMobile, setIsCompactMobile] = useState(false);
     const [examplesSheetOpen, setExamplesSheetOpen] = useState(false);
     const [examplesSheetOpener, setExamplesSheetOpener] = useState<HTMLElement | null>(null);
-    const appHeaderRef = useRef<AppHeaderHandle | null>(null);
+    const sidebarToggleRef = useRef<HTMLButtonElement | null>(null);
     const editorRef = useRef<EditorHandle | null>(null);
     const mobileExamplesButtonRef = useRef<HTMLButtonElement | null>(null);
     const previousVersionIdRef = useRef<string | null>(null);
@@ -172,9 +170,7 @@ export function ExampleBrowser({ baseUrl }: ExampleBrowserProps): JSX.Element {
     }, [ensureExamplesLoaded]);
 
     const syncVersionState = useCallback((): void => {
-        const nextVersions = getVersions();
         const nextSelected = resolveSelectedVersion();
-        setVersions(nextVersions);
         setSelectedVersion(nextSelected);
         selectedVersionRef.current = nextSelected;
 
@@ -276,7 +272,7 @@ export function ExampleBrowser({ baseUrl }: ExampleBrowserProps): JSX.Element {
             if (event.key === 'Escape') {
                 event.preventDefault();
                 setSidebarOpen(false);
-                window.requestAnimationFrame(() => appHeaderRef.current?.focusMenuButton());
+                window.requestAnimationFrame(() => sidebarToggleRef.current?.focus());
             }
         };
         document.addEventListener('keydown', onKeyDown);
@@ -292,19 +288,6 @@ export function ExampleBrowser({ baseUrl }: ExampleBrowserProps): JSX.Element {
         writeUrlState({ version: selected.id, example: example.path });
         if (isCompactMobile) setExamplesSheetOpen(false);
         else if (!window.matchMedia('(min-width: 1120px)').matches) setSidebarOpen(false);
-    };
-
-    const selectVersion = (id: string): void => {
-        const next = getVersionById(id);
-        if (!next || selectedVersionRef.current?.id === id) return;
-        previousVersionIdRef.current = selectedVersionRef.current?.id ?? null;
-        missingExampleToastEnabledRef.current = true;
-        setSelectedVersion(next);
-        selectedVersionRef.current = next;
-        storeSelectedVersion(id);
-        writeUrlState({ version: id });
-        showToast(`Switched to @codexo/exojs@${id}`);
-        void ensureExamplesLoaded(id);
     };
 
     return (
@@ -323,18 +306,17 @@ export function ExampleBrowser({ baseUrl }: ExampleBrowserProps): JSX.Element {
                 </aside>
             )}
             <div className={css(styles, 'right-column')}>
-                <AppHeader
-                    ref={appHeaderRef}
-                    sidebarOpen={sidebarOpen}
-                    showSidebarToggle={!isCompactMobile}
-                    sidebarControls="playground-navigation"
-                    versions={versions}
-                    selectedVersion={selectedVersion}
-                    onToggleSidebar={() => setSidebarOpen(value => !value)}
-                    onSelectVersion={selectVersion}
-                />
                 <main className={css(styles, 'main-content')}>
-                    <Editor ref={editorRef} activeExample={activeExample} catalogLoadError={loadError} selectedVersionId={selectedVersion?.id ?? ''} />
+                    <Editor
+                        ref={editorRef}
+                        activeExample={activeExample}
+                        catalogLoadError={loadError}
+                        selectedVersionId={selectedVersion?.id ?? ''}
+                        showSidebarToggle={!isCompactMobile}
+                        sidebarOpen={sidebarOpen}
+                        sidebarToggleRef={sidebarToggleRef}
+                        onToggleSidebar={() => setSidebarOpen(value => !value)}
+                    />
                 </main>
                 {isCompactMobile && (
                     <nav className={css(styles, 'mobile-actions')} aria-label="Playground actions">

@@ -4,6 +4,7 @@ description: 'Compose gameplay and UI layers without coupling scene logic.'
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import Callout from '../../../components/Callout.astro';
 
 # HUD overlay
 
@@ -56,6 +57,10 @@ The alternative — rendering HUD elements after the world in a single scene's `
 ## Mini-map with a mask
 
 A mini-map is a special HUD element: it needs a second `View` to render the world from a zoomed-out perspective into a `RenderTexture`, which is then displayed as a sprite in the corner of the HUD. The capture is a [`CallbackRenderPass`](/ExoJS/en/api/callback-render-pass/) with a `{ target }`, run once per frame from the scene's pipeline:
+
+<Callout type="pitfall" title="Draw with context.backend inside a target pass">
+Inside a `{ target }` render redirect, issue your draws through `context.backend` directly. A `context.render(node)` call there resets the active view back to the camera, so the off-screen capture would render from the wrong viewpoint.
+</Callout>
 
 ```js
 // In GameScene.init: build the capture pass once.

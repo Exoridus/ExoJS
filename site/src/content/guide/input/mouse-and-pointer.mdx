@@ -4,6 +4,7 @@ description: 'Work with pointer events across mouse and touch-compatible devices
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import Callout from '../../../components/Callout.astro';
 
 # Mouse and pointer
 
@@ -37,6 +38,10 @@ app.input.onPointerTap.add(pointer => {
 ```
 
 The pointer's `position` is in canvas-local pixel space — `(0, 0)` is the top-left of the canvas, regardless of CSS size or page scroll.
+
+<Callout type="pitfall" title="Pointer coordinates are design space, not world space">
+`pointer.x`/`pointer.y` are design-space pixels — the same coordinates whether or not the camera has panned or zoomed. Before hit-testing against world objects, run them through the active view's `screenToWorld`; using the raw values places or selects things in the wrong spot the moment the camera moves.
+</Callout>
 
 ## Primary pointer convenience
 

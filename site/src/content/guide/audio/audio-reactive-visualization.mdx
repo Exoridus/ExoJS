@@ -4,6 +4,7 @@ description: 'Bridge audio analysis and beat-detection state into the render pip
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import Callout from '../../../components/Callout.astro';
 
 # Audio-reactive visualization
 
@@ -134,11 +135,19 @@ update(delta) {
 
 Tune the envelope shapes with the mutable public fields `pulseHalfLife`, `barPulseHalfLife`, and `justBeatWindow`. Smaller values give snappier responses; larger values give longer afterglow.
 
+<Callout type="pitfall" title="justBeat can slip through at low frame rates">
+`justBeat` is only `true` for a frame or two per beat (a ~30 ms window), so a frame-rate dip below ~30fps can skip the window entirely. For effects that must never drop a beat — a sound cue, a scored hit — drive them from the `onBeat` signal, which is dispatched once per beat regardless of frame rate.
+</Callout>
+
 ## Spectrograms with DataTexture
 
 When you want a scrolling spectrogram — a 2D texture that updates each frame with a new column of frequency data — use [`DataTexture`](/ExoJS/en/api/data-texture/). Its pixels live in a CPU-side typed array that you mutate directly, then upload to the GPU with `commit()` or `commitRect()`.
 
 `DataTexture` defaults to nearest-neighbor filtering with clamp-to-edge wrapping, which is what you want for spectrum data where bilinear filtering would corrupt sampled values.
+
+<Callout type="hint" title="Upload only the column that changed">
+A scrolling spectrogram rewrites just one column per frame. `commitRect(x, y, width, height)` re-uploads that single region to the GPU — far cheaper than `commit()`, which re-uploads the entire texture every frame.
+</Callout>
 
 A simple scrolling spectrogram:
 

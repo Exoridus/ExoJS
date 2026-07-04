@@ -3,6 +3,8 @@ title: 'Tiled maps'
 description: 'Load Tiled (.tmj) tilemaps as assets through the official @codexo/exojs-tiled extension.'
 ---
 
+import Callout from '../../../components/Callout.astro';
+
 # Tiled maps
 
 [Tiled](https://www.mapeditor.org/) is a popular open-source map editor. The official
@@ -16,6 +18,10 @@ and tile data.
 > ```sh
 > npm install @codexo/exojs @codexo/exojs-tiled
 > ```
+
+<Callout type="pitfall" title="TiledMap is data, not something you can draw">
+Loading a map gives you layer grids and tileset textures — it is not a `Drawable`, so adding it to the scene puts nothing on screen. You build the rendering yourself (batched `Sprite`s or a `Mesh`) from the data it exposes.
+</Callout>
 
 Like all extensions, the core ships nothing Tiled-specific — an `Application` only understands
 `.tmj` files once you activate the extension. There are two ways to do that.
@@ -72,6 +78,10 @@ extension uses.
 
 Once the extension is active, load a `.tmj` map the same way you load any asset — by type token,
 by path, or by config-map. All three resolve to the same handler.
+
+<Callout type="invalid" title="Only orthogonal Tiled JSON loads — the rest throw by design">
+XML (`.tmx`/`.tsx`), infinite maps, isometric or hexagonal orientations, collection-of-images tilesets, and `zstd` compression each raise a clear error rather than loading. Export an orthogonal JSON map (`.tmj`) with CSV, gzip, or zlib data.
+</Callout>
 
 ```js no-check
 import { TiledMap } from '@codexo/exojs-tiled';

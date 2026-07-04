@@ -4,6 +4,7 @@ description: 'Shape sound with filters and bus-level processing.'
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import Callout from '../../../components/Callout.astro';
 
 # Audio effects
 
@@ -32,6 +33,10 @@ app.audio.master.removeEffect(reverb);
 ```
 
 Filters are reusable — move one from bus to bus by removing it from the old bus and adding it to the new one. Destroy a filter with `filter.destroy()` when it's no longer needed anywhere.
+
+<Callout type="info" title="Effect order is the order you add them">
+`addEffect` always appends to the end of the chain, so the sequence you add effects in is the sequence audio flows through — a compressor added before a reverb sounds different from one added after. To slot an effect in earlier, `removeEffect` the later ones and add them back in the order you want.
+</Callout>
 
 ## CompressorEffect
 
@@ -70,6 +75,10 @@ const reverb = new ReverbEffect({
 });
 ```
 
+<Callout type="warning" title="Keep durationSeconds and decay stable during playback">
+Changing `durationSeconds` or `decay` on a live `ReverbEffect` rebuilds its impulse response — a heavier operation than a simple parameter tweak. Set them at construction and leave them alone while audio is playing; automate `wet` for real-time changes instead.
+</Callout>
+
 `DelayEffect` creates an echo with configurable feedback:
 
 ```js
@@ -80,7 +89,7 @@ const delay = new DelayEffect({
 });
 ```
 
-Both expose live `wet`, `delaySeconds`, `feedback`, `decay`, and `durationSeconds` properties. Changing `durationSeconds` or `decay` on a reverb rebuilds the impulse response — prefer to keep these stable during playback.
+Both expose live `wet`, `delaySeconds`, `feedback`, `decay`, and `durationSeconds` properties.
 
 ## DuckingEffect
 
@@ -237,6 +246,10 @@ app.audio.master.addEffect(convReverb);
 ## Worklet-based effects
 
 Four filters use `AudioWorkletProcessor` and load asynchronously. They extend `WorkletEffect`, which exposes a `ready` promise — the engine registers the worklet, you construct the filter and add it to a bus, and the chain rewires automatically once the processor is loaded.
+
+<Callout type="hint" title="Await ready before you depend on a worklet effect">
+A `WorkletEffect` loads its processor asynchronously — the bus rewires itself once it's ready, but until then the effect passes audio through untouched. `await effect.ready` before you rely on its output or read state from it.
+</Callout>
 
 ```js no-check
 import { BitCrusherEffect, GranularEffect, PitchShiftEffect, VocoderEffect } from '@codexo/exojs-audio-fx';

@@ -4,6 +4,7 @@ description: 'Drive visuals from beat and frequency information.'
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import Callout from '../../../components/Callout.astro';
 
 # Beat detection
 
@@ -76,6 +77,10 @@ detector.onBeat.add(info => {
 });
 ```
 
+<Callout type="pitfall" title="Beat signals are not frame-locked">
+`onBeat` and its siblings fire from the worklet as it detects each beat, delivered asynchronously to the main thread — not aligned to your `update` frame, and possibly finer than `requestAnimationFrame`. Use them for one-shot triggers; for visuals that must stay frame-stable, poll getters like `pulse` or `justBeat` in `update` instead.
+</Callout>
+
 Use `onDownbeat` for events that should only fire on the "one" — a brighter flash, a bar-level visual change, a camera shake:
 
 ```js
@@ -115,6 +120,10 @@ detector.lookahead          // readonly array of upcoming beats
 ```
 
 These are pure derivations from the detector's most recent worklet state update — no allocation, no event dispatch.
+
+<Callout type="info" title="Trust tempo and confidence only once locked">
+Beats arrive `'provisional'` first — low-latency and ideal for snappy visual reactivity — then promote to `'locked'` once the grid settles, and `tempo`/`confidence` read 0 until that point. Gate anything that needs a dependable BPM — a sequencer, a UI readout — on `info.status === 'locked'`.
+</Callout>
 
 ## Bar and time-signature tracking
 

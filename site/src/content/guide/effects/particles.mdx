@@ -4,6 +4,7 @@ description: 'Spawn and tune particle systems for environmental and reactive eff
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import Callout from '../../../components/Callout.astro';
 
 # Particles
 
@@ -119,6 +120,14 @@ Distributions let each spawned particle get a different value. The most commonly
 ## Update modules
 
 Update modules mutate particle state each frame. Every built-in update module that works on both backends declares a `wgsl()` contribution — when a WebGPU backend is active and every registered update module is GPU-eligible, the system auto-compiles a composite WGSL compute shader and runs the full update pipeline on the GPU in a single dispatch. When any module lacks a `wgsl()` contribution, or when running on WebGL2, the system falls back to CPU. You don't configure this — it's automatic.
+
+<Callout type="warning" title="Register every update module before the first `update()`">
+GPU mode compiles all modules into one composite shader on the first `update()`, which locks the list. Add every force, drag, fade and color module up front — you cannot append one once the system has stepped.
+</Callout>
+
+<Callout type="info" title="Each system picks GPU or CPU on its own">
+A system takes the WGSL compute path when the backend is WebGPU and every update module is GPU-eligible; otherwise it runs the identical API on the CPU. Read `system.gpuMode` to confirm which path it took.
+</Callout>
 
 The frequently-used update modules:
 

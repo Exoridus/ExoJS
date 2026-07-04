@@ -3,6 +3,8 @@ title: 'Serialization & prefabs'
 description: 'Serialize scenes to JSON and back, capture reusable prefabs, persist save slots with a key-value store, and register serializers for your own node types.'
 ---
 
+import Callout from '../../../components/Callout.astro';
+
 # Serialization & prefabs
 
 ExoJS can turn a scene-graph subtree into plain JSON and rebuild it later. The serializer captures **data and structure** — transforms, visuals, asset references, and the tree shape — **not behaviour**. Update logic, signal handlers, tweens, and systems live in your `Scene` / `System` code and are re-attached after a load. That boundary keeps the format small and matches the engine's code-first design.
@@ -27,6 +29,10 @@ scene.deserialize(JSON.parse(json));
 ```
 
 A freshly-constructed node serializes to just its `type` tag — only non-default fields are written, so the JSON stays compact.
+
+<Callout type="info" title="Structure is captured, behaviour is not">
+Serialization records data and structure — transforms, tints, blend modes, frames, tree shape, and asset keys. Live and behavioural pieces (a `mask` node, post-process `filters`, `Geometry` clip shapes, custom materials, update logic) are skipped, so re-attach them in your `Scene` code after loading.
+</Callout>
 
 ## Prefabs
 
@@ -65,6 +71,10 @@ if (data) scene.deserialize(data); // restore
 ```
 
 Choose the backend by capability: [`WebStorageStore`](/ExoJS/en/api/web-storage-store/) for small synchronous JSON saves, [`IndexedDbKeyValueStore`](/ExoJS/en/api/indexed-db-key-value-store/) for large or binary saves, [`MemoryStore`](/ExoJS/en/api/memory-store/) for tests. They share one `KeyValueStore` interface, so swapping is a one-line change.
+
+<Callout type="warning" title="Load the assets before you deserialize">
+A saved scene stores asset references as loader keys, not the assets themselves. The referenced textures and other assets must already be loaded into the app's `Loader` before you call `deserialize`, or restoration fails on the missing keys.
+</Callout>
 
 ## Custom node types
 
