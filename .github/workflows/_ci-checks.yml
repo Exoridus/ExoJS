@@ -486,6 +486,10 @@ jobs:
         run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Build core
+        env:
+          # Enables the Codecov bundle-analysis upload in rollup.config.ts;
+          # absent (e.g. fork PRs, local builds) the build stays offline.
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         run: pnpm build
 
       # The extension packages each have their own rollup build; pnpm runs them
@@ -675,6 +679,8 @@ jobs:
       - name: Build site
         env:
           EXOJS_PACKAGE_PATH: ..
+          # Enables the Codecov bundle-analysis upload in astro.config.ts.
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         run: pnpm site:build
 
   required-ci:

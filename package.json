@@ -154,6 +154,7 @@
     "url": "git+https://github.com/Exoridus/ExoJS.git"
   },
   "devDependencies": {
+    "@codecov/rollup-plugin": "^2.0.1",
     "@codexo/exojs-config": "workspace:*",
     "@eslint-react/eslint-plugin": "^5.9.0",
     "@eslint/js": "^10.0.1",

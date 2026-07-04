@@ -1,6 +1,7 @@
 import { dirname, relative as relativePath, resolve as resolvePath } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { codecovRollupPlugin } from '@codecov/rollup-plugin';
 import { createBuildDefinesFromRepo } from '@codexo/exojs-config/build-defines';
 import { createWorkletPlugin } from '@codexo/exojs-config/worklet-plugin';
 import resolve from '@rollup/plugin-node-resolve';
@@ -44,6 +45,19 @@ const extensionSourcePlugin = (): Plugin => ({
 const glslPlugin = string({
   include: ['**/*.vert', '**/*.frag'],
 });
+
+// Codecov Bundle Analysis: uploads per-bundle module stats when a token is
+// present (CI passes CODECOV_TOKEN via secrets: inherit). A plain local
+// `pnpm build` has no token and stays fully offline.
+const codecovBundlePlugin = (bundleName: string): Plugin[] =>
+  process.env.CODECOV_TOKEN
+    ? codecovRollupPlugin({
+        enableBundleAnalysis: true,
+        bundleName,
+        uploadToken: process.env.CODECOV_TOKEN,
+        telemetry: false,
+      })
+    : [];
 
 // Real, typed AudioWorklet sources imported via `?worklet` (see
 // `@codexo/exojs-config/worklet-plugin`) are transpiled and inlined as a JS
@@ -114,14 +128,17 @@ const bundled: RollupOptions = {
     format: 'es',
     sourcemap: true,
   },
-  plugins: basePlugins({
-    exportConditions: sourceConditions,
-    transform: typescript({
-      compilerOptions: { incremental: false },
-      outputToFilesystem: false,
+  plugins: [
+    ...basePlugins({
+      exportConditions: sourceConditions,
+      transform: typescript({
+        compilerOptions: { incremental: false },
+        outputToFilesystem: false,
+      }),
+      minify: 'production',
     }),
-    minify: 'production',
-  }),
+    ...codecovBundlePlugin('exo-esm'),
+  ],
 };
 
 // Unminified IIFE global bundle for CDN script-tag usage (both dev and production).
@@ -151,14 +168,17 @@ const iifeMin: RollupOptions = {
     name: 'Exo',
     sourcemap: true,
   },
-  plugins: basePlugins({
-    exportConditions: sourceConditions,
-    transform: typescript({
-      compilerOptions: { incremental: false },
-      outputToFilesystem: false,
+  plugins: [
+    ...basePlugins({
+      exportConditions: sourceConditions,
+      transform: typescript({
+        compilerOptions: { incremental: false },
+        outputToFilesystem: false,
+      }),
+      minify: 'always',
     }),
-    minify: 'always',
-  }),
+    ...codecovBundlePlugin('exo-iife-min'),
+  ],
 };
 
 const debugBundled: RollupOptions = {
@@ -202,21 +222,24 @@ const modules: RollupOptions = {
       return relativePath(dirname(sourcemapPath), resolvePath(rootDir, match[1])).replaceAll('\\', '/');
     },
   },
-  plugins: basePlugins({
-    exportConditions: sourceConditions,
-    mainFields: ['module', 'browser', 'main'],
-    transform: typescript({
-      compilerOptions: {
-        incremental: false,
-        outDir: 'dist/esm',
-        declaration: true,
-        declarationDir: 'dist/esm',
-        // Embed the original TS text so the shipped maps work without src/
-        // on disk (npm consumers, and Vite's missing-source check).
-        inlineSources: true,
-      },
+  plugins: [
+    ...basePlugins({
+      exportConditions: sourceConditions,
+      mainFields: ['module', 'browser', 'main'],
+      transform: typescript({
+        compilerOptions: {
+          incremental: false,
+          outDir: 'dist/esm',
+          declaration: true,
+          declarationDir: 'dist/esm',
+          // Embed the original TS text so the shipped maps work without src/
+          // on disk (npm consumers, and Vite's missing-source check).
+          inlineSources: true,
+        },
+      }),
     }),
-  }),
+    ...codecovBundlePlugin('exo-esm-modules'),
+  ],
 };
 
 // The full IIFE bundle transpiles TypeScript source across multiple rootDirs

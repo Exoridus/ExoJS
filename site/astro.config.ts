@@ -1,3 +1,6 @@
+// Default import on purpose: the package's ESM build exports the plugin as
+// `default` only (the .d.ts advertises a named export it doesn't ship).
+import codecovAstroPlugin from '@codecov/astro-plugin';
 import { defineConfig } from 'astro/config';
 import mdx from '@astrojs/mdx';
 import react from '@astrojs/react';
@@ -9,8 +12,22 @@ import { SHIKI_THEMES } from './src/lib/shiki-theme';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Codecov Bundle Analysis for the site bundle — upload only when the token is
+// present (CI); local builds stay offline. Placed after all other integrations
+// per the plugin's docs.
+const codecovIntegrations = process.env.CODECOV_TOKEN
+    ? [
+          codecovAstroPlugin({
+              enableBundleAnalysis: true,
+              bundleName: 'site',
+              uploadToken: process.env.CODECOV_TOKEN,
+              telemetry: false,
+          }),
+      ]
+    : [];
+
 export default defineConfig({
-    integrations: [react(), mdx()],
+    integrations: [react(), mdx(), ...codecovIntegrations],
     output: 'static',
     base: '/ExoJS/',
     i18n: {
