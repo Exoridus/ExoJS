@@ -7,6 +7,10 @@ import type { InputManager } from '#input/InputManager';
 import type { KeyEvent } from '#input/KeyEvent';
 import { Keyboard } from '#input/types';
 import { Container } from '#rendering/Container';
+import { Drawable } from '#rendering/Drawable';
+
+/** Minimal concrete non-Container leaf RenderNode, for exercising Tab-collection through a leaf. */
+class LeafNode extends Drawable {}
 
 const noopInteraction: InteractionHooks = {
   _notifyNodeAdded() {},
@@ -263,6 +267,103 @@ describe('FocusManager', () => {
 
     node.blur();
     expect(focus.focused).toBeNull();
+  });
+
+  test('destroy() detaches from InputManager and clears state', () => {
+    const { scene, focus, onKeyDown, onKeyUp } = createFocusApp();
+    const node = focusable();
+
+    scene.root.addChild(node);
+    focus.focus(node);
+    expect(focus.focused).toBe(node);
+
+    focus.destroy();
+
+    expect(focus.focused).toBeNull();
+
+    // The onKeyDown/onKeyUp handlers were removed — further dispatches are no-ops.
+    const handler = vi.fn();
+
+    node.onKeyDown.add(handler);
+    onKeyDown.dispatch(Keyboard.Tab);
+    onKeyUp.dispatch(Keyboard.Tab);
+
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  test('keyup is a no-op when nothing is focused', () => {
+    const { onKeyUp } = createFocusApp();
+
+    expect(() => onKeyUp.dispatch(Keyboard.Enter)).not.toThrow();
+  });
+
+  test('Tab is a no-op when the active scope has zero focusable nodes', () => {
+    const { scene, focus, onKeyDown } = createFocusApp();
+
+    scene.root.addChild(new Container()); // present, but not focusable
+
+    expect(() => onKeyDown.dispatch(Keyboard.Tab)).not.toThrow();
+    expect(focus.focused).toBeNull();
+  });
+
+  test('Tab is a no-op when there is no active scene (root resolves to null)', () => {
+    const onKeyDown = new Signal<[number]>();
+    const onKeyUp = new Signal<[number]>();
+    const app = {
+      input: { onKeyDown, onKeyUp } as unknown as InputManager,
+      scene: {
+        get currentScene(): Scene | null {
+          return null;
+        },
+      },
+    } as unknown as Application;
+    const focus = new FocusManager(app);
+
+    expect(() => onKeyDown.dispatch(Keyboard.Tab)).not.toThrow();
+    expect(focus.focused).toBeNull();
+  });
+
+  test('focusPrevious() with nothing focused wraps to the last focusable node', () => {
+    const { scene, focus } = createFocusApp();
+    const a = focusable();
+    const b = focusable();
+    const c = focusable();
+
+    scene.root.addChild(a).addChild(b).addChild(c);
+
+    focus.focusPrevious();
+
+    expect(focus.focused).toBe(c);
+  });
+
+  test('an invisible focusable node is excluded from Tab order', () => {
+    const { scene, focus, onKeyDown } = createFocusApp();
+    const visible = focusable();
+    const hidden = focusable();
+
+    hidden.visible = false;
+    scene.root.addChild(visible).addChild(hidden);
+
+    onKeyDown.dispatch(Keyboard.Tab);
+    expect(focus.focused).toBe(visible);
+
+    // Wraps back to `visible` — `hidden` is never a stop along the way.
+    onKeyDown.dispatch(Keyboard.Tab);
+    expect(focus.focused).toBe(visible);
+  });
+
+  test('a non-Container focusable leaf node participates in Tab order', () => {
+    const { scene, focus, onKeyDown } = createFocusApp();
+    const leaf = new LeafNode();
+
+    leaf.focusable = true;
+    scene.root.addChild(leaf);
+
+    onKeyDown.dispatch(Keyboard.Tab);
+
+    expect(focus.focused).toBe(leaf);
+
+    leaf.destroy();
   });
 
   test('pushScope restricts Tab traversal to a subtree', () => {

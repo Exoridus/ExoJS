@@ -443,6 +443,17 @@ describe('DebugOverlay — view-mode routing', () => {
   });
 });
 
+describe('DebugOverlay — resize handling', () => {
+  test('dispatching app.onResize resizes and recenters the internal overlay view without throwing', () => {
+    const app = makeApp();
+    const debug = new DebugOverlay(app);
+
+    expect(() => app.onResize.dispatch(1024, 768, undefined)).not.toThrow();
+
+    debug.destroy();
+  });
+});
+
 describe('DebugOverlay — new layer exports', () => {
   test('BoundingBoxesLayer IS exported from debug subpath', () => {
     expect(typeof (debugExports as Record<string, unknown>)['BoundingBoxesLayer']).toBe('function');

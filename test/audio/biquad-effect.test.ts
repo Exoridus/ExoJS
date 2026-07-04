@@ -1,4 +1,4 @@
-import { getAudioContext } from '#audio/audio-context';
+import { getAudioContext, onAudioContextReady } from '#audio/audio-context';
 import { BiquadEffect } from '#audio/BiquadEffect';
 
 interface MockParam {
@@ -114,5 +114,52 @@ describe('BiquadEffect', () => {
     expect(node.disconnect).toHaveBeenCalled();
 
     spy.restore();
+  });
+
+  test('inputNode/outputNode throw and setters no-op safely before the node exists', () => {
+    const ctx = getAudioContext();
+    const originalState = ctx.state;
+    ctx.state = 'suspended';
+
+    const fx = new BiquadEffect({ frequency: 300 });
+
+    // Not yet set up: the node accessors must throw.
+    expect(() => fx.inputNode).toThrow('BiquadEffect not yet initialized.');
+    expect(() => fx.outputNode).toThrow('BiquadEffect not yet initialized.');
+
+    // Setters must still update the stored value without touching a null node.
+    fx.type = 'highpass';
+    fx.frequency = 500;
+    fx.resonance = 4;
+    fx.gain = 2;
+    fx.detune = 10;
+
+    expect(fx.type).toBe('highpass');
+    expect(fx.frequency).toBe(500);
+    expect(fx.resonance).toBe(4);
+    expect(fx.gain).toBe(2);
+    expect(fx.detune).toBe(10);
+
+    ctx.state = originalState;
+    fx.destroy();
+  });
+
+  test('setup runs once the audio context becomes ready, applying the pending values', () => {
+    const spy = setupBiquadSpy();
+    const ctx = getAudioContext();
+    const originalState = ctx.state;
+    ctx.state = 'suspended';
+
+    const fx = new BiquadEffect({ frequency: 750 });
+    expect(spy.nodes.length).toBe(0);
+
+    ctx.state = originalState;
+    onAudioContextReady.dispatch(ctx);
+
+    expect(spy.nodes.length).toBe(1);
+    expect(spy.nodes[0].frequency.setValueAtTime).toHaveBeenCalledWith(750, expect.any(Number));
+
+    spy.restore();
+    fx.destroy();
   });
 });

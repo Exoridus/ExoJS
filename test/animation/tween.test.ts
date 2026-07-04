@@ -146,6 +146,36 @@ describe('Tween', () => {
     });
   });
 
+  describe('repeat cycle overflow carries into the next cycle', () => {
+    test('an overshooting update() applies the leftover time to the next cycle', () => {
+      const sprite = makeSprite();
+      const onRepeat = vi.fn();
+      const tween = new Tween(sprite).to({ x: 100 }, 1.0).repeat(1).onRepeat(onRepeat).start();
+
+      tween.update(1.5); // 1.0s completes cycle 1; 0.5s carries into cycle 2
+
+      expect(onRepeat).toHaveBeenCalledTimes(1);
+      expect(tween.state).toBe(TweenState.Active); // one more cycle remains
+      expect(sprite.x).toBeCloseTo(50); // halfway through cycle 2 within the same call
+    });
+
+    test('yoyo + repeat(2): direction flips twice, back to forward (no overshoot needed)', () => {
+      // Drives the yoyo direction-flip twice with exact-duration updates to
+      // independently cover both the 1 -> -1 and -1 -> 1 flip branches.
+      const sprite = makeSprite();
+      const tween = new Tween(sprite).to({ x: 100 }, 1.0).repeat(2).yoyo().start();
+
+      tween.update(1.0); // cycle 1 end: direction flips 1 -> -1
+      expect(tween.state).toBe(TweenState.Active);
+
+      tween.update(1.0); // cycle 2 end: direction flips -1 -> 1
+      expect(tween.state).toBe(TweenState.Active);
+
+      tween.update(1.0); // cycle 3 end: all repeats exhausted
+      expect(tween.state).toBe(TweenState.Complete);
+    });
+  });
+
   describe('yoyo', () => {
     test('yoyo + repeat(1): cycle 1 forward, cycle 2 backward — x returns to start', () => {
       const sprite = makeSprite(0);
@@ -186,6 +216,20 @@ describe('Tween', () => {
       expect(sprite.x).toBeCloseTo(100, 5);
       expect(tween.state).toBe(TweenState.Complete);
     });
+
+    test('pause() is a no-op when the tween is not Active (e.g. Idle)', () => {
+      const tween = new Tween(makeSprite()).to({ x: 100 }, 1.0);
+
+      tween.pause();
+      expect(tween.state).toBe(TweenState.Idle);
+    });
+
+    test('resume() is a no-op when the tween is not Paused (e.g. Active)', () => {
+      const tween = new Tween(makeSprite()).to({ x: 100 }, 1.0).start();
+
+      tween.resume();
+      expect(tween.state).toBe(TweenState.Active);
+    });
   });
 
   describe('stop', () => {
@@ -225,6 +269,21 @@ describe('Tween', () => {
 
       tween.update(1.0);
       expect(sprite.x).toBe(xAtStop);
+    });
+
+    test('stop() is a no-op when the tween is Idle (never started)', () => {
+      const tween = new Tween(makeSprite()).to({ x: 100 }, 1.0);
+
+      tween.stop();
+      expect(tween.state).toBe(TweenState.Idle);
+    });
+
+    test('stop() works when the tween is Paused', () => {
+      const tween = new Tween(makeSprite()).to({ x: 100 }, 1.0).start();
+
+      tween.pause();
+      tween.stop();
+      expect(tween.state).toBe(TweenState.Stopped);
     });
 
     test('stop() removes tween from manager', () => {
@@ -327,6 +386,61 @@ describe('Tween', () => {
       expect(target.label).toBe('hello'); // untouched
 
       warnSpy.mockRestore();
+    });
+
+    test('to() with an explicit undefined end value skips that property in _applyProgress (JS runtime guard)', () => {
+      // 'as never' bypasses the NumericKeys<T> constraint to simulate a
+      // caller passing `undefined` as an end value. The target's `x` is a
+      // real number, so it IS captured into _startValues; the guard that
+      // must trigger is the `end === undefined` check in _applyProgress().
+      const target = { x: 0, y: 0 };
+      const tween = new Tween(target).to({ x: undefined, y: 100 } as never, 1.0).start();
+
+      tween.update(0.5);
+      expect(target.x).toBe(0); // skipped — end value was undefined
+      expect(target.y).toBeCloseTo(50, 5);
+    });
+  });
+
+  describe('progress getter', () => {
+    test('progress is 1 when duration is 0 (edge case)', () => {
+      const tween = new Tween(makeSprite()).to({ x: 100 }, 0).start();
+      expect(tween.progress).toBe(1);
+    });
+
+    test('progress reflects the eased t while playing forward', () => {
+      const tween = new Tween(makeSprite()).to({ x: 100 }, 1.0).start();
+      tween.update(0.5);
+      expect(tween.progress).toBeCloseTo(0.5, 10); // linear easing, direction 1
+    });
+
+    test('progress reflects the reversed t after a yoyo direction flip', () => {
+      const tween = new Tween(makeSprite()).to({ x: 100 }, 1.0).repeat(1).yoyo().start();
+
+      tween.update(1.0); // cycle 1 completes; direction flips to -1
+      tween.update(0.3); // 0.3s into the reversed cycle
+
+      // rawT = 0.3, direction === -1 => t = 1 - 0.3 = 0.7 (linear easing)
+      expect(tween.progress).toBeCloseTo(0.7, 10);
+    });
+  });
+
+  describe('internal guards', () => {
+    test('_applyProgress() is a no-op when start values have not been captured', () => {
+      // There is no public update() path that reaches _applyProgress()
+      // before _captureStartValues() has run in the same call, so this
+      // defensive guard is exercised directly via the private method.
+      const tween = new Tween(makeSprite());
+      expect(() => (tween as unknown as { _applyProgress: () => void })._applyProgress()).not.toThrow();
+    });
+
+    test('_applyProgress() with duration 0 takes the duration-0 rawT branch and completes immediately', () => {
+      const sprite = makeSprite();
+      const tween = new Tween(sprite).to({ x: 100 }, 0).start();
+
+      tween.update(0.1);
+      expect(sprite.x).toBe(100);
+      expect(tween.state).toBe(TweenState.Complete);
     });
   });
 

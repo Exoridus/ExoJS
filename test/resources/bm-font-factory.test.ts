@@ -95,6 +95,31 @@ chars count=0
     expect(data.pages[1]).toBe('atlas_1.png');
   });
 
+  test('defaults a numeric attribute to 0 when its key is missing from the line', () => {
+    const fnt = `
+common lineHeight=32 base=26
+page id=0 file="atlas_0.png"
+chars count=1
+char x=5 y=5 width=10 height=10 xoffset=0 yoffset=0 xadvance=10 page=0
+`;
+    // The "id" key is absent, so intVal('id') cannot match and falls back to 0.
+    const data = parseBmFontText(fnt);
+    expect(data.chars.get(0)).toBeDefined();
+    expect(data.chars.get(0)!.x).toBe(5);
+  });
+
+  test('defaults a string attribute to "" when its key is missing from the line', () => {
+    const fnt = `
+common lineHeight=32 base=26
+page id=0
+chars count=0
+`;
+    // The "file" key is absent, so strVal('file') matches neither the quoted
+    // nor the bare form and falls back to ''.
+    const data = parseBmFontText(fnt);
+    expect(data.pages[0]).toBe('');
+  });
+
   test('parses the Kenney Blocks fixture — 95 chars, lineHeight=32', () => {
     const fnt = `
 info face="Kenney Blocks" size=32 bold=0 italic=0

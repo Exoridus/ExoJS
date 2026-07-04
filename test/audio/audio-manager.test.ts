@@ -1,5 +1,60 @@
 ﻿import { AudioBus } from '#audio/AudioBus';
 import { AudioManager } from '#audio/AudioManager';
+import { Signal } from '#core/Signal';
+
+// ---------------------------------------------------------------------------
+// Helpers for the deferred-context scenarios below (onUnlock forwarding).
+//
+// The default MockAudioContext (test/setup-env.vitest.ts) starts in the
+// 'running' state, so the real onAudioContextReady signal fires synchronously
+// the first time anything subscribes — leaving no window to observe an
+// AudioManager registering its own forwarding handler *before* the event
+// fires. To exercise AudioManager's onUnlock wiring deterministically we
+// replace '#audio/audio-context' wholesale with a minimal fake that starts
+// "locked" and only becomes ready when the test explicitly dispatches it.
+// ---------------------------------------------------------------------------
+
+interface FakeAudioParam {
+  setValueAtTime: MockInstance;
+  setTargetAtTime: MockInstance;
+  value: number;
+}
+
+const makeFakeParam = (): FakeAudioParam => ({
+  setValueAtTime: vi.fn(),
+  setTargetAtTime: vi.fn(),
+  value: 0,
+});
+
+/** Minimal fake AudioContext sufficient for AudioBus/AudioListener setup. */
+const makeFakeAudioContext = (): AudioContext =>
+  ({
+    currentTime: 0,
+    destination: {},
+    listener: {
+      positionX: makeFakeParam(),
+      positionY: makeFakeParam(),
+      positionZ: makeFakeParam(),
+      forwardX: makeFakeParam(),
+      forwardY: makeFakeParam(),
+      forwardZ: makeFakeParam(),
+      upX: makeFakeParam(),
+      upY: makeFakeParam(),
+      upZ: makeFakeParam(),
+    },
+    createGain: () =>
+      ({
+        connect: vi.fn(),
+        disconnect: vi.fn(),
+        gain: makeFakeParam(),
+      }) as unknown as GainNode,
+    createStereoPanner: () =>
+      ({
+        connect: vi.fn(),
+        disconnect: vi.fn(),
+        pan: makeFakeParam(),
+      }) as unknown as StereoPannerNode,
+  }) as unknown as AudioContext;
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -156,5 +211,52 @@ describe('AudioManager', () => {
 
     mixer1.destroy();
     mixer2.destroy();
+  });
+
+  // ---- onUnlock ----
+
+  test('onUnlock fires once the shared AudioContext transitions to running', async () => {
+    vi.resetModules();
+    const fakeCtx = makeFakeAudioContext();
+    const fakeSignal = new Signal<[AudioContext]>();
+
+    vi.doMock('#audio/audio-context', () => ({
+      getAudioContext: () => fakeCtx,
+      isAudioContextReady: () => false,
+      onAudioContextReady: fakeSignal,
+    }));
+
+    const { AudioManager: DeferredAudioManager } = await import('#audio/AudioManager');
+    const mixer = new DeferredAudioManager();
+    const onUnlock = vi.fn();
+    mixer.onUnlock.add(onUnlock);
+
+    // Simulate the AudioContext becoming ready: fires every pending listener in
+    // registration order — master/music/sound buses, the listener, and
+    // finally AudioManager's own onUnlock-forwarding handler (see
+    // AudioManager.ts constructor, registered last).
+    fakeSignal.dispatch(fakeCtx);
+
+    expect(onUnlock).toHaveBeenCalledTimes(1);
+
+    vi.doUnmock('#audio/audio-context');
+    vi.resetModules();
+  });
+
+  test('onUnlock fires (once, async) for an AudioManager built while the shared AudioContext is already running', async () => {
+    // Our global test AudioContext mock starts 'running' immediately, so this
+    // mirrors "an AudioManager constructed after the context has already
+    // unlocked" — e.g. a second Application in the same process. The one-shot
+    // module-global ready signal has already fired by then, so the manager
+    // dispatches its own unlock on a microtask instead.
+    const mixer = new AudioManager();
+    expect(mixer.locked).toBe(false);
+
+    const onUnlock = vi.fn();
+    mixer.onUnlock.add(onUnlock);
+
+    await Promise.resolve(); // the already-running dispatch is deferred one microtask
+
+    expect(onUnlock).toHaveBeenCalledTimes(1);
   });
 });

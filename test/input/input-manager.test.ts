@@ -197,6 +197,41 @@ describe('InputManager gamepad lifecycle', () => {
     inputManager.destroy();
   });
 
+  test('compact strategy — two simultaneous disconnects empty every slot with no ghost pad left behind', () => {
+    // When pads at slot 0 and slot 1 both vanish in the same update() poll,
+    // every slot must end up accurately reflecting hardware reality (empty
+    // slots only): the compact shift re-points map entries mid-loop, so the
+    // disconnect sweep resolves each browser index against the live map.
+    const inputManager = createInputManager('compact');
+    const disconnectedSlots: number[] = [];
+
+    withMockedGetGamepads(setSnapshot => {
+      inputManager.onGamepadDisconnected.add(pad => disconnectedSlots.push(pad.slot));
+
+      const padA = createNativeGamepad('Vendor: 045e Product: 0b13', 0);
+      const padB = createNativeGamepad('Vendor: 054c Product: 0ce6', 1);
+
+      setSnapshot([padA, padB, null, null]);
+      inputManager.update();
+
+      expect(inputManager.gamepads[0].connected).toBe(true);
+      expect(inputManager.gamepads[1].connected).toBe(true);
+
+      // Both physical pads vanish in the SAME polling frame.
+      setSnapshot([null, null, null, null]);
+      inputManager.update();
+
+      expect(inputManager.gamepads[0].connected).toBe(false);
+      expect(inputManager.gamepads[1].connected).toBe(false);
+      expect(inputManager.connectedGamepadCount).toBe(0);
+      // One disconnect per vanished pad: first the trailing slot 1 empties
+      // (its pad shifted down), then slot 0 empties on the second disconnect.
+      expect(disconnectedSlots).toEqual([1, 0]);
+    });
+
+    inputManager.destroy();
+  });
+
   test('compact strategy: pad.connected reads false on the empty slot after disconnect', () => {
     const inputManager = createInputManager('compact');
 

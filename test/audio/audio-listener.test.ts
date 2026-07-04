@@ -1,5 +1,6 @@
 ﻿import { getAudioContext } from '#audio/audio-context';
 import { AudioListener } from '#audio/AudioListener';
+import { Signal } from '#core/Signal';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -227,6 +228,127 @@ describe('AudioListener', () => {
     expect(node.getGlobalTransform).toHaveBeenCalledTimes(1);
     expect(listener.position.x).toBe(77);
     expect(listener.position.y).toBe(88);
+    listener.destroy();
+  });
+
+  // ---- Deferred setup (AudioContext not ready at construction time) ----
+
+  test('subscribes to onAudioContextReady when the context is not ready yet, and sets up once it fires', async () => {
+    vi.resetModules();
+    const fakeSignal = new Signal<[AudioContext]>();
+    const fakeCtx = {
+      currentTime: 0,
+      listener: {
+        positionX: { setValueAtTime: vi.fn() },
+        positionY: { setValueAtTime: vi.fn() },
+        positionZ: { setValueAtTime: vi.fn() },
+        forwardX: { setValueAtTime: vi.fn() },
+        forwardY: { setValueAtTime: vi.fn() },
+        forwardZ: { setValueAtTime: vi.fn() },
+        upX: { setValueAtTime: vi.fn() },
+        upY: { setValueAtTime: vi.fn() },
+        upZ: { setValueAtTime: vi.fn() },
+      },
+    } as unknown as AudioContext;
+
+    vi.doMock('#audio/audio-context', () => ({
+      getAudioContext: () => fakeCtx,
+      isAudioContextReady: () => false,
+      onAudioContextReady: fakeSignal,
+    }));
+
+    const { AudioListener: DeferredAudioListener } = await import('#audio/AudioListener');
+    const listener = new DeferredAudioListener();
+
+    // Not set up yet — no orientation has been written.
+    const l = fakeCtx.listener as unknown as { forwardZ: { setValueAtTime: MockInstance } };
+    expect(l.forwardZ.setValueAtTime).not.toHaveBeenCalled();
+    expect(fakeSignal.count).toBe(1);
+
+    // The AudioContext becomes ready — the listener's deferred setup runs and
+    // it unsubscribes from the (one-shot) global signal.
+    fakeSignal.dispatch(fakeCtx);
+
+    expect(l.forwardZ.setValueAtTime).toHaveBeenCalledWith(-1, expect.any(Number));
+    expect(fakeSignal.count).toBe(0);
+
+    listener.destroy();
+    vi.doUnmock('#audio/audio-context');
+    vi.resetModules();
+  });
+
+  // ---- Legacy WebAudio listener API (setOrientation / setPosition) ----
+
+  test('falls back to setOrientation() when positionX/forwardX-style AudioParams are absent', async () => {
+    vi.resetModules();
+    const setOrientation = vi.fn();
+    const setPosition = vi.fn();
+    const legacyCtx = {
+      currentTime: 0,
+      listener: { setOrientation, setPosition },
+    } as unknown as AudioContext;
+
+    vi.doMock('#audio/audio-context', () => ({
+      getAudioContext: () => legacyCtx,
+      isAudioContextReady: () => true,
+      onAudioContextReady: new Signal<[AudioContext]>(),
+    }));
+
+    const { AudioListener: LegacyAudioListener } = await import('#audio/AudioListener');
+    const listener = new LegacyAudioListener();
+
+    expect(setOrientation).toHaveBeenCalledWith(0, 0, -1, 0, 1, 0);
+
+    listener.target = { x: 7, y: 9 };
+    listener._tick();
+
+    expect(setPosition).toHaveBeenCalledWith(7, 9, 0);
+
+    listener.destroy();
+    vi.doUnmock('#audio/audio-context');
+    vi.resetModules();
+  });
+
+  test('does nothing (no throw) when the WebAudio listener exposes neither AudioParam nor legacy orientation/position APIs', async () => {
+    vi.resetModules();
+    const bareCtx = {
+      currentTime: 0,
+      listener: {},
+    } as unknown as AudioContext;
+
+    vi.doMock('#audio/audio-context', () => ({
+      getAudioContext: () => bareCtx,
+      isAudioContextReady: () => true,
+      onAudioContextReady: new Signal<[AudioContext]>(),
+    }));
+
+    const { AudioListener: BareAudioListener } = await import('#audio/AudioListener');
+    const listener = new BareAudioListener();
+
+    listener.target = { x: 3, y: 4 };
+    expect(() => listener._tick()).not.toThrow();
+
+    listener.destroy();
+    vi.doUnmock('#audio/audio-context');
+    vi.resetModules();
+  });
+
+  // ---- Defensive branch: _readTargetPosition's own null guard ----
+  //
+  // `_tick()` already guards `if (this.target !== null)` before ever calling
+  // `_readTargetPosition()`, so the method's internal `if (target === null)
+  // return;` cannot be reached through the public API. It is exercised
+  // directly here purely for coverage of this defensive check.
+  test('_readTargetPosition() is a no-op when called directly with a null target', () => {
+    const listener = new AudioListener();
+    listener.position.set(1, 2);
+    const readTargetPosition = (listener as unknown as { _readTargetPosition: () => void })._readTargetPosition.bind(listener);
+
+    expect(listener.target).toBeNull();
+    expect(() => readTargetPosition()).not.toThrow();
+    expect(listener.position.x).toBe(1);
+    expect(listener.position.y).toBe(2);
+
     listener.destroy();
   });
 });
