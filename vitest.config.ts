@@ -85,8 +85,19 @@ export default defineConfig({
     coverage: {
       provider: 'istanbul',
       reporter: ['lcov', 'clover', 'text-summary'],
-      include: ['src/**/*.ts'],
-      exclude: ['src/**/*.d.ts'],
+      // Core plus the extension packages that have vitest projects in
+      // `test:coverage`. Untested packages (aseprite, ldtk, react) stay out —
+      // with `all: true` semantics their 0%-covered sources would swamp the
+      // global numbers without adding signal; add each when it gets a suite.
+      include: [
+        'src/**/*.ts',
+        'packages/exojs-particles/src/**/*.ts',
+        'packages/exojs-tilemap/src/**/*.ts',
+        'packages/exojs-tiled/src/**/*.ts',
+        'packages/exojs-physics/src/**/*.ts',
+        'packages/exojs-audio-fx/src/**/*.ts',
+      ],
+      exclude: ['src/**/*.d.ts', 'packages/*/src/**/*.d.ts'],
       // Hard regression gate for the `unit-tests` job (already required in
       // `_ci-checks.yml`) — `.codecov.yml` posts project/patch coverage statuses
       // but they are NOT wired up as required checks, so a coverage drop
@@ -94,11 +105,11 @@ export default defineConfig({
       // itself (the exact command the CI job runs) below the floor.
       //
       // A ratchet floor, not a target: set a few points below the measured
-      // baseline (statements 75.34%, branches 65.43%, functions 74.23%, lines
-      // 75.81% as of 2026-07-03) so normal test-suite churn doesn't flake the
-      // gate, while still catching a real regression. Raise the floor as
-      // coverage grows — never lower it without an explicit reason recorded
-      // here.
+      // baseline (statements 75.25%, branches 65.34%, functions 74.07%, lines
+      // 75.72% as of 2026-07-04, core + the five tested extension packages)
+      // so normal test-suite churn doesn't flake the gate, while still
+      // catching a real regression. Raise the floor as coverage grows — never
+      // lower it without an explicit reason recorded here.
       thresholds: {
         statements: 73,
         branches: 63,
