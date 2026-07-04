@@ -1,4 +1,6 @@
-import { parseBmFontText } from '#resources/factories/BmFontFactory';
+import { Texture } from '#rendering/texture/Texture';
+import { BmFontLoaderFactory, parseBmFontText } from '#resources/factories/BmFontFactory';
+import type { Loader } from '#resources/Loader';
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -71,6 +73,16 @@ describe('parseBmFontText', () => {
     expect(data.chars.size).toBe(2);
   });
 
+  test('parses an unquoted (bare) file value on the page line', () => {
+    const bareValue = `
+common lineHeight=32 base=26
+page id=0 file=atlas_0.png
+chars count=0
+`;
+    const data = parseBmFontText(bareValue);
+    expect(data.pages[0]).toBe('atlas_0.png');
+  });
+
   test('handles multiple pages', () => {
     const multiPage = `
 common lineHeight=32 base=26
@@ -100,5 +112,82 @@ char id=90   x=70   y=57   width=13  height=18  xoffset=0  yoffset=9   xadvance=
     expect(data.chars.get(65)).toBeDefined(); // 'A'
     expect(data.chars.get(90)).toBeDefined(); // 'Z'
     expect(data.chars.get(32)).toBeDefined(); // space
+  });
+});
+
+// ---------------------------------------------------------------------------
+// BmFontLoaderFactory
+// ---------------------------------------------------------------------------
+
+const createLoaderMock = (): Loader => ({ load: vi.fn(async () => new Texture(null)) }) as unknown as Loader;
+
+describe('BmFontLoaderFactory', () => {
+  test('storageName is "bmfont"', () => {
+    const factory = new BmFontLoaderFactory(createLoaderMock());
+    expect(factory.storageName).toBe('bmfont');
+  });
+
+  test('process() reads the response text and records the response URL', async () => {
+    const factory = new BmFontLoaderFactory(createLoaderMock());
+    const response = { text: async () => MINIMAL_FNT, url: 'https://example.com/fonts/ui.fnt' } as unknown as Response;
+
+    const result = await factory.process(response);
+
+    expect(result).toEqual({ text: MINIMAL_FNT, url: 'https://example.com/fonts/ui.fnt' });
+  });
+
+  test('create() parses the descriptor and loads each page texture via the owning Loader', async () => {
+    const texture = new Texture(null);
+    const loader = { load: vi.fn(async () => texture) } as unknown as Loader;
+    const factory = new BmFontLoaderFactory(loader);
+
+    const font = await factory.create({ text: MINIMAL_FNT, url: 'https://example.com/fonts/ui.fnt' });
+
+    expect(font.textures).toEqual([texture]);
+    expect(font.fontData.lineHeight).toBe(40);
+    expect(loader.load).toHaveBeenCalledTimes(1);
+    expect(loader.load).toHaveBeenCalledWith(Texture, 'https://example.com/fonts/test.png');
+  });
+
+  test('create() resolves page URLs relative to the .fnt descriptor URL, not the page filename alone', async () => {
+    const loadedUrls: string[] = [];
+    const loader = {
+      load: vi.fn(async (_ctor: unknown, url: string) => {
+        loadedUrls.push(url);
+        return new Texture(null);
+      }),
+    } as unknown as Loader;
+    const factory = new BmFontLoaderFactory(loader);
+
+    await factory.create({ text: MINIMAL_FNT, url: 'https://example.com/assets/fonts/ui.fnt' });
+
+    expect(loadedUrls).toEqual(['https://example.com/assets/fonts/test.png']);
+  });
+
+  test('create() loads multiple page textures in page-index order', async () => {
+    const multiPage = `
+common lineHeight=32 base=26
+page id=0 file="atlas_0.png"
+page id=1 file="atlas_1.png"
+chars count=0
+`;
+    const requestedUrls: string[] = [];
+    const loader = {
+      load: vi.fn(async (_ctor: unknown, url: string) => {
+        requestedUrls.push(url);
+        return new Texture(null);
+      }),
+    } as unknown as Loader;
+    const factory = new BmFontLoaderFactory(loader);
+
+    const font = await factory.create({ text: multiPage, url: 'https://example.com/ui.fnt' });
+
+    expect(requestedUrls).toEqual(['https://example.com/atlas_0.png', 'https://example.com/atlas_1.png']);
+    expect(font.textures).toHaveLength(2);
+  });
+
+  test('destroy() is inherited from AbstractAssetFactory and does not throw', () => {
+    const factory = new BmFontLoaderFactory(createLoaderMock());
+    expect(() => factory.destroy()).not.toThrow();
   });
 });
