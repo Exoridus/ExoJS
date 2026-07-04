@@ -9,20 +9,29 @@ const app = new Application({
     },
     clearColor: Color.black,
 });
+// A small pool of different UI sounds so repeated taps stay interesting.
+const SOUND_KEYS = ['uiClick', 'uiConfirm', 'uiBong', 'impactLight', 'impactHeavy'];
 class PlaySoundScene extends Scene {
-    sound;
+    sounds;
     text;
+    index = 0;
     async load(loader) {
-        await loader.load(Sound, { click: assets.demo.audio.uiClick });
+        await Promise.all(SOUND_KEYS.map(key => loader.load(Sound, { [key]: assets.demo.audio[key] })));
     }
     init(loader) {
         const { width, height } = this.app.canvas;
-        this.sound = loader.get(Sound, 'click');
+        // Keep example SFX comfortable — full volume is jarring in the docs.
+        this.app.audio.sound.volume = 0.5;
+        this.sounds = SOUND_KEYS.map(key => loader.get(Sound, key));
         this.text = new Text('Click anywhere to play SFX', { fillColor: Color.white, fontSize: 24, align: 'center' })
             .setAnchor(0.5, 0.5)
             .setPosition(width / 2, height / 2);
         this.app.input.onPointerTap.add(() => {
-            this.app.audio.play(this.sound);
+            // Cycle through the pool so each tap plays a different sound.
+            const sound = this.sounds[this.index];
+            this.index = (this.index + 1) % this.sounds.length;
+            this.app.audio.play(sound);
+            this.text.text = `Playing: ${SOUND_KEYS[(this.index + this.sounds.length - 1) % this.sounds.length]}`;
         });
     }
     draw(context) {

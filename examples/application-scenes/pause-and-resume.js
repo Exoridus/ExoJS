@@ -22,10 +22,16 @@ class PauseResumeScene extends Scene {
         const { width, height } = this.app.canvas;
         this.sprite.setAnchor(0.5);
         this.sprite.setPosition(width / 2, height / 2);
-        this.label = new Text('Space: pause update', { fillColor: Color.white, fontSize: 16 });
+        this.label = new Text('Space or click: pause update', { fillColor: Color.white, fontSize: 16 });
         this.label.setAnchor(0.5, 0);
         this.label.setPosition(width / 2, 16);
         this.inputs.onTrigger(Keyboard.Space, () => {
+            // scene.paused skips update() + systems each frame; drawing continues.
+            this.paused = !this.paused;
+            this.label.text = this.paused ? 'Paused (draw running)' : 'Running';
+        });
+        // Same toggle on click/tap so the pause works without a keyboard.
+        this.app.input.onPointerTap.add(() => {
             // scene.paused skips update() + systems each frame; drawing continues.
             this.paused = !this.paused;
             this.label.text = this.paused ? 'Paused (draw running)' : 'Running';

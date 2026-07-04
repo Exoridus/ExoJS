@@ -24,7 +24,8 @@ class SignalBusInspectorScene extends Scene {
             damage: new Signal(),
             score: new Signal(),
         };
-        this.text = new Text('', { fillColor: Color.white, fontSize: 19, lineHeight: 28 });
+        // lineHeight is a multiplier on fontSize (28/19 ≈ 1.47), not pixels.
+        this.text = new Text('', { fillColor: Color.white, fontSize: 19, lineHeight: 1.47 });
         this.text.setPosition(40, 70);
         this.tick = new Timer(Time.fromSeconds(1), true);
         this.listenerA = () => undefined;

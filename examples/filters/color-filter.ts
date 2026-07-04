@@ -54,7 +54,7 @@ class ColorFilterScene extends Scene {
     private desaturate!: ShaderFilter;
     private invert!: ShaderFilter;
     private brightness!: ShaderFilter;
-    private index = 0;
+    private index = 1; // start on Desaturate - the most visually obvious preset
     private hud!: ReturnType<typeof mountControls>;
     private cycle!: ReturnType<ReturnType<typeof mountControlPanel>['addCycle']>;
 
