@@ -46,6 +46,21 @@ describe('Polygon.project()', () => {
 
     polygon.destroy();
   });
+
+  test('(d) the polygon x/y position offsets the projection, like Circle/Rectangle', () => {
+    const polygon = makeSquare();
+    polygon.setPosition(100, 50);
+
+    const onX = polygon.project(new Vector(1, 0));
+    expect(onX.min).toBe(100);
+    expect(onX.max).toBe(110);
+
+    const onY = polygon.project(new Vector(0, 1));
+    expect(onY.min).toBe(50);
+    expect(onY.max).toBe(60);
+
+    polygon.destroy();
+  });
 });
 
 describe('Polygon', () => {

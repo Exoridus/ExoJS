@@ -45,14 +45,9 @@ const rect = (x: number, y: number, w: number, h: number): Rectangle => new Rect
 const circle = (x: number, y: number, radius: number): Circle => new Circle(x, y, radius);
 const ellipse = (x: number, y: number, rx: number, ry: number): Ellipse => new Ellipse(x, y, rx, ry);
 const line = (x1: number, y1: number, x2: number, y2: number): Line => new Line(x1, y1, x2, y2);
-// NOTE: `Polygon.project()` (src/math/Polygon.ts) reads only the local
-// `points` and never adds the polygon's own `x`/`y` position offset (unlike
-// Circle.project()/Rectangle.project(), which both do). Every SAT-based
-// routine here (getNormals()/project()) is therefore blind to a non-zero
-// Polygon position — see the final report for a repro. To keep these tests
-// exercising *intended* geometry rather than pinning that gap, `square()`
-// bakes its (x, y) directly into the point coordinates and always leaves the
-// Polygon position at the (0, 0) default.
+// `square()` bakes its (x, y) directly into the point coordinates and leaves
+// the Polygon position at the (0, 0) default; positioned-polygon behaviour
+// (x/y offset honoured by project()/the SAT paths) has dedicated tests.
 const square = (x: number, y: number, size: number): Polygon =>
   new Polygon([new Vector(x, y), new Vector(x + size, y), new Vector(x + size, y + size), new Vector(x, y + size)]);
 
@@ -371,16 +366,6 @@ describe('intersectionCircleEllipse', () => {
 // intersectionCirclePoly
 // ---------------------------------------------------------------------------
 
-// NOTE (see final report — suspected bug in intersectionCirclePoly): for a
-// polygon at the default (0, 0) position, this function only reports a hit
-// for circles overlapping through one specific edge/vertex, or once the
-// radius is large enough to reach vertex (0, 0). Circles centred well inside
-// the polygon, or overlapping any of the *other* three edges/corners with a
-// modest radius, are incorrectly reported as *not* intersecting. The sibling
-// getCollisionPolygonCircle() (a separate implementation) does not share this
-// bug — see its describe block below, where the same scenarios pass. Tests
-// below are split into "safe" cases that do not touch the buggy region, and
-// dedicated "BUG" cases that pin the current (incorrect) behaviour.
 describe('intersectionCirclePoly', () => {
   test('circle far away from the polygon does not intersect', () => {
     expect(intersectionCirclePoly(circle(500, 500, 1), square(0, 0, 10))).toBe(false);
@@ -407,20 +392,25 @@ describe('intersectionCirclePoly', () => {
     expect(intersectionCirclePoly(circle(5, 5, 1000), square(0, 0, 10))).toBe(true);
   });
 
-  test('BUG: a circle centred well inside the polygon is incorrectly reported as not intersecting', () => {
-    // Geometrically this must be a hit (the circle centre is inside the
-    // polygon, far from every edge) — getCollisionPolygonCircle agrees it's a
-    // hit for the same shapes. This pins the current, incorrect result.
-    expect(intersectionCirclePoly(circle(5, 5, 1), square(0, 0, 10))).toBe(false);
+  test('a circle centred well inside the polygon intersects', () => {
+    expect(intersectionCirclePoly(circle(5, 5, 1), square(0, 0, 10))).toBe(true);
   });
 
-  test('BUG: a circle clearly overlapping the top edge is incorrectly reported as not intersecting', () => {
-    expect(intersectionCirclePoly(circle(5, -0.5, 1), square(0, 0, 10))).toBe(false);
+  test('a circle clearly overlapping the top edge intersects', () => {
+    expect(intersectionCirclePoly(circle(5, -0.5, 1), square(0, 0, 10))).toBe(true);
   });
 
-  test('BUG: a circle clearly overlapping the (10,10) vertex is incorrectly reported as not intersecting', () => {
+  test('a circle clearly overlapping the (10,10) vertex intersects', () => {
     // Distance from (11, 11) to the corner (10, 10) is sqrt(2) ≈ 1.41 < 2.
-    expect(intersectionCirclePoly(circle(11, 11, 2), square(0, 0, 10))).toBe(false);
+    expect(intersectionCirclePoly(circle(11, 11, 2), square(0, 0, 10))).toBe(true);
+  });
+
+  test('a polygon positioned via its x/y offset is honoured', () => {
+    // Local unit square at position (100, 100) → world square [100..110]².
+    const positioned = new Polygon([new Vector(0, 0), new Vector(10, 0), new Vector(10, 10), new Vector(0, 10)], 100, 100);
+
+    expect(intersectionCirclePoly(circle(105, 105, 1), positioned)).toBe(true);
+    expect(intersectionCirclePoly(circle(5, 5, 1), positioned)).toBe(false);
   });
 });
 
@@ -463,6 +453,14 @@ describe('intersectionPolyPoly', () => {
 
   test('separated polygons do not intersect', () => {
     expect(intersectionPolyPoly(square(0, 0, 10), square(500, 500, 10))).toBe(false);
+  });
+
+  test('a polygon positioned via its x/y offset is honoured by the SAT path', () => {
+    // Local unit square at position (500, 500) → world square [500..510]².
+    const positioned = new Polygon([new Vector(0, 0), new Vector(10, 0), new Vector(10, 10), new Vector(0, 10)], 500, 500);
+
+    expect(intersectionPolyPoly(square(0, 0, 10), positioned)).toBe(false);
+    expect(intersectionPolyPoly(square(495, 495, 10), positioned)).toBe(true);
   });
 });
 
@@ -545,19 +543,12 @@ describe('getCollisionCircleCircle', () => {
     expect(response!.projectionN.y).toBeCloseTo(0);
   });
 
-  // BUG (see final report): CollisionResponse.projectionV is documented as
-  // "projectionN scaled by overlap" (src/math/Collision.ts), and every other
-  // getCollision* implementation builds it that way. getCollisionCircleCircle
-  // instead scales the *unnormalized* centre-to-centre difference vector by
-  // `overlap`, so its magnitude is `distance * overlap`, not `overlap`. Here
-  // distance=8, overlap=2 → projectionV.x comes out to 16, not 2.
-  test('BUG: projectionV magnitude is distance*overlap instead of overlap (unlike every other getCollision*)', () => {
+  test('projectionV is projectionN scaled by overlap, like every other getCollision*', () => {
     const response = getCollisionCircleCircle(circle(0, 0, 5), circle(8, 0, 5));
 
     expect(response).not.toBeNull();
     expect(response!.overlap).toBeCloseTo(2);
-    // Correct MTV would be projectionN(1,0) * overlap(2) = (2, 0).
-    expect(response!.projectionV.x).toBeCloseTo(16); // pins the current (buggy) magnitude
+    expect(response!.projectionV.x).toBeCloseTo(2);
     expect(response!.projectionV.y).toBeCloseTo(0);
   });
 

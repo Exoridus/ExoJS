@@ -124,13 +124,12 @@ export function layoutText(text: string, style: TextLayoutStyle, layout: LayoutO
       const extraPerGap = (maxLineWidth - line.width) / gaps;
       let wordIdx = -1;
       let prevWasSpace = true;
-      const spaceAdv = provider.getGlyph(' ', fontSize).advance;
 
       for (const entry of line.placements) {
-        if (prevWasSpace && entry.info.advance !== spaceAdv) {
+        if (prevWasSpace && entry.char !== ' ') {
           wordIdx++;
           prevWasSpace = false;
-        } else if (!prevWasSpace && entry.info.advance === spaceAdv) {
+        } else if (!prevWasSpace && entry.char === ' ') {
           prevWasSpace = true;
         }
 
