@@ -694,9 +694,21 @@ export class InputManager implements System {
       }
     }
 
-    for (const [browserIndex, pad] of [...this.gamepadsByBrowserIndex.entries()]) {
-      if (!seenBrowserIndices.has(browserIndex)) {
-        this.gamepadsByBrowserIndex.delete(browserIndex);
+    // Two pads can vanish in the same poll, and the compact strategy's shift
+    // re-points map entries while this loop runs — so resolve each browser
+    // index against the LIVE map at dispatch time instead of a pre-loop
+    // entries snapshot (a stale pad reference would disconnect the wrong,
+    // already-repurposed slot and leave a ghost `connected` pad behind).
+    for (const browserIndex of [...this.gamepadsByBrowserIndex.keys()]) {
+      if (seenBrowserIndices.has(browserIndex)) {
+        continue;
+      }
+
+      const pad = this.gamepadsByBrowserIndex.get(browserIndex);
+
+      this.gamepadsByBrowserIndex.delete(browserIndex);
+
+      if (pad !== undefined) {
         this.handleGamepadDisconnect(pad);
       }
     }

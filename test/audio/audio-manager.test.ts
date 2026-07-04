@@ -243,33 +243,20 @@ describe('AudioManager', () => {
     vi.resetModules();
   });
 
-  // BUG: AudioManager's constructor builds `master` (and `music`/`sound`) BEFORE
-  // registering its own onUnlock-forwarding handler (AudioManager.ts, the busses
-  // at lines ~45-47 vs. `onAudioContextReady.add(...)` at line ~55). Each AudioBus
-  // itself subscribes to the very same module-global `onAudioContextReady` signal
-  // in its own constructor when the context isn't ready yet. That signal fires
-  // to "running" exactly ONCE, ever, for the whole process (see audio-context.ts
-  // `readyDispatched`). So: the first bus ever constructed anywhere (e.g. the
-  // very first AudioManager's `master` bus) consumes that one-time event before
-  // AudioManager's own handler is even registered — and once the context is
-  // already running (true for every AudioManager built afterwards, e.g. a second
-  // Application sharing the process-wide AudioContext), `onUnlock` never fires
-  // for it at all, because AudioManager's own listener is added to a queue that
-  // will never be flushed again. Correct behavior would be for every AudioManager
-  // to observe onUnlock exactly once, regardless of construction order relative
-  // to the context's readiness.
-  test('BUG: onUnlock never fires for an AudioManager built while the shared AudioContext is already running', () => {
+  test('onUnlock fires (once, async) for an AudioManager built while the shared AudioContext is already running', async () => {
     // Our global test AudioContext mock starts 'running' immediately, so this
     // mirrors "an AudioManager constructed after the context has already
-    // unlocked" — e.g. a second Application in the same process.
+    // unlocked" — e.g. a second Application in the same process. The one-shot
+    // module-global ready signal has already fired by then, so the manager
+    // dispatches its own unlock on a microtask instead.
     const mixer = new AudioManager();
     expect(mixer.locked).toBe(false);
 
     const onUnlock = vi.fn();
     mixer.onUnlock.add(onUnlock);
 
-    // Current (buggy) behavior: onUnlock never dispatches, even though the
-    // context is unmistakably already unlocked.
-    expect(onUnlock).not.toHaveBeenCalled();
+    await Promise.resolve(); // the already-running dispatch is deferred one microtask
+
+    expect(onUnlock).toHaveBeenCalledTimes(1);
   });
 });

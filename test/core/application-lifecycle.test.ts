@@ -274,36 +274,25 @@ describe('Application lifecycle / getters / sizing', () => {
       expect(app.pixelRatio).toBe(1);
     });
 
-    test('BUG: fixedTimeStep constructor option is silently ignored (always falls back to the 60Hz default)', async () => {
-      // Correct behavior per ApplicationOptions.fixedTimeStep's JSDoc: passing e.g.
-      // `fixedTimeStep: 0.02` should make `app.fixedTimeStep` return 0.02.
-      //
-      // Root cause: the `this.options = {...}` object literal built in the
-      // constructor (Application.ts ~L342-371) never copies `appSettings.fixedTimeStep`
-      // (nor `.seed`, see the sibling BUG test below) onto `this.options` — it only
-      // forwards clearColor/backend/canvas/loader/rendering/input/hello. The later read
-      // at `this.options.fixedTimeStep !== undefined ? ... : defaultFixedStepMs` (~L400)
-      // therefore always takes the `undefined` branch and uses the default, no matter
-      // what the caller passed to the constructor.
+    test('fixedTimeStep constructor option configures the fixed-step size', async () => {
       const { Application } = await loadHarness();
       const app = new Application({ backend: { type: 'webgl2' }, fixedTimeStep: 0.02 });
 
-      // Pinning the CURRENT (buggy) behavior: still the 60Hz default, not 0.02.
+      expect(app.fixedTimeStep).toBeCloseTo(0.02, 5);
+    });
+
+    test('omitting fixedTimeStep falls back to the 60Hz default', async () => {
+      const { Application } = await loadHarness();
+      const app = new Application({ backend: { type: 'webgl2' } });
+
       expect(app.fixedTimeStep).toBeCloseTo(1 / 60, 5);
     });
 
-    test('BUG: seed constructor option is silently ignored (app.random always gets a non-deterministic seed)', async () => {
-      // Correct behavior per ApplicationOptions.seed's JSDoc: passing a seed should
-      // make `app.random` deterministic (same seed -> same first draw). Same root
-      // cause as the fixedTimeStep BUG above: `this.options.seed` is never populated
-      // from `appSettings.seed`, so `this.random = new Random(this.options.seed)`
-      // (~L397) always constructs with `undefined`, which Random defaults to
-      // `Date.now()` — i.e. the explicit seed has zero effect.
+    test('seed constructor option makes app.random deterministic', async () => {
       const { Application } = await loadHarness();
       const app = new Application({ backend: { type: 'webgl2' }, seed: 42 });
 
-      // Pinning the CURRENT (buggy) behavior: the RNG's seed is not the requested 42.
-      expect(app.random.seed).not.toBe(42);
+      expect(app.random.seed).toBe(42);
     });
 
     test('clearColor getter returns the backend clearColor instance', async () => {

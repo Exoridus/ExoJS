@@ -313,8 +313,11 @@ export class Tween<T extends object = object> {
 
     this._elapsed += deltaSeconds;
 
-    // Clamp to duration for this cycle.
-    if (this._elapsed >= this._duration) {
+    // Clamp to duration for this cycle, remembering the overshoot so it can
+    // carry into the next repeat cycle below.
+    const overflow = this._elapsed - this._duration;
+
+    if (overflow >= 0) {
       this._elapsed = this._duration;
     }
 
@@ -338,8 +341,8 @@ export class Tween<T extends object = object> {
           this._direction = this._direction === 1 ? -1 : 1;
         }
 
-        // Reset elapsed for next cycle; carry overflow.
-        const overflow = this._elapsed - this._duration;
+        // Reset elapsed for next cycle; carry the overshoot (at most one
+        // extra cycle per update call).
         this._elapsed = overflow > 0 ? Math.min(overflow, this._duration) : 0;
 
         // Apply progress for any overflow.

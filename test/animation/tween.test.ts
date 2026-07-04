@@ -146,38 +146,22 @@ describe('Tween', () => {
     });
   });
 
-  describe('BUG: repeat cycle overflow is not carried into the next cycle', () => {
-    test('BUG: an overshooting update() drops the leftover time instead of applying it to the next cycle', () => {
-      // Expected (correct) behavior: the "Carry overflow" comment on the
-      // elapsed-reset logic in Tween.update() implies that when a single
-      // update() call overshoots the cycle duration, the leftover time
-      // should immediately apply to the next repeat cycle (so a 1.5s update
-      // against a 1.0s duration would land the sprite ~50% through cycle 2
-      // within the same call).
-      //
-      // Actual behavior: `this._elapsed` is unconditionally clamped to
-      // `this._duration` at the "Clamp to duration for this cycle" guard
-      // *before* the overflow is computed later in the same update() call.
-      // By the time `const overflow = this._elapsed - this._duration;` runs,
-      // elapsed already equals duration, so overflow is always exactly 0.
-      // The carry-over never happens; the extra 0.5s is silently dropped and
-      // the sprite sits at the cycle-1 end value until a later update() call
-      // independently advances cycle 2 from scratch.
+  describe('repeat cycle overflow carries into the next cycle', () => {
+    test('an overshooting update() applies the leftover time to the next cycle', () => {
       const sprite = makeSprite();
       const onRepeat = vi.fn();
       const tween = new Tween(sprite).to({ x: 100 }, 1.0).repeat(1).onRepeat(onRepeat).start();
 
-      tween.update(1.5); // 1.0s completes cycle 1; 0.5s should carry into cycle 2
+      tween.update(1.5); // 1.0s completes cycle 1; 0.5s carries into cycle 2
 
       expect(onRepeat).toHaveBeenCalledTimes(1);
       expect(tween.state).toBe(TweenState.Active); // one more cycle remains
-      expect(sprite.x).toBe(100); // BUG: should be ~50 if the overflow had carried over
+      expect(sprite.x).toBeCloseTo(50); // halfway through cycle 2 within the same call
     });
 
     test('yoyo + repeat(2): direction flips twice, back to forward (no overshoot needed)', () => {
-      // Drives the yoyo direction-flip twice without relying on the dead
-      // overflow-carry path above, to independently cover both the
-      // 1 -> -1 and -1 -> 1 flip branches.
+      // Drives the yoyo direction-flip twice with exact-duration updates to
+      // independently cover both the 1 -> -1 and -1 -> 1 flip branches.
       const sprite = makeSprite();
       const tween = new Tween(sprite).to({ x: 100 }, 1.0).repeat(2).yoyo().start();
 

@@ -2505,20 +2505,36 @@ describe('registerManifest() option-equivalence branch matrix', () => {
     expect(registerTwice(new OptionsBox(1), { value: 1 })).toThrow('Conflicting asset definition');
   });
 
-  test('BUG: treats two structurally-identical custom-class option instances as conflicting', () => {
-    // registerManifest()'s JSDoc promises: "Equivalent definitions (same path,
-    // deeply-equal options) are allowed and de-duplicated silently." _areOptionsEquivalent
-    // only performs structural (key-by-key) comparison when both sides are plain objects
-    // (Object.prototype) or arrays; any other shared non-null prototype — e.g. two
-    // instances of the same user-defined class — is treated as unconditionally
-    // non-equivalent, even when every field matches. Expected: two deeply-equal
-    // instances of the same class should be treated as equivalent, exactly like the
-    // documented plain-object case.
+  test('accepts two structurally-identical same-class option instances as equivalent', () => {
     class OptionsBox {
       public constructor(public readonly value: number) {}
     }
 
-    expect(registerTwice(new OptionsBox(1), new OptionsBox(1))).toThrow('Conflicting asset definition');
+    expect(registerTwice(new OptionsBox(1), new OptionsBox(1))).not.toThrow();
+  });
+
+  test('rejects two same-class option instances with differing fields', () => {
+    class OptionsBox {
+      public constructor(public readonly value: number) {}
+    }
+
+    expect(registerTwice(new OptionsBox(1), new OptionsBox(2))).toThrow('Conflicting asset definition');
+  });
+
+  test('compares Date options by timestamp', () => {
+    expect(registerTwice({ since: new Date(1000) }, { since: new Date(1000) })).not.toThrow();
+    expect(registerTwice({ since: new Date(1000) }, { since: new Date(2000) })).toThrow('Conflicting asset definition');
+  });
+
+  test('exotic containers stay reference-only (two similar Maps still conflict)', () => {
+    expect(
+      registerTwice(
+        { lookup: new Map([['a', 1]]) },
+        {
+          lookup: new Map([['a', 1]]),
+        },
+      ),
+    ).toThrow('Conflicting asset definition');
   });
 });
 
@@ -2694,7 +2710,7 @@ describe('background bundle loading — _loadSingleBackground shortcuts', () => 
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// BUG pin — backgroundLoad() re-entrancy duplicates not-yet-started queue entries
+// backgroundLoad() re-entrancy — queued entries must not be duplicated
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('backgroundLoad() re-entrancy', () => {
@@ -2704,16 +2720,7 @@ describe('backgroundLoad() re-entrancy', () => {
     global.fetch = originalFetch;
   });
 
-  test('BUG: calling backgroundLoad() again before the queue drains double-queues a not-yet-started entry, corrupting onProgress totals', async () => {
-    // EXPECTED correct behavior: backgroundLoad() should skip manifest entries that
-    // are already sitting in `_backgroundQueue` — mirroring `_isQueuedInBackground`,
-    // which `_loadSingleBackground` already uses for this exact purpose — instead of
-    // only checking `_hasResource`/`_inFlight`. As written, calling it again before
-    // the first pass has fully drained re-pushes any alias that hasn't started yet,
-    // producing a duplicate queue entry. `_drainBackground`'s hasResource guard (the
-    // `continue` branch under the `while` loop) stops the duplicate from being
-    // re-fetched, but it still counts the duplicate as a completed item, so
-    // `onProgress` can report `loaded` exceeding `total`.
+  test('calling backgroundLoad() again before the queue drains does not double-queue entries or corrupt onProgress', async () => {
     const factory = new MockTextFactory();
     const loader = new Loader({ basePath: '/', concurrency: 1 });
     const deferredA = createDeferred<Response>();
@@ -2726,7 +2733,7 @@ describe('backgroundLoad() re-entrancy', () => {
     const done = new Promise<void>(resolve => {
       loader.onProgress.add((loaded, total) => {
         progress.push([loaded, total]);
-        if (progress.length === 3) resolve();
+        if (loaded === total) resolve();
       });
     });
 
@@ -2739,15 +2746,18 @@ describe('backgroundLoad() re-entrancy', () => {
     });
 
     loader.backgroundLoad(); // queue=[a,b] -> starts 'a' (active=1), 'b' stays queued
-    loader.backgroundLoad(); // 'a' is in-flight -> skipped; 'b' is only queued (not in-flight) -> pushed again
+    loader.backgroundLoad(); // 'a' in-flight -> skipped; 'b' already queued -> skipped too
 
     deferredA.resolve({ ok: true, status: 200, statusText: 'OK' } as Response);
     deferredB.resolve({ ok: true, status: 200, statusText: 'OK' } as Response);
 
     await done;
 
-    expect(global.fetch).toHaveBeenCalledTimes(2); // a.txt + b.txt fetched only once each despite the duplicate queue entry
-    expect(progress[2]).toEqual([3, 2]); // loaded (3) exceeds total (2) — the corrupted-progress symptom
+    expect(global.fetch).toHaveBeenCalledTimes(2); // a.txt + b.txt fetched once each
+    expect(progress).toEqual([
+      [1, 2],
+      [2, 2],
+    ]); // loaded never exceeds total
   });
 });
 
