@@ -113,7 +113,9 @@ Optional packages install independently — add only what your project needs:
 npm install @codexo/exojs-physics
 npm install @codexo/exojs-particles
 npm install @codexo/exojs-tilemap @codexo/exojs-tiled
+npm install @codexo/exojs-aseprite @codexo/exojs-ldtk
 npm install @codexo/exojs-audio-fx
+npm install @codexo/exojs-react
 ```
 
 ## Quickstart
