@@ -13,8 +13,9 @@
 import { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { Scene } from '#core/Scene';
-import { Graphics } from '#rendering/primitives/Graphics';
+import { DebugOverlay } from '#debug/DebugOverlay';
 import { Mesh } from '#rendering/mesh/Mesh';
+import { Graphics } from '#rendering/primitives/Graphics';
 import type { RenderingContext } from '#rendering/RenderingContext';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
@@ -140,13 +141,10 @@ describe('WebGL2 untextured mesh rendering', () => {
     const container = document.createElement('div');
     document.body.appendChild(container);
 
-    let scene!: ParityScene;
-
     class ParityScene extends Scene {
       public mesh!: Mesh;
 
       public override init(): void {
-        scene = this;
         this.mesh = new Mesh({
           vertices: new Float32Array([20, 20, 100, 20, 100, 100, 20, 100]),
           indices: new Uint16Array([0, 1, 2, 0, 2, 3]),
@@ -174,7 +172,6 @@ describe('WebGL2 untextured mesh rendering', () => {
       const backend = app.backend as WebGl2Backend;
       expectPixelNear(readPixel(backend, 60, 60), [255, 255, 0, 255]); // inside mesh → yellow
       expectPixelNear(readPixel(backend, 120, 120), [0, 0, 0, 255]); // outside → background
-      expect(scene.mesh).toBeDefined();
     } finally {
       app.destroy();
       container.remove();
@@ -232,6 +229,56 @@ describe('WebGL2 untextured mesh rendering', () => {
     } finally {
       graphics.destroy();
       backend.destroy();
+    }
+  });
+
+  test('the DebugOverlay boundingBoxes layer draws boxes around scene-graph nodes', async () => {
+    // Playground finding: with boundingBoxes visible, no boxes appeared even
+    // though the layer walks scene.root and the node is attached to it.
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+
+    class BoxScene extends Scene {
+      public override init(): void {
+        const mesh = new Mesh({
+          vertices: new Float32Array([40, 40, 88, 40, 88, 88, 40, 88]),
+          indices: new Uint16Array([0, 1, 2, 0, 2, 3]),
+        });
+        mesh.tint = new Color(60, 60, 60, 1); // dim so the box color stands out
+        this.root.addChild(mesh);
+      }
+
+      public override draw(context: RenderingContext): void {
+        context.backend.clear();
+        context.render(this.root);
+      }
+    }
+
+    const app = new Application({
+      canvas: { width: 128, height: 128, mount: container },
+      clearColor: Color.black,
+      rendering: { webglAttributes: { ...defaultWebGlAttributes } },
+    } as ConstructorParameters<typeof Application>[0]);
+
+    const overlay = new DebugOverlay(app);
+    overlay.layers.boundingBoxes.visible = true;
+
+    try {
+      await app.start(new BoxScene());
+      await new Promise(resolve => setTimeout(resolve, 250));
+
+      const backend = app.backend as WebGl2Backend;
+      // The box outline hugs the mesh bounds (40..88). Sample the top edge —
+      // it must NOT be the mesh fill (60ish) or background (0): the layer
+      // colors are saturated HSL-derived values, so at least one channel is
+      // bright.
+      const edge = readPixel(backend, 64, 40);
+      const bright = Math.max(edge[0], edge[1], edge[2]);
+      expect(bright, `expected a saturated box edge at (64,40), got [${edge.join(', ')}]`).toBeGreaterThan(120);
+    } finally {
+      overlay.destroy();
+      app.destroy();
+      container.remove();
     }
   });
 
