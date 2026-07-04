@@ -177,8 +177,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
 
+      # NOTE: no `--` before the extra args — pnpm (unlike npm) forwards a
+      # literal `--` to the script, and vitest silently discards everything
+      # after it (the junit reporter args here were dropped that way for
+      # months; the analytics upload below only warned, never failed).
       - name: Test (with coverage)
-        run: pnpm test:coverage -- --reporter=default --reporter=junit --outputFile.junit=./test-results/unit.junit.xml
+        run: pnpm test:coverage --reporter=default --reporter=junit --outputFile.junit=./test-results/unit.junit.xml
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v6.0.2
@@ -246,9 +250,10 @@ jobs:
       # lane executes count toward the Codecov number (the jsdom `unit` flag
       # can never reach them). The global vitest coverage thresholds are the
       # jsdom ratchet — zero them here, this lane only *collects* coverage.
+      # No `--` before the args (see the unit-tests step note).
       - name: Browser tests (Chromium WebGL2, new headless)
         run: >-
-          pnpm test:browser:webgl --
+          pnpm test:browser:webgl
           --reporter=default --reporter=junit --outputFile.junit=./test-results/browser-webgl.junit.xml
           --coverage --coverage.reporter=lcov --coverage.reporter=text-summary
           --coverage.thresholds.statements=0 --coverage.thresholds.branches=0
@@ -338,8 +343,9 @@ jobs:
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium
 
+      # No `--` before the args (see the unit-tests step note).
       - name: Browser tests (Chromium WebGPU, Mesa lavapipe via xvfb)
-        run: xvfb-run -a pnpm test:browser:webgpu -- --reporter=default --reporter=junit --outputFile.junit=./test-results/browser-webgpu.junit.xml
+        run: xvfb-run -a pnpm test:browser:webgpu --reporter=default --reporter=junit --outputFile.junit=./test-results/browser-webgpu.junit.xml
 
       - name: Upload test results to Codecov
         if: ${{ !cancelled() }}
@@ -451,7 +457,7 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
 
       - name: Browser tests (audio, headless Chromium)
-        run: pnpm test:browser:audio -- --reporter=default --reporter=junit --outputFile.junit=./test-results/browser-audio.junit.xml
+        run: pnpm test:browser:audio --reporter=default --reporter=junit --outputFile.junit=./test-results/browser-audio.junit.xml
 
       - name: Upload test results to Codecov
         if: ${{ !cancelled() }}
