@@ -63,6 +63,18 @@ describe('Polygon.project()', () => {
   });
 });
 
+describe('Polygon.contains()', () => {
+  test('honours the polygon x/y position offset, like getBounds()', () => {
+    // Local unit square at position (100, 100) → world square [100..110]².
+    const polygon = new Polygon([new Vector(0, 0), new Vector(10, 0), new Vector(10, 10), new Vector(0, 10)], 100, 100);
+
+    expect(polygon.contains(105, 105)).toBe(true);
+    expect(polygon.contains(5, 5)).toBe(false);
+
+    polygon.destroy();
+  });
+});
+
 describe('Polygon', () => {
   test('setPoints handles shrinking point arrays safely', () => {
     const polygon = new Polygon([new Vector(0, 0), new Vector(10, 0), new Vector(10, 10), new Vector(0, 10)]);

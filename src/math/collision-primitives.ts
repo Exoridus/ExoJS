@@ -208,7 +208,10 @@ const intersectionPointEllipse = ({ x: x1, y: y1 }: PointLike, { x: x2, y: y2, r
   return normX * normX + normY * normY <= 1;
 };
 
-const intersectionPointPoly = (point: PointLike, { points }: PolygonLikeLike): boolean => polygonContainsPoint(point, points);
+const intersectionPointPoly = (point: PointLike, { x: offsetX, y: offsetY, points }: PolygonLikeLike): boolean =>
+  // Shift the point into the polygon's local space so its x/y position
+  // offset is honoured (the local `points` never carry the offset).
+  polygonContainsPoint({ x: point.x - offsetX, y: point.y - offsetY }, points);
 
 const intersectionLineLineSegments = (a1: PointLike, a2: PointLike, b1: PointLike, b2: PointLike): boolean => {
   const denominator = (a2.x - a1.x) * (b2.y - b1.y) - (b2.x - b1.x) * (a2.y - a1.y);
