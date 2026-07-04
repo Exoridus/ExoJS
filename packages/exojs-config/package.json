@@ -18,6 +18,7 @@
     "./typescript/test.json": "./typescript/test.json"
   },
   "dependencies": {
+    "@codecov/rollup-plugin": "^2.0.1",
     "@rollup/plugin-node-resolve": "^16.0.3",
     "@rollup/plugin-replace": "^6.0.3",
     "@rollup/plugin-typescript": "^12.3.0",

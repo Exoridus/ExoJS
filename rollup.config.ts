@@ -265,11 +265,15 @@ const iifeFull: RollupOptions = {
     name: 'Exo',
     sourcemap: true,
   },
-  plugins: basePlugins({
-    exportConditions: fullSourceConditions,
-    extensionSource: true,
-    transform: fullBundleTransform(),
-  }),
+  plugins: [
+    ...basePlugins({
+      exportConditions: fullSourceConditions,
+      extensionSource: true,
+      transform: fullBundleTransform(),
+    }),
+    // "Everything together": core + every extension in one tracked bundle.
+    ...codecovBundlePlugin('exo-full-iife'),
+  ],
 };
 
 // Minified full IIFE bundle (production only).

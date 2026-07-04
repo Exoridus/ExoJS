@@ -164,6 +164,9 @@ importers:
 
   packages/exojs-config:
     dependencies:
+      '@codecov/rollup-plugin':
+        specifier: ^2.0.1
+        version: 2.0.1(rollup@4.62.2)
       '@rollup/plugin-node-resolve':
         specifier: ^16.0.3
         version: 16.0.3(rollup@4.62.2)
@@ -7279,7 +7282,7 @@ snapshots:
 
   make-dir@4.0.0:
     dependencies:
-      semver: 7.8.4
+      semver: 7.8.5
 
   markdown-extensions@2.0.0: {}
 
@@ -8646,7 +8649,7 @@ snapshots:
   volar-service-typescript@0.0.70(@volar/language-service@2.4.28):
     dependencies:
       path-browserify: 1.0.1
-      semver: 7.8.4
+      semver: 7.8.5
       typescript-auto-import-cache: 0.3.6
       vscode-languageserver-textdocument: 1.0.12
       vscode-nls: 5.2.0
