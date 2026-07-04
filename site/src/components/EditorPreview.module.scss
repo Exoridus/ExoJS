@@ -1,10 +1,7 @@
 .root {
     display: block;
-    // Default to the standard 1280x720 playground stage BEFORE the example
-    // reports its real canvas size — otherwise the surface starts at a
-    // smaller placeholder and the whole layout jumps once the example loads.
-    width: calc(var(--canvas-w, 1280px) * var(--preview-zoom, 1));
-    height: calc(var(--canvas-h, 720px) * var(--preview-zoom, 1));
+    width: calc(var(--canvas-w, 800px) * var(--preview-zoom, 1));
+    height: calc(var(--canvas-h, 600px) * var(--preview-zoom, 1));
     position: relative;
     background: var(--bg-code);
 }

@@ -37,6 +37,10 @@
     display: flex;
     justify-content: center;
     align-items: flex-start;
+    // Reserve the 16:9 stage height BEFORE the example reports its canvas
+    // size, so the layout doesn't jump when the preview appears. Purely a
+    // container measure — the iframe's own zoom mechanics stay untouched.
+    aspect-ratio: 16 / 9;
     min-height: 240px;
     background: var(--bg-code);
     overflow-x: auto;

@@ -77,15 +77,17 @@ export const EditorPreview = forwardRef<EditorPreviewHandle, EditorPreviewProps>
         setUpdateId(value => value + 1);
         disconnectCanvasObservers(canvasMutationObserverRef, canvasAttributeObserverRef);
         currentCanvasRef.current = { width: 0, height: 0, zoom: 1 };
-        // Pre-reserve the standard 1280x720 playground stage at the fitted
-        // zoom instead of collapsing to the CSS fallback — otherwise the
-        // surface visibly jumps when the example reports its canvas. Examples
-        // with a custom canvas size still resize once they report.
-        const zoom = measureFillZoom(rootRef.current, 1280, 720);
-        rootRef.current?.style.setProperty('--canvas-w', '1280px');
-        rootRef.current?.style.setProperty('--canvas-h', '720px');
-        rootRef.current?.style.setProperty('--preview-zoom', String(zoom));
-        onCanvasSize?.({ width: 0, height: 0, zoom });
+        // NOTE: do NOT pre-set --canvas-w/--preview-zoom here. The zoom is
+        // CSS `zoom` on the iframe, which rescales the iframe's inner layout
+        // viewport — applying it before the example loads makes preview.html
+        // fit its 1280x720 stage against a distorted innerWidth and every
+        // example renders shrunken into the top-left corner. The stable
+        // pre-load height comes from the surface's aspect-ratio instead
+        // (see Editor.module.scss).
+        rootRef.current?.style.removeProperty('--canvas-w');
+        rootRef.current?.style.removeProperty('--canvas-h');
+        rootRef.current?.style.removeProperty('--preview-zoom');
+        onCanvasSize?.({ width: 0, height: 0, zoom: 1 });
     }, [onCanvasSize, sourceCode]);
 
     useEffect(() => {
