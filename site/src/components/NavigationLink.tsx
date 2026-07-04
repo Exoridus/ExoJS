@@ -7,6 +7,8 @@ export interface NavigationLinkProps {
     active: boolean;
     description: string;
     href: string;
+    /** Didactic difficulty from the catalog; renders a badge for the non-default levels. */
+    level?: 'intro' | 'intermediate' | 'advanced';
     path: string;
     title: string;
     unavailable: boolean;
@@ -14,7 +16,7 @@ export interface NavigationLinkProps {
     onSelectExample(path: string): void;
 }
 
-export function NavigationLink({ active, description, href, path, title, unavailable, unavailableReason, onSelectExample }: NavigationLinkProps): JSX.Element {
+export function NavigationLink({ active, description, href, level, path, title, unavailable, unavailableReason, onSelectExample }: NavigationLinkProps): JSX.Element {
     const tooltip = unavailable ? `${title}\n${unavailableReason || 'Unavailable in this browser.'}` : description || title;
 
     const onClick = (event: MouseEvent<HTMLAnchorElement>): void => {
@@ -39,6 +41,10 @@ export function NavigationLink({ active, description, href, path, title, unavail
                 &gt;
             </span>
             <span className={css(styles, 'title')}>{title}</span>
+            {/* Intermediate is the catalog default — badging it too would turn
+                the list into noise; intro/advanced are the useful signals. */}
+            {!unavailable && level === 'intro' && <span className={cx(css(styles, 'badge'), css(styles, 'badge--intro'))}>Intro</span>}
+            {!unavailable && level === 'advanced' && <span className={cx(css(styles, 'badge'), css(styles, 'badge--advanced'))}>Advanced</span>}
             {unavailable && <span className={cx(css(styles, 'badge'))}>Unavailable</span>}
         </a>
     );

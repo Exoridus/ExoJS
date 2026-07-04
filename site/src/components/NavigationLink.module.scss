@@ -76,6 +76,16 @@
     color: var(--fg-faint);
 }
 
+.badge--intro {
+    border-color: color-mix(in oklab, var(--mint), transparent 55%);
+    color: var(--mint);
+}
+
+.badge--advanced {
+    border-color: color-mix(in oklab, var(--violet), transparent 55%);
+    color: var(--violet);
+}
+
 @media (max-width: 1119px) {
     .link {
         min-height: 44px;

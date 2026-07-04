@@ -77,10 +77,15 @@ export const EditorPreview = forwardRef<EditorPreviewHandle, EditorPreviewProps>
         setUpdateId(value => value + 1);
         disconnectCanvasObservers(canvasMutationObserverRef, canvasAttributeObserverRef);
         currentCanvasRef.current = { width: 0, height: 0, zoom: 1 };
-        rootRef.current?.style.removeProperty('--canvas-w');
-        rootRef.current?.style.removeProperty('--canvas-h');
-        rootRef.current?.style.removeProperty('--preview-zoom');
-        onCanvasSize?.({ width: 0, height: 0, zoom: 1 });
+        // Pre-reserve the standard 1280x720 playground stage at the fitted
+        // zoom instead of collapsing to the CSS fallback — otherwise the
+        // surface visibly jumps when the example reports its canvas. Examples
+        // with a custom canvas size still resize once they report.
+        const zoom = measureFillZoom(rootRef.current, 1280, 720);
+        rootRef.current?.style.setProperty('--canvas-w', '1280px');
+        rootRef.current?.style.setProperty('--canvas-h', '720px');
+        rootRef.current?.style.setProperty('--preview-zoom', String(zoom));
+        onCanvasSize?.({ width: 0, height: 0, zoom });
     }, [onCanvasSize, sourceCode]);
 
     useEffect(() => {
@@ -361,11 +366,19 @@ function renderExecutionError(iframeBody: HTMLBodyElement): void {
 }
 
 function createPreviewErrorEntry(error: unknown, fallbackMessage?: string | Event): PreviewErrorEntry {
-    if (error instanceof Error) {
-        return {
-            summary: error.message,
-            details: error.stack ?? error.message,
-        };
+    // Duck-type instead of `instanceof Error`: errors thrown inside the preview
+    // iframe come from a different realm (the iframe's own Error constructor),
+    // so `instanceof` fails and every runtime error used to collapse into a
+    // useless "{}" panel via JSON.stringify (Error props are non-enumerable).
+    if (typeof error === 'object' && error !== null && typeof (error as { message?: unknown }).message === 'string') {
+        const errorLike = error as { message: string; stack?: unknown; name?: unknown };
+        if (errorLike.message.trim()) {
+            const prefix = typeof errorLike.name === 'string' && errorLike.name && errorLike.name !== 'Error' ? `${errorLike.name}: ` : '';
+            return {
+                summary: `${prefix}${errorLike.message}`,
+                details: typeof errorLike.stack === 'string' && errorLike.stack.trim() ? errorLike.stack : `${prefix}${errorLike.message}`,
+            };
+        }
     }
 
     if (typeof fallbackMessage === 'string' && fallbackMessage.trim()) {
