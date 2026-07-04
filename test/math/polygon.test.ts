@@ -241,9 +241,7 @@ describe('Polygon — points / edges', () => {
   test('setPoints() grows the point/edge arrays when given more points than before', () => {
     const polygon = new Polygon([new Vector(0, 0), new Vector(10, 0)]);
 
-    expect(() =>
-      polygon.setPoints([new Vector(0, 0), new Vector(10, 0), new Vector(10, 10), new Vector(0, 10), new Vector(-5, 5)]),
-    ).not.toThrow();
+    expect(() => polygon.setPoints([new Vector(0, 0), new Vector(10, 0), new Vector(10, 10), new Vector(0, 10), new Vector(-5, 5)])).not.toThrow();
     expect(polygon.points.length).toBe(5);
     expect(polygon.edges.length).toBe(5);
 
