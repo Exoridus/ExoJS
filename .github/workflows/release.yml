@@ -40,6 +40,8 @@ jobs:
       node-version: '24.x'
       pnpm-version: '11.4.0'
       ref: ${{ github.event.inputs.tag || github.ref_name }}
+    # Pass caller secrets through (CODECOV_TOKEN) — see ci.yml.
+    secrets: inherit
 
   # ── Stage 1: PREPARE/VERIFY ────────────────────────────────────────────────
   # Build every lockstep package exactly once, then pack/hash/attw/
