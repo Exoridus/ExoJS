@@ -231,6 +231,9 @@ export class Polygon implements ShapeLike {
     const nx = axis.x / length;
     const ny = axis.y / length;
 
+    // World-space projection: the polygon's x/y offset shifts every vertex by
+    // the same amount, so it contributes a constant term along the axis.
+    const offset = nx * this._position.x + ny * this._position.y;
     const points = this._points;
     let min = Infinity;
     let max = -Infinity;
@@ -244,7 +247,7 @@ export class Polygon implements ShapeLike {
       if (projection > max) max = projection;
     }
 
-    return result.set(min, max);
+    return result.set(min + offset, max + offset);
   }
 
   public contains(x: number, y: number): boolean {

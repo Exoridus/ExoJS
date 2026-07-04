@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-01T04:46:42.287Z",
+  "generatedAt": "2026-07-04T11:45:27.071Z",
   "description": "Stage-1 BeatDetector baseline. Phase 1 = RECORD ONLY; thresholds become hard assertions in Stage 2.",
   "stage2TargetList": [],
   "fixtures": [

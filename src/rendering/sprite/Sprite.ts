@@ -273,6 +273,15 @@ export class Sprite extends Drawable {
       this.height = height;
     }
 
+    // The local bounds changed size — re-derive the origin from the
+    // fractional anchor, or an anchored sprite keeps the OLD bounds' pixel
+    // origin and renders offset by the size difference (an anchored sprite
+    // switching from the full atlas to its first animation frame used to
+    // land hundreds of pixels off-canvas).
+    if (this.anchor.x !== 0 || this.anchor.y !== 0) {
+      this._updateOrigin();
+    }
+
     this.invalidateCache();
 
     return this;

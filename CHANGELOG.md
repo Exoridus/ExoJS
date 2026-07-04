@@ -4,6 +4,57 @@ All notable changes to ExoJS are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.1] - 2026-07-04
+
+Bugfix release. Twelve engine defects back-ported from the v0.16 line —
+notably several long-standing collision-detection and vector-math errors
+that affect physics-adjacent code.
+
+### Fixed
+
+- **Collision: circle-vs-polygon false negatives.** `Collision.intersects.circlePoly`
+  used a sign-inverted frame transform, so circles deep inside a polygon or
+  overlapping most of its edges/vertices were reported as _not_ intersecting;
+  a second defect in the right-Voronoi exclusion measured the distance to the
+  wrong vertex. Both now mirror the (correct) `Collision.resolve.polygonCircle`.
+- **Collision: circle-vs-circle MTV magnitude.** `Collision.resolve.circleCircle`
+  scaled the _unnormalized_ center delta by the overlap, making `projectionV`'s
+  magnitude `distance × overlap` instead of `overlap` as documented (and as
+  every other resolver computes it).
+- **Positioned polygons.** `Polygon.project()` and `Polygon.contains()` (via
+  `Collision.intersects.pointPoly`) ignored the polygon's `x`/`y` position, so
+  every SAT path and point containment test was wrong for polygons placed via
+  their position instead of baked-in point coordinates.
+- **Vector angle convention.** The `angle` getter measured from the positive
+  Y-axis (`atan2(x, y)`) while the angle/length setters and `PolarVector` use
+  the standard X-axis convention. The getter now returns `atan2(y, x)`: setting
+  `angle` rotates as documented, setting `length` preserves direction, and
+  `PolarVector.fromVector(v).toVector()` round-trips again.
+- **`ObservableVector.angle`/`length` accessors.** Setter-only overrides
+  shadowed the inherited getters, so reads returned `undefined` and the setters
+  NaNed the vector. The getters are now declared alongside the overrides.
+- **Text: justify with monospace fonts.** `align: 'justify'` detected word
+  boundaries by comparing glyph advances against the space glyph, which breaks
+  down when every glyph shares the same advance. Boundaries are now detected
+  from the characters themselves.
+- **Root-absolute sub-asset paths.** The BmFont page, Tiled TMJ→TSJ→image, and
+  Aseprite sheet-image resolvers stripped the leading slash from root-absolute
+  bases, so sub-assets 404ed when an app was deployed under a sub-path.
+- **Anchored sprites across texture-frame changes.** `AnimatedSprite` kept a
+  stale pixel origin when switching from the full atlas to a frame (rendering
+  far off-canvas), and origins were derived from world bounds, double-applying
+  scale when the anchor was set after transforming. Origins now re-derive from
+  local bounds on frame changes.
+- **Debug layers invisible.** `BoundingBoxesLayer`, `HitTestLayer`,
+  `PerformanceLayer`, and `RenderPassInspectorLayer` built colors with 0..1
+  components where `Color` expects 0..255, drawing black-on-black.
+- **Shape outline gaps.** Stroked `Graphics` primitives (`drawRectangle`,
+  `drawCircle`, …) never stroked the closing segment, leaving every outline
+  visibly open at its start corner.
+- **Spatializable position setter.** `Voice.position` now accepts any `{ x, y }`
+  point (values are copied), matching the documented usage for moving a live
+  spatial voice.
+
 ## [0.15.0] - 2026-07-02
 
 The rendering-views and audio-effects release. Core's render surface is

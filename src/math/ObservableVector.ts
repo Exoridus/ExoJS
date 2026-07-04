@@ -64,10 +64,21 @@ export class ObservableVector extends AbstractVector {
     }
   }
 
+  // The getters must be redeclared alongside the setter overrides: a
+  // setter-only accessor on the subclass prototype would shadow the whole
+  // inherited accessor pair, leaving `get` undefined.
+  public override get angle(): number {
+    return Math.atan2(this._y, this._x);
+  }
+
   public override set angle(angle: number) {
     const length = this.length;
 
     this.set(Math.cos(angle) * length, Math.sin(angle) * length);
+  }
+
+  public override get length(): number {
+    return Math.sqrt(this._x * this._x + this._y * this._y);
   }
 
   public override set length(magnitude: number) {

@@ -40,6 +40,10 @@ export function resolveTiledUrl(ref: string, base: string): string {
   }
 
   const resolved = new URL(ref, SYNTHETIC_ORIGIN + base.replace(/^\/+/, ''));
+  const relative = resolved.href.slice(SYNTHETIC_ORIGIN.length);
 
-  return resolved.href.slice(SYNTHETIC_ORIGIN.length);
+  // A root-relative base must produce a root-relative result again — dropping
+  // the leading slash would make the browser re-resolve the reference against
+  // the document base URL (e.g. `/site/assets/x.png` → `/site/site/assets/…`).
+  return base.startsWith('/') ? `/${relative}` : relative;
 }

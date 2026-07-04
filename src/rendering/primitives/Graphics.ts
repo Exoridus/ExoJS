@@ -307,6 +307,20 @@ export class Graphics extends Container {
     return this;
   }
 
+  /**
+   * Stroke a shape's perimeter. Shape builders return their outline OPEN
+   * (first point not repeated), but `buildPath` only closes a path whose
+   * first and last points coincide — so the closing segment (e.g. a
+   * rectangle's left edge) went missing. Repeat the first point here.
+   */
+  private _strokeClosedOutline(points: number[]): void {
+    if (points.length >= 4) {
+      this.drawPath([...points, points[0]!, points[1]!]);
+    } else {
+      this.drawPath(points);
+    }
+  }
+
   /** Fill a closed polygon defined by `[x0,y0, x1,y1, ...]` and optionally stroke its outline. */
   public drawPolygon(path: number[]): this {
     const data = buildPolygon(path);
@@ -314,7 +328,7 @@ export class Graphics extends Container {
     this._appendFill(data);
 
     if (this._lineWidth > 0) {
-      this.drawPath(data.points);
+      this._strokeClosedOutline(data.points);
     }
 
     return this;
@@ -327,7 +341,7 @@ export class Graphics extends Container {
     this._appendFill(data);
 
     if (this._lineWidth > 0) {
-      this.drawPath(data.points);
+      this._strokeClosedOutline(data.points);
     }
 
     return this;
@@ -340,7 +354,7 @@ export class Graphics extends Container {
     this._appendFill(data);
 
     if (this._lineWidth > 0) {
-      this.drawPath(data.points);
+      this._strokeClosedOutline(data.points);
     }
 
     return this;
@@ -353,7 +367,7 @@ export class Graphics extends Container {
     this._appendFill(data);
 
     if (this._lineWidth > 0) {
-      this.drawPath(data.points);
+      this._strokeClosedOutline(data.points);
     }
 
     return this;
@@ -370,7 +384,7 @@ export class Graphics extends Container {
     this._appendFill(data);
 
     if (this._lineWidth > 0) {
-      this.drawPath(data.points);
+      this._strokeClosedOutline(data.points);
     }
 
     return this;
@@ -386,7 +400,7 @@ export class Graphics extends Container {
     this._appendFill(data);
 
     if (this._lineWidth > 0) {
-      this.drawPath(data.points);
+      this._strokeClosedOutline(data.points);
     }
 
     return this;

@@ -14,12 +14,13 @@ export abstract class AbstractVector {
   public abstract y: number;
 
   /**
-   * Angle of this vector in radians, measured from the positive Y-axis
-   * (clockwise). Setting this rotates the vector to the new angle while
-   * preserving its {@link length}. Mutates in place.
+   * Angle of this vector in radians, measured from the positive X-axis
+   * (the same convention as `PolarVector.phi`). Setting this rotates the
+   * vector to the new angle while preserving its {@link length}. Mutates in
+   * place.
    */
   public get angle(): number {
-    return Math.atan2(this.x, this.y);
+    return Math.atan2(this.y, this.x);
   }
 
   public set angle(angle: number) {
