@@ -22,3 +22,7 @@ concurrency:
 jobs:
   checks:
     uses: ./.github/workflows/_ci-checks.yml
+    # Reusable workflows do NOT see caller secrets by default; without this the
+    # Codecov upload runs tokenless and is rejected ("Token required because
+    # branch is protected").
+    secrets: inherit
