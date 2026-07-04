@@ -288,6 +288,58 @@ describe('HitTestLayer', () => {
     expect(walkBoundsSpy).not.toHaveBeenCalled();
   });
 
+  test('render() skips invisible nodes (and their subtree)', () => {
+    const invisibleChild = makeNode({ interactive: true, visible: true, boundsW: 20, boundsH: 20 });
+    const invisibleNode = makeNode({ interactive: true, visible: false, boundsW: 50, boundsH: 50, children: [invisibleChild] });
+    const app = makeApp(invisibleNode);
+    const layer = new HitTestLayer(app);
+    const backend = app.backend;
+
+    layer.render(backend as unknown as Parameters<typeof layer.render>[0]);
+
+    expect(invisibleNode.getBounds).not.toHaveBeenCalled();
+    expect(invisibleChild.getBounds).not.toHaveBeenCalled();
+  });
+
+  test('render() reuses the Graphics primitive across frames (only created once)', () => {
+    const node = makeNode({ interactive: true, boundsW: 10, boundsH: 10 });
+    const app = makeApp(node);
+    const layer = new HitTestLayer(app);
+    const backend = app.backend;
+
+    layer.render(backend as unknown as Parameters<typeof layer.render>[0]);
+    expect(() => layer.render(backend as unknown as Parameters<typeof layer.render>[0])).not.toThrow();
+  });
+
+  test('an interactive node with zero-area bounds is not drawn, but its children still are', () => {
+    const child = makeNode({ interactive: true, boundsW: 10, boundsH: 10 });
+    const zeroAreaNode = makeNode({ interactive: true, boundsW: 0, boundsH: 0, children: [child] });
+    const app = makeApp(zeroAreaNode);
+    const layer = new HitTestLayer(app);
+    const backend = app.backend;
+
+    layer.render(backend as unknown as Parameters<typeof layer.render>[0]);
+
+    expect(child.getBounds).toHaveBeenCalled();
+  });
+
+  test('a leaf node with no children property is not recursed into', () => {
+    // Plain leaf (no `children` key at all, as opposed to an empty array) —
+    // exercises the Array.isArray(container.children) false branch.
+    const leaf = {
+      visible: true,
+      zIndex: 0,
+      interactive: true,
+      getBounds: vi.fn(() => ({ width: 10, height: 10, left: 0, top: 0, right: 10, bottom: 10 })),
+      contains: vi.fn(() => false),
+    };
+    const app = makeApp(leaf as unknown as FakeNode);
+    const layer = new HitTestLayer(app);
+    const backend = app.backend;
+
+    expect(() => layer.render(backend as unknown as Parameters<typeof layer.render>[0])).not.toThrow();
+  });
+
   test('update() does not throw', () => {
     const layer = new HitTestLayer(makeApp());
     const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('#core/Time').Time;

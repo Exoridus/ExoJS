@@ -1,4 +1,4 @@
-﻿import { getAudioContext } from '#audio/audio-context';
+﻿import { getAudioContext, onAudioContextReady } from '#audio/audio-context';
 import { WorkletEffect } from '#audio/WorkletEffect';
 
 // ---------------------------------------------------------------------------
@@ -304,6 +304,78 @@ describe('WorkletEffect', () => {
     // Must be close to the 44100-based value, not the 48000 fallback.
     expect(filter['_dryDelay']!.delayTime.value).toBeCloseTo(expected, 5);
     expect(filter['_dryDelay']!.delayTime.value).not.toBeCloseTo(wrong, 5);
+    filter.destroy();
+  });
+
+  // ---------------------------------------------------------------------------
+  // Construction before the audio context is ready
+  // ---------------------------------------------------------------------------
+
+  it('defers setup when constructed before the audio context is ready', () => {
+    const ctx = getAudioContext();
+    const gainSpy = vi.spyOn(ctx, 'createGain');
+    const originalState = ctx.state;
+    ctx.state = 'suspended';
+
+    const filter = new TestWorkletEffect();
+    // Nothing set up yet — inputNode/outputNode still throw.
+    expect(gainSpy).not.toHaveBeenCalled();
+    expect(() => filter.inputNode).toThrow('input node accessed before audio context is ready.');
+    expect(() => filter.outputNode).toThrow('output node accessed before audio context is ready.');
+    // _sampleRate falls back to 48000 before the output gain exists.
+    expect(filter['_sampleRate']).toBe(48000);
+
+    ctx.state = originalState;
+    filter.destroy();
+  });
+
+  it('sets up once the context becomes ready, running the pending handler', async () => {
+    const ctx = getAudioContext();
+    const gainSpy = vi.spyOn(ctx, 'createGain');
+    const originalState = ctx.state;
+    ctx.state = 'suspended';
+
+    const filter = new TestWorkletEffect();
+    expect(gainSpy).not.toHaveBeenCalled();
+
+    ctx.state = originalState;
+    onAudioContextReady.dispatch(ctx);
+
+    expect(gainSpy).toHaveBeenCalled();
+    expect(() => filter.inputNode).not.toThrow();
+    await filter.ready;
+    expect(filter['_workletNode']).not.toBeNull();
+
+    filter.destroy();
+  });
+
+  it('wet setter no-ops safely before the dry/wet gains exist', () => {
+    const ctx = getAudioContext();
+    const originalState = ctx.state;
+    ctx.state = 'suspended';
+
+    const filter = new TestWorkletEffect();
+    expect(() => (filter.wet = 0.5)).not.toThrow();
+    expect(filter.wet).toBe(0.5);
+
+    ctx.state = originalState;
+    filter.destroy();
+  });
+
+  it('_setAudioParam ramps a known worklet parameter and is a no-op for an unknown one', async () => {
+    const filter = new TestWorkletEffect();
+    await filter.ready;
+
+    const node = filter['_workletNode']!;
+    const knownParam = node.parameters.get('threshold')!;
+    const setTargetSpy = vi.spyOn(knownParam, 'setTargetAtTime');
+
+    filter['_setAudioParam']('threshold', -10);
+    expect(setTargetSpy).toHaveBeenCalledWith(-10, expect.any(Number), expect.any(Number));
+
+    // Unknown parameter name: parameters.get() returns undefined, no-op.
+    expect(() => filter['_setAudioParam']('does-not-exist', 1)).not.toThrow();
+
     filter.destroy();
   });
 });

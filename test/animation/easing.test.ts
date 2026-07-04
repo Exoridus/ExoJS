@@ -141,6 +141,10 @@ describe('Easing', () => {
     test('f(0.5) ≈ 0.5', () => {
       expect(Ease.expoInOut(0.5)).toBeCloseTo(0.5, 10);
     });
+
+    test('f(0.25) uses the t<0.5 branch formula', () => {
+      expect(Ease.expoInOut(0.25)).toBeCloseTo(Math.pow(2, 20 * 0.25 - 10) / 2, 10);
+    });
   });
 
   describe('circIn', () => {
@@ -184,6 +188,12 @@ describe('Easing', () => {
     test('f(0.5) > 0.5 (already past the first bounce peak)', () => {
       expect(Ease.bounceOut(0.5)).toBeGreaterThan(0.5);
     });
+
+    test('f(0.8) hits the third bounce segment (t in [2/d1, 2.5/d1))', () => {
+      // d1 = 2.75; 2/d1 ≈ 0.727, 2.5/d1 ≈ 0.909 — 0.8 falls in that range,
+      // which none of the other bounce tests exercise.
+      expect(Ease.bounceOut(0.8)).toBeCloseTo(0.94, 3);
+    });
   });
 
   describe('bounceIn', () => {
@@ -206,6 +216,14 @@ describe('Easing', () => {
     test('f(1) === 1 (edge case)', () => {
       expect(Ease.elasticIn(1)).toBe(1);
     });
+
+    test('f(0.5) matches the elastic formula (mid-range, exercises the c4 branch)', () => {
+      // Neither 0 nor 1, so this reaches the c4 computation and the actual
+      // oscillating formula, which the edge-case-only tests above never do.
+      const c4 = (2 * Math.PI) / 3;
+      const expected = -Math.pow(2, 10 * 0.5 - 10) * Math.sin((0.5 * 10 - 10.75) * c4);
+      expect(Ease.elasticIn(0.5)).toBeCloseTo(expected, 10);
+    });
   });
 
   describe('elasticOut', () => {
@@ -215,6 +233,12 @@ describe('Easing', () => {
 
     test('f(1) === 1 (edge case)', () => {
       expect(Ease.elasticOut(1)).toBe(1);
+    });
+
+    test('f(0.5) matches the elastic formula (mid-range, exercises the c4 branch)', () => {
+      const c4 = (2 * Math.PI) / 3;
+      const expected = Math.pow(2, -10 * 0.5) * Math.sin((0.5 * 10 - 0.75) * c4) + 1;
+      expect(Ease.elasticOut(0.5)).toBeCloseTo(expected, 10);
     });
   });
 
@@ -229,6 +253,12 @@ describe('Easing', () => {
 
     test('f(0.5) ≈ 0.5', () => {
       expect(Ease.elasticInOut(0.5)).toBeCloseTo(0.5, 5);
+    });
+
+    test('f(0.25) uses the t<0.5 branch formula', () => {
+      const c5 = (2 * Math.PI) / 4.5;
+      const expected = -(Math.pow(2, 20 * 0.25 - 10) * Math.sin((20 * 0.25 - 11.125) * c5)) / 2;
+      expect(Ease.elasticInOut(0.25)).toBeCloseTo(expected, 10);
     });
   });
 });

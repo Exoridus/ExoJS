@@ -220,6 +220,164 @@ describe('SoundVoice — capabilities', () => {
     sound.destroy();
   });
 
+  // ---- time getter ----
+
+  test('time returns 0 once the voice has ended', () => {
+    const factory = setupSourceSpy();
+    const manager = new AudioManager();
+    const sound = new Sound(createAudioBufferStub(2));
+
+    const voice = manager.play(sound) as SoundVoice;
+    voice.stop();
+
+    expect(voice.time).toBe(0);
+
+    factory.restore();
+    sound.destroy();
+  });
+
+  test('time wraps into [0, duration) for a looping voice, forward and backward', () => {
+    const factory = setupSourceSpy();
+    const manager = new AudioManager();
+    const sound = new Sound(createAudioBufferStub(2)); // duration/span = 2
+
+    const voice = manager.play(sound) as SoundVoice;
+    voice.loop = true;
+
+    const ctx = getAudioContext();
+
+    // Forward elapsed time past the span: pos % span is already >= 0.
+    ctx.currentTime = 5; // elapsed = 5, 5 % 2 = 1
+    expect(voice.time).toBeCloseTo(1);
+
+    // A negative pos (elapsed goes "backward" of the start time) forces the
+    // `pos < 0` correction branch: -5 % 2 === -1 in JS, then +span => 1.
+    ctx.currentTime = -5;
+    expect(voice.time).toBeCloseTo(1);
+
+    ctx.currentTime = 0;
+    factory.restore();
+    sound.destroy();
+  });
+
+  // ---- loop setter no-ops ----
+
+  test('loop setter is a no-op when the value is unchanged', () => {
+    const factory = setupSourceSpy();
+    const manager = new AudioManager();
+    const sound = new Sound(createAudioBufferStub(2));
+
+    const voice = manager.play(sound) as SoundVoice;
+    expect(voice.loop).toBe(false);
+
+    voice.loop = false; // same value — should not touch the source at all
+    expect(factory.sources[0].loop).toBe(false);
+    expect(voice.loop).toBe(false);
+
+    factory.restore();
+    sound.destroy();
+  });
+
+  test('loop setter is a no-op once the voice has ended', () => {
+    const factory = setupSourceSpy();
+    const manager = new AudioManager();
+    const sound = new Sound(createAudioBufferStub(2));
+
+    const voice = manager.play(sound) as SoundVoice;
+    voice.stop();
+
+    voice.loop = true;
+    expect(voice.loop).toBe(true);
+    // The (already-stopped) source is untouched.
+    expect(factory.sources[0].loop).toBe(false);
+
+    factory.restore();
+    sound.destroy();
+  });
+
+  // ---- playbackRate setter no-ops ----
+
+  test('playbackRate setter is a no-op when the (clamped) value is unchanged', () => {
+    const factory = setupSourceSpy();
+    const manager = new AudioManager();
+    const sound = new Sound(createAudioBufferStub());
+
+    const voice = manager.play(sound) as SoundVoice;
+    expect(voice.playbackRate).toBe(1);
+
+    voice.playbackRate = 1; // same value — should not retune the live source
+    expect(factory.sources[0].playbackRate.setTargetAtTime).not.toHaveBeenCalled();
+    expect(voice.playbackRate).toBe(1);
+
+    factory.restore();
+    sound.destroy();
+  });
+
+  test('playbackRate setter is a no-op once the voice has ended', () => {
+    const factory = setupSourceSpy();
+    const manager = new AudioManager();
+    const sound = new Sound(createAudioBufferStub());
+
+    const voice = manager.play(sound) as SoundVoice;
+    voice.stop();
+
+    voice.playbackRate = 2;
+    expect(voice.playbackRate).toBe(2);
+    expect(factory.sources[0].playbackRate.setTargetAtTime).not.toHaveBeenCalled();
+
+    factory.restore();
+    sound.destroy();
+  });
+
+  test('seek() is a no-op once the voice has ended', () => {
+    const factory = setupSourceSpy();
+    const manager = new AudioManager();
+    const sound = new Sound(createAudioBufferStub(2));
+
+    const voice = manager.play(sound) as SoundVoice;
+    voice.stop();
+
+    voice.seek(1);
+    // No second source was created — seek() bailed out early.
+    expect(factory.sources.length).toBe(1);
+
+    factory.restore();
+    sound.destroy();
+  });
+
+  test('loop setter clears the source loop window when disabling loop', () => {
+    const factory = setupSourceSpy();
+    const manager = new AudioManager();
+    const sound = new Sound(createAudioBufferStub(2));
+
+    const voice = manager.play(sound) as SoundVoice;
+    voice.loop = true;
+    expect(factory.sources[0].loopStart).toBe(0);
+
+    voice.loop = false; // value actually changes: true -> false
+    expect(factory.sources[0].loop).toBe(false);
+    expect(voice.loop).toBe(false);
+
+    factory.restore();
+    sound.destroy();
+  });
+
+  test('detune setter is a no-op once the voice has ended', () => {
+    const factory = setupSourceSpy();
+    const manager = new AudioManager();
+    const sound = new Sound(createAudioBufferStub());
+
+    const voice = manager.play(sound) as SoundVoice;
+    voice.stop();
+
+    voice.detune = 42;
+    expect(voice.detune).toBe(42);
+    expect(factory.sources[0].detune.setTargetAtTime).not.toHaveBeenCalled();
+
+    factory.restore();
+    sound.destroy();
+  });
+
   test('follow(node) tracks the node global transform on each manager tick', () => {
     const factory = setupSourceSpy();
     const pannerSpy = setupPannerSpy();

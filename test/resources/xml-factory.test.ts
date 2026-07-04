@@ -30,4 +30,14 @@ describe('XmlFactory', () => {
 
     await expect(factory.create('<root><unclosed></root>')).rejects.toThrow('XML parse error');
   });
+
+  test('create() falls back to "unknown error" when the detected parsererror element has no text content', async () => {
+    const factory = new XmlFactory();
+
+    // Note: the factory detects a parse failure purely by the presence of a
+    // <parsererror> element (per its JSDoc) — a well-formed document that
+    // happens to contain its own empty <parsererror> element is (mis)detected
+    // the same way, exercising the "no text" fallback message.
+    await expect(factory.create('<root><parsererror></parsererror></root>')).rejects.toThrow('XML parse error: unknown error');
+  });
 });

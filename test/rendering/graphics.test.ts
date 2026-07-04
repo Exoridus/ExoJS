@@ -1,7 +1,9 @@
 import { Color } from '#core/Color';
 import { LinearGradient } from '#rendering/gradient/LinearGradient';
 import { RadialGradient } from '#rendering/gradient/RadialGradient';
+import { Mesh } from '#rendering/mesh/Mesh';
 import { Graphics } from '#rendering/primitives/Graphics';
+import type { RenderNode } from '#rendering/RenderNode';
 import { DataTexture } from '#rendering/texture/DataTexture';
 
 const createLinearGradient = (): LinearGradient =>
@@ -15,6 +17,16 @@ const createLinearGradient = (): LinearGradient =>
   );
 
 describe('Graphics', () => {
+  test('lineWidth getter reflects the last assigned value', () => {
+    const graphics = new Graphics();
+
+    expect(graphics.lineWidth).toBe(0);
+
+    graphics.lineWidth = 3;
+
+    expect(graphics.lineWidth).toBe(3);
+  });
+
   test('drawArc appends a path and updates current point', () => {
     const graphics = new Graphics();
 
@@ -233,6 +245,333 @@ describe('Graphics', () => {
       expect(graphics.fillStyle).toBeInstanceOf(Color);
       expect(graphics.children.length).toBe(0);
       expect(destroySpy).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('child-type guard', () => {
+    test('addChild rejects a non-Mesh child', () => {
+      const graphics = new Graphics();
+      const nonMesh = { destroy: () => undefined } as unknown as RenderNode;
+
+      expect(() => graphics.addChild(nonMesh)).toThrow('Graphics can only contain Mesh children.');
+    });
+
+    test('addChildAt rejects a non-Mesh child', () => {
+      const graphics = new Graphics();
+      const nonMesh = { destroy: () => undefined } as unknown as RenderNode;
+
+      expect(() => graphics.addChildAt(nonMesh, 0)).toThrow('Graphics can only contain Mesh children.');
+    });
+
+    test('addChild accepts a Mesh child', () => {
+      const graphics = new Graphics();
+      const mesh = new Mesh({ vertices: new Float32Array([0, 0, 10, 0, 10, 10]) });
+
+      expect(() => graphics.addChild(mesh)).not.toThrow();
+      expect(graphics.children.length).toBe(1);
+    });
+  });
+
+  describe('pen / path methods', () => {
+    test('lineTo strokes a segment from the current point and advances the pen', () => {
+      const graphics = new Graphics();
+
+      graphics.lineWidth = 2;
+      graphics.moveTo(0, 0);
+      graphics.lineTo(10, 0);
+
+      expect(graphics.children.length).toBe(1);
+      expect(graphics.currentPoint.x).toBe(10);
+      expect(graphics.currentPoint.y).toBe(0);
+    });
+
+    test('quadraticCurveTo strokes a curve and advances the pen to the end point', () => {
+      const graphics = new Graphics();
+
+      graphics.lineWidth = 2;
+      graphics.moveTo(0, 0);
+      graphics.quadraticCurveTo(5, 10, 10, 0);
+
+      expect(graphics.children.length).toBe(1);
+      expect(graphics.currentPoint.x).toBe(10);
+      expect(graphics.currentPoint.y).toBe(0);
+    });
+
+    test('bezierCurveTo strokes a curve and advances the pen to the end point', () => {
+      const graphics = new Graphics();
+
+      graphics.lineWidth = 2;
+      graphics.moveTo(0, 0);
+      graphics.bezierCurveTo(3, 10, 7, 10, 10, 0);
+
+      expect(graphics.children.length).toBe(1);
+      expect(graphics.currentPoint.x).toBe(10);
+      expect(graphics.currentPoint.y).toBe(0);
+    });
+  });
+
+  describe('arcTo degenerate-geometry fallbacks', () => {
+    test('radius 0 falls back to a straight lineTo', () => {
+      const graphics = new Graphics();
+
+      graphics.lineWidth = 2;
+      graphics.moveTo(0, 0);
+      graphics.arcTo(10, 0, 10, 10, 0);
+
+      expect(graphics.currentPoint.x).toBe(10);
+      expect(graphics.currentPoint.y).toBe(0);
+    });
+
+    test('current point already at the corner falls back to a straight lineTo', () => {
+      const graphics = new Graphics();
+
+      graphics.lineWidth = 2;
+      graphics.moveTo(10, 0);
+      graphics.arcTo(10, 0, 10, 10, 2);
+
+      expect(graphics.currentPoint.x).toBe(10);
+      expect(graphics.currentPoint.y).toBe(0);
+    });
+
+    test('coincident corner and end point fall back to a straight lineTo', () => {
+      const graphics = new Graphics();
+
+      graphics.lineWidth = 2;
+      graphics.moveTo(0, 0);
+      graphics.arcTo(10, 0, 10, 0, 2);
+
+      expect(graphics.currentPoint.x).toBe(10);
+      expect(graphics.currentPoint.y).toBe(0);
+    });
+
+    test('collinear same-direction corner (angle 0) falls back to a straight lineTo', () => {
+      const graphics = new Graphics();
+
+      graphics.lineWidth = 2;
+      graphics.moveTo(0, 0);
+      graphics.arcTo(10, 0, 20, 0, 2);
+
+      expect(graphics.currentPoint.x).toBe(10);
+      expect(graphics.currentPoint.y).toBe(0);
+    });
+
+    test('collinear reversing corner (angle PI) falls back to a straight lineTo', () => {
+      const graphics = new Graphics();
+
+      graphics.lineWidth = 2;
+      graphics.moveTo(0, 0);
+      graphics.arcTo(10, 0, 5, 0, 2);
+
+      expect(graphics.currentPoint.x).toBe(10);
+      expect(graphics.currentPoint.y).toBe(0);
+    });
+
+    test('a right-hand turn (negative cross product) computes the arc on the opposite side', () => {
+      const graphics = new Graphics();
+
+      graphics.lineWidth = 2;
+      graphics.moveTo(0, 0);
+      // Turning downward (clockwise) at the corner produces a negative cross
+      // product, exercising the `leftTurn === false` normal-direction branch.
+      graphics.arcTo(10, 0, 10, -10, 2);
+
+      expect(graphics.children.length).toBeGreaterThanOrEqual(2);
+      expect(graphics.currentPoint.x).toBeCloseTo(10, 4);
+      expect(graphics.currentPoint.y).toBeCloseTo(-2, 4);
+    });
+
+    test('a radius too large for the segment lengths falls back to a straight lineTo', () => {
+      const graphics = new Graphics();
+
+      graphics.lineWidth = 2;
+      graphics.moveTo(0, 0);
+      // 90 degree turn with a radius far larger than either leg — the tangent
+      // distance would exceed both segment lengths.
+      graphics.arcTo(10, 0, 10, 10, 1000);
+
+      expect(graphics.currentPoint.x).toBe(10);
+      expect(graphics.currentPoint.y).toBe(0);
+    });
+  });
+
+  describe('drawArc branch matrix', () => {
+    test('radius 0 draws nothing', () => {
+      const graphics = new Graphics();
+
+      graphics.lineWidth = 2;
+      graphics.drawArc(0, 0, 0, 0, Math.PI / 2);
+
+      expect(graphics.children.length).toBe(0);
+    });
+
+    test('startAngle === endAngle draws nothing (zero sweep)', () => {
+      const graphics = new Graphics();
+
+      graphics.lineWidth = 2;
+      graphics.drawArc(0, 0, 10, 0, 0);
+
+      expect(graphics.children.length).toBe(0);
+    });
+
+    test('omitting anticlockwise uses the clockwise default', () => {
+      const graphics = new Graphics();
+
+      graphics.lineWidth = 2;
+      graphics.drawArc(0, 0, 10, 0, Math.PI / 2);
+
+      expect(graphics.children.length).toBe(1);
+    });
+
+    test('a negative sweep with anticlockwise=false wraps forward by a full turn', () => {
+      const graphics = new Graphics();
+
+      graphics.lineWidth = 2;
+      graphics.drawArc(0, 0, 10, Math.PI / 2, 0, false);
+
+      expect(graphics.children.length).toBe(1);
+    });
+
+    test('a positive sweep with anticlockwise=true wraps backward by a full turn', () => {
+      const graphics = new Graphics();
+
+      graphics.lineWidth = 2;
+      graphics.drawArc(0, 0, 10, 0, Math.PI / 2, true);
+
+      expect(graphics.children.length).toBe(1);
+    });
+  });
+
+  describe('shape draws', () => {
+    test('drawPolygon fills only when lineWidth is 0', () => {
+      const graphics = new Graphics();
+
+      graphics.fillColor = new Color(1, 2, 3);
+      graphics.drawPolygon([0, 0, 10, 0, 10, 10, 0, 10]);
+
+      expect(graphics.children.length).toBe(1);
+    });
+
+    test('drawPolygon fills and strokes the closed outline when lineWidth > 0', () => {
+      const graphics = new Graphics();
+
+      graphics.fillColor = new Color(1, 2, 3);
+      graphics.lineWidth = 2;
+      graphics.drawPolygon([0, 0, 10, 0, 10, 10, 0, 10]);
+
+      // One fill mesh plus at least one stroke mesh for the closed outline.
+      expect(graphics.children.length).toBeGreaterThanOrEqual(2);
+    });
+
+    test('drawCircle strokes its outline when lineWidth > 0', () => {
+      const graphics = new Graphics();
+
+      graphics.fillColor = new Color(1, 2, 3);
+      graphics.lineWidth = 2;
+      graphics.drawCircle(0, 0, 10);
+
+      expect(graphics.children.length).toBeGreaterThanOrEqual(2);
+    });
+
+    test('drawEllipse fills only when lineWidth is 0', () => {
+      const graphics = new Graphics();
+
+      graphics.fillColor = new Color(1, 2, 3);
+      graphics.drawEllipse(0, 0, 10, 5);
+
+      expect(graphics.children.length).toBe(1);
+    });
+
+    test('drawEllipse fills and strokes the closed outline when lineWidth > 0', () => {
+      const graphics = new Graphics();
+
+      graphics.fillColor = new Color(1, 2, 3);
+      graphics.lineWidth = 2;
+      graphics.drawEllipse(0, 0, 10, 5);
+
+      expect(graphics.children.length).toBeGreaterThanOrEqual(2);
+    });
+
+    test('drawRoundedRectangle fills only when lineWidth is 0', () => {
+      const graphics = new Graphics();
+
+      graphics.fillColor = new Color(1, 2, 3);
+      graphics.drawRoundedRectangle(0, 0, 20, 10, 3);
+
+      expect(graphics.children.length).toBe(1);
+    });
+
+    test('drawRoundedRectangle fills and strokes the closed outline when lineWidth > 0', () => {
+      const graphics = new Graphics();
+
+      graphics.fillColor = new Color(1, 2, 3);
+      graphics.lineWidth = 2;
+      graphics.drawRoundedRectangle(0, 0, 20, 10, 3);
+
+      expect(graphics.children.length).toBeGreaterThanOrEqual(2);
+    });
+
+    test('drawStar fills only when lineWidth is 0, using default innerRadius and rotation', () => {
+      const graphics = new Graphics();
+
+      graphics.fillColor = new Color(1, 2, 3);
+      graphics.drawStar(0, 0, 5, 10);
+
+      expect(graphics.children.length).toBe(1);
+    });
+
+    test('drawStar fills and strokes the closed outline when lineWidth > 0, with explicit innerRadius/rotation', () => {
+      const graphics = new Graphics();
+
+      graphics.fillColor = new Color(1, 2, 3);
+      graphics.lineWidth = 2;
+      graphics.drawStar(0, 0, 5, 10, 4, 0.2);
+
+      expect(graphics.children.length).toBeGreaterThanOrEqual(2);
+    });
+  });
+
+  describe('computeBoundsUvs degenerate spans', () => {
+    test('a zero-height (horizontal, zero-thickness) gradient stroke collapses V to 0', () => {
+      const graphics = new Graphics();
+
+      // Default lineWidth is 0, so buildLine produces a zero-thickness quad
+      // whose vertices all share the same Y — a degenerate vertical span.
+      graphics.strokeStyle = createLinearGradient();
+      graphics.drawLine(0, 5, 10, 5);
+
+      const mesh = graphics.getChildAt(0);
+      const uvs = Array.from(mesh.uvs!);
+
+      for (let i = 1; i < uvs.length; i += 2) {
+        expect(uvs[i]).toBe(0);
+      }
+    });
+
+    test('a zero-width (vertical, zero-thickness) gradient stroke collapses U to 0', () => {
+      const graphics = new Graphics();
+
+      graphics.strokeStyle = createLinearGradient();
+      graphics.drawLine(5, 0, 5, 10);
+
+      const mesh = graphics.getChildAt(0);
+      const uvs = Array.from(mesh.uvs!);
+
+      for (let i = 0; i < uvs.length; i += 2) {
+        expect(uvs[i]).toBe(0);
+      }
+    });
+  });
+
+  describe('destroy', () => {
+    test('destroy clears children and releases pen/style state without throwing', () => {
+      const graphics = new Graphics();
+
+      graphics.fillColor = new Color(1, 2, 3);
+      graphics.lineWidth = 2;
+      graphics.drawRectangle(0, 0, 10, 10);
+
+      expect(() => graphics.destroy()).not.toThrow();
+      expect(graphics.children.length).toBe(0);
     });
   });
 });

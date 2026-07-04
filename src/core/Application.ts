@@ -368,6 +368,8 @@ export class Application {
         pointerDistanceThreshold: inputOptions.pointerDistanceThreshold ?? defaultInputSettings.pointerDistanceThreshold,
       },
       hello: appSettings.hello ?? true,
+      ...(appSettings.seed !== undefined && { seed: appSettings.seed }),
+      ...(appSettings.fixedTimeStep !== undefined && { fixedTimeStep: appSettings.fixedTimeStep }),
     };
 
     // Capture extension snapshot before constructing extension-sensitive subsystems.

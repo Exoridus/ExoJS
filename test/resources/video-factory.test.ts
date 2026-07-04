@@ -183,6 +183,49 @@ describe('VideoFactory', () => {
     video.destroy();
   });
 
+  test('settle() is idempotent: a second terminal event after the load already settled is a no-op', async () => {
+    const factory = new VideoFactory();
+    const revokeSpy = vi.spyOn(URL, 'revokeObjectURL');
+
+    const promise = factory.create(VIDEO_HEADER);
+    const videoElement = lastVideo();
+
+    videoElement.dispatchEvent(new Event('canplaythrough'));
+    const video = await promise;
+
+    revokeSpy.mockClear();
+
+    // A second, different terminal event still fires (each listener uses
+    // { once: true } but on a different event type) — settle()'s internal
+    // `settled` guard must make this a no-op rather than re-running cleanup.
+    expect(() => videoElement.dispatchEvent(new Event('error'))).not.toThrow();
+    expect(revokeSpy).not.toHaveBeenCalled();
+
+    video.destroy();
+  });
+
+  test('a pending stall timer is cleared when the video settles successfully before it fires', async () => {
+    vi.useFakeTimers();
+    const factory = new VideoFactory();
+    const clearTimeoutSpy = vi.spyOn(globalThis, 'clearTimeout');
+
+    const promise = factory.create(VIDEO_HEADER, { stallTimeout: 50 });
+    const videoElement = lastVideo();
+
+    videoElement.dispatchEvent(new Event('stalled'));
+    videoElement.dispatchEvent(new Event('canplaythrough'));
+
+    const video = await promise;
+
+    expect(clearTimeoutSpy).toHaveBeenCalled();
+
+    // Advancing past the original stall deadline must not reject/throw now that
+    // the promise already settled successfully.
+    vi.advanceTimersByTime(100);
+
+    video.destroy();
+  });
+
   test('create() revokes the object URL once loading settles', async () => {
     const factory = new VideoFactory();
 

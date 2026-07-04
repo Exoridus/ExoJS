@@ -1,7 +1,17 @@
 ﻿import { Signal } from '#core/Signal';
 import { RenderPassInspectorLayer } from '#debug/RenderPassInspectorLayer';
+import type { RenderingContext } from '#rendering/RenderingContext';
+import { RenderPass } from '#rendering/RenderPass';
+import { RenderPipeline } from '#rendering/RenderPipeline';
 import type { GlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
 import { resetDefaultGlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
+import type { Text } from '#rendering/text/Text';
+
+class TestPass extends RenderPass {
+  public override execute(_context: RenderingContext): void {
+    // no-op — the inspector never runs the pass, only lists it.
+  }
+}
 
 // Stub the glyph atlas pool so Text construction doesn't touch a real 2D canvas context.
 const fakeGlyph = {
@@ -86,6 +96,29 @@ function makeNode(
     constructor: NamedClass as any,
   };
 }
+
+const makeFakeView = () => ({
+  width: 800,
+  height: 600,
+  getBounds: () => ({ intersectsWith: () => true }),
+});
+
+const makeBackend = () => ({
+  stats: {
+    frameTimeMs: 0,
+    drawCalls: 0,
+    culledNodes: 0,
+    submittedNodes: 0,
+    batches: 0,
+    renderPasses: 0,
+    renderTargetChanges: 0,
+    frame: 0,
+  },
+  view: makeFakeView(),
+  setView: vi.fn().mockReturnThis(),
+  draw: vi.fn().mockReturnThis(),
+  flush: vi.fn().mockReturnThis(),
+});
 
 const makeApp = (root: FakeNode | null = null) =>
   ({
@@ -196,6 +229,24 @@ describe('RenderPassInspectorLayer', () => {
     expect(layer.entries.length).toBe(2);
   });
 
+  test('a leaf node with no children property is not recursed into', () => {
+    // Plain leaf (no `children` key at all, as opposed to an empty array) —
+    // exercises the Array.isArray(container.children) false branch in _collect.
+    const leaf = { visible: true, filters: [], mask: null, cacheAsBitmap: false, getBounds: vi.fn(), constructor: { name: 'Leaf' } };
+    const layer = new RenderPassInspectorLayer(makeApp(leaf as unknown as FakeNode));
+
+    expect(() => layer.update(makeTime())).not.toThrow();
+  });
+
+  test('a filter-chain hole (undefined entry) is skipped defensively', () => {
+    const holeyFilters = [undefined as unknown as FakeFilter, makeFilter('Blur')];
+    const root = makeNode({ filters: holeyFilters });
+    const layer = new RenderPassInspectorLayer(makeApp(root));
+
+    expect(() => layer.update(makeTime())).not.toThrow();
+    expect(layer.entries[0].filters.length).toBe(2);
+  });
+
   test('destroy releases panel state and clears entries', () => {
     const root = makeNode({ filters: [makeFilter('A')] });
     const layer = new RenderPassInspectorLayer(makeApp(root));
@@ -206,6 +257,12 @@ describe('RenderPassInspectorLayer', () => {
     expect(layer.entries).toEqual([]);
   });
 
+  test('destroy() before any update() call is safe (panel never built)', () => {
+    const layer = new RenderPassInspectorLayer(makeApp());
+
+    expect(() => layer.destroy()).not.toThrow();
+  });
+
   test('subsequent update replaces previous entries (no accumulation)', () => {
     const root = makeNode({ filters: [makeFilter('A')] });
     const layer = new RenderPassInspectorLayer(makeApp(root));
@@ -213,5 +270,86 @@ describe('RenderPassInspectorLayer', () => {
     layer.update(makeTime());
     layer.update(makeTime());
     expect(layer.entries.length).toBe(1);
+  });
+
+  test('render() submits the panel subtree to the backend without throwing', () => {
+    const root = makeNode({ filters: [makeFilter('A')] });
+    const layer = new RenderPassInspectorLayer(makeApp(root));
+    const backend = makeBackend();
+
+    layer.update(makeTime());
+    expect(() => layer.render(backend as unknown as Parameters<typeof layer.render>[0])).not.toThrow();
+  });
+
+  test('render() before any update() call is a no-op', () => {
+    const layer = new RenderPassInspectorLayer(makeApp());
+    const backend = makeBackend();
+
+    expect(() => layer.render(backend as unknown as Parameters<typeof layer.render>[0])).not.toThrow();
+  });
+});
+
+describe('RenderPassInspectorLayer — pipeline inspection', () => {
+  test('pipeline defaults to null and setPipeline() is chainable', () => {
+    const layer = new RenderPassInspectorLayer(makeApp());
+    const pipeline = new RenderPipeline();
+
+    expect(layer.pipeline).toBeNull();
+    expect(layer.pipelineRows()).toEqual([]);
+
+    const result = layer.setPipeline(pipeline);
+
+    expect(result).toBe(layer);
+    expect(layer.pipeline).toBe(pipeline);
+  });
+
+  test('pipelineRows() reflects the pipeline set via setPipeline()', () => {
+    const layer = new RenderPassInspectorLayer(makeApp());
+    const pipeline = new RenderPipeline().addPass(new TestPass({ label: 'world' }));
+
+    layer.setPipeline(pipeline);
+
+    expect(layer.pipelineRows()).toEqual([{ depth: 0, label: 'world', enabled: true, isPipeline: false }]);
+
+    layer.setPipeline(null);
+    expect(layer.pipelineRows()).toEqual([]);
+  });
+
+  test('the panel HUD lists pipeline rows alongside filter-chain entries, dimming disabled passes', () => {
+    const root = makeNode({ filters: [makeFilter('Blur')] });
+    const layer = new RenderPassInspectorLayer(makeApp(root));
+    const pipeline = new RenderPipeline().addPass(new TestPass({ label: 'world' })).addPass(new TestPass({ label: 'units', enabled: false }));
+
+    layer.setPipeline(pipeline);
+    layer.update(makeTime());
+
+    expect(layer.entries.length).toBe(1);
+    expect(layer.pipelineRows()).toEqual([
+      { depth: 0, label: 'world', enabled: true, isPipeline: false },
+      { depth: 0, label: 'units', enabled: false, isPipeline: false },
+    ]);
+
+    const lines = (layer as unknown as { _lines: Text[] })._lines;
+
+    expect(lines.some(l => l.text === '  world')).toBe(true);
+    expect(lines.some(l => l.text === '  units [off]')).toBe(true);
+  });
+});
+
+describe('RenderPassInspectorLayer — HUD overflow', () => {
+  test('entries beyond the panel line budget collapse into a "+N more" summary line', () => {
+    // One entry (1 header line) plus 30 filters (30 lines) = 31 lines, well
+    // past the panel's fixed line budget — this must trigger the overflow path.
+    const manyFilters = Array.from({ length: 30 }, (_, i) => makeFilter(`Filter${i}`));
+    const root = makeNode({ filters: manyFilters });
+    const layer = new RenderPassInspectorLayer(makeApp(root));
+
+    layer.update(makeTime());
+
+    const lines = (layer as unknown as { _lines: Text[] })._lines;
+    const last = lines[lines.length - 1];
+
+    expect(last?.text).toMatch(/^\.\.\. \(\+\d+ more\)$/);
+    expect(last?.visible).toBe(true);
   });
 });

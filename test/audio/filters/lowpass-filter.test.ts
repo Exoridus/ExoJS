@@ -1,4 +1,4 @@
-﻿import { getAudioContext } from '#audio/audio-context';
+﻿import { getAudioContext, onAudioContextReady } from '#audio/audio-context';
 import { LowpassFilter } from '#audio/filters/LowpassFilter';
 
 describe('LowpassFilter', () => {
@@ -130,6 +130,46 @@ describe('LowpassFilter', () => {
       const filter = new LowpassFilter();
       filter.destroy();
       expect(() => filter.inputNode).toThrow();
+    });
+  });
+
+  describe('construction before the audio context is ready', () => {
+    it('defers setup: getters throw and setters no-op safely until the context becomes ready', () => {
+      const ctx = getAudioContext();
+      const originalState = ctx.state;
+      ctx.state = 'suspended';
+
+      const filter = new LowpassFilter({ frequency: 400 });
+
+      expect(() => filter.inputNode).toThrow('LowpassFilter not yet initialized.');
+      expect(() => filter.outputNode).toThrow('LowpassFilter not yet initialized.');
+
+      filter.frequency = 600;
+      filter.resonance = 3;
+      expect(filter.frequency).toBe(600);
+      expect(filter.resonance).toBe(3);
+
+      ctx.state = originalState;
+      filter.destroy();
+    });
+
+    it('sets up the node once the context becomes ready, applying the pending values', () => {
+      const ctx = getAudioContext();
+      const spy = vi.spyOn(ctx, 'createBiquadFilter');
+      const originalState = ctx.state;
+      ctx.state = 'suspended';
+
+      const filter = new LowpassFilter({ frequency: 600 });
+      expect(spy).not.toHaveBeenCalled();
+
+      ctx.state = originalState;
+      onAudioContextReady.dispatch(ctx);
+
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(filter.frequency).toBe(600);
+
+      spy.mockRestore();
+      filter.destroy();
     });
   });
 });

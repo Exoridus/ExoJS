@@ -924,6 +924,14 @@ export class Loader {
    * instead if you need to await completion.
    */
   public backgroundLoad(): void {
+    // Start a fresh progress batch only when idle; a re-entrant call while the
+    // queue is draining extends the running batch instead (mirrors the
+    // accounting in _loadSingleBackground).
+    if (this._backgroundQueue.length === 0 && this._backgroundActive === 0) {
+      this._backgroundLoaded = 0;
+      this._backgroundTotal = 0;
+    }
+
     for (const [type, entries] of this._manifest) {
       for (const [alias, entry] of entries) {
         if (this._hasResource(type, alias)) continue;
@@ -931,6 +939,7 @@ export class Loader {
         const key = this._key(type, alias);
 
         if (this._inFlight.has(key)) continue;
+        if (this._isQueuedInBackground(type, alias)) continue;
 
         this._backgroundQueue.push({
           type,
@@ -938,11 +947,9 @@ export class Loader {
           path: entry.path,
           options: entry.options,
         });
+        this._backgroundTotal++;
       }
     }
-
-    this._backgroundTotal = this._backgroundQueue.length;
-    this._backgroundLoaded = 0;
 
     this._drainBackground();
   }
@@ -1908,7 +1915,17 @@ export class Loader {
       return false;
     }
 
-    if (leftPrototype !== Object.prototype && leftPrototype !== null) {
+    // Same-prototype instances compare structurally by their own enumerable
+    // keys — the registerManifest contract allows deeply-equal options of any
+    // shared class, not just plain objects. Built-ins whose state is NOT
+    // carried in enumerable own keys need explicit handling: Dates compare by
+    // timestamp; other exotic containers stay reference-only (Object.is above)
+    // so two distinct-but-similar instances never count as equivalent.
+    if (left instanceof Date) {
+      return left.getTime() === (right as Date).getTime();
+    }
+
+    if (left instanceof Map || left instanceof Set || left instanceof RegExp || left instanceof ArrayBuffer || ArrayBuffer.isView(left)) {
       return false;
     }
 

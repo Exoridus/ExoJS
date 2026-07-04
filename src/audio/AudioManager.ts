@@ -52,9 +52,18 @@ export class AudioManager implements System {
     this._registered.set('music', this.music);
     this._registered.set('sound', this.sound);
 
-    onAudioContextReady.add((): void => {
-      this.onUnlock.dispatch();
-    });
+    if (isAudioContextReady()) {
+      // The shared context is already running — this manager was constructed
+      // after the one-shot ready signal fired (e.g. a second Application in
+      // the same process; the buses above would otherwise consume the signal
+      // before this handler registers). Dispatch the unlock on a microtask so
+      // subscribers registered right after construction still observe it.
+      queueMicrotask(() => this.onUnlock.dispatch());
+    } else {
+      onAudioContextReady.add((): void => {
+        this.onUnlock.dispatch();
+      });
+    }
   }
 
   /**
