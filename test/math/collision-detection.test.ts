@@ -427,10 +427,7 @@ describe('intersectionCirclePoly', () => {
     expect(intersectionCirclePoly(circle(5, 5, 1), positioned)).toBe(false);
   });
 
-  // These two pin further internal branches of the same already-buggy sign-inverted
-  // frame (see the describe-level NOTE above), purely for statement/branch coverage
-  // of the current implementation — not additional distinct bugs.
-  test('BUG (coverage): a circle diagonally far from the polygon is excluded via the right-Voronoi check', () => {
+  test('a circle diagonally far from the polygon is excluded via the right-Voronoi check', () => {
     expect(intersectionCirclePoly(circle(-20, -20, 1), square(0, 0, 10))).toBe(false);
   });
 
@@ -505,7 +502,7 @@ describe('intersectionSat', () => {
     expect(intersectionSat(square(0, 0, 10), square(500, 0, 10))).toBe(false);
   });
 
-  test('a separating axis found only among the second shape\'s normals is still detected', () => {
+  test("a separating axis found only among the second shape's normals is still detected", () => {
     // The square's own axes (X/Y) show overlap for both shapes' bounding
     // extents, but the diamond's diagonal edge normals reveal a true
     // separating axis — this can only be found by testing shapeB's normals
@@ -543,7 +540,7 @@ describe('getCollisionRectangleRectangle', () => {
     expect(response!.projectionV.x).toBeCloseTo(2);
   });
 
-  test('smaller X penetration, rectB to the left of rectA\'s centre → normalX = -1', () => {
+  test("smaller X penetration, rectB to the left of rectA's centre → normalX = -1", () => {
     const response = getCollisionRectangleRectangle(rect(0, 0, 10, 10), rect(-8, 0, 10, 10));
 
     expect(response).not.toBeNull();
@@ -551,7 +548,7 @@ describe('getCollisionRectangleRectangle', () => {
     expect(response!.projectionN.y).toBeCloseTo(0);
   });
 
-  test('smaller Y penetration, rectB below rectA\'s centre → normalY = +1', () => {
+  test("smaller Y penetration, rectB below rectA's centre → normalY = +1", () => {
     const response = getCollisionRectangleRectangle(rect(0, 0, 10, 10), rect(0, 8, 10, 10));
 
     expect(response).not.toBeNull();
@@ -976,7 +973,7 @@ describe('getCollisionSat', () => {
     expect(response!.overlap).toBeGreaterThan(0);
   });
 
-  test('a separating axis found only among the second shape\'s normals is still detected', () => {
+  test("a separating axis found only among the second shape's normals is still detected", () => {
     // Same axis-mismatch scenario as intersectionSat above: the square's own
     // axes see overlap everywhere, but the diamond's diagonal normals reveal
     // the true separating axis, which can only be found in the second loop.
@@ -1024,7 +1021,7 @@ describe('getCollisionSat', () => {
     expect(response!.shapeBinA).toBe(false);
   });
 
-  test('a shape with zero normals falls back to the other shape\'s first normal', () => {
+  test("a shape with zero normals falls back to the other shape's first normal", () => {
     // An empty Polygon yields getNormals() === [], so normalsA[0] is
     // undefined and the `(normalsA[0] || normalsB[0])!` fallback must be used
     // instead. It also has no separating axes to test, so the loop over its
