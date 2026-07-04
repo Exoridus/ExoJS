@@ -85,10 +85,9 @@ export default defineConfig({
     coverage: {
       provider: 'istanbul',
       reporter: ['lcov', 'clover', 'text-summary'],
-      // Core plus the extension packages that have vitest projects in
-      // `test:coverage`. Untested packages (aseprite, ldtk, react) stay out —
-      // with `all: true` semantics their 0%-covered sources would swamp the
-      // global numbers without adding signal; add each when it gets a suite.
+      // Core plus every extension package with a vitest project in
+      // `test:coverage` — all packages have suites now (aseprite/ldtk since
+      // PR #222, react since PR #200), so they all count.
       include: [
         'src/**/*.ts',
         'packages/exojs-particles/src/**/*.ts',
@@ -96,6 +95,10 @@ export default defineConfig({
         'packages/exojs-tiled/src/**/*.ts',
         'packages/exojs-physics/src/**/*.ts',
         'packages/exojs-audio-fx/src/**/*.ts',
+        'packages/exojs-aseprite/src/**/*.ts',
+        'packages/exojs-ldtk/src/**/*.ts',
+        'packages/exojs-react/src/**/*.tsx',
+        'packages/exojs-react/src/**/*.ts',
       ],
       exclude: ['src/**/*.d.ts', 'packages/*/src/**/*.d.ts'],
       // Hard regression gate for the `unit-tests` job (already required in
@@ -105,16 +108,17 @@ export default defineConfig({
       // itself (the exact command the CI job runs) below the floor.
       //
       // A ratchet floor, not a target: set a few points below the measured
-      // baseline (statements 75.25%, branches 65.34%, functions 74.07%, lines
-      // 75.72% as of 2026-07-04, core + the five tested extension packages)
-      // so normal test-suite churn doesn't flake the gate, while still
-      // catching a real regression. Raise the floor as coverage grows — never
-      // lower it without an explicit reason recorded here.
+      // baseline (statements 79.46%, branches 70.00%, functions 78.87%, lines
+      // 79.84% as of 2026-07-04 after the coverage-fleet pass, core + all
+      // extension packages) so normal test-suite churn doesn't flake the
+      // gate, while still catching a real regression. Raise the floor as
+      // coverage grows — never lower it without an explicit reason recorded
+      // here.
       thresholds: {
-        statements: 73,
-        branches: 63,
-        functions: 72,
-        lines: 73,
+        statements: 77,
+        branches: 67,
+        functions: 76,
+        lines: 77,
       },
     },
     projects: [
