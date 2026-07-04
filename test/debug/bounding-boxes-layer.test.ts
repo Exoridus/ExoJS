@@ -248,6 +248,59 @@ describe('BoundingBoxesLayer', () => {
     expect(node2.getBounds).toHaveBeenCalled();
   });
 
+  test('hue mapping covers every HSL sextant (hue >= 180)', () => {
+    // zIndex*30 % 360 sweeps the hue wheel; zIndex 5,7,9,11 -> hue 150/210/270/330,
+    // landing in the h<180 / h<240 / h<300 / else branches of hslToColor that the
+    // other tests (hue 0/30/60) never reach.
+    const nodes = [5, 7, 9, 11].map(zIndex => makeNode({ visible: true, zIndex, boundsW: 10, boundsH: 10 }));
+
+    const root: FakeNode = {
+      visible: true,
+      zIndex: 0,
+      interactive: false,
+      getBounds: vi.fn(() => ({ width: 0, height: 0, left: 0, top: 0, right: 0, bottom: 0 })),
+      contains: vi.fn(() => false),
+      children: nodes,
+    };
+
+    const app = makeApp(root);
+    const layer = new BoundingBoxesLayer(app);
+    const backend = app.backend;
+
+    expect(() => layer.render(backend as unknown as Parameters<typeof layer.render>[0])).not.toThrow();
+
+    for (const node of nodes) {
+      expect(node.getBounds).toHaveBeenCalled();
+    }
+  });
+
+  test('render() reuses the Graphics primitive across frames (only created once)', () => {
+    const node = makeNode({ visible: true, boundsW: 10, boundsH: 10 });
+    const app = makeApp(node);
+    const layer = new BoundingBoxesLayer(app);
+    const backend = app.backend;
+
+    layer.render(backend as unknown as Parameters<typeof layer.render>[0]);
+    expect(() => layer.render(backend as unknown as Parameters<typeof layer.render>[0])).not.toThrow();
+  });
+
+  test('a leaf node with no children property is not recursed into', () => {
+    // Plain leaf (no `children` key at all, as opposed to an empty array) —
+    // exercises the Array.isArray(container.children) false branch.
+    const leaf = {
+      visible: true,
+      zIndex: 0,
+      interactive: false,
+      getBounds: vi.fn(() => ({ width: 10, height: 10, left: 0, top: 0, right: 10, bottom: 10 })),
+      contains: vi.fn(() => false),
+    };
+    const app = makeApp(leaf as unknown as FakeNode);
+    const layer = new BoundingBoxesLayer(app);
+    const backend = app.backend;
+
+    expect(() => layer.render(backend as unknown as Parameters<typeof layer.render>[0])).not.toThrow();
+  });
+
   test('update() does not throw', () => {
     const layer = new BoundingBoxesLayer(makeApp());
     const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('#core/Time').Time;

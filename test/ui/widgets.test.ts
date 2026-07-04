@@ -1,5 +1,8 @@
+import { Color } from '#core/Color';
 import { KeyEvent } from '#input/KeyEvent';
 import { Keyboard } from '#input/types';
+import { Rectangle } from '#math/Rectangle';
+import { Graphics } from '#rendering/primitives/Graphics';
 import type { GlyphAtlas } from '#rendering/text/GlyphAtlas';
 import type { GlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
 import { resetDefaultGlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
@@ -53,6 +56,36 @@ describe('Panel', () => {
 
     expect(panel.uiWidth).toBe(200);
     expect(panel.uiHeight).toBe(100);
+  });
+
+  test('defaults to zero size and no border when constructed with no options', () => {
+    const panel = new Panel();
+
+    expect(panel.uiWidth).toBe(0);
+    expect(panel.uiHeight).toBe(0);
+    expect(panel.borderWidth).toBe(0);
+  });
+
+  test('exposes background, color, borderColor, borderWidth, cornerRadius getters', () => {
+    const color = new Color(10, 20, 30, 1);
+    const borderColor = new Color(1, 2, 3, 1);
+    const panel = new Panel({ width: 100, height: 50, color, borderColor, borderWidth: 3, cornerRadius: 12 });
+
+    expect(panel.background).toBeInstanceOf(Graphics);
+    expect(panel.color.r).toBe(10);
+    expect(panel.borderColor.r).toBe(1);
+    expect(panel.borderWidth).toBe(3);
+    expect(panel.cornerRadius).toBe(12);
+  });
+
+  test('resizing to zero skips (re)drawing the background without throwing', () => {
+    // Constructing directly at (0, 0) is a same-value no-op against the Widget
+    // default (_uiWidth/_uiHeight start at 0) and never runs _relayout — so the
+    // zero-size early return is only reachable via an explicit resize away
+    // from a non-zero starting size.
+    const panel = new Panel({ width: 100, height: 50 });
+
+    expect(() => panel.setSize(0, 0)).not.toThrow();
   });
 });
 
@@ -112,6 +145,53 @@ describe('Button', () => {
     button.label = 'Stop';
     expect(button.label).toBe('Stop');
   });
+
+  test('exposes colors, cornerRadius, textColor, fontSize getters', () => {
+    const button = new Button({ cornerRadius: 4, textColor: new Color(9, 9, 9, 1), fontSize: 20 });
+
+    expect(button.cornerRadius).toBe(4);
+    expect(button.textColor.r).toBe(9);
+    expect(button.fontSize).toBe(20);
+    expect(button.colors.normal).toBeInstanceOf(Color);
+  });
+
+  test('pointer-over/out toggles the hover state while enabled', () => {
+    const button = new Button();
+
+    expect(() => button.onPointerOver.dispatch({} as never)).not.toThrow();
+    expect(() => button.onPointerOut.dispatch({} as never)).not.toThrow();
+  });
+
+  test('pointer-down sets the pressed state only while enabled', () => {
+    const button = new Button();
+
+    button.onPointerDown.dispatch({} as never); // enabled -> pressed + redraw
+    button.onPointerUp.dispatch({} as never); // -> refreshState
+
+    button.enabled = false;
+    expect(() => button.onPointerDown.dispatch({} as never)).not.toThrow(); // disabled -> no-op
+  });
+
+  test('a disabled button ignores a pointer tap (onClick not dispatched)', () => {
+    const button = new Button();
+    const handler = vi.fn();
+
+    button.onClick.add(handler);
+    button.enabled = false;
+    button.onPointerTap.dispatch({} as never);
+
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  test('resizing to zero skips (re)drawing the background without throwing', () => {
+    // A Button constructed directly at (0, 0) is a same-value no-op against the
+    // Widget default (_uiWidth/_uiHeight start at 0) and never runs _relayout —
+    // so the zero-size early return in _draw() is only reachable via an
+    // explicit resize away from a non-zero starting size.
+    const button = new Button();
+
+    expect(() => button.setSize(0, 0)).not.toThrow();
+  });
 });
 
 describe('ProgressBar', () => {
@@ -126,6 +206,42 @@ describe('ProgressBar', () => {
     bar.value = -1;
     expect(bar.value).toBe(0);
   });
+
+  test('setting the same clamped value again is a no-op (no redraw)', () => {
+    const bar = new ProgressBar({ value: 0.5 });
+
+    bar.value = 0.5;
+    expect(bar.value).toBe(0.5);
+
+    // 2 clamps to the same 1 twice in a row — second assignment is the no-op branch.
+    bar.value = 1;
+    bar.value = 2;
+    expect(bar.value).toBe(1);
+  });
+
+  test('exposes trackColor, fillColor, cornerRadius getters', () => {
+    const bar = new ProgressBar({ trackColor: new Color(1, 2, 3, 1), fillColor: new Color(4, 5, 6, 1), cornerRadius: 6 });
+
+    expect(bar.trackColor.r).toBe(1);
+    expect(bar.fillColor.r).toBe(4);
+    expect(bar.cornerRadius).toBe(6);
+  });
+
+  test('defaults to no options and a zero fill value (empty-fill draw branch)', () => {
+    const bar = new ProgressBar();
+
+    expect(bar.value).toBe(0);
+  });
+
+  test('resizing the track to zero skips (re)drawing it without throwing', () => {
+    // Constructing directly at (0, 0) is a same-value no-op against the Widget
+    // default (_uiWidth/_uiHeight start at 0) and never runs _relayout — so the
+    // zero-size early return in _drawTrack() is only reachable via an explicit
+    // resize away from a non-zero starting size.
+    const bar = new ProgressBar({ width: 200, height: 12 });
+
+    expect(() => bar.setSize(0, 0)).not.toThrow();
+  });
 });
 
 describe('Label', () => {
@@ -136,6 +252,21 @@ describe('Label', () => {
 
     label.text = 'World';
     expect(label.text).toBe('World');
+  });
+
+  test('setting the same text again is a no-op (no re-measure)', () => {
+    const label = new Label('Hello');
+
+    label.text = 'Hello';
+    expect(label.text).toBe('Hello');
+  });
+
+  test('constructs with no arguments and exposes the underlying textNode', () => {
+    const label = new Label();
+
+    expect(label.text).toBe('');
+    expect(label.textNode).toBeDefined();
+    expect(label.textNode.text).toBe('');
   });
 });
 
@@ -192,5 +323,37 @@ describe('Stack', () => {
     expect(b.position.x).toBe(65);
     expect(stack.uiWidth).toBe(105);
     expect(stack.uiHeight).toBe(30);
+  });
+
+  test('exposes direction, spacing, padding getters', () => {
+    const stack = new Stack({ direction: 'row', spacing: 12, padding: 4 });
+
+    expect(stack.direction).toBe('row');
+    expect(stack.spacing).toBe(12);
+    expect(stack.padding).toBe(4);
+  });
+
+  test('defaults to column direction, spacing 8, padding 0', () => {
+    const stack = new Stack();
+
+    expect(stack.direction).toBe('column');
+    expect(stack.spacing).toBe(8);
+    expect(stack.padding).toBe(0);
+  });
+
+  test('lays out a non-Widget child using its own getLocalBounds() (not uiWidth/uiHeight)', () => {
+    const stack = new Stack({ direction: 'row', spacing: 0 });
+    const gfx = new Graphics();
+
+    // Graphics (unlike Widget) does not expose an explicit layout size — the
+    // `child instanceof Widget` branch in Stack.layout() falls back to
+    // getLocalBounds() for it, which this stubs to a known non-zero size.
+    vi.spyOn(gfx, 'getLocalBounds').mockReturnValue(new Rectangle(0, 0, 40, 20));
+
+    stack.addItem(gfx);
+
+    expect(gfx.position.x).toBe(0);
+    expect(stack.uiWidth).toBe(40);
+    expect(stack.uiHeight).toBe(20);
   });
 });

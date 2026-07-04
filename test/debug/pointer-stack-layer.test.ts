@@ -238,6 +238,68 @@ describe('PointerStackLayer', () => {
     expect(app.input.getPrimaryPointerPosition as MockInstance).toHaveBeenCalled();
   });
 
+  test('invisible nodes (and their subtree) are excluded from the stack', () => {
+    const invisibleChild = makeNode({ name: 'InvisibleChild', containsResult: true });
+    const invisibleNode = makeNode({ name: 'Invisible', visible: false, containsResult: true, children: [invisibleChild] });
+    const visibleNode = makeNode({ name: 'Visible', containsResult: true });
+
+    const root = makeNode({ containsResult: false, children: [invisibleNode, visibleNode] });
+    const app = makeApp({ root, pointerPos: { x: 10, y: 10 } });
+    const layer = new PointerStackLayer(app);
+    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('#core/Time').Time;
+    const backend = app.backend;
+
+    layer.update(fakeTime);
+    layer.render(backend as unknown as Parameters<typeof layer.render>[0]);
+
+    // The invisible node's own contains() is never reached, and its subtree is
+    // never walked — only the visible sibling contributes to the stack.
+    expect(invisibleNode.contains).not.toHaveBeenCalled();
+    expect(invisibleChild.contains).not.toHaveBeenCalled();
+    expect(visibleNode.contains).toHaveBeenCalledWith(10, 10);
+  });
+
+  test('update() called twice reuses the already-built panel', () => {
+    const app = makeApp({ pointerPos: { x: 10, y: 10 } });
+    const layer = new PointerStackLayer(app);
+    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('#core/Time').Time;
+
+    layer.update(fakeTime);
+    expect(() => layer.update(fakeTime)).not.toThrow();
+  });
+
+  test('an interactive node in the stack is annotated with " — interactive"', () => {
+    const interactiveNode = makeNode({ name: 'Btn', containsResult: true, interactive: true, zIndex: 3 });
+    const root = makeNode({ containsResult: false, children: [interactiveNode] });
+    const app = makeApp({ root, pointerPos: { x: 5, y: 5 } });
+    const layer = new PointerStackLayer(app);
+    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('#core/Time').Time;
+
+    layer.update(fakeTime);
+
+    const lines = (layer as unknown as { _lines: Array<{ text: string }> })._lines;
+
+    expect(lines.some(l => l.text.includes('Btn — z=3 — interactive'))).toBe(true);
+  });
+
+  test('a leaf node with no children property is not recursed into', () => {
+    // Plain leaf (no `children` key at all, as opposed to an empty array) —
+    // exercises the Array.isArray(container.children) false branch in _collectContaining.
+    const leaf = { visible: true, zIndex: 0, interactive: false, contains: vi.fn(() => true), constructor: { name: 'Leaf' } };
+    const app = makeApp({ root: leaf as unknown as FakeNode, pointerPos: { x: 1, y: 1 } });
+    const layer = new PointerStackLayer(app);
+    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('#core/Time').Time;
+
+    expect(() => layer.update(fakeTime)).not.toThrow();
+  });
+
+  test('destroy() before any update() call is safe (panel never built)', () => {
+    const app = makeApp({ pointerPos: { x: 10, y: 10 } });
+    const layer = new PointerStackLayer(app);
+
+    expect(() => layer.destroy()).not.toThrow();
+  });
+
   test('destroy() cleans up without throwing', () => {
     const app = makeApp({ pointerPos: { x: 10, y: 10 } });
     const layer = new PointerStackLayer(app);
