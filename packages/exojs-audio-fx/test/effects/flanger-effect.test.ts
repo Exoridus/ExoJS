@@ -264,6 +264,15 @@ describe('FlangerEffect', () => {
       expect(delayNode.delayTime.setTargetAtTime).toHaveBeenCalledWith(0.01, expect.anything(), expect.anything());
       effect.destroy();
     });
+
+    it('is a no-op on the node graph after destroy but still updates the field', () => {
+      const effect = new FlangerEffect();
+      effect.destroy();
+      expect(() => {
+        effect.delayMs = 10;
+      }).not.toThrow();
+      expect(effect.delayMs).toBe(10);
+    });
   });
 
   describe('depthMs setter', () => {
@@ -304,6 +313,15 @@ describe('FlangerEffect', () => {
       expect(lfoGain.gain.setTargetAtTime).toHaveBeenCalledWith(0.004, expect.anything(), expect.anything());
       effect.destroy();
     });
+
+    it('is a no-op on the node graph after destroy but still updates the field', () => {
+      const effect = new FlangerEffect();
+      effect.destroy();
+      expect(() => {
+        effect.depthMs = 5;
+      }).not.toThrow();
+      expect(effect.depthMs).toBe(5);
+    });
   });
 
   describe('rateHz setter', () => {
@@ -335,6 +353,15 @@ describe('FlangerEffect', () => {
       expect(effect.rateHz).toBe(2);
       expect(lfoOscillator.frequency.setTargetAtTime).toHaveBeenCalledWith(2, expect.anything(), expect.anything());
       effect.destroy();
+    });
+
+    it('is a no-op on the node graph after destroy but still updates the field', () => {
+      const effect = new FlangerEffect();
+      effect.destroy();
+      expect(() => {
+        effect.rateHz = 3;
+      }).not.toThrow();
+      expect(effect.rateHz).toBe(3);
     });
   });
 
@@ -375,6 +402,15 @@ describe('FlangerEffect', () => {
       expect(effect.feedback).toBe(0.8);
       expect(feedbackGain.gain.setTargetAtTime).toHaveBeenCalledWith(0.8, expect.anything(), expect.anything());
       effect.destroy();
+    });
+
+    it('is a no-op on the node graph after destroy but still updates the field', () => {
+      const effect = new FlangerEffect();
+      effect.destroy();
+      expect(() => {
+        effect.feedback = 0.6;
+      }).not.toThrow();
+      expect(effect.feedback).toBe(0.6);
     });
   });
 
@@ -417,6 +453,15 @@ describe('FlangerEffect', () => {
       expect(wetGain.gain.setTargetAtTime).toHaveBeenCalledWith(0.8, expect.anything(), expect.anything());
       expect(dryGain.gain.setTargetAtTime).toHaveBeenCalledWith(expect.closeTo(0.2, 5), expect.anything(), expect.anything());
       effect.destroy();
+    });
+
+    it('is a no-op on the node graph after destroy but still updates the field', () => {
+      const effect = new FlangerEffect();
+      effect.destroy();
+      expect(() => {
+        effect.wet = 0.3;
+      }).not.toThrow();
+      expect(effect.wet).toBe(0.3);
     });
   });
 

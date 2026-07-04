@@ -19,6 +19,16 @@ const makeBiquadFilterNode = (ctx: AudioContext, filterType: BiquadFilterType) =
 });
 
 describe('EqualizerEffect', () => {
+  describe('deferred setup before AudioContext exists', () => {
+    it('registers a deferred onAudioContextReady setup when constructed before any AudioContext exists', async () => {
+      vi.resetModules();
+      const { EqualizerEffect: FreshEqualizerEffect } = await import('../../src/effects/EqualizerEffect');
+      const effect = new FreshEqualizerEffect();
+      expect(effect.inputNode).toBeDefined();
+      effect.destroy();
+    });
+  });
+
   describe('construction', () => {
     it('creates three BiquadFilterNodes', () => {
       const ctx = getAudioContext();
@@ -211,6 +221,164 @@ describe('EqualizerEffect', () => {
       const filter = new EqualizerEffect();
       filter.destroy();
       expect(() => filter.inputNode).toThrow('EqualizerEffect not yet initialized.');
+      expect(() => filter.outputNode).toThrow('EqualizerEffect not yet initialized.');
+    });
+
+    it('double destroy is safe', () => {
+      const filter = new EqualizerEffect();
+      filter.destroy();
+      expect(() => filter.destroy()).not.toThrow();
+    });
+  });
+
+  describe('frequency getters and setters', () => {
+    let ctx: AudioContext;
+    let lowShelf: ReturnType<typeof makeBiquadFilterNode>;
+    let peaking: ReturnType<typeof makeBiquadFilterNode>;
+    let highShelf: ReturnType<typeof makeBiquadFilterNode>;
+    let spy: MockInstance;
+
+    beforeEach(() => {
+      ctx = getAudioContext();
+      lowShelf = makeBiquadFilterNode(ctx, 'lowshelf');
+      peaking = makeBiquadFilterNode(ctx, 'peaking');
+      highShelf = makeBiquadFilterNode(ctx, 'highshelf');
+      const nodes = [lowShelf, peaking, highShelf];
+      let nodeCallCount = 0;
+      spy = vi.spyOn(ctx, 'createBiquadFilter').mockImplementation(() => {
+        return nodes[nodeCallCount++] as unknown as BiquadFilterNode;
+      });
+    });
+
+    afterEach(() => {
+      spy.mockRestore();
+    });
+
+    it('uses default lowFrequency of 250', () => {
+      const filter = new EqualizerEffect();
+      expect(filter.lowFrequency).toBe(250);
+      filter.destroy();
+    });
+
+    it('uses default midFrequency of 1500', () => {
+      const filter = new EqualizerEffect();
+      expect(filter.midFrequency).toBe(1500);
+      filter.destroy();
+    });
+
+    it('uses default highFrequency of 6000', () => {
+      const filter = new EqualizerEffect();
+      expect(filter.highFrequency).toBe(6000);
+      filter.destroy();
+    });
+
+    it('accepts custom frequency options', () => {
+      const filter = new EqualizerEffect({ lowFrequency: 100, midFrequency: 2000, highFrequency: 8000 });
+      expect(filter.lowFrequency).toBe(100);
+      expect(filter.midFrequency).toBe(2000);
+      expect(filter.highFrequency).toBe(8000);
+      filter.destroy();
+    });
+
+    it('lowFrequency setter ramps lowShelf.frequency via setTargetAtTime', () => {
+      const filter = new EqualizerEffect();
+      filter.lowFrequency = 300;
+      expect(filter.lowFrequency).toBe(300);
+      expect(lowShelf.frequency.setTargetAtTime).toHaveBeenCalledWith(300, 0, 0.01);
+      filter.destroy();
+    });
+
+    it('midFrequency setter ramps peaking.frequency via setTargetAtTime', () => {
+      const filter = new EqualizerEffect();
+      filter.midFrequency = 2500;
+      expect(filter.midFrequency).toBe(2500);
+      expect(peaking.frequency.setTargetAtTime).toHaveBeenCalledWith(2500, 0, 0.01);
+      filter.destroy();
+    });
+
+    it('highFrequency setter ramps highShelf.frequency via setTargetAtTime', () => {
+      const filter = new EqualizerEffect();
+      filter.highFrequency = 9000;
+      expect(filter.highFrequency).toBe(9000);
+      expect(highShelf.frequency.setTargetAtTime).toHaveBeenCalledWith(9000, 0, 0.01);
+      filter.destroy();
+    });
+
+    it('lowFrequency setter clamps to a minimum of 0', () => {
+      const filter = new EqualizerEffect();
+      filter.lowFrequency = -50;
+      expect(filter.lowFrequency).toBe(0);
+      filter.destroy();
+    });
+
+    it('midFrequency setter clamps to a minimum of 0', () => {
+      const filter = new EqualizerEffect();
+      filter.midFrequency = -50;
+      expect(filter.midFrequency).toBe(0);
+      filter.destroy();
+    });
+
+    it('highFrequency setter clamps to a minimum of 0', () => {
+      const filter = new EqualizerEffect();
+      filter.highFrequency = -50;
+      expect(filter.highFrequency).toBe(0);
+      filter.destroy();
+    });
+
+    it('lowFrequency setter is a no-op on the node graph after destroy but still updates the field', () => {
+      const filter = new EqualizerEffect();
+      filter.destroy();
+      expect(() => {
+        filter.lowFrequency = 400;
+      }).not.toThrow();
+      expect(filter.lowFrequency).toBe(400);
+    });
+
+    it('midFrequency setter is a no-op on the node graph after destroy but still updates the field', () => {
+      const filter = new EqualizerEffect();
+      filter.destroy();
+      expect(() => {
+        filter.midFrequency = 1800;
+      }).not.toThrow();
+      expect(filter.midFrequency).toBe(1800);
+    });
+
+    it('highFrequency setter is a no-op on the node graph after destroy but still updates the field', () => {
+      const filter = new EqualizerEffect();
+      filter.destroy();
+      expect(() => {
+        filter.highFrequency = 7000;
+      }).not.toThrow();
+      expect(filter.highFrequency).toBe(7000);
+    });
+  });
+
+  describe('gain setters after destroy', () => {
+    it('low setter is a no-op on the node graph after destroy but still updates the field', () => {
+      const filter = new EqualizerEffect();
+      filter.destroy();
+      expect(() => {
+        filter.low = 10;
+      }).not.toThrow();
+      expect(filter.low).toBe(10);
+    });
+
+    it('mid setter is a no-op on the node graph after destroy but still updates the field', () => {
+      const filter = new EqualizerEffect();
+      filter.destroy();
+      expect(() => {
+        filter.mid = -10;
+      }).not.toThrow();
+      expect(filter.mid).toBe(-10);
+    });
+
+    it('high setter is a no-op on the node graph after destroy but still updates the field', () => {
+      const filter = new EqualizerEffect();
+      filter.destroy();
+      expect(() => {
+        filter.high = 20;
+      }).not.toThrow();
+      expect(filter.high).toBe(20);
     });
   });
 });

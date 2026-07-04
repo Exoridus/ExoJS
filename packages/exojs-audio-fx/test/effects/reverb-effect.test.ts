@@ -153,6 +153,15 @@ describe('ReverbEffect', () => {
       expect(filter.durationSeconds).toBe(5);
       filter.destroy();
     });
+
+    it('updates the internal value without throwing when called after destroy', () => {
+      const filter = new ReverbEffect();
+      filter.destroy();
+      expect(() => {
+        filter.durationSeconds = 1.5;
+      }).not.toThrow();
+      expect(filter.durationSeconds).toBe(1.5);
+    });
   });
 
   describe('decay setter', () => {
@@ -169,6 +178,15 @@ describe('ReverbEffect', () => {
       expect(filter.decay).toBe(10);
       filter.destroy();
     });
+
+    it('updates the internal value without throwing when called after destroy', () => {
+      const filter = new ReverbEffect();
+      filter.destroy();
+      expect(() => {
+        filter.decay = 3;
+      }).not.toThrow();
+      expect(filter.decay).toBe(3);
+    });
   });
 
   describe('inputNode / outputNode', () => {
@@ -178,10 +196,16 @@ describe('ReverbEffect', () => {
       filter.destroy();
     });
 
-    it('throws after destroy', () => {
+    it('throws after destroy (inputNode)', () => {
       const filter = new ReverbEffect();
       filter.destroy();
       expect(() => filter.inputNode).toThrow('ReverbEffect not yet initialized.');
+    });
+
+    it('throws after destroy (outputNode)', () => {
+      const filter = new ReverbEffect();
+      filter.destroy();
+      expect(() => filter.outputNode).toThrow('ReverbEffect not yet initialized.');
     });
   });
 
@@ -219,6 +243,15 @@ describe('ReverbEffect', () => {
       gainSpy.mockRestore();
       convolverSpy.mockRestore();
     });
+
+    it('wet setter updates the internal value without throwing when called after destroy', () => {
+      const filter = new ReverbEffect();
+      filter.destroy();
+      expect(() => {
+        filter.wet = 0.9;
+      }).not.toThrow();
+      expect(filter.wet).toBe(0.9);
+    });
   });
 
   describe('destroy', () => {
@@ -240,6 +273,12 @@ describe('ReverbEffect', () => {
       }
       gainSpy.mockRestore();
       convolverSpy.mockRestore();
+    });
+
+    it('double destroy is safe', () => {
+      const filter = new ReverbEffect();
+      filter.destroy();
+      expect(() => filter.destroy()).not.toThrow();
     });
   });
 });

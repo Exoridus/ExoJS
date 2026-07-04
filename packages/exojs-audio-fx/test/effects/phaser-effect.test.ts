@@ -445,6 +445,15 @@ describe('PhaserEffect', () => {
       expect(effect.rateHz).toBe(20);
       effect.destroy();
     });
+
+    it('is a no-op on the node graph after destroy but still updates the field', () => {
+      const effect = new PhaserEffect();
+      effect.destroy();
+      expect(() => {
+        effect.rateHz = 3;
+      }).not.toThrow();
+      expect(effect.rateHz).toBe(3);
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -489,6 +498,15 @@ describe('PhaserEffect', () => {
       expect(effect.baseFrequency).toBe(5000);
       effect.destroy();
     });
+
+    it('is a no-op on the node graph after destroy but still updates the field', () => {
+      const effect = new PhaserEffect();
+      effect.destroy();
+      expect(() => {
+        effect.baseFrequency = 700;
+      }).not.toThrow();
+      expect(effect.baseFrequency).toBe(700);
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -521,6 +539,15 @@ describe('PhaserEffect', () => {
       expect(effect.depth).toBe(1);
       effect.destroy();
     });
+
+    it('is a no-op on the node graph after destroy but still updates the field', () => {
+      const effect = new PhaserEffect();
+      effect.destroy();
+      expect(() => {
+        effect.depth = 0.2;
+      }).not.toThrow();
+      expect(effect.depth).toBe(0.2);
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -551,6 +578,15 @@ describe('PhaserEffect', () => {
       effect.feedback = 2;
       expect(effect.feedback).toBe(0.9);
       effect.destroy();
+    });
+
+    it('is a no-op on the node graph after destroy but still updates the field', () => {
+      const effect = new PhaserEffect();
+      effect.destroy();
+      expect(() => {
+        effect.feedback = 0.5;
+      }).not.toThrow();
+      expect(effect.feedback).toBe(0.5);
     });
   });
 
@@ -583,6 +619,15 @@ describe('PhaserEffect', () => {
       effect.wet = 2;
       expect(effect.wet).toBe(1);
       effect.destroy();
+    });
+
+    it('is a no-op on the node graph after destroy but still updates the field', () => {
+      const effect = new PhaserEffect();
+      effect.destroy();
+      expect(() => {
+        effect.wet = 0.3;
+      }).not.toThrow();
+      expect(effect.wet).toBe(0.3);
     });
   });
 

@@ -148,6 +148,43 @@ describe('DuckingEffect', () => {
         filter.destroy();
       }
     });
+
+    it('defers the cross-connection via onceSetup when sidechain output is not yet available', async () => {
+      const fakeConnect = vi.fn();
+      const fakeOutputNode = { connect: fakeConnect, disconnect: vi.fn() } as unknown as GainNode;
+
+      // First call (inside _onWorkletReady) returns null so the else/onceSetup branch is
+      // taken; subsequent calls (inside the deferred callback) return a real node.
+      let callCount = 0;
+      const getOutputNodeSpy = vi.spyOn(sidechain, '_getOutputNode').mockImplementation(() => {
+        callCount++;
+        return callCount === 1 ? null : fakeOutputNode;
+      });
+      const onceSetupSpy = vi.spyOn(sidechain, 'onceSetup');
+
+      const filter = new DuckingEffect({ sidechain });
+      await filter.ready;
+
+      // The AudioBus is already set up (AudioContext ready), so onceSetup's real
+      // implementation invokes the deferred callback synchronously within this call.
+      expect(onceSetupSpy).toHaveBeenCalledTimes(1);
+      expect(getOutputNodeSpy).toHaveBeenCalledTimes(2);
+      expect(fakeConnect).toHaveBeenCalledWith(filter['_workletNode'], 0, 1);
+      filter.destroy();
+    });
+
+    it('deferred onceSetup callback is a no-op if the sidechain output is still unavailable', async () => {
+      // Always returns null: neither the immediate check nor the deferred callback
+      // ever obtains a real output node, so `.connect` must never be called.
+      vi.spyOn(sidechain, '_getOutputNode').mockReturnValue(null);
+      const onceSetupSpy = vi.spyOn(sidechain, 'onceSetup');
+
+      const filter = new DuckingEffect({ sidechain });
+      await filter.ready;
+
+      expect(onceSetupSpy).toHaveBeenCalledTimes(1);
+      filter.destroy();
+    });
   });
 
   describe('setters after ready', () => {

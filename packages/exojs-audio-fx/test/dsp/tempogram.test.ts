@@ -3,6 +3,8 @@ import {
   computeTempoCandidates,
   findTempoPeaks,
   isOctaveRelated,
+  scoreTempoHypotheses,
+  tempoPrior,
 } from '../../src/dsp/tempogram';
 
 const SAMPLE_RATE = 48000;
@@ -204,5 +206,119 @@ describe('isOctaveRelated', () => {
   it('does not flag a nearby non-octave tempo', () => {
     expect(isOctaveRelated(130, 120)).toBe(false);
     expect(isOctaveRelated(140, 120)).toBe(false); // 1.17 — legitimate drift, not metrical
+  });
+
+  it('returns false for a non-positive reference (guards divide-by-zero)', () => {
+    expect(isOctaveRelated(120, 0)).toBe(false);
+    expect(isOctaveRelated(120, -60)).toBe(false);
+  });
+});
+
+describe('computeAcf — empty input', () => {
+  it('returns all zeros for an empty flux array (n === 0 guards)', () => {
+    const acf = computeAcf(new Float32Array(0), 1, 5);
+    expect(acf.length).toBe(5);
+    for (const v of acf) expect(v).toBe(0);
+  });
+});
+
+describe('findTempoPeaks — endpoint peaks and defaults', () => {
+  it('returns no peaks for a single-sample ACF (acf.length > 1 guard is false)', () => {
+    const peaks = findTempoPeaks(new Float32Array([5]), 10, HOP_SIZE, SAMPLE_RATE);
+    expect(peaks).toEqual([]);
+  });
+
+  it('detects a leading-endpoint peak (lag === minLag beats its only neighbour)', () => {
+    const acf = new Float32Array([5, 1, 2, 1]);
+    const peaks = findTempoPeaks(acf, 10, HOP_SIZE, SAMPLE_RATE, 10);
+    const leading = peaks.find(p => p.lag === 10);
+    expect(leading).toBeDefined();
+    expect(leading!.score).toBe(5);
+  });
+
+  it('detects a trailing-endpoint peak (lag === maxLag beats its only neighbour)', () => {
+    const acf = new Float32Array([1, 2, 1, 5]);
+    const peaks = findTempoPeaks(acf, 10, HOP_SIZE, SAMPLE_RATE, 10);
+    const trailing = peaks.find(p => p.lag === 13);
+    expect(trailing).toBeDefined();
+    expect(trailing!.score).toBe(5);
+  });
+
+  // NOTE on two lines that remain uncovered in `parabolicPeakOffset` after this test:
+  // - `if (denom >= 0) return 0;` — mathematically unreachable through `findTempoPeaks`'
+  //   strict peak-selection gate (`acf[i] > acf[i-1] && acf[i] > acf[i+1]`): if yMid is
+  //   strictly greater than both neighbours, `yPrev + yNext < 2*yMid` always holds (adding
+  //   the two strict inequalities), so `denom = yPrev - 2*yMid + yNext` is always negative.
+  //   A randomized search of >230M float32 triples satisfying the strict-peak invariant
+  //   (spanning the full float32 dynamic range, including extreme-magnitude mismatches that
+  //   trigger catastrophic cancellation) found zero counterexamples — confirming this is a
+  //   pure defensive guard against a case that cannot occur via the public API, not merely a
+  //   rare one. Left uncovered as documented unreachable code.
+  // - `if (d < -0.5) d = -0.5;` — the mirror-image clamp of the `d > 0.5` case covered by the
+  //   test below. The `d > 0.5` clamp WAS found (below) via floating-point cancellation with
+  //   an extreme-magnitude yPrev; an equally extensive randomized search (>500M triples,
+  //   including deliberately mirroring the found +0.5 triple) for the symmetric `d < -0.5`
+  //   case found none — the two branches of this expression are not perfectly symmetric under
+  //   floating-point rounding (`p - 2*m + q` evaluates left-to-right, so swapping p/q changes
+  //   intermediate rounding). Left uncovered; treated as practically unreachable rather than
+  //   forcing an artificial non-representative test.
+  it('clamps the parabolic interpolation offset to +0.5 on extreme floating-point asymmetry', () => {
+    // These three values are a strict interior local maximum (the middle sample
+    // is greater than both neighbours and positive, satisfying findTempoPeaks'
+    // peak-selection gate), but their magnitudes are so mismatched that the
+    // catastrophic cancellation inside the parabolic-fit formula
+    // `0.5 * (yPrev - yNext) / (yPrev - 2*yMid + yNext)` rounds to a hair
+    // above 0.5 in double precision, exercising the `d > 0.5` clamp.
+    const acf = new Float32Array([-7335888027648, 0.03963751718401909, 0.03963751345872879]);
+    const minLag = 10;
+    const peaks = findTempoPeaks(acf, minLag, HOP_SIZE, SAMPLE_RATE, 10);
+    const interior = peaks.find(p => p.lag > minLag && p.lag < minLag + 2);
+    expect(interior).toBeDefined();
+    // lag = minLag + i + offset, i = 1, offset clamped to exactly 0.5.
+    expect(interior!.lag).toBeCloseTo(minLag + 1.5, 10);
+  });
+
+  it('uses the default topK of 3 when omitted', () => {
+    // Five independent single-neighbour "peaks" alternating up/down so every
+    // interior sample plus both endpoints qualify — without the default topK
+    // cap this would return more than 3 candidates.
+    const acf = new Float32Array([5, 1, 5, 1, 5, 1, 5]);
+    const peaks = findTempoPeaks(acf, 10, HOP_SIZE, SAMPLE_RATE);
+    expect(peaks.length).toBeLessThanOrEqual(3);
+  });
+});
+
+describe('tempoPrior — defaults', () => {
+  it('is 1 at the default prior centre (140 BPM) when mu/sigma are omitted', () => {
+    expect(tempoPrior(140)).toBeCloseTo(1, 10);
+  });
+
+  it('decays away from the default centre', () => {
+    expect(tempoPrior(280)).toBeLessThan(tempoPrior(140));
+  });
+});
+
+describe('scoreTempoHypotheses — defaults and boundary lag', () => {
+  it('accepts an omitted options argument (all defaults)', () => {
+    const acf = new Float32Array(20).fill(0.1);
+    const scored = scoreTempoHypotheses([{ bpm: 120, score: 0, lag: 24 }], acf, 10);
+    expect(scored.length).toBe(1);
+    expect(scored[0]!.bpm).toBe(120);
+  });
+
+  it('samples the ACF exactly at its last representable lag (boundary interpolation)', () => {
+    // acf has 5 samples for lags 10..14 (minLag=10, length=5, maxIndex=4).
+    // A candidate at lag=7 makes its super-multiple lag*2 === 14, landing
+    // exactly on the last ACF sample — the interpolator's "at the last index,
+    // no right neighbour" boundary path.
+    const acf = new Float32Array([0.1, 0.2, 0.3, 0.4, 0.5]);
+    expect(() => scoreTempoHypotheses([{ bpm: 100, score: 0, lag: 7 }], acf, 10, { maxBpm: 300 })).not.toThrow();
+  });
+});
+
+describe('computeTempoCandidates — omitted options', () => {
+  it('accepts an omitted options argument (uses all documented defaults)', () => {
+    const flux = syntheticNovelty(120, 400);
+    expect(() => computeTempoCandidates(flux, MIN_LAG, MAX_LAG, HOP_SIZE, SAMPLE_RATE)).not.toThrow();
   });
 });

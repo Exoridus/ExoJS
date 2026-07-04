@@ -44,6 +44,49 @@ function makeVoiceLike(): Voice {
   return { output: ctx.createGain() } as unknown as Voice;
 }
 
+/**
+ * Runs `run` against a fresh copy of the `@codexo/exojs` module registry (via
+ * `vi.resetModules()` + dynamic import) backed by an `AudioContext` that starts
+ * `'suspended'` instead of the shared mock's default `'running'`.
+ *
+ * The shared mock AudioContext starts `'running'` immediately, so
+ * `onAudioContextReady.add()`/`.once()` dispatch synchronously the first time
+ * anything touches the context — there is no window to observe a genuinely
+ * pending state, nor to have several deferred registrations queue up before
+ * the ready signal fires. A real browser starts `'suspended'` under the
+ * autoplay policy; this helper reproduces that deterministically. Nothing
+ * dispatches until `flipToReady()` is called.
+ */
+async function withSuspendedBeatDetectorContext<T>(
+  run: (mod: {
+    fresh: typeof import('@codexo/exojs');
+    FreshBeatDetector: typeof BeatDetector;
+    flipToReady: () => void;
+  }) => T | Promise<T>,
+): Promise<T> {
+  const OriginalAudioContext = globalThis.AudioContext;
+  class SuspendedMockAudioContext extends (OriginalAudioContext as unknown as new () => AudioContext) {
+    public constructor() {
+      super();
+      (this as unknown as { state: AudioContextState }).state = 'suspended';
+    }
+  }
+  Object.defineProperty(globalThis, 'AudioContext', { configurable: true, value: SuspendedMockAudioContext });
+  try {
+    vi.resetModules();
+    const fresh = await import('@codexo/exojs');
+    const { BeatDetector: FreshBeatDetector } = await import('../src/BeatDetector');
+    const flipToReady = (): void => {
+      const ctx = fresh.getAudioContext();
+      (ctx as unknown as { state: AudioContextState }).state = 'running';
+      fresh.getAudioContext(); // re-trigger monitoring — dispatches ready to every pending handler
+    };
+    return await run({ fresh, FreshBeatDetector, flipToReady });
+  } finally {
+    Object.defineProperty(globalThis, 'AudioContext', { configurable: true, value: OriginalAudioContext });
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -703,6 +746,409 @@ describe('BeatDetector', () => {
       expect(() => {
         (la as UpcomingBeat[]).push({ audioTime: 99, tempo: 999, isDownbeat: false, beatInBar: 2 });
       }).toThrow();
+      d.destroy();
+    });
+  });
+
+  // ---- Additional stage 1/2 state accessors ----
+
+  describe('additional state accessors', () => {
+    it('exposes beatPhase, nextBeatTime, gridStability, rms, onsetStrength, bandEnergy, nextDownbeatTime from state messages', async () => {
+      const d = new BeatDetector();
+      await d.ready;
+      simulateMessage(d, {
+        type: 'state',
+        tempo: 120,
+        beatPhase: 0.25,
+        confidence: 0.5,
+        gridStability: 0.75,
+        tempoCandidates: [],
+        rms: 0.4,
+        onsetStrength: 0.9,
+        bandEnergy: { low: 0.1, mid: 0.2, high: 0.3 },
+        barPosition: 1,
+        barLength: 4,
+        timeSignature: { numerator: 4, denominator: 4 },
+        lookahead: [],
+        nextBeatTime: 1.25,
+        nextDownbeatTime: 3.0,
+      });
+      expect(d.beatPhase).toBeCloseTo(0.25);
+      expect(d.nextBeatTime).toBeCloseTo(1.25);
+      expect(d.gridStability).toBeCloseTo(0.75);
+      expect(d.rms).toBeCloseTo(0.4);
+      expect(d.onsetStrength).toBeCloseTo(0.9);
+      expect(d.bandEnergy).toEqual({ low: 0.1, mid: 0.2, high: 0.3 });
+      expect(d.nextDownbeatTime).toBeCloseTo(3.0);
+      d.destroy();
+    });
+
+    it('falls back to documented defaults for every field a state message omits', async () => {
+      const d = new BeatDetector();
+      await d.ready;
+      simulateMessage(d, { type: 'state' });
+      expect(d.tempo).toBe(0);
+      expect(d.beatPhase).toBe(0);
+      expect(d.nextBeatTime).toBe(0);
+      expect(d.nextDownbeatTime).toBe(0);
+      expect(d.confidence).toBe(0);
+      expect(d.gridStability).toBe(0);
+      expect(d.tempoCandidates).toEqual([]);
+      expect(d.rms).toBe(0);
+      expect(d.onsetStrength).toBe(0);
+      expect(d.bandEnergy).toEqual({ low: 0, mid: 0, high: 0 });
+      expect(d.barPosition).toBe(1);
+      expect(d.barLength).toBe(4);
+      expect(d.timeSignature).toEqual({ numerator: 4, denominator: 4 });
+      expect(d.lookahead).toEqual([]);
+      d.destroy();
+    });
+  });
+
+  // ---- Visual derived state — pure getters for per-frame polling ----
+
+  describe('visual derived state', () => {
+    it('secondsSinceLastBeat, pulse, barPulse, and justBeat are all 0/false before any tempo is known', () => {
+      const d = new BeatDetector();
+      expect(d.secondsSinceLastBeat).toBe(0);
+      expect(d.pulse).toBe(0);
+      expect(d.barPulse).toBe(0);
+      expect(d.justBeat).toBe(false);
+      d.destroy();
+    });
+
+    it('secondsSinceLastBeat and pulse compute from tempo and beatPhase once known', async () => {
+      const d = new BeatDetector();
+      await d.ready;
+      simulateMessage(d, {
+        type: 'state',
+        tempo: 120,
+        beatPhase: 0.5,
+        confidence: 0.8,
+        gridStability: 0.8,
+        tempoCandidates: [],
+        rms: 0,
+        onsetStrength: 0,
+        bandEnergy: { low: 0, mid: 0, high: 0 },
+        barPosition: 1,
+        barLength: 4,
+        timeSignature: { numerator: 4, denominator: 4 },
+        lookahead: [],
+        nextBeatTime: 0,
+        nextDownbeatTime: 2,
+      });
+      // secondsSinceLastBeat = beatPhase * (60 / tempo) = 0.5 * 0.5 = 0.25
+      expect(d.secondsSinceLastBeat).toBeCloseTo(0.25);
+      expect(d.pulse).toBeCloseTo(Math.pow(0.5, 0.25 / d.pulseHalfLife));
+      expect(d.justBeat).toBe(0.25 < d.justBeatWindow);
+      d.destroy();
+    });
+
+    it('barPulse is 0 when barLength is 0 even if tempo is known', async () => {
+      const d = new BeatDetector();
+      await d.ready;
+      simulateMessage(d, {
+        type: 'state',
+        tempo: 120,
+        beatPhase: 0,
+        confidence: 0.8,
+        gridStability: 0.8,
+        tempoCandidates: [],
+        rms: 0,
+        onsetStrength: 0,
+        bandEnergy: { low: 0, mid: 0, high: 0 },
+        barPosition: 1,
+        barLength: 0,
+        timeSignature: { numerator: 4, denominator: 4 },
+        lookahead: [],
+        nextBeatTime: 0,
+        nextDownbeatTime: 0,
+      });
+      expect(d.barPulse).toBe(0);
+      d.destroy();
+    });
+
+    it('barPulse computes a decay envelope in [0, 1] once tempo and barLength are known', async () => {
+      const d = new BeatDetector();
+      await d.ready;
+      simulateMessage(d, {
+        type: 'state',
+        tempo: 120,
+        beatPhase: 0,
+        confidence: 0.8,
+        gridStability: 0.8,
+        tempoCandidates: [],
+        rms: 0,
+        onsetStrength: 0,
+        bandEnergy: { low: 0, mid: 0, high: 0 },
+        barPosition: 1,
+        barLength: 4,
+        timeSignature: { numerator: 4, denominator: 4 },
+        lookahead: [],
+        nextBeatTime: 0,
+        nextDownbeatTime: 2,
+      });
+      expect(d.barPulse).toBeGreaterThanOrEqual(0);
+      expect(d.barPulse).toBeLessThanOrEqual(1);
+      d.destroy();
+    });
+
+    it('subdivisionPhase returns 0 for a non-finite or non-positive division', () => {
+      const d = new BeatDetector();
+      expect(d.subdivisionPhase(0)).toBe(0);
+      expect(d.subdivisionPhase(-2)).toBe(0);
+      expect(d.subdivisionPhase(Number.NaN)).toBe(0);
+      expect(d.subdivisionPhase(Number.POSITIVE_INFINITY)).toBe(0);
+      d.destroy();
+    });
+
+    it('subdivisionPhase computes (beatPhase * division) % 1', async () => {
+      const d = new BeatDetector();
+      await d.ready;
+      simulateMessage(d, {
+        type: 'state',
+        tempo: 120,
+        beatPhase: 0.6,
+        confidence: 0.8,
+        gridStability: 0.8,
+        tempoCandidates: [],
+        rms: 0,
+        onsetStrength: 0,
+        bandEnergy: { low: 0, mid: 0, high: 0 },
+        barPosition: 1,
+        barLength: 4,
+        timeSignature: { numerator: 4, denominator: 4 },
+        lookahead: [],
+        nextBeatTime: 0,
+        nextDownbeatTime: 0,
+      });
+      // 0.6 * 4 = 2.4 -> % 1 = 0.4 (approximately, floating point)
+      expect(d.subdivisionPhase(4)).toBeCloseTo(0.4, 10);
+      d.destroy();
+    });
+  });
+
+  // ---- Constructor source option / source setter idempotence ----
+
+  describe('constructor source option', () => {
+    it('accepts a source via the constructor option and connects it once ready', async () => {
+      const node = getAudioContext().createGain() as unknown as AudioNode;
+      const connectSpy = vi.spyOn(node, 'connect');
+      const d = new BeatDetector({ source: node });
+      await d.ready;
+      expect(d.source).toBe(node);
+      expect(connectSpy).toHaveBeenCalled();
+      d.destroy();
+    });
+  });
+
+  describe('source setter — same value twice', () => {
+    it('is a no-op when assigning the same source again (no re-tap)', async () => {
+      const d = new BeatDetector();
+      await d.ready;
+      const node = getAudioContext().createGain() as unknown as AudioNode;
+      d.source = node;
+      const connectSpy = vi.spyOn(node, 'connect');
+      d.source = node;
+      expect(connectSpy).not.toHaveBeenCalled();
+      d.destroy();
+    });
+  });
+
+  // ---- Deferred construction / source connection (context not yet ready) ----
+
+  describe('deferred setup when constructed before the context is ready', () => {
+    it('registers via onAudioContextReady and resolves the worklet once ready', async () => {
+      await withSuspendedBeatDetectorContext(async ({ FreshBeatDetector, flipToReady }) => {
+        const d = new FreshBeatDetector();
+        expect(d.tempo).toBe(0);
+        // Before _setup() has ever run, `_ready` is still null — the `ready`
+        // getter falls back to an already-resolved promise (`?? Promise.resolve()`).
+        await expect(d.ready).resolves.toBeUndefined();
+        flipToReady();
+        await expect(d.ready).resolves.toBeUndefined();
+        d.destroy();
+      });
+    });
+
+    it('connects a source assigned before the context is ready once the worklet resolves', async () => {
+      await withSuspendedBeatDetectorContext(async ({ FreshBeatDetector, flipToReady }) => {
+        const d = new FreshBeatDetector();
+        const node = { connect: vi.fn(), disconnect: vi.fn() } as unknown as AudioNode;
+        d.source = node;
+        expect(node.connect).not.toHaveBeenCalled();
+        flipToReady();
+        // At this exact synchronous point the source setter's own deferred
+        // handler (registered after the constructor's) may already have fired
+        // and no-opped, because _workletNode is still null — the worklet
+        // registration promise resolves asynchronously. _setup()'s own
+        // pending-source check (once the promise resolves) is what actually
+        // connects it.
+        await d.ready;
+        expect(node.connect).toHaveBeenCalled();
+        d.destroy();
+      });
+    });
+
+    it('replacing a pending source cancels the previous deferred handler', async () => {
+      await withSuspendedBeatDetectorContext(async ({ FreshBeatDetector, flipToReady }) => {
+        const d = new FreshBeatDetector();
+        const node1 = { connect: vi.fn(), disconnect: vi.fn() } as unknown as AudioNode;
+        const node2 = { connect: vi.fn(), disconnect: vi.fn() } as unknown as AudioNode;
+        d.source = node1;
+        d.source = node2;
+        flipToReady();
+        await d.ready;
+        expect(node2.connect).toHaveBeenCalled();
+        expect(node1.connect).not.toHaveBeenCalled();
+        d.destroy();
+      });
+    });
+
+    it('destroying while a source connection is still pending cancels the deferred handler', async () => {
+      await withSuspendedBeatDetectorContext(({ FreshBeatDetector, flipToReady }) => {
+        const d = new FreshBeatDetector();
+        const node = { connect: vi.fn(), disconnect: vi.fn() } as unknown as AudioNode;
+        d.source = node;
+        d.destroy();
+        expect(() => flipToReady()).not.toThrow();
+        expect(node.connect).not.toHaveBeenCalled();
+      });
+    });
+  });
+
+  // ---- Bus deferred connection (AudioBus not yet internally set up) ----
+
+  describe('source setter — AudioBus not yet internally set up', () => {
+    it('defers via the bus onceSetup hook and connects once the bus becomes available', async () => {
+      const bus = new AudioBus('bd-deferred-bus');
+      const outputNode = bus._getOutputNode();
+      expect(outputNode).not.toBeNull();
+      const onceSetupSpy = vi.spyOn(bus, 'onceSetup');
+      vi.spyOn(bus, '_getOutputNode').mockReturnValueOnce(null);
+      const connectSpy = vi.spyOn(outputNode!, 'connect');
+
+      const d = new BeatDetector();
+      await d.ready;
+      d.source = bus;
+
+      expect(onceSetupSpy).toHaveBeenCalled();
+      expect(connectSpy).toHaveBeenCalled();
+      d.destroy();
+      bus.destroy();
+    });
+
+    it('the bus onceSetup callback is a no-op if the source changed before it fired', async () => {
+      const bus = new AudioBus('bd-deferred-bus-2');
+      vi.spyOn(bus, '_getOutputNode').mockReturnValue(null);
+      let capturedCallback: (() => void) | undefined;
+      vi.spyOn(bus, 'onceSetup').mockImplementation(cb => {
+        capturedCallback = cb;
+      });
+
+      const d = new BeatDetector();
+      await d.ready;
+      d.source = bus;
+      expect(capturedCallback).toBeDefined();
+
+      const node = getAudioContext().createGain() as unknown as AudioNode;
+      d.source = node;
+
+      expect(() => capturedCallback!()).not.toThrow();
+      d.destroy();
+      bus.destroy();
+    });
+  });
+
+  // ---- Non-bus deferred connection fallback ----
+
+  describe('source setter — unrecognised source type', () => {
+    it('resolves to null and falls through to the deferred fallback without throwing', async () => {
+      const d = new BeatDetector();
+      await d.ready;
+      const unrecognised = {} as unknown as AudioNode;
+      expect(() => {
+        d.source = unrecognised;
+      }).not.toThrow();
+      expect(d.source).toBe(unrecognised);
+      d.destroy();
+    });
+
+    // NOTE: _deferConnectionViaBus's non-bus "otherwise" fallback registers
+    // onAudioContextReady.once(...). That callback can only ever fire
+    // synchronously as part of the SAME onAudioContextReady dispatch that also
+    // kicks off _setup()'s async worklet registration (registerAudioWorkletProcessor(...).then(...))
+    // — reaching _connectSource while the context is *not yet* ready requires
+    // this method to be invoked directly (see below), since through the public
+    // API isAudioContextReady() is always true by the time _connectSource is
+    // ever called. Because the worklet-ready promise can only resolve in a
+    // *later* microtask than this synchronous dispatch, `this._workletNode` is
+    // provably still null at the exact moment this callback runs — so the
+    // "reconnect" branch inside it (`this._workletNode && isAudioContextReady()`
+    // both true) is structurally unreachable for this fallback path specifically,
+    // unlike the AudioBus onceSetup path above (whose readiness is independent
+    // of the worklet's async setup). The two tests below still exercise the
+    // callback body itself (both the "still applicable" and "source changed"
+    // no-op cases), just not the inner `_connectSource` call.
+    it('_deferConnectionViaBus falls back to onAudioContextReady.once and runs its callback once ready', async () => {
+      await withSuspendedBeatDetectorContext(async ({ FreshBeatDetector, flipToReady }) => {
+        const d = new FreshBeatDetector();
+        const unrecognised = {} as unknown as AudioNode;
+        (d as unknown as { _source: unknown })._source = unrecognised;
+        (d as unknown as { _deferConnectionViaBus: (s: unknown) => void })._deferConnectionViaBus(unrecognised);
+        expect(() => flipToReady()).not.toThrow();
+        await expect(d.ready).resolves.toBeUndefined();
+        d.destroy();
+      });
+    });
+
+    it('the once() fallback callback is a no-op if the source changed before it fired', async () => {
+      await withSuspendedBeatDetectorContext(async ({ FreshBeatDetector, flipToReady }) => {
+        const d = new FreshBeatDetector();
+        const unrecognised = {} as unknown as AudioNode;
+        (d as unknown as { _source: unknown })._source = unrecognised;
+        (d as unknown as { _deferConnectionViaBus: (s: unknown) => void })._deferConnectionViaBus(unrecognised);
+        (d as unknown as { _source: unknown })._source = null;
+        expect(() => flipToReady()).not.toThrow();
+        await expect(d.ready).resolves.toBeUndefined();
+        d.destroy();
+      });
+    });
+  });
+
+  // ---- MediaStream re-resolution (private guard) ----
+
+  describe('private defensive guards', () => {
+    it('_resolveToAudioNode replaces an existing stream tap when resolved again without an intervening disconnect', async () => {
+      // Through the public `.source =` setter this is unreachable — _disconnectTap()
+      // always runs first and clears `_streamSource`. Calling the private method
+      // directly (consistent with this file's existing convention of reaching
+      // into internal state, e.g. getMockWorkletNode) exercises the "already had
+      // a stream source" replace-and-disconnect branch directly.
+      const d = new BeatDetector();
+      await d.ready;
+      const stream = { getTracks: () => [] } as unknown as MediaStream;
+      const ctx = getAudioContext();
+      const resolve = (
+        d as unknown as { _resolveToAudioNode: (s: unknown, c: unknown) => AudioNode | null }
+      )._resolveToAudioNode.bind(d);
+      const first = resolve(stream, ctx);
+      expect(first).not.toBeNull();
+      const disconnectSpy = vi.spyOn(first!, 'disconnect');
+      const second = resolve(stream, ctx);
+      expect(disconnectSpy).toHaveBeenCalled();
+      expect(second).not.toBe(first);
+      d.destroy();
+    });
+
+    it('_resolveToAudioNode returns null for a null source', () => {
+      // _connectSource never passes null (the public `source` setter already
+      // returns early for `value === null`), so this guard is unreachable via
+      // the public API; invoked directly here purely for coverage.
+      const d = new BeatDetector();
+      const ctx = getAudioContext();
+      const result = (d as unknown as { _resolveToAudioNode: (s: unknown, c: unknown) => unknown })._resolveToAudioNode(null, ctx);
+      expect(result).toBeNull();
       d.destroy();
     });
   });

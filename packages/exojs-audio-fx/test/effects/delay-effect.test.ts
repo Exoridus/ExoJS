@@ -151,6 +151,15 @@ describe('DelayEffect', () => {
       expect(filter.feedback).toBe(0.6);
       filter.destroy();
     });
+
+    it('updates the internal value without throwing when called after destroy', () => {
+      const filter = new DelayEffect();
+      filter.destroy();
+      expect(() => {
+        filter.feedback = 0.5;
+      }).not.toThrow();
+      expect(filter.feedback).toBe(0.5);
+    });
   });
 
   describe('delaySeconds setter', () => {
@@ -167,6 +176,15 @@ describe('DelayEffect', () => {
       expect(filter.delaySeconds).toBe(5);
       filter.destroy();
     });
+
+    it('updates the internal value without throwing when called after destroy', () => {
+      const filter = new DelayEffect();
+      filter.destroy();
+      expect(() => {
+        filter.delaySeconds = 1.5;
+      }).not.toThrow();
+      expect(filter.delaySeconds).toBe(1.5);
+    });
   });
 
   describe('wet setter', () => {
@@ -177,6 +195,15 @@ describe('DelayEffect', () => {
       filter.wet = 2;
       expect(filter.wet).toBe(1);
       filter.destroy();
+    });
+
+    it('updates the internal value without throwing when called after destroy', () => {
+      const filter = new DelayEffect();
+      filter.destroy();
+      expect(() => {
+        filter.wet = 0.9;
+      }).not.toThrow();
+      expect(filter.wet).toBe(0.9);
     });
   });
 
@@ -201,10 +228,22 @@ describe('DelayEffect', () => {
       delaySpy.mockRestore();
     });
 
-    it('throws after destroy', () => {
+    it('throws after destroy (inputNode)', () => {
       const filter = new DelayEffect();
       filter.destroy();
       expect(() => filter.inputNode).toThrow('DelayEffect not yet initialized.');
+    });
+
+    it('throws after destroy (outputNode)', () => {
+      const filter = new DelayEffect();
+      filter.destroy();
+      expect(() => filter.outputNode).toThrow('DelayEffect not yet initialized.');
+    });
+
+    it('double destroy is safe', () => {
+      const filter = new DelayEffect();
+      filter.destroy();
+      expect(() => filter.destroy()).not.toThrow();
     });
   });
 });

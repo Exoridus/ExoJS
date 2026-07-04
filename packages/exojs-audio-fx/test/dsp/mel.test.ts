@@ -68,4 +68,25 @@ describe('computeMelBands', () => {
     computeMelBands(mag, fb, out);
     for (const v of out) expect(v).toBeCloseTo(0, 3);
   });
+
+  it('allocates its own output array when none is supplied', () => {
+    const fb = buildMelFilterbank(8, 80, 8000, 2048, 48000);
+    const mag = new Float32Array(1024).fill(1);
+    const out = computeMelBands(mag, fb);
+    expect(out).toBeInstanceOf(Float32Array);
+    expect(out.length).toBe(8);
+  });
+});
+
+describe('buildMelFilterbank — degenerate bands', () => {
+  it('falls back to a unit weight when startBin === peakBin === endBin', () => {
+    // A large band count over a tiny FFT / narrow frequency range collapses
+    // several consecutive mel points onto the same rounded FFT bin, producing
+    // a degenerate single-bin band whose weight is forced to 1.
+    const fb = buildMelFilterbank(64, 100, 200, 64, 8000);
+    const degenerate = fb.find(band => band.startBin === band.peakBin && band.peakBin === band.endBin);
+    expect(degenerate).toBeDefined();
+    expect(degenerate!.weights.length).toBe(1);
+    expect(degenerate!.weights[0]).toBe(1);
+  });
 });

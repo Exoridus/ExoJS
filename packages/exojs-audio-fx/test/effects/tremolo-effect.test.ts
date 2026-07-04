@@ -358,6 +358,15 @@ describe('TremoloEffect', () => {
       expect(lfoOscillator.frequency.setTargetAtTime).toHaveBeenCalledWith(10, expect.anything(), expect.anything());
       effect.destroy();
     });
+
+    it('is a no-op on the node graph after destroy but still updates the field', () => {
+      const effect = new TremoloEffect();
+      effect.destroy();
+      expect(() => {
+        effect.rateHz = 3;
+      }).not.toThrow();
+      expect(effect.rateHz).toBe(3);
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -426,6 +435,15 @@ describe('TremoloEffect', () => {
       expect(panGain.gain.setTargetAtTime).toHaveBeenCalledWith(expect.closeTo(0.4), expect.anything(), expect.anything());
       effect.destroy();
     });
+
+    it('is a no-op on the node graph after destroy but still updates the field', () => {
+      const effect = new TremoloEffect();
+      effect.destroy();
+      expect(() => {
+        effect.depth = 0.2;
+      }).not.toThrow();
+      expect(effect.depth).toBe(0.2);
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -469,6 +487,15 @@ describe('TremoloEffect', () => {
       expect(wetGain.gain.setTargetAtTime).toHaveBeenCalledWith(expect.closeTo(0.6), expect.anything(), expect.anything());
       expect(dryGain.gain.setTargetAtTime).toHaveBeenCalledWith(expect.closeTo(0.4), expect.anything(), expect.anything());
       effect.destroy();
+    });
+
+    it('is a no-op on the node graph after destroy but still updates the field', () => {
+      const effect = new TremoloEffect();
+      effect.destroy();
+      expect(() => {
+        effect.wet = 0.3;
+      }).not.toThrow();
+      expect(effect.wet).toBe(0.3);
     });
   });
 

@@ -201,6 +201,45 @@ describe('VocoderEffect', () => {
       expect(modOutputConnectSpy).toHaveBeenCalledWith(filter['_workletNode'], 0, 1);
       filter.destroy();
     });
+
+    it('defers the cross-connection via onceSetup when modulator output is not yet available', async () => {
+      const modulator = makeModulatorBus();
+      const fakeConnect = vi.fn();
+      const fakeOutputNode = { connect: fakeConnect, disconnect: vi.fn() } as unknown as GainNode;
+
+      // First call (inside _onWorkletReady) returns null so the else/onceSetup branch is
+      // taken; subsequent calls (inside the deferred callback) return a real node.
+      let callCount = 0;
+      const getOutputNodeSpy = vi.spyOn(modulator, '_getOutputNode').mockImplementation(() => {
+        callCount++;
+        return callCount === 1 ? null : fakeOutputNode;
+      });
+      const onceSetupSpy = vi.spyOn(modulator, 'onceSetup');
+
+      const filter = new VocoderEffect({ modulator });
+      await filter.ready;
+
+      // The AudioBus is already set up (AudioContext ready), so onceSetup's real
+      // implementation invokes the deferred callback synchronously within this call.
+      expect(onceSetupSpy).toHaveBeenCalledTimes(1);
+      expect(getOutputNodeSpy).toHaveBeenCalledTimes(2);
+      expect(fakeConnect).toHaveBeenCalledWith(filter['_workletNode'], 0, 1);
+      filter.destroy();
+    });
+
+    it('deferred onceSetup callback is a no-op if the modulator output is still unavailable', async () => {
+      const modulator = makeModulatorBus();
+      // Always returns null: neither the immediate check nor the deferred callback
+      // ever obtains a real output node, so `.connect` must never be called.
+      vi.spyOn(modulator, '_getOutputNode').mockReturnValue(null);
+      const onceSetupSpy = vi.spyOn(modulator, 'onceSetup');
+
+      const filter = new VocoderEffect({ modulator });
+      await filter.ready;
+
+      expect(onceSetupSpy).toHaveBeenCalledTimes(1);
+      filter.destroy();
+    });
   });
 
   // -------------------------------------------------------------------------
