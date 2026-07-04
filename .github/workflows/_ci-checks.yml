@@ -242,8 +242,26 @@ jobs:
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium
 
+      # Istanbul instrumentation is enabled so the real GPU-backend lines this
+      # lane executes count toward the Codecov number (the jsdom `unit` flag
+      # can never reach them). The global vitest coverage thresholds are the
+      # jsdom ratchet — zero them here, this lane only *collects* coverage.
       - name: Browser tests (Chromium WebGL2, new headless)
-        run: pnpm test:browser:webgl -- --reporter=default --reporter=junit --outputFile.junit=./test-results/browser-webgl.junit.xml
+        run: >-
+          pnpm test:browser:webgl --
+          --reporter=default --reporter=junit --outputFile.junit=./test-results/browser-webgl.junit.xml
+          --coverage --coverage.reporter=lcov --coverage.reporter=text-summary
+          --coverage.thresholds.statements=0 --coverage.thresholds.branches=0
+          --coverage.thresholds.functions=0 --coverage.thresholds.lines=0
+
+      - name: Upload coverage to Codecov (browser flag)
+        if: ${{ !cancelled() }}
+        uses: codecov/codecov-action@v6.0.2
+        with:
+          files: ./coverage/lcov.info
+          flags: browser
+          fail_ci_if_error: true
+          token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Upload test results to Codecov
         if: ${{ !cancelled() }}

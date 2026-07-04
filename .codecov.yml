@@ -35,12 +35,20 @@ flags:
       - src/
       - packages/
     carryforward: true
+  # Istanbul coverage collected by the Chromium-WebGL2 browser lane — the
+  # only lane that executes the real GPU backend paths (src/rendering/webgl2,
+  # webgpu bootstrap, browser-only branches). Merged with `unit` into the
+  # overall number; carryforward keeps it for commits whose CI run skips the
+  # browser lane.
+  browser:
+    paths:
+      - src/
+      - packages/
+    carryforward: true
 
 # Per-package coverage breakdown in the PR comment and dashboard.
-# Components are pure reporting slices over the single `unit` upload —
-# no extra uploads needed. Untested packages (aseprite, ldtk, react) are
-# not listed yet; add each together with its first test suite (and its
-# vitest coverage.include entry).
+# Components are pure reporting slices over the merged uploads (`unit` +
+# `browser`) — no extra uploads needed.
 component_management:
   default_rules:
     statuses: [] # informational only — no per-component commit statuses
