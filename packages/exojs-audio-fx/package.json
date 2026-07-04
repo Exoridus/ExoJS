@@ -1,6 +1,6 @@
 {
   "name": "@codexo/exojs-audio-fx",
-  "version": "0.15.0",
+  "version": "0.15.1",
   "description": "Audio effects, DSP, beat detection and analysis for ExoJS.",
   "repository": {
     "type": "git",
