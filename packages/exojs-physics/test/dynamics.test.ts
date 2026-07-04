@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
+import { Manifold } from '../src/collision/Manifold';
+import type { ContactRecord } from '../src/ContactGraph';
 import { BoxShape, CircleShape, PhysicsWorld } from '../src/index';
 import { PhysicsBody } from '../src/PhysicsBody';
+import { ContactSolver } from '../src/solver/ContactSolver';
+import { colliderAt } from './support';
 
 /**
  * The Solver Correctness & Stability matrix, exercised over the
@@ -621,6 +625,62 @@ describe('failure safety', () => {
     // is a v0.16 CCD / bullet-mode item (see the operating-envelope note).
     expectAllFinite(world);
     expect(bullet.y).toBeGreaterThan(floorTop); // tunnelled through (documented limitation)
+  });
+});
+
+// ── ContactSolver internals ─────────────────────────────────────────
+
+describe('ContactSolver internals', () => {
+  it('contactHertz=0 takes the rigid (non-soft) branch and still settles a resting box', () => {
+    // Default worlds use contactHertz=30 (soft); this exercises the `contactHertz > 0`
+    // false side of ContactSolver.prepare's soft-factor computation (biasRate=0,
+    // massScale=1, impulseScale=0 — the hard-constraint fallback).
+    const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY }, contactHertz: 0 });
+    const floorTop = 300;
+
+    addFloor(world, floorTop);
+    const box = addBox(world, 0, floorTop - 16 - 0.5, 32);
+
+    advance(world, 2);
+
+    expectAllFinite(world);
+    expect(Math.abs(box.linearVelocityY)).toBeLessThanOrEqual(1);
+  });
+
+  it('prepare() skips a contact whose manifold reports zero points', () => {
+    // ContactGraph only ever pushes a record into solidContacts when the narrow
+    // phase reports `touching` (which requires pointCount ≥ 1), so this path is not
+    // reachable through PhysicsWorld — it is exercised here by calling the solver
+    // directly with a hand-built record whose manifold was never populated.
+    const world = new PhysicsWorld();
+    const colliderA = colliderAt(world, new BoxShape(10, 10), { x: 0, y: 0 });
+    const colliderB = colliderAt(world, new BoxShape(10, 10), { x: 5, y: 0 }, 0, 'dynamic');
+
+    const record: ContactRecord = {
+      a: colliderA,
+      b: colliderB,
+      isSensor: false,
+      touching: true,
+      seen: true,
+      manifold: new Manifold(), // freshly constructed — pointCount stays 0
+      normalImpulse: [0, 0],
+      tangentImpulse: [0, 0],
+      pointIds: [0, 0],
+    };
+
+    const solver = new ContactSolver();
+    const bodyB = colliderB.body;
+    const vyBefore = bodyB.linearVelocityY;
+
+    solver.prepare([record], 1 / 240, 30, 10);
+    solver.warmStart();
+    solver.solveVelocities(true);
+    solver.solveVelocities(false);
+    solver.applyRestitution();
+
+    // pointCount === 0 → the contact is skipped entirely: no constraint is built, so
+    // none of the solve passes touch bodyB's velocity.
+    expect(bodyB.linearVelocityY).toBe(vyBefore);
   });
 });
 
