@@ -32,19 +32,22 @@ class MultilineAndWrapScene extends Scene {
         const bodyY = height * 0.16 + 36;
         const colX = (index: number): number => colWidth * index + (colWidth - 360) / 2;
 
-        this.titleA = new Text('No wrap — single line overflows', { fillColor: titleColor, fontSize: 16 });
+        this.titleA = new Text('Word wrap @ 360px — at word boundaries', { fillColor: titleColor, fontSize: 16 });
         this.titleA.setPosition(colX(0), titleY);
-        this.textA = new Text(paragraph, { fillColor: Color.white, fontSize: 22 });
+        this.textA = new Text(paragraph, { fillColor: Color.white, fontSize: 22, maxWidth: 360 });
         this.textA.setPosition(colX(0), bodyY);
 
-        this.titleB = new Text('Word wrap @ 360px — at word boundaries', { fillColor: titleColor, fontSize: 16 });
+        this.titleB = new Text('Break words @ 280px — splits a token', { fillColor: titleColor, fontSize: 16 });
         this.titleB.setPosition(colX(1), titleY);
-        this.textB = new Text(paragraph, { fillColor: Color.white, fontSize: 22, maxWidth: 360 });
+        this.textB = new Text(longToken, { fillColor: Color.white, fontSize: 22, maxWidth: 280, breakWords: true });
         this.textB.setPosition(colX(1), bodyY);
 
-        this.titleC = new Text('Break words @ 280px — splits a token', { fillColor: titleColor, fontSize: 16 });
+        // No-wrap goes in the LAST column on purpose: its single line overflows
+        // off the right canvas edge, demonstrating the overflow without running
+        // across (and visually breaking) the other two columns.
+        this.titleC = new Text('No wrap — single line overflows', { fillColor: titleColor, fontSize: 16 });
         this.titleC.setPosition(colX(2), titleY);
-        this.textC = new Text(longToken, { fillColor: Color.white, fontSize: 22, maxWidth: 280, breakWords: true });
+        this.textC = new Text(paragraph, { fillColor: Color.white, fontSize: 22 });
         this.textC.setPosition(colX(2), bodyY);
     }
 

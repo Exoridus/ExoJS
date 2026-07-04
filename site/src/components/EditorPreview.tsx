@@ -77,6 +77,13 @@ export const EditorPreview = forwardRef<EditorPreviewHandle, EditorPreviewProps>
         setUpdateId(value => value + 1);
         disconnectCanvasObservers(canvasMutationObserverRef, canvasAttributeObserverRef);
         currentCanvasRef.current = { width: 0, height: 0, zoom: 1 };
+        // NOTE: do NOT pre-set --canvas-w/--preview-zoom here. The zoom is
+        // CSS `zoom` on the iframe, which rescales the iframe's inner layout
+        // viewport — applying it before the example loads makes preview.html
+        // fit its 1280x720 stage against a distorted innerWidth and every
+        // example renders shrunken into the top-left corner. The stable
+        // pre-load height comes from the surface's aspect-ratio instead
+        // (see Editor.module.scss).
         rootRef.current?.style.removeProperty('--canvas-w');
         rootRef.current?.style.removeProperty('--canvas-h');
         rootRef.current?.style.removeProperty('--preview-zoom');
@@ -361,11 +368,19 @@ function renderExecutionError(iframeBody: HTMLBodyElement): void {
 }
 
 function createPreviewErrorEntry(error: unknown, fallbackMessage?: string | Event): PreviewErrorEntry {
-    if (error instanceof Error) {
-        return {
-            summary: error.message,
-            details: error.stack ?? error.message,
-        };
+    // Duck-type instead of `instanceof Error`: errors thrown inside the preview
+    // iframe come from a different realm (the iframe's own Error constructor),
+    // so `instanceof` fails and every runtime error used to collapse into a
+    // useless "{}" panel via JSON.stringify (Error props are non-enumerable).
+    if (typeof error === 'object' && error !== null && typeof (error as { message?: unknown }).message === 'string') {
+        const errorLike = error as { message: string; stack?: unknown; name?: unknown };
+        if (errorLike.message.trim()) {
+            const prefix = typeof errorLike.name === 'string' && errorLike.name && errorLike.name !== 'Error' ? `${errorLike.name}: ` : '';
+            return {
+                summary: `${prefix}${errorLike.message}`,
+                details: typeof errorLike.stack === 'string' && errorLike.stack.trim() ? errorLike.stack : `${prefix}${errorLike.message}`,
+            };
+        }
     }
 
     if (typeof fallbackMessage === 'string' && fallbackMessage.trim()) {

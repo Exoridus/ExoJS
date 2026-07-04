@@ -6,10 +6,10 @@
   "subsystem": "ui",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 105,
+  "memberCount": 106,
   "counts": {
     "constructors": 1,
-    "methods": 47,
+    "methods": 48,
     "properties": 44,
     "events": 13
   },
@@ -314,6 +314,35 @@
           "params": [],
           "returnType": "void",
           "description": "Redraw size-dependent content (background, child positions). Override in subclasses."
+        },
+        {
+          "name": "_updateOrigin",
+          "signature": "_updateOrigin(): void",
+          "signatureTokens": [
+            {
+              "text": "_updateOrigin",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Re-derive origin from the fractional anchor and the CURRENT local bounds. Uses local (untransformed) bounds on purpose: the transform multiplies the origin by scale itself, so deriving from world bounds would double-apply scale whenever the anchor is set after scaling. Subclasses whose local bounds change after construction (e.g. a sprite switching to a texture sub-frame) must call this to keep an anchored node anchored."
         },
         {
           "name": "addChild",

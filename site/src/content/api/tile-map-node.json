@@ -6,10 +6,10 @@
   "subsystem": "tilemap",
   "importPath": "@codexo/exojs-tilemap",
   "tier": "advanced",
-  "memberCount": 97,
+  "memberCount": 98,
   "counts": {
     "constructors": 1,
-    "methods": 44,
+    "methods": 45,
     "properties": 39,
     "events": 13
   },
@@ -198,6 +198,35 @@
           "params": [],
           "returnType": "void",
           "description": "Mark own + all descendants' GlobalTransform + Bounds dirty."
+        },
+        {
+          "name": "_updateOrigin",
+          "signature": "_updateOrigin(): void",
+          "signatureTokens": [
+            {
+              "text": "_updateOrigin",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Re-derive origin from the fractional anchor and the CURRENT local bounds. Uses local (untransformed) bounds on purpose: the transform multiplies the origin by scale itself, so deriving from world bounds would double-apply scale whenever the anchor is set after scaling. Subclasses whose local bounds change after construction (e.g. a sprite switching to a texture sub-frame) must call this to keep an anchored node anchored."
         },
         {
           "name": "addChild",

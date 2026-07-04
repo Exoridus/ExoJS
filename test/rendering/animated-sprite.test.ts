@@ -14,6 +14,48 @@ const createTextureStub = (): Texture =>
 const createFrames = (): Rectangle[] => [new Rectangle(0, 0, 16, 16), new Rectangle(16, 0, 16, 16), new Rectangle(32, 0, 16, 16)];
 
 describe('AnimatedSprite', () => {
+  test('play() snaps the sprite to the frame size while preserving user scale', () => {
+    // Regression: the sprite starts out showing the full atlas texture
+    // (128x64 stub). The first frame application used the keep-pixel-size
+    // path, which inflated scale by atlasWidth/frameWidth (128/16 = 8x) —
+    // a setScale(3) sprite rendered at scale 24 and disappeared off-canvas.
+    const sprite = new AnimatedSprite(createTextureStub(), {
+      walk: { frames: createFrames(), fps: 10 },
+    });
+    sprite.setScale(3);
+
+    sprite.play('walk');
+
+    expect(sprite.scale.x).toBe(3);
+    expect(sprite.scale.y).toBe(3);
+    expect(sprite.width).toBe(3 * 16);
+    expect(sprite.height).toBe(3 * 16);
+
+    // Subsequent frame advances keep the pixel size stable.
+    sprite.update(100);
+    expect(sprite.currentFrame).toBe(1);
+    expect(sprite.width).toBe(3 * 16);
+  });
+
+  test('an anchored sprite stays anchored when play() applies the first frame', () => {
+    // Regression: origin was derived from the anchor exactly once (at
+    // setAnchor time, from the full 128x64 atlas bounds) and never re-derived
+    // when the texture frame changed — an anchor-0.5 sprite kept origin
+    // (64, 32) after switching to a 16x16 frame and rendered dozens (with
+    // real atlases: hundreds) of pixels away from its position.
+    const sprite = new AnimatedSprite(createTextureStub(), {
+      walk: { frames: createFrames(), fps: 10 },
+    });
+    sprite.setAnchor(0.5);
+    expect(sprite.origin.x).toBe(64);
+    expect(sprite.origin.y).toBe(32);
+
+    sprite.play('walk');
+
+    expect(sprite.origin.x).toBe(8);
+    expect(sprite.origin.y).toBe(8);
+  });
+
   test('clip can play and advance frames predictably', () => {
     const frames = createFrames();
     const sprite = new AnimatedSprite(null, {

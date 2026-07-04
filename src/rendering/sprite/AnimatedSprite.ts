@@ -87,6 +87,7 @@ export class AnimatedSprite extends Sprite {
   private readonly _clips = new Map<string, NormalizedAnimatedSpriteClip>();
   private _currentClipName: string | null = null;
   private _currentFrameIndex = 0;
+  private _hasAppliedFrame = false;
   private _playing = false;
   private _repeatOverride: number | null = null;
   private _elapsedFrameTimeMs = 0;
@@ -443,7 +444,22 @@ export class AnimatedSprite extends Sprite {
    */
   private _applyFrame(clip: NormalizedAnimatedSpriteClip, frameIndex: number): void {
     // In-bounds by every call site's own guard.
-    this.setTextureFrame(clip.frames[frameIndex]!, false);
+    if (this._hasAppliedFrame) {
+      // Frame-to-frame advance: keep the current pixel size so differently
+      // sized frames don't visibly pop.
+      this.setTextureFrame(clip.frames[frameIndex]!, false);
+    } else {
+      // First application: the sprite still shows the full source texture
+      // (usually the whole atlas), so "keep the pixel size" would inflate the
+      // scale by atlasSize/frameSize and the sprite would render blown up far
+      // beyond the canvas. Snap the logical size to the frame instead — while
+      // preserving the user's scale, which `resetSize` would reset to 1.
+      const scaleX = this.scale.x;
+      const scaleY = this.scale.y;
+      this.setTextureFrame(clip.frames[frameIndex]!, true);
+      this.scale.set(scaleX, scaleY);
+      this._hasAppliedFrame = true;
+    }
 
     const offset = clip.frameOffsets?.[frameIndex];
 

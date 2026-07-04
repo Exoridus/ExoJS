@@ -80,13 +80,21 @@ function binding<T>(
  * parent's source. `new URL(ref, source)` only works when `source` is an
  * absolute URL; loaders are frequently called with relative paths (e.g.
  * `assets/demo/fonts/x.fnt`), so fall back to a synthetic base and strip it.
+ * A root-absolute source (`/assets/demo/fonts/x.fnt`) must yield a
+ * root-absolute result again — dropping the leading slash would make the
+ * browser re-resolve the page image against the document base URL.
+ * @internal exported for tests
  */
-function resolveSubAssetPath(ref: string, source: string): string {
+export function resolveSubAssetPath(ref: string, source: string): string {
+  if (/^(?:[a-z][a-z\d+.-]*:|\/\/|\/)/i.test(ref)) {
+    return ref;
+  }
   try {
     return new URL(ref, source).href;
   } catch {
     const base = 'https://exojs.invalid/';
-    return new URL(ref, base + source.replace(/^\/+/, '')).href.slice(base.length);
+    const resolved = new URL(ref, base + source.replace(/^\/+/, '')).href.slice(base.length);
+    return source.startsWith('/') ? `/${resolved}` : resolved;
   }
 }
 

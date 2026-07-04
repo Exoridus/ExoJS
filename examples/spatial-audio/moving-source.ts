@@ -1,4 +1,5 @@
 import { Application, Color, Graphics, Scene, Sound, Text } from '@codexo/exojs';
+import type { Spatializable, Voice } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -29,6 +30,7 @@ function linearAttenuation(distance: number): number {
 
 class MovingSourceScene extends Scene {
     private sound!: Sound;
+    private voice!: Voice & Spatializable;
     private listener!: { x: number; y: number };
     private angle = 0;
     private graphics!: Graphics;
@@ -72,16 +74,21 @@ class MovingSourceScene extends Scene {
 
         // Core defers playback until the AudioContext unlocks on the first
         // gesture, then starts automatically — just call play().
-        this.app.audio.play(this.sound, { loop: true, volume: 1 });
+        // play() returns the narrow Voice interface; Sound voices are spatializable.
+        this.voice = this.app.audio.play(this.sound, { loop: true, volume: 1 }) as Voice & Spatializable;
         this.hud.setStatus('Source orbiting the listener');
     }
 
     override update(delta): void {
         this.angle += delta.seconds * 1.1;
-        this.sound.position = {
+        const position = {
             x: this.listener.x + Math.cos(this.angle) * ORBIT_X,
             y: this.listener.y + Math.sin(this.angle) * ORBIT_Y,
         };
+        // sound.position only seeds NEW voices — the running loop moves via
+        // voice.position, so update both (descriptor + live voice).
+        this.sound.position = position;
+        this.voice.position = position;
     }
 
     override draw(context): void {

@@ -172,7 +172,7 @@ describe('HitTestLayer', () => {
     expect(nonInteractive.getBounds).not.toHaveBeenCalled();
   });
 
-  test('hovered node gets yellow color (1, 1, 0)', () => {
+  test('hovered node gets yellow color (255, 255, 0)', () => {
     const hoveredNode = makeNode({ interactive: true, boundsW: 50, boundsH: 50 });
     const interaction = makeInteraction({ hovered: hoveredNode as unknown as FakeNode });
     const app = makeApp(hoveredNode as unknown as FakeNode, interaction);
@@ -195,11 +195,11 @@ describe('HitTestLayer', () => {
 
     vi.restoreAllMocks();
 
-    // Yellow = (1, 1, 0).
-    expect(colorAssignments.some(c => c.r === 1 && c.g === 1 && c.b === 0)).toBe(true);
+    // Yellow = (255, 255, 0) — Color channels are 0..255.
+    expect(colorAssignments.some(c => c.r === 255 && c.g === 255 && c.b === 0)).toBe(true);
   });
 
-  test('captured node gets cyan color (0, 1, 1)', () => {
+  test('captured node gets cyan color (0, 255, 255)', () => {
     const capturedNode = makeNode({ interactive: true, boundsW: 50, boundsH: 50 });
     const interaction = makeInteraction({
       hovered: null,
@@ -225,11 +225,11 @@ describe('HitTestLayer', () => {
 
     vi.restoreAllMocks();
 
-    // Cyan = (0, 1, 1).
-    expect(colorAssignments.some(c => c.r === 0 && c.g === 1 && c.b === 1)).toBe(true);
+    // Cyan = (0, 255, 255) — Color channels are 0..255.
+    expect(colorAssignments.some(c => c.r === 0 && c.g === 255 && c.b === 255)).toBe(true);
   });
 
-  test('idle interactive node gets magenta color (1, 0, 1)', () => {
+  test('idle interactive node gets magenta color (255, 0, 255)', () => {
     const idleNode = makeNode({ interactive: true, boundsW: 50, boundsH: 50 });
     const interaction = makeInteraction({ hovered: null, captured: [] });
     const app = makeApp(idleNode as unknown as FakeNode, interaction);
@@ -252,8 +252,8 @@ describe('HitTestLayer', () => {
 
     vi.restoreAllMocks();
 
-    // Magenta = (1, 0, 1).
-    expect(colorAssignments.some(c => c.r === 1 && c.g === 0 && c.b === 1)).toBe(true);
+    // Magenta = (255, 0, 255) — Color channels are 0..255.
+    expect(colorAssignments.some(c => c.r === 255 && c.g === 0 && c.b === 255)).toBe(true);
   });
 
   test('quadtree regions rendered when spatial index is active (quadtree non-null)', () => {

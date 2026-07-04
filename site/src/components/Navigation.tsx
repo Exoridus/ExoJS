@@ -147,6 +147,7 @@ export function Navigation({ activeExample, availableTags, examples, loaded, loa
                                             path={example.path}
                                             title={example.title}
                                             description={example.description}
+                                            level={example.level}
                                             active={isExampleRouteActive(example.path, activeExample?.path)}
                                             unavailable={!availability.available}
                                             unavailableReason={availability.reason ?? ''}

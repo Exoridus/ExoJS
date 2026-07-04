@@ -28,7 +28,9 @@ class SoundPoolScene extends Scene {
     evictions = 0;
     hud;
     async load(loader) {
-        await loader.load(Sound, { shot: assets.demo.audio.uiClick });
+        // impactHeavy is long enough (~0.5 s) that rapid fire actually overlaps -
+        // a short click ends before the next shot and the pool never fills.
+        await loader.load(Sound, { shot: assets.demo.audio.impactHeavy });
     }
     init(loader) {
         const { width, height } = this.app.canvas;
@@ -72,7 +74,8 @@ class SoundPoolScene extends Scene {
             this.evictions += 1;
         }
         this.voices.push(this.clock + this.sound.duration);
-        this.app.audio.play(this.sound);
+        // Small random pitch per shot keeps the barrage from sounding robotic.
+        this.app.audio.play(this.sound, { playbackRate: 0.85 + Math.random() * 0.3, volume: 0.5 });
     }
     update(delta) {
         this.clock += delta.seconds;

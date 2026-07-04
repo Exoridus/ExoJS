@@ -16,10 +16,10 @@ class SvgDrawableScene extends Scene {
     texture;
     sprite;
     async load(loader) {
-        // rune-mark.svg carries only a viewBox (no width/height), so it would
-        // rasterise to a 0x0 image. Request an explicit pixel size — the SVG is
-        // vector, so it stays crisp scaled up to 256x256.
-        await loader.load(SvgAsset, { mark: 'svg/rune-mark.svg' }, { width: 256, height: 256 });
+        // The exo.js wordmark SVG carries only a viewBox (no width/height), so
+        // it would rasterise to a 0x0 image. Request an explicit pixel size —
+        // the SVG is vector, so it stays crisp at any rasterised resolution.
+        await loader.load(SvgAsset, { mark: 'svg/exo-wordmark.svg' }, { width: 850, height: 324 });
     }
     init(loader) {
         const { width, height } = this.app.canvas;

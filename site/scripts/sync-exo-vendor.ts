@@ -403,8 +403,13 @@ const syncVendor = (): void => {
         }
         const pkgDist = path.resolve(pkgRoot, 'dist', 'esm');
         if (!fs.existsSync(pkgDist)) {
-            console.warn(`[vendor:sync] Extension package @codexo/${pkgName} dist not found at ${pkgDist} — skipping.`);
-            continue;
+            // Hard error on purpose. This used to warn-and-skip, which shipped a
+            // playground where every extension example failed at runtime with
+            // "Cannot find module '@codexo/exojs-…'" — and nobody saw the warning.
+            throw new Error(
+                `[vendor:sync] Extension package @codexo/${pkgName} dist not found at ${pkgDist}. ` +
+                    `Build the extension packages first: pnpm --filter "@codexo/exojs-*" build`
+            );
         }
         const vendorDir = path.resolve(projectRoot, 'public', 'vendor', pkgName);
         const destDir = path.resolve(vendorDir, 'esm');

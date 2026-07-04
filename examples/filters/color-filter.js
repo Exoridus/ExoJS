@@ -46,7 +46,7 @@ class ColorFilterScene extends Scene {
     desaturate;
     invert;
     brightness;
-    index = 0;
+    index = 1; // start on Desaturate - the most visually obvious preset
     hud;
     cycle;
     async load(loader) {

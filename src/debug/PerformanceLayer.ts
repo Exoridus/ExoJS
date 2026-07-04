@@ -34,7 +34,7 @@ const bgColor = new Color(0, 0, 0, 0.7);
 // Bright text color (light blue-white).
 const textColor = Color.white.clone();
 // Cyan sparkline.
-const sparklineColor = new Color(0, 1, 1, 1);
+const sparklineColor = new Color(0, 255, 255, 1);
 
 // -----------------------------------------------------------------------------
 

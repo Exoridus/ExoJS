@@ -51,7 +51,8 @@ function hslToColor(h: number, s: number, l: number, alpha: number): Color {
     b = x;
   }
 
-  return new Color(r + m, g + m, b + m, alpha);
+  // Color channels are 0..255 (alpha 0..1) — scale up from the HSL math's 0..1.
+  return new Color((r + m) * 255, (g + m) * 255, (b + m) * 255, alpha);
 }
 
 // ---------------------------------------------------------------------------

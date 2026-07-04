@@ -21,9 +21,9 @@ const panelPadding = 8;
 const textSize = 11;
 
 const bgColor = new Color(0, 0, 0, 0.7);
-const headerColor = new Color(0.6, 1, 1, 1);
+const headerColor = new Color(153, 255, 255, 1);
 const textColor = Color.white.clone();
-const dimColor = new Color(0.7, 0.7, 0.7, 1);
+const dimColor = new Color(178, 178, 178, 1);
 
 /**
  * Snapshot of one drawable's filter chain at the moment the inspector

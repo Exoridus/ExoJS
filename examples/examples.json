@@ -1,20 +1,17 @@
 {
     "application-scenes": [
         {
-            "slug": "camera-and-view",
-            "path": "application-scenes/camera-and-view.js",
+            "slug": "scene-lifecycle",
+            "path": "application-scenes/scene-lifecycle.js",
             "language": "typescript",
-            "title": "Camera and View",
-            "description": "Pan and zoom the Camera by dragging and scrolling; observe world and screen coordinates update live.",
+            "title": "Scene Lifecycle",
+            "description": "Observe the full Scene lifecycle: onLoad, onActivate, onUpdate, onDeactivate, and onUnload through a simple counter display.",
             "backend": "core",
+            "featured": true,
             "tags": [
-                "camera",
-                "view",
                 "scene"
             ],
-            "capabilities": [
-                "keyboard"
-            ]
+            "level": "intro"
         },
         {
             "slug": "camera-basic",
@@ -30,7 +27,75 @@
             ],
             "capabilities": [
                 "pointer"
-            ]
+            ],
+            "level": "intro"
+        },
+        {
+            "slug": "camera-and-view",
+            "path": "application-scenes/camera-and-view.js",
+            "language": "typescript",
+            "title": "Camera and View",
+            "description": "Pan and zoom the Camera by dragging and scrolling; observe world and screen coordinates update live.",
+            "backend": "core",
+            "tags": [
+                "camera",
+                "view",
+                "scene"
+            ],
+            "capabilities": [
+                "keyboard"
+            ],
+            "level": "intermediate"
+        },
+        {
+            "slug": "world-vs-screen-coords",
+            "path": "application-scenes/world-vs-screen-coords.js",
+            "language": "typescript",
+            "title": "World Vs Screen Coords",
+            "description": "Convert pointer positions between world space and screen space as the camera pans and zooms.",
+            "backend": "core",
+            "tags": [
+                "camera",
+                "scene",
+                "pointer"
+            ],
+            "capabilities": [
+                "pointer"
+            ],
+            "level": "intermediate"
+        },
+        {
+            "slug": "pause-and-resume",
+            "path": "application-scenes/pause-and-resume.js",
+            "language": "typescript",
+            "title": "Pause and Resume",
+            "description": "Pause and resume the game loop by pressing Space — freeze updates without stopping the renderer or audio.",
+            "backend": "core",
+            "tags": [
+                "scene",
+                "pause"
+            ],
+            "capabilities": [
+                "keyboard"
+            ],
+            "level": "intro"
+        },
+        {
+            "slug": "multiple-scenes",
+            "path": "application-scenes/multiple-scenes.js",
+            "language": "typescript",
+            "title": "Multiple Scenes",
+            "description": "Switch between two active Scenes using keyboard shortcuts. Demonstrates addScene, removeScene, and scene priority.",
+            "backend": "core",
+            "tags": [
+                "scene",
+                "scenes"
+            ],
+            "capabilities": [
+                "pointer",
+                "keyboard"
+            ],
+            "level": "intermediate"
         },
         {
             "slug": "hud-overlay-scene",
@@ -44,7 +109,22 @@
                 "overlay",
                 "scene",
                 "camera"
-            ]
+            ],
+            "level": "intermediate"
+        },
+        {
+            "slug": "picture-in-picture",
+            "path": "application-scenes/picture-in-picture.js",
+            "language": "typescript",
+            "title": "Picture in Picture",
+            "description": "Embed a secondary scene view inside the main view — classic minimap or security-camera picture-in-picture layout.",
+            "backend": "core",
+            "tags": [
+                "camera",
+                "scene",
+                "rendering"
+            ],
+            "level": "advanced"
         },
         {
             "slug": "multi-view-split-screen",
@@ -61,114 +141,28 @@
             ],
             "capabilities": [
                 "keyboard"
-            ]
-        },
-        {
-            "slug": "multiple-scenes",
-            "path": "application-scenes/multiple-scenes.js",
-            "language": "typescript",
-            "title": "Multiple Scenes",
-            "description": "Switch between two active Scenes using keyboard shortcuts. Demonstrates addScene, removeScene, and scene priority.",
-            "backend": "core",
-            "tags": [
-                "scene",
-                "scenes"
             ],
-            "capabilities": [
-                "pointer",
-                "keyboard"
-            ]
-        },
-        {
-            "slug": "pause-and-resume",
-            "path": "application-scenes/pause-and-resume.js",
-            "language": "typescript",
-            "title": "Pause and Resume",
-            "description": "Pause and resume the game loop by pressing Space — freeze updates without stopping the renderer or audio.",
-            "backend": "core",
-            "tags": [
-                "scene",
-                "pause"
-            ],
-            "capabilities": [
-                "keyboard"
-            ]
-        },
-        {
-            "slug": "picture-in-picture",
-            "path": "application-scenes/picture-in-picture.js",
-            "language": "typescript",
-            "title": "Picture in Picture",
-            "description": "Embed a secondary scene view inside the main view — classic minimap or security-camera picture-in-picture layout.",
-            "backend": "core",
-            "tags": [
-                "camera",
-                "scene",
-                "rendering"
-            ]
-        },
-        {
-            "slug": "scene-lifecycle",
-            "path": "application-scenes/scene-lifecycle.js",
-            "language": "typescript",
-            "title": "Scene Lifecycle",
-            "description": "Observe the full Scene lifecycle: onLoad, onActivate, onUpdate, onDeactivate, and onUnload through a simple counter display.",
-            "backend": "core",
-            "featured": true,
-            "level": "intro",
-            "tags": [
-                "scene"
-            ]
-        },
-        {
-            "slug": "world-vs-screen-coords",
-            "path": "application-scenes/world-vs-screen-coords.js",
-            "language": "typescript",
-            "title": "World Vs Screen Coords",
-            "description": "Convert pointer positions between world space and screen space as the camera pans and zooms.",
-            "backend": "core",
-            "tags": [
-                "camera",
-                "scene",
-                "pointer"
-            ],
-            "capabilities": [
-                "pointer"
-            ]
+            "level": "advanced"
         }
     ],
     "audio-basics": [
         {
-            "slug": "audio-buses",
-            "path": "audio-basics/audio-buses.js",
+            "slug": "play-sound",
+            "path": "audio-basics/play-sound.js",
             "language": "typescript",
-            "title": "Audio Buses",
-            "description": "Route sounds through named buses (music, sfx, master) and control volume per bus with sliders.",
+            "title": "Play Sound",
+            "description": "Load a Sound asset and play it on a pointer tap — covers the required user-gesture unlock and basic volume control.",
             "backend": "core",
+            "featured": true,
             "tags": [
                 "audio",
-                "buses"
+                "sound"
             ],
             "capabilities": [
                 "pointer",
                 "audio"
-            ]
-        },
-        {
-            "slug": "crossfade-tracks",
-            "path": "audio-basics/crossfade-tracks.js",
-            "language": "typescript",
-            "title": "Crossfade Tracks",
-            "description": "Crossfade between two audio tracks by fading out one bus and fading in another over a configurable duration.",
-            "backend": "core",
-            "tags": [
-                "audio",
-                "crossfade"
             ],
-            "capabilities": [
-                "pointer",
-                "audio"
-            ]
+            "level": "intro"
         },
         {
             "slug": "music-loop",
@@ -183,42 +177,8 @@
             ],
             "capabilities": [
                 "audio"
-            ]
-        },
-        {
-            "slug": "play-sound",
-            "path": "audio-basics/play-sound.js",
-            "language": "typescript",
-            "title": "Play Sound",
-            "description": "Load a Sound asset and play it on a pointer tap — covers the required user-gesture unlock and basic volume control.",
-            "backend": "core",
-            "featured": true,
-            "level": "intro",
-            "tags": [
-                "audio",
-                "sound"
             ],
-            "capabilities": [
-                "pointer",
-                "audio"
-            ]
-        },
-        {
-            "slug": "random-pitch-pool",
-            "path": "audio-basics/random-pitch-pool.js",
-            "language": "typescript",
-            "title": "Random Pitch Pool",
-            "description": "Play the same sound with randomised pitch on each keypress to add variation to repeated sound effects.",
-            "backend": "core",
-            "tags": [
-                "audio",
-                "sound",
-                "pool"
-            ],
-            "capabilities": [
-                "keyboard",
-                "audio"
-            ]
+            "level": "intro"
         },
         {
             "slug": "sound-pool",
@@ -235,44 +195,63 @@
             "capabilities": [
                 "keyboard",
                 "audio"
-            ]
+            ],
+            "level": "intermediate"
+        },
+        {
+            "slug": "random-pitch-pool",
+            "path": "audio-basics/random-pitch-pool.js",
+            "language": "typescript",
+            "title": "Random Pitch Pool",
+            "description": "Play the same sound with randomised pitch on each keypress to add variation to repeated sound effects.",
+            "backend": "core",
+            "tags": [
+                "audio",
+                "sound",
+                "pool"
+            ],
+            "capabilities": [
+                "keyboard",
+                "audio"
+            ],
+            "level": "intermediate"
+        },
+        {
+            "slug": "audio-buses",
+            "path": "audio-basics/audio-buses.js",
+            "language": "typescript",
+            "title": "Audio Buses",
+            "description": "Route sounds through named buses (music, sfx, master) and control volume per bus with sliders.",
+            "backend": "core",
+            "tags": [
+                "audio",
+                "buses"
+            ],
+            "capabilities": [
+                "pointer",
+                "audio"
+            ],
+            "level": "intermediate"
+        },
+        {
+            "slug": "crossfade-tracks",
+            "path": "audio-basics/crossfade-tracks.js",
+            "language": "typescript",
+            "title": "Crossfade Tracks",
+            "description": "Crossfade between two audio tracks by fading out one bus and fading in another over a configurable duration.",
+            "backend": "core",
+            "tags": [
+                "audio",
+                "crossfade"
+            ],
+            "capabilities": [
+                "pointer",
+                "audio"
+            ],
+            "level": "intermediate"
         }
     ],
     "audio-fx": [
-        {
-            "slug": "compressor",
-            "path": "audio-fx/compressor.js",
-            "language": "typescript",
-            "title": "Compressor",
-            "description": "Apply a dynamic compressor to even out loud and quiet audio signals. Adjust threshold, ratio, attack, and release live.",
-            "backend": "core",
-            "tags": [
-                "audio",
-                "fx",
-                "compressor"
-            ],
-            "capabilities": [
-                "pointer",
-                "audio"
-            ]
-        },
-        {
-            "slug": "ducking",
-            "path": "audio-fx/ducking.js",
-            "language": "typescript",
-            "title": "Ducking",
-            "description": "Automatically lower music volume when a sound effect plays — classic game audio ducking via the DuckingFilter.",
-            "backend": "core",
-            "tags": [
-                "audio",
-                "fx",
-                "ducking"
-            ],
-            "capabilities": [
-                "pointer",
-                "audio"
-            ]
-        },
         {
             "slug": "reverb-and-delay",
             "path": "audio-fx/reverb-and-delay.js",
@@ -289,7 +268,44 @@
             "capabilities": [
                 "pointer",
                 "audio"
-            ]
+            ],
+            "level": "intro"
+        },
+        {
+            "slug": "compressor",
+            "path": "audio-fx/compressor.js",
+            "language": "typescript",
+            "title": "Compressor",
+            "description": "Apply a dynamic compressor to even out loud and quiet audio signals. Adjust threshold, ratio, attack, and release live.",
+            "backend": "core",
+            "tags": [
+                "audio",
+                "fx",
+                "compressor"
+            ],
+            "capabilities": [
+                "pointer",
+                "audio"
+            ],
+            "level": "intermediate"
+        },
+        {
+            "slug": "ducking",
+            "path": "audio-fx/ducking.js",
+            "language": "typescript",
+            "title": "Ducking",
+            "description": "Automatically lower music volume when a sound effect plays — classic game audio ducking via the DuckingFilter.",
+            "backend": "core",
+            "tags": [
+                "audio",
+                "fx",
+                "ducking"
+            ],
+            "capabilities": [
+                "pointer",
+                "audio"
+            ],
+            "level": "intermediate"
         },
         {
             "slug": "vocoder",
@@ -306,7 +322,8 @@
             "capabilities": [
                 "pointer",
                 "audio"
-            ]
+            ],
+            "level": "advanced"
         }
     ],
     "beat-detection": [
@@ -324,7 +341,8 @@
             ],
             "capabilities": [
                 "audio"
-            ]
+            ],
+            "level": "intro"
         },
         {
             "slug": "frequency-bands",
@@ -340,7 +358,8 @@
             ],
             "capabilities": [
                 "audio"
-            ]
+            ],
+            "level": "intermediate"
         },
         {
             "slug": "tempo-tracking",
@@ -356,7 +375,8 @@
             ],
             "capabilities": [
                 "audio"
-            ]
+            ],
+            "level": "intermediate"
         }
     ],
     "custom-renderers": [
@@ -371,7 +391,8 @@
                 "rendering",
                 "advanced",
                 "custom"
-            ]
+            ],
+            "level": "advanced"
         },
         {
             "slug": "custom-triangle-renderer",
@@ -388,10 +409,67 @@
             ],
             "capabilities": [
                 "webgpu"
-            ]
+            ],
+            "level": "advanced"
         }
     ],
     "debug-layer": [
+        {
+            "slug": "performance-overlay",
+            "path": "debug-layer/performance-overlay.js",
+            "language": "typescript",
+            "title": "Performance Overlay",
+            "description": "Enable the built-in debug overlay to monitor FPS, draw calls, sprite count, and GPU memory inside your scene.",
+            "backend": "core",
+            "featured": true,
+            "tags": [
+                "debug",
+                "performance"
+            ],
+            "capabilities": [
+                "keyboard"
+            ],
+            "level": "intro"
+        },
+        {
+            "slug": "bounding-boxes",
+            "path": "debug-layer/bounding-boxes.js",
+            "language": "typescript",
+            "title": "Bounding Boxes",
+            "description": "Overlay axis-aligned bounding boxes on every rendered node to debug layout, culling, and hit-test regions.",
+            "backend": "core",
+            "tags": [
+                "debug",
+                "rendering"
+            ],
+            "level": "intro"
+        },
+        {
+            "slug": "pointer-and-hittest",
+            "path": "debug-layer/pointer-and-hittest.js",
+            "language": "typescript",
+            "title": "Pointer and Hittest",
+            "description": "Visualise pointer hit-test regions and see which node receives each event — useful for debugging interactive areas.",
+            "backend": "core",
+            "tags": [
+                "debug",
+                "pointer",
+                "input"
+            ],
+            "level": "intermediate"
+        },
+        {
+            "slug": "signal-bus-inspector",
+            "path": "debug-layer/signal-bus-inspector.js",
+            "language": "typescript",
+            "title": "Signal Bus Inspector",
+            "description": "List all active Signals on the SignalBus, inspect current values, and monitor subscriber counts in the debug layer.",
+            "backend": "core",
+            "tags": [
+                "debug"
+            ],
+            "level": "intermediate"
+        },
         {
             "slug": "asset-browser",
             "path": "debug-layer/asset-browser.js",
@@ -406,63 +484,25 @@
             ],
             "capabilities": [
                 "pointer"
-            ]
-        },
-        {
-            "slug": "bounding-boxes",
-            "path": "debug-layer/bounding-boxes.js",
-            "language": "typescript",
-            "title": "Bounding Boxes",
-            "description": "Overlay axis-aligned bounding boxes on every rendered node to debug layout, culling, and hit-test regions.",
-            "backend": "core",
-            "tags": [
-                "debug",
-                "rendering"
-            ]
-        },
-        {
-            "slug": "performance-overlay",
-            "path": "debug-layer/performance-overlay.js",
-            "language": "typescript",
-            "title": "Performance Overlay",
-            "description": "Enable the built-in debug overlay to monitor FPS, draw calls, sprite count, and GPU memory inside your scene.",
-            "backend": "core",
-            "featured": true,
-            "level": "intro",
-            "tags": [
-                "debug",
-                "performance"
             ],
-            "capabilities": [
-                "keyboard"
-            ]
-        },
-        {
-            "slug": "pointer-and-hittest",
-            "path": "debug-layer/pointer-and-hittest.js",
-            "language": "typescript",
-            "title": "Pointer and Hittest",
-            "description": "Visualise pointer hit-test regions and see which node receives each event — useful for debugging interactive areas.",
-            "backend": "core",
-            "tags": [
-                "debug",
-                "pointer",
-                "input"
-            ]
-        },
-        {
-            "slug": "signal-bus-inspector",
-            "path": "debug-layer/signal-bus-inspector.js",
-            "language": "typescript",
-            "title": "Signal Bus Inspector",
-            "description": "List all active Signals on the SignalBus, inspect current values, and monitor subscriber counts in the debug layer.",
-            "backend": "core",
-            "tags": [
-                "debug"
-            ]
+            "level": "intermediate"
         }
     ],
     "filters": [
+        {
+            "slug": "color-filter",
+            "path": "filters/color-filter.js",
+            "language": "typescript",
+            "title": "Color Filter",
+            "description": "Tint, desaturate, invert, and adjust the brightness of a sprite; cycle through the presets from the control panel.",
+            "backend": "core",
+            "tags": [
+                "fx",
+                "color",
+                "filter"
+            ],
+            "level": "intro"
+        },
         {
             "slug": "blur-filter",
             "path": "filters/blur-filter.js",
@@ -474,7 +514,8 @@
                 "fx",
                 "blur",
                 "filter"
-            ]
+            ],
+            "level": "intro"
         },
         {
             "slug": "chromatic-aberration",
@@ -487,20 +528,35 @@
                 "fx",
                 "filter",
                 "shader"
-            ]
+            ],
+            "level": "intermediate"
         },
         {
-            "slug": "color-filter",
-            "path": "filters/color-filter.js",
+            "slug": "filter-stack",
+            "path": "filters/filter-stack.js",
             "language": "typescript",
-            "title": "Color Filter",
-            "description": "Tint, desaturate, invert, and adjust the brightness of a sprite; cycle through the presets from the control panel.",
+            "title": "Filter Stack",
+            "description": "Chain multiple filters on a single sprite and toggle each layer independently to see how they compose.",
             "backend": "core",
             "tags": [
                 "fx",
-                "color",
                 "filter"
-            ]
+            ],
+            "level": "intermediate"
+        },
+        {
+            "slug": "noise-vignette",
+            "path": "filters/noise-vignette.js",
+            "language": "typescript",
+            "title": "Noise Vignette",
+            "description": "Combine animated film grain and a radial vignette in a single pass filter — common cinematic post-processing.",
+            "backend": "core",
+            "tags": [
+                "fx",
+                "filter",
+                "shader"
+            ],
+            "level": "intermediate"
         },
         {
             "slug": "crt-scanlines",
@@ -513,7 +569,22 @@
                 "fx",
                 "filter",
                 "shader"
-            ]
+            ],
+            "level": "intermediate"
+        },
+        {
+            "slug": "palette-cycling",
+            "path": "filters/palette-cycling.js",
+            "language": "typescript",
+            "title": "Palette Cycling",
+            "description": "Animate a 1D LUT each frame to recolour a sprite — classic indexed-colour palette-cycling effect (DOS-demo style).",
+            "backend": "core",
+            "tags": [
+                "lut",
+                "palette",
+                "color"
+            ],
+            "level": "advanced"
         },
         {
             "slug": "custom-fragment-shader",
@@ -527,19 +598,8 @@
                 "filter",
                 "shader",
                 "advanced"
-            ]
-        },
-        {
-            "slug": "filter-stack",
-            "path": "filters/filter-stack.js",
-            "language": "typescript",
-            "title": "Filter Stack",
-            "description": "Chain multiple filters on a single sprite and toggle each layer independently to see how they compose.",
-            "backend": "core",
-            "tags": [
-                "fx",
-                "filter"
-            ]
+            ],
+            "level": "advanced"
         },
         {
             "slug": "metaballs",
@@ -552,33 +612,8 @@
                 "fx",
                 "filter",
                 "shader"
-            ]
-        },
-        {
-            "slug": "noise-vignette",
-            "path": "filters/noise-vignette.js",
-            "language": "typescript",
-            "title": "Noise Vignette",
-            "description": "Combine animated film grain and a radial vignette in a single pass filter — common cinematic post-processing.",
-            "backend": "core",
-            "tags": [
-                "fx",
-                "filter",
-                "shader"
-            ]
-        },
-        {
-            "slug": "palette-cycling",
-            "path": "filters/palette-cycling.js",
-            "language": "typescript",
-            "title": "Palette Cycling",
-            "description": "Animate a 1D LUT each frame to recolour a sprite — classic indexed-colour palette-cycling effect (DOS-demo style).",
-            "backend": "core",
-            "tags": [
-                "lut",
-                "palette",
-                "color"
-            ]
+            ],
+            "level": "advanced"
         }
     ],
     "geometry-graphics": [
@@ -590,14 +625,14 @@
             "description": "Draw filled and stroked rectangles, circles, polygons, and Bézier curves with the Graphics API.",
             "backend": "core",
             "featured": true,
-            "level": "intro",
             "tags": [
                 "graphics",
                 "rendering"
             ],
             "capabilities": [
                 "webgpu"
-            ]
+            ],
+            "level": "intro"
         },
         {
             "slug": "graphics-gradient",
@@ -611,7 +646,8 @@
                 "gradient",
                 "fillStyle",
                 "strokeStyle"
-            ]
+            ],
+            "level": "intro"
         },
         {
             "slug": "gradient",
@@ -624,7 +660,50 @@
                 "graphics",
                 "gradient",
                 "rendering"
-            ]
+            ],
+            "level": "intro"
+        },
+        {
+            "slug": "mesh-triangle",
+            "path": "geometry-graphics/mesh-triangle.js",
+            "language": "typescript",
+            "title": "Mesh Triangle",
+            "description": "Render a single vertex-coloured triangle with a custom Mesh — the minimal GPU geometry example.",
+            "backend": "core",
+            "tags": [
+                "mesh",
+                "graphics",
+                "rendering"
+            ],
+            "level": "intermediate"
+        },
+        {
+            "slug": "mesh-textured-quad",
+            "path": "geometry-graphics/mesh-textured-quad.js",
+            "language": "typescript",
+            "title": "Mesh Textured Quad",
+            "description": "Map a texture onto a custom Mesh quad and control UV coordinates per vertex.",
+            "backend": "core",
+            "tags": [
+                "mesh",
+                "graphics",
+                "rendering"
+            ],
+            "level": "intermediate"
+        },
+        {
+            "slug": "mesh-deformed-grid",
+            "path": "geometry-graphics/mesh-deformed-grid.js",
+            "language": "typescript",
+            "title": "Mesh Deformed Grid",
+            "description": "Animate vertex positions on a Mesh grid to produce wave and ripple deformation effects.",
+            "backend": "core",
+            "tags": [
+                "mesh",
+                "graphics",
+                "rendering"
+            ],
+            "level": "advanced"
         },
         {
             "slug": "infinite-grid",
@@ -640,46 +719,8 @@
             ],
             "capabilities": [
                 "keyboard"
-            ]
-        },
-        {
-            "slug": "mesh-deformed-grid",
-            "path": "geometry-graphics/mesh-deformed-grid.js",
-            "language": "typescript",
-            "title": "Mesh Deformed Grid",
-            "description": "Animate vertex positions on a Mesh grid to produce wave and ripple deformation effects.",
-            "backend": "core",
-            "tags": [
-                "mesh",
-                "graphics",
-                "rendering"
-            ]
-        },
-        {
-            "slug": "mesh-textured-quad",
-            "path": "geometry-graphics/mesh-textured-quad.js",
-            "language": "typescript",
-            "title": "Mesh Textured Quad",
-            "description": "Map a texture onto a custom Mesh quad and control UV coordinates per vertex.",
-            "backend": "core",
-            "tags": [
-                "mesh",
-                "graphics",
-                "rendering"
-            ]
-        },
-        {
-            "slug": "mesh-triangle",
-            "path": "geometry-graphics/mesh-triangle.js",
-            "language": "typescript",
-            "title": "Mesh Triangle",
-            "description": "Render a single vertex-coloured triangle with a custom Mesh — the minimal GPU geometry example.",
-            "backend": "core",
-            "tags": [
-                "mesh",
-                "graphics",
-                "rendering"
-            ]
+            ],
+            "level": "advanced"
         },
         {
             "slug": "immediate-mode-rendering",
@@ -688,31 +729,16 @@
             "title": "Immediate-Mode Rendering",
             "description": "Draw procedural geometry without a scene graph: gears via drawGeometry and a 2,400-spark field as a single instanced RenderBatch draw call, with a live drawCalls readout.",
             "backend": "core",
-            "level": "advanced",
             "tags": [
                 "rendering",
                 "geometry",
                 "instancing",
                 "performance"
-            ]
+            ],
+            "level": "advanced"
         }
     ],
     "getting-started": [
-        {
-            "slug": "game-loop",
-            "path": "getting-started/game-loop.js",
-            "language": "typescript",
-            "title": "Game Loop",
-            "description": "Run a single Scene with a fixed-step update loop, draw a spinning rectangle, and observe how tick and deltaTime drive motion.",
-            "backend": "core",
-            "featured": true,
-            "level": "intro",
-            "tags": [
-                "game",
-                "loop",
-                "scene"
-            ]
-        },
         {
             "slug": "hello-world",
             "path": "getting-started/hello-world.js",
@@ -721,12 +747,27 @@
             "description": "Create an Application, attach a Scene, draw a Graphics shape, and see the first render cycle — the minimal ExoJS starting point.",
             "backend": "core",
             "featured": true,
-            "level": "intro",
             "tags": [
                 "scene",
                 "graphics",
                 "rendering"
-            ]
+            ],
+            "level": "intro"
+        },
+        {
+            "slug": "game-loop",
+            "path": "getting-started/game-loop.js",
+            "language": "typescript",
+            "title": "Game Loop",
+            "description": "Run a single Scene with a fixed-step update loop, draw a spinning rectangle, and observe how tick and deltaTime drive motion.",
+            "backend": "core",
+            "featured": true,
+            "tags": [
+                "game",
+                "loop",
+                "scene"
+            ],
+            "level": "intro"
         },
         {
             "slug": "resize-and-dpr",
@@ -735,64 +776,15 @@
             "title": "Resize and DPR",
             "description": "Handle window resizes and device pixel ratio changes so the canvas stays sharp on high-DPI screens without stretching.",
             "backend": "core",
-            "level": "intro",
             "tags": [
                 "resize",
                 "dpr",
                 "responsive"
-            ]
+            ],
+            "level": "intro"
         }
     ],
     "input": [
-        {
-            "slug": "action-mapping",
-            "path": "input/action-mapping.js",
-            "language": "typescript",
-            "title": "Action Mapping",
-            "description": "Map multiple physical inputs (keyboard keys + gamepad buttons) to named actions and read them identically in the update loop.",
-            "backend": "core",
-            "tags": [
-                "input",
-                "keyboard",
-                "gamepad"
-            ],
-            "capabilities": [
-                "keyboard",
-                "gamepad"
-            ]
-        },
-        {
-            "slug": "gamepad",
-            "path": "input/gamepad.js",
-            "language": "typescript",
-            "title": "Gamepad",
-            "description": "Read axes and buttons from a connected gamepad — plug in a controller and drive a circle around the canvas.",
-            "backend": "core",
-            "featured": true,
-            "level": "intro",
-            "tags": [
-                "input",
-                "gamepad"
-            ],
-            "capabilities": [
-                "gamepad"
-            ]
-        },
-        {
-            "slug": "key-rebinding",
-            "path": "input/key-rebinding.js",
-            "language": "typescript",
-            "title": "Key Rebinding",
-            "description": "Let players reassign key bindings at runtime and persist the new mapping through a serialisable InputProfile.",
-            "backend": "core",
-            "tags": [
-                "input",
-                "keyboard"
-            ],
-            "capabilities": [
-                "keyboard"
-            ]
-        },
         {
             "slug": "keyboard",
             "path": "input/keyboard.js",
@@ -801,14 +793,14 @@
             "description": "Read key state per-frame and on-event with the Keyboard API. Move a square using the arrow keys.",
             "backend": "core",
             "featured": true,
-            "level": "intro",
             "tags": [
                 "input",
                 "keyboard"
             ],
             "capabilities": [
                 "keyboard"
-            ]
+            ],
+            "level": "intro"
         },
         {
             "slug": "mouse-and-pointer",
@@ -824,22 +816,42 @@
             ],
             "capabilities": [
                 "pointer"
-            ]
+            ],
+            "level": "intro"
         },
         {
-            "slug": "multi-gamepad",
-            "path": "input/multi-gamepad.js",
+            "slug": "pointer-to-world",
+            "path": "input/pointer-to-world.js",
             "language": "typescript",
-            "title": "Multi Gamepad",
-            "description": "Handle multiple connected gamepads simultaneously — each controller drives its own coloured square.",
+            "title": "Pointer to World",
+            "description": "Convert screen-space pointer coordinates to world-space positions as the camera pans and zooms.",
             "backend": "core",
+            "tags": [
+                "input",
+                "pointer",
+                "camera"
+            ],
+            "capabilities": [
+                "pointer"
+            ],
+            "level": "intermediate"
+        },
+        {
+            "slug": "gamepad",
+            "path": "input/gamepad.js",
+            "language": "typescript",
+            "title": "Gamepad",
+            "description": "Read axes and buttons from a connected gamepad — plug in a controller and drive a circle around the canvas.",
+            "backend": "core",
+            "featured": true,
             "tags": [
                 "input",
                 "gamepad"
             ],
             "capabilities": [
                 "gamepad"
-            ]
+            ],
+            "level": "intro"
         },
         {
             "slug": "multitouch",
@@ -856,65 +868,61 @@
             "capabilities": [
                 "pointer",
                 "touch"
-            ]
+            ],
+            "level": "intermediate"
         },
         {
-            "slug": "pointer-to-world",
-            "path": "input/pointer-to-world.js",
+            "slug": "action-mapping",
+            "path": "input/action-mapping.js",
             "language": "typescript",
-            "title": "Pointer to World",
-            "description": "Convert screen-space pointer coordinates to world-space positions as the camera pans and zooms.",
+            "title": "Action Mapping",
+            "description": "Map multiple physical inputs (keyboard keys + gamepad buttons) to named actions and read them identically in the update loop.",
             "backend": "core",
             "tags": [
                 "input",
-                "pointer",
-                "camera"
+                "keyboard",
+                "gamepad"
             ],
             "capabilities": [
-                "pointer"
-            ]
+                "keyboard",
+                "gamepad"
+            ],
+            "level": "intermediate"
+        },
+        {
+            "slug": "key-rebinding",
+            "path": "input/key-rebinding.js",
+            "language": "typescript",
+            "title": "Key Rebinding",
+            "description": "Let players reassign key bindings at runtime and persist the new mapping through a serialisable InputProfile.",
+            "backend": "core",
+            "tags": [
+                "input",
+                "keyboard"
+            ],
+            "capabilities": [
+                "keyboard"
+            ],
+            "level": "advanced"
+        },
+        {
+            "slug": "multi-gamepad",
+            "path": "input/multi-gamepad.js",
+            "language": "typescript",
+            "title": "Multi Gamepad",
+            "description": "Handle multiple connected gamepads simultaneously — each controller drives its own coloured square.",
+            "backend": "core",
+            "tags": [
+                "input",
+                "gamepad"
+            ],
+            "capabilities": [
+                "gamepad"
+            ],
+            "level": "advanced"
         }
     ],
     "particles": [
-        {
-            "slug": "bonfire",
-            "path": "particles/bonfire.js",
-            "language": "typescript",
-            "title": "Bonfire",
-            "description": "Simulate a campfire with an emitter that varies particle colour, lifetime, and velocity over the flame shape.",
-            "backend": "core",
-            "tags": [
-                "particles"
-            ]
-        },
-        {
-            "slug": "cursor-attractor-particles",
-            "path": "particles/cursor-attractor-particles.js",
-            "language": "typescript",
-            "title": "Cursor Attractor Particles",
-            "description": "Attract and repel particles toward the pointer position using a custom force field on the particle emitter.",
-            "backend": "core",
-            "tags": [
-                "particles",
-                "pointer"
-            ],
-            "capabilities": [
-                "pointer"
-            ]
-        },
-        {
-            "slug": "custom-wgsl-module",
-            "path": "particles/custom-wgsl-module.js",
-            "language": "typescript",
-            "title": "Custom Wgsl Module",
-            "description": "Supply a custom WGSL compute module to the GPU particle system to implement non-standard particle behaviour.",
-            "backend": "core",
-            "tags": [
-                "particles",
-                "advanced",
-                "webgpu"
-            ]
-        },
         {
             "slug": "emitter-basics",
             "path": "particles/emitter-basics.js",
@@ -924,7 +932,20 @@
             "backend": "core",
             "tags": [
                 "particles"
-            ]
+            ],
+            "level": "intro"
+        },
+        {
+            "slug": "bonfire",
+            "path": "particles/bonfire.js",
+            "language": "typescript",
+            "title": "Bonfire",
+            "description": "Simulate a campfire with an emitter that varies particle colour, lifetime, and velocity over the flame shape.",
+            "backend": "core",
+            "tags": [
+                "particles"
+            ],
+            "level": "intermediate"
         },
         {
             "slug": "fireworks",
@@ -939,7 +960,24 @@
             ],
             "capabilities": [
                 "pointer"
-            ]
+            ],
+            "level": "intermediate"
+        },
+        {
+            "slug": "cursor-attractor-particles",
+            "path": "particles/cursor-attractor-particles.js",
+            "language": "typescript",
+            "title": "Cursor Attractor Particles",
+            "description": "Attract and repel particles toward the pointer position using a custom force field on the particle emitter.",
+            "backend": "core",
+            "tags": [
+                "particles",
+                "pointer"
+            ],
+            "capabilities": [
+                "pointer"
+            ],
+            "level": "intermediate"
         },
         {
             "slug": "gpu-particles",
@@ -952,25 +990,42 @@
                 "particles",
                 "webgpu",
                 "performance"
-            ]
+            ],
+            "level": "advanced"
+        },
+        {
+            "slug": "custom-wgsl-module",
+            "path": "particles/custom-wgsl-module.js",
+            "language": "typescript",
+            "title": "Custom Wgsl Module",
+            "description": "Supply a custom WGSL compute module to the GPU particle system to implement non-standard particle behaviour.",
+            "backend": "core",
+            "tags": [
+                "particles",
+                "advanced",
+                "webgpu"
+            ],
+            "level": "advanced"
         }
     ],
     "performance": [
         {
-            "slug": "backend-comparison",
-            "path": "performance/backend-comparison.js",
+            "slug": "sprite-stress",
+            "path": "performance/sprite-stress.js",
             "language": "typescript",
-            "title": "Backend Comparison",
-            "description": "Switch between WebGPU and WebGL2 backends at runtime and compare frame times for the same scene.",
+            "title": "Sprite Stress",
+            "description": "Render thousands of sprites to measure raw throughput; compare WebGPU and WebGL2 backends at high counts.",
             "backend": "core",
+            "featured": true,
             "tags": [
                 "performance",
-                "webgpu",
-                "rendering"
+                "rendering",
+                "webgpu"
             ],
             "capabilities": [
-                "keyboard"
-            ]
+                "webgpu"
+            ],
+            "level": "intermediate"
         },
         {
             "slug": "multi-texture-stress",
@@ -985,7 +1040,8 @@
             ],
             "capabilities": [
                 "webgpu"
-            ]
+            ],
+            "level": "intermediate"
         },
         {
             "slug": "particle-stress",
@@ -1001,25 +1057,25 @@
             ],
             "capabilities": [
                 "webgpu"
-            ]
+            ],
+            "level": "intermediate"
         },
         {
-            "slug": "sprite-stress",
-            "path": "performance/sprite-stress.js",
+            "slug": "backend-comparison",
+            "path": "performance/backend-comparison.js",
             "language": "typescript",
-            "title": "Sprite Stress",
-            "description": "Render thousands of sprites to measure raw throughput; compare WebGPU and WebGL2 backends at high counts.",
+            "title": "Backend Comparison",
+            "description": "Switch between WebGPU and WebGL2 backends at runtime and compare frame times for the same scene.",
             "backend": "core",
-            "featured": true,
-            "level": "intermediate",
             "tags": [
                 "performance",
-                "rendering",
-                "webgpu"
+                "webgpu",
+                "rendering"
             ],
             "capabilities": [
-                "webgpu"
-            ]
+                "keyboard"
+            ],
+            "level": "intermediate"
         }
     ],
     "physics": [
@@ -1033,7 +1089,8 @@
             "tags": [
                 "physics",
                 "binding"
-            ]
+            ],
+            "level": "intro"
         },
         {
             "slug": "tiled-map-physics-actor",
@@ -1046,22 +1103,23 @@
                 "physics",
                 "tilemap",
                 "collision"
-            ]
+            ],
+            "level": "intermediate"
         }
     ],
     "render-targets": [
         {
-            "slug": "bloom-lite",
-            "path": "render-targets/bloom-lite.js",
+            "slug": "render-to-texture",
+            "path": "render-targets/render-to-texture.js",
             "language": "typescript",
-            "title": "Bloom Lite",
-            "description": "Multi-pass bloom: render the scene into a RenderTarget, blur it, and composite back with additive blending.",
+            "title": "Render to Texture",
+            "description": "Draw a scene into a RenderTarget and sample the result as a texture on another sprite in the same frame.",
             "backend": "core",
             "tags": [
-                "fx",
                 "rendering",
                 "advanced"
-            ]
+            ],
+            "level": "intro"
         },
         {
             "slug": "mini-map",
@@ -1074,45 +1132,8 @@
                 "rendering",
                 "camera",
                 "advanced"
-            ]
-        },
-        {
-            "slug": "post-processing-chain",
-            "path": "render-targets/post-processing-chain.js",
-            "language": "typescript",
-            "title": "Post Processing Chain",
-            "description": "Chain multiple RenderTarget passes to build a full-scene post-processing pipeline (blur → vignette → colour grade).",
-            "backend": "core",
-            "tags": [
-                "fx",
-                "rendering",
-                "advanced"
-            ]
-        },
-        {
-            "slug": "render-pipeline",
-            "path": "render-targets/render-pipeline.js",
-            "language": "typescript",
-            "title": "Render Pipeline",
-            "description": "Compose a frame from named RenderPass steps: render the world off-screen, blur it, composite to the screen, and nest a UI pipeline — with a runtime-toggleable blur step and resize wiring.",
-            "backend": "core",
-            "tags": [
-                "rendering",
-                "advanced",
-                "fx"
-            ]
-        },
-        {
-            "slug": "render-to-texture",
-            "path": "render-targets/render-to-texture.js",
-            "language": "typescript",
-            "title": "Render to Texture",
-            "description": "Draw a scene into a RenderTarget and sample the result as a texture on another sprite in the same frame.",
-            "backend": "core",
-            "tags": [
-                "rendering",
-                "advanced"
-            ]
+            ],
+            "level": "intermediate"
         },
         {
             "slug": "trail-feedback",
@@ -1125,7 +1146,22 @@
                 "fx",
                 "rendering",
                 "advanced"
-            ]
+            ],
+            "level": "intermediate"
+        },
+        {
+            "slug": "bloom-lite",
+            "path": "render-targets/bloom-lite.js",
+            "language": "typescript",
+            "title": "Bloom Lite",
+            "description": "Multi-pass bloom: render the scene into a RenderTarget, blur it, and composite back with additive blending.",
+            "backend": "core",
+            "tags": [
+                "fx",
+                "rendering",
+                "advanced"
+            ],
+            "level": "advanced"
         },
         {
             "slug": "water-mirror",
@@ -1138,7 +1174,36 @@
                 "fx",
                 "rendering",
                 "advanced"
-            ]
+            ],
+            "level": "advanced"
+        },
+        {
+            "slug": "post-processing-chain",
+            "path": "render-targets/post-processing-chain.js",
+            "language": "typescript",
+            "title": "Post Processing Chain",
+            "description": "Chain multiple RenderTarget passes to build a full-scene post-processing pipeline (blur → vignette → colour grade).",
+            "backend": "core",
+            "tags": [
+                "fx",
+                "rendering",
+                "advanced"
+            ],
+            "level": "advanced"
+        },
+        {
+            "slug": "render-pipeline",
+            "path": "render-targets/render-pipeline.js",
+            "language": "typescript",
+            "title": "Render Pipeline",
+            "description": "Compose a frame from named RenderPass steps: render the world off-screen, blur it, composite to the screen, and nest a UI pipeline — with a runtime-toggleable blur step and resize wiring.",
+            "backend": "core",
+            "tags": [
+                "rendering",
+                "advanced",
+                "fx"
+            ],
+            "level": "advanced"
         }
     ],
     "scene-graph": [
@@ -1152,59 +1217,8 @@
             "tags": [
                 "scene-graph",
                 "rendering"
-            ]
-        },
-        {
-            "slug": "local-vs-global-transform",
-            "path": "scene-graph/local-vs-global-transform.js",
-            "language": "typescript",
-            "title": "Local Vs Global Transform",
-            "description": "Compare local and world transforms on nested nodes and see how parent transforms compose with children.",
-            "backend": "core",
-            "tags": [
-                "scene-graph",
-                "rendering"
-            ]
-        },
-        {
-            "slug": "masks",
-            "path": "scene-graph/masks.js",
-            "language": "typescript",
-            "title": "Masks",
-            "description": "Apply a stencil mask to a Container so children only render inside the mask's geometry.",
-            "backend": "core",
-            "tags": [
-                "scene-graph",
-                "fx",
-                "rendering"
-            ]
-        },
-        {
-            "slug": "nested-transforms",
-            "path": "scene-graph/nested-transforms.js",
-            "language": "typescript",
-            "title": "Nested Transforms",
-            "description": "Build a solar-system hierarchy of orbiting nodes to practice parent-child transform composition.",
-            "backend": "core",
-            "tags": [
-                "scene-graph",
-                "animation"
-            ]
-        },
-        {
-            "slug": "parallax-starfield",
-            "path": "scene-graph/parallax-starfield.js",
-            "language": "typescript",
-            "title": "Parallax Starfield",
-            "description": "Layer three Container rows at different scroll speeds to create a parallax depth effect driven by pointer movement.",
-            "backend": "core",
-            "tags": [
-                "scene-graph",
-                "rendering"
             ],
-            "capabilities": [
-                "pointer"
-            ]
+            "level": "intro"
         },
         {
             "slug": "pivot-and-anchor",
@@ -1216,7 +1230,34 @@
             "tags": [
                 "scene-graph",
                 "sprite"
-            ]
+            ],
+            "level": "intro"
+        },
+        {
+            "slug": "nested-transforms",
+            "path": "scene-graph/nested-transforms.js",
+            "language": "typescript",
+            "title": "Nested Transforms",
+            "description": "Build a solar-system hierarchy of orbiting nodes to practice parent-child transform composition.",
+            "backend": "core",
+            "tags": [
+                "scene-graph",
+                "animation"
+            ],
+            "level": "intermediate"
+        },
+        {
+            "slug": "local-vs-global-transform",
+            "path": "scene-graph/local-vs-global-transform.js",
+            "language": "typescript",
+            "title": "Local Vs Global Transform",
+            "description": "Compare local and world transforms on nested nodes and see how parent transforms compose with children.",
+            "backend": "core",
+            "tags": [
+                "scene-graph",
+                "rendering"
+            ],
+            "level": "intermediate"
         },
         {
             "slug": "z-ordering",
@@ -1231,44 +1272,192 @@
             ],
             "capabilities": [
                 "keyboard"
-            ]
+            ],
+            "level": "intermediate"
+        },
+        {
+            "slug": "parallax-starfield",
+            "path": "scene-graph/parallax-starfield.js",
+            "language": "typescript",
+            "title": "Parallax Starfield",
+            "description": "Layer three Container rows at different scroll speeds to create a parallax depth effect driven by pointer movement.",
+            "backend": "core",
+            "tags": [
+                "scene-graph",
+                "rendering"
+            ],
+            "capabilities": [
+                "pointer"
+            ],
+            "level": "intermediate"
+        },
+        {
+            "slug": "masks",
+            "path": "scene-graph/masks.js",
+            "language": "typescript",
+            "title": "Masks",
+            "description": "Apply a stencil mask to a Container so children only render inside the mask's geometry.",
+            "backend": "core",
+            "tags": [
+                "scene-graph",
+                "fx",
+                "rendering"
+            ],
+            "level": "advanced"
         }
     ],
     "showcase": [
         {
-            "slug": "audio-reactive-particles",
-            "path": "showcase/audio-reactive-particles.js",
+            "slug": "orb-dodge",
+            "path": "showcase/orb-dodge.js",
             "language": "typescript",
-            "title": "Audio Reactive Particles",
-            "description": "Emit particles driven by real-time AudioAnalyser frequency data — bass controls density, treble controls spread.",
+            "title": "Orb Dodge",
+            "description": "A complete dodge-and-collect loop: move with WASD or arrow keys, collect green orbs for points, avoid red orbs, and restart from the game-over screen.",
             "backend": "core",
             "featured": true,
-            "level": "intermediate",
             "tags": [
+                "game",
+                "input",
+                "collision",
+                "hud"
+            ],
+            "capabilities": [
+                "keyboard"
+            ],
+            "level": "intermediate"
+        },
+        {
+            "slug": "gamepad-spaceship",
+            "path": "showcase/gamepad-spaceship.js",
+            "language": "typescript",
+            "title": "Gamepad Spaceship",
+            "description": "Fly a spaceship with a gamepad: left stick steers, right trigger fires, and rumble kicks on impact.",
+            "backend": "core",
+            "featured": true,
+            "tags": [
+                "gamepad",
+                "input",
                 "audio",
-                "reactive",
+                "scene"
+            ],
+            "capabilities": [
+                "gamepad"
+            ],
+            "level": "intermediate"
+        },
+        {
+            "slug": "damage-flash",
+            "path": "showcase/damage-flash.js",
+            "language": "typescript",
+            "title": "Damage Flash",
+            "description": "Click a sprite to trigger a red flash tween — a common game-feel pattern for hit feedback.",
+            "backend": "core",
+            "tags": [
+                "animation",
+                "fx"
+            ],
+            "capabilities": [
+                "pointer"
+            ],
+            "level": "intro"
+        },
+        {
+            "slug": "screen-shake-on-explosion",
+            "path": "showcase/screen-shake-on-explosion.js",
+            "language": "typescript",
+            "title": "Screen Shake on Explosion",
+            "description": "Click to detonate — trigger an explosion particle burst followed by a camera shake tween.",
+            "backend": "core",
+            "tags": [
+                "camera",
+                "fx",
                 "particles"
             ],
             "capabilities": [
-                "audio"
-            ]
+                "pointer"
+            ],
+            "level": "intermediate"
         },
         {
-            "slug": "audio-visualisation",
-            "path": "showcase/audio-visualisation.js",
+            "slug": "typewriter-text",
+            "path": "showcase/typewriter-text.js",
             "language": "typescript",
-            "title": "Audio Visualisation",
-            "description": "Full-screen audio visualiser: frequency bars, waveform, and a beat-pulse ring driven by AudioAnalyser data.",
+            "title": "Typewriter Text",
+            "description": "Reveal text character-by-character with a configurable delay and a key-click sound effect per character.",
             "backend": "core",
             "tags": [
-                "audio",
-                "reactive",
-                "visualiser"
+                "text",
+                "animation",
+                "audio"
+            ],
+            "capabilities": [
+                "audio"
+            ],
+            "level": "intro"
+        },
+        {
+            "slug": "dialog-system",
+            "path": "showcase/dialog-system.js",
+            "language": "typescript",
+            "title": "Dialog System",
+            "description": "Click through a typewriter-animated dialog box with portrait, name plate, and choice buttons — game UI recipe.",
+            "backend": "core",
+            "tags": [
+                "scene",
+                "text",
+                "audio"
             ],
             "capabilities": [
                 "pointer",
                 "audio"
-            ]
+            ],
+            "level": "intermediate"
+        },
+        {
+            "slug": "mouse-parallax",
+            "path": "showcase/mouse-parallax.js",
+            "language": "typescript",
+            "title": "Mouse Parallax",
+            "description": "Move layered background planes at different speeds relative to pointer position for a depth parallax effect.",
+            "backend": "core",
+            "tags": [
+                "scene-graph",
+                "rendering",
+                "pointer"
+            ],
+            "capabilities": [
+                "pointer"
+            ],
+            "level": "intro"
+        },
+        {
+            "slug": "rectangles-collision",
+            "path": "showcase/rectangles-collision.js",
+            "language": "typescript",
+            "title": "Rectangles Collision",
+            "description": "Drag rectangles around the canvas and detect AABB overlap in the update loop — foundational collision recipe.",
+            "backend": "core",
+            "tags": [
+                "scene",
+                "rendering"
+            ],
+            "level": "intro"
+        },
+        {
+            "slug": "pause-blur",
+            "path": "showcase/pause-blur.js",
+            "language": "typescript",
+            "title": "Pause Blur",
+            "description": "Pause the game, fade up a blur filter over the scene, and show a pause menu — common game polish pattern.",
+            "backend": "core",
+            "tags": [
+                "fx",
+                "scene"
+            ],
+            "capabilities": [
+                "keyboard"
+            ],
+            "level": "intermediate"
         },
         {
             "slug": "boss-intro-cinematic",
@@ -1286,7 +1475,36 @@
                 "pointer",
                 "keyboard",
                 "audio"
-            ]
+            ],
+            "level": "intermediate"
+        },
+        {
+            "slug": "loading-progress-with-shader",
+            "path": "showcase/loading-progress-with-shader.js",
+            "language": "typescript",
+            "title": "Loading Progress with Shader",
+            "description": "Show an animated progress ring during asset loading using a custom GLSL fill-sweep shader.",
+            "backend": "core",
+            "tags": [
+                "fx",
+                "shader",
+                "scene"
+            ],
+            "level": "intermediate"
+        },
+        {
+            "slug": "minimap-with-mask",
+            "path": "showcase/minimap-with-mask.js",
+            "language": "typescript",
+            "title": "Minimap with Mask",
+            "description": "Render a secondary camera view inside a circular stencil mask to create a round minimap overlay.",
+            "backend": "core",
+            "tags": [
+                "rendering",
+                "camera",
+                "fx"
+            ],
+            "level": "intermediate"
         },
         {
             "slug": "color-grading",
@@ -1302,71 +1520,60 @@
             ],
             "capabilities": [
                 "keyboard"
-            ]
+            ],
+            "level": "intermediate"
         },
         {
-            "slug": "damage-flash",
-            "path": "showcase/damage-flash.js",
+            "slug": "vinyl-record",
+            "path": "showcase/vinyl-record.js",
             "language": "typescript",
-            "title": "Damage Flash",
-            "description": "Click a sprite to trigger a red flash tween — a common game-feel pattern for hit feedback.",
+            "title": "Vinyl Record",
+            "description": "Spin an animated vinyl record that speeds up or slows down as music plays — an audio-driven visual recipe.",
             "backend": "core",
             "tags": [
-                "animation",
-                "fx"
+                "audio",
+                "animation"
             ],
             "capabilities": [
-                "pointer"
-            ]
+                "audio"
+            ],
+            "level": "intermediate"
         },
         {
-            "slug": "dialog-system",
-            "path": "showcase/dialog-system.js",
+            "slug": "audio-visualisation",
+            "path": "showcase/audio-visualisation.js",
             "language": "typescript",
-            "title": "Dialog System",
-            "description": "Click through a typewriter-animated dialog box with portrait, name plate, and choice buttons — game UI recipe.",
+            "title": "Audio Visualisation",
+            "description": "Full-screen audio visualiser: frequency bars, waveform, and a beat-pulse ring driven by AudioAnalyser data.",
             "backend": "core",
             "tags": [
-                "scene",
-                "text",
-                "audio"
+                "audio",
+                "reactive",
+                "visualiser"
             ],
             "capabilities": [
                 "pointer",
                 "audio"
-            ]
+            ],
+            "level": "intermediate"
         },
         {
-            "slug": "gamepad-spaceship",
-            "path": "showcase/gamepad-spaceship.js",
+            "slug": "audio-reactive-particles",
+            "path": "showcase/audio-reactive-particles.js",
             "language": "typescript",
-            "title": "Gamepad Spaceship",
-            "description": "Fly a spaceship with a gamepad: left stick steers, right trigger fires, and rumble kicks on impact.",
+            "title": "Audio Reactive Particles",
+            "description": "Emit particles driven by real-time AudioAnalyser frequency data — bass controls density, treble controls spread.",
             "backend": "core",
             "featured": true,
-            "level": "intermediate",
             "tags": [
-                "gamepad",
-                "input",
                 "audio",
-                "scene"
+                "reactive",
+                "particles"
             ],
             "capabilities": [
-                "gamepad"
-            ]
-        },
-        {
-            "slug": "loading-progress-with-shader",
-            "path": "showcase/loading-progress-with-shader.js",
-            "language": "typescript",
-            "title": "Loading Progress with Shader",
-            "description": "Show an animated progress ring during asset loading using a custom GLSL fill-sweep shader.",
-            "backend": "core",
-            "tags": [
-                "fx",
-                "shader",
-                "scene"
-            ]
+                "audio"
+            ],
+            "level": "intermediate"
         },
         {
             "slug": "low-band-camera-shake",
@@ -1382,129 +1589,8 @@
             ],
             "capabilities": [
                 "audio"
-            ]
-        },
-        {
-            "slug": "minimap-with-mask",
-            "path": "showcase/minimap-with-mask.js",
-            "language": "typescript",
-            "title": "Minimap with Mask",
-            "description": "Render a secondary camera view inside a circular stencil mask to create a round minimap overlay.",
-            "backend": "core",
-            "tags": [
-                "rendering",
-                "camera",
-                "fx"
-            ]
-        },
-        {
-            "slug": "mouse-parallax",
-            "path": "showcase/mouse-parallax.js",
-            "language": "typescript",
-            "title": "Mouse Parallax",
-            "description": "Move layered background planes at different speeds relative to pointer position for a depth parallax effect.",
-            "backend": "core",
-            "tags": [
-                "scene-graph",
-                "rendering",
-                "pointer"
             ],
-            "capabilities": [
-                "pointer"
-            ]
-        },
-        {
-            "slug": "pause-blur",
-            "path": "showcase/pause-blur.js",
-            "language": "typescript",
-            "title": "Pause Blur",
-            "description": "Pause the game, fade up a blur filter over the scene, and show a pause menu — common game polish pattern.",
-            "backend": "core",
-            "tags": [
-                "fx",
-                "scene"
-            ],
-            "capabilities": [
-                "keyboard"
-            ]
-        },
-        {
-            "slug": "rectangles-collision",
-            "path": "showcase/rectangles-collision.js",
-            "language": "typescript",
-            "title": "Rectangles Collision",
-            "description": "Drag rectangles around the canvas and detect AABB overlap in the update loop — foundational collision recipe.",
-            "backend": "core",
-            "tags": [
-                "scene",
-                "rendering"
-            ]
-        },
-        {
-            "slug": "screen-shake-on-explosion",
-            "path": "showcase/screen-shake-on-explosion.js",
-            "language": "typescript",
-            "title": "Screen Shake on Explosion",
-            "description": "Click to detonate — trigger an explosion particle burst followed by a camera shake tween.",
-            "backend": "core",
-            "tags": [
-                "camera",
-                "fx",
-                "particles"
-            ],
-            "capabilities": [
-                "pointer"
-            ]
-        },
-        {
-            "slug": "typewriter-text",
-            "path": "showcase/typewriter-text.js",
-            "language": "typescript",
-            "title": "Typewriter Text",
-            "description": "Reveal text character-by-character with a configurable delay and a key-click sound effect per character.",
-            "backend": "core",
-            "tags": [
-                "text",
-                "animation",
-                "audio"
-            ],
-            "capabilities": [
-                "audio"
-            ]
-        },
-        {
-            "slug": "vinyl-record",
-            "path": "showcase/vinyl-record.js",
-            "language": "typescript",
-            "title": "Vinyl Record",
-            "description": "Spin an animated vinyl record that speeds up or slows down as music plays — an audio-driven visual recipe.",
-            "backend": "core",
-            "tags": [
-                "audio",
-                "animation"
-            ],
-            "capabilities": [
-                "audio"
-            ]
-        },
-        {
-            "slug": "orb-dodge",
-            "path": "showcase/orb-dodge.js",
-            "language": "typescript",
-            "title": "Orb Dodge",
-            "description": "A complete dodge-and-collect loop: move with WASD or arrow keys, collect green orbs for points, avoid red orbs, and restart from the game-over screen.",
-            "backend": "core",
-            "featured": true,
-            "level": "intermediate",
-            "tags": [
-                "game",
-                "input",
-                "collision",
-                "hud"
-            ],
-            "capabilities": [
-                "keyboard"
-            ]
+            "level": "advanced"
         }
     ],
     "spatial-audio": [
@@ -1523,7 +1609,8 @@
             "capabilities": [
                 "pointer",
                 "audio"
-            ]
+            ],
+            "level": "intro"
         },
         {
             "slug": "moving-source",
@@ -1539,7 +1626,8 @@
             ],
             "capabilities": [
                 "audio"
-            ]
+            ],
+            "level": "intermediate"
         },
         {
             "slug": "falloff-curves",
@@ -1557,10 +1645,51 @@
             "capabilities": [
                 "pointer",
                 "audio"
-            ]
+            ],
+            "level": "intermediate"
         }
     ],
     "sprites-textures": [
+        {
+            "slug": "sprite-basics",
+            "path": "sprites-textures/sprite-basics.js",
+            "language": "typescript",
+            "title": "Sprite Basics",
+            "description": "Load a texture, create a Sprite, and control position, rotation, scale, and alpha inside a Scene.",
+            "backend": "core",
+            "featured": true,
+            "tags": [
+                "sprite",
+                "rendering"
+            ],
+            "level": "intro"
+        },
+        {
+            "slug": "texture-loader",
+            "path": "sprites-textures/texture-loader.js",
+            "language": "typescript",
+            "title": "Texture Loader",
+            "description": "Load image assets at startup, reference them by key, and assign the resulting Texture to a Sprite.",
+            "backend": "core",
+            "tags": [
+                "sprite",
+                "rendering"
+            ],
+            "level": "intro"
+        },
+        {
+            "slug": "spritesheet-frames",
+            "path": "sprites-textures/spritesheet-frames.js",
+            "language": "typescript",
+            "title": "Spritesheet Frames",
+            "description": "Slice a spritesheet into named frames and step through them to play a simple frame animation.",
+            "backend": "core",
+            "tags": [
+                "sprite",
+                "animation"
+            ],
+            "level": "intermediate"
+        },
         {
             "slug": "blendmodes",
             "path": "sprites-textures/blendmodes.js",
@@ -1575,33 +1704,8 @@
             ],
             "capabilities": [
                 "pointer"
-            ]
-        },
-        {
-            "slug": "sprite-basics",
-            "path": "sprites-textures/sprite-basics.js",
-            "language": "typescript",
-            "title": "Sprite Basics",
-            "description": "Load a texture, create a Sprite, and control position, rotation, scale, and alpha inside a Scene.",
-            "backend": "core",
-            "featured": true,
-            "level": "intro",
-            "tags": [
-                "sprite",
-                "rendering"
-            ]
-        },
-        {
-            "slug": "spritesheet-frames",
-            "path": "sprites-textures/spritesheet-frames.js",
-            "language": "typescript",
-            "title": "Spritesheet Frames",
-            "description": "Slice a spritesheet into named frames and step through them to play a simple frame animation.",
-            "backend": "core",
-            "tags": [
-                "sprite",
-                "animation"
-            ]
+            ],
+            "level": "intermediate"
         },
         {
             "slug": "svg-drawable",
@@ -1613,19 +1717,8 @@
             "tags": [
                 "sprite",
                 "rendering"
-            ]
-        },
-        {
-            "slug": "texture-loader",
-            "path": "sprites-textures/texture-loader.js",
-            "language": "typescript",
-            "title": "Texture Loader",
-            "description": "Load image assets at startup, reference them by key, and assign the resulting Texture to a Sprite.",
-            "backend": "core",
-            "tags": [
-                "sprite",
-                "rendering"
-            ]
+            ],
+            "level": "intermediate"
         },
         {
             "slug": "video-drawable",
@@ -1640,10 +1733,59 @@
             ],
             "capabilities": [
                 "pointer"
-            ]
+            ],
+            "level": "advanced"
         }
     ],
     "text-fonts": [
+        {
+            "slug": "basic-text",
+            "path": "text-fonts/basic-text.js",
+            "language": "typescript",
+            "title": "Basic Text",
+            "description": "Render canvas-rasterised text inside a Scene. Set font, size, colour, and alignment via TextStyle.",
+            "backend": "core",
+            "tags": [
+                "text"
+            ],
+            "level": "intro"
+        },
+        {
+            "slug": "stroke-and-shadow",
+            "path": "text-fonts/stroke-and-shadow.js",
+            "language": "typescript",
+            "title": "Stroke and Shadow",
+            "description": "Add outline stroke and drop shadow to text using TextStyle properties — common game UI typography.",
+            "backend": "core",
+            "tags": [
+                "text"
+            ],
+            "level": "intro"
+        },
+        {
+            "slug": "multiline-and-wrap",
+            "path": "text-fonts/multiline-and-wrap.js",
+            "language": "typescript",
+            "title": "Multiline and Wrap",
+            "description": "Configure word-wrap width, line height, and horizontal alignment for multi-line Text drawables.",
+            "backend": "core",
+            "tags": [
+                "text"
+            ],
+            "level": "intermediate"
+        },
+        {
+            "slug": "web-fonts",
+            "path": "text-fonts/web-fonts.js",
+            "language": "typescript",
+            "title": "Web Fonts",
+            "description": "Load a custom web font via FontFace API and render it in a Text drawable — use any Google Font or local .ttf.",
+            "backend": "core",
+            "tags": [
+                "text"
+            ],
+            "level": "intermediate"
+        },
         {
             "slug": "bitmap-text-basic",
             "path": "text-fonts/bitmap-text-basic.js",
@@ -1655,40 +1797,8 @@
                 "bitmap",
                 "text",
                 "bmfont"
-            ]
-        },
-        {
-            "slug": "basic-text",
-            "path": "text-fonts/basic-text.js",
-            "language": "typescript",
-            "title": "Basic Text",
-            "description": "Render canvas-rasterised text inside a Scene. Set font, size, colour, and alignment via TextStyle.",
-            "backend": "core",
-            "tags": [
-                "text"
-            ]
-        },
-        {
-            "slug": "multiline-and-wrap",
-            "path": "text-fonts/multiline-and-wrap.js",
-            "language": "typescript",
-            "title": "Multiline and Wrap",
-            "description": "Configure word-wrap width, line height, and horizontal alignment for multi-line Text drawables.",
-            "backend": "core",
-            "tags": [
-                "text"
-            ]
-        },
-        {
-            "slug": "stroke-and-shadow",
-            "path": "text-fonts/stroke-and-shadow.js",
-            "language": "typescript",
-            "title": "Stroke and Shadow",
-            "description": "Add outline stroke and drop shadow to text using TextStyle properties — common game UI typography.",
-            "backend": "core",
-            "tags": [
-                "text"
-            ]
+            ],
+            "level": "intermediate"
         },
         {
             "slug": "text-glitch",
@@ -1701,44 +1811,49 @@
                 "text",
                 "fx",
                 "animation"
-            ]
-        },
-        {
-            "slug": "web-fonts",
-            "path": "text-fonts/web-fonts.js",
-            "language": "typescript",
-            "title": "Web Fonts",
-            "description": "Load a custom web font via FontFace API and render it in a Text drawable — use any Google Font or local .ttf.",
-            "backend": "core",
-            "tags": [
-                "text"
-            ]
+            ],
+            "level": "advanced"
         }
     ],
     "tweens-animation": [
         {
-            "slug": "easing-curves",
-            "path": "tweens-animation/easing-curves.js",
+            "slug": "tween-basics",
+            "path": "tweens-animation/tween-basics.js",
             "language": "typescript",
-            "title": "Easing Curves",
-            "description": "Visualise all built-in easing functions side-by-side and pick the curve that fits your animation.",
+            "title": "Tween Basics",
+            "description": "Animate numeric properties with Tween: set from/to, duration, easing, and chain an onComplete callback.",
             "backend": "core",
             "tags": [
                 "animation",
                 "tween"
-            ]
+            ],
+            "level": "intro"
         },
         {
-            "slug": "frame-animation",
-            "path": "tweens-animation/frame-animation.js",
+            "slug": "tween-with-yoyo",
+            "path": "tweens-animation/tween-with-yoyo.js",
             "language": "typescript",
-            "title": "Frame Animation",
-            "description": "Step through spritesheet frames on a timer to play a looping animation with configurable FPS.",
+            "title": "Tween with Yoyo",
+            "description": "Ping-pong a tween back and forth with the yoyo option — ideal for pulsing, breathing, or idle animations.",
             "backend": "core",
             "tags": [
                 "animation",
-                "sprite"
-            ]
+                "tween"
+            ],
+            "level": "intro"
+        },
+        {
+            "slug": "tween-chains",
+            "path": "tweens-animation/tween-chains.js",
+            "language": "typescript",
+            "title": "Tween Chains",
+            "description": "Build a sequence of tweens that fire one after another using tween.then() chaining.",
+            "backend": "core",
+            "tags": [
+                "animation",
+                "tween"
+            ],
+            "level": "intermediate"
         },
         {
             "slug": "interrupt-and-replace",
@@ -1753,31 +1868,8 @@
             ],
             "capabilities": [
                 "pointer"
-            ]
-        },
-        {
-            "slug": "tween-basics",
-            "path": "tweens-animation/tween-basics.js",
-            "language": "typescript",
-            "title": "Tween Basics",
-            "description": "Animate numeric properties with Tween: set from/to, duration, easing, and chain an onComplete callback.",
-            "backend": "core",
-            "tags": [
-                "animation",
-                "tween"
-            ]
-        },
-        {
-            "slug": "tween-chains",
-            "path": "tweens-animation/tween-chains.js",
-            "language": "typescript",
-            "title": "Tween Chains",
-            "description": "Build a sequence of tweens that fire one after another using tween.then() chaining.",
-            "backend": "core",
-            "tags": [
-                "animation",
-                "tween"
-            ]
+            ],
+            "level": "intermediate"
         },
         {
             "slug": "tween-from-array",
@@ -1789,19 +1881,34 @@
             "tags": [
                 "animation",
                 "tween"
-            ]
+            ],
+            "level": "intermediate"
         },
         {
-            "slug": "tween-with-yoyo",
-            "path": "tweens-animation/tween-with-yoyo.js",
+            "slug": "easing-curves",
+            "path": "tweens-animation/easing-curves.js",
             "language": "typescript",
-            "title": "Tween with Yoyo",
-            "description": "Ping-pong a tween back and forth with the yoyo option — ideal for pulsing, breathing, or idle animations.",
+            "title": "Easing Curves",
+            "description": "Visualise all built-in easing functions side-by-side and pick the curve that fits your animation.",
             "backend": "core",
             "tags": [
                 "animation",
                 "tween"
-            ]
+            ],
+            "level": "intermediate"
+        },
+        {
+            "slug": "frame-animation",
+            "path": "tweens-animation/frame-animation.js",
+            "language": "typescript",
+            "title": "Frame Animation",
+            "description": "Step through spritesheet frames on a timer to play a looping animation with configurable FPS.",
+            "backend": "core",
+            "tags": [
+                "animation",
+                "sprite"
+            ],
+            "level": "intermediate"
         }
     ],
     "ui": [
@@ -1817,7 +1924,8 @@
                 "hud",
                 "button",
                 "widget"
-            ]
+            ],
+            "level": "intro"
         }
     ]
 }

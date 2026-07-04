@@ -27,6 +27,7 @@ function linearAttenuation(distance) {
 }
 class MovingSourceScene extends Scene {
     sound;
+    voice;
     listener;
     angle = 0;
     graphics;
@@ -63,15 +64,20 @@ class MovingSourceScene extends Scene {
         });
         // Core defers playback until the AudioContext unlocks on the first
         // gesture, then starts automatically — just call play().
-        this.app.audio.play(this.sound, { loop: true, volume: 1 });
+        // play() returns the narrow Voice interface; Sound voices are spatializable.
+        this.voice = this.app.audio.play(this.sound, { loop: true, volume: 1 });
         this.hud.setStatus('Source orbiting the listener');
     }
     update(delta) {
         this.angle += delta.seconds * 1.1;
-        this.sound.position = {
+        const position = {
             x: this.listener.x + Math.cos(this.angle) * ORBIT_X,
             y: this.listener.y + Math.sin(this.angle) * ORBIT_Y,
         };
+        // sound.position only seeds NEW voices — the running loop moves via
+        // voice.position, so update both (descriptor + live voice).
+        this.sound.position = position;
+        this.voice.position = position;
     }
     draw(context) {
         const source = this.sound.position ?? { x: 0, y: 0 };

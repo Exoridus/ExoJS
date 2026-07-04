@@ -490,11 +490,17 @@ jobs:
           # Enables the Codecov bundle-analysis upload in rollup.config.ts;
           # absent (e.g. fork PRs, local builds) the build stays offline.
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+          # Also build + track the all-in-one bundle (core + every extension)
+          # so Codecov's Bundles tab carries the "everything together" number.
+          EXOJS_FULL_BUNDLE: '1'
         run: pnpm build
 
       # The extension packages each have their own rollup build; pnpm runs them
       # in workspace-dependency order (tilemap before tiled).
       - name: Build extension packages
+        env:
+          # Per-package bundle-analysis uploads (see exojs-config/rollup).
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         run: pnpm --filter "@codexo/exojs-particles" --filter "@codexo/exojs-tilemap" --filter "@codexo/exojs-tiled" --filter "@codexo/exojs-physics" --filter "@codexo/exojs-audio-fx" --filter "@codexo/exojs-aseprite" --filter "@codexo/exojs-ldtk" --filter "@codexo/exojs-react" build
 
       - name: Upload dist artifact

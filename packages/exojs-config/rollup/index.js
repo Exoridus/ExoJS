@@ -4,8 +4,9 @@
 // `#` resolution. Package-local config supplies only the package root and its own
 // source condition (or null when the package has no internal `#` imports).
 import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { dirname, relative, resolve } from 'node:path';
 
+import { codecovRollupPlugin } from '@codecov/rollup-plugin';
 import { createBuildDefinesFromRepo } from '../build-defines/index.js';
 import { createWorkletPlugin } from '../worklet-plugin.js';
 import nodeResolve from '@rollup/plugin-node-resolve';
@@ -42,6 +43,18 @@ export function createExtensionConfig(opts) {
   const isExternal = id =>
     id.startsWith('@codexo/exojs') || external.some(name => id === name || id.startsWith(`${name}/`));
 
+  const packageName = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8')).name ?? 'extension';
+  // Codecov Bundle Analysis: uploads per-package bundle stats when a token is
+  // present (CI passes CODECOV_TOKEN); local and fork builds stay offline.
+  const codecovPlugins = process.env.CODECOV_TOKEN
+    ? codecovRollupPlugin({
+        enableBundleAnalysis: true,
+        bundleName: packageName.replace(/^@codexo\//, ''),
+        uploadToken: process.env.CODECOV_TOKEN,
+        telemetry: false,
+      })
+    : [];
+
   return {
     input: inputs,
     external: isExternal,
@@ -51,6 +64,16 @@ export function createExtensionConfig(opts) {
       sourcemap: true,
       preserveModules: true,
       preserveModulesRoot: 'src',
+      // The preserveModules tree emits `sources` one directory level too high
+      // (../../../src/… escapes the package), so consumers that inspect the
+      // maps warn about missing source files. Re-anchor every `src/…` source
+      // to its real location relative to its map file (same fix as the core
+      // rollup.config.ts).
+      sourcemapPathTransform: (relativeSourcePath, sourcemapPath) => {
+        const match = /^(?:\.\.[\\/])+(src[\\/].*)$/.exec(relativeSourcePath);
+        if (!match) return relativeSourcePath;
+        return relative(dirname(sourcemapPath), resolve(root, match[1])).replaceAll('\\', '/');
+      },
     },
     plugins: [
       replace({
@@ -73,12 +96,17 @@ export function createExtensionConfig(opts) {
           declaration: true,
           declarationDir: 'dist/esm',
           declarationMap: false,
+          // Embed the original TS text so the shipped maps work without src/
+          // on disk (npm consumers, Vite's missing-source check).
+          inlineSources: true,
           // Only this package's source condition is active (or none): the package's
           // `#` -> ./src, while Core's `#` (in its built .d.ts) -> Core's dist.
           customConditions: sourceCondition ? [sourceCondition] : [],
           paths: corePaths,
         },
       }),
+      // Bundle-analysis upload goes last, after all transforms.
+      ...codecovPlugins,
     ],
   };
 }

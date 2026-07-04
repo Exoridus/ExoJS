@@ -54,11 +54,13 @@ class GameScene extends Scene {
 
         this.hud = mountControls({
             title: 'Pause Blur',
-            controls: [{ keys: 'Esc', action: 'pause / resume' }],
-            hint: 'Press Esc to pause — the scene blurs up behind the menu.',
+            controls: [{ keys: 'Esc / Click', action: 'pause / resume' }],
+            hint: 'Press Esc or click to pause — the scene blurs up behind the menu.',
         });
 
         this.inputs.onTrigger(Keyboard.Escape, () => this.togglePause());
+        // Same toggle on click/tap so the pause works without a keyboard.
+        this.app.input.onPointerTap.add(() => this.togglePause());
     }
 
     override update(delta): void {
