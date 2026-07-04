@@ -3,10 +3,10 @@
 # ExoJS
 
 [![Latest](https://img.shields.io/github/v/release/Exoridus/ExoJS?style=for-the-badge&label=Latest&logo=github&color=44cc11)](https://github.com/Exoridus/ExoJS/releases/latest)
-[![npm](https://img.shields.io/npm/v/%40codexo%2Fexojs?style=for-the-badge&logo=npm&label=npm&color=cb3837)](https://www.npmjs.com/package/@codexo/exojs)
+[![npm](https://img.shields.io/npm/v/%40codexo%2Fexojs?style=for-the-badge&logo=npm&label=npm&color=44cc11)](https://www.npmjs.com/package/@codexo/exojs)
 [![CI](https://img.shields.io/github/actions/workflow/status/Exoridus/ExoJS/ci.yml?branch=main&style=for-the-badge&logo=githubactions&logoColor=fff&label=CI)](https://github.com/Exoridus/ExoJS/actions/workflows/ci.yml)
 [![Coverage](https://img.shields.io/codecov/c/github/Exoridus/ExoJS?style=for-the-badge&logo=codecov&logoColor=fff&label=Coverage)](https://app.codecov.io/gh/Exoridus/ExoJS)
-[![License](https://img.shields.io/github/license/Exoridus/ExoJS?style=for-the-badge&color=1a1e23)](https://github.com/Exoridus/ExoJS/blob/main/LICENSE)
+[![License](https://img.shields.io/github/license/Exoridus/ExoJS?style=for-the-badge&color=44cc11)](https://github.com/Exoridus/ExoJS/blob/main/LICENSE)
 
 A TypeScript-first 2D engine for games and interactive apps. Explicit scene graph, WebGPU/WebGL2 rendering, native physics, spatial audio, and a strict type system — measured and verified, not just claimed.
 

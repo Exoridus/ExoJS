@@ -96,6 +96,10 @@ const isEnginePath = file => {
   if (file === 'tsconfig.json' || file === 'tsconfig.test.json' || file === 'tsconfig.eslint.json') return true;
   // Root manifest + lockfile + workspace topology all affect the whole build.
   if (file === 'package.json' || file === 'pnpm-lock.yaml' || file === 'pnpm-workspace.yaml') return true;
+  // The release version-coherence tests derive expectations from the root
+  // CHANGELOG, so a changelog-only PR must still run the unit lane (a docs-only
+  // changelog edit once skipped it and the mismatch only failed on main).
+  if (file === 'CHANGELOG.md') return true;
   // Runtime-package CODE (source, tests, build config, manifest) — but not docs.
   for (const pkg of RUNTIME_PACKAGES) {
     if (file.startsWith(`packages/${pkg}/`) && !isPackageDocPath(file)) return true;
