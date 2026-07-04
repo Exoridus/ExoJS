@@ -88,7 +88,9 @@ export interface RatePitched {
 /** A voice that can be positioned in 2D space and optionally track a node. */
 export interface Spatializable {
   /** World-space position of the source, or `null` when not spatialized. */
-  position: Vector | null;
+  get position(): Vector | null;
+  /** Accepts any `{ x, y }` point — implementations copy the values. */
+  set position(value: Vector | { x: number; y: number } | null);
   /**
    * Track a {@link SceneNode}: the voice reads the node's global translation
    * each frame. Pass `null` to stop following and fall back to
