@@ -178,16 +178,29 @@ jobs:
         run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Test (with coverage)
-        run: pnpm test:coverage
+        run: pnpm test:coverage -- --reporter=default --reporter=junit --outputFile.junit=./test-results/unit.junit.xml
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v6.0.2
         with:
           files: ./coverage/lcov.info
           flags: unit
-          fail_ci_if_error: false
+          # Loud on purpose: the upload failed silently for months (empty token
+          # in the reusable workflow) and nobody noticed.
+          fail_ci_if_error: true
           token: ${{ secrets.CODECOV_TOKEN }}
           slug: Exoridus/ExoJS
+
+      # Test Analytics (flaky detection, failure rates, slowest tests). Runs
+      # even when the test step failed — capturing failures is the point.
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/test-results-action@v1
+        with:
+          files: ./test-results/unit.junit.xml
+          flags: unit
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   browser-tests:
     name: Browser Tests
@@ -230,7 +243,16 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
 
       - name: Browser tests (Chromium WebGL2, new headless)
-        run: pnpm test:browser:webgl
+        run: pnpm test:browser:webgl -- --reporter=default --reporter=junit --outputFile.junit=./test-results/browser-webgl.junit.xml
+
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/test-results-action@v1
+        with:
+          files: ./test-results/browser-webgl.junit.xml
+          flags: browser-webgl
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   # Blocking lane. Chromium WebGPU is run against Mesa lavapipe (a real Vulkan
   # software rasterizer) instead of Chromium's bundled SwiftShader WebGPU
@@ -299,7 +321,16 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
 
       - name: Browser tests (Chromium WebGPU, Mesa lavapipe via xvfb)
-        run: xvfb-run -a pnpm test:browser:webgpu
+        run: xvfb-run -a pnpm test:browser:webgpu -- --reporter=default --reporter=junit --outputFile.junit=./test-results/browser-webgpu.junit.xml
+
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/test-results-action@v1
+        with:
+          files: ./test-results/browser-webgpu.junit.xml
+          flags: browser-webgpu
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   # Optional, non-blocking lane. The Ubuntu CI runner does not give headless
   # Firefox a usable WebGL2 context, and Firefox WebGPU adapter availability
@@ -402,7 +433,16 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
 
       - name: Browser tests (audio, headless Chromium)
-        run: pnpm test:browser:audio
+        run: pnpm test:browser:audio -- --reporter=default --reporter=junit --outputFile.junit=./test-results/browser-audio.junit.xml
+
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/test-results-action@v1
+        with:
+          files: ./test-results/browser-audio.junit.xml
+          flags: browser-audio
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   # Builds the core package and all extension packages exactly once, then
   # publishes the resulting dist trees as a shared artifact. `package-verify`

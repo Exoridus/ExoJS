@@ -1,6 +1,8 @@
 coverage:
   # Minimum project-wide coverage before Codecov reports a failure.
   # Start permissive; tighten once coverage grows above these floors.
+  # These statuses are informational — the hard regression gate is the
+  # vitest coverage thresholds in vitest.config.ts (fails the CI job itself).
   status:
     project:
       default:
@@ -14,18 +16,56 @@ coverage:
 ignore:
   - 'src/**/*.d.ts'
   - 'src/**/index.ts' # barrel re-exports add noise, not signal
+  - 'packages/*/src/**/*.d.ts'
+  - 'packages/*/src/**/index.ts'
   - 'scripts/**'
   - 'test/**'
+  - 'packages/*/test/**'
   - 'site/**'
 
 comment:
-  layout: 'reach,diff,flags,files'
+  layout: 'reach,diff,flags,components,files'
   behavior: default
   require_changes: true # only comment when coverage actually changes
 
-# Separate flags can be added later for, e.g., rendering vs. audio suites.
+# Upload flags — one per CI lane that uploads (see _ci-checks.yml).
 flags:
   unit:
     paths:
       - src/
+      - packages/
     carryforward: true
+
+# Per-package coverage breakdown in the PR comment and dashboard.
+# Components are pure reporting slices over the single `unit` upload —
+# no extra uploads needed. Untested packages (aseprite, ldtk, react) are
+# not listed yet; add each together with its first test suite (and its
+# vitest coverage.include entry).
+component_management:
+  default_rules:
+    statuses: [] # informational only — no per-component commit statuses
+  individual_components:
+    - component_id: core
+      name: core
+      paths:
+        - src/**
+    - component_id: particles
+      name: particles
+      paths:
+        - packages/exojs-particles/src/**
+    - component_id: tilemap
+      name: tilemap
+      paths:
+        - packages/exojs-tilemap/src/**
+    - component_id: tiled
+      name: tiled
+      paths:
+        - packages/exojs-tiled/src/**
+    - component_id: physics
+      name: physics
+      paths:
+        - packages/exojs-physics/src/**
+    - component_id: audio-fx
+      name: audio-fx
+      paths:
+        - packages/exojs-audio-fx/src/**
