@@ -284,10 +284,6 @@ describe('layoutText', () => {
   });
 
   test('align "justify" distributes extra space across inter-word gaps on non-last lines', () => {
-    // The source detects "start of a new word" by comparing a glyph's advance
-    // to the space glyph's advance — so the mock atlas must give the space a
-    // *different* advance than letters, or every character looks like a word
-    // start (uniform-advance atlases can't exercise this branch).
     const letterAdvance = 10;
     const spaceAdvance = 5;
     const atlas = {
@@ -322,6 +318,30 @@ describe('layoutText', () => {
     expect(firstLine).toHaveLength(3);
     const bPlacement = firstLine.at(-1)!;
     expect(bPlacement.x).toBe(40); // 15 natural + 25 stretch (extraPerGap = (50 - 25) / 1)
+  });
+
+  test('align "justify" works with a uniform-advance (monospace) atlas', () => {
+    // Word boundaries must be detected from the characters themselves, not by
+    // comparing advances against the space glyph — with a monospace atlas every
+    // glyph shares the space's advance, which used to defeat gap detection.
+    const advance = 10;
+    const atlas = makeAtlas(advance);
+    const style = new TextStyle({ fontSize: 16, align: 'justify' });
+
+    // _wrapLine (maxWidth 30): "A B" (30px) fits on line 0; "CCCCC" (50px,
+    // over budget but unbreakable without breakWords) becomes line 1 — the
+    // widest realized line, so line 0 has slack to distribute.
+    const placements = layoutText('A B CCCCC', style, { maxWidth: 30 }, atlas);
+
+    const lineYs = [...new Set(placements.map(p => p.y))];
+    expect(lineYs).toHaveLength(2);
+
+    // First line contains 'A', ' ', 'B' — the justified gap must stretch "B"
+    // beyond its natural position of 20px: extraPerGap = (50 - 30) / 1 = 20.
+    const firstLine = placements.filter(p => p.y === lineYs[0]);
+    expect(firstLine).toHaveLength(3);
+    expect(firstLine[0]!.x).toBe(0); // first word stays anchored at the left edge
+    expect(firstLine.at(-1)!.x).toBe(40);
   });
 
   test('align "justify" does not stretch the last line', () => {

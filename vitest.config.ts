@@ -108,17 +108,17 @@ export default defineConfig({
       // itself (the exact command the CI job runs) below the floor.
       //
       // A ratchet floor, not a target: set a few points below the measured
-      // baseline (statements 79.46%, branches 70.00%, functions 78.87%, lines
-      // 79.84% as of 2026-07-04 after the coverage-fleet pass, core + all
-      // extension packages) so normal test-suite churn doesn't flake the
+      // baseline (statements 80.83%, branches 72.28%, functions 81.88%, lines
+      // 81.24% as of 2026-07-04 after the src/math full-coverage pass, core +
+      // all extension packages) so normal test-suite churn doesn't flake the
       // gate, while still catching a real regression. Raise the floor as
       // coverage grows — never lower it without an explicit reason recorded
       // here.
       thresholds: {
-        statements: 77,
-        branches: 67,
-        functions: 76,
-        lines: 77,
+        statements: 78,
+        branches: 70,
+        functions: 79,
+        lines: 79,
       },
     },
     projects: [

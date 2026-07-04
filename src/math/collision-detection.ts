@@ -234,9 +234,14 @@ const shouldExcludeRightVoronoi = (
     return false;
   }
 
-  const region = getVoronoiRegionForPoint(nextEdge.x, nextEdge.y, circleX - nextPoint.x, circleY - nextPoint.y);
+  // In the right region the closest polygon feature is the *next* vertex, so
+  // both the region refinement and the distance test use `circle - nextPoint`
+  // (mirrors the right-region branch of getCollisionPolygonCircle).
+  const positionBx = circleX - nextPoint.x;
+  const positionBy = circleY - nextPoint.y;
+  const region = getVoronoiRegionForPoint(nextEdge.x, nextEdge.y, positionBx, positionBy);
 
-  return region === VoronoiRegion.left && getVectorLength(pointX, pointY) > radius;
+  return region === VoronoiRegion.left && getVectorLength(positionBx, positionBy) > radius;
 };
 
 const shouldExcludeMiddleVoronoi = (pointX: number, pointY: number, radius: number, edgeX: number, edgeY: number): boolean => {
@@ -254,15 +259,10 @@ const shouldExcludeMiddleVoronoi = (pointX: number, pointY: number, radius: numb
 };
 
 const intersectionCirclePoly = ({ x: cx, y: cy, radius }: Circle, { x: px, y: py, points, edges }: Polygon): boolean => {
-  // Frame transform: express the circle's position relative to the polygon's
-  // local space, but with the sign inverted (poly.position - circle.position
-  // rather than the natural circle.position - poly.position). The poly's
-  // `points` are then in their local coordinates and the Voronoi-region tests
-  // below combine them with the negated-offset circle position to reach the
-  // same value as a positively-offset frame would. Don't flip without
-  // re-deriving the Voronoi math.
-  const circleX = px - cx;
-  const circleY = py - cy;
+  // Frame transform: the circle centre expressed in the polygon's local space
+  // (circle.position - poly.position), matching getCollisionPolygonCircle.
+  const circleX = cx - px;
+  const circleY = cy - py;
   const len = points.length;
 
   for (let i = 0; i < len; i++) {
@@ -372,8 +372,8 @@ const getCollisionCircleCircle = (circleA: Circle, circleB: Circle): CollisionRe
     return null;
   }
 
-  const projectionN = difference.clone().normalize();
-  const projectionV = difference.multiply(overlap);
+  const projectionN = difference.normalize();
+  const projectionV = projectionN.clone().multiply(overlap);
 
   return {
     shapeA: circleA,

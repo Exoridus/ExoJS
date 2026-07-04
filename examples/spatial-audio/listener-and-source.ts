@@ -41,7 +41,9 @@ class ListenerAndSourceScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
 
     override async load(loader): Promise<void> {
-        await loader.load(Sound, { source: 'audio/impact-light.ogg' });
+        // A continuous music loop, not a one-shot: spatialization is only
+        // audible while there is sustained signal to pan/attenuate.
+        await loader.load(Sound, { source: 'audio/demo-loop-main.ogg' });
     }
 
     override init(loader): void {

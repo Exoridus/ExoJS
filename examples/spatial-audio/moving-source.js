@@ -35,7 +35,9 @@ class MovingSourceScene extends Scene {
     tapPrompt;
     hud;
     async load(loader) {
-        await loader.load(Sound, { tone: 'audio/impact-light.ogg' });
+        // A continuous music loop, not a one-shot: spatialization is only
+        // audible while there is sustained signal to pan/attenuate.
+        await loader.load(Sound, { tone: 'audio/demo-loop-main.ogg' });
     }
     init(loader) {
         const { width, height } = this.app.canvas;
