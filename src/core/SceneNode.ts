@@ -663,9 +663,18 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
     this._invalidateBoundsCascade();
   }
 
-  private _updateOrigin(): void {
+  /**
+   * Re-derive `origin` from the fractional anchor and the CURRENT local
+   * bounds. Uses local (untransformed) bounds on purpose: the transform
+   * multiplies the origin by scale itself, so deriving from world bounds
+   * would double-apply scale whenever the anchor is set after scaling.
+   * Subclasses whose local bounds change after construction (e.g. a sprite
+   * switching to a texture sub-frame) must call this to keep an anchored
+   * node anchored.
+   */
+  protected _updateOrigin(): void {
     const { x, y } = this._anchor;
-    const { width, height } = this.getBounds();
+    const { width, height } = this.getLocalBounds();
 
     this.setOrigin(width * x, height * y);
   }
