@@ -18,14 +18,17 @@ A TypeScript-first 2D engine for games and interactive apps. Explicit scene grap
 
 ## Packages
 
-| Package                   | Description                                                        |
-| ------------------------- | ------------------------------------------------------------------ |
-| `@codexo/exojs`           | Core runtime — scene graph, rendering, audio, UI, serialization    |
-| `@codexo/exojs-physics`   | Native 2D physics — shapes, constraints, TGS-Soft solver           |
-| `@codexo/exojs-particles` | GPU-driven particles (WebGPU compute) with CPU fallback            |
-| `@codexo/exojs-tilemap`   | Format-independent tilemap runtime and object layers               |
-| `@codexo/exojs-tiled`     | Tiled JSON adapter and scene-graph conversion                      |
-| `@codexo/exojs-audio-fx`  | Audio effects — biquad filters, analyser, beat detection, worklets |
+| Package                   | Description                                                            |
+| ------------------------- | ---------------------------------------------------------------------- |
+| `@codexo/exojs`           | Core runtime — scene graph, rendering, audio, UI, serialization        |
+| `@codexo/exojs-physics`   | Native 2D physics — shapes, constraints, TGS-Soft solver               |
+| `@codexo/exojs-particles` | GPU-driven particles (WebGPU compute) with CPU fallback                |
+| `@codexo/exojs-tilemap`   | Format-independent tilemap runtime and object layers                   |
+| `@codexo/exojs-tiled`     | Tiled JSON adapter and scene-graph conversion                          |
+| `@codexo/exojs-aseprite`  | Aseprite adapter — sprite sheets, tags, frame direction/repeat, slices |
+| `@codexo/exojs-ldtk`      | LDtk adapter — multi-world levels, entities, structured field values   |
+| `@codexo/exojs-audio-fx`  | Audio effects — biquad filters, analyser, beat detection, worklets     |
+| `@codexo/exojs-react`     | React bindings — run an ExoJS `Application` inside React components    |
 
 ## Features
 
