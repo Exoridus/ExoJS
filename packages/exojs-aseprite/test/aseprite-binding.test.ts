@@ -109,6 +109,20 @@ describe('asepriteBinding.load — array fixture', () => {
     const sheet = await handler.load({ source: 'sprites/hero.json' }, context);
     expect(sheet.spritesheet.frames.size).toBe(3);
   });
+
+  it('resolves a relative image ref against an absolute (scheme-qualified) source URL', async () => {
+    const { context, loaderLoad } = makeContext({ 'https://cdn.example.com/sprites/hero.json': loadFixture('hero.array.json') });
+    const handler = asepriteBinding.create();
+    await handler.load({ source: 'https://cdn.example.com/sprites/hero.json' }, context);
+    expect(loaderLoad).toHaveBeenCalledWith(Texture, 'https://cdn.example.com/sprites/hero.png');
+  });
+
+  it('resolves a relative image ref against a root-relative source, preserving the leading slash', async () => {
+    const { context, loaderLoad } = makeContext({ '/assets/sprites/hero.json': loadFixture('hero.array.json') });
+    const handler = asepriteBinding.create();
+    await handler.load({ source: '/assets/sprites/hero.json' }, context);
+    expect(loaderLoad).toHaveBeenCalledWith(Texture, '/assets/sprites/hero.png');
+  });
 });
 
 // ── load() — validation / AsepriteFormatError ───────────────────────────────────

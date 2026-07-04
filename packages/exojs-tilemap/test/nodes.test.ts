@@ -180,6 +180,35 @@ describe('TileLayerNode', () => {
     expect(node.chunkNodes).toHaveLength(2);
   });
 
+  it('_collectContent is a no-op (skips super call) when the layer is invisible', () => {
+    const tileset = makeTileset();
+    const layer = makeLayer(tileset, { visible: false });
+    const node = new TileLayerNode(layer);
+
+    const mockBuilder = { view: { center: { x: 0, y: 0 } } };
+
+    expect(() => (node as unknown as { _collectContent(b: unknown): void })._collectContent(mockBuilder)).not.toThrow();
+  });
+
+  it('propagates a non-null tintColor onto chunk tints (RGB channels extracted from the packed color)', () => {
+    const tileset = makeTileset();
+    const layer = fillLayer(
+      new TileLayer({
+        id: 1, name: 'tinted', width: 4, height: 4, tileWidth: 32, tileHeight: 32,
+        tilesets: [tileset], tintColor: 0x336699,
+      }),
+      tileset,
+    );
+    const node = new TileLayerNode(layer);
+
+    expect(node.chunkNodes.length).toBeGreaterThan(0);
+    for (const chunk of node.chunkNodes) {
+      expect(chunk.tint.r).toBe(0x33);
+      expect(chunk.tint.g).toBe(0x66);
+      expect(chunk.tint.b).toBe(0x99);
+    }
+  });
+
   it('destroy() frees chunk nodes but not the layer', () => {
     const tileset = makeTileset();
     const layer = fillLayer(makeLayer(tileset), tileset);
@@ -240,6 +269,37 @@ describe('TileChunkNode geometry cache', () => {
     node.setPosition(123, 456);
 
     expect(node.pages).toBe(first); // geometry is transform-independent
+  });
+
+  it('exposes its chunk coordinates and empty status', () => {
+    const tileset = makeTileset();
+    // 40-wide map so chunk (1,1) is distinct from (0,0).
+    const layer = new TileLayer({ id: 1, name: 'l', width: 40, height: 40, tileWidth: 32, tileHeight: 32, tilesets: [tileset] });
+    layer.setTileAt(0, 0, { tileset, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY });
+    layer.setTileAt(33, 33, { tileset, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY });
+
+    const [first, second] = new TileLayerNode(layer).chunkNodes;
+
+    expect(first!.chunkX).toBe(0);
+    expect(first!.chunkY).toBe(0);
+    expect(first!.isEmpty).toBe(false);
+
+    expect(second!.chunkX).toBe(1);
+    expect(second!.chunkY).toBe(1);
+    expect(second!.isEmpty).toBe(false);
+  });
+
+  it('isEmpty reflects the built page geometry (recomputed lazily via pages)', () => {
+    const tileset = makeTileset();
+    const layer = makeLayer(tileset);
+    layer.setTileAt(0, 0, { tileset, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY });
+
+    const node = new TileLayerNode(layer).chunkNodes[0];
+    expect(node.isEmpty).toBe(false);
+
+    layer.clearTileAt(0, 0);
+    // The chunk still exists (materialised) but its geometry is now empty.
+    expect(node.isEmpty).toBe(true);
   });
 
   it('exposes accurate local bounds for culling (clamped edge chunk)', () => {

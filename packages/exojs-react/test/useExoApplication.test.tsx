@@ -17,6 +17,18 @@ vi.mock('@codexo/exojs', async importActual => {
   return { ...actual, Application: MockApp };
 });
 
+/**
+ * Drives `useExoApplication` WITHOUT ever attaching the returned `canvasRef` to
+ * an element — exercises the mount effect's early-return guard (`canvasRef.current`
+ * stays null, so no Application is constructed).
+ */
+function NoCanvasHarness({ options, expose }: { options?: ExoApplicationOptions; expose: (result: UseExoApplicationResult) => void }): ReactElement {
+  const result = useExoApplication(options);
+  expose(result);
+
+  return <div data-testid="no-canvas" />;
+}
+
 interface HarnessProps {
   options?: ExoApplicationOptions;
   onReady?: (app: Application) => void;
@@ -88,6 +100,16 @@ describe('useExoApplication — construction & wiring', () => {
     expect(harness.result().canvasRef).toBe(refBefore);
     // A live prop change must NOT tear down and rebuild the Application.
     expect(MockApplication.instances).toHaveLength(1);
+  });
+});
+
+describe('useExoApplication — canvasRef never attached', () => {
+  it('does not construct an Application while canvasRef.current stays null', () => {
+    let latest: UseExoApplicationResult | undefined;
+    render(<NoCanvasHarness options={{ canvas: { width: 800, height: 600 } }} expose={r => (latest = r)} />);
+
+    expect(MockApplication.instances).toHaveLength(0);
+    expect(latest!.app).toBeNull();
   });
 });
 

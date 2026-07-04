@@ -42,6 +42,29 @@ describe('TiledFormatError', () => {
   });
 });
 
+describe('primitive validators — error message shape for each unmet expectation', () => {
+  it('describes a null value as "null" (not "object")', () => {
+    expect(() => validateTiledMapData(null, SOURCE)).toThrow(/expected an object, got null/);
+  });
+
+  it('expectArray throws when given a non-array', () => {
+    const base = { id: 1, name: '', type: '', x: 0, y: 0, width: 16, height: 16, rotation: 0, visible: true };
+    expect(() => validateTiledObjectData({ ...base, polygon: 'not-an-array' }, SOURCE, '')).toThrow(/expected an array, got string/);
+  });
+
+  it('expectString throws when given a non-string', () => {
+    expect(() => validateTiledPropertyData({ name: 42, value: 'x' }, SOURCE, '')).toThrow(/expected a string, got number/);
+  });
+
+  it('expectInteger throws when given a non-integer number', () => {
+    expect(() => validateTiledAnimationFrameData({ tileid: 1.5, duration: 100 }, SOURCE, '')).toThrow(/expected an integer, got 1.5/);
+  });
+
+  it('expectNonNegativeInteger throws when given a negative integer', () => {
+    expect(() => validateTiledAnimationFrameData({ tileid: -1, duration: 100 }, SOURCE, '')).toThrow(/expected a non-negative integer, got -1/);
+  });
+});
+
 describe('validateTiledPropertyData', () => {
   it('parses a string property, defaulting type to "string"', () => {
     expect(validateTiledPropertyData({ name: 'label', value: 'hello' }, SOURCE, '')).toEqual({
@@ -281,6 +304,12 @@ describe('checkTiledLayerInfiniteConsistency', () => {
     const group = validateTiledLayerData(baseLayer({ type: 'group', layers: [inconsistentChild] }), SOURCE, 'layers[0]');
     expect(() => checkTiledLayerInfiniteConsistency([group], false, SOURCE, 'layers')).toThrow(/has "chunks" on a finite map/);
   });
+
+  it('skips a hole in the layers array (defensive; a genuine sparse hole, not producible by JSON.parse)', () => {
+    const layers: import('../src/data').TiledLayerData[] = new Array(2) as import('../src/data').TiledLayerData[];
+    layers[1] = tileLayer({ data: [1] });
+    expect(() => checkTiledLayerInfiniteConsistency(layers, false, SOURCE, 'layers')).not.toThrow();
+  });
 });
 
 describe('validateTiledTileData', () => {
@@ -356,6 +385,23 @@ describe('validateTiledTilesetFileData', () => {
   it('throws on a non-object root', () => {
     expect(() => validateTiledTilesetFileData([], 'tiles.tsj')).toThrow(/expected an object, got an array/);
   });
+
+  it('parses wangsets with colors and wangtiles', () => {
+    const result = validateTiledTilesetFileData({
+      name: 'terrain', tilewidth: 16, tileheight: 16, tilecount: 4, columns: 2,
+      wangsets: [{
+        name: 'ground',
+        type: 'corner',
+        tile: -1,
+        colors: [{ name: 'grass', color: '#00ff00', tile: 0, probability: 1 }],
+        wangtiles: [{ tileid: 0, wangid: [0, 1, 0, 1, 0, 1, 0, 1] }],
+      }],
+    }, 'terrain.tsj');
+    expect(result.wangsets).toHaveLength(1);
+    expect(result.wangsets?.[0]).toMatchObject({ name: 'ground', type: 'corner', tile: -1 });
+    expect(result.wangsets?.[0].colors[0]).toEqual({ name: 'grass', color: '#00ff00', tile: 0, probability: 1 });
+    expect(result.wangsets?.[0].wangtiles[0]).toEqual({ tileid: 0, wangid: [0, 1, 0, 1, 0, 1, 0, 1] });
+  });
 });
 
 describe('validateTiledMapData', () => {
@@ -412,5 +458,14 @@ describe('validateTiledMapData', () => {
 
   it('throws on a non-object root', () => {
     expect(() => validateTiledMapData('not a map', SOURCE)).toThrow(/expected an object, got string/);
+  });
+
+  it('parses a numeric compressionlevel', () => {
+    const result = validateTiledMapData({ ...validMap, compressionlevel: 6 }, SOURCE);
+    expect(result.compressionlevel).toBe(6);
+  });
+
+  it('throws when version is neither a string nor a number', () => {
+    expect(() => validateTiledMapData({ ...validMap, version: true }, SOURCE)).toThrow(/expected a string or number, got boolean/);
   });
 });

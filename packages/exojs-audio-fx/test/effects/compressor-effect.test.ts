@@ -85,10 +85,34 @@ describe('CompressorEffect', () => {
       filter.destroy();
     });
 
-    it('throws after destroy', () => {
+    it('throws after destroy (inputNode)', () => {
       const filter = new CompressorEffect();
       filter.destroy();
       expect(() => filter.inputNode).toThrow('CompressorEffect not yet initialized.');
+    });
+
+    it('throws after destroy (outputNode)', () => {
+      const filter = new CompressorEffect();
+      filter.destroy();
+      expect(() => filter.outputNode).toThrow('CompressorEffect not yet initialized.');
+    });
+  });
+
+  describe('construction before the audio context is ready', () => {
+    it('registers a deferred onAudioContextReady setup and _onAudioContextReady wires the node', async () => {
+      // The shared mock AudioContext is always 'running', so
+      // onAudioContextReady.add() synchronously creates the context and
+      // dispatches ready inside the constructor call itself — the deferred
+      // callback (and the constructor's else-branch registration) both
+      // execute before `new` returns. Using a fresh module registry via
+      // vi.resetModules() guarantees the internal audio-context singleton
+      // starts in its virgin (not-ready) state for this one test, regardless
+      // of what earlier tests in this file already did with getAudioContext().
+      vi.resetModules();
+      const { CompressorEffect: FreshCompressorEffect } = await import('../../src/effects/CompressorEffect');
+      const effect = new FreshCompressorEffect();
+      expect(effect.inputNode).toBeDefined();
+      effect.destroy();
     });
   });
 
@@ -138,6 +162,51 @@ describe('CompressorEffect', () => {
       filter.destroy();
     });
 
+    it('threshold setter updates the internal value without throwing after destroy', () => {
+      const filter = new CompressorEffect();
+      filter.destroy();
+      expect(() => {
+        filter.threshold = -10;
+      }).not.toThrow();
+      expect(filter.threshold).toBe(-10);
+    });
+
+    it('knee setter updates the internal value without throwing after destroy', () => {
+      const filter = new CompressorEffect();
+      filter.destroy();
+      expect(() => {
+        filter.knee = 15;
+      }).not.toThrow();
+      expect(filter.knee).toBe(15);
+    });
+
+    it('ratio setter updates the internal value without throwing after destroy', () => {
+      const filter = new CompressorEffect();
+      filter.destroy();
+      expect(() => {
+        filter.ratio = 8;
+      }).not.toThrow();
+      expect(filter.ratio).toBe(8);
+    });
+
+    it('attack setter updates the internal value without throwing after destroy', () => {
+      const filter = new CompressorEffect();
+      filter.destroy();
+      expect(() => {
+        filter.attack = 0.2;
+      }).not.toThrow();
+      expect(filter.attack).toBe(0.2);
+    });
+
+    it('release setter updates the internal value without throwing after destroy', () => {
+      const filter = new CompressorEffect();
+      filter.destroy();
+      expect(() => {
+        filter.release = 0.6;
+      }).not.toThrow();
+      expect(filter.release).toBe(0.6);
+    });
+
     it('setters call setTargetAtTime on the underlying audio param', () => {
       const ctx = getAudioContext();
       const mockNode = createMockCompressor(ctx);
@@ -155,6 +224,25 @@ describe('CompressorEffect', () => {
       expect(mockNode.release.setTargetAtTime).toHaveBeenCalledWith(0.5, 0, 0.01);
       filter.destroy();
       spy.mockRestore();
+    });
+  });
+
+  describe('reduction', () => {
+    it('reflects the underlying node.reduction value', () => {
+      const ctx = getAudioContext();
+      const mockNode = createMockCompressor(ctx);
+      mockNode.reduction = -6.5;
+      const spy = vi.spyOn(ctx, 'createDynamicsCompressor').mockReturnValue(mockNode as unknown as DynamicsCompressorNode);
+      const filter = new CompressorEffect();
+      expect(filter.reduction).toBe(-6.5);
+      filter.destroy();
+      spy.mockRestore();
+    });
+
+    it('falls back to 0 after destroy (node reference cleared)', () => {
+      const filter = new CompressorEffect();
+      filter.destroy();
+      expect(filter.reduction).toBe(0);
     });
   });
 

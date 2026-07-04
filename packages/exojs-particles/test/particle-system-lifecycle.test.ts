@@ -43,6 +43,32 @@ describe('ParticleSystem construction shapes', () => {
     expect(system.hasAtlas).toBe(false);
   });
 
+  test('texture + frames overload without a trailing options bag uses the default capacity', () => {
+    const tex = makeTexture();
+    const frames = [new Rectangle(0, 0, 8, 8), new Rectangle(8, 0, 8, 8)];
+    const system = new ParticleSystem(tex, frames);
+
+    expect(system.capacity).toBe(4096);
+    expect(system.frames.length).toBe(2);
+    expect(system.hasAtlas).toBe(true);
+  });
+
+  test('Spritesheet overload without a trailing options bag uses the default capacity', () => {
+    const tex = makeTexture(32, 32);
+    const sheet = new Spritesheet(tex, {
+      frames: {
+        a: { frame: { x: 0, y: 0, w: 16, h: 16 } },
+        b: { frame: { x: 16, y: 0, w: 16, h: 16 } },
+      },
+    });
+
+    const system = new ParticleSystem(sheet);
+
+    expect(system.capacity).toBe(4096);
+    expect(system.texture).toBe(tex);
+    expect(system.frames.length).toBe(2);
+  });
+
   test('Spritesheet overload pulls texture and frames from the sheet', () => {
     const tex = makeTexture(32, 32);
     const sheet = new Spritesheet(tex, {
@@ -114,6 +140,19 @@ describe('ParticleSystem texture / frame accessors', () => {
     expect(top).toBeCloseTo(-5);
     expect(right).toBeCloseTo(10);
     expect(bottom).toBeCloseTo(5);
+  });
+
+  test('vertices getter reuses the cached value on a second access without recomputing', () => {
+    const system = new ParticleSystem(makeTexture(20, 10), { capacity: 4 });
+
+    const first = system.vertices;
+    const second = system.vertices;
+
+    // Same underlying Float32Array instance, with unchanged values — the
+    // cache-hit branch must skip the recompute block entirely.
+    expect(second).toBe(first);
+    expect(second[0]).toBeCloseTo(-10);
+    expect(second[1]).toBeCloseTo(-5);
   });
 
   test('texCoords ordering flips when the texture has flipY set', () => {
@@ -199,6 +238,23 @@ describe('ParticleSystem module registries', () => {
 
     expect(destroySpy).toHaveBeenCalledTimes(1);
     expect(system.deathModules.length).toBe(0);
+  });
+});
+
+describe('ParticleSystem.aliveCount', () => {
+  test('counts only slots flagged alive within [0, liveCount), distinct from liveCount itself', () => {
+    const system = new ParticleSystem(makeTexture(), { capacity: 8 });
+
+    system.spawn();
+    system.spawn();
+    system.spawn();
+
+    // Directly clear one slot's alive flag without going through the
+    // normal compaction path (simulates a GPU-mode dead hole).
+    system.alive[1] = 0;
+
+    expect(system.liveCount).toBe(3);
+    expect(system.aliveCount).toBe(2);
   });
 });
 

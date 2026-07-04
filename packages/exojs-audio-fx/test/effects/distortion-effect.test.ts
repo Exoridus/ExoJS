@@ -320,6 +320,15 @@ describe('DistortionEffect', () => {
       waveShaperSpy.mockRestore();
       biquadSpy.mockRestore();
     });
+
+    it('updates the internal value without throwing when called after destroy', () => {
+      const effect = new DistortionEffect();
+      effect.destroy();
+      expect(() => {
+        effect.drive = 0.6;
+      }).not.toThrow();
+      expect(effect.drive).toBe(0.6);
+    });
   });
 
   describe('wet setter', () => {
@@ -357,6 +366,15 @@ describe('DistortionEffect', () => {
       waveShaperSpy.mockRestore();
       biquadSpy.mockRestore();
     });
+
+    it('updates the internal value without throwing when called after destroy', () => {
+      const effect = new DistortionEffect();
+      effect.destroy();
+      expect(() => {
+        effect.wet = 0.3;
+      }).not.toThrow();
+      expect(effect.wet).toBe(0.3);
+    });
   });
 
   describe('oversample setter', () => {
@@ -377,6 +395,15 @@ describe('DistortionEffect', () => {
       gainSpy.mockRestore();
       waveShaperSpy.mockRestore();
       biquadSpy.mockRestore();
+    });
+
+    it('updates the internal value without throwing when called after destroy', () => {
+      const effect = new DistortionEffect();
+      effect.destroy();
+      expect(() => {
+        effect.oversample = '4x';
+      }).not.toThrow();
+      expect(effect.oversample).toBe('4x');
     });
   });
 
@@ -411,6 +438,15 @@ describe('DistortionEffect', () => {
       waveShaperSpy.mockRestore();
       biquadSpy.mockRestore();
     });
+
+    it('updates the internal value without throwing when called after destroy', () => {
+      const effect = new DistortionEffect();
+      effect.destroy();
+      expect(() => {
+        effect.tone = 0.2;
+      }).not.toThrow();
+      expect(effect.tone).toBe(0.2);
+    });
   });
 
   describe('destroy', () => {
@@ -433,6 +469,12 @@ describe('DistortionEffect', () => {
       const effect = new DistortionEffect();
       effect.destroy();
       expect(() => effect.inputNode).toThrow('DistortionEffect not yet initialized.');
+    });
+
+    it('double destroy is safe', () => {
+      const effect = new DistortionEffect();
+      effect.destroy();
+      expect(() => effect.destroy()).not.toThrow();
     });
   });
 });

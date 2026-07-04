@@ -1292,6 +1292,245 @@ function makeEntity(identifier: string): LdtkEntityInstance {
   };
 }
 
+// ── Coverage-closing edge cases ─────────────────────────────────────────────
+
+describe('ldtkToTileMap — grid size skips a non-Entities layer with an invalid grid size', () => {
+  it('continues past a layer whose __gridSize is 0 and uses the next valid layer', () => {
+    // A layer type outside the LdtkLayerType union (cast) is used here so the
+    // gridSize<=0 layer is never routed through the Tiles/IntGrid/AutoLayer
+    // switch cases in convertLevel (which would otherwise try to build a
+    // TileLayer from its own invalid __gridSize and throw). This isolates
+    // pickLevelGridSize's `__gridSize > 0` guard for the non-Entities branch.
+    const invalidGridSizeLayer = {
+      __identifier: 'Unsupported',
+      __type: 'Unsupported',
+      __cWid: 2,
+      __cHei: 1,
+      __gridSize: 0, // invalid — must be skipped, not treated as the map's grid size
+      layerDefUid: 102,
+      levelId: 1,
+      visible: true,
+      iid: 'unsupported-0',
+    } as unknown as LdtkLayerInstance;
+
+    const validTilesLayer: LdtkLayerInstance = {
+      __identifier: 'Tiles',
+      __type: 'Tiles',
+      __cWid: 2,
+      __cHei: 1,
+      __gridSize: 24,
+      layerDefUid: 101,
+      levelId: 1,
+      visible: true,
+      iid: 'tiles-0',
+      gridTiles: [],
+      autoLayerTiles: [],
+    };
+
+    const data: LdtkData = {
+      jsonVersion: '1.5.3',
+      defaultGridSize: 16,
+      defs: { tilesets: [], layers: [] },
+      levels: [
+        {
+          identifier: 'L',
+          uid: 1,
+          iid: 'iid-1',
+          worldX: 0,
+          worldY: 0,
+          pxWid: 48,
+          pxHei: 24,
+          layerInstances: [invalidGridSizeLayer, validTilesLayer],
+        },
+      ],
+    };
+
+    const map = ldtkToTileMap(data).levels[0]!;
+    expect(map.tileWidth).toBe(24);
+    expect(map.tileHeight).toBe(24);
+  });
+});
+
+describe('ldtkToTileMap — Tiles/AutoLayer tile-source fallback when the field is absent', () => {
+  const tileset = makeTileset('Atlas', 4);
+
+  it('falls back to an empty tile list for a Tiles layer with no gridTiles field', () => {
+    const data = docWithLayer({
+      __identifier: 'Tiles',
+      __type: 'Tiles',
+      __cWid: 4,
+      __cHei: 1,
+      __gridSize: 16,
+      layerDefUid: 101,
+      levelId: 1,
+      visible: true,
+      iid: 'tiles-1',
+      __tilesetDefUid: 1,
+      // gridTiles intentionally omitted
+    });
+
+    const layer = ldtkToTileMap(data, { tilesets: new Map([[1, tileset]]) }).levels[0]!
+      .layers[0]!;
+    expect(layer.countNonEmptyTiles()).toBe(0);
+  });
+
+  it('falls back to an empty tile list for an AutoLayer layer with no autoLayerTiles field', () => {
+    const data = docWithLayer({
+      __identifier: 'Walls',
+      __type: 'AutoLayer',
+      __cWid: 4,
+      __cHei: 1,
+      __gridSize: 16,
+      layerDefUid: 110,
+      levelId: 1,
+      visible: true,
+      iid: 'auto-1',
+      __tilesetDefUid: 1,
+      // autoLayerTiles intentionally omitted
+    });
+
+    const layer = ldtkToTileMap(data, { tilesets: new Map([[1, tileset]]) }).levels[0]!
+      .layers[0]!;
+    expect(layer.countNonEmptyTiles()).toBe(0);
+  });
+});
+
+describe('ldtkToTileMap — IntGrid auto-tiles reference a tileset uid missing from the tilesets map', () => {
+  it('leaves the layer without tiles instead of throwing', () => {
+    const tileset = makeTileset('Atlas', 4);
+    const data = docWithLayer({
+      __identifier: 'Collision',
+      __type: 'IntGrid',
+      __cWid: 4,
+      __cHei: 1,
+      __gridSize: 16,
+      layerDefUid: 120,
+      levelId: 1,
+      visible: true,
+      iid: 'int-1',
+      __tilesetDefUid: 999, // not present in the tilesets map below
+      intGridCsv: [1, 0, 0, 0],
+      autoLayerTiles: [{ px: [0, 0], src: [0, 0], f: 0, t: 3 }],
+    });
+
+    const layer = ldtkToTileMap(data, { tilesets: new Map([[1, tileset]]) }).levels[0]!
+      .layers[0]!;
+    expect(layer.countNonEmptyTiles()).toBe(0);
+  });
+});
+
+describe('ldtkToTileMap — IntGrid layer with no intGridCsv data', () => {
+  it('exposes no IntGrid properties when intGridCsv is absent', () => {
+    const data = docWithLayer({
+      __identifier: 'Collision',
+      __type: 'IntGrid',
+      __cWid: 4,
+      __cHei: 1,
+      __gridSize: 16,
+      layerDefUid: 120,
+      levelId: 1,
+      visible: true,
+      iid: 'int-1',
+      // intGridCsv intentionally omitted
+    });
+
+    const layer = ldtkToTileMap(data).levels[0]!.layers[0]!;
+    expect(getLdtkIntGridValueAt(layer, 0, 0)).toBeUndefined();
+  });
+
+  it('exposes no IntGrid properties when intGridCsv is an empty array', () => {
+    const data = docWithLayer({
+      __identifier: 'Collision',
+      __type: 'IntGrid',
+      __cWid: 4,
+      __cHei: 1,
+      __gridSize: 16,
+      layerDefUid: 120,
+      levelId: 1,
+      visible: true,
+      iid: 'int-1',
+      intGridCsv: [],
+    });
+
+    const layer = ldtkToTileMap(data).levels[0]!.layers[0]!;
+    expect(getLdtkIntGridValueAt(layer, 0, 0)).toBeUndefined();
+  });
+});
+
+describe('ldtkToTileMap — Entities layer fallback / defensive entries', () => {
+  it('produces an empty ObjectLayer for an Entities layer with no entityInstances field', () => {
+    const data = docWithLayer({
+      __identifier: 'Entities',
+      __type: 'Entities',
+      __cWid: 4,
+      __cHei: 1,
+      __gridSize: 16,
+      layerDefUid: 130,
+      levelId: 1,
+      visible: true,
+      iid: 'ent-1',
+      // entityInstances intentionally omitted
+    });
+
+    const objectLayer = ldtkToTileMap(data).levels[0]!.objectLayers[0]!;
+    expect(objectLayer.objects).toHaveLength(0);
+  });
+
+  it('skips a hole (undefined entry) in entityInstances while keeping surrounding entities and their index-derived ids', () => {
+    // entityInstances is typed as a dense array, but the conversion loop
+    // defensively guards against a sparse/holey array — construct one via a
+    // cast to exercise that guard.
+    const holeyInstances = [
+      makeEntity('First'),
+      undefined,
+      makeEntity('Second'),
+    ] as unknown as readonly LdtkEntityInstance[];
+
+    const data = docWithLayer({
+      __identifier: 'Entities',
+      __type: 'Entities',
+      __cWid: 4,
+      __cHei: 1,
+      __gridSize: 16,
+      layerDefUid: 130,
+      levelId: 1,
+      visible: true,
+      iid: 'ent-1',
+      entityInstances: holeyInstances,
+    });
+
+    const objects = ldtkToTileMap(data).levels[0]!.objectLayers[0]!.objects;
+    expect(objects.map(o => o.name)).toEqual(['First', 'Second']);
+    // index 1 (the hole) was skipped, so the surviving ids are 0 and 2.
+    expect(objects.map(o => o.id)).toEqual([0, 2]);
+  });
+});
+
+describe('ldtkToTileMap — unrecognised field types (exhaustiveness guard)', () => {
+  it('throws when a top-level field carries an unrecognised, non-Array __type', () => {
+    // Constructing this requires a cast — the LdtkFieldInstance union only
+    // permits known __type values, so this exercises the runtime guard
+    // against malformed/future LDtk data rather than a reachable-by-types path.
+    const bogusField = {
+      __identifier: 'x',
+      __type: 'FutureType',
+      __value: 'whatever',
+    } as unknown as LdtkFieldInstance;
+
+    expect(() => convertSingleField(bogusField)).toThrow(/unrecognised LDtk field type "FutureType"/);
+  });
+
+  it('drops an Array<T> element whose element type is unrecognised, yielding an empty array', () => {
+    const props = convertSingleField({
+      __identifier: 'mystery',
+      __type: 'Array<FutureType>',
+      __value: [1, 2, 3],
+    });
+
+    expect(props['mystery']).toEqual([]);
+  });
+});
+
 function makeEntityLevel(identifier: string, uid: number): LdtkLevel {
   return {
     identifier,

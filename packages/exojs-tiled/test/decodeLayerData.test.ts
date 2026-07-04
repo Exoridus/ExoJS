@@ -133,4 +133,54 @@ describe('decodeTiledLayerData', () => {
     });
     await expect(decodeTiledLayerData(raw, 'test.tmj')).rejects.toThrow(TiledFormatError);
   });
+
+  it('rejects an unrecognised (non-empty) compression value', async () => {
+    const raw = makeRawMap({
+      type: 'tilelayer',
+      encoding: 'base64',
+      compression: 'rle',
+      data: bytesToBase64(gidsToBytes(GIDS)),
+    });
+    await expect(decodeTiledLayerData(raw, 'test.tmj')).rejects.toThrow(TiledFormatError);
+    await expect(decodeTiledLayerData(raw, 'test.tmj')).rejects.toThrow(/unsupported tile layer compression/);
+  });
+
+  it('skips a non-object entry in the chunks array', async () => {
+    const raw = makeRawMap({
+      type: 'tilelayer',
+      encoding: 'base64',
+      chunks: [null, { x: 0, y: 0, width: 4, height: 2, data: bytesToBase64(gidsToBytes(GIDS)) }],
+    });
+    await decodeTiledLayerData(raw, 'test.tmj');
+    const layer = (raw.layers as Record<string, unknown>[])[0];
+    const chunks = layer.chunks as unknown[];
+    expect(chunks[0]).toBeNull();
+    expect((chunks[1] as Record<string, unknown>).data).toEqual(GIDS);
+  });
+
+  it('leaves a chunk whose data is not a string untouched', async () => {
+    const raw = makeRawMap({
+      type: 'tilelayer',
+      encoding: 'base64',
+      chunks: [{ x: 0, y: 0, width: 1, height: 1 }], // no "data" field
+    });
+    await decodeTiledLayerData(raw, 'test.tmj');
+    const layer = (raw.layers as Record<string, unknown>[])[0];
+    const chunk = (layer.chunks as Record<string, unknown>[])[0];
+    expect(chunk.data).toBeUndefined();
+  });
+
+  it('skips a non-object entry in a layers array', async () => {
+    const raw = makeRawMap({ type: 'tilelayer', data: [...GIDS] });
+    (raw.layers as unknown[]).unshift('not-a-layer-object');
+    await decodeTiledLayerData(raw, 'test.tmj');
+    const layers = raw.layers as unknown[];
+    expect(layers[0]).toBe('not-a-layer-object');
+    expect((layers[1] as Record<string, unknown>).data).toEqual(GIDS);
+  });
+
+  it('returns a non-object raw document unchanged without throwing', async () => {
+    await expect(decodeTiledLayerData('not a map', 'test.tmj')).resolves.toBe('not a map');
+    await expect(decodeTiledLayerData(null, 'test.tmj')).resolves.toBeNull();
+  });
 });

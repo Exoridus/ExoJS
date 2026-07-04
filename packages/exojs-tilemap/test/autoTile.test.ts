@@ -299,6 +299,87 @@ describe('WangSet — membership', () => {
     expect(wangSet.isMember(0)).toBe(false);
     expect(wangSet.members.has(10)).toBe(true);
   });
+
+  it('accepts a plain Record blobMap (not just a Map) and exposes it via blobMap', () => {
+    const wangSet = new WangSet({
+      blobMap: { 0: 10, 255: 11 },
+      tilesetIndex: 0,
+    });
+
+    expect(wangSet.getTileId(0)).toBe(10);
+    expect(wangSet.getTileId(255)).toBe(11);
+    expect(wangSet.isMember(10)).toBe(true);
+    expect(wangSet.isMember(11)).toBe(true);
+
+    // The public getter exposes the same resolved mapping, keyed by number.
+    expect(wangSet.blobMap.get(0)).toBe(10);
+    expect(wangSet.blobMap.get(255)).toBe(11);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Test 4b: applyVariant edge cases — unmapped mask / missing tileset
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe('autoTile — applyVariant defensive paths', () => {
+  it('leaves a cell untouched when its computed mask has no blobMap entry', () => {
+    const ts = makeTileset256();
+    const layer = makeLayer(ts, 3, 3);
+
+    // Fill the grid so the center cell computes a non-zero mask, but the
+    // blobMap only maps mask 0 → 0 — every other mask is unmapped.
+    for (let ty = 0; ty < 3; ty++) {
+      for (let tx = 0; tx < 3; tx++) {
+        setTile(layer, ts, tx, ty, 0);
+      }
+    }
+
+    const sparseBlobMap = new Map<number, number>([[0, 0]]);
+    const wangSet = new WangSet({ blobMap: sparseBlobMap, tilesetIndex: 0, type: 'blob' });
+    autoTile(layer, wangSet, { wrapBorder: false });
+
+    // Center (1,1) computes mask 255, which has no mapping — the cell must be
+    // left exactly as painted (localTileId 0), never rewritten.
+    expect(layer.getTileAt(1, 1)?.localTileId).toBe(0);
+  });
+
+  it('leaves a cell untouched when the wangSet.tilesetIndex has no matching tileset on the layer', () => {
+    const ts = makeTileset256();
+    const layer = makeLayer(ts, 2, 2);
+    setTile(layer, ts, 0, 0, 0);
+    setTile(layer, ts, 1, 0, 0);
+
+    // matchFn bypasses the tilesetIndex membership gate entirely, so a
+    // wangSet.tilesetIndex that doesn't correspond to any of the layer's
+    // tilesets can still reach applyVariant's tileset lookup.
+    const wangSet = new WangSet({ blobMap: identityBlobMap(), tilesetIndex: 99, type: 'blob' });
+    autoTile(layer, wangSet, { matchFn: () => true, wrapBorder: false });
+
+    // layer.tilesets[99] is undefined → applyVariant must bail out silently.
+    expect(layer.getTileAt(0, 0)?.localTileId).toBe(0);
+    expect(layer.getTileAt(1, 0)?.localTileId).toBe(0);
+  });
+
+  it('refreshCell defaults wrapBorder to true and honours a custom matchFn', () => {
+    const ts = makeTileset256();
+    const layer = makeLayer(ts, 3, 3);
+
+    for (let ty = 0; ty < 3; ty++) {
+      for (let tx = 0; tx < 3; tx++) {
+        setTile(layer, ts, tx, ty, 0);
+      }
+    }
+
+    const wangSet = new WangSet({ blobMap: identityBlobMap(), tilesetIndex: 0, type: 'blob' });
+
+    // No `wrapBorder` key at all (exercises the `?? true` default) and a
+    // matchFn that unconditionally accepts every cell.
+    expect(() => refreshCell(layer, 0, 0, wangSet, { matchFn: () => true })).not.toThrow();
+
+    // wrapBorder defaulting to true means every corner neighbor counts as
+    // in-group, so the corner cell ends up with the full mask (255).
+    expect(layer.getTileAt(0, 0)?.localTileId).toBe(255);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════

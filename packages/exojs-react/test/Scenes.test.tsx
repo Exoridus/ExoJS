@@ -128,4 +128,106 @@ describe('<Scenes> / <Scene> / useActiveScene', () => {
 
     await waitFor(() => expect(onError).toHaveBeenCalledWith(failure));
   });
+
+  it('wraps a non-Error rejection from app.scene.setScene() (scene switch) before dispatching it', async () => {
+    const app = makeApp();
+    const view = render(<Tree app={app} active="title" />);
+    await view.findByTestId('active');
+
+    const onError = vi.fn();
+    app.onError.add(onError);
+    app.scene.setScene.mockRejectedValueOnce('switch failed as a plain string');
+
+    view.rerender(<Tree app={app} active="game" />);
+
+    await waitFor(() => expect(onError).toHaveBeenCalledWith(new Error('switch failed as a plain string')));
+  });
+
+  it('routes a rejected app.scene.setScene(null) (no matching <Scene>) to app.onError', async () => {
+    const app = makeApp();
+    const view = render(<Tree app={app} active="title" />);
+    await view.findByTestId('active');
+
+    const onError = vi.fn();
+    app.onError.add(onError);
+    const failure = new Error('clear failed');
+    app.scene.setScene.mockRejectedValueOnce(failure);
+
+    view.rerender(<Tree app={app} active="does-not-exist" />);
+
+    await waitFor(() => expect(onError).toHaveBeenCalledWith(failure));
+  });
+
+  it('wraps a non-Error rejection from app.scene.setScene(null) (no matching <Scene>) before dispatching it', async () => {
+    const app = makeApp();
+    const view = render(<Tree app={app} active="title" />);
+    await view.findByTestId('active');
+
+    const onError = vi.fn();
+    app.onError.add(onError);
+    app.scene.setScene.mockRejectedValueOnce('clear failed as a plain string');
+
+    view.rerender(<Tree app={app} active="does-not-exist" />);
+
+    await waitFor(() => expect(onError).toHaveBeenCalledWith(new Error('clear failed as a plain string')));
+  });
+
+  it('wraps a non-Error rejection from the first app.start() activation before dispatching it', async () => {
+    const app = makeApp();
+    const onError = vi.fn();
+    app.onError.add(onError);
+    app.start.mockRejectedValueOnce('start failed as a plain string');
+
+    render(<Tree app={app} active="title" />);
+
+    await waitFor(() => expect(onError).toHaveBeenCalledWith(new Error('start failed as a plain string')));
+  });
+
+  it('does not install the scene when the component unmounts before app.start() resolves', async () => {
+    const app = makeApp();
+    let resolveStart!: (value: MockApplication) => void;
+    app.start.mockImplementationOnce(
+      () =>
+        new Promise<MockApplication>(resolve => {
+          resolveStart = resolve;
+        }),
+    );
+
+    const view = render(<Tree app={app} active="title" />);
+    expect(app.start).toHaveBeenCalledTimes(1);
+
+    // Unmount before the pending start() promise settles — the effect's
+    // cleanup already ran (cancelled = true) by the time it resolves below.
+    view.unmount();
+    resolveStart(app);
+
+    // Flush the microtask queue so the (now-late) `.then` in `apply()` runs;
+    // it must be a no-op rather than calling setInstance on an unmounted tree.
+    await Promise.resolve().then(() => Promise.resolve());
+    expect(view.queryByTestId('active')).toBeNull();
+  });
+
+  it('ignores non-<Scene> children when collecting the scene registry', async () => {
+    const app = makeApp();
+    const { findByTestId } = render(
+      <ExoContext.Provider value={app}>
+        <Scenes active="title">
+          <Scene name="title" component={TitleScene}>
+            <span data-testid="hud">title-hud</span>
+          </Scene>
+          {'a stray text child'}
+          <div data-testid="not-a-scene">ignored</div>
+        </Scenes>
+      </ExoContext.Provider>,
+    );
+
+    expect((await findByTestId('hud')).textContent).toBe('title-hud');
+  });
+});
+
+describe('<Scene> rendered directly', () => {
+  it('renders nothing on its own', () => {
+    const { container } = render(<Scene name="standalone" component={TitleScene} />);
+    expect(container.innerHTML).toBe('');
+  });
 });

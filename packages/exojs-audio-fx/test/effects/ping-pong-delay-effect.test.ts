@@ -371,6 +371,15 @@ describe('PingPongDelayEffect', () => {
       delaySpy.mockRestore();
       pannerSpy.mockRestore();
     });
+
+    it('is a no-op on the node graph after destroy but still updates the field', () => {
+      const effect = new PingPongDelayEffect();
+      effect.destroy();
+      expect(() => {
+        effect.delayTime = 0.6;
+      }).not.toThrow();
+      expect(effect.delayTime).toBe(0.6);
+    });
   });
 
   describe('feedback setter', () => {
@@ -423,6 +432,15 @@ describe('PingPongDelayEffect', () => {
       gainSpy.mockRestore();
       delaySpy.mockRestore();
       pannerSpy.mockRestore();
+    });
+
+    it('is a no-op on the node graph after destroy but still updates the field', () => {
+      const effect = new PingPongDelayEffect();
+      effect.destroy();
+      expect(() => {
+        effect.feedback = 0.5;
+      }).not.toThrow();
+      expect(effect.feedback).toBe(0.5);
     });
   });
 
@@ -478,6 +496,15 @@ describe('PingPongDelayEffect', () => {
       delaySpy.mockRestore();
       pannerSpy.mockRestore();
     });
+
+    it('is a no-op on the node graph after destroy but still updates the field', () => {
+      const effect = new PingPongDelayEffect();
+      effect.destroy();
+      expect(() => {
+        effect.wet = 0.3;
+      }).not.toThrow();
+      expect(effect.wet).toBe(0.3);
+    });
   });
 
   describe('destroy', () => {
@@ -518,6 +545,12 @@ describe('PingPongDelayEffect', () => {
       const effect = new PingPongDelayEffect();
       effect.destroy();
       expect(() => effect.inputNode).toThrow('PingPongDelayEffect not yet initialized.');
+    });
+
+    it('double destroy is safe', () => {
+      const effect = new PingPongDelayEffect();
+      effect.destroy();
+      expect(() => effect.destroy()).not.toThrow();
     });
   });
 });

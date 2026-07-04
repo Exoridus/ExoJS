@@ -171,6 +171,128 @@ describe('TileAnimator', () => {
     expect(tile?.transform.flipX).toBe(true);
   });
 
+  it('update() is a no-op for non-positive or non-finite deltaSeconds', () => {
+    const ts = makeTileset256();
+    ts._setDefinition(0, {
+      animation: [
+        { localTileId: 0, duration: 100 },
+        { localTileId: 1, duration: 100 },
+      ],
+    });
+
+    const layer = makeLayer(ts, 3, 3);
+    setTile(layer, ts, 0, 0, 0);
+
+    const animator = new TileAnimator(layer);
+
+    animator.update(0); // zero
+    animator.update(-1); // negative
+    animator.update(NaN); // non-finite
+    animator.update(Infinity); // non-finite
+
+    // None of these advanced the clock or wrote a frame.
+    expect(animator.elapsedMs).toBe(0);
+    expect(layer.getTileAt(0, 0)?.localTileId).toBe(0);
+  });
+
+  it('update() is a no-op when there are no animated cells to advance', () => {
+    const ts = makeTileset256();
+    const layer = makeLayer(ts, 2, 2);
+    setTile(layer, ts, 0, 0, 5); // no animation definition → not registered
+
+    const animator = new TileAnimator(layer);
+    expect(animator.animatedCellCount).toBe(0);
+
+    // update() must return early via the `this._cells.length === 0` guard clause.
+    expect(() => animator.update(0.5)).not.toThrow();
+    expect(animator.elapsedMs).toBe(0);
+  });
+
+  it('ignores an animation whose frames reference an out-of-range local tile id', () => {
+    const ts = makeTileset256();
+    // localTileId 999 exceeds the 256-tile tileset — malformed data.
+    ts._setDefinition(0, {
+      animation: [
+        { localTileId: 0, duration: 100 },
+        { localTileId: 999, duration: 100 },
+      ],
+    });
+
+    const layer = makeLayer(ts, 2, 2);
+    setTile(layer, ts, 0, 0, 0);
+
+    const animator = new TileAnimator(layer);
+    // The malformed cell must be skipped entirely during the scan.
+    expect(animator.animatedCellCount).toBe(0);
+  });
+
+  it('ignores an animation whose total duration is zero', () => {
+    const ts = makeTileset256();
+    // Both frame durations clamp to 0 (Math.max(0, duration)) → total is 0.
+    ts._setDefinition(0, {
+      animation: [
+        { localTileId: 0, duration: 0 },
+        { localTileId: 1, duration: -5 },
+      ],
+    });
+
+    const layer = makeLayer(ts, 2, 2);
+    setTile(layer, ts, 0, 0, 0);
+
+    const animator = new TileAnimator(layer);
+    expect(animator.animatedCellCount).toBe(0);
+  });
+
+  it('rescan() resets to frame 0 before re-scanning the layers', () => {
+    const ts = makeTileset256();
+    ts._setDefinition(0, {
+      animation: [
+        { localTileId: 0, duration: 100 },
+        { localTileId: 1, duration: 100 },
+      ],
+    });
+
+    const layer = makeLayer(ts, 2, 2);
+    setTile(layer, ts, 0, 0, 0);
+
+    const animator = new TileAnimator(layer);
+    animator.update(0.15); // → frame 1
+    expect(layer.getTileAt(0, 0)?.localTileId).toBe(1);
+
+    // A second animated cell appears after construction; rescan() must pick it up.
+    setTile(layer, ts, 1, 1, 0);
+    animator.rescan();
+
+    // rescan() resets first (frame 0, clock 0) then re-scans both cells.
+    expect(layer.getTileAt(0, 0)?.localTileId).toBe(0);
+    expect(animator.elapsedMs).toBe(0);
+    expect(animator.animatedCellCount).toBe(2);
+  });
+
+  it('destroy() drops the cell registry and zeroes the clock', () => {
+    const ts = makeTileset256();
+    ts._setDefinition(0, {
+      animation: [
+        { localTileId: 0, duration: 100 },
+        { localTileId: 1, duration: 100 },
+      ],
+    });
+
+    const layer = makeLayer(ts, 2, 2);
+    setTile(layer, ts, 0, 0, 0);
+
+    const animator = new TileAnimator(layer);
+    animator.update(0.05);
+    expect(animator.animatedCellCount).toBe(1);
+
+    animator.destroy();
+
+    expect(animator.animatedCellCount).toBe(0);
+    expect(animator.elapsedMs).toBe(0);
+    // The layer itself is untouched by destroy — only the registry is dropped.
+    expect(layer.destroyed).toBe(false);
+  });
+
   it('accepts multiple layers', () => {
     const ts = makeTileset256();
     ts._setDefinition(0, {

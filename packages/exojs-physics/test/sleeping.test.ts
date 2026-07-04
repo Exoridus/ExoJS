@@ -115,6 +115,19 @@ describe('sleeping', () => {
     }
   });
 
+  it('enableSleeping: false skips the sleep-timer pass entirely (bodies never sleep)', () => {
+    // perf.test.ts also exercises `enableSleeping: false`, but its coverage-run
+    // guard returns before ever calling `world.step` under istanbul
+    // instrumentation, so that path needs its own small, un-gated test here.
+    const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY }, enableSleeping: false });
+    addFloor(world, 300);
+    const box = addBox(world, 0, 300 - 16 - 2);
+
+    advance(world, 3); // well past the default timeToSleep
+
+    expect(box.isSleeping).toBe(false);
+  });
+
   it('sleep transitions are deterministic across identical runs', () => {
     const run = (): string => {
       const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });

@@ -227,6 +227,15 @@ describe('ConvolutionEffect', () => {
       convolverSpy.mockRestore();
     });
 
+    it('wet setter updates the internal value without throwing when called after destroy', () => {
+      const effect = new ConvolutionEffect();
+      effect.destroy();
+      expect(() => {
+        effect.wet = 0.3;
+      }).not.toThrow();
+      expect(effect.wet).toBe(0.3);
+    });
+
     it('wet setter applies gain multiplier to wetGain', () => {
       const ctx = getAudioContext();
       const { wetGain, gainSpy, convolverSpy } = wireAll(ctx);
@@ -266,6 +275,15 @@ describe('ConvolutionEffect', () => {
       effect.destroy();
     });
 
+    it('gain setter updates the internal value without throwing when called after destroy', () => {
+      const effect = new ConvolutionEffect();
+      effect.destroy();
+      expect(() => {
+        effect.gain = 3;
+      }).not.toThrow();
+      expect(effect.gain).toBe(3);
+    });
+
     it('gain setter updates wetGain (wet=0.5, gain=2 → wetGain=1.0)', () => {
       const ctx = getAudioContext();
       const { wetGain, gainSpy, convolverSpy } = wireAll(ctx);
@@ -284,6 +302,15 @@ describe('ConvolutionEffect', () => {
       effect.normalize = false;
       expect(effect.normalize).toBe(false);
       effect.destroy();
+    });
+
+    it('normalize setter updates the internal value without throwing when called after destroy', () => {
+      const effect = new ConvolutionEffect();
+      effect.destroy();
+      expect(() => {
+        effect.normalize = false;
+      }).not.toThrow();
+      expect(effect.normalize).toBe(false);
     });
 
     it('normalize setter applies to convolver', () => {
@@ -373,6 +400,44 @@ describe('ConvolutionEffect', () => {
       convolverSpy.mockRestore();
     });
 
+    it('stores a pending impulse when called before the audio context is ready', async () => {
+      // The shared mock AudioContext is always constructed with state
+      // 'running', so by the time any effect's constructor returns, its
+      // internal _setup has already been synchronously assigned (see the
+      // onAudioContextReady dispatch mechanism in src/audio/audio-context.ts).
+      // To genuinely exercise ConvolutionEffect.setImpulse's `else` branch
+      // (storing `_pendingImpulse` for later application in `_setupNodes`),
+      // the underlying AudioContext must still be 'suspended' when
+      // setImpulse is called. We simulate that real-world scenario (a
+      // context awaiting a user-interaction gesture per browser autoplay
+      // policy) by swapping in an AudioContext subclass that starts
+      // 'suspended', combined with vi.resetModules() so the module-level
+      // audio-context singleton starts virgin for this one test.
+      const OriginalAudioContext = globalThis.AudioContext;
+      class SuspendedAudioContext extends (OriginalAudioContext as unknown as new () => AudioContext) {
+        public constructor() {
+          super();
+          (this as unknown as { state: AudioContextState }).state = 'suspended';
+        }
+      }
+      Object.defineProperty(globalThis, 'AudioContext', { configurable: true, value: SuspendedAudioContext });
+
+      vi.resetModules();
+      const { ConvolutionEffect: FreshConvolutionEffect } = await import('../../src/effects/ConvolutionEffect');
+
+      const effect = new FreshConvolutionEffect();
+      // _setup must genuinely be null here — the context never reached 'running'.
+      expect(effect['_setup']).toBeNull();
+
+      const ir = { length: 1 } as unknown as AudioBuffer;
+      effect.setImpulse(ir);
+      // The else branch stores the impulse for later application in _setupNodes.
+      expect(effect['_pendingImpulse']).toBe(ir);
+
+      effect.destroy();
+      Object.defineProperty(globalThis, 'AudioContext', { configurable: true, value: OriginalAudioContext });
+    });
+
     it('setImpulse sets normalize before buffer (Web Audio order)', () => {
       const ctx = getAudioContext();
       const normalizeOrder: boolean[] = [];
@@ -437,6 +502,12 @@ describe('ConvolutionEffect', () => {
       const effect = new ConvolutionEffect();
       effect.destroy();
       expect(() => effect.inputNode).toThrow('ConvolutionEffect not yet initialized.');
+    });
+
+    it('double destroy is safe', () => {
+      const effect = new ConvolutionEffect();
+      effect.destroy();
+      expect(() => effect.destroy()).not.toThrow();
     });
   });
 });

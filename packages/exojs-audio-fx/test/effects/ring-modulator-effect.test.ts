@@ -251,6 +251,15 @@ describe('RingModulatorEffect', () => {
       expect(effect.frequency).toBe(20000);
       effect.destroy();
     });
+
+    it('is a no-op on the node graph after destroy but still updates the field', () => {
+      const effect = new RingModulatorEffect();
+      effect.destroy();
+      expect(() => {
+        effect.frequency = 660;
+      }).not.toThrow();
+      expect(effect.frequency).toBe(660);
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -274,6 +283,15 @@ describe('RingModulatorEffect', () => {
       const effect = new RingModulatorEffect({ waveform: 'sawtooth' });
       expect(effect.waveform).toBe('sawtooth');
       effect.destroy();
+    });
+
+    it('is a no-op on the node graph after destroy but still updates the field', () => {
+      const effect = new RingModulatorEffect();
+      effect.destroy();
+      expect(() => {
+        effect.waveform = 'square';
+      }).not.toThrow();
+      expect(effect.waveform).toBe('square');
     });
   });
 
@@ -319,6 +337,15 @@ describe('RingModulatorEffect', () => {
       effect.wet = 2;
       expect(effect.wet).toBe(1);
       effect.destroy();
+    });
+
+    it('is a no-op on the node graph after destroy but still updates the field', () => {
+      const effect = new RingModulatorEffect();
+      effect.destroy();
+      expect(() => {
+        effect.wet = 0.3;
+      }).not.toThrow();
+      expect(effect.wet).toBe(0.3);
     });
   });
 

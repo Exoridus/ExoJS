@@ -655,7 +655,10 @@ function checkGidCoverage(map: TiledMap, source: string): void {
         if (object === undefined) continue;
         const gid = object.gid;
 
-        if (gid !== undefined && map.findTilesetForGid(gid) === undefined) {
+        // gid 0 (after masking the flip bits) is the empty-cell sentinel, the
+        // same as in tile-layer data — accept it as "no tile" instead of
+        // rejecting it as uncovered.
+        if (gid !== undefined && maskTiledGid(gid) !== 0 && map.findTilesetForGid(gid) === undefined) {
           throw new TiledFormatError(source, `${layerPath}.objects[${o}].gid`, `gid ${gid} (masked: ${maskTiledGid(gid)}) is not covered by any tileset`);
         }
       }

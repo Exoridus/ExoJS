@@ -187,6 +187,50 @@ describe('ChorusEffect', () => {
       expect(filter.delayMs).toBe(0);
       filter.destroy();
     });
+
+    it('updates the internal value without throwing when called after destroy', () => {
+      const filter = new ChorusEffect();
+      filter.destroy();
+      expect(() => {
+        filter.delayMs = 15;
+      }).not.toThrow();
+      expect(filter.delayMs).toBe(15);
+    });
+  });
+
+  describe('depthMs setter', () => {
+    it('updates lfoGain.gain via setTargetAtTime', () => {
+      const ctx = getAudioContext();
+      const lfoGain = makeGainNode(ctx);
+      let gainCallCount = 0;
+      // ChorusEffect._setupNodes createGain order: inputGain, outputGain, dryGain, wetGain, lfoGain
+      const gains = [makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), lfoGain];
+      vi.spyOn(ctx, 'createGain').mockImplementation(() => {
+        return gains[gainCallCount++] as unknown as GainNode;
+      });
+
+      const filter = new ChorusEffect({ depthMs: 5 });
+      filter.depthMs = 10;
+      expect(filter.depthMs).toBe(10);
+      expect(lfoGain.gain.setTargetAtTime).toHaveBeenCalledWith(0.01, expect.anything(), expect.anything());
+      filter.destroy();
+    });
+
+    it('clamps depthMs to minimum of 0', () => {
+      const filter = new ChorusEffect();
+      filter.depthMs = -10;
+      expect(filter.depthMs).toBe(0);
+      filter.destroy();
+    });
+
+    it('updates the internal value without throwing when called after destroy', () => {
+      const filter = new ChorusEffect();
+      filter.destroy();
+      expect(() => {
+        filter.depthMs = 8;
+      }).not.toThrow();
+      expect(filter.depthMs).toBe(8);
+    });
   });
 
   describe('rateHz setter', () => {
@@ -211,6 +255,15 @@ describe('ChorusEffect', () => {
       filter.rateHz = -1;
       expect(filter.rateHz).toBe(0);
       filter.destroy();
+    });
+
+    it('updates the internal value without throwing when called after destroy', () => {
+      const filter = new ChorusEffect();
+      filter.destroy();
+      expect(() => {
+        filter.rateHz = 2;
+      }).not.toThrow();
+      expect(filter.rateHz).toBe(2);
     });
   });
 
@@ -243,6 +296,15 @@ describe('ChorusEffect', () => {
       filter.wet = 2;
       expect(filter.wet).toBe(1);
       filter.destroy();
+    });
+
+    it('updates the internal value without throwing when called after destroy', () => {
+      const filter = new ChorusEffect();
+      filter.destroy();
+      expect(() => {
+        filter.wet = 0.9;
+      }).not.toThrow();
+      expect(filter.wet).toBe(0.9);
     });
   });
 
@@ -284,6 +346,12 @@ describe('ChorusEffect', () => {
       const filter = new ChorusEffect();
       filter.destroy();
       expect(() => filter.inputNode).toThrow('ChorusEffect not yet initialized.');
+    });
+
+    it('throws after destroy when accessing outputNode', () => {
+      const filter = new ChorusEffect();
+      filter.destroy();
+      expect(() => filter.outputNode).toThrow('ChorusEffect not yet initialized.');
     });
 
     it('double destroy is safe', () => {

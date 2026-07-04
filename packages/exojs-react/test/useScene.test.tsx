@@ -96,4 +96,53 @@ describe('useScene', () => {
 
     await waitFor(() => expect(onError).toHaveBeenCalledWith(failure));
   });
+
+  it('wraps a non-Error rejection from the first app.start() activation before dispatching it', async () => {
+    const app = makeApp();
+    const onError = vi.fn();
+    app.onError.add(onError);
+    app.start.mockRejectedValueOnce('start failed as a plain string');
+
+    render(provide(app, <SceneProbe sceneClass={LevelScene} />));
+
+    await waitFor(() => expect(onError).toHaveBeenCalledWith(new Error('start failed as a plain string')));
+  });
+
+  it('wraps a non-Error rejection from the best-effort setScene(null) cleanup on unmount before dispatching it', async () => {
+    const app = makeApp();
+    const view = render(provide(app, <SceneProbe sceneClass={LevelScene} />));
+    await view.findByText('LevelScene');
+
+    const onError = vi.fn();
+    app.onError.add(onError);
+    app.scene.setScene.mockRejectedValueOnce('clear failed as a plain string');
+
+    view.unmount();
+
+    await waitFor(() => expect(onError).toHaveBeenCalledWith(new Error('clear failed as a plain string')));
+  });
+
+  it('does not install the scene when the component unmounts before app.start() resolves', async () => {
+    const app = makeApp();
+    let resolveStart!: (value: MockApplication) => void;
+    app.start.mockImplementationOnce(
+      () =>
+        new Promise<MockApplication>(resolve => {
+          resolveStart = resolve;
+        }),
+    );
+
+    const view = render(provide(app, <SceneProbe sceneClass={LevelScene} />));
+    expect(app.start).toHaveBeenCalledTimes(1);
+
+    // Unmount before the pending start() promise settles — the effect's
+    // cleanup already ran (cancelled = true) by the time it resolves below.
+    view.unmount();
+    resolveStart(app);
+
+    // Flush the microtask queue so the (now-late) `.then` in `apply()` runs;
+    // it must be a no-op rather than calling setScene on an unmounted tree.
+    await Promise.resolve().then(() => Promise.resolve());
+    expect(view.queryByText('LevelScene')).toBeNull();
+  });
 });

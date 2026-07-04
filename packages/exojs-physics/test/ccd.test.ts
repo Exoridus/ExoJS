@@ -139,4 +139,45 @@ describe('continuous collision (bullet mode)', () => {
     // would have dead-stopped it at vy ≈ 0.
     expect(ball.linearVelocityY).toBeGreaterThan(1000);
   });
+
+  it('a bullet with negligible motion this step is skipped by the sweep (near-zero distance)', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+    const ball = new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new CircleShape(6) }] });
+    ball.isBullet = true;
+    world.add(ball);
+
+    // No velocity, no gravity — the body barely moves (well below the sweep's
+    // 1e-6 distance floor), so `_advanceBullets` must bail out via the
+    // near-zero-distance guard instead of normalizing a ~zero-length direction.
+    expect(() => world.step(FRAME)).not.toThrow();
+    expect(ball.x).toBe(0);
+    expect(ball.y).toBe(0);
+  });
+
+  it('a slow bullet impact below the restitution threshold does not bounce', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+    // The CCD sweep tracks the centre point only (documented limitation — see
+    // `_advanceBullets`), targeting the wall's true surface at x = 198,
+    // independent of the ball's own radius. A normal-sized ball's *actual*
+    // shape would already overlap the wall from this close (radius 6 ≫ the
+    // 0.005px gap), so the ordinary discrete solver — not CCD — would resolve
+    // it first. Using a tiny radius (0.002, smaller than this step's ~0.0083px
+    // travel) keeps the real shapes apart at the step's start while still
+    // letting the centre-only sweep register the crossing, so CCD (not the
+    // discrete solver) is what responds here. At vx = 0.5 px/s the impact speed
+    // is well below `ccdRestitutionThreshold` (1 px/s), so the response must be
+    // a pure slide (restitution 0), not a bounce.
+    world.add(new PhysicsBody({ type: 'static', position: { x: 200, y: 0 }, colliders: [{ shape: new BoxShape(4, 400) }] }));
+    const ball = new PhysicsBody({ type: 'dynamic', position: { x: 198 - 0.005, y: 0 }, colliders: [{ shape: new CircleShape(0.002) }] });
+    ball.isBullet = true;
+    world.add(ball);
+    ball.linearVelocityX = 0.5;
+
+    world.step(FRAME);
+
+    expect(ball.x).toBeLessThan(198); // clamped short of the wall surface, did not tunnel
+    // A bounce (restitution > 0) would reverse the velocity to a negative value;
+    // a slide (restitution 0) cancels the inward velocity to ~0, not past it.
+    expect(ball.linearVelocityX).toBeCloseTo(0, 6);
+  });
 });

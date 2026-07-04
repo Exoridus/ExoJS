@@ -381,4 +381,215 @@ describe('joints', () => {
     expect(wheel.y).toBeGreaterThan(45); // pulled down to the limit
     expect(wheel.y).toBeLessThan(51); // capped at upperTranslation (30 + 20)
   });
+
+  // ── Edge-case coverage: joint limits at their boundary, zero-length axes,
+  // soft-spring branches and fixed-rotation degenerate-mass paths ───────────
+
+  it('a distance joint with minLength acts as a strut — stops a body from crushing into the anchor', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
+    const anchor = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
+    // Bob starts well above the anchor and falls toward it under gravity; the strut
+    // (minLength only — maxLength defaults to Infinity) stops it at minLength instead
+    // of letting it crush through to the anchor.
+    const bob = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: -300 }, colliders: [{ shape: new BoxShape(16, 16) }] }));
+
+    world.addJoint(new DistanceJoint({ bodyA: anchor, bodyB: bob, minLength: 100 }));
+
+    advance(world, 3);
+
+    const distance = Math.hypot(bob.x - anchor.x, bob.y - anchor.y);
+    expect(distance).toBeGreaterThan(95); // never crushed below minLength
+    expect(distance).toBeLessThan(160); // and not flung far past it either
+    expect(bob.y).toBeLessThan(0); // still above the anchor — never crossed through
+  });
+
+  it('handles coincident anchors at prepare time (zero-length axis) without producing NaN', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+    const a = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(16, 16) }] }));
+    const b = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(16, 16) }] }));
+
+    // Both anchors default to their body's position — identical points, so the
+    // connecting axis has zero length at the first _prepare().
+    world.addJoint(new DistanceJoint({ bodyA: a, bodyB: b, length: 50 }));
+
+    world.step(1 / 60);
+
+    expect(Number.isFinite(a.x)).toBe(true);
+    expect(Number.isFinite(a.y)).toBe(true);
+    expect(Number.isFinite(b.x)).toBe(true);
+    expect(Number.isFinite(b.y)).toBe(true);
+  });
+
+  it('uses default hertz/dampingRatio/maxForce when omitted, and target reads back the current point', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+    const body = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(20, 20) }] }));
+
+    const joint = world.addJoint(new MouseJoint({ body, target: { x: 0, y: 0 } }));
+
+    expect(joint.hertz).toBe(5);
+    expect(joint.dampingRatio).toBe(0.7);
+    expect(joint.maxForce).toBe(Infinity);
+    expect(joint.target).toEqual({ x: 0, y: 0 });
+
+    joint.target = { x: 30, y: 0 }; // move the target away — the default soft spring pulls the body toward it
+    expect(joint.target).toEqual({ x: 30, y: 0 });
+
+    advance(world, 1);
+
+    expect(body.x).toBeGreaterThan(20); // still converges toward the target with the defaults
+  });
+
+  it('a zero-length axis in a prismatic joint is rejected at construction', () => {
+    // A (0,0) axis cannot be normalized into a direction — silently creating a
+    // joint that constrains nothing would let the body free-fall.
+    const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
+    const anchor = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
+    const slider = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(20, 20) }] }));
+
+    expect(() => new PrismaticJoint({ bodyA: anchor, bodyB: slider, anchor: { x: 0, y: 0 }, axis: { x: 0, y: 0 } })).toThrow(RangeError);
+    expect(() => new PrismaticJoint({ bodyA: anchor, bodyB: slider, anchor: { x: 0, y: 0 }, axis: { x: Number.NaN, y: 0 } })).toThrow(RangeError);
+  });
+
+  it('a prismatic joint with a fixed-rotation slider keeps the perpendicular lock solvable (k22 fallback)', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
+    const anchor = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
+    // Both bodies are rotation-locked (static anchor + fixedRotation slider): iA+iB=0,
+    // which would make the perpendicular+angular block matrix singular without the
+    // `_k22 = 1` fallback.
+    const slider = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, fixedRotation: true, colliders: [{ shape: new BoxShape(20, 20) }] }));
+
+    world.addJoint(new PrismaticJoint({ bodyA: anchor, bodyB: slider, anchor: { x: 0, y: 0 }, axis: { x: 1, y: 0 } }));
+
+    advance(world, 2);
+
+    expect(Math.abs(slider.y)).toBeLessThan(1); // perpendicular still locked with both bodies rotation-locked
+    expect(slider.angle).toBe(0);
+  });
+
+  it('a soft revolute joint (hertz>0) settles bounded near the pivot radius', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
+    const anchor = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
+    const bob = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 70, y: 0 }, colliders: [{ shape: new BoxShape(16, 16) }] }));
+
+    world.addJoint(new RevoluteJoint({ bodyA: anchor, bodyB: bob, anchor: { x: 0, y: 0 }, hertz: 3, dampingRatio: 1 }));
+
+    advance(world, 2);
+
+    // A soft pin lets the anchor point drift a little under load but stays bounded.
+    const radius = Math.hypot(bob.x, bob.y);
+    expect(radius).toBeGreaterThan(60);
+    expect(radius).toBeLessThan(140);
+    expect(Number.isFinite(bob.angle)).toBe(true);
+  });
+
+  it('an angular motor on a fixed-rotation body does nothing (zero angular effective mass)', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+    const anchor = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
+    const bob = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 50, y: 0 }, fixedRotation: true, colliders: [{ shape: new BoxShape(16, 16) }] }));
+
+    world.addJoint(new RevoluteJoint({ bodyA: anchor, bodyB: bob, anchor: { x: 0, y: 0 }, enableMotor: true, motorSpeed: 10, maxMotorTorque: 1e8 }));
+
+    advance(world, 1);
+
+    expect(bob.angularVelocity).toBe(0); // fixed rotation — zero angular mass, the motor can't spin it
+  });
+
+  it('a revolute lower-angle limit engages its Baumgarte push-back when violently overshot', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+    const anchor = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
+    const bar = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 50, y: 0 }, colliders: [{ shape: new BoxShape(100, 10) }] }));
+
+    world.addJoint(new RevoluteJoint({ bodyA: anchor, bodyB: bar, anchor: { x: 0, y: 0 }, enableLimit: true, lowerAngle: -0.2, upperAngle: 0.2 }));
+
+    bar.angularVelocity = -50; // slam it hard into the lower limit, forcing a real overshoot
+
+    advance(world, 0.5);
+
+    expect(bar.angle).toBeGreaterThanOrEqual(-0.3); // the limit + push-back stopped it near lowerAngle
+    expect(Number.isFinite(bar.angle)).toBe(true);
+  });
+
+  it('a soft weld joint (linearHertz/angularHertz>0) holds bounded near the anchor pose', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
+    const anchor = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
+    const box = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 50, y: 30 }, colliders: [{ shape: new BoxShape(20, 20) }] }));
+
+    world.addJoint(new WeldJoint({ bodyA: anchor, bodyB: box, linearHertz: 3, angularHertz: 3, dampingRatio: 1 }));
+
+    advance(world, 1);
+
+    // A soft weld is compliant under load (it can sag/rotate noticeably, unlike the
+    // rigid weld above) but still bounded — not flung away or blown up to NaN/Inf.
+    expect(Number.isFinite(box.x)).toBe(true);
+    expect(Number.isFinite(box.y)).toBe(true);
+    expect(Number.isFinite(box.angle)).toBe(true);
+    expect(Math.hypot(box.x, box.y)).toBeLessThan(300);
+  });
+
+  it('a weld joint between fixed-rotation bodies still locks position (zero angular effective mass)', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
+    const anchor = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
+    const box = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 50, y: 0 }, fixedRotation: true, colliders: [{ shape: new BoxShape(20, 20) }] }));
+
+    world.addJoint(new WeldJoint({ bodyA: anchor, bodyB: box }));
+
+    advance(world, 2);
+
+    expect(box.x).toBeCloseTo(50, 0);
+    expect(box.angle).toBe(0); // fixed rotation — never rotates regardless of the angular constraint
+  });
+
+  it('a zero-length axis in a wheel joint is rejected at construction', () => {
+    // Same rationale as the prismatic joint above: a (0,0) axis cannot be
+    // normalized, so suspension spring and lateral lock would apply zero force.
+    const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
+    const chassis = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
+    const wheel = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 30 }, colliders: [{ shape: new CircleShape(10) }] }));
+
+    expect(() => new WheelJoint({ bodyA: chassis, bodyB: wheel, anchor: { x: 0, y: 30 }, axis: { x: 0, y: 0 }, hertz: 5, dampingRatio: 1 })).toThrow(RangeError);
+  });
+
+  it('a wheel motor on a fixed-rotation wheel does nothing (zero angular effective mass)', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+    const chassis = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
+    const wheel = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 30 }, fixedRotation: true, colliders: [{ shape: new CircleShape(10) }] }));
+
+    world.addJoint(
+      new WheelJoint({ bodyA: chassis, bodyB: wheel, anchor: { x: 0, y: 30 }, axis: { x: 0, y: 1 }, enableMotor: true, motorSpeed: 20, maxMotorTorque: 1e8 }),
+    );
+
+    advance(world, 1);
+
+    expect(wheel.angularVelocity).toBe(0); // fixed rotation — zero angular mass, the motor can't spin it
+  });
+
+  it('a wheel lower-translation limit engages its Baumgarte push-back when violently overshot', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+    const chassis = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
+    const wheel = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 30 }, colliders: [{ shape: new CircleShape(10) }] }));
+
+    // A soft suspension (hertz>0) actually allows axis travel — with hertz=0 (rigid)
+    // the axial "spring" alone holds the translation near 0, so the limit would never
+    // see a violation to push back from.
+    world.addJoint(
+      new WheelJoint({
+        bodyA: chassis,
+        bodyB: wheel,
+        anchor: { x: 0, y: 30 },
+        axis: { x: 0, y: 1 },
+        hertz: 1,
+        dampingRatio: 1,
+        enableLimit: true,
+        lowerTranslation: -15,
+        upperTranslation: 15,
+      }),
+    );
+
+    wheel.linearVelocityY = -3000; // slam it hard away from the chassis, past lowerTranslation
+
+    advance(world, 0.3);
+
+    expect(wheel.y).toBeGreaterThan(0); // the lower limit + push-back stopped the overshoot before it ran away
+    expect(Number.isFinite(wheel.y)).toBe(true);
+  });
 });

@@ -335,6 +335,15 @@ describe('AutoWahEffect', () => {
       effect.destroy();
     });
 
+    it('updates the internal value without throwing when called after destroy', () => {
+      const effect = new AutoWahEffect();
+      effect.destroy();
+      expect(() => {
+        effect.baseFrequency = 500;
+      }).not.toThrow();
+      expect(effect.baseFrequency).toBe(500);
+    });
+
     it('ramps wahFilter.frequency via setTargetAtTime', () => {
       const ctx = getAudioContext();
       const wahFilter = makeBiquadFilterNode(ctx);
@@ -359,6 +368,15 @@ describe('AutoWahEffect', () => {
       effect.sensitivity = 9999;
       expect(effect.sensitivity).toBe(6000);
       effect.destroy();
+    });
+
+    it('updates the internal value without throwing when called after destroy', () => {
+      const effect = new AutoWahEffect();
+      effect.destroy();
+      expect(() => {
+        effect.sensitivity = 1000;
+      }).not.toThrow();
+      expect(effect.sensitivity).toBe(1000);
     });
 
     it('ramps sensitivityGain.gain via setTargetAtTime', () => {
@@ -392,6 +410,15 @@ describe('AutoWahEffect', () => {
       effect.destroy();
     });
 
+    it('updates the internal value without throwing when called after destroy', () => {
+      const effect = new AutoWahEffect();
+      effect.destroy();
+      expect(() => {
+        effect.q = 10;
+      }).not.toThrow();
+      expect(effect.q).toBe(10);
+    });
+
     it('ramps wahFilter.Q via setTargetAtTime', () => {
       const ctx = getAudioContext();
       const wahFilter = makeBiquadFilterNode(ctx);
@@ -416,6 +443,15 @@ describe('AutoWahEffect', () => {
       effect.responseMs = 9999;
       expect(effect.responseMs).toBe(500);
       effect.destroy();
+    });
+
+    it('updates the internal value without throwing when called after destroy', () => {
+      const effect = new AutoWahEffect();
+      effect.destroy();
+      expect(() => {
+        effect.responseMs = 50;
+      }).not.toThrow();
+      expect(effect.responseMs).toBe(50);
     });
 
     it('ramps smoothingLowpass.frequency via setTargetAtTime', () => {
@@ -447,6 +483,15 @@ describe('AutoWahEffect', () => {
       effect.wet = 2;
       expect(effect.wet).toBe(1);
       effect.destroy();
+    });
+
+    it('updates the internal value without throwing when called after destroy', () => {
+      const effect = new AutoWahEffect();
+      effect.destroy();
+      expect(() => {
+        effect.wet = 0.3;
+      }).not.toThrow();
+      expect(effect.wet).toBe(0.3);
     });
 
     it('ramps complementary dry/wet gains via setTargetAtTime', () => {

@@ -1,9 +1,17 @@
 import { ExtensionRegistry } from '@codexo/exojs/extensions';
+import type { RenderBackend } from '@codexo/exojs/renderer-sdk';
+import { RenderBackendType } from '@codexo/exojs/renderer-sdk';
 import { beforeEach,describe, expect, it } from 'vitest';
 
 import { resetExtensionRegistryForTesting } from '../../../src/extensions/testing';
 import { TileChunkNode } from '../src/TileChunkNode';
 import { tilemapExtension } from '../src/tilemapExtension';
+import { WebGl2TileChunkRenderer } from '../src/webgl2/WebGl2TileChunkRenderer';
+import { WebGpuTileChunkRenderer } from '../src/webgpu/WebGpuTileChunkRenderer';
+
+function fakeBackend(backendType: RenderBackendType): RenderBackend {
+  return { backendType } as unknown as RenderBackend;
+}
 
 describe('@codexo/exojs-tilemap root', () => {
   it('tilemapExtension has correct id', () => {
@@ -27,6 +35,19 @@ describe('@codexo/exojs-tilemap root', () => {
   it('root import does NOT register in ExtensionRegistry', () => {
     const registry = ExtensionRegistry.list();
     expect(registry.some(e => e.id === '@codexo/exojs-tilemap')).toBe(false);
+  });
+
+  it('the renderer binding creates the matching backend-specific renderer', () => {
+    const create = tilemapExtension.renderers![0]!.create;
+
+    expect(create(fakeBackend(RenderBackendType.WebGl2))).toBeInstanceOf(WebGl2TileChunkRenderer);
+    expect(create(fakeBackend(RenderBackendType.WebGpu))).toBeInstanceOf(WebGpuTileChunkRenderer);
+  });
+
+  it('the renderer binding throws for an unsupported backend type', () => {
+    const create = tilemapExtension.renderers![0]!.create;
+
+    expect(() => create(fakeBackend('unsupported' as RenderBackendType))).toThrow(/Unsupported render backend/);
   });
 });
 

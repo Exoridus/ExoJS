@@ -349,6 +349,15 @@ describe('LimiterEffect', () => {
       gainSpy.mockRestore();
       compressorSpy.mockRestore();
     });
+
+    it('is a no-op on the node graph after destroy but still updates the field', () => {
+      const effect = new LimiterEffect();
+      effect.destroy();
+      expect(() => {
+        effect.threshold = -20;
+      }).not.toThrow();
+      expect(effect.threshold).toBe(-20);
+    });
   });
 
   describe('attack setter', () => {
@@ -382,6 +391,15 @@ describe('LimiterEffect', () => {
       effect.destroy();
       gainSpy.mockRestore();
       compressorSpy.mockRestore();
+    });
+
+    it('is a no-op on the node graph after destroy but still updates the field', () => {
+      const effect = new LimiterEffect();
+      effect.destroy();
+      expect(() => {
+        effect.attack = 0.02;
+      }).not.toThrow();
+      expect(effect.attack).toBe(0.02);
     });
   });
 
@@ -417,6 +435,15 @@ describe('LimiterEffect', () => {
       gainSpy.mockRestore();
       compressorSpy.mockRestore();
     });
+
+    it('is a no-op on the node graph after destroy but still updates the field', () => {
+      const effect = new LimiterEffect();
+      effect.destroy();
+      expect(() => {
+        effect.release = 0.4;
+      }).not.toThrow();
+      expect(effect.release).toBe(0.4);
+    });
   });
 
   describe('ratio setter', () => {
@@ -451,6 +478,15 @@ describe('LimiterEffect', () => {
       gainSpy.mockRestore();
       compressorSpy.mockRestore();
     });
+
+    it('is a no-op on the node graph after destroy but still updates the field', () => {
+      const effect = new LimiterEffect();
+      effect.destroy();
+      expect(() => {
+        effect.ratio = 10;
+      }).not.toThrow();
+      expect(effect.ratio).toBe(10);
+    });
   });
 
   describe('knee setter', () => {
@@ -484,6 +520,15 @@ describe('LimiterEffect', () => {
       effect.destroy();
       gainSpy.mockRestore();
       compressorSpy.mockRestore();
+    });
+
+    it('is a no-op on the node graph after destroy but still updates the field', () => {
+      const effect = new LimiterEffect();
+      effect.destroy();
+      expect(() => {
+        effect.knee = 12;
+      }).not.toThrow();
+      expect(effect.knee).toBe(12);
     });
   });
 
@@ -525,6 +570,15 @@ describe('LimiterEffect', () => {
       gainSpy.mockRestore();
       compressorSpy.mockRestore();
     });
+
+    it('is a no-op on the node graph after destroy but still updates the field', () => {
+      const effect = new LimiterEffect();
+      effect.destroy();
+      expect(() => {
+        effect.wet = 0.3;
+      }).not.toThrow();
+      expect(effect.wet).toBe(0.3);
+    });
   });
 
   describe('destroy', () => {
@@ -555,6 +609,12 @@ describe('LimiterEffect', () => {
       const effect = new LimiterEffect();
       effect.destroy();
       expect(() => effect.inputNode).toThrow('LimiterEffect not yet initialized.');
+    });
+
+    it('double destroy is safe', () => {
+      const effect = new LimiterEffect();
+      effect.destroy();
+      expect(() => effect.destroy()).not.toThrow();
     });
   });
 });

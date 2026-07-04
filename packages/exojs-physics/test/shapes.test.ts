@@ -88,6 +88,43 @@ describe('PolygonShape — convex validation', () => {
     expect(Object.isFrozen(p.vertices)).toBe(true);
     expect(Object.isFrozen(p.normals)).toBe(true);
   });
+
+  it('welds a coincident interior vertex (within the weld epsilon) instead of keeping it as a distinct point', () => {
+    const p = new PolygonShape([
+      { x: -5, y: -5 },
+      { x: 5, y: -5 },
+      { x: 5.00001, y: -5 }, // duplicate of the previous vertex, well within weldEpsilon
+      { x: 5, y: 5 },
+      { x: -5, y: 5 },
+    ]);
+
+    expect(p.count).toBe(4);
+    expect(p.area).toBeCloseTo(100, 3);
+  });
+
+  it('rejects vertices that all weld together into fewer than three distinct points', () => {
+    expect(
+      () =>
+        new PolygonShape([
+          { x: 0, y: 0 },
+          { x: 0.00001, y: 0 },
+          { x: 0.00002, y: 0 },
+        ]),
+    ).toThrow(RangeError);
+  });
+
+  it('drops a trailing vertex that duplicates the first (wrap-around weld)', () => {
+    const p = new PolygonShape([
+      { x: -5, y: -5 },
+      { x: 5, y: -5 },
+      { x: 5, y: 5 },
+      { x: -5, y: 5 },
+      { x: -5, y: -4.99999 }, // duplicates the first vertex, closing the loop
+    ]);
+
+    expect(p.count).toBe(4);
+    expect(p.area).toBeCloseTo(100, 3);
+  });
 });
 
 describe('BoxShape', () => {

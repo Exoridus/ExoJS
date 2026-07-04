@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { Collider } from '../src/Collider';
 import type { RayHit } from '../src/index';
-import { BoxShape, CircleShape, PhysicsWorld } from '../src/index';
+import { BoxShape, CircleShape, PhysicsWorld, PolygonShape } from '../src/index';
 import { colliderAt } from './support';
 
 describe('queries', () => {
@@ -93,5 +93,144 @@ describe('queries', () => {
     expect(world.queryPoint({ x: 0, y: 0 }, { category: 0x0001, mask: 0x0001 })).toEqual([]);
     // Query whose mask includes 0x0002 finds it.
     expect(world.queryPoint({ x: 0, y: 0 }, { category: 0x0001, mask: 0x0002 })).toHaveLength(1);
+  });
+
+  it('queryPoint tests circle colliders by radial distance', () => {
+    const world = new PhysicsWorld();
+    const circle = colliderAt(world, new CircleShape(5), { x: 0, y: 0 });
+
+    expect(world.queryPoint({ x: 3, y: 0 })).toEqual([circle]);
+    expect(world.queryPoint({ x: 10, y: 0 })).toEqual([]);
+  });
+
+  it('queryPoint rejects a point inside a non-rectangular polygon AABB but outside the shape', () => {
+    const world = new PhysicsWorld();
+    const triangle = colliderAt(
+      world,
+      new PolygonShape([
+        { x: -10, y: 10 },
+        { x: 10, y: 10 },
+        { x: 0, y: -10 },
+      ]),
+      { x: 0, y: 0 },
+    );
+
+    // Inside the triangle's bounding box, but past the slanted edge (outside the shape).
+    expect(world.queryPoint({ x: 9.8, y: 9 })).toEqual([]);
+    // Inside both the AABB and the triangle itself.
+    expect(world.queryPoint({ x: 0, y: 0 })).toEqual([triangle]);
+  });
+
+  it('queryAabb skips colliders excluded by the filter', () => {
+    const world = new PhysicsWorld();
+    colliderAt(world, new BoxShape(10, 10), { x: 0, y: 0 }, 0, 'static', { filter: { category: 0x0002 } });
+
+    expect(world.queryAabb({ minX: -10, minY: -10, maxX: 10, maxY: 10 }, { category: 0x0001, mask: 0x0001 })).toEqual([]);
+  });
+
+  it('forEachAabbHit skips colliders excluded by the filter', () => {
+    const world = new PhysicsWorld();
+    colliderAt(world, new BoxShape(10, 10), { x: 0, y: 0 }, 0, 'static', { filter: { category: 0x0002 } });
+    const visited: Collider[] = [];
+
+    world.forEachAabbHit({ minX: -10, minY: -10, maxX: 10, maxY: 10 }, { category: 0x0001, mask: 0x0001 }, c => visited.push(c));
+    expect(visited).toEqual([]);
+  });
+
+  it('forEachAabbHit skips colliders whose AABB does not overlap (no filter involved)', () => {
+    const world = new PhysicsWorld();
+    colliderAt(world, new BoxShape(10, 10), { x: 100, y: 0 });
+    const visited: Collider[] = [];
+
+    world.forEachAabbHit({ minX: -10, minY: -10, maxX: 10, maxY: 10 }, undefined, c => visited.push(c));
+    expect(visited).toEqual([]);
+  });
+
+  it('rayCast skips colliders excluded by the filter', () => {
+    const world = new PhysicsWorld();
+    colliderAt(world, new BoxShape(10, 10), { x: 50, y: 0 }, 0, 'static', { filter: { category: 0x0002 } });
+    const far = colliderAt(world, new BoxShape(10, 10), { x: 100, y: 0 });
+
+    const hit = world.rayCast({ x: 0, y: 0 }, { x: 1, y: 0 }, { category: 0x0001, mask: 0x0001 });
+    expect(hit).not.toBeNull();
+    expect((hit as RayHit).collider).toBe(far);
+  });
+
+  it('rayCast tracks the nearest hit as closer and farther colliders are encountered', () => {
+    const world = new PhysicsWorld();
+    // Encounter order deliberately mixed: medium, then nearer (updates best), then farther (best unchanged).
+    colliderAt(world, new BoxShape(6, 6), { x: 50, y: 0 });
+    const near = colliderAt(world, new BoxShape(6, 6), { x: 20, y: 0 });
+    colliderAt(world, new BoxShape(6, 6), { x: 80, y: 0 });
+
+    const hit = world.rayCast({ x: 0, y: 0 }, { x: 1, y: 0 });
+    expect(hit).not.toBeNull();
+    expect((hit as RayHit).collider).toBe(near);
+  });
+
+  it('rayCast respects maxDistance and reports no hit past it', () => {
+    const world = new PhysicsWorld();
+    colliderAt(world, new CircleShape(5), { x: 50, y: 0 });
+
+    expect(world.rayCast({ x: 0, y: 0 }, { x: 1, y: 0 }, undefined, 20)).toBeNull();
+  });
+
+  it('rayCast misses a circle that lies behind the ray origin (pointing away)', () => {
+    const world = new PhysicsWorld();
+    colliderAt(world, new CircleShape(5), { x: -50, y: 0 });
+
+    expect(world.rayCast({ x: 0, y: 0 }, { x: 1, y: 0 })).toBeNull();
+  });
+
+  it('rayCast misses a circle the ray passes beside (negative discriminant)', () => {
+    const world = new PhysicsWorld();
+    colliderAt(world, new CircleShape(3), { x: 50, y: 10 });
+
+    expect(world.rayCast({ x: 0, y: 0 }, { x: 1, y: 0 })).toBeNull();
+  });
+
+  it('rayCast from inside a convex polygon reports no entry hit', () => {
+    const world = new PhysicsWorld();
+    colliderAt(world, new BoxShape(20, 20), { x: 0, y: 0 });
+
+    // The ray starts already inside the box, so it never crosses an entering face.
+    expect(world.rayCast({ x: 0, y: 0 }, { x: 1, y: 0 })).toBeNull();
+  });
+
+  it('rayCast against a polygon respects maxDistance', () => {
+    const world = new PhysicsWorld();
+    colliderAt(world, new BoxShape(10, 10), { x: 100, y: 0 });
+
+    expect(world.rayCast({ x: 0, y: 0 }, { x: 1, y: 0 }, undefined, 50)).toBeNull();
+  });
+
+  it('rayCastAll throws on a zero direction', () => {
+    const world = new PhysicsWorld();
+
+    expect(() => world.rayCastAll({ x: 0, y: 0 }, { x: 0, y: 0 })).toThrow(RangeError);
+  });
+
+  it('rayCastAll skips colliders excluded by the filter', () => {
+    const world = new PhysicsWorld();
+    colliderAt(world, new BoxShape(10, 10), { x: 50, y: 0 }, 0, 'static', { filter: { category: 0x0002 } });
+    const far = colliderAt(world, new BoxShape(10, 10), { x: 150, y: 0 });
+
+    const hits = world.rayCastAll({ x: 0, y: 0 }, { x: 1, y: 0 }, { category: 0x0001, mask: 0x0001 });
+    expect(hits.map(h => h.collider)).toEqual([far]);
+  });
+
+  it('overlapShape skips colliders excluded by the filter', () => {
+    const world = new PhysicsWorld();
+    colliderAt(world, new BoxShape(20, 20), { x: 0, y: 0 }, 0, 'static', { filter: { category: 0x0002 } });
+
+    expect(world.overlapShape(new CircleShape(5), { x: 8, y: 0 }, { category: 0x0001, mask: 0x0001 })).toEqual([]);
+  });
+
+  it('overlapShape supports a rotated polygon probe shape', () => {
+    const world = new PhysicsWorld();
+    const box = colliderAt(world, new BoxShape(20, 20), { x: 0, y: 0 });
+
+    expect(world.overlapShape(new BoxShape(4, 4), { x: 8, y: 0 }, undefined, Math.PI / 4)).toEqual([box]);
+    expect(world.overlapShape(new BoxShape(4, 4), { x: 100, y: 0 }, undefined, Math.PI / 4)).toEqual([]);
   });
 });

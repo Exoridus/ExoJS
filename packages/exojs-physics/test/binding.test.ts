@@ -1,6 +1,9 @@
 import type { SceneNode } from '@codexo/exojs';
 import { describe, expect, it } from 'vitest';
 
+import { NativePhysicsBackend } from '../src/backend/NativePhysicsBackend';
+import { BindingRegistry } from '../src/binding/BindingRegistry';
+import { Collider } from '../src/Collider';
 import { BoxShape, PhysicsBody, PhysicsWorld } from '../src/index';
 
 interface FakeNode {
@@ -84,5 +87,51 @@ describe('SceneNode binding', () => {
     world.step(1 / 60);
     expect(node.x).toBe(0);
     expect(node.y).toBe(0);
+  });
+});
+
+describe('BindingRegistry', () => {
+  it('tracks the number of active bindings via size', () => {
+    const registry = new BindingRegistry();
+    const bodyA = new PhysicsBody({ type: 'kinematic', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(10, 10) }] });
+    const bodyB = new PhysicsBody({ type: 'kinematic', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(10, 10) }] });
+
+    expect(registry.size).toBe(0);
+
+    registry.bind(bodyA, fakeNode() as unknown as SceneNode);
+    expect(registry.size).toBe(1);
+
+    registry.bind(bodyB, fakeNode() as unknown as SceneNode);
+    expect(registry.size).toBe(2);
+
+    registry.unbind(bodyA);
+    expect(registry.size).toBe(1);
+
+    registry.clear();
+    expect(registry.size).toBe(0);
+  });
+});
+
+describe('NativePhysicsBackend', () => {
+  it('exposes the latest broad-phase candidate pairs', () => {
+    // A real PhysicsWorld is used only to attach + synchronize the colliders (assign
+    // ids, compute their AABBs) — the backend under test is a fresh, standalone instance,
+    // not the world's own backend.
+    const world = new PhysicsWorld();
+    const colliderA = new Collider({ shape: new BoxShape(10, 10) });
+    const colliderB = new Collider({ shape: new BoxShape(10, 10) });
+
+    world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 }, colliders: [colliderA] }));
+    world.add(new PhysicsBody({ type: 'static', position: { x: 5, y: 0 }, colliders: [colliderB] }));
+
+    const backend = new NativePhysicsBackend();
+
+    expect(backend.candidatePairs.length).toBe(0);
+
+    backend.detect([colliderA, colliderB]);
+
+    expect(backend.candidatePairs.length).toBe(1);
+    expect(backend.candidatePairs[0]?.a).toBe(colliderA);
+    expect(backend.candidatePairs[0]?.b).toBe(colliderB);
   });
 });

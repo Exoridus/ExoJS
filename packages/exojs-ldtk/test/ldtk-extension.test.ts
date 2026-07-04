@@ -1,10 +1,12 @@
+import type { AssetLoaderContext } from '@codexo/exojs';
 import { ExtensionRegistry } from '@codexo/exojs/extensions';
 import { tilemapExtension } from '@codexo/exojs-tilemap';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { buildSnapshot } from '../../../src/extensions/snapshot';
 import { resetExtensionRegistryForTesting } from '../../../src/extensions/testing';
 import { ldtkMapBinding } from '../src/ldtkBinding';
+import type { LdtkData } from '../src/LdtkData';
 import { ldtkExtension } from '../src/ldtkExtension';
 import { LdtkMap } from '../src/LdtkMap';
 
@@ -45,6 +47,44 @@ describe('@codexo/exojs-ldtk asset binding — ldtkMapBinding', () => {
   it('create() returns a handler with a load function', () => {
     const handler = ldtkMapBinding.create();
     expect(typeof handler.load).toBe('function');
+  });
+
+  it("load() delegates to loadLdtkMap, passing through the request's source and the context", async () => {
+    const fixture: LdtkData = {
+      jsonVersion: '1.5.3',
+      defaultGridSize: 16,
+      defs: { tilesets: [], layers: [] },
+      levels: [
+        {
+          identifier: 'L',
+          uid: 1,
+          iid: 'iid-1',
+          worldX: 0,
+          worldY: 0,
+          pxWid: 16,
+          pxHei: 16,
+          layerInstances: [],
+        },
+      ],
+    };
+    const source = 'https://example.com/world.ldtk';
+    const context: AssetLoaderContext = {
+      loader: { load: vi.fn() } as unknown as AssetLoaderContext['loader'],
+      identityKey: 'test',
+      fetchText: vi.fn(),
+      fetchArrayBuffer: vi.fn(),
+      fetchJson: vi.fn(async (requested: string) => {
+        expect(requested).toBe(source);
+        return fixture;
+      }),
+    };
+
+    const handler = ldtkMapBinding.create();
+    const result = await handler.load({ source }, context);
+
+    expect(result).toBeInstanceOf(LdtkMap);
+    expect(result.source).toBe(source);
+    expect(context.fetchJson).toHaveBeenCalledWith(source);
   });
 });
 

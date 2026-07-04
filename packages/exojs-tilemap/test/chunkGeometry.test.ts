@@ -178,4 +178,29 @@ describe('buildChunkPages', () => {
     const pages = buildChunkPages(stubChunk(packTile(0, 20, TILE_TRANSFORM_IDENTITY)), [tileset], 32, 32);
     expect(pages).toHaveLength(0);
   });
+
+  it('returns no pages when the chunk reports itself empty (short-circuit before scanning cells)', () => {
+    const tileset = makeTileset();
+    const emptyChunk: ReadonlyTileChunk = {
+      cx: 0, cy: 0, width: 1, height: 1, revision: 1,
+      empty: true,
+      getRawAt: () => {
+        throw new Error('must not be called when chunk.empty is true');
+      },
+      cloneTiles: () => new Uint32Array([0]),
+    };
+    expect(buildChunkPages(emptyChunk, [tileset], 32, 32)).toEqual([]);
+  });
+
+  it('skips cells whose underlying texture reports a non-positive width or height', () => {
+    // The TextureRegion/TileSet must construct with valid, positive dimensions
+    // (both types enforce this) — but the underlying Texture is a live,
+    // mutable object (e.g. a not-yet-decoded image, or a lost GPU context) that
+    // can legitimately report 0 afterwards. buildChunkPages must guard against it.
+    const tileset = makeTileset('degenerate', 16, 32, 32, 512, 512);
+    (tileset.texture.texture as unknown as { width: number }).width = 0;
+
+    const pages = buildChunkPages(stubChunk(packTile(0, 0, TILE_TRANSFORM_IDENTITY)), [tileset], 32, 32);
+    expect(pages).toHaveLength(0);
+  });
 });
