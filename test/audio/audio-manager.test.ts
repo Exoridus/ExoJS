@@ -1,5 +1,60 @@
 ﻿import { AudioBus } from '#audio/AudioBus';
 import { AudioManager } from '#audio/AudioManager';
+import { Signal } from '#core/Signal';
+
+// ---------------------------------------------------------------------------
+// Helpers for the deferred-context scenarios below (onUnlock forwarding).
+//
+// The default MockAudioContext (test/setup-env.vitest.ts) starts in the
+// 'running' state, so the real onAudioContextReady signal fires synchronously
+// the first time anything subscribes — leaving no window to observe an
+// AudioManager registering its own forwarding handler *before* the event
+// fires. To exercise AudioManager's onUnlock wiring deterministically we
+// replace '#audio/audio-context' wholesale with a minimal fake that starts
+// "locked" and only becomes ready when the test explicitly dispatches it.
+// ---------------------------------------------------------------------------
+
+interface FakeAudioParam {
+  setValueAtTime: MockInstance;
+  setTargetAtTime: MockInstance;
+  value: number;
+}
+
+const makeFakeParam = (): FakeAudioParam => ({
+  setValueAtTime: vi.fn(),
+  setTargetAtTime: vi.fn(),
+  value: 0,
+});
+
+/** Minimal fake AudioContext sufficient for AudioBus/AudioListener setup. */
+const makeFakeAudioContext = (): AudioContext =>
+  ({
+    currentTime: 0,
+    destination: {},
+    listener: {
+      positionX: makeFakeParam(),
+      positionY: makeFakeParam(),
+      positionZ: makeFakeParam(),
+      forwardX: makeFakeParam(),
+      forwardY: makeFakeParam(),
+      forwardZ: makeFakeParam(),
+      upX: makeFakeParam(),
+      upY: makeFakeParam(),
+      upZ: makeFakeParam(),
+    },
+    createGain: () =>
+      ({
+        connect: vi.fn(),
+        disconnect: vi.fn(),
+        gain: makeFakeParam(),
+      }) as unknown as GainNode,
+    createStereoPanner: () =>
+      ({
+        connect: vi.fn(),
+        disconnect: vi.fn(),
+        pan: makeFakeParam(),
+      }) as unknown as StereoPannerNode,
+  }) as unknown as AudioContext;
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -156,5 +211,65 @@ describe('AudioManager', () => {
 
     mixer1.destroy();
     mixer2.destroy();
+  });
+
+  // ---- onUnlock ----
+
+  test('onUnlock fires once the shared AudioContext transitions to running', async () => {
+    vi.resetModules();
+    const fakeCtx = makeFakeAudioContext();
+    const fakeSignal = new Signal<[AudioContext]>();
+
+    vi.doMock('#audio/audio-context', () => ({
+      getAudioContext: () => fakeCtx,
+      isAudioContextReady: () => false,
+      onAudioContextReady: fakeSignal,
+    }));
+
+    const { AudioManager: DeferredAudioManager } = await import('#audio/AudioManager');
+    const mixer = new DeferredAudioManager();
+    const onUnlock = vi.fn();
+    mixer.onUnlock.add(onUnlock);
+
+    // Simulate the AudioContext becoming ready: fires every pending listener in
+    // registration order — master/music/sound buses, the listener, and
+    // finally AudioManager's own onUnlock-forwarding handler (see
+    // AudioManager.ts constructor, registered last).
+    fakeSignal.dispatch(fakeCtx);
+
+    expect(onUnlock).toHaveBeenCalledTimes(1);
+
+    vi.doUnmock('#audio/audio-context');
+    vi.resetModules();
+  });
+
+  // BUG: AudioManager's constructor builds `master` (and `music`/`sound`) BEFORE
+  // registering its own onUnlock-forwarding handler (AudioManager.ts, the busses
+  // at lines ~45-47 vs. `onAudioContextReady.add(...)` at line ~55). Each AudioBus
+  // itself subscribes to the very same module-global `onAudioContextReady` signal
+  // in its own constructor when the context isn't ready yet. That signal fires
+  // to "running" exactly ONCE, ever, for the whole process (see audio-context.ts
+  // `readyDispatched`). So: the first bus ever constructed anywhere (e.g. the
+  // very first AudioManager's `master` bus) consumes that one-time event before
+  // AudioManager's own handler is even registered — and once the context is
+  // already running (true for every AudioManager built afterwards, e.g. a second
+  // Application sharing the process-wide AudioContext), `onUnlock` never fires
+  // for it at all, because AudioManager's own listener is added to a queue that
+  // will never be flushed again. Correct behavior would be for every AudioManager
+  // to observe onUnlock exactly once, regardless of construction order relative
+  // to the context's readiness.
+  test('BUG: onUnlock never fires for an AudioManager built while the shared AudioContext is already running', () => {
+    // Our global test AudioContext mock starts 'running' immediately, so this
+    // mirrors "an AudioManager constructed after the context has already
+    // unlocked" — e.g. a second Application in the same process.
+    const mixer = new AudioManager();
+    expect(mixer.locked).toBe(false);
+
+    const onUnlock = vi.fn();
+    mixer.onUnlock.add(onUnlock);
+
+    // Current (buggy) behavior: onUnlock never dispatches, even though the
+    // context is unmistakably already unlocked.
+    expect(onUnlock).not.toHaveBeenCalled();
   });
 });

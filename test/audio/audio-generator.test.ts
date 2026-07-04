@@ -346,4 +346,168 @@ describe('AudioGenerator', () => {
     const gen = new AudioGenerator();
     expect(() => gen.destroy()).not.toThrow();
   });
+
+  // ---- poolSize / poolStrategy setters ----
+
+  test('poolSize setter floors the value and clamps to a minimum of 1', () => {
+    const gen = new AudioGenerator();
+    gen.poolSize = 4.9;
+    expect(gen.poolSize).toBe(4);
+    gen.poolSize = 0;
+    expect(gen.poolSize).toBe(1);
+    gen.poolSize = -3;
+    expect(gen.poolSize).toBe(1);
+  });
+
+  test('poolStrategy setter updates the eviction strategy', () => {
+    const gen = new AudioGenerator();
+    gen.poolStrategy = SoundPoolStrategy.LeastRecentlyUsed;
+    expect(gen.poolStrategy).toBe(SoundPoolStrategy.LeastRecentlyUsed);
+  });
+
+  // ---- NoopVoice when the AudioContext is locked ----
+
+  test('play() returns an already-ended NoopVoice while the AudioContext is locked', async () => {
+    vi.resetModules();
+    vi.doMock('#audio/audio-context', async importOriginal => {
+      const actual = await importOriginal<typeof import('#audio/audio-context')>();
+      return { ...actual, isAudioContextReady: () => false };
+    });
+
+    const { AudioGenerator: LockedAudioGenerator } = await import('#audio/AudioGenerator');
+    const { AudioManager: LockedAudioManager } = await import('#audio/AudioManager');
+    const { NoopVoice } = await import('#audio/NoopVoice');
+
+    const manager = new LockedAudioManager();
+    const gen = new LockedAudioGenerator();
+    const voice = manager.play(gen);
+
+    expect(voice).toBeInstanceOf(NoopVoice);
+    expect(voice.ended).toBe(true);
+    expect(voice.bus).toBe(manager.sound);
+
+    vi.doUnmock('#audio/audio-context');
+    vi.resetModules();
+  });
+
+  // ---- _pruneEndedVoices() defensive scan ----
+  //
+  // In practice, a pooled voice is removed from `_activeVoices` synchronously
+  // the moment it ends (its `onEnd` handler splices it out immediately — see
+  // `_createVoice`), so `_pruneEndedVoices`'s scan never actually finds an
+  // ended-but-still-tracked entry through the public API. This test forges
+  // that (otherwise unreachable) state directly to exercise the defensive
+  // pruning branch.
+  test('_pruneEndedVoices() removes a stale ended entry so it does not count against the pool limit', () => {
+    const manager = new AudioManager();
+    const spy = setupSpy();
+    const gen = new AudioGenerator({ poolSize: 1 });
+
+    manager.play(gen);
+    expect(spy.oscillators[0].stop).not.toHaveBeenCalled();
+
+    // Forge a stale "already ended" entry sitting in the pool without going
+    // through the normal onEnd-triggered removal.
+    const activeVoices = (gen as unknown as { _activeVoices: Array<{ voice: { ended: boolean }; startedAt: number }> })._activeVoices;
+    activeVoices.length = 0;
+    activeVoices.push({ voice: { ended: true }, startedAt: 0 });
+
+    // Playing again prunes the stale entry first, so the pool isn't
+    // considered full and nothing is evicted.
+    manager.play(gen);
+    expect(spy.oscillators[0].stop).not.toHaveBeenCalled();
+    expect(spy.oscillators.length).toBe(2);
+
+    spy.restore();
+    gen.destroy();
+  });
+
+  // ---- _pickEvictionVictim(): LeastRecentlyUsed strategy ----
+
+  test('LeastRecentlyUsed strategy evicts the voice with the smallest startedAt', () => {
+    const manager = new AudioManager();
+    const spy = setupSpy();
+    const gen = new AudioGenerator({ poolSize: 2, poolStrategy: SoundPoolStrategy.LeastRecentlyUsed });
+    const ctx = getAudioContext() as AudioContext & { currentTime: number };
+
+    ctx.currentTime = 0;
+    manager.play(gen); // oldest
+
+    ctx.currentTime = 5;
+    manager.play(gen); // newer
+
+    expect(spy.oscillators[0].stop).not.toHaveBeenCalled();
+    expect(spy.oscillators[1].stop).not.toHaveBeenCalled();
+
+    ctx.currentTime = 10;
+    manager.play(gen); // triggers eviction — the oldest (index 0) must go
+
+    expect(spy.oscillators[0].stop).toHaveBeenCalled();
+    expect(spy.oscillators[1].stop).not.toHaveBeenCalled();
+
+    ctx.currentTime = 0;
+    spy.restore();
+    gen.destroy();
+  });
+
+  test('_pickEvictionVictim() returning an out-of-range index is a defensive no-op (nothing evicted)', () => {
+    const manager = new AudioManager();
+    const spy = setupSpy();
+    const gen = new AudioGenerator({ poolSize: 1 });
+
+    manager.play(gen);
+    // Structurally, `_pickEvictionVictim()` always returns a valid index into
+    // a non-empty `_activeVoices` (guaranteed by the `length >= poolSize`
+    // check that gates the call), so `victim` can never actually be
+    // `undefined`. Forced here via a spy purely for coverage of that guard.
+    vi.spyOn(gen as unknown as { _pickEvictionVictim: () => number }, '_pickEvictionVictim').mockReturnValue(99);
+
+    manager.play(gen);
+
+    expect(spy.oscillators[0].stop).not.toHaveBeenCalled();
+
+    spy.restore();
+    gen.destroy();
+  });
+
+  // ---- volume/muted option resolution (per-play override chain) ----
+
+  test('options.muted overrides both options.volume and the descriptor volume to 0', () => {
+    const manager = new AudioManager();
+    const spy = setupSpy();
+    const gen = new AudioGenerator({ volume: 1 });
+
+    manager.play(gen, { muted: true, volume: 0.8 });
+
+    expect(spy.gains[0].gain.setTargetAtTime).toHaveBeenCalledWith(0, expect.any(Number), expect.any(Number));
+
+    spy.restore();
+    gen.destroy();
+  });
+
+  test('options.volume overrides the descriptor volume when not muted', () => {
+    const manager = new AudioManager();
+    const spy = setupSpy();
+    const gen = new AudioGenerator({ volume: 1 });
+
+    manager.play(gen, { volume: 0.3 });
+
+    expect(spy.gains[0].gain.setTargetAtTime).toHaveBeenCalledWith(0.3, expect.any(Number), expect.any(Number));
+
+    spy.restore();
+    gen.destroy();
+  });
+
+  test('descriptor muted=true zeroes the voice volume when no per-play override is given', () => {
+    const manager = new AudioManager();
+    const spy = setupSpy();
+    const gen = new AudioGenerator({ volume: 1, muted: true });
+
+    manager.play(gen);
+
+    expect(spy.gains[0].gain.setTargetAtTime).toHaveBeenCalledWith(0, expect.any(Number), expect.any(Number));
+
+    spy.restore();
+    gen.destroy();
+  });
 });

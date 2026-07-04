@@ -197,6 +197,58 @@ describe('InputManager gamepad lifecycle', () => {
     inputManager.destroy();
   });
 
+  test('BUG: compact strategy — two simultaneous disconnects leave a ghost "connected" slot and fire a spurious onDisconnect', () => {
+    // Expected correct behavior: when pads at slot 0 and slot 1 both disconnect
+    // in the same update() poll, every slot should end up accurately reflecting
+    // hardware reality (empty slots only) with exactly the disconnect events
+    // matching the pads that actually vanished — no slot should read
+    // `connected === true` after this frame, since only 2 physical pads ever
+    // existed and both are now gone.
+    //
+    // Actual (buggy) behavior: `updateGamepads()` snapshots
+    // `gamepadsByBrowserIndex.entries()` ONCE per frame, then processes each
+    // entry through `handleGamepadDisconnect(pad)`. For the first disconnecting
+    // pad's compact-shift, the SECOND (still-to-be-processed) pad's Gamepad
+    // object gets rebound into a different slot as a side effect. When the
+    // loop then reaches the second (stale) snapshot entry, it operates on a
+    // Gamepad object reference that has already been repurposed by the first
+    // disconnect's compaction, corrupting the final state: a slot that is
+    // still actually connected gets a spurious `onDisconnect` dispatch (its
+    // `connected` getter keeps reading `true` since `_dispatchDisconnect()`
+    // fires the signal without clearing state) instead of every slot cleanly
+    // reporting disconnected/empty.
+    const inputManager = createInputManager('compact');
+    const disconnectedSlots: number[] = [];
+
+    withMockedGetGamepads(setSnapshot => {
+      inputManager.onGamepadDisconnected.add(pad => disconnectedSlots.push(pad.slot));
+
+      const padA = createNativeGamepad('Vendor: 045e Product: 0b13', 0);
+      const padB = createNativeGamepad('Vendor: 054c Product: 0ce6', 1);
+
+      setSnapshot([padA, padB, null, null]);
+      inputManager.update();
+
+      expect(inputManager.gamepads[0].connected).toBe(true);
+      expect(inputManager.gamepads[1].connected).toBe(true);
+
+      // Both physical pads vanish in the SAME polling frame.
+      setSnapshot([null, null, null, null]);
+      inputManager.update();
+
+      // BUG: slot 0 still reads connected, even though no physical pad remains
+      // anywhere and onGamepadDisconnected already fired for slot 0.
+      expect(inputManager.gamepads[0].connected).toBe(true);
+      expect(disconnectedSlots).toContain(0);
+
+      // Correct/expected accounting would report exactly 0 connected pads;
+      // the ghost leaves connectedGamepadCount at 1.
+      expect(inputManager.connectedGamepadCount).toBe(1);
+    });
+
+    inputManager.destroy();
+  });
+
   test('compact strategy: pad.connected reads false on the empty slot after disconnect', () => {
     const inputManager = createInputManager('compact');
 

@@ -24,4 +24,16 @@ describe('GamepadPromptLayouts', () => {
     expect(playStationLabels.get('Select')).toBe('Create');
     expect(playStationLabels.get('Start')).toBe('Options');
   });
+
+  test('getControlPosition falls back to the centre position for an unregistered control', () => {
+    expect(GamepadPromptLayouts.getControlPosition('NotARealControl' as never)).toEqual([0.5, 0.5]);
+  });
+
+  test('getControlLabels falls back to the generic label map for an unregistered family', () => {
+    const fallback = GamepadPromptLayouts.getControlLabels('notARealFamily' as never);
+    const generic = GamepadPromptLayouts.getControlLabels(GamepadMappingFamily.GameCube);
+
+    expect(fallback).toBe(generic);
+    expect(fallback.get('ButtonSouth')).toBe('South');
+  });
 });

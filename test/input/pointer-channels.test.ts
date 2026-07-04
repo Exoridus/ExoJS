@@ -5,7 +5,8 @@
 
 import type { Application } from '#core/Application';
 import { InputManager } from '#input/InputManager';
-import { Pointer } from '#input/Pointer';
+import { Pointer, PointerState } from '#input/Pointer';
+import { ChannelSize } from '#input/types';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -528,5 +529,169 @@ describe('Pointer coordinate mapping — pixelRatio > 1', () => {
     expect(ch(im, Pointer.Y)).toBeCloseTo(0.5, 5);
 
     im.destroy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 12. Direct Pointer unit tests — construct the class standalone (bypassing
+//     InputManager) for precise control over getters, defensive branches,
+//     and destroy()/handleEnter() paths that InputManager never exercises.
+// ---------------------------------------------------------------------------
+
+describe('Pointer — direct construction and getters', () => {
+  interface FakePointerEventInit {
+    pointerId?: number;
+    pointerType?: string;
+    clientX?: number;
+    clientY?: number;
+    width?: number;
+    height?: number;
+    tiltX?: number;
+    tiltY?: number;
+    buttons?: number;
+    pressure?: number;
+    twist?: number;
+    isPrimary?: boolean;
+  }
+
+  const makeEvent = (init: FakePointerEventInit = {}): PointerEvent =>
+    ({
+      pointerId: init.pointerId ?? 1,
+      pointerType: init.pointerType ?? 'mouse',
+      clientX: init.clientX ?? 0,
+      clientY: init.clientY ?? 0,
+      width: init.width ?? 1,
+      height: init.height ?? 1,
+      tiltX: init.tiltX ?? 0,
+      tiltY: init.tiltY ?? 0,
+      buttons: init.buttons ?? 0,
+      pressure: init.pressure ?? 0,
+      twist: init.twist ?? 0,
+      isPrimary: init.isPrimary ?? false,
+    }) as unknown as PointerEvent;
+
+  test('exposes width/height/buttons/pressure/rotation/twist/tiltX/tiltY/slotIndex getters', () => {
+    const canvas = createCanvas(800, 600);
+    const app = createMockApp(canvas);
+    const channels = new Float32Array(ChannelSize.Container);
+    const event = makeEvent({
+      clientX: 400,
+      clientY: 300,
+      width: 80,
+      height: 60,
+      buttons: 1,
+      pressure: 0.5,
+      twist: 90,
+      tiltX: 10,
+      tiltY: -20,
+    });
+    const pointer = new Pointer(event, app, canvas, channels, 3);
+
+    expect(pointer.width).toBeCloseTo(80, 5);
+    expect(pointer.height).toBeCloseTo(60, 5);
+    expect(pointer.buttons).toBe(1);
+    expect(pointer.pressure).toBeCloseTo(0.5, 5);
+    expect(pointer.rotation).toBe(90);
+    expect(pointer.twist).toBe(90);
+    expect(pointer.tiltX).toBe(10);
+    expect(pointer.tiltY).toBe(-20);
+    expect(pointer.slotIndex).toBe(3);
+    expect(pointer.currentState).toBe(PointerState.Unknown);
+
+    pointer.destroy();
+  });
+
+  test('handleEnter() sets currentState to InsideCanvas and writes active channels', () => {
+    const canvas = createCanvas(800, 600);
+    const app = createMockApp(canvas);
+    const channels = new Float32Array(ChannelSize.Container);
+    const pointer = new Pointer(makeEvent({ clientX: 400, clientY: 300 }), app, canvas, channels, 0);
+
+    pointer.handleEnter(makeEvent({ clientX: 100, clientY: 100 }));
+
+    expect(pointer.currentState).toBe(PointerState.InsideCanvas);
+    expect(channels[Pointer.Active]).toBe(1);
+
+    pointer.destroy();
+  });
+
+  test('destroy() can be called twice without throwing (second call finds channels already cleared)', () => {
+    const canvas = createCanvas(800, 600);
+    const app = createMockApp(canvas);
+    const channels = new Float32Array(ChannelSize.Container);
+    const pointer = new Pointer(makeEvent(), app, canvas, channels, 0);
+
+    pointer.destroy();
+
+    expect(() => pointer.destroy()).not.toThrow();
+  });
+
+  test('a zero-size bounding rect maps to the geometry origin (u=v=0) with zero content size', () => {
+    const canvas = createCanvas(800, 600);
+
+    vi.spyOn(canvas, 'getBoundingClientRect').mockReturnValue({
+      left: 0,
+      top: 0,
+      right: 0,
+      bottom: 0,
+      width: 0,
+      height: 0,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    } as DOMRect);
+
+    const app = createMockApp(canvas);
+    const channels = new Float32Array(ChannelSize.Container);
+    const pointer = new Pointer(makeEvent({ clientX: 400, clientY: 300, width: 20, height: 20 }), app, canvas, channels, 0);
+
+    expect(pointer.x).toBe(0);
+    expect(pointer.y).toBe(0);
+    expect(pointer.width).toBe(0);
+    expect(pointer.height).toBe(0);
+
+    pointer.destroy();
+  });
+
+  test('a null app (defensive guard) yields a zero-size geometry and a safe channel-write fallback', () => {
+    const canvas = createCanvas(0, 0); // also exercises the `|| 1` normalization fallback in _writeChannels
+    const channels = new Float32Array(ChannelSize.Container);
+
+    expect(() => {
+      const pointer = new Pointer(makeEvent({ clientX: 10, clientY: 10 }), null as unknown as Application, canvas, channels, 0);
+
+      expect(pointer.x).toBe(0);
+      expect(pointer.y).toBe(0);
+      expect(pointer.width).toBe(0);
+      expect(pointer.height).toBe(0);
+
+      pointer.destroy();
+    }).not.toThrow();
+  });
+
+  test('buttons bitmask sets Right and Middle channel flags (Left clear)', () => {
+    const canvas = createCanvas(800, 600);
+    const app = createMockApp(canvas);
+    const channels = new Float32Array(ChannelSize.Container);
+    const pointer = new Pointer(makeEvent({ clientX: 400, clientY: 300, buttons: 0b110 }), app, canvas, channels, 0);
+
+    expect(channels[Pointer.Left]).toBe(0);
+    expect(channels[Pointer.Right]).toBe(1);
+    expect(channels[Pointer.Middle]).toBe(1);
+
+    pointer.destroy();
+  });
+
+  test('handleMove() on a destroyed pointer is a safe no-op that reports zero geometry', () => {
+    const canvas = createCanvas(800, 600);
+    const app = createMockApp(canvas);
+    const channels = new Float32Array(ChannelSize.Container);
+    const pointer = new Pointer(makeEvent({ clientX: 100, clientY: 100 }), app, canvas, channels, 0);
+
+    pointer.destroy();
+
+    expect(() => pointer.handleMove(makeEvent({ clientX: 200, clientY: 200 }))).not.toThrow();
+    expect(pointer.x).toBe(0);
+    expect(pointer.y).toBe(0);
   });
 });

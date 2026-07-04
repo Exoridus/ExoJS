@@ -94,11 +94,16 @@ const createApp = (): {
     width: 800,
     height: 600,
     input: signals as unknown as InputManager,
-    focus: { focused: null, focus() {}, blur() {}, _notifyNodeRemoved() {} },
+    focus: { focused: null, focus() {}, blur: vi.fn(), _notifyNodeRemoved() {} },
     // Default centered camera: design-space pointer coords pass through to
-    // world space unchanged (identity screenToWorld).
+    // world space unchanged (identity screenToWorld). `screenView` uses the
+    // same identity mapping — tests that need to distinguish UI vs world
+    // space position their nodes accordingly.
     rendering: {
       view: {
+        screenToWorld: (x: number, y: number): { x: number; y: number } => ({ x, y }),
+      },
+      screenView: {
         screenToWorld: (x: number, y: number): { x: number; y: number } => ({ x, y }),
       },
     },
@@ -110,6 +115,49 @@ const createApp = (): {
   } as unknown as Application;
 
   return { app, scene, signals, canvas };
+};
+
+/** Build an Application mock with no active scene (`currentScene` is null). */
+const createAppNoScene = (
+  overrides: { width?: number; height?: number } = {},
+): {
+  app: Application;
+  signals: MockSignals;
+  canvas: HTMLCanvasElement;
+} => {
+  const signals: MockSignals = {
+    onPointerDown: new Signal<[Pointer]>(),
+    onPointerMove: new Signal<[Pointer]>(),
+    onPointerUp: new Signal<[Pointer]>(),
+    onPointerTap: new Signal<[Pointer]>(),
+    onPointerCancel: new Signal<[Pointer]>(),
+    onPointerLeave: new Signal<[Pointer]>(),
+  };
+
+  const canvas = document.createElement('canvas');
+
+  const app = {
+    canvas,
+    width: overrides.width ?? 800,
+    height: overrides.height ?? 600,
+    input: signals as unknown as InputManager,
+    focus: { focused: null, focus() {}, blur: vi.fn(), _notifyNodeRemoved() {} },
+    rendering: {
+      view: {
+        screenToWorld: (x: number, y: number): { x: number; y: number } => ({ x, y }),
+      },
+      screenView: {
+        screenToWorld: (x: number, y: number): { x: number; y: number } => ({ x, y }),
+      },
+    },
+    scene: {
+      get currentScene(): Scene | null {
+        return null;
+      },
+    },
+  } as unknown as Application;
+
+  return { app, signals, canvas };
 };
 
 /**
@@ -382,6 +430,37 @@ describe('InteractionManager — pointerover / pointerout on move', () => {
     im.destroy();
     spriteA.destroy();
     spriteB.destroy();
+  });
+
+  test('moving off a hovered sprite to empty space fires pointerout only (no spurious pointerover)', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
+    const sprite = new TestSprite().setBounds(0, 0, 50, 50);
+
+    sprite.interactive = true;
+    scene.addChild(sprite);
+
+    const outHandler = vi.fn();
+    const overHandler = vi.fn();
+
+    sprite.onPointerOut.add(outHandler);
+    sprite.onPointerOver.add(overHandler);
+
+    signals.onPointerMove.dispatch(makePointer({ x: 25, y: 25 }));
+    flushInteractions(im);
+    expect(overHandler).toHaveBeenCalledTimes(1);
+
+    // Move off the sprite entirely — no node under the pointer any more.
+    signals.onPointerMove.dispatch(makePointer({ x: 500, y: 500 }));
+    flushInteractions(im);
+
+    expect(outHandler).toHaveBeenCalledTimes(1);
+    expect(overHandler).toHaveBeenCalledTimes(1); // unchanged — no new pointerover fired
+    expect(im.getHoveredNode()).toBeNull();
+
+    im.destroy();
+    sprite.destroy();
   });
 });
 
@@ -988,5 +1067,676 @@ describe('InteractionManager — input capture', () => {
     inside.destroy();
     outside.destroy();
     modal.destroy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getHoveredNode
+// ---------------------------------------------------------------------------
+
+describe('InteractionManager — getHoveredNode', () => {
+  test('returns null for a pointerId that has no recorded hit', () => {
+    const { app, scene } = createApp();
+    const im = new InteractionManager(app);
+
+    im.attachRoot(scene.root);
+
+    expect(im.getHoveredNode(42)).toBeNull();
+
+    im.destroy();
+  });
+
+  test('returns the hovered node for a given pointerId', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+
+    im.attachRoot(scene.root);
+
+    const sprite = new TestSprite().setBounds(0, 0, 100, 100);
+
+    sprite.interactive = true;
+    scene.addChild(sprite);
+
+    signals.onPointerMove.dispatch(makePointer({ id: 7, x: 50, y: 50 }));
+    flushInteractions(im);
+
+    expect(im.getHoveredNode(7)).toBe(sprite);
+
+    im.destroy();
+    sprite.destroy();
+  });
+
+  test('returns null when no pointerId is given and nothing is hovered', () => {
+    const { app, scene } = createApp();
+    const im = new InteractionManager(app);
+
+    im.attachRoot(scene.root);
+
+    expect(im.getHoveredNode()).toBeNull();
+
+    im.destroy();
+  });
+
+  test('returns the first hovered node in iteration order when no pointerId is given', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+
+    im.attachRoot(scene.root);
+
+    const sprite = new TestSprite().setBounds(0, 0, 100, 100);
+
+    sprite.interactive = true;
+    scene.addChild(sprite);
+
+    signals.onPointerMove.dispatch(makePointer({ id: 1, x: 50, y: 50 }));
+    flushInteractions(im);
+
+    expect(im.getHoveredNode()).toBe(sprite);
+
+    im.destroy();
+    sprite.destroy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getCapturedNodes
+// ---------------------------------------------------------------------------
+
+describe('InteractionManager — getCapturedNodes', () => {
+  test('returns an empty array when nothing is captured', () => {
+    const { app, scene } = createApp();
+    const im = new InteractionManager(app);
+
+    im.attachRoot(scene.root);
+
+    expect(im.getCapturedNodes()).toEqual([]);
+
+    im.destroy();
+  });
+
+  test('returns the dragged node while a drag is active', () => {
+    const { app, scene, signals, canvas } = createApp();
+
+    Object.defineProperty(canvas, 'setPointerCapture', { value: () => undefined, writable: true, configurable: true });
+    Object.defineProperty(canvas, 'releasePointerCapture', { value: () => undefined, writable: true, configurable: true });
+
+    const im = new InteractionManager(app);
+
+    im.attachRoot(scene.root);
+
+    const sprite = new TestSprite().setBounds(0, 0, 100, 100);
+
+    sprite.interactive = true;
+    sprite.draggable = true;
+    scene.addChild(sprite);
+
+    signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+    flushInteractions(im);
+
+    expect(im.getCapturedNodes()).toEqual([sprite]);
+
+    im.destroy();
+    sprite.destroy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// detachRoot
+// ---------------------------------------------------------------------------
+
+describe('InteractionManager — detachRoot', () => {
+  test('blurs focus, clears the capture stack, unregisters interactive nodes, and clears the subtree stage', () => {
+    const { app, scene } = createApp();
+    const im = new InteractionManager(app);
+
+    im.attachRoot(scene.root);
+
+    const sprite = new TestSprite().setBounds(0, 0, 100, 100);
+
+    sprite.interactive = true;
+    scene.addChild(sprite);
+
+    im.pushInputCapture(scene.root);
+
+    expect(sprite._getStage()).not.toBeNull();
+
+    im.detachRoot(scene.root);
+
+    expect(app.focus.blur).toHaveBeenCalledTimes(1);
+
+    // Interactive nodes were unregistered — the quadtree is torn down.
+    expect(im._getDebugQuadtree()).toBeNull();
+
+    // The subtree's stage was cleared — nodes are no longer routed anywhere.
+    expect(sprite._getStage()).toBeNull();
+
+    // The (stale) capture pushed above was cleared, not merely shadowed.
+    expect((im as unknown as { _captureStack: unknown[] })._captureStack).toHaveLength(0);
+
+    im.destroy();
+    sprite.destroy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// UI layer (attachUIRoot / detachUIRoot)
+// ---------------------------------------------------------------------------
+
+describe('InteractionManager — UI layer', () => {
+  test('a UI node is hit-tested in screen space and takes priority over a world node at the same position', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+
+    im.attachRoot(scene.root);
+    im.attachUIRoot(scene.ui);
+
+    const worldSprite = new TestSprite().setBounds(0, 0, 100, 100);
+
+    worldSprite.interactive = true;
+    scene.addChild(worldSprite);
+
+    const uiSprite = new TestSprite().setBounds(0, 0, 100, 100);
+
+    uiSprite.interactive = true;
+    scene.ui.addChild(uiSprite);
+
+    const worldHandler = vi.fn();
+    const uiHandler = vi.fn();
+
+    worldSprite.onPointerDown.add(worldHandler);
+    uiSprite.onPointerDown.add(uiHandler);
+
+    signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+    flushInteractions(im);
+
+    expect(uiHandler).toHaveBeenCalledTimes(1);
+    expect(worldHandler).not.toHaveBeenCalled();
+
+    im.destroy();
+    worldSprite.destroy();
+    uiSprite.destroy();
+  });
+
+  test('a click that misses every UI node falls through to world hit-testing', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+
+    im.attachRoot(scene.root);
+    im.attachUIRoot(scene.ui);
+
+    const worldSprite = new TestSprite().setBounds(0, 0, 100, 100);
+
+    worldSprite.interactive = true;
+    scene.addChild(worldSprite);
+
+    // UI sprite lives far away from the click position.
+    const uiSprite = new TestSprite().setBounds(500, 500, 50, 50);
+
+    uiSprite.interactive = true;
+    scene.ui.addChild(uiSprite);
+
+    const worldHandler = vi.fn();
+
+    worldSprite.onPointerDown.add(worldHandler);
+
+    signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+    flushInteractions(im);
+
+    expect(worldHandler).toHaveBeenCalledTimes(1);
+
+    im.destroy();
+    worldSprite.destroy();
+    uiSprite.destroy();
+  });
+
+  test('attachUIRoot installs the UI stage; detachUIRoot clears it', () => {
+    const { app, scene } = createApp();
+    const im = new InteractionManager(app);
+
+    im.attachRoot(scene.root);
+    im.attachUIRoot(scene.ui);
+
+    expect(scene.ui._getStage()).not.toBeNull();
+
+    im.detachUIRoot(scene.ui);
+
+    expect(scene.ui._getStage()).toBeNull();
+
+    im.destroy();
+  });
+
+  test('dragging a node inside the UI layer resolves coordinates in UI space (_isUINode traversal)', () => {
+    const { app, scene, signals, canvas } = createApp();
+
+    Object.defineProperty(canvas, 'setPointerCapture', { value: () => undefined, writable: true, configurable: true });
+    Object.defineProperty(canvas, 'releasePointerCapture', { value: () => undefined, writable: true, configurable: true });
+
+    const im = new InteractionManager(app);
+
+    im.attachRoot(scene.root);
+    im.attachUIRoot(scene.ui);
+
+    const uiSprite = new TestSprite().setBounds(0, 0, 100, 100);
+
+    uiSprite.interactive = true;
+    uiSprite.draggable = true;
+    scene.ui.addChild(uiSprite);
+
+    const dragHandler = vi.fn();
+
+    uiSprite.onDrag.add(dragHandler);
+
+    signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+    flushInteractions(im);
+
+    signals.onPointerMove.dispatch(makePointer({ x: 60, y: 60 }));
+    flushInteractions(im);
+
+    expect(dragHandler).toHaveBeenCalledTimes(1);
+
+    im.destroy();
+    uiSprite.destroy();
+  });
+
+  test('_isUINode returns false while dragging a world node, even when a UI root is also attached', () => {
+    const { app, scene, signals, canvas } = createApp();
+
+    Object.defineProperty(canvas, 'setPointerCapture', { value: () => undefined, writable: true, configurable: true });
+    Object.defineProperty(canvas, 'releasePointerCapture', { value: () => undefined, writable: true, configurable: true });
+
+    const im = new InteractionManager(app);
+
+    im.attachRoot(scene.root);
+    im.attachUIRoot(scene.ui); // a UI root exists, but the dragged node lives in the world
+
+    const worldSprite = new TestSprite().setBounds(0, 0, 100, 100);
+
+    worldSprite.interactive = true;
+    worldSprite.draggable = true;
+    scene.addChild(worldSprite);
+
+    const dragHandler = vi.fn();
+
+    worldSprite.onDrag.add(dragHandler);
+
+    signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+    flushInteractions(im);
+
+    signals.onPointerMove.dispatch(makePointer({ x: 60, y: 60 }));
+    flushInteractions(im);
+
+    expect(dragHandler).toHaveBeenCalledTimes(1);
+    // Grabbed at (50,50) while at position (0,0) — offset (-50,-50). Moving
+    // to (60,60) in (identity-mapped) world space yields position (10,10).
+    expect(worldSprite.position.x).toBe(10);
+    expect(worldSprite.position.y).toBe(10);
+
+    im.destroy();
+    worldSprite.destroy();
+  });
+
+  test('UI hooks route _notifyNodeRemoved and _notifyInteractiveChanged for already-attached UI nodes', () => {
+    const { app, scene } = createApp();
+    const im = new InteractionManager(app);
+
+    im.attachRoot(scene.root);
+    im.attachUIRoot(scene.ui);
+
+    const uiSprite = new TestSprite().setBounds(0, 0, 100, 100);
+
+    scene.ui.addChild(uiSprite); // added while non-interactive, stage already set
+
+    // Toggling `.interactive` on an already-attached UI node routes through
+    // `_uiInteraction._notifyInteractiveChanged` (a no-op, but must not throw).
+    expect(() => {
+      uiSprite.interactive = true;
+      uiSprite.interactive = false;
+    }).not.toThrow();
+
+    // Removing an already-attached UI node routes through
+    // `_uiInteraction._notifyNodeRemoved` (a no-op, but must not throw).
+    expect(() => scene.ui.removeChild(uiSprite)).not.toThrow();
+
+    im.destroy();
+    uiSprite.destroy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// No active scene
+// ---------------------------------------------------------------------------
+
+describe('InteractionManager — no active scene', () => {
+  test('pointer events are safely ignored when there is no current scene', () => {
+    const { app, signals } = createAppNoScene();
+    const im = new InteractionManager(app);
+
+    expect(() => {
+      signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+      flushInteractions(im);
+    }).not.toThrow();
+
+    expect(im.getHoveredNode()).toBeNull();
+
+    im.destroy();
+  });
+
+  test('creating the quadtree with no current scene root falls back to the seed bounds, and to the default width/height when app.width/height are falsy', () => {
+    const { app } = createAppNoScene({ width: 0, height: 0 });
+    const im = new InteractionManager(app);
+
+    // A freestanding container (not the scene's root — there is no scene) can
+    // still be attached directly; registering its interactive child forces
+    // quadtree creation while `app.scene.currentScene` is null.
+    const root = new Container();
+    const sprite = new TestSprite().setBounds(0, 0, 10, 10);
+
+    sprite.interactive = true;
+    root.addChild(sprite);
+
+    expect(() => im.attachRoot(root)).not.toThrow();
+    expect(im._getDebugQuadtree()).not.toBeNull();
+
+    im.destroy();
+    sprite.destroy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Invisible nodes are skipped by hit-testing
+// ---------------------------------------------------------------------------
+
+describe('InteractionManager — invisible nodes', () => {
+  test('an invisible interactive node inside a captured subtree is skipped by hit-testing', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+
+    im.attachRoot(scene.root);
+
+    const modal = new Container();
+    const hidden = new TestSprite().setBounds(0, 0, 100, 100);
+
+    hidden.interactive = true;
+    hidden.visible = false;
+    modal.addChild(hidden);
+    scene.addChild(modal);
+    im.pushInputCapture(modal);
+
+    const handler = vi.fn();
+
+    hidden.onPointerDown.add(handler);
+
+    signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+    flushInteractions(im);
+
+    expect(handler).not.toHaveBeenCalled();
+
+    im.destroy();
+    hidden.destroy();
+    modal.destroy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Coalesced events (two events for one pointer enqueued before update())
+// ---------------------------------------------------------------------------
+
+describe('InteractionManager — coalesced events', () => {
+  test('two events enqueued for the same pointer before update() are both processed on the next flush', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+
+    im.attachRoot(scene.root);
+
+    const sprite = new TestSprite().setBounds(0, 0, 100, 100);
+
+    sprite.interactive = true;
+    scene.addChild(sprite);
+
+    const downHandler = vi.fn();
+    const moveHandler = vi.fn();
+
+    sprite.onPointerDown.add(downHandler);
+    sprite.onPointerMove.add(moveHandler);
+
+    // Both dispatched BEFORE update() — coalesced into a single pending queue entry.
+    signals.onPointerDown.dispatch(makePointer({ id: 3, x: 50, y: 50 }));
+    signals.onPointerMove.dispatch(makePointer({ id: 3, x: 55, y: 55 }));
+    flushInteractions(im);
+
+    expect(downHandler).toHaveBeenCalledTimes(1);
+    expect(moveHandler).toHaveBeenCalledTimes(1);
+
+    im.destroy();
+    sprite.destroy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Hit-miss edge cases (event fires with no node under the pointer)
+// ---------------------------------------------------------------------------
+
+describe('InteractionManager — events with no hit', () => {
+  test('pointermove over empty space dispatches nothing and does not throw', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+
+    im.attachRoot(scene.root);
+
+    const sprite = new TestSprite().setBounds(0, 0, 100, 100);
+
+    sprite.interactive = true;
+    scene.addChild(sprite);
+
+    const handler = vi.fn();
+
+    sprite.onPointerMove.add(handler);
+
+    expect(() => {
+      signals.onPointerMove.dispatch(makePointer({ x: 500, y: 500 }));
+      flushInteractions(im);
+    }).not.toThrow();
+    expect(handler).not.toHaveBeenCalled();
+
+    im.destroy();
+    sprite.destroy();
+  });
+
+  test('pointerup on a non-draggable node fires pointerup with no drag involved', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+
+    im.attachRoot(scene.root);
+
+    const sprite = new TestSprite().setBounds(0, 0, 100, 100);
+
+    sprite.interactive = true;
+    scene.addChild(sprite);
+
+    const handler = vi.fn();
+
+    sprite.onPointerUp.add(handler);
+
+    signals.onPointerUp.dispatch(makePointer({ x: 50, y: 50 }));
+    flushInteractions(im);
+
+    expect(handler).toHaveBeenCalledTimes(1);
+
+    im.destroy();
+    sprite.destroy();
+  });
+
+  test('pointerup over empty space dispatches nothing and does not throw', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+
+    im.attachRoot(scene.root);
+
+    expect(() => {
+      signals.onPointerUp.dispatch(makePointer({ x: 500, y: 500 }));
+      flushInteractions(im);
+    }).not.toThrow();
+
+    im.destroy();
+  });
+
+  test('pointertap over empty space dispatches nothing and does not throw', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+
+    im.attachRoot(scene.root);
+
+    expect(() => {
+      signals.onPointerTap.dispatch(makePointer({ x: 500, y: 500 }));
+      flushInteractions(im);
+    }).not.toThrow();
+
+    im.destroy();
+  });
+
+  test('pointercancel/pointerleave with no prior hover and no active drag does not throw', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+
+    im.attachRoot(scene.root);
+
+    expect(() => {
+      signals.onPointerCancel.dispatch(makePointer({ id: 9, x: 500, y: 500 }));
+      flushInteractions(im);
+      signals.onPointerLeave.dispatch(makePointer({ id: 9, x: 500, y: 500 }));
+      flushInteractions(im);
+    }).not.toThrow();
+
+    im.destroy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Registration-guard idempotency
+// ---------------------------------------------------------------------------
+
+describe('InteractionManager — registration guards', () => {
+  test('calling attachRoot twice on the same root does not double-register interactive nodes', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+
+    im.attachRoot(scene.root);
+
+    const sprite = new TestSprite().setBounds(0, 0, 100, 100);
+
+    sprite.interactive = true;
+    scene.addChild(sprite);
+
+    // Re-attaching the same, already-attached root re-walks the subtree —
+    // `_registerNode`'s "already registered" guard must no-op for `sprite`.
+    expect(() => im.attachRoot(scene.root)).not.toThrow();
+
+    const handler = vi.fn();
+
+    sprite.onPointerDown.add(handler);
+    signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+    flushInteractions(im);
+
+    // Still fires exactly once — no duplicate registration/dispatch.
+    expect(handler).toHaveBeenCalledTimes(1);
+
+    im.destroy();
+    sprite.destroy();
+  });
+
+  test('_notifyInteractiveChanged(node, false) for an unregistered node is a safe no-op', () => {
+    const { app, scene } = createApp();
+    const im = new InteractionManager(app);
+
+    im.attachRoot(scene.root);
+
+    const sprite = new TestSprite().setBounds(0, 0, 100, 100);
+
+    sprite.interactive = true;
+    scene.addChild(sprite);
+
+    // First call unregisters normally; the second call finds `sprite` already
+    // absent from the tracking set — `_unregisterNode`'s own guard no-ops.
+    expect(() => {
+      im._notifyInteractiveChanged(sprite, false);
+      im._notifyInteractiveChanged(sprite, false);
+    }).not.toThrow();
+
+    im.destroy();
+    sprite.destroy();
+  });
+
+  test('toggling .interactive AFTER a node is already attached routes through the setter (not addChild)', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+
+    im.attachRoot(scene.root);
+
+    const sprite = new TestSprite().setBounds(0, 0, 100, 100);
+
+    // Added while non-interactive — `_notifyNodeAdded` skips registration.
+    scene.addChild(sprite);
+
+    // Now flip it on while already attached — this is the setter's own
+    // `_notifyInteractiveChanged(node, true)` path, distinct from the
+    // addChild-time subtree walk exercised by every other test in this file.
+    sprite.interactive = true;
+
+    const handler = vi.fn();
+
+    sprite.onPointerDown.add(handler);
+    signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+    flushInteractions(im);
+
+    expect(handler).toHaveBeenCalledTimes(1);
+
+    im.destroy();
+    sprite.destroy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Miscellaneous
+// ---------------------------------------------------------------------------
+
+describe('InteractionManager — miscellaneous', () => {
+  test('update() with nothing enqueued is a no-op (dirty flag stays false)', () => {
+    const { app, scene } = createApp();
+    const im = new InteractionManager(app);
+
+    im.attachRoot(scene.root);
+
+    expect(() => im.update()).not.toThrow();
+
+    im.destroy();
+  });
+
+  test('unregistering one of two interactive nodes keeps the quadtree alive for the other', () => {
+    const { app, scene } = createApp();
+    const im = new InteractionManager(app);
+
+    im.attachRoot(scene.root);
+
+    const spriteA = new TestSprite().setBounds(0, 0, 50, 50);
+    const spriteB = new TestSprite().setBounds(60, 0, 50, 50);
+
+    spriteA.interactive = true;
+    spriteB.interactive = true;
+    scene.addChild(spriteA);
+    scene.addChild(spriteB);
+
+    expect(im._getDebugQuadtree()).not.toBeNull();
+
+    spriteA.interactive = false; // unregisters A only — B keeps the quadtree alive
+
+    expect(im._getDebugQuadtree()).not.toBeNull();
+
+    spriteB.interactive = false; // now empty — quadtree is torn down
+
+    expect(im._getDebugQuadtree()).toBeNull();
+
+    im.destroy();
+    spriteA.destroy();
+    spriteB.destroy();
   });
 });

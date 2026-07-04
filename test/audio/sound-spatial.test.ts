@@ -197,6 +197,13 @@ describe('Sound — spatial (PannerNode)', () => {
     expect(sound.velocity).toBeNull();
   });
 
+  test('setting velocity to null when already null is a no-op', () => {
+    const sound = new Sound(createAudioBufferStub());
+    expect(sound.velocity).toBeNull();
+    expect(() => (sound.velocity = null)).not.toThrow();
+    expect(sound.velocity).toBeNull();
+  });
+
   // 7. Setting position multiple times reuses value (no additional panner per update)
   test('updating position multiple times changes the descriptor value', () => {
     const sound = new Sound(createAudioBufferStub());
@@ -268,6 +275,41 @@ describe('Sound — spatial (PannerNode)', () => {
     sound.position = { x: 1, y: 2 };
     sound.velocity = { x: 3, y: 4 };
     expect(() => sound.destroy()).not.toThrow();
+  });
+
+  // 10. distanceModel / refDistance / maxDistance / rolloffFactor accessors
+  test('distanceModel getter/setter round-trips', () => {
+    const sound = new Sound(createAudioBufferStub());
+    expect(sound.distanceModel).toBe('linear');
+    sound.distanceModel = 'exponential';
+    expect(sound.distanceModel).toBe('exponential');
+  });
+
+  test('refDistance getter/setter round-trips and clamps to >= 0', () => {
+    const sound = new Sound(createAudioBufferStub());
+    expect(sound.refDistance).toBe(50);
+    sound.refDistance = 20;
+    expect(sound.refDistance).toBe(20);
+    sound.refDistance = -5;
+    expect(sound.refDistance).toBe(0);
+  });
+
+  test('maxDistance getter/setter round-trips and clamps to >= 0', () => {
+    const sound = new Sound(createAudioBufferStub());
+    expect(sound.maxDistance).toBe(1000);
+    sound.maxDistance = 500;
+    expect(sound.maxDistance).toBe(500);
+    sound.maxDistance = -1;
+    expect(sound.maxDistance).toBe(0);
+  });
+
+  test('rolloffFactor getter/setter round-trips and clamps to >= 0', () => {
+    const sound = new Sound(createAudioBufferStub());
+    expect(sound.rolloffFactor).toBe(1);
+    sound.rolloffFactor = 2.5;
+    expect(sound.rolloffFactor).toBe(2.5);
+    sound.rolloffFactor = -3;
+    expect(sound.rolloffFactor).toBe(0);
   });
 
   test('destroy() stops all active voices', () => {

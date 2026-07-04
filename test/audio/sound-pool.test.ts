@@ -135,6 +135,35 @@ describe('Sound — pool defaults', () => {
     expect(sound.poolSize).toBe(3);
   });
 
+  // setPoolSize() is a no-op when the (normalized) size is unchanged
+  test('setPoolSize() is a no-op when the normalized size is unchanged', () => {
+    const sound = new Sound(createAudioBufferStub(), { poolSize: 4 });
+    expect(sound.setPoolSize(4)).toBe(sound);
+    // Fractional/negative inputs normalize to the same 4 — still a no-op.
+    expect(sound.setPoolSize(4.9)).toBe(sound);
+    expect(sound.poolSize).toBe(4);
+  });
+
+  // setPoolSize() shrinking below the active voice count trims (evicts) the excess
+  test('setPoolSize() shrink trims active voices down to the new capacity', () => {
+    const factory = setupSourceFactory();
+    const manager = new AudioManager();
+    const sound = new Sound(createAudioBufferStub(), { poolSize: 4 });
+
+    manager.play(sound); // src[0]
+    manager.play(sound); // src[1]
+    manager.play(sound); // src[2]
+
+    sound.setPoolSize(1);
+
+    expect(factory.sources[0].stop).toHaveBeenCalledTimes(1);
+    expect(factory.sources[1].stop).toHaveBeenCalledTimes(1);
+    expect(factory.sources[2].stop).not.toHaveBeenCalled();
+
+    factory.restore();
+    sound.destroy();
+  });
+
   // priority getter/setter round-trip
   test('priority setter updates priority', () => {
     const sound = new Sound(createAudioBufferStub());
@@ -228,6 +257,36 @@ describe('Sound — LeastRecentlyUsed eviction', () => {
     expect(factory.sources[2].stop).not.toHaveBeenCalled();
 
     timeMock.restore();
+    factory.restore();
+    sound.destroy();
+  });
+});
+
+describe('Sound — LeastRecentlyUsed eviction while the audio context is not ready', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  // LRU falls back to `now = 0` when the audio context is not running yet.
+  test('LRU eviction still picks a victim when isAudioContextReady() is false', () => {
+    const factory = setupSourceFactory();
+    const manager = new AudioManager();
+    const sound = new Sound(createAudioBufferStub(4), {
+      poolSize: 1,
+      poolStrategy: SoundPoolStrategy.LeastRecentlyUsed,
+    });
+
+    manager.play(sound); // src[0]
+
+    const ctx = getAudioContext();
+    const originalState = ctx.state;
+    ctx.state = 'suspended';
+
+    manager.play(sound); // src[1] — triggers eviction with the context not ready
+
+    ctx.state = originalState;
+
+    expect(factory.sources.length).toBe(2);
+    expect(factory.sources[0].stop).toHaveBeenCalledTimes(1);
+
     factory.restore();
     sound.destroy();
   });
@@ -351,6 +410,34 @@ describe('Sound — natural pool cleanup', () => {
     // Pool should now be empty — a 3rd play creates a fresh voice without evicting
     manager.play(sound); // src[2]
     expect(factory.sources[2].stop).not.toHaveBeenCalled();
+
+    factory.restore();
+    sound.destroy();
+  });
+
+  // Defensive prune path: a stale pool entry whose voice already ended (the
+  // normal onEnd-driven removal did not run for some reason) is pruned on the
+  // next play() rather than being left to accumulate.
+  test('_pruneEndedVoices() removes a stale entry pointing at an already-ended voice', () => {
+    const factory = setupSourceFactory();
+    const manager = new AudioManager();
+    const sound = new Sound(createAudioBufferStub(), { poolSize: 4 });
+
+    const voice = manager.play(sound); // src[0], auto-removed from the pool via onEnd on stop()
+    voice.stop();
+
+    // Re-seed a stale entry directly, simulating the pool bookkeeping having
+    // missed the automatic onEnd removal.
+    (sound as unknown as { _activeVoices: Array<{ voice: unknown; startedAt: number; effectiveDuration: number }> })._activeVoices.push({
+      voice,
+      startedAt: 0,
+      effectiveDuration: 1,
+    });
+
+    manager.play(sound); // src[1] — _pruneEndedVoices() drops the stale entry first
+
+    expect(factory.sources.length).toBe(2);
+    expect(factory.sources[1].stop).not.toHaveBeenCalled();
 
     factory.restore();
     sound.destroy();

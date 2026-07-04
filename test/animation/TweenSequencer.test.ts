@@ -281,6 +281,35 @@ describe('TweenSequencer', () => {
       seq.resume();
       expect(tween.state).toBe(TweenState.Active);
     });
+
+    test('pause() is a no-op when the sequencer is not Active (e.g. Idle)', () => {
+      const seq = new TweenSequencer();
+      seq.pause();
+      expect(seq.state).toBe(TweenSequencerState.Idle);
+    });
+
+    test('resume() is a no-op when the sequencer is not Paused (e.g. Active)', () => {
+      const { tween } = makeTween(1.0);
+      const seq = new TweenSequencer().then(tween).start();
+      seq.resume();
+      expect(seq.state).toBe(TweenSequencerState.Active);
+    });
+
+    test('pause()/resume() on an empty-stage sequencer is safe (no current-stage tweens)', () => {
+      const seq = new TweenSequencer().start();
+      expect(() => seq.pause()).not.toThrow();
+      expect(seq.state).toBe(TweenSequencerState.Paused);
+      expect(() => seq.resume()).not.toThrow();
+      expect(seq.state).toBe(TweenSequencerState.Active);
+    });
+
+    test('pause() during a delay stage is safe (current stage has no tweens)', () => {
+      const seq = new TweenSequencer().wait(0.5).start();
+      seq.update(0.1); // still within the delay
+
+      expect(() => seq.pause()).not.toThrow();
+      expect(seq.state).toBe(TweenSequencerState.Paused);
+    });
   });
 
   // ── repeat() ───────────────────────────────────────────────────────────────
@@ -328,6 +357,53 @@ describe('TweenSequencer', () => {
     });
   });
 
+  // ── yoyo() ─────────────────────────────────────────────────────────────────
+
+  describe('yoyo()', () => {
+    test('yoyo() + repeat(2): stage order reverses each pass, direction flips twice', () => {
+      const { tween: t1 } = makeTween(1.0);
+      const { tween: t2 } = makeTween(1.0);
+
+      const seq = new TweenSequencer().then(t1).then(t2).repeat(2).yoyo().start();
+
+      // Pass 1 (forward): t1 then t2.
+      seq.update(1.0); // t1 done -> stage 1 (t2) starts
+      expect(t1.state).toBe(TweenState.Complete);
+      expect(t2.state).toBe(TweenState.Active);
+
+      // t2 completes, ending pass 1; direction flips 1 -> -1 and pass 2
+      // starts reversed, immediately restarting t2 (logical stage 0 now
+      // maps to t2) — all within this single update() call.
+      seq.update(1.0);
+      expect(t2.state).toBe(TweenState.Active);
+
+      seq.update(1.0); // reversed-stage 0 (t2) done -> reversed-stage 1 (t1) starts
+      expect(t1.state).toBe(TweenState.Active);
+
+      seq.update(1.0); // t1 done -> pass 2 complete; direction flips -1 -> 1; pass 3 starts forward
+      expect(seq.state).toBe(TweenSequencerState.Active); // pass 3 remains
+
+      // Pass 3 (forward): t1 then t2 -> sequence completes.
+      seq.update(1.0);
+      seq.update(1.0);
+      expect(seq.state).toBe(TweenSequencerState.Complete);
+    });
+
+    test('yoyo(false) explicitly keeps stage order forward (default-argument branch coverage)', () => {
+      const { tween: t1 } = makeTween(1.0);
+      const { tween: t2 } = makeTween(1.0);
+
+      const seq = new TweenSequencer().then(t1).then(t2).repeat(1).yoyo(false).start();
+
+      seq.update(1.0); // t1 done -> t2 starts
+      seq.update(1.0); // t2 done -> pass 1 complete, direction unaffected
+
+      // Pass 2 (still forward): t1 restarts first, same order as pass 1.
+      expect(t1.state).toBe(TweenState.Active);
+      expect(seq.state).toBe(TweenSequencerState.Active);
+    });
+  });
+
   // ── progress ───────────────────────────────────────────────────────────────
 
   describe('progress', () => {
@@ -348,6 +424,23 @@ describe('TweenSequencer', () => {
 
       seq.update(1.0); // stage 2 done
       expect(seq.progress).toBeCloseTo(1, 5);
+    });
+  });
+
+  // ── Internal guards ────────────────────────────────────────────────────────
+
+  describe('internal guards', () => {
+    test('update() guards against an out-of-range stage index (defensive; internal state forced for coverage)', () => {
+      // _currentStageIndex is kept in [0, _stages.length) by every public
+      // mutator (start()/_advanceStage()); there is no public path that
+      // leaves it out of range, since _stages can only grow and the index
+      // is reset on every pass boundary. This forces that internal state
+      // directly to exercise the defensive `stage === undefined` guard.
+      const { tween } = makeTween(1.0);
+      const seq = new TweenSequencer().then(tween).start();
+
+      (seq as unknown as { _currentStageIndex: number })._currentStageIndex = 99;
+      expect(() => seq.update(0.1)).not.toThrow();
     });
   });
 
