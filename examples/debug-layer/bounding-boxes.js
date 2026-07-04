@@ -29,6 +29,10 @@ class BoundingBoxesScene extends Scene {
         this.sprites = Array.from({ length: count }, (_, i) => {
             const sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setScale(0.8);
             sprite.setPosition(margin + i * step, height / 2 + Math.sin(i) * 80);
+            // The boundingBoxes layer walks the SCENE GRAPH (scene.root), so
+            // the sprites must be attached to it — nodes that are only passed
+            // to context.render() directly are invisible to the overlay.
+            this.root.addChild(sprite);
             return { sprite, speed: 0.8 + i * 0.14 };
         });
     }
@@ -42,8 +46,7 @@ class BoundingBoxesScene extends Scene {
     }
     draw(context) {
         context.backend.clear();
-        for (const { sprite } of this.sprites)
-            context.render(sprite);
+        context.render(this.root);
     }
 }
 app.start(new BoundingBoxesScene());

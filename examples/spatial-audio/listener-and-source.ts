@@ -1,4 +1,5 @@
 import { Application, Color, Graphics, Scene, Sound, Text } from '@codexo/exojs';
+import type { Spatializable, Voice } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -31,6 +32,7 @@ function linearAttenuation(distance: number): number {
 
 class ListenerAndSourceScene extends Scene {
     private sound!: Sound;
+    private voice!: Voice & Spatializable;
     private dragging = false;
     private listener!: { x: number; y: number };
     private graphics!: Graphics;
@@ -82,7 +84,10 @@ class ListenerAndSourceScene extends Scene {
         });
         this.app.input.onPointerMove.add(pointer => {
             if (!this.dragging) return;
+            // sound.position only seeds NEW voices - a live voice moves via
+            // voice.position, so update both (descriptor + running loop).
             this.sound.position = { x: pointer.x, y: pointer.y };
+            this.voice.position = { x: pointer.x, y: pointer.y };
         });
         this.app.input.onPointerUp.add(() => {
             this.dragging = false;
@@ -90,7 +95,8 @@ class ListenerAndSourceScene extends Scene {
 
         // Core defers playback until the AudioContext unlocks on the first
         // gesture, then starts automatically — just call play().
-        this.app.audio.play(this.sound, { loop: true, volume: 1 });
+        // play() returns the narrow Voice interface; Sound voices are spatializable.
+        this.voice = this.app.audio.play(this.sound, { loop: true, volume: 1 }) as Voice & Spatializable;
         this.hud.setStatus('Drag the red source to move it');
     }
 

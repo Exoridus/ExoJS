@@ -22,13 +22,15 @@ class ZOrderingScene extends Scene {
     init(loader) {
         const { width, height } = this.app.canvas;
         this.group = new Container();
-        this.label = new Text('Press 1, 2, 3', { fillColor: Color.white, fontSize: 18 });
+        this.label = new Text('Press 1, 2, 3 — front: 3 (blue)', { fillColor: Color.white, fontSize: 18 });
         this.label.setPosition(18, 18);
+        // Large, tightly spaced sprites so they clearly overlap — otherwise a
+        // zIndex change has nothing visible to reorder.
         this.sprites = [0, 1, 2].map(index => {
             const sprite = new Sprite(loader.get(Texture, 'bunny'))
                 .setAnchor(0.5)
-                .setScale(0.9)
-                .setPosition(width / 2 - 60 + index * 60, height / 2);
+                .setScale(2.4)
+                .setPosition(width / 2 - 90 + index * 90, height / 2);
             sprite.setTint([new Color(255, 120, 120), new Color(120, 255, 170), new Color(120, 170, 255)][index]);
             sprite.zIndex = index;
             this.group.addChild(sprite);
@@ -42,6 +44,8 @@ class ZOrderingScene extends Scene {
         this.sprites.forEach((sprite, i) => {
             sprite.zIndex = i === index ? 3 : i;
         });
+        const names = ['1 (red)', '2 (green)', '3 (blue)'];
+        this.label.text = `Press 1, 2, 3 — front: ${names[index]}`;
     }
     draw(context) {
         context.backend.clear();

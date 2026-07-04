@@ -29,6 +29,7 @@ function linearAttenuation(distance) {
 }
 class ListenerAndSourceScene extends Scene {
     sound;
+    voice;
     dragging = false;
     listener;
     graphics;
@@ -76,14 +77,18 @@ class ListenerAndSourceScene extends Scene {
         this.app.input.onPointerMove.add(pointer => {
             if (!this.dragging)
                 return;
+            // sound.position only seeds NEW voices - a live voice moves via
+            // voice.position, so update both (descriptor + running loop).
             this.sound.position = { x: pointer.x, y: pointer.y };
+            this.voice.position = { x: pointer.x, y: pointer.y };
         });
         this.app.input.onPointerUp.add(() => {
             this.dragging = false;
         });
         // Core defers playback until the AudioContext unlocks on the first
         // gesture, then starts automatically — just call play().
-        this.app.audio.play(this.sound, { loop: true, volume: 1 });
+        // play() returns the narrow Voice interface; Sound voices are spatializable.
+        this.voice = this.app.audio.play(this.sound, { loop: true, volume: 1 });
         this.hud.setStatus('Drag the red source to move it');
     }
     draw(context) {
