@@ -1,6 +1,6 @@
 {
   "name": "@codexo/exojs-ldtk",
-  "version": "0.15.0",
+  "version": "0.15.1",
   "description": "LDtk level format asset extension for ExoJS.",
   "repository": {
     "type": "git",

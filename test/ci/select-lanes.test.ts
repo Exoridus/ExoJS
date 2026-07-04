@@ -86,6 +86,10 @@ describe('CI lane selection — engine/site areas', () => {
     expect(selectAreas(['packages/exojs-particles/CHANGELOG.md'])).toEqual({ engine: false, site: true, audioFx: false });
   });
 
+  it('the ROOT changelog gates the engine lane (release version-coherence tests read it)', () => {
+    expect(selectAreas(['CHANGELOG.md']).engine).toBe(true);
+  });
+
   it('core engine SOURCE change keeps existing behavior (engine lanes, no site)', () => {
     const { areas, lanes } = decide('src/rendering/Drawable.ts');
     expect(areas).toEqual({ engine: true, site: false, audioFx: false });
