@@ -1170,7 +1170,7 @@
       "members": [
         {
           "name": "angle",
-          "signature": "angle: unknown",
+          "signature": "angle: number",
           "signatureTokens": [
             {
               "text": "angle",
@@ -1181,17 +1181,17 @@
               "kind": "punctuation"
             },
             {
-              "text": "unknown",
+              "text": "number",
               "kind": "keyword"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Angle of this vector in radians, measured from the positive X-axis (the same convention as PolarVector.phi). Setting this rotates the vector to the new angle while preserving its length. Mutates in place."
         },
         {
           "name": "length",
-          "signature": "length: unknown",
+          "signature": "length: number",
           "signatureTokens": [
             {
               "text": "length",
@@ -1202,13 +1202,13 @@
               "kind": "punctuation"
             },
             {
-              "text": "unknown",
+              "text": "number",
               "kind": "keyword"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Euclidean magnitude of this vector. Setting rescales the vector to magnitude while preserving its angle. Mutates in place."
         },
         {
           "name": "lengthSq",

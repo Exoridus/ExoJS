@@ -111,62 +111,40 @@ describe('ObservableVector owner notification', () => {
 });
 
 describe('ObservableVector angle/length overrides', () => {
-  // BUG (see final report — the most severe finding of this sweep):
-  // `ObservableVector` overrides only the *setter* for `angle` and `length`
-  // (src/math/ObservableVector.ts), never redeclaring the getter. In native
-  // JS/TS accessor semantics, a subclass that redefines just one half of an
-  // inherited accessor pair replaces the whole property descriptor on its own
-  // prototype — it does NOT fall back to the base class's getter for the
-  // half it didn't redefine. So `ObservableVector.prototype` ends up with an
-  // `angle`/`length` property that has a setter but `get: undefined`, and
-  // reading `v.angle` or `v.length` on any `ObservableVector` returns
-  // `undefined` instead of inheriting `AbstractVector`'s getter. Confirmed
-  // with a minimal repro of the same class shape (plain `get`/`set` pair in a
-  // base class, setter-only override in a subclass) — reading the property on
-  // the subclass instance yields `undefined` before and after invoking the
-  // setter.
-  test('BUG: reading .angle on an ObservableVector returns undefined (setter-only override shadows the inherited getter)', () => {
+  // The subclass must redeclare the getter next to each setter override —
+  // a setter-only accessor on the subclass prototype would shadow the whole
+  // inherited accessor pair and leave `get` undefined.
+  test('reading .angle works like AbstractVector.angle', () => {
     const v = new ObservableVector(null, 0, 0, 5);
 
-    // Expected (per AbstractVector.angle): atan2(0, 5) = 0.
-    expect(v.angle).toBeUndefined();
+    expect(v.angle).toBeCloseTo(Math.PI / 2);
   });
 
-  test('BUG: reading .length on an ObservableVector returns undefined (setter-only override shadows the inherited getter)', () => {
+  test('reading .length works like AbstractVector.length', () => {
     const v = new ObservableVector(null, 0, 3, 4);
 
-    // Expected (per AbstractVector.length): sqrt(3^2 + 4^2) = 5.
-    expect(v.length).toBeUndefined();
+    expect(v.length).toBe(5);
   });
 
-  // The setters themselves still run (only the getter half is shadowed), and
-  // still route through set() for a single notification. They also carry the
-  // same axis-convention mismatch pinned for AbstractVector in
-  // vector.test.ts: the (would-be) getter reads the angle from the Y-axis,
-  // but these setters reconstruct via the X-axis (cos → x, sin → y)
-  // convention. `this.length` inside the angle setter, and `this.angle`
-  // inside the length setter, both resolve to `undefined` per the bug above,
-  // which turns every `Math.cos`/`Math.sin` call into `NaN` — so these
-  // setters don't just use the "wrong" convention, they zero out the vector.
-  test('BUG: angle setter reads the shadowed .length getter and NaNs out the vector (but still notifies once)', () => {
+  test('angle setter rotates the vector, preserving length, and notifies once', () => {
     const onChange = vi.fn();
     const v = new ObservableVector({ _onObservableChange: onChange }, 0, 0, 5);
 
-    v.angle = Math.PI / 2;
+    v.angle = 0;
 
-    expect(v.x).toBeNaN();
-    expect(v.y).toBeNaN();
+    expect(v.x).toBeCloseTo(5);
+    expect(v.y).toBeCloseTo(0);
     expect(onChange).toHaveBeenCalledTimes(1);
   });
 
-  test('BUG: length setter reads the shadowed .angle getter and NaNs out the vector (but still notifies once)', () => {
+  test('length setter rescales the vector, preserving direction, and notifies once', () => {
     const onChange = vi.fn();
     const v = new ObservableVector({ _onObservableChange: onChange }, 0, 3, 4);
 
     v.length = 10;
 
-    expect(v.x).toBeNaN();
-    expect(v.y).toBeNaN();
+    expect(v.x).toBeCloseTo(6);
+    expect(v.y).toBeCloseTo(8);
     expect(onChange).toHaveBeenCalledTimes(1);
   });
 });

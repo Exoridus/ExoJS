@@ -23,7 +23,7 @@ describe('PolarVector.fromVector()', () => {
     const p = PolarVector.fromVector(v);
 
     expect(p.radius).toBeCloseTo(v.length);
-    // AbstractVector.angle is measured from the positive Y-axis, clockwise.
+    // AbstractVector.angle and PolarVector.phi share the X-axis convention.
     expect(p.phi).toBeCloseTo(v.angle);
   });
 
@@ -49,25 +49,15 @@ describe('PolarVector.toVector()', () => {
     expect(p.toVector()).toBe(Vector.temp);
   });
 
-  // BUG (see final report): the class doc comment claims
-  // `PolarVector.fromVector(v).toVector()` reproduces `v` (modulo float
-  // precision). It does not, for any vector where x !== y. `fromVector()`
-  // stores `radius`/`phi` using `AbstractVector.angle`, which is measured from
-  // the positive Y-axis: `phi = atan2(x, y)`. `toVector()` then reconstructs
-  // Cartesian coordinates using the standard X-axis convention:
-  // `x = radius*cos(phi)`, `y = radius*sin(phi)`. Mixing the two conventions
-  // swaps the components instead of round-tripping them: for (3, 4) — length
-  // 5, phi ≈ 0.6435 — `toVector()` yields (4, 3), not (3, 4).
-  test('BUG: fromVector()/toVector() swaps x and y instead of round-tripping', () => {
+  test('fromVector()/toVector() round-trips an asymmetric vector', () => {
     const original = new Vector(3, 4);
     const roundTripped = PolarVector.fromVector(original).toVector();
 
-    // Documented/expected: roundTripped.x ≈ 3, roundTripped.y ≈ 4.
-    expect(roundTripped.x).toBeCloseTo(4);
-    expect(roundTripped.y).toBeCloseTo(3);
+    expect(roundTripped.x).toBeCloseTo(3);
+    expect(roundTripped.y).toBeCloseTo(4);
   });
 
-  test('round-trips correctly on the symmetric x === y case (angle convention mismatch is masked)', () => {
+  test('fromVector()/toVector() round-trips the symmetric x === y case', () => {
     const original = new Vector(5, 5);
     const roundTripped = PolarVector.fromVector(original).toVector();
 

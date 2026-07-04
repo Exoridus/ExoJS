@@ -1746,7 +1746,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Angle of this vector in radians, measured from the positive Y-axis (clockwise). Setting this rotates the vector to the new angle while preserving its length. Mutates in place."
+          "description": "Angle of this vector in radians, measured from the positive X-axis (the same convention as PolarVector.phi). Setting this rotates the vector to the new angle while preserving its length. Mutates in place."
         },
         {
           "name": "length",

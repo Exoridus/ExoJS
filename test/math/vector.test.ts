@@ -234,30 +234,21 @@ describe('Vector static factories', () => {
 // ---------------------------------------------------------------------------
 
 describe('AbstractVector.angle', () => {
-  test('getter measures the angle from the positive Y-axis, clockwise', () => {
-    expect(new Vector(0, 1).angle).toBeCloseTo(0);
-    expect(new Vector(1, 0).angle).toBeCloseTo(Math.PI / 2);
+  test('getter measures the angle from the positive X-axis, like PolarVector.phi', () => {
+    expect(new Vector(1, 0).angle).toBeCloseTo(0);
+    expect(new Vector(0, 1).angle).toBeCloseTo(Math.PI / 2);
   });
 
-  // BUG (see final report): the getter measures the angle from the positive
-  // Y-axis (`atan2(x, y)`, per the class doc comment), but the setter
-  // reconstructs components using the standard X-axis convention
-  // (`x = cos(angle) * length`, `y = sin(angle) * length`). The two use
-  // incompatible conventions, so the setter does not rotate the vector to the
-  // angle its own getter would report — for a vector at getter-angle 0 (i.e.
-  // pointing along +Y), setting `.angle = Math.PI / 2` should rotate it to
-  // point along +X (5, 0) but instead leaves it at (0, 5), unchanged.
-  test('BUG: angle setter uses a different axis convention than the angle getter, so it does not rotate as documented', () => {
+  test('setter rotates the vector to the new angle while preserving length', () => {
     const v = new Vector(0, 5);
 
-    expect(v.angle).toBeCloseTo(0); // pointing along +Y reads as angle 0
+    expect(v.angle).toBeCloseTo(Math.PI / 2); // pointing along +Y
 
-    v.angle = Math.PI / 2;
+    v.angle = 0;
 
-    expect(v.length).toBeCloseTo(5); // length is preserved...
-    // ...but expected x=5, y=0 (rotated to point along +X); instead unchanged.
-    expect(v.x).toBeCloseTo(0);
-    expect(v.y).toBeCloseTo(5);
+    expect(v.length).toBeCloseTo(5);
+    expect(v.x).toBeCloseTo(5);
+    expect(v.y).toBeCloseTo(0);
   });
 });
 
@@ -266,21 +257,14 @@ describe('AbstractVector.length', () => {
     expect(new Vector(3, 4).length).toBe(5);
   });
 
-  // BUG (see final report): same root cause as the angle-setter bug above.
-  // The length setter reads `this.angle` (Y-axis convention) then
-  // reconstructs via the X-axis convention (`cos` → x, `sin` → y), so
-  // rescaling does not preserve the vector's own angle/direction — for (3, 4)
-  // scaled to length 10, the expected direction-preserving result is (6, 8),
-  // but the setter instead produces (8, 6) (x/y swapped).
-  test('BUG: length setter uses a different axis convention than the angle getter, so it does not preserve direction as documented', () => {
+  test('setter rescales the vector while preserving its direction', () => {
     const v = new Vector(3, 4);
 
     v.length = 10;
 
     expect(v.length).toBeCloseTo(10);
-    // Expected (direction-preserving): x=6, y=8. Actual: swapped.
-    expect(v.x).toBeCloseTo(8);
-    expect(v.y).toBeCloseTo(6);
+    expect(v.x).toBeCloseTo(6);
+    expect(v.y).toBeCloseTo(8);
   });
 });
 
