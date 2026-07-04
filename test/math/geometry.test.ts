@@ -158,6 +158,24 @@ describe('buildPath', () => {
     expect(box.minY).toBeGreaterThan(-50);
     expect(box.maxY).toBeLessThan(50);
   });
+
+  test('a sharp (but non-collinear) turn also triggers the spike bevel fallback', () => {
+    // Unlike the near-exact-reversal case above (which hits the separate
+    // denom<0.1 near-parallel guard), this turn has a well-defined miter
+    // intersection point that lies far away (pdist > 196 * lineWidth^2),
+    // exercising the perp3-based bevel fallback instead.
+    const points = [0, 0, 100, 0, 5, 5];
+    const data = buildPath(points, 4);
+    const box = bboxOf(data.vertices);
+
+    // The raw (unbevelled) miter intersection for this configuration would
+    // land more than 150 units away from the joint at (100, 0); the bevel
+    // fallback must keep every vertex close to the path instead.
+    expect(box.minX).toBeGreaterThanOrEqual(-10);
+    expect(box.maxX).toBeLessThanOrEqual(110);
+    expect(box.minY).toBeGreaterThanOrEqual(-10);
+    expect(box.maxY).toBeLessThanOrEqual(10);
+  });
 });
 
 // ---------------------------------------------------------------------------

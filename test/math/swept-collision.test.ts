@@ -128,6 +128,62 @@ describe('sweepRectangle', () => {
     expect(hit!.x).toBeCloseTo(10, 10); // 0 + 20 * 0.5
     expect(hit!.y).toBe(0);
   });
+
+  test('moving box approaches static box from above (deltaY < 0)', () => {
+    // moving: y in [20..30], target: y in [0..10]. Moving upward (negative Y).
+    const moving = rect(0, 20, 10, 10);
+    const target = rect(0, 0, 10, 10);
+    const hit = sweepRectangle(moving, 0, -20, target);
+
+    expect(hit).not.toBeNull();
+    expect(hit!.t).toBeCloseTo(0.5, 10);
+    expect(hit!.normalY).toBe(1);
+  });
+
+  test('no movement on Y and no static Y overlap → null', () => {
+    // deltaY === 0 and the boxes never overlap on the Y axis, regardless of X.
+    const moving = rect(0, 0, 10, 10);
+    const target = rect(0, 100, 10, 10);
+    const hit = sweepRectangle(moving, 5, 0, target);
+
+    expect(hit).toBeNull();
+  });
+
+  test('already overlapping with a smaller X penetration picks normal via movMinX < tarMinX (-1)', () => {
+    // moving straddles target's left edge → overlapX < overlapY, moving's min-X is left of target's.
+    const moving = rect(-5, 0, 10, 20);
+    const target = rect(0, 0, 20, 20);
+    const hit = sweepRectangle(moving, 0, 0, target);
+
+    expect(hit).not.toBeNull();
+    expect(hit!.t).toBe(0);
+    expect(hit!.normalX).toBe(-1);
+    expect(hit!.normalY).toBe(0);
+  });
+
+  test('already overlapping with a smaller X penetration picks normal via movMinX >= tarMinX (+1)', () => {
+    // moving straddles target's right edge → overlapX < overlapY, moving's min-X is right of target's.
+    const moving = rect(15, 0, 10, 20);
+    const target = rect(0, 0, 20, 20);
+    const hit = sweepRectangle(moving, 0, 0, target);
+
+    expect(hit).not.toBeNull();
+    expect(hit!.t).toBe(0);
+    expect(hit!.normalX).toBe(1);
+    expect(hit!.normalY).toBe(0);
+  });
+
+  test('already overlapping with a smaller Y penetration picks normal via movMinY < tarMinY (-1)', () => {
+    // moving straddles target's top edge → overlapY < overlapX, moving's min-Y is above target's.
+    const moving = rect(0, -5, 20, 10);
+    const target = rect(0, 0, 20, 20);
+    const hit = sweepRectangle(moving, 0, 0, target);
+
+    expect(hit).not.toBeNull();
+    expect(hit!.t).toBe(0);
+    expect(hit!.normalX).toBe(0);
+    expect(hit!.normalY).toBe(-1);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -142,6 +198,20 @@ describe('sweepCircleVsCircle', () => {
 
     expect(hit).not.toBeNull();
     expect(hit!.t).toBe(0);
+  });
+
+  test('already overlapping but not coincident computes a real (dist > 0) normal', () => {
+    // distance (3) < combined radius (10), and the centres are offset — unlike
+    // the coincident-centre case above, this exercises the dist > 0 branch.
+    const moving = circle(0, 0, 5);
+    const target = circle(3, 0, 5);
+    const hit = sweepCircleVsCircle(moving, 0, 0, target);
+
+    expect(hit).not.toBeNull();
+    expect(hit!.t).toBe(0);
+    // dx = moving.x - target.x = 0 - 3 = -3, dist = 3 > 0 → normal = dx/dist = -1.
+    expect(hit!.normalX).toBeCloseTo(-1);
+    expect(hit!.normalY).toBeCloseTo(0);
   });
 
   test('circle approaches on collision course → correct t', () => {
@@ -208,6 +278,15 @@ describe('sweepCircleVsCircle', () => {
 
     expect(hit).toBeNull();
   });
+
+  test('moving toward the target, but not far enough to ever reach it → t > 1 → null', () => {
+    // combined radius = 4, gap = 100 - 4 = 96; delta of 10 only covers t = 9.6.
+    const moving = circle(0, 0, 2);
+    const target = circle(100, 0, 2);
+    const hit = sweepCircleVsCircle(moving, 10, 0, target);
+
+    expect(hit).toBeNull();
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -256,6 +335,120 @@ describe('sweepCircleVsRectangle', () => {
 
     expect(hit).toBeNull();
   });
+
+  test('already overlapping from outside the rect (dist > 0 branch)', () => {
+    // Circle centred to the right of the rect's right edge, close enough that
+    // its boundary already overlaps — the closest rect point is not the
+    // circle's own centre, so `dist > 0`.
+    const moving = circle(25, 5, 6);
+    const target = rect(0, 0, 20, 10);
+    const hit = sweepCircleVsRectangle(moving, 0, 0, target);
+
+    expect(hit).not.toBeNull();
+    expect(hit!.t).toBe(0);
+    expect(hit!.normalX).toBeCloseTo(1);
+    expect(hit!.normalY).toBeCloseTo(0);
+  });
+
+  test('circle centre inside the rect picks the Y exit axis when it is the smaller penetration', () => {
+    const moving = circle(10, 2, 1);
+    const target = rect(0, 0, 20, 20);
+    const hit = sweepCircleVsRectangle(moving, 0, 0, target);
+
+    expect(hit).not.toBeNull();
+    expect(hit!.t).toBe(0);
+    expect(hit!.normalX).toBe(0);
+    expect(hit!.normalY).toBe(-1);
+  });
+
+  test('circle centre inside the rect, X exit axis, exitRight is the smaller exit', () => {
+    const moving = circle(15, 10, 1);
+    const target = rect(0, 0, 20, 20);
+    const hit = sweepCircleVsRectangle(moving, 0, 0, target);
+
+    expect(hit).not.toBeNull();
+    expect(hit!.normalX).toBe(1);
+    expect(hit!.normalY).toBe(0);
+  });
+
+  test('circle centre inside the rect, X exit axis, exitLeft is the smaller exit', () => {
+    const moving = circle(3, 10, 1);
+    const target = rect(0, 0, 20, 20);
+    const hit = sweepCircleVsRectangle(moving, 0, 0, target);
+
+    expect(hit).not.toBeNull();
+    expect(hit!.normalX).toBe(-1);
+    expect(hit!.normalY).toBe(0);
+  });
+
+  test('moving toward the top face but not far enough to reach the bottom face time-wise', () => {
+    // tT lands in [0, 1] (hit), but tB overshoots past t = 1 — exercises the
+    // tB-range check's false outcome (unlike the full-traverse top/bottom tests
+    // above, which happen to satisfy both time windows at once).
+    const moving = circle(10, -30, 5);
+    const target = rect(0, 0, 20, 20);
+    const hit = sweepCircleVsRectangle(moving, 0, 40, target);
+
+    expect(hit).not.toBeNull();
+    expect(hit!.t).toBeCloseTo(0.625, 5);
+    expect(hit!.normalY).toBe(-1);
+  });
+
+  test('moving toward the rect too slowly — neither the top nor bottom face time window is reached', () => {
+    const moving = circle(10, -100, 5);
+    const target = rect(0, 0, 20, 20);
+    const hit = sweepCircleVsRectangle(moving, 0, 10, target);
+
+    expect(hit).toBeNull();
+  });
+
+  test('circle centre inside the rect, Y exit axis, exitBottom is the smaller exit', () => {
+    const moving = circle(10, 18, 1);
+    const target = rect(0, 0, 20, 20);
+    const hit = sweepCircleVsRectangle(moving, 0, 0, target);
+
+    expect(hit).not.toBeNull();
+    expect(hit!.normalX).toBe(0);
+    expect(hit!.normalY).toBe(1);
+  });
+
+  test('not overlapping and no movement → null', () => {
+    const moving = circle(100, 100, 1);
+    const target = rect(0, 0, 10, 10);
+    const hit = sweepCircleVsRectangle(moving, 0, 0, target);
+
+    expect(hit).toBeNull();
+  });
+
+  test('circle approaching the right face moving left (flat-face tR branch)', () => {
+    const moving = circle(30, 10, 5);
+    const target = rect(0, 0, 20, 20);
+    const hit = sweepCircleVsRectangle(moving, -100, 0, target);
+
+    expect(hit).not.toBeNull();
+    expect(hit!.normalX).toBe(1);
+    expect(hit!.normalY).toBe(0);
+  });
+
+  test('circle approaching the top face moving down (flat-face tT branch)', () => {
+    const moving = circle(10, -30, 5);
+    const target = rect(0, 0, 20, 20);
+    const hit = sweepCircleVsRectangle(moving, 0, 100, target);
+
+    expect(hit).not.toBeNull();
+    expect(hit!.normalX).toBe(0);
+    expect(hit!.normalY).toBe(-1);
+  });
+
+  test('circle approaching the bottom face moving up (flat-face tB branch)', () => {
+    const moving = circle(10, 50, 5);
+    const target = rect(0, 0, 20, 20);
+    const hit = sweepCircleVsRectangle(moving, 0, -100, target);
+
+    expect(hit).not.toBeNull();
+    expect(hit!.normalX).toBe(0);
+    expect(hit!.normalY).toBe(1);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -296,6 +489,18 @@ describe('sweepRectangleAgainst', () => {
     expect(hit).not.toBeNull();
     expect(hit!.t).toBeCloseTo(0.5, 5);
   });
+
+  test('a later target with a later hit time does not replace the current earliest', () => {
+    const moving = rect(0, 0, 10, 10);
+    const near = rect(20, 0, 10, 10);
+    const far = rect(60, 0, 10, 10);
+    // near listed first this time, so the "far" candidate must fail the
+    // hit.t < earliest.t check instead of setting it.
+    const hit = sweepRectangleAgainst(moving, 100, 0, [near, far]);
+
+    expect(hit).not.toBeNull();
+    expect(hit!.t).toBeCloseTo(0.1, 5);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -335,6 +540,16 @@ describe('sweepCircleAgainst', () => {
 
     expect(hit).not.toBeNull();
     expect(hit!.t).toBeCloseTo(0.5, 5);
+  });
+
+  test('a later target with a later hit time does not replace the current earliest', () => {
+    const moving = circle(0, 0, 2);
+    const near = circle(10, 0, 2);
+    const far = circle(50, 0, 2);
+    const hit = sweepCircleAgainst(moving, 100, 0, [near, far]);
+
+    expect(hit).not.toBeNull();
+    expect(hit!.t).toBeCloseTo(6 / 100, 5);
   });
 });
 

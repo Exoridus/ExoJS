@@ -51,6 +51,13 @@ const line = (x1: number, y1: number, x2: number, y2: number): Line => new Line(
 const square = (x: number, y: number, size: number): Polygon =>
   new Polygon([new Vector(x, y), new Vector(x + size, y), new Vector(x + size, y + size), new Vector(x, y + size)]);
 
+// A diamond (rotated square) whose edge normals point along the diagonals
+// instead of the cardinal axes. Used to exercise SAT paths where the
+// separating axis only shows up among one shape's own normals, not the
+// other's — the classic reason SAT must test both shapes' edge normals.
+const diamond = (cx: number, cy: number, r: number): Polygon =>
+  new Polygon([new Vector(cx + r, cy), new Vector(cx, cy + r), new Vector(cx - r, cy), new Vector(cx, cy - r)]);
+
 // ---------------------------------------------------------------------------
 // intersectionPointPoint
 // ---------------------------------------------------------------------------
@@ -243,6 +250,13 @@ describe('intersectionLineEllipse', () => {
     // Horizontal line at y=5 is tangent to an ellipse with ry=5 centred at origin.
     expect(intersectionLineEllipse(line(-20, 5, 20, 5), ellipse(0, 0, 10, 5))).toBe(true);
   });
+
+  test('both quadratic roots lie beyond the segment end (tA > 1) → no intersection', () => {
+    // Segment from (-30,0) to (-20,0): both crossing points of the infinite
+    // line with the ellipse boundary lie at t > 1, past the segment's end,
+    // so this forces evaluation of the tB-range check too (not just tA's).
+    expect(intersectionLineEllipse(line(-30, 0, -20, 0), ellipse(0, 0, 10, 5))).toBe(false);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -412,6 +426,20 @@ describe('intersectionCirclePoly', () => {
     expect(intersectionCirclePoly(circle(105, 105, 1), positioned)).toBe(true);
     expect(intersectionCirclePoly(circle(5, 5, 1), positioned)).toBe(false);
   });
+
+  // These two pin further internal branches of the same already-buggy sign-inverted
+  // frame (see the describe-level NOTE above), purely for statement/branch coverage
+  // of the current implementation — not additional distinct bugs.
+  test('BUG (coverage): a circle diagonally far from the polygon is excluded via the right-Voronoi check', () => {
+    expect(intersectionCirclePoly(circle(-20, -20, 1), square(0, 0, 10))).toBe(false);
+  });
+
+  test('a degenerate polygon with a zero-length edge (duplicate consecutive vertex) does not throw', () => {
+    // Exercises shouldExcludeMiddleVoronoi's normalLength === 0 guard.
+    const degenerate = new Polygon([new Vector(0, 0), new Vector(0, 0), new Vector(10, 0), new Vector(10, 10), new Vector(0, 10)]);
+
+    expect(() => intersectionCirclePoly(circle(0, -5, 1), degenerate)).not.toThrow();
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -476,6 +504,14 @@ describe('intersectionSat', () => {
   test('a single separating axis is enough to report no intersection', () => {
     expect(intersectionSat(square(0, 0, 10), square(500, 0, 10))).toBe(false);
   });
+
+  test('a separating axis found only among the second shape\'s normals is still detected', () => {
+    // The square's own axes (X/Y) show overlap for both shapes' bounding
+    // extents, but the diamond's diagonal edge normals reveal a true
+    // separating axis — this can only be found by testing shapeB's normals
+    // (the second loop), which is the entire point of testing both shapes.
+    expect(intersectionSat(square(0, 0, 10), diamond(14, -3, 5))).toBe(false);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -507,6 +543,22 @@ describe('getCollisionRectangleRectangle', () => {
     expect(response!.projectionV.x).toBeCloseTo(2);
   });
 
+  test('smaller X penetration, rectB to the left of rectA\'s centre → normalX = -1', () => {
+    const response = getCollisionRectangleRectangle(rect(0, 0, 10, 10), rect(-8, 0, 10, 10));
+
+    expect(response).not.toBeNull();
+    expect(response!.projectionN.x).toBeCloseTo(-1);
+    expect(response!.projectionN.y).toBeCloseTo(0);
+  });
+
+  test('smaller Y penetration, rectB below rectA\'s centre → normalY = +1', () => {
+    const response = getCollisionRectangleRectangle(rect(0, 0, 10, 10), rect(0, 8, 10, 10));
+
+    expect(response).not.toBeNull();
+    expect(response!.projectionN.x).toBeCloseTo(0);
+    expect(response!.projectionN.y).toBeCloseTo(1);
+  });
+
   test('a big rectangle fully containing a small one reports containment flags', () => {
     const big = rect(0, 0, 100, 100);
     const small = rect(10, 10, 20, 20);
@@ -515,6 +567,13 @@ describe('getCollisionRectangleRectangle', () => {
     expect(response).not.toBeNull();
     expect(response!.shapeBinA).toBe(true); // small (B) is inside big (A)
     expect(response!.shapeAinB).toBe(false);
+  });
+
+  test('the second early-return branch catches rectA positioned entirely past rectB', () => {
+    // rectB.left (0) is not past rectA.right (60) and rectB.top (0) is not past
+    // rectA.bottom (60), so the first check passes; only the second check
+    // (rectA.left > rectB.right) catches this disjoint pair.
+    expect(getCollisionRectangleRectangle(rect(50, 50, 10, 10), rect(0, 0, 10, 10))).toBeNull();
   });
 });
 
@@ -611,6 +670,24 @@ describe('getCollisionCircleRectangle', () => {
     expect(response).not.toBeNull();
     expect(response!.overlap).toBeCloseTo(0);
   });
+
+  test('circle centre exactly inside the rectangle picks the Y exit axis when it is the smaller penetration', () => {
+    // Interior point (5, 2) of rect [0..10]x[0..10]: exitTop=2 is the smallest exit.
+    const response = getCollisionCircleRectangle(circle(5, 2, 1), rect(0, 0, 10, 10));
+
+    expect(response).not.toBeNull();
+    expect(response!.projectionN.x).toBeCloseTo(0);
+    expect(response!.projectionN.y).toBeCloseTo(-1);
+  });
+
+  test('circle centre exactly inside the rectangle, Y exit axis, exitBottom is the smaller exit', () => {
+    // Interior point (5, 8) of rect [0..10]x[0..10]: exitBottom=2 is the smallest exit.
+    const response = getCollisionCircleRectangle(circle(5, 8, 1), rect(0, 0, 10, 10));
+
+    expect(response).not.toBeNull();
+    expect(response!.projectionN.x).toBeCloseTo(0);
+    expect(response!.projectionN.y).toBeCloseTo(1);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -641,6 +718,15 @@ describe('getCollisionEllipseRectangle', () => {
     expect(response!.overlap).toBeCloseTo(5); // minExitX (3) + ellipse.rx (2)
   });
 
+  test('ellipse centre exactly inside the rectangle, X exit axis, exitRight is the smaller exit', () => {
+    const response = getCollisionEllipseRectangle(ellipse(7, 5, 2, 2), rect(0, 0, 10, 10));
+
+    expect(response).not.toBeNull();
+    expect(response!.projectionN.x).toBeCloseTo(1);
+    expect(response!.projectionN.y).toBeCloseTo(0);
+    expect(response!.overlap).toBeCloseTo(5); // minExitX (3) + ellipse.rx (2)
+  });
+
   test('swap=true swaps shapeA/shapeB and flips the normal', () => {
     const e = ellipse(-1, 5, 3, 3);
     const r = rect(0, 0, 10, 10);
@@ -652,6 +738,26 @@ describe('getCollisionEllipseRectangle', () => {
     expect(swapped!.shapeA).toBe(unswapped!.shapeB);
     expect(swapped!.shapeB).toBe(unswapped!.shapeA);
     expect(swapped!.projectionN.x).toBeCloseTo(-unswapped!.projectionN.x);
+  });
+
+  test('ellipse centre exactly inside the rectangle picks the Y exit axis when it is the smaller penetration', () => {
+    // Interior point (5, 2) of rect [0..10]x[0..10]: exitTop=2 is the smallest exit.
+    const response = getCollisionEllipseRectangle(ellipse(5, 2, 2, 2), rect(0, 0, 10, 10));
+
+    expect(response).not.toBeNull();
+    expect(response!.projectionN.x).toBeCloseTo(0);
+    expect(response!.projectionN.y).toBeCloseTo(-1);
+    expect(response!.overlap).toBeCloseTo(4); // minExitY (2) + ellipse.ry (2)
+  });
+
+  test('ellipse centre exactly inside the rectangle, Y exit axis, exitBottom is the smaller exit', () => {
+    // Interior point (5, 8) of rect [0..10]x[0..10]: exitBottom=2 is the smallest exit.
+    const response = getCollisionEllipseRectangle(ellipse(5, 8, 2, 2), rect(0, 0, 10, 10));
+
+    expect(response).not.toBeNull();
+    expect(response!.projectionN.x).toBeCloseTo(0);
+    expect(response!.projectionN.y).toBeCloseTo(1);
+    expect(response!.overlap).toBeCloseTo(4); // minExitY (2) + ellipse.ry (2)
   });
 });
 
@@ -750,6 +856,44 @@ describe('getCollisionPolygonCircle', () => {
     expect(swapped!.shapeA).toBe(unswapped!.shapeB);
     expect(swapped!.shapeB).toBe(unswapped!.shapeA);
   });
+
+  // The next four cases exercise the left/right vertex-Voronoi exclusion
+  // branches directly (a circle near a corner, not a flat edge), each with a
+  // radius just short of / just past the corner distance.
+  test('a circle near the (0,0) vertex, too far to reach it, returns null (left-vertex branch)', () => {
+    // Distance from (-1, -1) to the corner (0, 0) is sqrt(2) ≈ 1.41.
+    expect(getCollisionPolygonCircle(square(0, 0, 10), circle(-1, -1, 1))).toBeNull();
+  });
+
+  test('a circle near the (0,0) vertex, reaching it, computes a response (left-vertex branch)', () => {
+    const response = getCollisionPolygonCircle(square(0, 0, 10), circle(-1, -1, 2));
+
+    expect(response).not.toBeNull();
+    expect(response!.overlap).toBeGreaterThan(0);
+  });
+
+  test('a circle near the (10,0) vertex, too far to reach it, returns null (right-vertex branch)', () => {
+    expect(getCollisionPolygonCircle(square(0, 0, 10), circle(13, -1, 3))).toBeNull();
+  });
+
+  test('a circle near the (10,0) vertex, reaching it, computes a response (right-vertex branch)', () => {
+    const response = getCollisionPolygonCircle(square(0, 0, 10), circle(13, -1, 4));
+
+    expect(response).not.toBeNull();
+    expect(response!.overlap).toBeGreaterThan(0);
+  });
+
+  test('a circle directly in front of a flat edge but far away returns null (middle-region branch)', () => {
+    // Centred under the top edge (x=5 is within the edge's span) but far
+    // enough on the Y axis that no other vertex-region exclusion fires first.
+    expect(getCollisionPolygonCircle(square(0, 0, 10), circle(5, -1000, 1))).toBeNull();
+  });
+
+  test('a degenerate polygon with a zero-length edge does not throw (normalLength === 0 guard)', () => {
+    const degenerate = new Polygon([new Vector(0, 0), new Vector(0, 0), new Vector(10, 0), new Vector(10, 10), new Vector(0, 10)]);
+
+    expect(() => getCollisionPolygonCircle(degenerate, circle(0, -5, 1))).not.toThrow();
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -785,6 +929,13 @@ describe('getCollisionEllipseEllipse', () => {
     expect(response!.projectionN.x).toBeCloseTo(1);
     expect(response!.projectionN.y).toBeCloseTo(0);
     expect(response!.overlap).toBeCloseTo(2 + 3); // ellipseA.rx(2) + ellipseB.rx(3)
+  });
+
+  test('ellipses exactly tangent (touching) compute a zero-or-negative overlap and return null', () => {
+    // boundaryA(5) + boundaryB(5) === distance(10) along the connecting axis,
+    // so the computed overlap is <= 0 even though the polygon-approximation
+    // based intersectionEllipseEllipse() reports a (boundary) touch.
+    expect(getCollisionEllipseEllipse(ellipse(0, 0, 5, 3), ellipse(10, 0, 5, 3))).toBeNull();
   });
 });
 
@@ -823,5 +974,63 @@ describe('getCollisionSat', () => {
 
     expect(response).not.toBeNull();
     expect(response!.overlap).toBeGreaterThan(0);
+  });
+
+  test('a separating axis found only among the second shape\'s normals is still detected', () => {
+    // Same axis-mismatch scenario as intersectionSat above: the square's own
+    // axes see overlap everywhere, but the diamond's diagonal normals reveal
+    // the true separating axis, which can only be found in the second loop.
+    expect(getCollisionSat(square(0, 0, 10), diamond(14, -3, 5))).toBeNull();
+  });
+
+  test('shapeAinB stays true through every axis of the first shape, then flips false in the second loop', () => {
+    // Along the square's own axes (X/Y), the diamond's projection always
+    // contains the square's — so shapeAinB survives the entire first loop.
+    // Only the diamond's own (diagonal) axes reveal that containment doesn't
+    // actually hold, flipping shapeAinB to false inside the second loop.
+    const response = getCollisionSat(square(0, 0, 10), diamond(5, 5, 10));
+
+    expect(response).not.toBeNull();
+    expect(response!.shapeAinB).toBe(false);
+    expect(response!.shapeBinA).toBe(false);
+  });
+
+  test('shapeBinA stays true through every axis of the first shape, then flips false in the second loop', () => {
+    // Two irregular overlapping polygons (found by search) where containment
+    // "survives" every axis of the first shape but is disproved by one of the
+    // second shape's own axes — the mirror image of the case above.
+    const shapeA = new Polygon(
+      [
+        [12.3, 0],
+        [2.7, 4.7],
+        [-7.6, 13.2],
+        [-17.4, 0],
+        [-8.3, -14.4],
+        [6.1, -10.5],
+      ].map(([x, y]) => new Vector(x, y)),
+    );
+    const shapeB = new Polygon(
+      [
+        [8.4, 0.4],
+        [-3.8, 11.3],
+        [-15.2, 0.4],
+        [-3.8, -5.5],
+      ].map(([x, y]) => new Vector(x, y)),
+    );
+
+    const response = getCollisionSat(shapeA, shapeB);
+
+    expect(response).not.toBeNull();
+    expect(response!.shapeBinA).toBe(false);
+  });
+
+  test('a shape with zero normals falls back to the other shape\'s first normal', () => {
+    // An empty Polygon yields getNormals() === [], so normalsA[0] is
+    // undefined and the `(normalsA[0] || normalsB[0])!` fallback must be used
+    // instead. It also has no separating axes to test, so the loop over its
+    // (empty) normals never overlaps the other shape and this reports null.
+    const empty = new Polygon([]);
+
+    expect(getCollisionSat(empty, square(0, 0, 10))).toBeNull();
   });
 });
