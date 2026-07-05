@@ -121,6 +121,14 @@ function basePlugins(options: {
   ];
 }
 
+// The root tsconfig inherits `declaration: true` (library profile). Only the
+// `modules` build is meant to emit declarations (into dist/esm); every other
+// config must switch them off, or @rollup/plugin-typescript emits the whole
+// .d.ts tree as bundle assets — polluting dist/ with a duplicate declaration
+// tree and inflating the Codecov bundle-analysis numbers (incompressible
+// assets are counted at raw size in the gzip column).
+const noDeclarations = { declaration: false, declarationMap: false } as const;
+
 const bundled: RollupOptions = {
   input: 'src/index.ts',
   output: {
@@ -132,7 +140,7 @@ const bundled: RollupOptions = {
     ...basePlugins({
       exportConditions: sourceConditions,
       transform: typescript({
-        compilerOptions: { incremental: false },
+        compilerOptions: { incremental: false, ...noDeclarations },
         outputToFilesystem: false,
       }),
       minify: 'production',
@@ -153,7 +161,7 @@ const iife: RollupOptions = {
   plugins: basePlugins({
     exportConditions: sourceConditions,
     transform: typescript({
-      compilerOptions: { incremental: false },
+      compilerOptions: { incremental: false, ...noDeclarations },
       outputToFilesystem: false,
     }),
   }),
@@ -172,7 +180,7 @@ const iifeMin: RollupOptions = {
     ...basePlugins({
       exportConditions: sourceConditions,
       transform: typescript({
-        compilerOptions: { incremental: false },
+        compilerOptions: { incremental: false, ...noDeclarations },
         outputToFilesystem: false,
       }),
       minify: 'always',
@@ -197,7 +205,7 @@ const debugBundled: RollupOptions = {
   plugins: basePlugins({
     exportConditions: sourceConditions,
     transform: typescript({
-      compilerOptions: { incremental: false },
+      compilerOptions: { incremental: false, ...noDeclarations },
       outputToFilesystem: false,
     }),
     minify: 'production',
