@@ -1541,7 +1541,7 @@ export class Loader {
 
       if (adapter.stateOf(entry.handle) === 'failed') {
         adapter.begin(entry.handle);
-        this._startSeamlessFetch(type, adapter, source, entry.handle, entry.options);
+        this._startSeamlessFetch(type, source, entry.options);
       }
 
       return entry.handle;
@@ -1550,19 +1550,19 @@ export class Loader {
     const handle = adapter.createPlaceholder(options);
 
     this._deferred.set(key, { handle, options });
-    this._startSeamlessFetch(type, adapter, source, handle, options);
+    this._startSeamlessFetch(type, source, options);
 
     return handle;
   }
 
   /**
-   * Start (or on retry, restart) the fetch backing a deferred handle. Success
-   * fills the handle inside {@link _storeResource}; failure marks it
-   * `'failed'` and keeps the deferred entry so a later `get` can retry.
+   * Start (or on retry, restart) the fetch backing a deferred handle or value
+   * ref. Failure handling (adapter/ref fail + onError) lives centrally in
+   * {@link _onTrackedFailure}; the catch here only silences the void'd rejection.
    */
-  private _startSeamlessFetch(type: AssetConstructor, adapter: SeamlessAdapter<unknown>, source: string, handle: unknown, options: unknown): void {
-    void this._loadSingle(type, source, options).catch((error: unknown) => {
-      adapter.fail(handle, this._normalizeError(error));
+  private _startSeamlessFetch(type: AssetConstructor, source: string, options: unknown): void {
+    void this._loadSingle(type, source, options).catch(() => {
+      /* Failure handled centrally in _onTrackedFailure. */
     });
   }
 
@@ -1581,7 +1581,7 @@ export class Loader {
 
       if (entry.ref.loadState === 'failed') {
         entry.ref._begin();
-        this._startRefFetch(type, source, entry.ref, entry.options);
+        this._startRefFetch(type, source, entry.options);
       }
 
       return entry.ref;
@@ -1599,15 +1599,16 @@ export class Loader {
       return ref;
     }
 
-    this._startRefFetch(type, source, ref, options);
+    this._startRefFetch(type, source, options);
 
     return ref;
   }
 
-  /** Start (or restart) the fetch backing a value ref; the fill happens in {@link _storeResource}. */
-  private _startRefFetch(type: AssetConstructor, source: string, ref: AssetRef<unknown>, options: unknown): void {
-    void this._loadSingle(type, source, options).catch((error: unknown) => {
-      ref._fail(this._normalizeError(error));
+  /** Start (or restart) the fetch backing a value ref; the fill happens in
+   *  {@link _storeResource} and failure handling in {@link _onTrackedFailure}. */
+  private _startRefFetch(type: AssetConstructor, source: string, options: unknown): void {
+    void this._loadSingle(type, source, options).catch(() => {
+      /* Failure handled centrally in _onTrackedFailure. */
     });
   }
 
@@ -1648,10 +1649,10 @@ export class Loader {
 
       const context = this._buildHandlerContext(identityKey);
 
-      return this._trackInFlight(key, this._fetchWithHandler(type, alias, path, config, handlerEntry.load, context));
+      return this._trackInFlight(type, alias, this._fetchWithHandler(type, alias, path, config, handlerEntry.load, context));
     }
 
-    return this._trackInFlight(key, this._fetch(type, alias, path, resolvedOptions));
+    return this._trackInFlight(type, alias, this._fetch(type, alias, path, resolvedOptions));
   }
 
   private _loadSingleBackground(type: AssetConstructor, alias: string, path: string, options?: unknown): Promise<unknown> {
@@ -2060,15 +2061,16 @@ export class Loader {
   }
 
   private _startBackgroundEntry(entry: QueueEntry): void {
-    const key = this._key(entry.type, entry.alias);
-
     this._backgroundActive++;
 
-    this._trackInFlight(key, this._fetch(entry.type, entry.alias, entry.path, entry.options))
+    this._trackInFlight(entry.type, entry.alias, this._fetch(entry.type, entry.alias, entry.path, entry.options))
       .catch(error => {
-        const err = error instanceof Error ? error : new Error(String(error));
+        const err = this._normalizeError(error);
+        const key2 = this._key(entry.type, entry.alias);
 
-        this.onError.dispatch(entry.type, entry.alias, err);
+        if (!this._deferred.has(key2) && !this._refs.has(key2)) {
+          this.onError.dispatch(entry.type, entry.alias, err);
+        }
       })
       .finally(() => {
         this._backgroundActive--;
@@ -2078,15 +2080,39 @@ export class Loader {
       });
   }
 
-  private _trackInFlight(key: string, promise: Promise<unknown>): Promise<unknown> {
+  private _trackInFlight(type: AssetConstructor, alias: string, promise: Promise<unknown>): Promise<unknown> {
+    const key = this._key(type, alias);
     const trackedPromise = promise.finally(() => {
       this._inFlight.delete(key);
       this._preventStoreKeys.delete(key);
     });
 
+    // Non-swallowing observer: fails deferred handles / value refs (fresh
+    // error each attempt) and dispatches onError for entry-backed fetches —
+    // regardless of which verb (get/load/background) started the attempt.
+    trackedPromise.catch((error: unknown) => this._onTrackedFailure(type, alias, key, error));
     this._inFlight.set(key, trackedPromise);
 
     return trackedPromise;
+  }
+
+  private _onTrackedFailure(type: AssetConstructor, alias: string, key: string, error: unknown): void {
+    const err = this._normalizeError(error);
+    const deferredEntry = this._deferred.get(key);
+
+    if (deferredEntry !== undefined) {
+      this._seamlessAdapters.get(type)?.fail(deferredEntry.handle, err);
+      this.onError.dispatch(type, alias, err);
+
+      return;
+    }
+
+    const refEntry = this._refs.get(key);
+
+    if (refEntry !== undefined) {
+      refEntry.ref._fail(err);
+      this.onError.dispatch(type, alias, err);
+    }
   }
 
   private _emitBundleProgress(name: string, loaded: number, total: number, onProgress?: (loaded: number, total: number) => void): void {

@@ -113,4 +113,15 @@ describe('LoadState', () => {
     await expect(fresh).resolves.toBe(owner);
     await expect(rejected).rejects.toThrow('boom');
   });
+
+  test('fail() after fail() re-materializes loaded with the fresh error', async () => {
+    const state = new LoadState<object>();
+
+    state.begin();
+    state.fail(new Error('first'));
+    await expect(state.loaded(owner)).rejects.toThrow('first');
+
+    state.fail(new Error('second'));
+    await expect(state.loaded(owner)).rejects.toThrow('second');
+  });
 });

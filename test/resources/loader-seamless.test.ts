@@ -299,6 +299,57 @@ describe('Loader seamless get (Texture)', () => {
     await expect(rejectedPromise).rejects.toThrow(); // the old promise stays rejected
   });
 
+  test('a failed seamless get dispatches onError exactly once', async () => {
+    mockFetch404();
+    const loader = createCoreLoader();
+    const errors: string[] = [];
+
+    loader.onError.add((_type, alias) => errors.push(alias));
+
+    const handle = loader.get(Texture, 'gone.png');
+
+    await expect(handle.loaded).rejects.toThrow();
+    expect(errors).toEqual(['gone.png']);
+  });
+
+  test.todo('background + boosting get for the same source dispatch onError exactly once', async () => {
+    mockFetch404();
+    const loader = createCoreLoader();
+    const errors: string[] = [];
+
+    loader.onError.add((_type, alias) => errors.push(alias));
+    loader.backgroundLoad(Texture, ['gone.png']);
+
+    const handle = loader.get(Texture, 'gone.png');
+
+    await expect(handle.loaded).rejects.toThrow();
+    expect(errors).toEqual(['gone.png']);
+  });
+
+  test('plain load() failures do NOT dispatch onError (legacy semantics unchanged)', async () => {
+    mockFetch404();
+    const loader = createCoreLoader();
+    const errors: string[] = [];
+
+    loader.onError.add((_type, alias) => errors.push(alias));
+
+    await expect(loader.load(Texture, 'gone.png')).rejects.toThrow();
+    expect(errors).toEqual([]);
+  });
+
+  test('a load()-initiated retry that fails again refreshes the handle error', async () => {
+    mockFetch404();
+    const loader = createCoreLoader();
+
+    const handle = loader.get(Texture, 'gone.png');
+
+    await expect(handle.loaded).rejects.toThrow();
+
+    global.fetch = vi.fn(async (): Promise<Response> => ({ ok: false, status: 500, statusText: 'Server Error' }) as Response);
+    await expect(loader.load(Texture, 'gone.png')).rejects.toThrow();
+    await expect(handle.loaded).rejects.toThrow('500'); // fresh error, fresh promise
+  });
+
   test('type-level: seamless get forms', () => {
     const loader = createCoreLoader();
 
