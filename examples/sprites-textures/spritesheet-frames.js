@@ -29,7 +29,7 @@ class SpritesheetFramesScene extends Scene {
     init(loader) {
         const { width, height } = this.app.canvas;
         const texture = loader.get(Texture, 'characters');
-        const data = loader.get(Json, 'characters');
+        const data = loader.get(Json, 'characters').value;
         this.spritesheet = new Spritesheet(texture, data);
         // The spritesheet caches one Sprite per named frame; configure them all
         // once so any frame we draw is centred and scaled up for visibility.

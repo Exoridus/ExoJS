@@ -1,16 +1,16 @@
 {
   "title": "AssetRef",
-  "description": "Serialized reference to a loaded asset (e.g. a Texture). Stores the loader **source key** the asset was loaded under, not the asset data itself. The contract is that referenced assets are pre-loaded into the target Loader before Scene.deserialize runs.",
+  "description": "Deferred handle for value assets (parsed JSON, text, CSV rows, …), returned by `loader.get(Json, …)` and friends. Values cannot heal in place the way resource handles do, so the REF is the stable identity: value throws until `'ready'`, loaded resolves with the value itself, and a failed ref retries (healing in place) on the next `get`.",
   "symbol": "AssetRef",
-  "kind": "interface",
-  "subsystem": "core",
+  "kind": "class",
+  "subsystem": "resources",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 1,
+  "memberCount": 4,
   "counts": {
-    "constructors": 0,
+    "constructors": 1,
     "methods": 0,
-    "properties": 1,
+    "properties": 3,
     "events": 0
   },
   "sections": [
@@ -19,10 +19,59 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Serialized reference to a loaded asset (e.g. a Texture).",
-        "Stores the loader **source key** the asset was loaded under, not the asset data itself. The contract is that referenced assets are pre-loaded into the target Loader before Scene.deserialize runs."
+        "Deferred handle for value assets (parsed JSON, text, CSV rows, …), returned by `loader.get(Json, …)` and friends. Values cannot heal in place the way resource handles do, so the REF is the stable identity: value throws until `'ready'`, loaded resolves with the value itself, and a failed ref retries (healing in place) on the next `get`."
       ],
       "importLine": "import { AssetRef } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(): AssetRef<T>",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetRef",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": "AssetRef<T>",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
       "sourceLink": null
     },
     {
@@ -30,11 +79,11 @@
       "title": "Properties",
       "members": [
         {
-          "name": "source",
-          "signature": "source: string",
+          "name": "loaded",
+          "signature": "loaded: Promise<T>",
           "signatureTokens": [
             {
-              "text": "source",
+              "text": "loaded",
               "kind": "name"
             },
             {
@@ -42,13 +91,67 @@
               "kind": "punctuation"
             },
             {
-              "text": "string",
-              "kind": "keyword"
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Loader alias/source the asset was originally loaded under."
+          "description": "Promise settling with the parsed value. Re-materialized when a failed load is retried — read it fresh from this getter across load cycles."
+        },
+        {
+          "name": "loadState",
+          "signature": "loadState: LoadStateValue",
+          "signatureTokens": [
+            {
+              "text": "loadState",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LoadStateValue",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Load lifecycle of this ref: 'loading' | 'ready' | 'failed'."
+        },
+        {
+          "name": "value",
+          "signature": "value: T",
+          "signatureTokens": [
+            {
+              "text": "value",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The parsed value. Throws while 'loading' or 'failed' — await loaded or check loadState."
         }
       ],
       "paragraphs": [],
@@ -62,11 +165,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/core/serialization/types.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/serialization/types.ts"
+        "label": "src/resources/AssetRef.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/AssetRef.ts"
       }
     }
   ],
-  "sourcePath": "src/core/serialization/types.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/serialization/types.ts"
+  "sourcePath": "src/resources/AssetRef.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/AssetRef.ts"
 }

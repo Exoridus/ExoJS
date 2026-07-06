@@ -40,7 +40,7 @@ class SpriteFollowsBodyScene extends Scene {
         // Gravity in px/s², +Y down — matches the engine's screen space.
         this.world = new PhysicsWorld({ gravity: { x: 0, y: 1400 } });
 
-        const characters = new Spritesheet(loader.get(Texture, 'characters'), loader.get(Json, 'characters') as SpritesheetData);
+        const characters = new Spritesheet(loader.get(Texture, 'characters'), loader.get(Json, 'characters').value as SpritesheetData);
 
         this.floorY = height - 80;
 

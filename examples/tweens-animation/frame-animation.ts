@@ -29,7 +29,7 @@ class FrameAnimationScene extends Scene {
     override init(loader): void {
         const { width, height } = this.app.canvas;
         const texture = loader.get(Texture, 'characters');
-        const data = loader.get(Json, 'characters');
+        const data = loader.get(Json, 'characters').value;
         const sheet = new Spritesheet(texture, data);
 
         const walkFrames = ['character_beige_walk_a', 'character_beige_walk_b'].map(name => sheet.getFrame(name));

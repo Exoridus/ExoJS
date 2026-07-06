@@ -30,7 +30,7 @@ class GamepadScene extends Scene {
     }
 
     override init(loader): void {
-        this.buttons = new Spritesheet(loader.get(Texture, 'buttons'), loader.get(Json, 'buttons'));
+        this.buttons = new Spritesheet(loader.get(Texture, 'buttons'), loader.get(Json, 'buttons').value);
         this.status = this.createStatus();
         this.container = this.createGamepad();
 

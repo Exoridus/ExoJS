@@ -9,6 +9,7 @@ exports[`root index export surface snapshot > sorted runtime export names match 
   "ApplicationStatus",
   "ArcadeStickGamepadMapping",
   "Asset",
+  "AssetRef",
   "Assets",
   "AudioBus",
   "AudioEffect",

@@ -1,0 +1,99 @@
+{
+  "title": "PathExtension",
+  "description": "The registered extension key inferred from a path literal — basename-only, longest-suffix-first (Entscheidung #14) — or `never` when no dot-suffix of the basename is registered in ExtensionTypeMap.",
+  "symbol": "PathExtension",
+  "kind": "type",
+  "subsystem": "resources",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "The registered extension key inferred from a path literal — basename-only, longest-suffix-first (Entscheidung #14) — or `never` when no dot-suffix of the basename is registered in ExtensionTypeMap."
+      ],
+      "importLine": "import { PathExtension } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "PathExtension",
+          "signature": "MatchExtension<Basename<StripQueryHash<S>>>",
+          "signatureTokens": [
+            {
+              "text": "MatchExtension",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Basename",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "StripQueryHash",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "S",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/resources/Loader.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Loader.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/resources/Loader.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Loader.ts"
+}

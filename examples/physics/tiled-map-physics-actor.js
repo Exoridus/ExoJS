@@ -115,7 +115,7 @@ class TiledMapPhysicsActorScene extends Scene {
             });
         }
         // ── Dynamic actor ─────────────────────────────────────────────────
-        const characters = new Spritesheet(loader.get(Texture, 'characters'), loader.get(Json, 'characters'));
+        const characters = new Spritesheet(loader.get(Texture, 'characters'), loader.get(Json, 'characters').value);
         this.actor = characters.getFrameSprite('character_green_front').setAnchor(0.5);
         this.actorBody = this.world.attach(this.actor, {
             type: 'dynamic',

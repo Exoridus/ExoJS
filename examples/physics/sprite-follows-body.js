@@ -34,7 +34,7 @@ class SpriteFollowsBodyScene extends Scene {
         const { width, height } = this.app.canvas;
         // Gravity in px/s², +Y down — matches the engine's screen space.
         this.world = new PhysicsWorld({ gravity: { x: 0, y: 1400 } });
-        const characters = new Spritesheet(loader.get(Texture, 'characters'), loader.get(Json, 'characters'));
+        const characters = new Spritesheet(loader.get(Texture, 'characters'), loader.get(Json, 'characters').value);
         this.floorY = height - 80;
         // ── Static floor ──────────────────────────────────────────────────
         // A wide static body. `world.attach` binds it to the floor sprite, so

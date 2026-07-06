@@ -27,7 +27,7 @@ class GamepadScene extends Scene {
         await loader.load(Json, { buttons: 'json/buttons.json' });
     }
     init(loader) {
-        this.buttons = new Spritesheet(loader.get(Texture, 'buttons'), loader.get(Json, 'buttons'));
+        this.buttons = new Spritesheet(loader.get(Texture, 'buttons'), loader.get(Json, 'buttons').value);
         this.status = this.createStatus();
         this.container = this.createGamepad();
         for (const sprite of this.mappingButtons.values()) {

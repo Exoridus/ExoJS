@@ -33,7 +33,7 @@ class SpritesheetFramesScene extends Scene {
     override init(loader): void {
         const { width, height } = this.app.canvas;
         const texture = loader.get(Texture, 'characters');
-        const data = loader.get(Json, 'characters') as SpritesheetData;
+        const data = loader.get(Json, 'characters').value as SpritesheetData;
 
         this.spritesheet = new Spritesheet(texture, data);
 
