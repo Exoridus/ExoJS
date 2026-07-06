@@ -102,15 +102,37 @@ export interface ExtensionTypeMap {
   otf: FontFace;
 }
 
-type PathExtension<S extends string> = S extends `${string}.${infer E}?${string}` ? Lowercase<E> : S extends `${string}.${infer E}` ? Lowercase<E> : never;
+/** Last path segment of `S` (everything after the final `/`). */
+type Basename<S extends string> = S extends `${string}/${infer Rest}` ? Basename<Rest> : S;
+
+/** `S` without a trailing `?query` or `#fragment` part. */
+type StripQueryHash<S extends string> = S extends `${infer P}?${string}` ? P : S extends `${infer P}#${string}` ? P : S;
+
+/**
+ * Longest registered dot-suffix of a basename. Walks dots left to right, so
+ * the longest candidate (`aseprite.json`) is checked before shorter ones
+ * (`json`); resolves to `never` when no suffix is a registered extension.
+ */
+type MatchExtension<S extends string> = S extends `${string}.${infer Rest}` ? (Lowercase<Rest> extends keyof ExtensionTypeMap ? Lowercase<Rest> : MatchExtension<Rest>) : never;
+
+/**
+ * The registered extension key inferred from a path literal — basename-only,
+ * longest-suffix-first (Entscheidung #14) — or `never` when no dot-suffix of
+ * the basename is registered in {@link ExtensionTypeMap}.
+ */
+export type PathExtension<S extends string> = MatchExtension<Basename<StripQueryHash<S>>>;
 
 /**
  * Resolves the return type for {@link Loader.load} when called with a plain
  * path string. Returns `unknown` when the extension is not in
  * {@link ExtensionTypeMap} — the string-path overload rejects such paths at
  * compile time; use the token form (`load(MyType, path)`) instead.
+ *
+ * The `[PathExtension<S>] extends [never]` guard is load-bearing: indexing
+ * {@link ExtensionTypeMap} with `never` would silently produce `never` rather
+ * than the intended `unknown` fallback.
  */
-export type LoadByPath<S extends string> = PathExtension<S> extends keyof ExtensionTypeMap ? ExtensionTypeMap[PathExtension<S>] : unknown;
+export type LoadByPath<S extends string> = [PathExtension<S>] extends [never] ? unknown : ExtensionTypeMap[PathExtension<S>];
 
 /**
  * Additional asset types accepted by the **token form** of {@link Loader.load}
@@ -751,9 +773,12 @@ export class Loader {
    */
   // Generic form — caller narrows R while extension still must be registered.
 
-  public load<R, S extends string>(path: PathExtension<S> extends keyof ExtensionTypeMap ? S : never): LoadingQueue<R>;
+  // The `[PathExtension<S>] extends [never]` tuple guard is deliberate: the
+  // distributive `never extends keyof …` is vacuously TRUE, which would wrongly
+  // ACCEPT paths whose extension is unregistered.
+  public load<R, S extends string>(path: [PathExtension<S>] extends [never] ? never : S): LoadingQueue<R>;
   // Inferred form — R comes from ExtensionTypeMap.
-  public load<S extends string>(path: PathExtension<S> extends keyof ExtensionTypeMap ? S : never): LoadingQueue<LoadByPath<S>>;
+  public load<S extends string>(path: [PathExtension<S>] extends [never] ? never : S): LoadingQueue<LoadByPath<S>>;
 
   // -----------------------------------------------------------------------
   // Loading — generic overloads (return type inferred from class)
@@ -798,11 +823,10 @@ export class Loader {
     // 2b. Extension-based: single path string with no type token
     if (typeof arg0 === 'string' && arg1 === undefined) {
       const path = arg0;
-      const ext = path.match(/\.([^./?#]+)(?:[?#]|$)/)?.[1]?.toLowerCase();
-      const ctor = ext ? this._extensionMap.get(ext) : undefined;
+      const ctor = this._resolveExtensionType(path);
 
       if (ctor === undefined) {
-        throw new Error(`Loader: no type registered for extension ".${ext ?? '?'}" in "${path}". ` + 'Register one via loader.registerExtension().');
+        throw new Error(`Loader: no type registered for any extension of "${path}". Register one via loader.registerExtension().`);
       }
 
       // FontAsset requires a family option — infer it from the filename when not provided
@@ -2189,5 +2213,26 @@ export class Loader {
     }
 
     return `${this._basePath}${path}`;
+  }
+
+  /**
+   * Resolve the registered asset type for a path by matching the basename's
+   * dot-suffixes longest-first (Entscheidung #14): `hero.aseprite.json` tries
+   * `aseprite.json` before `json`. Query/hash suffixes are ignored.
+   */
+  private _resolveExtensionType(path: string): AssetConstructor | undefined {
+    const [withoutQueryHash = ''] = path.split(/[?#]/, 1);
+    const basename = withoutQueryHash.split('/').pop() ?? '';
+    const parts = basename.split('.');
+
+    for (let i = 1; i < parts.length; i++) {
+      const ctor = this._extensionMap.get(parts.slice(i).join('.').toLowerCase());
+
+      if (ctor !== undefined) {
+        return ctor;
+      }
+    }
+
+    return undefined;
   }
 }

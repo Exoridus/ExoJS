@@ -1694,13 +1694,13 @@ describe('registerExtension() + extension-based load(path)', () => {
   test('throws a clear error for an unregistered extension', () => {
     const loader = new Loader({ basePath: '/' });
 
-    expect(() => loader.load('mystery.foo')).toThrow(/no type registered for extension ".foo"/);
+    expect(() => loader.load('mystery.foo')).toThrow(/no type registered for any extension of "mystery.foo"/);
   });
 
   test('throws a clear error for a path with no extension at all', () => {
     const loader = new Loader({ basePath: '/' });
 
-    expect(() => loader.load('no-extension-here')).toThrow(/no type registered for extension ".\?"/);
+    expect(() => loader.load('no-extension-here')).toThrow(/no type registered for any extension of "no-extension-here"/);
   });
 
   test('rejects when the extension-inferred load fails', async () => {
