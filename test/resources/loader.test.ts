@@ -245,20 +245,6 @@ describe('Loader', () => {
     expect(() => ref.value).toThrow("'loading'");
   });
 
-  test('add() registers aliases, load() resolves them', async () => {
-    const factory = new MockTextFactory();
-    const loader = new Loader({ basePath: '/' });
-
-    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
-    mockFetch();
-
-    loader.add(TextAsset, { greeting: 'hello.txt' });
-    const result = await loader.load(TextAsset, 'greeting');
-
-    expect(result).toBe('resource:fresh-source');
-    expect(global.fetch).toHaveBeenCalledWith('/hello.txt', expect.anything());
-  });
-
   test('unload() removes a resource, unloadAll() clears type', async () => {
     const factory = new MockTextFactory();
     const loader = new Loader({ basePath: '/' });
@@ -378,11 +364,10 @@ describe('Loader', () => {
       return { ok: true, status: 200, statusText: 'OK' } as Response;
     });
 
-    loader.add(TextAsset, { a: 'a.txt', b: 'b.txt', c: 'c.txt' });
-    loader.backgroundLoad();
+    loader.backgroundLoad(TextAsset, ['a.txt', 'b.txt', 'c.txt']);
 
-    // Priority boost: load 'c' should resolve even though it was last in queue
-    const cResult = await loader.load(TextAsset, 'c');
+    // Priority boost: load 'c.txt' should resolve even though it was last in queue
+    const cResult = await loader.load(TextAsset, 'c.txt');
 
     expect(cResult).toBe('resource:fresh-source');
   });
@@ -394,13 +379,13 @@ describe('Loader', () => {
 
     loader.register(TextAsset, factory as AssetFactory<TextAsset>);
     loader.onLoaded.add(onLoaded);
-    loader.add(TextAsset, { queued: 'queued.txt' });
     mockFetch();
 
+    loader.backgroundLoad(TextAsset, 'queued.txt');
     await loader.loadAll();
 
     expect(onLoaded).toHaveBeenCalledTimes(1);
-    expect(onLoaded).toHaveBeenCalledWith(TextAsset, 'queued', 'resource:fresh-source');
+    expect(onLoaded).toHaveBeenCalledWith(TextAsset, 'queued.txt', 'resource:fresh-source');
   });
 
   test('boosted background items keep loadAll pending and report full progress', async () => {
@@ -411,7 +396,6 @@ describe('Loader', () => {
     const progress: Array<[number, number]> = [];
 
     loader.register(TextAsset, factory as AssetFactory<TextAsset>);
-    loader.add(TextAsset, { first: 'first.txt', boosted: 'boosted.txt' });
     loader.onProgress.add((loaded, total) => {
       progress.push([loaded, total]);
     });
@@ -430,6 +414,8 @@ describe('Loader', () => {
       throw new Error(`Unexpected fetch url: ${url}`);
     });
 
+    loader.backgroundLoad(TextAsset, ['first.txt', 'boosted.txt']);
+
     const loadAllPromise = loader.loadAll();
     let loadAllResolved = false;
 
@@ -437,7 +423,7 @@ describe('Loader', () => {
       loadAllResolved = true;
     });
 
-    const boostedPromise = loader.load(TextAsset, 'boosted');
+    const boostedPromise = loader.load(TextAsset, 'boosted.txt');
 
     firstFetch.resolve({
       ok: true,
@@ -445,7 +431,7 @@ describe('Loader', () => {
       statusText: 'OK',
     } as Response);
 
-    await loader.load(TextAsset, 'first');
+    await loader.load(TextAsset, 'first.txt');
     await Promise.resolve();
 
     expect(loadAllResolved).toBe(false);
@@ -600,16 +586,16 @@ describe('Loader', () => {
     ).not.toThrow();
   });
 
-  test('registerManifest() throws on conflict with prior manual add()', () => {
+  test('registerManifest() throws on conflict with prior manual backgroundLoad()', () => {
     const loader = new Loader({ basePath: '/' });
 
-    loader.add(TextAsset, { hero: 'hero-v1.txt' });
+    loader.backgroundLoad(TextAsset, ['hero-v1.txt']);
 
     expect(() =>
       loader.registerManifest(
         defineAssetManifest({
           bundles: {
-            boot: [{ type: TextAsset, alias: 'hero', path: 'hero-v2.txt' }],
+            boot: [{ type: TextAsset, alias: 'hero-v1.txt', path: 'hero-v2.txt' }],
           },
         }),
       ),
@@ -1722,61 +1708,6 @@ describe('registerExtension() + extension-based load(path)', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Coverage sweep — add() single-string and array forms
-// ─────────────────────────────────────────────────────────────────────────────
-
-describe('add() — single string and array-of-paths forms', () => {
-  const originalFetch = global.fetch;
-
-  afterEach(() => {
-    global.fetch = originalFetch;
-  });
-
-  function mockFetch(): void {
-    global.fetch = vi.fn(
-      async (): Promise<Response> =>
-        ({
-          ok: true,
-          status: 200,
-          statusText: 'OK',
-          text: async () => 'raw',
-          json: async () => ({}),
-          arrayBuffer: async () => new ArrayBuffer(0),
-        }) as unknown as Response,
-    );
-  }
-
-  test('add(type, path) registers the path as both its own alias and URL', async () => {
-    const factory = new MockTextFactory();
-    const loader = new Loader({ basePath: '/' });
-
-    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
-    mockFetch();
-
-    loader.add(TextAsset, 'solo.txt');
-    const result = await loader.load(TextAsset, 'solo.txt');
-
-    expect(result).toBe('resource:fresh-source');
-    expect(global.fetch).toHaveBeenCalledWith('/solo.txt', expect.anything());
-  });
-
-  test('add(type, [paths]) registers every path as its own alias', async () => {
-    const factory = new MockTextFactory();
-    const loader = new Loader({ basePath: '/' });
-
-    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
-    mockFetch();
-
-    loader.add(TextAsset, ['one.txt', 'two.txt']);
-
-    await expect(loader.load(TextAsset, 'one.txt')).resolves.toBe('resource:fresh-source');
-    await expect(loader.load(TextAsset, 'two.txt')).resolves.toBe('resource:fresh-source');
-    expect(global.fetch).toHaveBeenCalledWith('/one.txt', expect.anything());
-    expect(global.fetch).toHaveBeenCalledWith('/two.txt', expect.anything());
-  });
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
 // Coverage sweep — legacy batch load() failure branches (array / record forms)
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -1861,7 +1792,7 @@ describe('backgroundLoad() re-scan skip branches', () => {
     const loader = new Loader({ basePath: '/' });
 
     loader.register(TextAsset, factory as AssetFactory<TextAsset>);
-    loader.add(TextAsset, { a: 'a.txt' });
+    loader.registerManifest(defineAssetManifest({ bundles: { seed: [{ type: TextAsset, alias: 'a', path: 'a.txt' }] } }));
     mockFetch();
 
     await loader.load(TextAsset, 'a');
@@ -1878,7 +1809,7 @@ describe('backgroundLoad() re-scan skip branches', () => {
     const deferred = createDeferred<Response>();
 
     loader.register(TextAsset, factory as AssetFactory<TextAsset>);
-    loader.add(TextAsset, { a: 'a.txt' });
+    loader.registerManifest(defineAssetManifest({ bundles: { seed: [{ type: TextAsset, alias: 'a', path: 'a.txt' }] } }));
     global.fetch = vi.fn((): Promise<Response> => deferred.promise);
 
     void loader.load(TextAsset, 'a');
@@ -1908,7 +1839,17 @@ describe('setConcurrency()', () => {
     const loader = new Loader({ basePath: '/', concurrency: 6 });
 
     loader.register(TextAsset, factory as AssetFactory<TextAsset>);
-    loader.add(TextAsset, { a: 'a.txt', b: 'b.txt', c: 'c.txt' });
+    loader.registerManifest(
+      defineAssetManifest({
+        bundles: {
+          seed: [
+            { type: TextAsset, alias: 'a', path: 'a.txt' },
+            { type: TextAsset, alias: 'b', path: 'b.txt' },
+            { type: TextAsset, alias: 'c', path: 'c.txt' },
+          ],
+        },
+      }),
+    );
 
     expect(loader.setConcurrency(1)).toBe(loader);
 
@@ -2731,7 +2672,16 @@ describe('backgroundLoad() re-entrancy', () => {
     const progress: Array<[number, number]> = [];
 
     loader.register(TextAsset, factory as AssetFactory<TextAsset>);
-    loader.add(TextAsset, { a: 'a.txt', b: 'b.txt' });
+    loader.registerManifest(
+      defineAssetManifest({
+        bundles: {
+          seed: [
+            { type: TextAsset, alias: 'a', path: 'a.txt' },
+            { type: TextAsset, alias: 'b', path: 'b.txt' },
+          ],
+        },
+      }),
+    );
 
     const done = new Promise<void>(resolve => {
       loader.onProgress.add((loaded, total) => {

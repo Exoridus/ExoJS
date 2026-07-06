@@ -522,46 +522,6 @@ export class Loader {
     return this;
   }
 
-  // -----------------------------------------------------------------------
-  // Alias registration (add without loading)
-  // -----------------------------------------------------------------------
-
-  /**
-   * Registers one or more asset aliases in the manifest without immediately
-   * loading them.
-   *
-   * - Single path: the path is used as both the alias and the URL.
-   * - Array of paths: each path becomes its own alias.
-   * - Record: keys are aliases, values are URLs.
-   *
-   * Assets pre-registered here can later be loaded by alias, included in
-   * background loads via {@link backgroundLoad}, or used as the source of
-   * truth when resolving conflicts in {@link registerManifest}.
-   */
-  public add(type: Loadable, path: string): this;
-  public add(type: Loadable, paths: readonly string[]): this;
-  public add(type: Loadable, items: Readonly<Record<string, string>>): this;
-  public add(type: Loadable, source: string | readonly string[] | Readonly<Record<string, string>>): this {
-    const ctor = type;
-
-    if (typeof source === 'string') {
-      this._addManifestEntry(ctor, source, source);
-    } else if (Array.isArray(source)) {
-      // `Array.isArray` narrows the union to `any[]`, dropping the element type;
-      // the only array member of the union is `readonly string[]`.
-      const paths: readonly string[] = source;
-      for (const path of paths) {
-        this._addManifestEntry(ctor, path, path);
-      }
-    } else {
-      for (const [alias, path] of Object.entries(source)) {
-        this._addManifestEntry(ctor, alias, path);
-      }
-    }
-
-    return this;
-  }
-
   /**
    * Validates and registers an {@link AssetManifest}, making its bundles
    * available to {@link loadBundle}.
