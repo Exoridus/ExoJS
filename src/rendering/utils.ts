@@ -51,6 +51,33 @@ export const createCanvas = (options: CreateCanvasOptions = {}): HTMLCanvasEleme
   return newCanvas;
 };
 
+/** Options for {@link createCheckerCanvas}. All fields are optional. */
+export interface CreateCheckerCanvasOptions {
+  /** Edge length of the square canvas in pixels. Defaults to `8`. */
+  size?: number;
+  /** Fill colour of the top-left and bottom-right quadrants. Defaults to magenta. */
+  colorA?: string;
+  /** Fill colour of the remaining quadrants. Defaults to black. */
+  colorB?: string;
+}
+
+/**
+ * Create an `HTMLCanvasElement` filled with a 2×2 checkerboard pattern.
+ * Backs {@link Texture.missing}, the error placeholder shown for failed loads.
+ */
+export const createCheckerCanvas = (options: CreateCheckerCanvasOptions = {}): HTMLCanvasElement => {
+  const { size = 8, colorA = '#ff00ff', colorB = '#000' } = options;
+  const canvas = createCanvas({ fillStyle: colorA, width: size, height: size });
+  const context = canvas.getContext('2d')!;
+  const half = size / 2;
+
+  context.fillStyle = colorB;
+  context.fillRect(half, 0, half, half);
+  context.fillRect(0, half, half, half);
+
+  return canvas;
+};
+
 const heightCache: Map<string, number> = new Map<string, number>();
 
 /**

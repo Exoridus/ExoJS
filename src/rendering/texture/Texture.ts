@@ -1,9 +1,10 @@
+import type { Color } from '#core/Color';
 import type { TextureSource } from '#core/types';
 import { getTextureSourceSize } from '#core/utils';
 import { Size } from '#math/Size';
 import { isPowerOfTwo } from '#math/utils';
 import { ScaleModes, WrapModes } from '#rendering/types';
-import { createCanvas } from '#rendering/utils';
+import { createCanvas, createCheckerCanvas } from '#rendering/utils';
 
 import type { SamplerOptions } from './Sampler';
 
@@ -22,6 +23,7 @@ import type { SamplerOptions } from './Sampler';
 export class Texture {
   private static _black: Texture | null = null;
   private static _white: Texture | null = null;
+  private static _missing: Texture | null = null;
 
   public static defaultSamplerOptions: SamplerOptions = {
     scaleMode: ScaleModes.Linear,
@@ -35,7 +37,7 @@ export class Texture {
 
   public static get black(): Texture {
     if (Texture._black === null) {
-      Texture._black = new Texture(createCanvas({ fillStyle: '#000' }));
+      Texture._black = Texture.fromColor('#000', 10);
     }
 
     return Texture._black;
@@ -43,10 +45,35 @@ export class Texture {
 
   public static get white(): Texture {
     if (Texture._white === null) {
-      Texture._white = new Texture(createCanvas({ fillStyle: '#fff' }));
+      Texture._white = Texture.fromColor('#fff', 10);
     }
 
     return Texture._white;
+  }
+
+  /**
+   * Create a solid-colour texture of the given square size (default `1`×`1`).
+   * Accepts a {@link Color} instance or any CSS colour string; a Color with
+   * alpha below 1 is rendered with that alpha. Generalizes the fixed
+   * {@link Texture.black}/{@link Texture.white} helpers.
+   */
+  public static fromColor(color: Color | string, size = 1): Texture {
+    const fillStyle = typeof color === 'string' ? color : color.a < 1 ? `rgba(${color.r}, ${color.g}, ${color.b}, ${color.a})` : color.toString();
+
+    return new Texture(createCanvas({ fillStyle, width: size, height: size }));
+  }
+
+  /**
+   * Shared 8×8 magenta/black checkerboard shown in place of assets that failed
+   * to load — a visible error beats an invisible hole, in production too.
+   * Lazily created; every access returns the same instance.
+   */
+  public static get missing(): Texture {
+    if (Texture._missing === null) {
+      Texture._missing = new Texture(createCheckerCanvas());
+    }
+
+    return Texture._missing;
   }
 
   private _version = 0;
