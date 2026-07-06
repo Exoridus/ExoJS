@@ -196,4 +196,25 @@ describe('Loader seamless get (Texture)', () => {
     expect(warnings).toHaveLength(0);
     removeSink();
   });
+
+  test('unload() while the fetch is in flight fails the handle; a later get() heals it', async () => {
+    mockFetchImage();
+    const loader = createCoreLoader();
+
+    const handle = loader.get(Texture, 'ship.png');
+
+    loader.unload(Texture, 'ship.png');
+
+    await expect(handle.loaded).rejects.toThrow('unloaded while');
+    expect(handle.loadState).toBe('failed');
+
+    // Fetch mock is still OK — a later get() must retry and heal the SAME handle.
+    const again = loader.get(Texture, 'ship.png');
+
+    expect(again).toBe(handle);
+    expect(handle.loadState).toBe('loading');
+
+    await expect(handle.loaded).resolves.toBe(handle);
+    expect(handle.loadState).toBe('ready');
+  });
 });

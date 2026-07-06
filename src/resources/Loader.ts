@@ -2086,6 +2086,16 @@ export class Loader {
     const key = this._key(type, alias);
 
     if (this._preventStoreKeys.delete(key)) {
+      // The asset was unloaded while its fetch was in flight. A deferred handle
+      // waiting on this key must not stay 'loading' forever: fail it so
+      // `.loaded` rejects. The entry stays (like any failed fetch) so a later
+      // get() retries and heals the SAME handle in place.
+      const preventedEntry = this._deferred.get(key);
+
+      if (preventedEntry !== undefined) {
+        this._seamlessAdapters.get(type)?.fail(preventedEntry.handle, new Error(`Asset "${alias}" was unloaded while its fetch was in flight.`));
+      }
+
       return resource;
     }
 
