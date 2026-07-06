@@ -42,7 +42,14 @@ describe('compound extension matching (#14)', () => {
     loader.registerExtension('mock.json', Json); // Json's factory is bound via coreAssetBindings
     global.fetch = vi.fn(async (url: string | URL | Request): Promise<Response> => {
       seen.push(String(url));
-      return { ok: true, status: 200, statusText: 'OK', json: async () => ({ marker: true }), text: async () => '{}', arrayBuffer: async () => new ArrayBuffer(0) } as unknown as Response;
+      return {
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        json: async () => ({ marker: true }),
+        text: async () => '{}',
+        arrayBuffer: async () => new ArrayBuffer(0),
+      } as unknown as Response;
     }) as typeof fetch;
 
     // 'mock.json' (registered compound) must match before a hypothetical 'json'.

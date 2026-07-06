@@ -73,7 +73,9 @@ export const textureSeamlessAdapter: SeamlessAdapter<Texture> = {
     handle.setSource(donor.source);
 
     if (expected !== undefined && (handle.width !== expected.width || handle.height !== expected.height)) {
-      logger.warn(`Texture pre-size (${expected.width}×${expected.height}) does not match the loaded payload (${handle.width}×${handle.height}).`, { source: 'Loader' });
+      logger.warn(`Texture pre-size (${expected.width}×${expected.height}) does not match the loaded payload (${handle.width}×${handle.height}).`, {
+        source: 'Loader',
+      });
     }
 
     handle._loadState.settle(handle);

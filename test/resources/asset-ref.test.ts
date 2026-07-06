@@ -17,7 +17,14 @@ const originalFetch = global.fetch;
 const mockFetchJson = (payload: unknown): void => {
   global.fetch = vi.fn(
     async (): Promise<Response> =>
-      ({ ok: true, status: 200, statusText: 'OK', json: async () => payload, text: async () => JSON.stringify(payload), arrayBuffer: async () => new ArrayBuffer(0) }) as unknown as Response,
+      ({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        json: async () => payload,
+        text: async () => JSON.stringify(payload),
+        arrayBuffer: async () => new ArrayBuffer(0),
+      }) as unknown as Response,
   );
 };
 

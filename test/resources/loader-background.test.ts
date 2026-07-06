@@ -13,7 +13,10 @@ const originalFetch = global.fetch;
 
 describe('backgroundLoad(Type, srcs)', () => {
   beforeEach(() => {
-    vi.stubGlobal('createImageBitmap', vi.fn(async () => ({ width: 16, height: 16 })));
+    vi.stubGlobal(
+      'createImageBitmap',
+      vi.fn(async () => ({ width: 16, height: 16 })),
+    );
   });
 
   afterEach(() => {
@@ -23,8 +26,7 @@ describe('backgroundLoad(Type, srcs)', () => {
 
   const mockFetchImage = (): ReturnType<typeof vi.fn> => {
     const fetchMock = vi.fn(
-      async (): Promise<Response> =>
-        ({ ok: true, status: 200, statusText: 'OK', arrayBuffer: async () => new ArrayBuffer(8) }) as unknown as Response,
+      async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', arrayBuffer: async () => new ArrayBuffer(8) }) as unknown as Response,
     );
 
     global.fetch = fetchMock as typeof fetch;

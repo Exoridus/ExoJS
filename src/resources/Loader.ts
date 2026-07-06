@@ -20,18 +20,7 @@ import type { AssetConstructor } from './FactoryRegistry';
 import { FactoryRegistry } from './FactoryRegistry';
 import { LoadingQueue } from './LoadingQueue';
 import type { PreSizeOptions, SeamlessAdapter } from './seamless';
-import {
-  BinaryAsset,
-  CsvAsset,
-  FontAsset,
-  type ImageAsset,
-  Json,
-  SubtitleAsset,
-  type SvgAsset,
-  TextAsset,
-  WasmAsset,
-  XmlAsset,
-} from './tokens';
+import { BinaryAsset, CsvAsset, FontAsset, type ImageAsset, Json, SubtitleAsset, type SvgAsset, TextAsset, WasmAsset, XmlAsset } from './tokens';
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -120,7 +109,11 @@ type StripQueryHash<S extends string> = S extends `${infer P}?${string}` ? P : S
  * the longest candidate (`aseprite.json`) is checked before shorter ones
  * (`json`); resolves to `never` when no suffix is a registered extension.
  */
-type MatchExtension<S extends string> = S extends `${string}.${infer Rest}` ? (Lowercase<Rest> extends keyof ExtensionTypeMap ? Lowercase<Rest> : MatchExtension<Rest>) : never;
+type MatchExtension<S extends string> = S extends `${string}.${infer Rest}`
+  ? Lowercase<Rest> extends keyof ExtensionTypeMap
+    ? Lowercase<Rest>
+    : MatchExtension<Rest>
+  : never;
 
 /**
  * The registered extension key inferred from a path literal — basename-only,
