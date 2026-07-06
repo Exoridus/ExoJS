@@ -1734,6 +1734,26 @@ export class Loader {
   }
 
   /**
+   * Release every claim held under a claim scope (a scene unloading its
+   * scene-private assets). Collect the held keys first, then release — `_release`
+   * mutates `_claims`, so we must not delete during iteration.
+   * @internal
+   */
+  public _releaseScope(claimer: symbol): void {
+    const held: string[] = [];
+
+    for (const [key, entry] of this._claims) {
+      if (entry.scopes.has(claimer)) {
+        held.push(key);
+      }
+    }
+
+    for (const key of held) {
+      this._release(key, claimer);
+    }
+  }
+
+  /**
    * Free a key's payload while keeping its handle identity: find the handle
    * (post-fill in `_resources`, or in-flight in `_deferred`), adapter-evict it
    * (drops payload + re-arms to 'loading'), remove the stored resource, and

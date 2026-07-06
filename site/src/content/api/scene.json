@@ -6,11 +6,11 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 22,
+  "memberCount": 23,
   "counts": {
     "constructors": 1,
     "methods": 12,
-    "properties": 7,
+    "properties": 8,
     "events": 2
   },
   "sections": [
@@ -737,6 +737,27 @@
           "params": [],
           "returnType": null,
           "description": "Scene-bound input registry. Bindings created via this.inputs.onTrigger(...) etc. are automatically unbound when the scene is destroyed — no manual cleanup required. Throws if accessed before the scene is attached to an Application."
+        },
+        {
+          "name": "loader",
+          "signature": "loader: SceneLoader",
+          "signatureTokens": [
+            {
+              "text": "loader",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneLoader",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Scene-scoped claim view over the application Loader. Assets claimed via this.loader.get/load(...) are held under this scene's own claim scope and released automatically when the scene is destroyed — scene-private assets are evicted on unload with zero manual bookkeeping. App-lifetime assets stay on app.loader. Throws if accessed before the scene is attached to an Application."
         },
         {
           "name": "root",
