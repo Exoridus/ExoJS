@@ -10,6 +10,7 @@ import type { AssetDefinitions, AssetInput, InferAssetResource } from './AssetDe
 import type { AssetFactory } from './AssetFactory';
 import type { AssetManifest, LoadBundleOptions } from './AssetManifest';
 import { BundleLoadError, defineAssetManifest } from './AssetManifest';
+import { AssetRef } from './AssetRef';
 import { type Assets, AssetsImpl } from './Assets';
 import { CacheFirstStrategy } from './CacheFirstStrategy';
 import type { CacheStore } from './CacheStore';
@@ -20,16 +21,16 @@ import { FactoryRegistry } from './FactoryRegistry';
 import { LoadingQueue } from './LoadingQueue';
 import type { PreSizeOptions, SeamlessAdapter } from './seamless';
 import {
-  type BinaryAsset,
-  type CsvAsset,
+  BinaryAsset,
+  CsvAsset,
   FontAsset,
   type ImageAsset,
-  type Json,
-  type SubtitleAsset,
+  Json,
+  SubtitleAsset,
   type SvgAsset,
-  type TextAsset,
-  type WasmAsset,
-  type XmlAsset,
+  TextAsset,
+  WasmAsset,
+  XmlAsset,
 } from './tokens';
 
 // ---------------------------------------------------------------------------
@@ -337,6 +338,12 @@ export class Loader {
   // entries stay so a later get() retries and heals the SAME handle in place.
   private readonly _seamlessAdapters = new Map<AssetConstructor, SeamlessAdapter<unknown>>();
   private readonly _deferred = new Map<string, { readonly handle: unknown; readonly options: unknown }>();
+
+  // Value-asset refs (asset-system v2 §4.6): the ref is the stable identity —
+  // entries persist for the loader's lifetime (fill keeps them, fail keeps
+  // them for retry), unlike _deferred whose handles move into _resources.
+  private readonly _refs = new Map<string, { readonly ref: AssetRef<unknown>; readonly options: unknown }>();
+  private readonly _valueTokens: ReadonlySet<Loadable> = new Set<Loadable>([Json, TextAsset, CsvAsset, XmlAsset, SubtitleAsset, BinaryAsset, WasmAsset]);
 
   private _basePath: string;
   private _fetchOptions: RequestInit;
@@ -1070,14 +1077,18 @@ export class Loader {
   public get<S extends string>(path: LoadByPath<S> extends Texture ? S : never, options?: TextureFactoryOptions & PreSizeOptions): Texture;
 
   /**
-   * Retrieves a previously loaded asset by type and alias (legacy lookup for
-   * types without a seamless adapter; replaced by the asset graph in a later
-   * slice).
-   *
-   * Throws if the asset has not been loaded. Use {@link peek} for a
-   * non-throwing alternative, or {@link has} to guard the call.
+   * Seamless access to a value asset: returns a stable {@link AssetRef}
+   * synchronously and never throws. The ref fills when the payload arrives
+   * (`loaded` resolves with the parsed value); failed refs retry in place on
+   * the next `get`. `load()` keeps resolving the raw value.
    */
-  public get<T = unknown>(type: typeof Json, alias: string): T;
+  public get<T = unknown>(type: typeof Json, source: string, options?: unknown): AssetRef<T>;
+  public get(type: typeof TextAsset, source: string, options?: unknown): AssetRef<string>;
+  public get(type: typeof CsvAsset, source: string, options?: unknown): AssetRef<string[][]>;
+  public get(type: typeof XmlAsset, source: string, options?: unknown): AssetRef<Document>;
+  public get(type: typeof SubtitleAsset, source: string, options?: unknown): AssetRef<VTTCue[]>;
+  public get(type: typeof BinaryAsset, source: string, options?: unknown): AssetRef<ArrayBuffer>;
+  public get(type: typeof WasmAsset, source: string, options?: unknown): AssetRef<WebAssembly.Module>;
 
   /**
    * Retrieves a previously loaded asset by type and alias (legacy lookup form
@@ -1126,6 +1137,10 @@ export class Loader {
       }
 
       return out;
+    }
+
+    if (this._valueTokens.has(ctor) && typeof source === 'string') {
+      return this._getRef(ctor, source, options);
     }
 
     const alias = source as string;
@@ -1484,6 +1499,7 @@ export class Loader {
     this._identityKeyToAliases.clear();
     this._handlerFunctions.clear();
     this._deferred.clear();
+    this._refs.clear();
     this._seamlessAdapters.clear();
     this._backgroundQueue.length = 0;
     this.onProgress.destroy();
@@ -1547,6 +1563,51 @@ export class Loader {
   private _startSeamlessFetch(type: AssetConstructor, adapter: SeamlessAdapter<unknown>, source: string, handle: unknown, options: unknown): void {
     void this._loadSingle(type, source, options).catch((error: unknown) => {
       adapter.fail(handle, this._normalizeError(error));
+    });
+  }
+
+  /** Value-asset twin of {@link _getSeamless}: stable ref, options first-wins, retry-on-failed. */
+  private _getRef(type: AssetConstructor, source: string, options?: unknown): AssetRef<unknown> {
+    const key = this._key(type, source);
+    const entry = this._refs.get(key);
+
+    if (entry !== undefined) {
+      if (options !== undefined && !this._areOptionsEquivalent(entry.options, options)) {
+        logger.warn(`get(${this._describeType(type)}, "${source}"): conflicting options ignored — the first call's options win.`, {
+          source: 'Loader',
+          once: `loader:seamless-options:${key}`,
+        });
+      }
+
+      if (entry.ref.loadState === 'failed') {
+        entry.ref._begin();
+        this._startRefFetch(type, source, entry.ref, entry.options);
+      }
+
+      return entry.ref;
+    }
+
+    const ref = new AssetRef<unknown>();
+
+    this._refs.set(key, { ref, options });
+
+    const stored = this._resources.get(type)?.get(source);
+
+    if (stored !== undefined) {
+      ref._fill(stored);
+
+      return ref;
+    }
+
+    this._startRefFetch(type, source, ref, options);
+
+    return ref;
+  }
+
+  /** Start (or restart) the fetch backing a value ref; the fill happens in {@link _storeResource}. */
+  private _startRefFetch(type: AssetConstructor, source: string, ref: AssetRef<unknown>, options: unknown): void {
+    void this._loadSingle(type, source, options).catch((error: unknown) => {
+      ref._fail(this._normalizeError(error));
     });
   }
 
@@ -2160,6 +2221,12 @@ export class Loader {
         this._seamlessAdapters.get(type)?.fail(preventedEntry.handle, new Error(`Asset "${alias}" was unloaded while its fetch was in flight.`));
       }
 
+      const preventedRef = this._refs.get(key);
+
+      if (preventedRef?.ref.loadState === 'loading') {
+        preventedRef.ref._fail(new Error(`Asset "${alias}" was unloaded while its fetch was in flight.`));
+      }
+
       return resource;
     }
 
@@ -2188,6 +2255,10 @@ export class Loader {
       this._deferred.delete(key);
       resource = deferredEntry.handle;
     }
+
+    // Value-asset refs fill from whatever producer stores the value; the raw
+    // value stays the stored resource (load() keeps resolving it).
+    this._refs.get(key)?.ref._fill(resource);
 
     let typeResources = this._resources.get(type);
     if (!typeResources) {

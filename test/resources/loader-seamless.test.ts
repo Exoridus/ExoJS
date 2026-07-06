@@ -5,7 +5,6 @@ import { materializeAssetBindings } from '#extensions/materialize';
 import { Texture } from '#rendering/texture/Texture';
 import { coreAssetBindings } from '#resources/coreAssetBindings';
 import { Loader } from '#resources/Loader';
-import { Json } from '#resources/tokens';
 
 /** Loader with all core asset bindings (mirrors createCoreLoader in loader.test.ts). */
 function createCoreLoader(): Loader {
@@ -130,7 +129,11 @@ describe('Loader seamless get (Texture)', () => {
   test('legacy alias lookup still throws for adapterless types', () => {
     const loader = createCoreLoader();
 
-    expect(() => loader.get(Json, 'never-loaded')).toThrow('Missing resource');
+    // A type that is neither a seamless handle nor a value token still falls
+    // through to the throwing legacy lookup (value tokens now return AssetRef).
+    class Adapterless {}
+
+    expect(() => loader.get(Adapterless, 'never-loaded')).toThrow('Missing resource');
   });
 
   test('array form returns deferred handles in input order and dedups', async () => {

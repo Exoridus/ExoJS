@@ -233,13 +233,16 @@ describe('Loader', () => {
     await loader.load(TextAsset, 'demo.txt');
 
     expect(loader.has(TextAsset, 'demo.txt')).toBe(true);
-    expect(loader.get(TextAsset, 'demo.txt')).toBe('resource:fresh-source');
+    expect(loader.get(TextAsset, 'demo.txt').value).toBe('resource:fresh-source');
   });
 
-  test('get() throws for missing resource', () => {
+  test('get() returns a loading ref whose value throws for a never-loaded value asset', () => {
     const loader = new Loader({ basePath: '/' });
 
-    expect(() => loader.get(TextAsset, 'nope')).toThrow('Missing resource');
+    const ref = loader.get(TextAsset, 'nope');
+
+    expect(ref.loadState).toBe('loading');
+    expect(() => ref.value).toThrow("'loading'");
   });
 
   test('add() registers aliases, load() resolves them', async () => {
@@ -631,8 +634,8 @@ describe('Loader', () => {
     mockFetch();
 
     await expect(loader.loadBundle('boot')).resolves.toBeUndefined();
-    expect(loader.get(TextAsset, 'hero')).toBe('resource:fresh-source');
-    expect(loader.get(TextAsset, 'menu')).toBe('resource:fresh-source');
+    expect(loader.get(TextAsset, 'hero').value).toBe('resource:fresh-source');
+    expect(loader.get(TextAsset, 'menu').value).toBe('resource:fresh-source');
   });
 
   test('loadBundle() rejects clearly for unknown bundle name', async () => {
@@ -2275,9 +2278,9 @@ describe('loadContainer()', () => {
     const loader = createCoreLoaderLocal();
     await loader.loadContainer('assets/pack.exoa');
 
-    expect(loader.get(Json, 'level')).toEqual({ score: 42 });
-    expect(loader.get(TextAsset, 'readme')).toBe('hello world');
-    expect(new Uint8Array(loader.get(BinaryAsset, 'blob') as ArrayBuffer)).toEqual(new Uint8Array([1, 2, 3, 4]));
+    expect(loader.get(Json, 'level').value).toEqual({ score: 42 });
+    expect(loader.get(TextAsset, 'readme').value).toBe('hello world');
+    expect(new Uint8Array(loader.get(BinaryAsset, 'blob').value)).toEqual(new Uint8Array([1, 2, 3, 4]));
   });
 
   test('throws on an unknown asset type and stores nothing', async () => {
