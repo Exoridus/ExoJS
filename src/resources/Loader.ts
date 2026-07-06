@@ -1,3 +1,4 @@
+import type { Sound } from '#audio/Sound';
 import { logger } from '#core/logging';
 import { Signal } from '#core/Signal';
 import type { AssetHandler, AssetLoadRequest } from '#extensions/Extension';
@@ -96,6 +97,11 @@ export interface ExtensionTypeMap {
   webp: Texture;
   avif: Texture;
   gif: Texture;
+  ogg: Sound;
+  mp3: Sound;
+  wav: Sound;
+  m4a: Sound;
+  aac: Sound;
 }
 
 /** Last path segment of `S` (everything after the final `/`). */
@@ -1049,7 +1055,7 @@ export class Loader {
    * gate); dynamic strings resolving to an unregistered extension or a
    * non-seamless type throw with guidance.
    */
-  public get<S extends string>(path: LoadByPath<S> extends Texture ? S : never, options?: TextureFactoryOptions & PreSizeOptions): Texture;
+  public get<S extends string>(path: LoadByPath<S> extends Texture | Sound ? S : never, options?: unknown): LoadByPath<S>;
 
   /**
    * Seamless access to a value asset: returns a stable {@link AssetRef}

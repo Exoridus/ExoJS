@@ -740,7 +740,7 @@
         },
         {
           "name": "get",
-          "signature": "get(path: LoadByPath<S> extends Texture ? S : never, options?: TextureFactoryOptions & PreSizeOptions): Texture",
+          "signature": "get(path: LoadByPath<S> extends Sound | Texture ? S : never, options?: unknown): LoadByPath<S>",
           "signatureTokens": [
             {
               "text": "get",
@@ -787,6 +787,14 @@
               "kind": "punctuation"
             },
             {
+              "text": "Sound",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
               "text": "Texture",
               "kind": "type"
             },
@@ -823,16 +831,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "TextureFactoryOptions",
-              "kind": "type"
-            },
-            {
-              "text": " & ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "PreSizeOptions",
-              "kind": "type"
+              "text": "unknown",
+              "kind": "keyword"
             },
             {
               "text": ")",
@@ -843,23 +843,35 @@
               "kind": "punctuation"
             },
             {
-              "text": "Texture",
+              "text": "LoadByPath",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "S",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             }
           ],
           "params": [
             {
               "name": "path",
-              "type": "LoadByPath<S> extends Texture ? S : never",
+              "type": "LoadByPath<S> extends Sound | Texture ? S : never",
               "optional": false
             },
             {
               "name": "options",
-              "type": "TextureFactoryOptions & PreSizeOptions",
+              "type": "unknown",
               "optional": true
             }
           ],
-          "returnType": "Texture",
+          "returnType": "LoadByPath<S>",
           "description": "Seamless access by path alone — the asset type is inferred from the file extension (basename-only, longest-suffix-first; see ExtensionTypeMap). Accepts only paths whose inferred type has a seamless adapter (compile-time gate); dynamic strings resolving to an unregistered extension or a non-seamless type throw with guidance."
         },
         {
