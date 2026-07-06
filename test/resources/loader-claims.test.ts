@@ -2,6 +2,7 @@ import { expectTypeOf } from 'vitest';
 
 import { Sound } from '#audio/Sound';
 import { materializeAssetBindings } from '#extensions/materialize';
+import { Texture } from '#rendering/texture/Texture';
 import { coreAssetBindings } from '#resources/coreAssetBindings';
 import { Loader, type LoaderOptions } from '#resources/Loader';
 
@@ -137,7 +138,7 @@ describe('refcount / claims', () => {
     expect(handle.audioBuffer).toBeNull(); // both gone → evicted
   });
 
-  test('release while the fetch is still in flight fills the (unclaimed) handle in place', async () => {
+  test('release while the fetch is still in flight frees the handle on arrival (§4.7)', async () => {
     mockFetchAudio();
     const loader = createCoreLoader();
     const key = loader['_key'](Sound, 'boom.ogg');
@@ -147,14 +148,23 @@ describe('refcount / claims', () => {
     expect(loader['_deferred'].has(key)).toBe(true);
     expect(handle.loadState).toBe('loading');
 
+    // Capture .loaded BEFORE the fill so the awaiter holds the promise that the
+    // fill settles (a later read re-materializes a fresh 'loading' promise).
+    const captured = handle.loaded;
+
     // Release before load settles: hits _evictKey's leave-it branch (deferred
     // !== undefined) — it must NOT re-arm or drop the in-flight fetch.
     loader.release(handle);
 
-    await handle.loaded; // the running fetch completes and fills the handle
-    expect(handle.audioBuffer).not.toBeNull();
-    // Identity held: the stored resource is the same handle instance.
-    expect(loader['_resources'].get(Sound as never)?.get('boom.ogg')).toBe(handle);
+    // §4.7 free-on-arrival: the running fetch completes and settles the captured
+    // .loaded (the asset WAS fully there), but because refcount is 0 the payload
+    // is freed immediately on arrival.
+    await captured;
+    expect(handle.audioBuffer).toBeNull();
+    expect(handle.loadState).toBe('loading');
+    // Identity held: the handle is re-registered as a deferred, evicted placeholder.
+    expect(loader['_resources'].get(Sound as never)?.has('boom.ogg')).toBe(false);
+    expect(loader['_deferred'].has(key)).toBe(true);
   });
 
   test('a concurrent load in the reclaim window does not overwrite the healed handle (identity race)', async () => {
@@ -187,5 +197,46 @@ describe('refcount / claims', () => {
     // Identity preserved: still the handle, not a raw donor Sound.
     expect(loader['_resources'].get(Sound as never)?.get('boom.ogg')).toBe(handle);
     expect(handle.audioBuffer).not.toBeNull();
+  });
+
+  test('in-flight arrival at refcount 0 frees immediately but .loaded still resolves (§4.7)', async () => {
+    mockFetchAudio();
+    const loader = createCoreLoader();
+
+    const handle = loader.get(Sound, 'boom.ogg');
+    // Capture the pending .loaded before releasing: this is the promise the fill
+    // settles, so the awaiter observes the completed asset even after eviction.
+    const captured = handle.loaded;
+
+    loader.release(handle); // refcount 0 while the fetch is still in flight
+
+    // The captured promise resolves (the asset WAS fully fetched)…
+    await expect(captured).resolves.toBe(handle);
+    // …but the payload was freed on arrival because nothing claims it.
+    expect(handle.audioBuffer).toBeNull();
+    expect(handle.loadState).toBe('loading');
+  });
+
+  test('release of an unheld key is a no-op (no throw)', () => {
+    const loader = createCoreLoader();
+    expect(() => loader.release(Sound, 'never.ogg')).not.toThrow();
+  });
+
+  test('Texture eviction frees the source and heals on re-get', async () => {
+    mockFetchAudio(); // arrayBuffer response feeds the stubbed createImageBitmap
+    const loader = createCoreLoader();
+
+    const handle = loader.get(Texture, 'x.png');
+    await handle.loaded;
+    expect(handle.source).not.toBeNull();
+
+    loader.release(handle); // refcount 0 → evict in place
+    expect(handle.source).toBeNull();
+    expect(handle.loadState).toBe('loading');
+
+    const again = loader.get(Texture, 'x.png');
+    expect(again).toBe(handle); // identity preserved across the heal
+    await handle.loaded;
+    expect(handle.source).not.toBeNull();
   });
 });

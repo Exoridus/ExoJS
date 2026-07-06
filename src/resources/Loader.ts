@@ -2470,6 +2470,7 @@ export class Loader {
     // every consumer — get() before or after load(), and load()'s own promise —
     // sees exactly ONE instance per source.
     const deferredEntry = this._deferred.get(key);
+    let filledDeferredHandle = false;
 
     if (deferredEntry !== undefined && deferredEntry.handle !== resource) {
       const adapter = this._seamlessAdapters.get(type);
@@ -2489,6 +2490,7 @@ export class Loader {
 
       this._deferred.delete(key);
       resource = deferredEntry.handle;
+      filledDeferredHandle = true;
     }
 
     // Value-asset refs fill from whatever producer stores the value; the raw
@@ -2509,6 +2511,18 @@ export class Loader {
     }
 
     this.onLoaded.dispatch(type, alias, resource);
+
+    // §4.7 free-on-arrival: a deferred handle whose every claimer released
+    // during the in-flight fetch has now converged into `_resources` at
+    // refcount 0. `.loaded` was already settled by the fill above, so an
+    // awaiter holding that promise still resolves (the asset WAS complete);
+    // evicting here drops the payload in place (re-arming `.loaded` to
+    // 'loading') so it does not linger unclaimed. Gated on an actual deferred
+    // fill: a never-claimed bundle/container store (no `_deferred` entry) must
+    // persist, not be freed on arrival.
+    if (filledDeferredHandle && !this._claims.has(key)) {
+      this._evictKey(key, type, alias);
+    }
 
     return resource;
   }
