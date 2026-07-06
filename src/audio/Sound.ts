@@ -1,8 +1,10 @@
 import { LoadState, type LoadStateValue } from '#core/LoadState';
+import { logger } from '#core/logging';
 import { clamp } from '#math/utils';
 import { Vector } from '#math/Vector';
 
 import { getAudioContext, isAudioContextReady } from './audio-context';
+import type { AudioBus } from './AudioBus';
 import type { AudioManager } from './AudioManager';
 import { NoopVoice } from './NoopVoice';
 import type { Playable, PlayOptions, Voice } from './Playable';
@@ -454,10 +456,17 @@ export class Sound implements Playable {
    * strategy picks a victim to stop before the new voice starts.
    */
   public _createVoice(manager: AudioManager, options: PlayOptions): Voice {
+    const bus = options.bus ?? manager.sound;
+    const notLoaded = this._notLoadedVoice(bus);
+
+    if (notLoaded !== null) {
+      return notLoaded;
+    }
+
     const offset = this._clipStart + Math.max(0, options.time ?? 0);
 
     if (offset >= this._clipEnd) {
-      return new NoopVoice(options.bus ?? manager.sound);
+      return new NoopVoice(bus);
     }
 
     return this._buildVoice(manager, options, offset, {
@@ -479,6 +488,13 @@ export class Sound implements Playable {
       throw new Error(`Sound sprite "${name}" is not defined.`);
     }
 
+    const bus = options.bus ?? manager.sound;
+    const notLoaded = this._notLoadedVoice(bus);
+
+    if (notLoaded !== null) {
+      return notLoaded;
+    }
+
     const clipOffset = Math.max(0, options.time ?? 0);
     const offset = clip.start + clipOffset;
 
@@ -497,16 +513,42 @@ export class Sound implements Playable {
   }
 
   /**
+   * If the sound is not playable-loaded, return a {@link NoopVoice} with a
+   * differentiated warning; otherwise return `null` so the caller builds a
+   * real voice. Both the main path ({@link Sound._createVoice}) and the sprite
+   * path ({@link Sound._createSpriteVoice}) route through this before reaching
+   * {@link Sound._buildVoice} — after eviction the sprite path can otherwise
+   * hand `_buildVoice` a `null` buffer (a sprite defined while loaded, then
+   * evicted and replayed before the reload settles).
+   */
+  private _notLoadedVoice(bus: AudioBus): Voice | null {
+    if (this._loadState.value === 'failed') {
+      logger.warn('Sound.play() called on a sound that failed to load; playing silence.', { source: 'Sound' });
+      return new NoopVoice(bus);
+    }
+
+    if (this._audioBuffer === null || this._loadState.value === 'loading') {
+      logger.warn('Sound.play() called on a sound that is not yet loaded; playing silence. Await sound.loaded or use loader.load().', { source: 'Sound' });
+      return new NoopVoice(bus);
+    }
+
+    return null;
+  }
+
+  /**
    * Shared voice construction for full-buffer and sprite playback. Enforces the
    * pool limit, builds the {@link SoundVoice}, seeds spatialization from the
    * descriptor's position, and tracks the voice for eviction.
    */
   private _buildVoice(manager: AudioManager, options: PlayOptions, offset: number, window: SoundVoiceWindow): Voice {
-    // @internal invariant: the buffer is non-null here. Callers (`_createVoice`/
-    // `_createSpriteVoice`) are responsible for routing not-loaded/failed sounds
-    // away from `_buildVoice`; Task 2 completes that routing for both the main
-    // and the sprite path.
-    const buffer = this._audioBuffer!;
+    // @internal invariant: the buffer is non-null here. Both `_createVoice` and
+    // `_createSpriteVoice` route through `_notLoadedVoice` before reaching this
+    // method, so a null buffer can no longer arrive through any real caller.
+    const buffer = this._audioBuffer;
+
+    if (buffer === null) {
+      throw new Error('Sound._buildVoice() invariant violated: called with a null buffer.');
+    }
 
     const loop = options.loop ?? this.loop;
     const playbackRate = clamp(options.playbackRate ?? this.playbackRate, 0.1, 20);
