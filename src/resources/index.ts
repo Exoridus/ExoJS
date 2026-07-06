@@ -34,6 +34,7 @@ export type { LoadingProgress } from './LoadingQueue';
 export { LoadingQueue } from './LoadingQueue';
 export { MemoryStore } from './MemoryStore';
 export { NetworkOnlyStrategy } from './NetworkOnlyStrategy';
+export type { SeamlessAdapter } from './seamless';
 export { BinaryAsset, CsvAsset, FontAsset, ImageAsset, Json, SubtitleAsset, SvgAsset, TextAsset, WasmAsset, XmlAsset } from './tokens';
 export type { WebStorageStoreOptions } from './WebStorageStore';
 export { WebStorageStore } from './WebStorageStore';

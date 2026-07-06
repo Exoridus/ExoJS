@@ -6,10 +6,10 @@
   "subsystem": "resources",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 50,
+  "memberCount": 54,
   "counts": {
     "constructors": 1,
-    "methods": 39,
+    "methods": 43,
     "properties": 2,
     "events": 8
   },
@@ -395,6 +395,377 @@
         },
         {
           "name": "get",
+          "signature": "get(type: typeof Texture, source: string, options?: TextureFactoryOptions): Texture",
+          "signatureTokens": [
+            {
+              "text": "get",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "type",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "typeof",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextureFactoryOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "type",
+              "type": "typeof Texture",
+              "optional": false
+            },
+            {
+              "name": "source",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "TextureFactoryOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "Texture",
+          "description": "Seamless deferred access (asset-system v2). Returns SYNCHRONOUSLY and never throws: an already-loaded source returns the stored texture; an unknown source returns a placeholder handle immediately, starts the fetch, and fills the handle in place when the payload arrives (track it via Texture.loadState / Texture.loaded). Failed loads show the Texture.missing checker; calling get again for a 'failed' source retries and heals the same handle in place. The same source always yields the same instance — also across load — and options are first-wins: conflicting options on a later call are ignored with a one-time dev warning."
+        },
+        {
+          "name": "get",
+          "signature": "get(type: typeof Texture, sources: readonly string[], options?: TextureFactoryOptions): Texture[]",
+          "signatureTokens": [
+            {
+              "text": "get",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "type",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "typeof",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "sources",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextureFactoryOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "type",
+              "type": "typeof Texture",
+              "optional": false
+            },
+            {
+              "name": "sources",
+              "type": "readonly string[]",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "TextureFactoryOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "Texture[]",
+          "description": "Seamless deferred access (asset-system v2). Returns SYNCHRONOUSLY and never throws: an already-loaded source returns the stored texture; an unknown source returns a placeholder handle immediately, starts the fetch, and fills the handle in place when the payload arrives (track it via Texture.loadState / Texture.loaded). Failed loads show the Texture.missing checker; calling get again for a 'failed' source retries and heals the same handle in place. The same source always yields the same instance — also across load — and options are first-wins: conflicting options on a later call are ignored with a one-time dev warning."
+        },
+        {
+          "name": "get",
+          "signature": "get(type: typeof Texture, items: Readonly<Record<K, string>>, options?: TextureFactoryOptions): Record<K, Texture>",
+          "signatureTokens": [
+            {
+              "text": "get",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "type",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "typeof",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "items",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "K",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextureFactoryOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "K",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "type",
+              "type": "typeof Texture",
+              "optional": false
+            },
+            {
+              "name": "items",
+              "type": "Readonly<Record<K, string>>",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "TextureFactoryOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "Record<K, Texture>",
+          "description": "Seamless deferred access (asset-system v2). Returns SYNCHRONOUSLY and never throws: an already-loaded source returns the stored texture; an unknown source returns a placeholder handle immediately, starts the fetch, and fills the handle in place when the payload arrives (track it via Texture.loadState / Texture.loaded). Failed loads show the Texture.missing checker; calling get again for a 'failed' source retries and heals the same handle in place. The same source always yields the same instance — also across load — and options are first-wins: conflicting options on a later call are ignored with a one-time dev warning."
+        },
+        {
+          "name": "get",
           "signature": "get(type: typeof Json, alias: string): T",
           "signatureTokens": [
             {
@@ -467,7 +838,7 @@
             }
           ],
           "returnType": "T",
-          "description": "Retrieves a previously loaded asset by type and alias. Throws if the asset has not been loaded. Use peek for a non-throwing alternative, or has to guard the call."
+          "description": "Retrieves a previously loaded asset by type and alias (legacy lookup for types without a seamless adapter; replaced by the asset graph in a later slice). Throws if the asset has not been loaded. Use peek for a non-throwing alternative, or has to guard the call."
         },
         {
           "name": "get",
@@ -547,7 +918,7 @@
             }
           ],
           "returnType": "LoadReturn<T>",
-          "description": "Retrieves a previously loaded asset by type and alias. Throws if the asset has not been loaded. Use peek for a non-throwing alternative, or has to guard the call."
+          "description": "Retrieves a previously loaded asset by type and alias (legacy lookup form for types without a seamless adapter; replaced by the asset graph in a later slice). Throws if the asset has not been loaded — use peek for a non-throwing alternative, or has to guard the call."
         },
         {
           "name": "has",
@@ -2964,6 +3335,98 @@
           ],
           "returnType": "this",
           "description": "Validates and registers an AssetManifest, making its bundles available to loadBundle. Throws if any bundle name is already registered or if two entries for the same (type, alias) pair have conflicting paths or options. Equivalent definitions (same path, deeply-equal options) are allowed and de-duplicated silently."
+        },
+        {
+          "name": "registerSeamlessAdapter",
+          "signature": "registerSeamlessAdapter(type: AssetConstructor<T>, adapter: SeamlessAdapter<T>): this",
+          "signatureTokens": [
+            {
+              "text": "registerSeamlessAdapter",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "type",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetConstructor",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "adapter",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SeamlessAdapter",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "type",
+              "type": "AssetConstructor<T>",
+              "optional": false
+            },
+            {
+              "name": "adapter",
+              "type": "SeamlessAdapter<T>",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Registers the seamless-handle adapter for type, enabling the deferred get(type, source) form for it. One adapter per type."
         },
         {
           "name": "setConcurrency",

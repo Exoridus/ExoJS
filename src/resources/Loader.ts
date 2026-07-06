@@ -1,6 +1,8 @@
+import { logger } from '#core/logging';
 import { Signal } from '#core/Signal';
 import type { AssetHandler, AssetLoadRequest } from '#extensions/Extension';
 import { type BmFont } from '#rendering/text/BmFont';
+import type { Texture } from '#rendering/texture/Texture';
 
 import { Asset, AssetImpl } from './Asset';
 import { parseContainer } from './AssetContainer';
@@ -12,9 +14,11 @@ import { type Assets, AssetsImpl } from './Assets';
 import { CacheFirstStrategy } from './CacheFirstStrategy';
 import type { CacheStore } from './CacheStore';
 import type { CacheStrategy } from './CacheStrategy';
+import type { TextureFactoryOptions } from './factories/TextureFactory';
 import type { AssetConstructor } from './FactoryRegistry';
 import { FactoryRegistry } from './FactoryRegistry';
 import { LoadingQueue } from './LoadingQueue';
+import type { SeamlessAdapter } from './seamless';
 import {
   type BinaryAsset,
   type CsvAsset,
@@ -299,6 +303,13 @@ export class Loader {
   // Handlers registered via bindAsset — owned for their full lifecycle
   private readonly _boundHandlers: AssetHandler[] = [];
 
+  // ── Seamless deferred handles (asset-system v2) ───────────────────────────
+  // Adapter per seamless type; handles pending or failed, keyed by _key(type, source).
+  // Successful fills remove the entry (the handle moves to _resources); failed
+  // entries stay so a later get() retries and heals the SAME handle in place.
+  private readonly _seamlessAdapters = new Map<AssetConstructor, SeamlessAdapter<unknown>>();
+  private readonly _deferred = new Map<string, { readonly handle: unknown; readonly options: unknown }>();
+
   private _basePath: string;
   private _fetchOptions: RequestInit;
   private _concurrency: number;
@@ -458,6 +469,21 @@ export class Loader {
    */
   public registerExtension(ext: string, type: AssetConstructor): this {
     this._extensionMap.set(ext.replace(/^\./, '').toLowerCase(), type);
+    return this;
+  }
+
+  /**
+   * Registers the seamless-handle adapter for `type`, enabling the deferred
+   * `get(type, source)` form for it. One adapter per type.
+   * @advanced
+   */
+  public registerSeamlessAdapter<T>(type: AssetConstructor<T>, adapter: SeamlessAdapter<T>): this {
+    if (this._seamlessAdapters.has(type)) {
+      throw new Error(`A seamless adapter is already registered for ${this._describeType(type)}.`);
+    }
+
+    this._seamlessAdapters.set(type, adapter);
+
     return this;
   }
 
@@ -988,15 +1014,64 @@ export class Loader {
   // -----------------------------------------------------------------------
 
   /**
-   * Retrieves a previously loaded asset by type and alias.
+   * Seamless deferred access (asset-system v2). Returns SYNCHRONOUSLY and
+   * never throws: an already-loaded source returns the stored texture; an
+   * unknown source returns a placeholder handle immediately, starts the
+   * fetch, and fills the handle in place when the payload arrives (track it
+   * via {@link Texture.loadState} / {@link Texture.loaded}). Failed loads
+   * show the {@link Texture.missing} checker; calling `get` again for a
+   * `'failed'` source retries and heals the same handle in place.
+   *
+   * The same source always yields the same instance — also across
+   * {@link load} — and options are first-wins: conflicting options on a
+   * later call are ignored with a one-time dev warning.
+   */
+  public get(type: typeof Texture, source: string, options?: TextureFactoryOptions): Texture;
+  public get(type: typeof Texture, sources: readonly string[], options?: TextureFactoryOptions): Texture[];
+  public get<K extends string>(type: typeof Texture, items: Readonly<Record<K, string>>, options?: TextureFactoryOptions): Record<K, Texture>;
+
+  /**
+   * Retrieves a previously loaded asset by type and alias (legacy lookup for
+   * types without a seamless adapter; replaced by the asset graph in a later
+   * slice).
    *
    * Throws if the asset has not been loaded. Use {@link peek} for a
    * non-throwing alternative, or {@link has} to guard the call.
    */
   public get<T = unknown>(type: typeof Json, alias: string): T;
+
+  /**
+   * Retrieves a previously loaded asset by type and alias (legacy lookup form
+   * for types without a seamless adapter; replaced by the asset graph in a
+   * later slice). Throws if the asset has not been loaded — use {@link peek}
+   * for a non-throwing alternative, or {@link has} to guard the call.
+   */
   public get<T extends Loadable>(type: T, alias: string): LoadReturn<T>;
-  public get(type: Loadable, alias: string): unknown {
+  public get(type: Loadable, source: string | readonly string[] | Readonly<Record<string, string>>, options?: unknown): unknown {
     const ctor = type;
+    const adapter = this._seamlessAdapters.get(ctor);
+
+    if (adapter !== undefined) {
+      if (typeof source === 'string') {
+        return this._getSeamless(ctor, adapter, source, options);
+      }
+
+      if (Array.isArray(source)) {
+        const paths: readonly string[] = source;
+
+        return paths.map(path => this._getSeamless(ctor, adapter, path, options));
+      }
+
+      const out: Record<string, unknown> = {};
+
+      for (const [key, path] of Object.entries(source)) {
+        out[key] = this._getSeamless(ctor, adapter, path, options);
+      }
+
+      return out;
+    }
+
+    const alias = source as string;
     const typeMap = this._resources.get(ctor);
 
     if (!typeMap?.has(alias)) {
@@ -1199,7 +1274,7 @@ export class Loader {
    * @internal
    */
   public bindAsset<Result = unknown, Options = undefined>(
-    keys: { type: AssetConstructor<Result>; typeNames?: readonly string[]; extensions?: readonly string[] },
+    keys: { type: AssetConstructor<Result>; typeNames?: readonly string[]; extensions?: readonly string[]; seamless?: SeamlessAdapter<Result> },
     handler: AssetHandler<Result, Options>,
   ): void {
     const normalizedExts: string[] = [];
@@ -1281,6 +1356,10 @@ export class Loader {
     // Cast to the erased AssetHandler for storage; destroy() is the only method
     // called on entries in this array.
     this._boundHandlers.push(handler as AssetHandler);
+
+    if (keys.seamless !== undefined) {
+      this.registerSeamlessAdapter(keys.type, keys.seamless);
+    }
   }
 
   /**
@@ -1347,6 +1426,8 @@ export class Loader {
     this._aliasKeyToIdentityKey.clear();
     this._identityKeyToAliases.clear();
     this._handlerFunctions.clear();
+    this._deferred.clear();
+    this._seamlessAdapters.clear();
     this._backgroundQueue.length = 0;
     this.onProgress.destroy();
     this.onBundleProgress.destroy();
@@ -1361,6 +1442,56 @@ export class Loader {
   // -----------------------------------------------------------------------
   // Internal — loading
   // -----------------------------------------------------------------------
+
+  /**
+   * Seamless single-source resolution: an already-stored asset, an existing
+   * deferred handle (retried in place when `'failed'`), or a fresh
+   * placeholder whose fetch starts now.
+   */
+  private _getSeamless(type: AssetConstructor, adapter: SeamlessAdapter<unknown>, source: string, options?: unknown): unknown {
+    const stored = this._resources.get(type)?.get(source);
+
+    if (stored !== undefined) {
+      return stored;
+    }
+
+    const key = this._key(type, source);
+    const entry = this._deferred.get(key);
+
+    if (entry !== undefined) {
+      if (options !== undefined && !this._areOptionsEquivalent(entry.options, options)) {
+        logger.warn(`get(${this._describeType(type)}, "${source}"): conflicting options ignored — the first call's options win.`, {
+          source: 'Loader',
+          once: `loader:seamless-options:${key}`,
+        });
+      }
+
+      if (adapter.stateOf(entry.handle) === 'failed') {
+        adapter.begin(entry.handle);
+        this._startSeamlessFetch(type, adapter, source, entry.handle, entry.options);
+      }
+
+      return entry.handle;
+    }
+
+    const handle = adapter.createPlaceholder();
+
+    this._deferred.set(key, { handle, options });
+    this._startSeamlessFetch(type, adapter, source, handle, options);
+
+    return handle;
+  }
+
+  /**
+   * Start (or on retry, restart) the fetch backing a deferred handle. Success
+   * fills the handle inside {@link _storeResource}; failure marks it
+   * `'failed'` and keeps the deferred entry so a later `get` can retry.
+   */
+  private _startSeamlessFetch(type: AssetConstructor, adapter: SeamlessAdapter<unknown>, source: string, handle: unknown, options: unknown): void {
+    void this._loadSingle(type, source, options).catch((error: unknown) => {
+      adapter.fail(handle, this._normalizeError(error));
+    });
+  }
 
   private async _loadSingle(type: AssetConstructor, alias: string, options?: unknown, explicitPath?: string): Promise<unknown> {
     if (this._hasResource(type, alias)) {
@@ -1521,10 +1652,7 @@ export class Loader {
     // Same identity already in flight? Attach to the existing promise.
     const existing = this._inFlightByIdentity.get(identityKey);
     if (existing) {
-      return existing.then(resource => {
-        this._storeResource(type, alias, resource);
-        return resource;
-      });
+      return existing.then(resource => this._storeResource(type, alias, resource));
     }
 
     // Build load promise.
@@ -1582,8 +1710,8 @@ export class Loader {
     const url = this._resolveUrl(source);
     try {
       const resource = await handler(fullConfig, context);
-      this._storeResource(type, alias, resource);
-      return resource;
+
+      return this._storeResource(type, alias, resource);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
       throw new Error(`Failed to load "${alias}" from "${url}": ${message}`, { cause: error });
@@ -1669,9 +1797,7 @@ export class Loader {
         this._stores,
       );
 
-      this._storeResource(type, alias, resource);
-
-      return resource;
+      return this._storeResource(type, alias, resource);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
 
@@ -1963,11 +2089,47 @@ export class Loader {
     return this._resources.get(type)?.has(alias) ?? false;
   }
 
-  private _storeResource(type: AssetConstructor, alias: string, resource: unknown): void {
+  private _storeResource(type: AssetConstructor, alias: string, resource: unknown): unknown {
     const key = this._key(type, alias);
 
     if (this._preventStoreKeys.delete(key)) {
-      return;
+      // The asset was unloaded while its fetch was in flight. A deferred handle
+      // waiting on this key must not stay 'loading' forever: fail it so
+      // `.loaded` rejects. The entry stays (like any failed fetch) so a later
+      // get() retries and heals the SAME handle in place.
+      const preventedEntry = this._deferred.get(key);
+
+      if (preventedEntry !== undefined) {
+        this._seamlessAdapters.get(type)?.fail(preventedEntry.handle, new Error(`Asset "${alias}" was unloaded while its fetch was in flight.`));
+      }
+
+      return resource;
+    }
+
+    // Seamless intercept: a deferred handle registered for this (type, source)
+    // absorbs the fetched payload in place and becomes the stored resource, so
+    // every consumer — get() before or after load(), and load()'s own promise —
+    // sees exactly ONE instance per source.
+    const deferredEntry = this._deferred.get(key);
+
+    if (deferredEntry !== undefined && deferredEntry.handle !== resource) {
+      const adapter = this._seamlessAdapters.get(type);
+
+      if (adapter !== undefined) {
+        // A non-get producer (load(), bundle, background) may store into a key
+        // whose handle is 'failed' (e.g. an earlier get() 404'd). fill() → settle()
+        // must run from a re-armed state so `.loaded` re-materializes a resolved
+        // promise; without begin() the handle would read 'ready' while its cached
+        // `.loaded` stayed permanently rejected.
+        if (adapter.stateOf(deferredEntry.handle) === 'failed') {
+          adapter.begin(deferredEntry.handle);
+        }
+
+        adapter.fill(deferredEntry.handle, resource);
+      }
+
+      this._deferred.delete(key);
+      resource = deferredEntry.handle;
     }
 
     let typeResources = this._resources.get(type);
@@ -1984,6 +2146,8 @@ export class Loader {
     }
 
     this.onLoaded.dispatch(type, alias, resource);
+
+    return resource;
   }
 
   private _getTypeId(type: AssetConstructor): number {

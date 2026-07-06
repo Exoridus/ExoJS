@@ -19,6 +19,7 @@ export type { DecompressFormat } from './Codec';
 export { Codec } from './Codec';
 export { Color } from './Color';
 export { DisposalScope } from './DisposalScope';
+export type { LoadStateValue } from './LoadState';
 export type { LogEntry, LogOptions, LogSink } from './logging';
 export { Logger, logger, LogSeverity } from './logging';
 export { Perf } from './Perf';

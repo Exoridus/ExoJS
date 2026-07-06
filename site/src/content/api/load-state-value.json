@@ -1,0 +1,79 @@
+{
+  "title": "LoadStateValue",
+  "description": "Load lifecycle of a seamless asset handle. Directly constructed assets are `'ready'`.",
+  "symbol": "LoadStateValue",
+  "kind": "type",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Load lifecycle of a seamless asset handle. Directly constructed assets are `'ready'`."
+      ],
+      "importLine": "import { LoadStateValue } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "LoadStateValue",
+          "signature": "\"loading\" | \"ready\" | \"failed\"",
+          "signatureTokens": [
+            {
+              "text": "\"loading\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"ready\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"failed\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/LoadState.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/LoadState.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/LoadState.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/LoadState.ts"
+}
