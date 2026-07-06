@@ -6,6 +6,7 @@ import type { RenderBackend } from '#rendering/RenderBackend';
 import type { DrawableConstructor, Renderer } from '#rendering/Renderer';
 import type { AssetConstructor } from '#resources/FactoryRegistry';
 import type { AssetLoaderContext, Loader } from '#resources/Loader';
+import type { SeamlessAdapter } from '#resources/seamless';
 
 /**
  * Per-load request passed to {@link AssetHandler.load} and
@@ -104,6 +105,8 @@ export interface AssetBinding<Result = unknown, Options = undefined> {
    */
   readonly typeNames?: readonly string[];
   readonly extensions?: readonly string[];
+  /** Optional seamless-handle adapter (asset-system v2), registered alongside the handler. */
+  readonly seamless?: SeamlessAdapter<Result>;
   create(loader: Loader): AssetHandler<Result, Options>;
 }
 

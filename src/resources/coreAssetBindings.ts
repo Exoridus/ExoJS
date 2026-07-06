@@ -20,6 +20,7 @@ import { XmlFactory } from '#resources/factories/XmlFactory';
 
 import type { AssetConstructor } from './FactoryRegistry';
 import type { AssetLoaderContext, Loader } from './Loader';
+import { type SeamlessAdapter, textureSeamlessAdapter } from './seamless';
 import { BinaryAsset, CsvAsset, FontAsset, ImageAsset, Json, SubtitleAsset, SvgAsset, TextAsset, WasmAsset, XmlAsset } from './tokens';
 
 // ---------------------------------------------------------------------------
@@ -69,7 +70,7 @@ function textFactoryHandler<T>(makeFactory: () => { create(raw: string, options?
 // Typed binding factory that accepts abstract token classes.
 function binding<T>(
   type: AssetConstructor,
-  opts: { typeNames?: readonly string[]; extensions?: readonly string[] },
+  opts: { typeNames?: readonly string[]; extensions?: readonly string[]; seamless?: SeamlessAdapter<T> },
   create: (loader: Loader) => AssetHandler<T>,
 ): AssetBinding {
   return { type, ...opts, create };
@@ -104,7 +105,7 @@ export function resolveSubAssetPath(ref: string, source: string): string {
 
 const textureBinding = binding(
   Texture,
-  { typeNames: ['texture'] },
+  { typeNames: ['texture'], seamless: textureSeamlessAdapter },
   binaryFactoryHandler(() => new TextureFactory()),
 );
 

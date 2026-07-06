@@ -1,0 +1,133 @@
+import { logger } from '#core/logging';
+import { materializeAssetBindings } from '#extensions/materialize';
+import { Texture } from '#rendering/texture/Texture';
+import { coreAssetBindings } from '#resources/coreAssetBindings';
+import { Loader } from '#resources/Loader';
+import { Json } from '#resources/tokens';
+
+/** Loader with all core asset bindings (mirrors createCoreLoader in loader.test.ts). */
+function createCoreLoader(): Loader {
+  const loader = new Loader();
+  materializeAssetBindings(loader, coreAssetBindings);
+  return loader;
+}
+
+const originalFetch = global.fetch;
+
+const mockFetchImage = (): void => {
+  global.fetch = vi.fn(
+    async (): Promise<Response> =>
+      ({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        arrayBuffer: async () => new ArrayBuffer(8),
+      }) as unknown as Response,
+  );
+};
+
+const mockFetch404 = (): void => {
+  global.fetch = vi.fn(
+    async (): Promise<Response> =>
+      ({
+        ok: false,
+        status: 404,
+        statusText: 'Not Found',
+      }) as Response,
+  );
+};
+
+describe('Loader seamless get (Texture)', () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      'createImageBitmap',
+      vi.fn(async () => ({ width: 16, height: 16 })),
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    global.fetch = originalFetch;
+    logger._resetOnce();
+  });
+
+  test('returns a Texture synchronously in the loading state', () => {
+    mockFetchImage();
+    const loader = createCoreLoader();
+
+    const handle = loader.get(Texture, 'ship.png');
+
+    expect(handle).toBeInstanceOf(Texture);
+    expect(handle.loadState).toBe('loading');
+    expect(handle.width).toBe(0);
+  });
+
+  test('fills the handle in place when the fetch completes', async () => {
+    mockFetchImage();
+    const loader = createCoreLoader();
+
+    const handle = loader.get(Texture, 'ship.png');
+    const versionBefore = handle.version;
+
+    await expect(handle.loaded).resolves.toBe(handle);
+    expect(handle.loadState).toBe('ready');
+    expect(handle.width).toBe(16);
+    expect(handle.version).toBeGreaterThan(versionBefore);
+  });
+
+  test('same source returns the same instance, before and after completion', async () => {
+    mockFetchImage();
+    const loader = createCoreLoader();
+
+    const first = loader.get(Texture, 'ship.png');
+    const second = loader.get(Texture, 'ship.png');
+
+    expect(second).toBe(first);
+
+    await first.loaded;
+
+    expect(loader.get(Texture, 'ship.png')).toBe(first);
+    expect(loader.has(Texture, 'ship.png')).toBe(true);
+  });
+
+  test('load() after get() resolves to the SAME handle instance', async () => {
+    mockFetchImage();
+    const loader = createCoreLoader();
+
+    const handle = loader.get(Texture, 'ship.png');
+    const loaded = await loader.load(Texture, 'ship.png');
+
+    expect(loaded).toBe(handle);
+    expect(handle.loadState).toBe('ready');
+  });
+
+  test('get() after a completed load() returns the stored instance', async () => {
+    mockFetchImage();
+    const loader = createCoreLoader();
+
+    const loaded = await loader.load(Texture, 'ship.png');
+    const handle = loader.get(Texture, 'ship.png');
+
+    expect(handle).toBe(loaded);
+    expect(handle.loadState).toBe('ready');
+  });
+
+  test('onLoaded dispatches with the handle as the stored resource', async () => {
+    mockFetchImage();
+    const loader = createCoreLoader();
+    const seen: unknown[] = [];
+
+    loader.onLoaded.add((_type, _alias, resource) => seen.push(resource));
+
+    const handle = loader.get(Texture, 'ship.png');
+
+    await handle.loaded;
+    expect(seen).toEqual([handle]);
+  });
+
+  test('legacy alias lookup still throws for adapterless types', () => {
+    const loader = createCoreLoader();
+
+    expect(() => loader.get(Json, 'never-loaded')).toThrow('Missing resource');
+  });
+});
