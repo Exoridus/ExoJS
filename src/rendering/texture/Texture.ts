@@ -59,7 +59,15 @@ export class Texture {
    * {@link Texture.black}/{@link Texture.white} helpers.
    */
   public static fromColor(color: Color | string, size = 1): Texture {
-    const fillStyle = typeof color === 'string' ? color : color.a < 1 ? `rgba(${color.r}, ${color.g}, ${color.b}, ${color.a})` : color.toString();
+    let fillStyle: string;
+
+    if (typeof color === 'string') {
+      fillStyle = color;
+    } else if (color.a < 1) {
+      fillStyle = `rgba(${color.r}, ${color.g}, ${color.b}, ${color.a})`;
+    } else {
+      fillStyle = color.toString();
+    }
 
     return new Texture(createCanvas({ fillStyle, width: size, height: size }));
   }

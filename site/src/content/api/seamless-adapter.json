@@ -1,0 +1,310 @@
+{
+  "title": "SeamlessAdapter",
+  "description": "Per-type strategy for seamless deferred asset handles (asset-system v2). A seamless type hands out a stable placeholder handle synchronously from `loader.get(Type, source)`; when the payload arrives, fill transplants it into the handle **in place** so every existing consumer \"pops up\" without re-wiring. fail swaps in a visible error payload instead. The handle's identity never changes across the whole lifecycle.",
+  "symbol": "SeamlessAdapter",
+  "kind": "interface",
+  "subsystem": "resources",
+  "importPath": "@codexo/exojs",
+  "tier": "advanced",
+  "memberCount": 5,
+  "counts": {
+    "constructors": 0,
+    "methods": 5,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Per-type strategy for seamless deferred asset handles (asset-system v2).",
+        "A seamless type hands out a stable placeholder handle synchronously from `loader.get(Type, source)`; when the payload arrives, fill transplants it into the handle **in place** so every existing consumer \"pops up\" without re-wiring. fail swaps in a visible error payload instead. The handle's identity never changes across the whole lifecycle."
+      ],
+      "importLine": "import { SeamlessAdapter } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "begin",
+          "signature": "begin(handle: T): void",
+          "signatureTokens": [
+            {
+              "text": "begin",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "handle",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "handle",
+              "type": "T",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Re-arm a 'failed' handle for a retry ('failed' → 'loading', fresh .loaded)."
+        },
+        {
+          "name": "createPlaceholder",
+          "signature": "createPlaceholder(): T",
+          "signatureTokens": [
+            {
+              "text": "createPlaceholder",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "T",
+          "description": "Create a fresh deferred handle, already in the 'loading' state."
+        },
+        {
+          "name": "fail",
+          "signature": "fail(handle: T, error: Error): void",
+          "signatureTokens": [
+            {
+              "text": "fail",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "handle",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "error",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Error",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "handle",
+              "type": "T",
+              "optional": false
+            },
+            {
+              "name": "error",
+              "type": "Error",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Show the error payload on the handle and settle 'failed'."
+        },
+        {
+          "name": "fill",
+          "signature": "fill(handle: T, donor: T): void",
+          "signatureTokens": [
+            {
+              "text": "fill",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "handle",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "donor",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "handle",
+              "type": "T",
+              "optional": false
+            },
+            {
+              "name": "donor",
+              "type": "T",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Transplant the donor's payload into the handle in place and settle 'ready'."
+        },
+        {
+          "name": "stateOf",
+          "signature": "stateOf(handle: T): LoadStateValue",
+          "signatureTokens": [
+            {
+              "text": "stateOf",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "handle",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LoadStateValue",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "handle",
+              "type": "T",
+              "optional": false
+            }
+          ],
+          "returnType": "LoadStateValue",
+          "description": "Current load state of the handle."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/resources/seamless.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/seamless.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/resources/seamless.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/seamless.ts"
+}

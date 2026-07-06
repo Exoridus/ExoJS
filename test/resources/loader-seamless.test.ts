@@ -1,3 +1,5 @@
+import { expectTypeOf } from 'vitest';
+
 import { logger, LogSeverity } from '#core/logging';
 import { materializeAssetBindings } from '#extensions/materialize';
 import { Texture } from '#rendering/texture/Texture';
@@ -272,5 +274,14 @@ describe('Loader seamless get (Texture)', () => {
     expect(again).toBe(handle);
     await expect(again.loaded).rejects.toThrow();
     expect(again.loadState).toBe('failed');
+  });
+
+  test('type-level: seamless get forms', () => {
+    const loader = createCoreLoader();
+
+    expectTypeOf(loader.get(Texture, 'a.png')).toEqualTypeOf<Texture>();
+    expectTypeOf(loader.get(Texture, ['a.png', 'b.png'])).toEqualTypeOf<Texture[]>();
+    expectTypeOf(loader.get(Texture, { a: 'a.png', b: 'b.png' })).toEqualTypeOf<Record<'a' | 'b', Texture>>();
+    expectTypeOf(new Texture(null).loaded).toEqualTypeOf<Promise<Texture>>();
   });
 });

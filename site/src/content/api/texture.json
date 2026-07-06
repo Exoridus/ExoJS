@@ -6,11 +6,11 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 25,
+  "memberCount": 29,
   "counts": {
     "constructors": 1,
-    "methods": 9,
-    "properties": 15,
+    "methods": 10,
+    "properties": 18,
     "events": 0
   },
   "sections": [
@@ -546,6 +546,82 @@
           "params": [],
           "returnType": "this",
           "description": "Refresh the size from the current source and bump the version. Call after mutating the source's pixel data in place (e.g. drawing to a canvas) to notify backends that a re-upload is needed."
+        },
+        {
+          "name": "fromColor",
+          "signature": "fromColor(color: string | Color, size: number): Texture",
+          "signatureTokens": [
+            {
+              "text": "fromColor",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "color",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Color",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "size",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "color",
+              "type": "string | Color",
+              "optional": false
+            },
+            {
+              "name": "size",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "Texture",
+          "description": "Create a solid-colour texture of the given square size (default 1×1). Accepts a Color instance or any CSS colour string; a Color with alpha below 1 is rendered with that alpha. Generalizes the fixed Texture.black/Texture.white helpers."
         }
       ],
       "paragraphs": [],
@@ -660,6 +736,60 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "loaded",
+          "signature": "loaded: Promise<this>",
+          "signatureTokens": [
+            {
+              "text": "loaded",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Promise that settles with this texture once its payload has loaded — resolved immediately for 'ready' textures, rejected with the load error for 'failed' ones. Re-materialized when a failed load is retried, so read it fresh from this getter rather than caching it across load cycles."
+        },
+        {
+          "name": "loadState",
+          "signature": "loadState: LoadStateValue",
+          "signatureTokens": [
+            {
+              "text": "loadState",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LoadStateValue",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Load lifecycle of this texture. Directly constructed textures are 'ready'; deferred handles returned by loader.get(Texture, …) start 'loading' and become 'ready' once the payload fills in, or 'failed' (showing the Texture.missing checker) when the load errors."
         },
         {
           "name": "powerOfTwo",
@@ -849,6 +979,27 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "missing",
+          "signature": "missing: Texture",
+          "signatureTokens": [
+            {
+              "text": "missing",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Shared 8×8 magenta/black checkerboard shown in place of assets that failed to load — a visible error beats an invisible hole, in production too. Lazily created; every access returns the same instance."
         },
         {
           "name": "white",
