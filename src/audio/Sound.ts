@@ -169,9 +169,9 @@ export class Sound implements Playable {
 
   /**
    * Load lifecycle of this sound. Directly constructed sounds are `'ready'`;
-   * deferred handles returned by the Loader's seamless pipeline start
-   * `'loading'` and become `'ready'` once the payload fills in, or `'failed'`
-   * when the load errors.
+   * deferred handles returned by `loader.get(Sound, …)` start `'loading'` and
+   * become `'ready'` once the payload fills in, or `'failed'` when the load
+   * errors.
    */
   public get loadState(): LoadStateValue {
     return this._loadState.value;
@@ -502,9 +502,11 @@ export class Sound implements Playable {
    * descriptor's position, and tracks the voice for eviction.
    */
   private _buildVoice(manager: AudioManager, options: PlayOptions, offset: number, window: SoundVoiceWindow): Voice {
-    if (this._audioBuffer === null) {
-      throw new Error('Sound playback is unavailable: the sound is not loaded yet.');
-    }
+    // @internal invariant: the buffer is non-null here. Callers (`_createVoice`/
+    // `_createSpriteVoice`) are responsible for routing not-loaded/failed sounds
+    // away from `_buildVoice`; Task 2 completes that routing for both the main
+    // and the sprite path.
+    const buffer = this._audioBuffer!;
 
     const loop = options.loop ?? this.loop;
     const playbackRate = clamp(options.playbackRate ?? this.playbackRate, 0.1, 20);
@@ -539,7 +541,7 @@ export class Sound implements Playable {
         maxDistance: this._maxDistance,
         rolloffFactor: this._rolloffFactor,
       },
-      buffer: this._audioBuffer,
+      buffer,
       loop,
       playbackRate,
       detune,

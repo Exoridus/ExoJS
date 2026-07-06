@@ -814,7 +814,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Load lifecycle of this sound. Directly constructed sounds are 'ready'; deferred handles returned by the Loader's seamless pipeline start 'loading' and become 'ready' once the payload fills in, or 'failed' when the load errors."
+          "description": "Load lifecycle of this sound. Directly constructed sounds are 'ready'; deferred handles returned by loader.get(Sound, …) start 'loading' and become 'ready' once the payload fills in, or 'failed' when the load errors."
         },
         {
           "name": "maxDistance",
