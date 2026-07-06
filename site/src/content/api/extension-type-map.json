@@ -6,11 +6,11 @@
   "subsystem": "resources",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 5,
+  "memberCount": 11,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 5,
+    "properties": 11,
     "events": 0
   },
   "sections": [
@@ -30,6 +30,27 @@
       "title": "Properties",
       "members": [
         {
+          "name": "avif",
+          "signature": "avif: Texture",
+          "signatureTokens": [
+            {
+              "text": "avif",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
           "name": "fnt",
           "signature": "fnt: BmFont",
           "signatureTokens": [
@@ -43,6 +64,69 @@
             },
             {
               "text": "BmFont",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "gif",
+          "signature": "gif: Texture",
+          "signatureTokens": [
+            {
+              "text": "gif",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "jpeg",
+          "signature": "jpeg: Texture",
+          "signatureTokens": [
+            {
+              "text": "jpeg",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "jpg",
+          "signature": "jpg: Texture",
+          "signatureTokens": [
+            {
+              "text": "jpg",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
               "kind": "type"
             }
           ],
@@ -72,6 +156,27 @@
           "description": ""
         },
         {
+          "name": "png",
+          "signature": "png: Texture",
+          "signatureTokens": [
+            {
+              "text": "png",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
           "name": "ttf",
           "signature": "ttf: FontFace",
           "signatureTokens": [
@@ -85,6 +190,27 @@
             },
             {
               "text": "FontFace",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "webp",
+          "signature": "webp: Texture",
+          "signatureTokens": [
+            {
+              "text": "webp",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
               "kind": "type"
             }
           ],

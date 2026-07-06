@@ -978,15 +978,17 @@ export class Loader {
   // -----------------------------------------------------------------------
 
   /**
-   * Enqueues all manifest-registered assets that have not yet been loaded
-   * into the background fetch queue and begins draining the queue up to
-   * {@link setConcurrency | concurrency} simultaneous connections.
-   *
-   * Progress is reported via {@link onProgress}. In-flight assets and
-   * already-loaded assets are skipped automatically. Call {@link loadAll}
-   * instead if you need to await completion.
+   * Declares sources and enqueues them for low-priority background fetching in
+   * one step (replaces the removed `add()`; PixiJS model). Progress is
+   * reported via {@link onProgress}; already-loaded, in-flight, and
+   * already-queued sources are skipped. `get()`/`load()` on a queued source
+   * boosts it to the front. The zero-argument form enqueues everything
+   * registered in the manifest (bundles/manifest die with the asset graph).
    */
-  public backgroundLoad(): void {
+  public backgroundLoad(): void;
+  public backgroundLoad(type: Loadable, source: string, options?: unknown): void;
+  public backgroundLoad(type: Loadable, sources: readonly string[], options?: unknown): void;
+  public backgroundLoad(type?: Loadable, source?: string | readonly string[], options?: unknown): void {
     // Start a fresh progress batch only when idle; a re-entrant call while the
     // queue is draining extends the running batch instead (mirrors the
     // accounting in _loadSingleBackground).
@@ -995,17 +997,37 @@ export class Loader {
       this._backgroundTotal = 0;
     }
 
-    for (const [type, entries] of this._manifest) {
-      for (const [alias, entry] of entries) {
-        if (this._hasResource(type, alias)) continue;
+    if (type !== undefined && source !== undefined) {
+      const ctor: AssetConstructor = type;
+      const sources: readonly string[] = typeof source === 'string' ? [source] : source;
 
-        const key = this._key(type, alias);
+      for (const src of sources) {
+        this._addManifestEntry(ctor, src, src, options);
+
+        if (this._hasResource(ctor, src)) continue;
+        if (this._inFlight.has(this._key(ctor, src))) continue;
+        if (this._isQueuedInBackground(ctor, src)) continue;
+
+        this._backgroundQueue.push({ type: ctor, alias: src, path: src, options });
+        this._backgroundTotal++;
+      }
+
+      this._drainBackground();
+
+      return;
+    }
+
+    for (const [manifestType, entries] of this._manifest) {
+      for (const [alias, entry] of entries) {
+        if (this._hasResource(manifestType, alias)) continue;
+
+        const key = this._key(manifestType, alias);
 
         if (this._inFlight.has(key)) continue;
-        if (this._isQueuedInBackground(type, alias)) continue;
+        if (this._isQueuedInBackground(manifestType, alias)) continue;
 
         this._backgroundQueue.push({
-          type,
+          type: manifestType,
           alias,
           path: entry.path,
           options: entry.options,
@@ -1636,23 +1658,7 @@ export class Loader {
     const path = explicitPath ?? entry?.path ?? alias;
     const resolvedOptions = options ?? entry?.options;
 
-    // Check handler path first (for extension types registered via bindAsset)
-    const handlerEntry = this._handlerFunctions.get(type);
-
-    if (handlerEntry) {
-      const identityKey = this._identityKey(type, path);
-      const config: Record<string, unknown> = { source: path };
-
-      if (resolvedOptions !== null && resolvedOptions !== undefined && typeof resolvedOptions === 'object') {
-        Object.assign(config, resolvedOptions as Record<string, unknown>);
-      }
-
-      const context = this._buildHandlerContext(identityKey);
-
-      return this._trackInFlight(type, alias, this._fetchWithHandler(type, alias, path, config, handlerEntry.load, context));
-    }
-
-    return this._trackInFlight(type, alias, this._fetch(type, alias, path, resolvedOptions));
+    return this._trackInFlight(type, alias, this._dispatchFetch(type, alias, path, resolvedOptions));
   }
 
   private _loadSingleBackground(type: AssetConstructor, alias: string, path: string, options?: unknown): Promise<unknown> {
@@ -1899,6 +1905,32 @@ export class Loader {
     this._storeResource(type, alias, resource);
   }
 
+  /**
+   * Dispatches a load through the `bindAsset` handler path if one is
+   * registered for `type`, otherwise through the plain `register()`-based
+   * {@link _fetch}. Shared by the foreground ({@link _loadSingle}) and
+   * background ({@link _startBackgroundEntry}) fetch dispatchers so both
+   * honor `bindAsset` handlers identically.
+   */
+  private _dispatchFetch(type: AssetConstructor, alias: string, path: string, options?: unknown): Promise<unknown> {
+    const handlerEntry = this._handlerFunctions.get(type);
+
+    if (!handlerEntry) {
+      return this._fetch(type, alias, path, options);
+    }
+
+    const identityKey = this._identityKey(type, path);
+    const config: Record<string, unknown> = { source: path };
+
+    if (options !== null && options !== undefined && typeof options === 'object') {
+      Object.assign(config, options as Record<string, unknown>);
+    }
+
+    const context = this._buildHandlerContext(identityKey);
+
+    return this._fetchWithHandler(type, alias, path, config, handlerEntry.load, context);
+  }
+
   private async _fetch(type: AssetConstructor, alias: string, path: string, options?: unknown): Promise<unknown> {
     const factory = this._registry.resolve(type);
     const url = this._resolveUrl(path);
@@ -2063,7 +2095,7 @@ export class Loader {
   private _startBackgroundEntry(entry: QueueEntry): void {
     this._backgroundActive++;
 
-    this._trackInFlight(entry.type, entry.alias, this._fetch(entry.type, entry.alias, entry.path, entry.options))
+    this._trackInFlight(entry.type, entry.alias, this._dispatchFetch(entry.type, entry.alias, entry.path, entry.options))
       .catch(error => {
         const err = this._normalizeError(error);
         const key2 = this._key(entry.type, entry.alias);

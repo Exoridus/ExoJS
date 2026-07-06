@@ -312,7 +312,7 @@ describe('Loader seamless get (Texture)', () => {
     expect(errors).toEqual(['gone.png']);
   });
 
-  test.todo('background + boosting get for the same source dispatch onError exactly once', async () => {
+  test('background + boosting get for the same source dispatch onError exactly once', async () => {
     mockFetch404();
     const loader = createCoreLoader();
     const errors: string[] = [];
