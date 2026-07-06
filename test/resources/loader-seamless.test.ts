@@ -5,6 +5,7 @@ import { materializeAssetBindings } from '#extensions/materialize';
 import { Texture } from '#rendering/texture/Texture';
 import { coreAssetBindings } from '#resources/coreAssetBindings';
 import { Loader } from '#resources/Loader';
+import { textureSeamlessAdapter } from '#resources/seamless';
 
 /** Loader with all core asset bindings (mirrors createCoreLoader in loader.test.ts). */
 function createCoreLoader(): Loader {
@@ -145,6 +146,7 @@ describe('Loader seamless get (Texture)', () => {
     expect(a).toBeInstanceOf(Texture);
     expect(b).not.toBe(a);
     expect(aAgain).toBe(a);
+    expect(a).toBe(loader.get(Texture, 'a.png'));
 
     await Promise.all([a.loaded, b.loaded]);
     expect(a.loadState).toBe('ready');
@@ -163,6 +165,9 @@ describe('Loader seamless get (Texture)', () => {
 
     await ship.loaded;
     expect(ship.loadState).toBe('ready');
+
+    await gradient.loaded;
+    expect(gradient.loadState).toBe('ready');
   });
 
   test('conflicting options warn once and the first call wins', async () => {
@@ -173,18 +178,20 @@ describe('Loader seamless get (Texture)', () => {
       if (entry.severity === LogSeverity.Warning) warnings.push(entry.message);
     });
 
-    const handle = loader.get(Texture, 'ship.png', { samplerOptions: { flipY: true } });
+    try {
+      const handle = loader.get(Texture, 'ship.png', { samplerOptions: { flipY: true } });
 
-    loader.get(Texture, 'ship.png', { samplerOptions: { flipY: false } });
-    loader.get(Texture, 'ship.png', { samplerOptions: { flipY: false } });
+      loader.get(Texture, 'ship.png', { samplerOptions: { flipY: false } });
+      loader.get(Texture, 'ship.png', { samplerOptions: { flipY: false } });
 
-    expect(warnings).toHaveLength(1);
-    expect(warnings[0]).toContain('first call');
+      expect(warnings).toHaveLength(1);
+      expect(warnings[0]).toContain('first call');
 
-    await handle.loaded;
-    expect(handle.flipY).toBe(true); // first options reached the factory; fill transplanted them
-
-    removeSink();
+      await handle.loaded;
+      expect(handle.flipY).toBe(true); // first options reached the factory; fill transplanted them
+    } finally {
+      removeSink();
+    }
   });
 
   test('same options (deep-equal) do not warn', () => {
@@ -195,11 +202,14 @@ describe('Loader seamless get (Texture)', () => {
       if (entry.severity === LogSeverity.Warning) warnings.push(entry.message);
     });
 
-    loader.get(Texture, 'ship.png', { samplerOptions: { flipY: true } });
-    loader.get(Texture, 'ship.png', { samplerOptions: { flipY: true } });
+    try {
+      loader.get(Texture, 'ship.png', { samplerOptions: { flipY: true } });
+      loader.get(Texture, 'ship.png', { samplerOptions: { flipY: true } });
 
-    expect(warnings).toHaveLength(0);
-    removeSink();
+      expect(warnings).toHaveLength(0);
+    } finally {
+      removeSink();
+    }
   });
 
   test('unload() while the fetch is in flight fails the handle; a later get() heals it', async () => {
@@ -263,7 +273,7 @@ describe('Loader seamless get (Texture)', () => {
     await expect(rejectedPromise).rejects.toThrow(); // the old promise stays rejected
   });
 
-  test('a failed handle without retry keeps returning the same instance', async () => {
+  test('repeated get() on a persistently failing source retries and fails again on the same instance', async () => {
     mockFetch404();
     const loader = createCoreLoader();
 
@@ -275,6 +285,7 @@ describe('Loader seamless get (Texture)', () => {
     const again = loader.get(Texture, 'gone.png');
 
     expect(again).toBe(handle);
+    expect(again.loadState).toBe('loading');
     await expect(again.loaded).rejects.toThrow();
     expect(again.loadState).toBe('failed');
   });
@@ -406,5 +417,11 @@ describe('Loader seamless get (Texture)', () => {
     void (() => loader.get('fonts/ui.fnt'));
     // @ts-expect-error — unregistered extension
     void (() => loader.get('theme.custom'));
+  });
+
+  test('registering a second seamless adapter for the same type throws', () => {
+    const loader = createCoreLoader();
+
+    expect(() => loader.registerSeamlessAdapter(Texture, textureSeamlessAdapter)).toThrow('already registered');
   });
 });
