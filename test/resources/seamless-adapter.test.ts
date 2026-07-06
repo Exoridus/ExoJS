@@ -1,3 +1,4 @@
+import { logger, LogSeverity } from '#core/logging';
 import { Texture } from '#rendering/texture/Texture';
 import { textureSeamlessAdapter } from '#resources/seamless';
 
@@ -56,5 +57,61 @@ describe('textureSeamlessAdapter', () => {
 
     expect(handle.loadState).toBe('loading');
     expect(handle.loaded).not.toBe(rejected);
+  });
+
+  test('createPlaceholder pre-sizes from options and stays loading', () => {
+    const handle = textureSeamlessAdapter.createPlaceholder({ width: 64, height: 32 });
+
+    expect(handle.width).toBe(64);
+    expect(handle.height).toBe(32);
+    expect(handle.loadState).toBe('loading');
+  });
+
+  test('fill warns once when the payload size mismatches the pre-size', () => {
+    const warnings: string[] = [];
+    const removeSink = logger.addSink(entry => {
+      if (entry.severity === LogSeverity.Warning) warnings.push(entry.message);
+    });
+
+    try {
+      const handle = textureSeamlessAdapter.createPlaceholder({ width: 64, height: 64 });
+      const canvas = document.createElement('canvas');
+
+      canvas.width = 16;
+      canvas.height = 16;
+      textureSeamlessAdapter.fill(handle, new Texture(canvas));
+
+      expect(handle.width).toBe(16);
+      expect(warnings).toHaveLength(1);
+      expect(warnings[0]).toContain('pre-size');
+    } finally {
+      removeSink();
+    }
+  });
+
+  test('fill does not warn without a pre-size, and fail consumes the pre-size (no warn on heal)', () => {
+    const warnings: string[] = [];
+    const removeSink = logger.addSink(entry => {
+      if (entry.severity === LogSeverity.Warning) warnings.push(entry.message);
+    });
+
+    try {
+      const plain = textureSeamlessAdapter.createPlaceholder();
+      const canvas = document.createElement('canvas');
+
+      canvas.width = 16;
+      canvas.height = 16;
+      textureSeamlessAdapter.fill(plain, new Texture(canvas));
+      expect(warnings).toHaveLength(0);
+
+      const presized = textureSeamlessAdapter.createPlaceholder({ width: 64, height: 64 });
+
+      textureSeamlessAdapter.fail(presized, new Error('404'));
+      textureSeamlessAdapter.begin(presized);
+      textureSeamlessAdapter.fill(presized, new Texture(canvas));
+      expect(warnings).toHaveLength(0); // pre-size was consumed by fail — healing is not a mismatch
+    } finally {
+      removeSink();
+    }
   });
 });

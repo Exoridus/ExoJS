@@ -332,6 +332,17 @@ describe('Loader seamless get (Texture)', () => {
     expect(() => loader.get('fonts/ui.fnt' as never)).toThrow('no seamless adapter');
   });
 
+  test('get with pre-size options reserves layout and heals to real size', async () => {
+    mockFetchImage();
+    const loader = createCoreLoader();
+
+    const handle = loader.get(Texture, 'ship.png', { width: 16, height: 16 });
+
+    expect(handle.width).toBe(16); // reserved immediately, while loading
+    await handle.loaded;
+    expect(handle.width).toBe(16); // matches payload — no warning path
+  });
+
   test('type-level: get(path) accepts only seamless-inferrable extensions', () => {
     const loader = createCoreLoader();
 

@@ -18,7 +18,7 @@ import type { TextureFactoryOptions } from './factories/TextureFactory';
 import type { AssetConstructor } from './FactoryRegistry';
 import { FactoryRegistry } from './FactoryRegistry';
 import { LoadingQueue } from './LoadingQueue';
-import type { SeamlessAdapter } from './seamless';
+import type { PreSizeOptions, SeamlessAdapter } from './seamless';
 import {
   type BinaryAsset,
   type CsvAsset,
@@ -1056,9 +1056,9 @@ export class Loader {
    * {@link load} — and options are first-wins: conflicting options on a
    * later call are ignored with a one-time dev warning.
    */
-  public get(type: typeof Texture, source: string, options?: TextureFactoryOptions): Texture;
-  public get(type: typeof Texture, sources: readonly string[], options?: TextureFactoryOptions): Texture[];
-  public get<K extends string>(type: typeof Texture, items: Readonly<Record<K, string>>, options?: TextureFactoryOptions): Record<K, Texture>;
+  public get(type: typeof Texture, source: string, options?: TextureFactoryOptions & PreSizeOptions): Texture;
+  public get(type: typeof Texture, sources: readonly string[], options?: TextureFactoryOptions & PreSizeOptions): Texture[];
+  public get<K extends string>(type: typeof Texture, items: Readonly<Record<K, string>>, options?: TextureFactoryOptions & PreSizeOptions): Record<K, Texture>;
 
   /**
    * Seamless access by path alone — the asset type is inferred from the file
@@ -1067,7 +1067,7 @@ export class Loader {
    * gate); dynamic strings resolving to an unregistered extension or a
    * non-seamless type throw with guidance.
    */
-  public get<S extends string>(path: LoadByPath<S> extends Texture ? S : never, options?: TextureFactoryOptions): Texture;
+  public get<S extends string>(path: LoadByPath<S> extends Texture ? S : never, options?: TextureFactoryOptions & PreSizeOptions): Texture;
 
   /**
    * Retrieves a previously loaded asset by type and alias (legacy lookup for
@@ -1531,7 +1531,7 @@ export class Loader {
       return entry.handle;
     }
 
-    const handle = adapter.createPlaceholder();
+    const handle = adapter.createPlaceholder(options);
 
     this._deferred.set(key, { handle, options });
     this._startSeamlessFetch(type, adapter, source, handle, options);
