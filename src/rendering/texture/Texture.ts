@@ -1,4 +1,5 @@
 import type { Color } from '#core/Color';
+import { LoadState, type LoadStateValue } from '#core/LoadState';
 import type { TextureSource } from '#core/types';
 import { getTextureSourceSize } from '#core/utils';
 import { Size } from '#math/Size';
@@ -80,6 +81,8 @@ export class Texture {
   private _source: TextureSource = null;
   private _size: Size = new Size(0, 0);
   private readonly _destroyListeners: Set<() => void> = new Set<() => void>();
+  /** @internal — load lifecycle, driven by the Loader's seamless pipeline. */
+  public readonly _loadState = new LoadState<Texture>();
   private _scaleMode: ScaleModes;
   private _wrapMode: WrapModes;
   private _premultiplyAlpha = false;
@@ -191,6 +194,26 @@ export class Texture {
    */
   public get version(): number {
     return this._version;
+  }
+
+  /**
+   * Load lifecycle of this texture. Directly constructed textures are
+   * `'ready'`; deferred handles returned by `loader.get(Texture, …)` start
+   * `'loading'` and become `'ready'` once the payload fills in, or `'failed'`
+   * (showing the {@link Texture.missing} checker) when the load errors.
+   */
+  public get loadState(): LoadStateValue {
+    return this._loadState.value;
+  }
+
+  /**
+   * Promise that settles with this texture once its payload has loaded —
+   * resolved immediately for `'ready'` textures, rejected with the load error
+   * for `'failed'` ones. Re-materialized when a failed load is retried, so
+   * read it fresh from this getter rather than caching it across load cycles.
+   */
+  public get loaded(): Promise<this> {
+    return this._loadState.loaded(this) as Promise<this>;
   }
 
   /**
