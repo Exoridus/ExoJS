@@ -3,11 +3,11 @@ import { expectTypeOf } from 'vitest';
 import { Sound } from '#audio/Sound';
 import { materializeAssetBindings } from '#extensions/materialize';
 import { coreAssetBindings } from '#resources/coreAssetBindings';
-import { Loader } from '#resources/Loader';
+import { Loader, type LoaderOptions } from '#resources/Loader';
 
 /** Loader with all core asset bindings (mirrors createCoreLoader in loader-seamless.test.ts). */
-function createCoreLoader(): Loader {
-  const loader = new Loader();
+function createCoreLoader(options?: LoaderOptions): Loader {
+  const loader = new Loader(options);
   materializeAssetBindings(loader, coreAssetBindings);
   return loader;
 }
@@ -109,13 +109,17 @@ describe('refcount / claims', () => {
     expect(handle.audioBuffer).not.toBeNull();
   });
 
-  test('a not-yet-started background entry is dropped from the queue at refcount 0', async () => {
+  test('a not-yet-started background entry is dropped from the queue at refcount 0', () => {
     mockFetchAudio();
-    const loader = createCoreLoader();
-    loader.backgroundLoad(Sound, ['a.ogg', 'b.ogg', 'c.ogg']); // some remain queued behind the concurrency cap
-    // release one that is still queued
+    // Concurrency 1: only 'a.ogg' goes in flight; 'b'/'c' stay queued so the
+    // eviction queue-drop splice is actually exercised (at the default cap of 6
+    // all three drain synchronously and the queue is already empty).
+    const loader = createCoreLoader({ concurrency: 1 });
+    loader.backgroundLoad(Sound, ['a.ogg', 'b.ogg', 'c.ogg']);
+
+    expect(loader['_isQueuedInBackground'](Sound, 'c.ogg')).toBe(true); // still queued behind the cap
     loader.release(Sound, 'c.ogg');
-    expect(loader['_isQueuedInBackground'](Sound, 'c.ogg')).toBe(false);
+    expect(loader['_isQueuedInBackground'](Sound, 'c.ogg')).toBe(false); // dropped at refcount 0
   });
 
   test('two distinct claim scopes keep the payload until both release', async () => {
@@ -131,5 +135,57 @@ describe('refcount / claims', () => {
     expect(handle.audioBuffer).not.toBeNull(); // B still holds it
     loader._release(loader['_key'](Sound, 'boom.ogg'), scopeB);
     expect(handle.audioBuffer).toBeNull(); // both gone → evicted
+  });
+
+  test('release while the fetch is still in flight fills the (unclaimed) handle in place', async () => {
+    mockFetchAudio();
+    const loader = createCoreLoader();
+    const key = loader['_key'](Sound, 'boom.ogg');
+
+    const handle = loader.get(Sound, 'boom.ogg');
+    // Fetch is in flight: the handle is still deferred, not yet in _resources.
+    expect(loader['_deferred'].has(key)).toBe(true);
+    expect(handle.loadState).toBe('loading');
+
+    // Release before load settles: hits _evictKey's leave-it branch (deferred
+    // !== undefined) — it must NOT re-arm or drop the in-flight fetch.
+    loader.release(handle);
+
+    await handle.loaded; // the running fetch completes and fills the handle
+    expect(handle.audioBuffer).not.toBeNull();
+    // Identity held: the stored resource is the same handle instance.
+    expect(loader['_resources'].get(Sound as never)?.get('boom.ogg')).toBe(handle);
+  });
+
+  test('a concurrent load in the reclaim window does not overwrite the healed handle (identity race)', async () => {
+    mockFetchAudio();
+    const loader = createCoreLoader();
+    const key = loader['_key'](Sound, 'boom.ogg');
+
+    const handle = loader.get(Sound, 'boom.ogg');
+    await handle.loaded;
+    expect(loader['_resources'].get(Sound as never)?.get('boom.ogg')).toBe(handle);
+
+    // Evict: drops the stale in-flight entry (whose .finally is still pending).
+    loader.release(handle);
+    expect(handle.audioBuffer).toBeNull();
+
+    // Reclaim kicks a fresh re-fetch into the same handle and registers a new
+    // in-flight entry. A microtask hop lets the stale first-load `.finally`
+    // fire: without the self-entry guard in _trackInFlight it deletes the
+    // reclaim's live entry, so the concurrent load() below is no longer deduped
+    // and re-enters _loadSingle → a second _dispatchFetch whose raw donor
+    // overwrites the handle in _resources.
+    const again = loader.get(Sound, 'boom.ogg');
+    expect(again).toBe(handle);
+    await Promise.resolve();
+    const concurrent = loader.load(Sound, 'boom.ogg');
+
+    await handle.loaded;
+    await concurrent;
+
+    // Identity preserved: still the handle, not a raw donor Sound.
+    expect(loader['_resources'].get(Sound as never)?.get('boom.ogg')).toBe(handle);
+    expect(handle.audioBuffer).not.toBeNull();
   });
 });

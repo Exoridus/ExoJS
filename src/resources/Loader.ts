@@ -1762,8 +1762,10 @@ export class Loader {
       this._evicted.add(key);
       // A load that just settled may leave a resolved-but-not-yet-cleaned
       // in-flight entry (its `.finally` cleanup is a pending microtask). Drop it
-      // so the reclaim's re-fetch starts fresh instead of deduping onto the
-      // stale promise, which would never re-fill the re-armed handle.
+      // so the reclaim's re-fetch starts fresh instead of deduping onto that
+      // stale resolved promise, which would never re-fill the re-armed handle.
+      // The reclaim's fresh entry is protected from this stale `.finally` by the
+      // self-entry identity guard in `_trackInFlight`.
       this._inFlight.delete(key);
     }
 
@@ -2263,7 +2265,14 @@ export class Loader {
   private _trackInFlight(type: AssetConstructor, alias: string, promise: Promise<unknown>): Promise<unknown> {
     const key = this._key(type, alias);
     const trackedPromise = promise.finally(() => {
-      this._inFlight.delete(key);
+      // Clear only our OWN entry: a superseding load (e.g. a reclaim re-fetch
+      // after an eviction dropped and re-added this key) may already own the
+      // slot. Deleting it unconditionally would un-dedup a concurrent load and
+      // let a second fetch overwrite the healed handle with its raw donor.
+      if (this._inFlight.get(key) === trackedPromise) {
+        this._inFlight.delete(key);
+      }
+
       this._preventStoreKeys.delete(key);
     });
 
