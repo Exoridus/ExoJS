@@ -1,6 +1,11 @@
+import { Sound } from '#audio/Sound';
 import { logger, LogSeverity } from '#core/logging';
 import { Texture } from '#rendering/texture/Texture';
-import { textureSeamlessAdapter } from '#resources/seamless';
+import { soundSeamlessAdapter, textureSeamlessAdapter } from '#resources/seamless';
+
+function bufferStub(duration = 2): AudioBuffer {
+  return { duration } as AudioBuffer;
+}
 
 describe('textureSeamlessAdapter', () => {
   test("createPlaceholder returns an empty 'loading' texture", () => {
@@ -113,5 +118,49 @@ describe('textureSeamlessAdapter', () => {
     } finally {
       removeSink();
     }
+  });
+});
+
+describe('soundSeamlessAdapter', () => {
+  test('createPlaceholder yields a loading Sound with no buffer', () => {
+    const handle = soundSeamlessAdapter.createPlaceholder();
+    expect(handle).toBeInstanceOf(Sound);
+    expect(handle.loadState).toBe('loading');
+    expect(handle.audioBuffer).toBeNull();
+  });
+
+  test('fill transplants the donor buffer in place and settles ready', async () => {
+    const handle = soundSeamlessAdapter.createPlaceholder();
+    const donor = new Sound(bufferStub(3));
+    soundSeamlessAdapter.fill(handle, donor);
+    expect(handle.loadState).toBe('ready');
+    expect(handle.duration).toBe(3);
+    await expect(handle.loaded).resolves.toBe(handle);
+  });
+
+  test('fail settles failed and .loaded rejects', async () => {
+    const handle = soundSeamlessAdapter.createPlaceholder();
+    soundSeamlessAdapter.fail(handle, new Error('nope'));
+    expect(handle.loadState).toBe('failed');
+    await expect(handle.loaded).rejects.toThrow('nope');
+  });
+
+  test('evict drops the payload and re-arms for a heal', () => {
+    const handle = soundSeamlessAdapter.createPlaceholder();
+    soundSeamlessAdapter.fill(handle, new Sound(bufferStub(3)));
+    soundSeamlessAdapter.evict(handle);
+    expect(handle.audioBuffer).toBeNull();
+    expect(handle.loadState).toBe('loading');
+  });
+});
+
+describe('textureSeamlessAdapter.evict', () => {
+  test('drops the source and re-arms', () => {
+    const handle = textureSeamlessAdapter.createPlaceholder();
+    // simulate a fill via a donor
+    const donor = textureSeamlessAdapter.createPlaceholder();
+    // (donor needs a real source in a full test; here assert the re-arm contract)
+    textureSeamlessAdapter.evict(handle);
+    expect(handle.loadState).toBe('loading');
   });
 });

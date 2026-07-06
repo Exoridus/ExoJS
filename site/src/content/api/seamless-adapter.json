@@ -6,10 +6,10 @@
   "subsystem": "resources",
   "importPath": "@codexo/exojs",
   "tier": "advanced",
-  "memberCount": 5,
+  "memberCount": 6,
   "counts": {
     "constructors": 0,
-    "methods": 5,
+    "methods": 6,
     "properties": 0,
     "events": 0
   },
@@ -126,6 +126,53 @@
           ],
           "returnType": "T",
           "description": "Create a fresh deferred handle, already in the 'loading' state."
+        },
+        {
+          "name": "evict",
+          "signature": "evict(handle: T): void",
+          "signatureTokens": [
+            {
+              "text": "evict",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "handle",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "handle",
+              "type": "T",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Drop the payload back to a placeholder in place (refcount-0 eviction); identity is kept so a later fill heals every consumer."
         },
         {
           "name": "fail",
