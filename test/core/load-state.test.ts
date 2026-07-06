@@ -75,6 +75,25 @@ describe('LoadState', () => {
     await expect(all).resolves.toEqual([owner, owner, owner]);
   });
 
+  test("settle() directly from 'failed' re-materializes loaded; the old rejected promise stays rejected", async () => {
+    const state = new LoadState<object>();
+
+    state.begin();
+    state.fail(new Error('boom'));
+    const rejected = state.loaded(owner);
+
+    await expect(rejected).rejects.toThrow('boom');
+
+    state.settle(owner);
+    expect(state.value).toBe('ready');
+
+    const fresh = state.loaded(owner);
+
+    expect(fresh).not.toBe(rejected);
+    await expect(fresh).resolves.toBe(owner);
+    await expect(rejected).rejects.toThrow('boom');
+  });
+
   test('begin() after fail() re-materializes a FRESH promise; the old one stays rejected', async () => {
     const state = new LoadState<object>();
 

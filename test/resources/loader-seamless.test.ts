@@ -276,6 +276,26 @@ describe('Loader seamless get (Texture)', () => {
     expect(again.loadState).toBe('failed');
   });
 
+  test('load() after a get() that failed re-materializes loaded and heals the handle', async () => {
+    mockFetch404();
+    const loader = createCoreLoader();
+
+    const handle = loader.get(Texture, 'healme.png');
+
+    await expect(handle.loaded).rejects.toThrow();
+    const rejectedPromise = handle.loaded;
+
+    mockFetchImage();
+    const loaded = await loader.load(Texture, 'healme.png');
+
+    expect(loaded).toBe(handle);
+    expect(handle.loadState).toBe('ready');
+    expect(handle.width).toBe(16);
+
+    await expect(handle.loaded).resolves.toBe(handle); // fresh promise
+    await expect(rejectedPromise).rejects.toThrow(); // the old promise stays rejected
+  });
+
   test('type-level: seamless get forms', () => {
     const loader = createCoreLoader();
 

@@ -1039,6 +1039,13 @@ export class Loader {
    * non-throwing alternative, or {@link has} to guard the call.
    */
   public get<T = unknown>(type: typeof Json, alias: string): T;
+
+  /**
+   * Retrieves a previously loaded asset by type and alias (legacy lookup form
+   * for types without a seamless adapter; replaced by the asset graph in a
+   * later slice). Throws if the asset has not been loaded — use {@link peek}
+   * for a non-throwing alternative, or {@link has} to guard the call.
+   */
   public get<T extends Loadable>(type: T, alias: string): LoadReturn<T>;
   public get(type: Loadable, source: string | readonly string[] | Readonly<Record<string, string>>, options?: unknown): unknown {
     const ctor = type;
@@ -2106,7 +2113,21 @@ export class Loader {
     const deferredEntry = this._deferred.get(key);
 
     if (deferredEntry !== undefined && deferredEntry.handle !== resource) {
-      this._seamlessAdapters.get(type)?.fill(deferredEntry.handle, resource);
+      const adapter = this._seamlessAdapters.get(type);
+
+      if (adapter !== undefined) {
+        // A non-get producer (load(), bundle, background) may store into a key
+        // whose handle is 'failed' (e.g. an earlier get() 404'd). fill() → settle()
+        // must run from a re-armed state so `.loaded` re-materializes a resolved
+        // promise; without begin() the handle would read 'ready' while its cached
+        // `.loaded` stayed permanently rejected.
+        if (adapter.stateOf(deferredEntry.handle) === 'failed') {
+          adapter.begin(deferredEntry.handle);
+        }
+
+        adapter.fill(deferredEntry.handle, resource);
+      }
+
       this._deferred.delete(key);
       resource = deferredEntry.handle;
     }

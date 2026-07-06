@@ -61,8 +61,17 @@ export class LoadState<Owner> {
     this._reject = null;
   }
 
-  /** Enter `'ready'`; resolves a promise materialized while `'loading'`. */
+  /**
+   * Enter `'ready'`; resolves a promise materialized while `'loading'`. When
+   * settling directly from `'failed'` (no pending resolvers, but a cached
+   * rejected promise may exist), drop that promise so the next `.loaded` access
+   * re-materializes a resolved one instead of returning the stale rejection.
+   */
   public settle(owner: Owner): void {
+    if (this._value === 'failed') {
+      this._promise = null;
+    }
+
     this._value = 'ready';
     this._error = null;
     this._resolve?.(owner);

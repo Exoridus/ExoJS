@@ -918,7 +918,7 @@
             }
           ],
           "returnType": "LoadReturn<T>",
-          "description": "Seamless deferred access (asset-system v2). Returns SYNCHRONOUSLY and never throws: an already-loaded source returns the stored texture; an unknown source returns a placeholder handle immediately, starts the fetch, and fills the handle in place when the payload arrives (track it via Texture.loadState / Texture.loaded). Failed loads show the Texture.missing checker; calling get again for a 'failed' source retries and heals the same handle in place. The same source always yields the same instance — also across load — and options are first-wins: conflicting options on a later call are ignored with a one-time dev warning."
+          "description": "Retrieves a previously loaded asset by type and alias (legacy lookup form for types without a seamless adapter; replaced by the asset graph in a later slice). Throws if the asset has not been loaded — use peek for a non-throwing alternative, or has to guard the call."
         },
         {
           "name": "has",
