@@ -344,6 +344,16 @@ export class Loader {
   private readonly _refs = new Map<string, { readonly ref: AssetRef<unknown>; readonly options: unknown }>();
   private readonly _valueTokens: ReadonlySet<Loadable> = new Set<Loadable>([Json, TextAsset, CsvAsset, XmlAsset, SubtitleAsset, BinaryAsset, WasmAsset]);
 
+  // ── Refcount / claims (asset-system v2 §4.7) ──────────────────────────────
+  /** App-lifetime claim scope for direct `app.loader.get/load(…)` calls. @internal */
+  private readonly _rootClaimer = Symbol('app-loader');
+  /** Resource key → claim scopes + the type/source needed to evict/re-fetch; refcount = scopes.size. @internal */
+  private readonly _claims = new Map<string, { scopes: Set<symbol>; type: AssetConstructor; source: string }>();
+  /** Keys evicted at refcount 0 (handle re-registered in `_deferred`); the next claim re-fetches into it. @internal */
+  private readonly _evicted = new Set<string>();
+  /** Deferred handle / value-ref → its resource key, for `release(handle)`. @internal */
+  private readonly _handleKeys = new WeakMap<object, string>();
+
   private _basePath: string;
   private _fetchOptions: RequestInit;
   private _concurrency: number;
@@ -765,12 +775,24 @@ export class Loader {
   // -----------------------------------------------------------------------
 
   public load(arg0: unknown, arg1?: unknown, arg2?: unknown): LoadingQueue<unknown> {
+    return this._loadClaimed(this._rootClaimer, arg0, arg1, arg2);
+  }
+
+  /**
+   * Claimed variant of {@link load}: identical logic, but every resolved key is
+   * claimed under `claimer` (refcount). The public {@link load} delegates here
+   * under the app-lifetime {@link _rootClaimer}; the scene-scoped loader proxy
+   * passes its own scope. Claiming under `_rootClaimer` (which only `release()`
+   * frees) is observationally a no-op for existing callers.
+   * @internal
+   */
+  public _loadClaimed(claimer: symbol, arg0: unknown, arg1?: unknown, arg2?: unknown): LoadingQueue<unknown> {
     // 1. Single Asset<T>
     if (arg0 instanceof AssetImpl) {
       const asset = arg0 as Asset<unknown>;
       const alias = asset._config.source;
 
-      return this._createLoadingQueue([{ alias, asset }], results => results.get(alias));
+      return this._createLoadingQueue(claimer, [{ alias, asset }], results => results.get(alias));
     }
 
     // 2. Assets<M> container
@@ -781,7 +803,7 @@ export class Loader {
         asset: a,
       }));
 
-      return this._createLoadingQueue(items, results => {
+      return this._createLoadingQueue(claimer, items, results => {
         const out: Record<string, unknown> = {};
 
         for (const { alias } of items) {
@@ -804,6 +826,7 @@ export class Loader {
       // FontAsset requires a family option — infer it from the filename when not provided
       const options: unknown = ctor === FontAsset ? { family: (path.split('/').pop()?.split(/[?#]/)[0] ?? '').replace(/\.[^.]+$/, '') } : undefined;
 
+      this._claim(this._key(ctor, path), ctor, path, claimer);
       this._onFgBatchStart(path, path);
       let notifyFn: ((success: boolean) => void) | null = null;
       const promise = this._loadSingle(ctor, path, options).then(
@@ -830,6 +853,7 @@ export class Loader {
       const options = arg2;
 
       if (typeof source === 'string') {
+        this._claim(this._key(ctor, source), ctor, source, claimer);
         this._onFgBatchStart(source, source);
         let notifyFn: ((success: boolean) => void) | null = null;
         const promise = this._loadSingle(ctor, source, options).then(
@@ -856,6 +880,7 @@ export class Loader {
         let notifyFn: ((success: boolean) => void) | null = null;
         const results: unknown[] = new Array(paths.length);
         const promises = paths.map((path, i) => {
+          this._claim(this._key(ctor, path), ctor, path, claimer);
           this._onFgBatchStart(path, path);
           return this._loadSingle(ctor, path, options).then(
             v => {
@@ -890,6 +915,7 @@ export class Loader {
             ? options
             : { ...pathOrConfig, ...(typeof options === 'object' && options !== null ? (options as Record<string, unknown>) : {}) };
 
+        this._claim(this._key(ctor, alias), ctor, alias, claimer);
         this._onFgBatchStart(alias, path);
 
         return this._loadSingle(ctor, alias, itemOptions, path).then(
@@ -921,7 +947,7 @@ export class Loader {
       asset: value instanceof AssetImpl ? value : new (Asset as new (c: AssetInput) => Asset<unknown>)(value),
     }));
 
-    return this._createLoadingQueue(items, results => {
+    return this._createLoadingQueue(claimer, items, results => {
       const out: Record<string, unknown> = {};
 
       for (const { alias } of items) {
@@ -948,6 +974,18 @@ export class Loader {
   public backgroundLoad(type: Loadable, source: string, options?: unknown): void;
   public backgroundLoad(type: Loadable, sources: readonly string[], options?: unknown): void;
   public backgroundLoad(type?: Loadable, source?: string | readonly string[], options?: unknown): void {
+    this._backgroundClaimed(this._rootClaimer, type, source, options);
+  }
+
+  /**
+   * Claimed variant of {@link backgroundLoad}: identical queueing, but every
+   * declared source is claimed under `claimer` (refcount) so a scene-scoped
+   * pre-warm releases correctly and a not-yet-started entry is dropped from the
+   * queue at refcount 0. The public {@link backgroundLoad} delegates here under
+   * the app-lifetime {@link _rootClaimer}.
+   * @internal
+   */
+  public _backgroundClaimed(claimer: symbol, type?: Loadable, source?: string | readonly string[], options?: unknown): void {
     // Start a fresh progress batch only when idle; a re-entrant call while the
     // queue is draining extends the running batch instead (mirrors the
     // accounting in _loadSingleBackground).
@@ -961,6 +999,7 @@ export class Loader {
       const sources: readonly string[] = typeof source === 'string' ? [source] : source;
 
       for (const src of sources) {
+        this._claim(this._key(ctor, src), ctor, src, claimer);
         this._addManifestEntry(ctor, src, src, options);
 
         if (this._hasResource(ctor, src)) continue;
@@ -978,6 +1017,8 @@ export class Loader {
 
     for (const [manifestType, entries] of this._manifest) {
       for (const [alias, entry] of entries) {
+        this._claim(this._key(manifestType, alias), manifestType, alias, claimer);
+
         if (this._hasResource(manifestType, alias)) continue;
 
         const key = this._key(manifestType, alias);
@@ -1079,6 +1120,19 @@ export class Loader {
    */
   public get<T extends Loadable>(type: T, alias: string): LoadReturn<T>;
   public get(typeOrPath: Loadable | string, source?: unknown, options?: unknown): unknown {
+    return this._getClaimed(this._rootClaimer, typeOrPath, source, options);
+  }
+
+  /**
+   * Claimed variant of {@link get}: identical resolution, but each resolved key
+   * is claimed under `claimer` (refcount). The public {@link get} delegates here
+   * under the app-lifetime {@link _rootClaimer}; the scene-scoped loader proxy
+   * passes its own scope. `_claim` runs AFTER `_getSeamless`/`_getRef` so an
+   * evicted key's re-fetch is driven from here (the re-armed handle reads
+   * `'loading'`, which `_getSeamless` alone would not re-fetch).
+   * @internal
+   */
+  public _getClaimed(claimer: symbol, typeOrPath: Loadable | string, source?: unknown, options?: unknown): unknown {
     if (typeof typeOrPath === 'string') {
       const path = typeOrPath;
       const ctor = this._resolveExtensionType(path);
@@ -1093,7 +1147,10 @@ export class Loader {
         throw new Error(`Loader: type ${this._describeType(ctor)} inferred from "${path}" has no seamless adapter — use load() instead.`);
       }
 
-      return this._getSeamless(ctor, pathAdapter, path, source);
+      const handle = this._getSeamless(ctor, pathAdapter, path, source);
+      this._claim(this._key(ctor, path), ctor, path, claimer);
+
+      return handle;
     }
 
     const ctor = typeOrPath;
@@ -1101,13 +1158,21 @@ export class Loader {
 
     if (adapter !== undefined) {
       if (typeof source === 'string') {
-        return this._getSeamless(ctor, adapter, source, options);
+        const handle = this._getSeamless(ctor, adapter, source, options);
+        this._claim(this._key(ctor, source), ctor, source, claimer);
+
+        return handle;
       }
 
       if (Array.isArray(source)) {
         const paths: readonly string[] = source;
 
-        return paths.map(path => this._getSeamless(ctor, adapter, path, options));
+        return paths.map(path => {
+          const handle = this._getSeamless(ctor, adapter, path, options);
+          this._claim(this._key(ctor, path), ctor, path, claimer);
+
+          return handle;
+        });
       }
 
       const out: Record<string, unknown> = {};
@@ -1115,13 +1180,17 @@ export class Loader {
 
       for (const [key, path] of Object.entries(items)) {
         out[key] = this._getSeamless(ctor, adapter, path, options);
+        this._claim(this._key(ctor, path), ctor, path, claimer);
       }
 
       return out;
     }
 
     if (this._valueTokens.has(ctor) && typeof source === 'string') {
-      return this._getRef(ctor, source, options);
+      const ref = this._getRef(ctor, source, options);
+      this._claim(this._key(ctor, source), ctor, source, claimer);
+
+      return ref;
     }
 
     const alias = source as string;
@@ -1131,7 +1200,30 @@ export class Loader {
       throw new Error(`Missing resource "${alias}" for type ${ctor.name}.`);
     }
 
+    this._claim(this._key(ctor, alias), ctor, alias, claimer);
+
     return typeMap.get(alias);
+  }
+
+  /**
+   * Releases the app-lifetime claim on an asset. When the released claim is the
+   * last one on that key, the payload is evicted immediately: a seamless
+   * handle's payload is dropped in place (identity preserved, `loadState` →
+   * `'loading'`) so a later {@link get} heals every dangling consumer, and a
+   * not-yet-started background entry is dropped from the queue.
+   *
+   * Accepts either the deferred handle / value-ref returned by {@link get}, or
+   * the `(type, source)` pair. Releasing an unclaimed or unknown asset is a
+   * no-op.
+   */
+  public release(handle: object): void;
+  public release(type: AssetConstructor, source: string): void;
+  public release(handleOrType: object | AssetConstructor, source?: string): void {
+    const key = typeof source === 'string' ? this._key(handleOrType as AssetConstructor, source) : this._handleKeys.get(handleOrType);
+
+    if (key !== undefined) {
+      this._release(key, this._rootClaimer);
+    }
   }
 
   /**
@@ -1531,6 +1623,7 @@ export class Loader {
     const handle = adapter.createPlaceholder(options);
 
     this._deferred.set(key, { handle, options });
+    this._handleKeys.set(handle as object, key);
     this._startSeamlessFetch(type, source, options);
 
     return handle;
@@ -1571,6 +1664,7 @@ export class Loader {
     const ref = new AssetRef<unknown>();
 
     this._refs.set(key, { ref, options });
+    this._handleKeys.set(ref, key);
 
     const stored = this._resources.get(type)?.get(source);
 
@@ -1591,6 +1685,95 @@ export class Loader {
     void this._loadSingle(type, source, options).catch(() => {
       /* Failure handled centrally in _onTrackedFailure. */
     });
+  }
+
+  /**
+   * Register a claim on a resource key under a claim scope (idempotent per
+   * scope). On an evicted key, kick a re-fetch into the existing, already
+   * re-armed handle so every dangling consumer heals in place.
+   * @internal
+   */
+  public _claim(key: string, type: AssetConstructor, source: string, claimer: symbol): void {
+    let entry = this._claims.get(key);
+
+    if (entry === undefined) {
+      entry = { scopes: new Set<symbol>(), type, source };
+      this._claims.set(key, entry);
+    }
+
+    entry.scopes.add(claimer);
+
+    if (this._evicted.has(key)) {
+      this._evicted.delete(key);
+
+      // The handle was re-armed to 'loading' during eviction; just re-drive the fetch.
+      if (this._seamlessAdapters.has(type)) {
+        this._startSeamlessFetch(type, source, this._deferred.get(key)?.options);
+      }
+    }
+  }
+
+  /**
+   * Drop a claim scope from a key; when the last scope releases, evict the
+   * payload immediately (refcount 0).
+   * @internal
+   */
+  public _release(key: string, claimer: symbol): void {
+    const entry = this._claims.get(key);
+
+    if (entry === undefined) {
+      return;
+    }
+
+    entry.scopes.delete(claimer);
+
+    if (entry.scopes.size === 0) {
+      this._claims.delete(key);
+      this._evictKey(key, entry.type, entry.source);
+    }
+  }
+
+  /**
+   * Free a key's payload while keeping its handle identity: find the handle
+   * (post-fill in `_resources`, or in-flight in `_deferred`), adapter-evict it
+   * (drops payload + re-arms to 'loading'), remove the stored resource, and
+   * re-register the handle in `_deferred` so the next claim heals in place.
+   * Also drops a not-yet-started background-queue entry. Seamless payloads only
+   * this slice — value-ref eviction is an accepted gap (§6 follow-up).
+   * @internal
+   */
+  private _evictKey(key: string, type: AssetConstructor, source: string): void {
+    const adapter = this._seamlessAdapters.get(type);
+    // A still-deferred handle means the fetch is in flight and has not filled
+    // yet: leave it to the running fetch (which completes and fills the — now
+    // unclaimed — handle; §4.7 minimal). Only a payload that already converged
+    // into `_resources` is dropped in place here.
+    const deferred = this._deferred.get(key);
+    const handle = deferred?.handle ?? this._resources.get(type)?.get(source);
+
+    if (adapter !== undefined && deferred === undefined && handle !== undefined) {
+      adapter.evict(handle);
+      this._resources.get(type)?.delete(source);
+      // The original options were consumed when the payload converged into
+      // `_resources` (the pre-fill `_deferred` entry is gone); the re-fetch
+      // re-derives them from the manifest entry, if any.
+      this._deferred.set(key, { handle, options: undefined });
+      this._handleKeys.set(handle as object, key);
+      this._evicted.add(key);
+      // A load that just settled may leave a resolved-but-not-yet-cleaned
+      // in-flight entry (its `.finally` cleanup is a pending microtask). Drop it
+      // so the reclaim's re-fetch starts fresh instead of deduping onto the
+      // stale promise, which would never re-fill the re-armed handle.
+      this._inFlight.delete(key);
+    }
+
+    // Drop a not-yet-started background entry (only possible while still queued;
+    // once _startBackgroundEntry ran it is in _inFlight and cannot be cancelled).
+    const queued = this._backgroundQueue.findIndex(entry => this._key(entry.type, entry.alias) === key);
+
+    if (queued !== -1) {
+      this._backgroundQueue.splice(queued, 1);
+    }
   }
 
   private async _loadSingle(type: AssetConstructor, alias: string, options?: unknown, explicitPath?: string): Promise<unknown> {
@@ -1656,7 +1839,11 @@ export class Loader {
     return this._waitForBackgroundEntry(type, alias);
   }
 
-  private _createLoadingQueue<T>(items: Array<{ alias: string; asset: Asset<unknown> }>, buildResult: (results: Map<string, unknown>) => T): LoadingQueue<T> {
+  private _createLoadingQueue<T>(
+    claimer: symbol,
+    items: Array<{ alias: string; asset: Asset<unknown> }>,
+    buildResult: (results: Map<string, unknown>) => T,
+  ): LoadingQueue<T> {
     const results = new Map<string, unknown>();
     let notifyFn: ((success: boolean) => void) | null = null;
 
@@ -1677,6 +1864,8 @@ export class Loader {
           },
         );
       }
+
+      this._claim(this._key(ctor, alias), ctor, alias, claimer);
 
       return this._loadSingleAsset(ctor, alias, asset).then(
         resource => {
