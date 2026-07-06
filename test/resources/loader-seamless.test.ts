@@ -1,4 +1,4 @@
-import { logger } from '#core/logging';
+import { logger, LogSeverity } from '#core/logging';
 import { materializeAssetBindings } from '#extensions/materialize';
 import { Texture } from '#rendering/texture/Texture';
 import { coreAssetBindings } from '#resources/coreAssetBindings';
@@ -129,5 +129,71 @@ describe('Loader seamless get (Texture)', () => {
     const loader = createCoreLoader();
 
     expect(() => loader.get(Json, 'never-loaded')).toThrow('Missing resource');
+  });
+
+  test('array form returns deferred handles in input order and dedups', async () => {
+    mockFetchImage();
+    const loader = createCoreLoader();
+
+    const [a, b, aAgain] = loader.get(Texture, ['a.png', 'b.png', 'a.png']);
+
+    expect(a).toBeInstanceOf(Texture);
+    expect(b).not.toBe(a);
+    expect(aAgain).toBe(a);
+
+    await Promise.all([a.loaded, b.loaded]);
+    expect(a.loadState).toBe('ready');
+    expect(b.loadState).toBe('ready');
+  });
+
+  test('record form returns handles under the input keys', async () => {
+    mockFetchImage();
+    const loader = createCoreLoader();
+
+    const { ship, gradient } = loader.get(Texture, { ship: 'ship.png', gradient: 'gradient.png' });
+
+    expect(ship).toBeInstanceOf(Texture);
+    expect(gradient).not.toBe(ship);
+    expect(ship).toBe(loader.get(Texture, 'ship.png'));
+
+    await ship.loaded;
+    expect(ship.loadState).toBe('ready');
+  });
+
+  test('conflicting options warn once and the first call wins', async () => {
+    mockFetchImage();
+    const loader = createCoreLoader();
+    const warnings: string[] = [];
+    const removeSink = logger.addSink(entry => {
+      if (entry.severity === LogSeverity.Warning) warnings.push(entry.message);
+    });
+
+    const handle = loader.get(Texture, 'ship.png', { samplerOptions: { flipY: true } });
+
+    loader.get(Texture, 'ship.png', { samplerOptions: { flipY: false } });
+    loader.get(Texture, 'ship.png', { samplerOptions: { flipY: false } });
+
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain('first call');
+
+    await handle.loaded;
+    expect(handle.flipY).toBe(true); // first options reached the factory; fill transplanted them
+
+    removeSink();
+  });
+
+  test('same options (deep-equal) do not warn', () => {
+    mockFetchImage();
+    const loader = createCoreLoader();
+    const warnings: string[] = [];
+    const removeSink = logger.addSink(entry => {
+      if (entry.severity === LogSeverity.Warning) warnings.push(entry.message);
+    });
+
+    loader.get(Texture, 'ship.png', { samplerOptions: { flipY: true } });
+    loader.get(Texture, 'ship.png', { samplerOptions: { flipY: true } });
+
+    expect(warnings).toHaveLength(0);
+    removeSink();
   });
 });

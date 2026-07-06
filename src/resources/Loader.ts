@@ -1027,6 +1027,8 @@ export class Loader {
    * later call are ignored with a one-time dev warning.
    */
   public get(type: typeof Texture, source: string, options?: TextureFactoryOptions): Texture;
+  public get(type: typeof Texture, sources: readonly string[], options?: TextureFactoryOptions): Texture[];
+  public get<K extends string>(type: typeof Texture, items: Readonly<Record<K, string>>, options?: TextureFactoryOptions): Record<K, Texture>;
 
   /**
    * Retrieves a previously loaded asset by type and alias (legacy lookup for
@@ -1038,21 +1040,38 @@ export class Loader {
    */
   public get<T = unknown>(type: typeof Json, alias: string): T;
   public get<T extends Loadable>(type: T, alias: string): LoadReturn<T>;
-  public get(type: Loadable, source: string, options?: unknown): unknown {
+  public get(type: Loadable, source: string | readonly string[] | Readonly<Record<string, string>>, options?: unknown): unknown {
     const ctor = type;
     const adapter = this._seamlessAdapters.get(ctor);
 
     if (adapter !== undefined) {
-      return this._getSeamless(ctor, adapter, source, options);
+      if (typeof source === 'string') {
+        return this._getSeamless(ctor, adapter, source, options);
+      }
+
+      if (Array.isArray(source)) {
+        const paths: readonly string[] = source;
+
+        return paths.map(path => this._getSeamless(ctor, adapter, path, options));
+      }
+
+      const out: Record<string, unknown> = {};
+
+      for (const [key, path] of Object.entries(source)) {
+        out[key] = this._getSeamless(ctor, adapter, path, options);
+      }
+
+      return out;
     }
 
+    const alias = source as string;
     const typeMap = this._resources.get(ctor);
 
-    if (!typeMap?.has(source)) {
-      throw new Error(`Missing resource "${source}" for type ${ctor.name}.`);
+    if (!typeMap?.has(alias)) {
+      throw new Error(`Missing resource "${alias}" for type ${ctor.name}.`);
     }
 
-    return typeMap.get(source);
+    return typeMap.get(alias);
   }
 
   /**
