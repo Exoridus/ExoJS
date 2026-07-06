@@ -217,4 +217,60 @@ describe('Loader seamless get (Texture)', () => {
     await expect(handle.loaded).resolves.toBe(handle);
     expect(handle.loadState).toBe('ready');
   });
+
+  test('a 404 marks the handle failed with the missing checker; loaded rejects', async () => {
+    mockFetch404();
+    const loader = createCoreLoader();
+
+    const handle = loader.get(Texture, 'gone.png');
+
+    await expect(handle.loaded).rejects.toThrow('Failed to load');
+    expect(handle.loadState).toBe('failed');
+    expect(handle.source).toBe(Texture.missing.source);
+    expect(loader.has(Texture, 'gone.png')).toBe(false);
+  });
+
+  test('get() on a failed source retries and heals the SAME handle in place', async () => {
+    mockFetch404();
+    const loader = createCoreLoader();
+
+    const handle = loader.get(Texture, 'flaky.png');
+
+    await expect(handle.loaded).rejects.toThrow();
+    const rejectedPromise = handle.loaded;
+
+    mockFetchImage();
+    const retried = loader.get(Texture, 'flaky.png');
+
+    expect(retried).toBe(handle);
+    expect(handle.loadState).toBe('loading');
+
+    const freshPromise = handle.loaded;
+
+    expect(freshPromise).not.toBe(rejectedPromise);
+
+    await expect(freshPromise).resolves.toBe(handle);
+    expect(handle.loadState).toBe('ready');
+    expect(handle.width).toBe(16);
+    expect(handle.source).not.toBe(Texture.missing.source);
+    expect(loader.has(Texture, 'flaky.png')).toBe(true);
+
+    await expect(rejectedPromise).rejects.toThrow(); // the old promise stays rejected
+  });
+
+  test('a failed handle without retry keeps returning the same instance', async () => {
+    mockFetch404();
+    const loader = createCoreLoader();
+
+    const handle = loader.get(Texture, 'gone.png');
+
+    await expect(handle.loaded).rejects.toThrow();
+
+    mockFetch404();
+    const again = loader.get(Texture, 'gone.png');
+
+    expect(again).toBe(handle);
+    await expect(again.loaded).rejects.toThrow();
+    expect(again.loadState).toBe('failed');
+  });
 });
