@@ -1084,6 +1084,13 @@ export class Loader {
    * The same source always yields the same instance — also across
    * {@link load} — and options are first-wins: conflicting options on a
    * later call are ignored with a one-time dev warning.
+   *
+   * @remarks For a seamless type, `get(Type, source)` on an unloaded source
+   * returns a `'loading'` placeholder and fetches URL `<source>` — it no longer
+   * throws "missing resource". A bare alias that isn't a real path (a typo, or a
+   * not-yet-preloaded alias) therefore fetches that string and can 404 quietly
+   * instead of throwing; preloaded aliases still return the stored payload. This
+   * is intended seamless-by-default behaviour — the note is for debuggability.
    */
   public get(type: typeof Texture, source: string, options?: TextureFactoryOptions & PreSizeOptions): Texture;
   public get(type: typeof Texture, sources: readonly string[], options?: TextureFactoryOptions & PreSizeOptions): Texture[];
@@ -1215,6 +1222,12 @@ export class Loader {
    * Accepts either the deferred handle / value-ref returned by {@link get}, or
    * the `(type, source)` pair. Releasing an unclaimed or unknown asset is a
    * no-op.
+   *
+   * @remarks The `release(handle)` form resolves the key via an internal handle
+   * → key map that is populated ONLY for seamless handles and value-refs. A
+   * non-seamless legacy asset (e.g. `get(SomeNonSeamlessType, alias)`) has no
+   * such entry, so `release(handle)` silently can't find its key and won't drop
+   * the claim — use the `release(type, source)` form for those.
    */
   public release(handle: object): void;
   public release(type: AssetConstructor, source: string): void;
