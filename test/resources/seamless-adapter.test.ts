@@ -152,15 +152,37 @@ describe('soundSeamlessAdapter', () => {
     expect(handle.audioBuffer).toBeNull();
     expect(handle.loadState).toBe('loading');
   });
+
+  test('fill throws when the donor carries no decoded buffer', () => {
+    const handle = soundSeamlessAdapter.createPlaceholder();
+    expect(() => soundSeamlessAdapter.fill(handle, new Sound(null))).toThrow('no decoded buffer');
+  });
 });
 
 describe('textureSeamlessAdapter.evict', () => {
-  test('drops the source and re-arms', () => {
+  test('drops the real source and re-arms for a heal', () => {
     const handle = textureSeamlessAdapter.createPlaceholder();
-    // simulate a fill via a donor
-    const donor = textureSeamlessAdapter.createPlaceholder();
-    // (donor needs a real source in a full test; here assert the re-arm contract)
+    const canvas = document.createElement('canvas');
+
+    canvas.width = 16;
+    canvas.height = 16;
+
+    const donor = new Texture(canvas);
+
+    textureSeamlessAdapter.fill(handle, donor);
+
+    // Precondition: a real payload is present after the fill.
+    expect(handle.loadState).toBe('ready');
+    expect(handle.source).toBe(canvas);
+    expect(handle.width).toBe(16);
+    expect(handle.height).toBe(16);
+
     textureSeamlessAdapter.evict(handle);
+
+    // The drop must actually free the source and reset the size — these fail on a no-op evict.
+    expect(handle.source).toBeNull();
+    expect(handle.width).toBe(0);
+    expect(handle.height).toBe(0);
     expect(handle.loadState).toBe('loading');
   });
 });
