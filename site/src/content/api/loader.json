@@ -6,10 +6,10 @@
   "subsystem": "resources",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 54,
+  "memberCount": 60,
   "counts": {
     "constructors": 1,
-    "methods": 43,
+    "methods": 49,
     "properties": 2,
     "events": 8
   },
@@ -88,254 +88,6 @@
       "title": "Methods",
       "members": [
         {
-          "name": "add",
-          "signature": "add(type: Loadable, path: string): this",
-          "signatureTokens": [
-            {
-              "text": "add",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "type",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Loadable",
-              "kind": "type"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "path",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "string",
-              "kind": "keyword"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "this",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "type",
-              "type": "Loadable",
-              "optional": false
-            },
-            {
-              "name": "path",
-              "type": "string",
-              "optional": false
-            }
-          ],
-          "returnType": "this",
-          "description": "Registers one or more asset aliases in the manifest without immediately loading them. - Single path: the path is used as both the alias and the URL. - Array of paths: each path becomes its own alias. - Record: keys are aliases, values are URLs. Assets pre-registered here can later be loaded by alias, included in background loads via backgroundLoad, or used as the source of truth when resolving conflicts in registerManifest."
-        },
-        {
-          "name": "add",
-          "signature": "add(type: Loadable, paths: readonly string[]): this",
-          "signatureTokens": [
-            {
-              "text": "add",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "type",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Loadable",
-              "kind": "type"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "paths",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "readonly",
-              "kind": "keyword"
-            },
-            {
-              "text": " ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "string",
-              "kind": "keyword"
-            },
-            {
-              "text": "[]",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "this",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "type",
-              "type": "Loadable",
-              "optional": false
-            },
-            {
-              "name": "paths",
-              "type": "readonly string[]",
-              "optional": false
-            }
-          ],
-          "returnType": "this",
-          "description": "Registers one or more asset aliases in the manifest without immediately loading them. - Single path: the path is used as both the alias and the URL. - Array of paths: each path becomes its own alias. - Record: keys are aliases, values are URLs. Assets pre-registered here can later be loaded by alias, included in background loads via backgroundLoad, or used as the source of truth when resolving conflicts in registerManifest."
-        },
-        {
-          "name": "add",
-          "signature": "add(type: Loadable, items: Readonly<Record<string, string>>): this",
-          "signatureTokens": [
-            {
-              "text": "add",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "type",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Loadable",
-              "kind": "type"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "items",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Readonly",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Record",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "string",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "string",
-              "kind": "keyword"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "this",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "type",
-              "type": "Loadable",
-              "optional": false
-            },
-            {
-              "name": "items",
-              "type": "Readonly<Record<string, string>>",
-              "optional": false
-            }
-          ],
-          "returnType": "this",
-          "description": "Registers one or more asset aliases in the manifest without immediately loading them. - Single path: the path is used as both the alias and the URL. - Array of paths: each path becomes its own alias. - Record: keys are aliases, values are URLs. Assets pre-registered here can later be loaded by alias, included in background loads via backgroundLoad, or used as the source of truth when resolving conflicts in registerManifest."
-        },
-        {
           "name": "backgroundLoad",
           "signature": "backgroundLoad(): void",
           "signatureTokens": [
@@ -362,7 +114,205 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Enqueues all manifest-registered assets that have not yet been loaded into the background fetch queue and begins draining the queue up to concurrency simultaneous connections. Progress is reported via onProgress. In-flight assets and already-loaded assets are skipped automatically. Call loadAll instead if you need to await completion."
+          "description": "Declares sources and enqueues them for low-priority background fetching in one step (replaces the removed add(); PixiJS model). Progress is reported via onProgress; already-loaded, in-flight, and already-queued sources are skipped. get()/load() on a queued source boosts it to the front. The zero-argument form enqueues everything registered in the manifest (bundles/manifest die with the asset graph)."
+        },
+        {
+          "name": "backgroundLoad",
+          "signature": "backgroundLoad(type: Loadable, source: string, options?: unknown): void",
+          "signatureTokens": [
+            {
+              "text": "backgroundLoad",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "type",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Loadable",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "type",
+              "type": "Loadable",
+              "optional": false
+            },
+            {
+              "name": "source",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "unknown",
+              "optional": true
+            }
+          ],
+          "returnType": "void",
+          "description": "Declares sources and enqueues them for low-priority background fetching in one step (replaces the removed add(); PixiJS model). Progress is reported via onProgress; already-loaded, in-flight, and already-queued sources are skipped. get()/load() on a queued source boosts it to the front. The zero-argument form enqueues everything registered in the manifest (bundles/manifest die with the asset graph)."
+        },
+        {
+          "name": "backgroundLoad",
+          "signature": "backgroundLoad(type: Loadable, sources: readonly string[], options?: unknown): void",
+          "signatureTokens": [
+            {
+              "text": "backgroundLoad",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "type",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Loadable",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "sources",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "type",
+              "type": "Loadable",
+              "optional": false
+            },
+            {
+              "name": "sources",
+              "type": "readonly string[]",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "unknown",
+              "optional": true
+            }
+          ],
+          "returnType": "void",
+          "description": "Declares sources and enqueues them for low-priority background fetching in one step (replaces the removed add(); PixiJS model). Progress is reported via onProgress; already-loaded, in-flight, and already-queued sources are skipped. get()/load() on a queued source boosts it to the front. The zero-argument form enqueues everything registered in the manifest (bundles/manifest die with the asset graph)."
         },
         {
           "name": "destroy",
@@ -395,7 +345,7 @@
         },
         {
           "name": "get",
-          "signature": "get(type: typeof Texture, source: string, options?: TextureFactoryOptions): Texture",
+          "signature": "get(type: typeof Texture, source: string, options?: TextureFactoryOptions & PreSizeOptions): Texture",
           "signatureTokens": [
             {
               "text": "get",
@@ -462,6 +412,14 @@
               "kind": "type"
             },
             {
+              "text": " & ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PreSizeOptions",
+              "kind": "type"
+            },
+            {
               "text": ")",
               "kind": "punctuation"
             },
@@ -487,7 +445,7 @@
             },
             {
               "name": "options",
-              "type": "TextureFactoryOptions",
+              "type": "TextureFactoryOptions & PreSizeOptions",
               "optional": true
             }
           ],
@@ -496,7 +454,7 @@
         },
         {
           "name": "get",
-          "signature": "get(type: typeof Texture, sources: readonly string[], options?: TextureFactoryOptions): Texture[]",
+          "signature": "get(type: typeof Texture, sources: readonly string[], options?: TextureFactoryOptions & PreSizeOptions): Texture[]",
           "signatureTokens": [
             {
               "text": "get",
@@ -575,6 +533,14 @@
               "kind": "type"
             },
             {
+              "text": " & ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PreSizeOptions",
+              "kind": "type"
+            },
+            {
               "text": ")",
               "kind": "punctuation"
             },
@@ -604,7 +570,7 @@
             },
             {
               "name": "options",
-              "type": "TextureFactoryOptions",
+              "type": "TextureFactoryOptions & PreSizeOptions",
               "optional": true
             }
           ],
@@ -613,7 +579,7 @@
         },
         {
           "name": "get",
-          "signature": "get(type: typeof Texture, items: Readonly<Record<K, string>>, options?: TextureFactoryOptions): Record<K, Texture>",
+          "signature": "get(type: typeof Texture, items: Readonly<Record<K, string>>, options?: TextureFactoryOptions & PreSizeOptions): Record<K, Texture>",
           "signatureTokens": [
             {
               "text": "get",
@@ -712,6 +678,14 @@
               "kind": "type"
             },
             {
+              "text": " & ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PreSizeOptions",
+              "kind": "type"
+            },
+            {
               "text": ")",
               "kind": "punctuation"
             },
@@ -757,7 +731,7 @@
             },
             {
               "name": "options",
-              "type": "TextureFactoryOptions",
+              "type": "TextureFactoryOptions & PreSizeOptions",
               "optional": true
             }
           ],
@@ -766,7 +740,131 @@
         },
         {
           "name": "get",
-          "signature": "get(type: typeof Json, alias: string): T",
+          "signature": "get(path: LoadByPath<S> extends Texture ? S : never, options?: TextureFactoryOptions & PreSizeOptions): Texture",
+          "signatureTokens": [
+            {
+              "text": "get",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "path",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LoadByPath",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "S",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "extends",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            },
+            {
+              "text": " ? ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "S",
+              "kind": "type"
+            },
+            {
+              "text": " : ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "never",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextureFactoryOptions",
+              "kind": "type"
+            },
+            {
+              "text": " & ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PreSizeOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "path",
+              "type": "LoadByPath<S> extends Texture ? S : never",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "TextureFactoryOptions & PreSizeOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "Texture",
+          "description": "Seamless access by path alone — the asset type is inferred from the file extension (basename-only, longest-suffix-first; see ExtensionTypeMap). Accepts only paths whose inferred type has a seamless adapter (compile-time gate); dynamic strings resolving to an unregistered extension or a non-seamless type throw with guidance."
+        },
+        {
+          "name": "get",
+          "signature": "get(type: typeof Json, source: string, options?: unknown): AssetRef<T>",
           "signatureTokens": [
             {
               "text": "get",
@@ -801,7 +899,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "alias",
+              "text": "source",
               "kind": "param"
             },
             {
@@ -813,6 +911,26 @@
               "kind": "keyword"
             },
             {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
               "text": ")",
               "kind": "punctuation"
             },
@@ -821,8 +939,20 @@
               "kind": "punctuation"
             },
             {
+              "text": "AssetRef",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
               "text": "T",
               "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             }
           ],
           "params": [
@@ -832,13 +962,708 @@
               "optional": false
             },
             {
-              "name": "alias",
+              "name": "source",
               "type": "string",
               "optional": false
+            },
+            {
+              "name": "options",
+              "type": "unknown",
+              "optional": true
             }
           ],
-          "returnType": "T",
-          "description": "Retrieves a previously loaded asset by type and alias (legacy lookup for types without a seamless adapter; replaced by the asset graph in a later slice). Throws if the asset has not been loaded. Use peek for a non-throwing alternative, or has to guard the call."
+          "returnType": "AssetRef<T>",
+          "description": "Seamless access to a value asset: returns a stable AssetRef synchronously and never throws. The ref fills when the payload arrives (loaded resolves with the parsed value); failed refs retry in place on the next get. load() keeps resolving the raw value."
+        },
+        {
+          "name": "get",
+          "signature": "get(type: typeof TextAsset, source: string, options?: unknown): AssetRef<string>",
+          "signatureTokens": [
+            {
+              "text": "get",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "type",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "typeof",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextAsset",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetRef",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "type",
+              "type": "typeof TextAsset",
+              "optional": false
+            },
+            {
+              "name": "source",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "unknown",
+              "optional": true
+            }
+          ],
+          "returnType": "AssetRef<string>",
+          "description": "Seamless deferred access (asset-system v2). Returns SYNCHRONOUSLY and never throws: an already-loaded source returns the stored texture; an unknown source returns a placeholder handle immediately, starts the fetch, and fills the handle in place when the payload arrives (track it via Texture.loadState / Texture.loaded). Failed loads show the Texture.missing checker; calling get again for a 'failed' source retries and heals the same handle in place. The same source always yields the same instance — also across load — and options are first-wins: conflicting options on a later call are ignored with a one-time dev warning."
+        },
+        {
+          "name": "get",
+          "signature": "get(type: typeof CsvAsset, source: string, options?: unknown): AssetRef<string[][]>",
+          "signatureTokens": [
+            {
+              "text": "get",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "type",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "typeof",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CsvAsset",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetRef",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "type",
+              "type": "typeof CsvAsset",
+              "optional": false
+            },
+            {
+              "name": "source",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "unknown",
+              "optional": true
+            }
+          ],
+          "returnType": "AssetRef<string[][]>",
+          "description": "Seamless deferred access (asset-system v2). Returns SYNCHRONOUSLY and never throws: an already-loaded source returns the stored texture; an unknown source returns a placeholder handle immediately, starts the fetch, and fills the handle in place when the payload arrives (track it via Texture.loadState / Texture.loaded). Failed loads show the Texture.missing checker; calling get again for a 'failed' source retries and heals the same handle in place. The same source always yields the same instance — also across load — and options are first-wins: conflicting options on a later call are ignored with a one-time dev warning."
+        },
+        {
+          "name": "get",
+          "signature": "get(type: typeof XmlAsset, source: string, options?: unknown): AssetRef<Document>",
+          "signatureTokens": [
+            {
+              "text": "get",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "type",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "typeof",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "XmlAsset",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetRef",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Document",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "type",
+              "type": "typeof XmlAsset",
+              "optional": false
+            },
+            {
+              "name": "source",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "unknown",
+              "optional": true
+            }
+          ],
+          "returnType": "AssetRef<Document>",
+          "description": "Seamless deferred access (asset-system v2). Returns SYNCHRONOUSLY and never throws: an already-loaded source returns the stored texture; an unknown source returns a placeholder handle immediately, starts the fetch, and fills the handle in place when the payload arrives (track it via Texture.loadState / Texture.loaded). Failed loads show the Texture.missing checker; calling get again for a 'failed' source retries and heals the same handle in place. The same source always yields the same instance — also across load — and options are first-wins: conflicting options on a later call are ignored with a one-time dev warning."
+        },
+        {
+          "name": "get",
+          "signature": "get(type: typeof SubtitleAsset, source: string, options?: unknown): AssetRef<VTTCue[]>",
+          "signatureTokens": [
+            {
+              "text": "get",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "type",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "typeof",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SubtitleAsset",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetRef",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "VTTCue",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "type",
+              "type": "typeof SubtitleAsset",
+              "optional": false
+            },
+            {
+              "name": "source",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "unknown",
+              "optional": true
+            }
+          ],
+          "returnType": "AssetRef<VTTCue[]>",
+          "description": "Seamless deferred access (asset-system v2). Returns SYNCHRONOUSLY and never throws: an already-loaded source returns the stored texture; an unknown source returns a placeholder handle immediately, starts the fetch, and fills the handle in place when the payload arrives (track it via Texture.loadState / Texture.loaded). Failed loads show the Texture.missing checker; calling get again for a 'failed' source retries and heals the same handle in place. The same source always yields the same instance — also across load — and options are first-wins: conflicting options on a later call are ignored with a one-time dev warning."
+        },
+        {
+          "name": "get",
+          "signature": "get(type: typeof BinaryAsset, source: string, options?: unknown): AssetRef<ArrayBuffer>",
+          "signatureTokens": [
+            {
+              "text": "get",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "type",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "typeof",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BinaryAsset",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetRef",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ArrayBuffer",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "type",
+              "type": "typeof BinaryAsset",
+              "optional": false
+            },
+            {
+              "name": "source",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "unknown",
+              "optional": true
+            }
+          ],
+          "returnType": "AssetRef<ArrayBuffer>",
+          "description": "Seamless deferred access (asset-system v2). Returns SYNCHRONOUSLY and never throws: an already-loaded source returns the stored texture; an unknown source returns a placeholder handle immediately, starts the fetch, and fills the handle in place when the payload arrives (track it via Texture.loadState / Texture.loaded). Failed loads show the Texture.missing checker; calling get again for a 'failed' source retries and heals the same handle in place. The same source always yields the same instance — also across load — and options are first-wins: conflicting options on a later call are ignored with a one-time dev warning."
+        },
+        {
+          "name": "get",
+          "signature": "get(type: typeof WasmAsset, source: string, options?: unknown): AssetRef<Module>",
+          "signatureTokens": [
+            {
+              "text": "get",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "type",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "typeof",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "WasmAsset",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetRef",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Module",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "type",
+              "type": "typeof WasmAsset",
+              "optional": false
+            },
+            {
+              "name": "source",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "unknown",
+              "optional": true
+            }
+          ],
+          "returnType": "AssetRef<Module>",
+          "description": "Seamless deferred access (asset-system v2). Returns SYNCHRONOUSLY and never throws: an already-loaded source returns the stored texture; an unknown source returns a placeholder handle immediately, starts the fetch, and fills the handle in place when the payload arrives (track it via Texture.loadState / Texture.loaded). Failed loads show the Texture.missing checker; calling get again for a 'failed' source retries and heals the same handle in place. The same source always yields the same instance — also across load — and options are first-wins: conflicting options on a later call are ignored with a one-time dev warning."
         },
         {
           "name": "get",
@@ -1897,7 +2722,7 @@
         },
         {
           "name": "load",
-          "signature": "load(path: PathExtension<S> extends keyof ExtensionTypeMap ? S : never): LoadingQueue<R>",
+          "signature": "load(path: [MatchExtension<Basename<StripQueryHash<S>>>] extends [never] ? never : S): LoadingQueue<R>",
           "signatureTokens": [
             {
               "text": "load",
@@ -1916,7 +2741,27 @@
               "kind": "punctuation"
             },
             {
-              "text": "PathExtension",
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MatchExtension",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Basename",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "StripQueryHash",
               "kind": "type"
             },
             {
@@ -1932,6 +2777,18 @@
               "kind": "punctuation"
             },
             {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
               "text": " ",
               "kind": "punctuation"
             },
@@ -1944,32 +2801,32 @@
               "kind": "punctuation"
             },
             {
-              "text": "keyof",
-              "kind": "keyword"
-            },
-            {
-              "text": " ",
+              "text": "[",
               "kind": "punctuation"
             },
             {
-              "text": "ExtensionTypeMap",
-              "kind": "type"
+              "text": "never",
+              "kind": "keyword"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
             },
             {
               "text": " ? ",
               "kind": "punctuation"
             },
             {
-              "text": "S",
-              "kind": "type"
+              "text": "never",
+              "kind": "keyword"
             },
             {
               "text": " : ",
               "kind": "punctuation"
             },
             {
-              "text": "never",
-              "kind": "keyword"
+              "text": "S",
+              "kind": "type"
             },
             {
               "text": ")",
@@ -1999,7 +2856,7 @@
           "params": [
             {
               "name": "path",
-              "type": "PathExtension<S> extends keyof ExtensionTypeMap ? S : never",
+              "type": "[MatchExtension<Basename<StripQueryHash<S>>>] extends [never] ? never : S",
               "optional": false
             }
           ],
@@ -2008,7 +2865,7 @@
         },
         {
           "name": "load",
-          "signature": "load(path: PathExtension<S> extends keyof ExtensionTypeMap ? S : never): LoadingQueue<LoadByPath<S>>",
+          "signature": "load(path: [MatchExtension<Basename<StripQueryHash<S>>>] extends [never] ? never : S): LoadingQueue<LoadByPath<S>>",
           "signatureTokens": [
             {
               "text": "load",
@@ -2027,7 +2884,27 @@
               "kind": "punctuation"
             },
             {
-              "text": "PathExtension",
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MatchExtension",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Basename",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "StripQueryHash",
               "kind": "type"
             },
             {
@@ -2043,6 +2920,18 @@
               "kind": "punctuation"
             },
             {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
               "text": " ",
               "kind": "punctuation"
             },
@@ -2055,32 +2944,32 @@
               "kind": "punctuation"
             },
             {
-              "text": "keyof",
-              "kind": "keyword"
-            },
-            {
-              "text": " ",
+              "text": "[",
               "kind": "punctuation"
             },
             {
-              "text": "ExtensionTypeMap",
-              "kind": "type"
+              "text": "never",
+              "kind": "keyword"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
             },
             {
               "text": " ? ",
               "kind": "punctuation"
             },
             {
-              "text": "S",
-              "kind": "type"
+              "text": "never",
+              "kind": "keyword"
             },
             {
               "text": " : ",
               "kind": "punctuation"
             },
             {
-              "text": "never",
-              "kind": "keyword"
+              "text": "S",
+              "kind": "type"
             },
             {
               "text": ")",
@@ -2122,7 +3011,7 @@
           "params": [
             {
               "name": "path",
-              "type": "PathExtension<S> extends keyof ExtensionTypeMap ? S : never",
+              "type": "[MatchExtension<Basename<StripQueryHash<S>>>] extends [never] ? never : S",
               "optional": false
             }
           ],

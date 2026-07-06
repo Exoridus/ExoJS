@@ -45,7 +45,7 @@ export interface SerializedScene {
  * data itself. The contract is that referenced assets are pre-loaded into the
  * target {@link Loader} before {@link Scene.deserialize} runs.
  */
-export interface AssetRef {
+export interface SerializedAssetRef {
   /** Loader alias/source the asset was originally loaded under. */
   source: string;
 }

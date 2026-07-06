@@ -103,11 +103,13 @@ async load(loader) {
 init(loader) {
     this.sky    = new Sprite(loader.get(Texture, 'sky'));
     this.ambient = loader.get(AudioStream, 'ambient');
-    this.levels = loader.get(Json, 'levels');
+    this.levels = loader.get(Json, 'levels').value;
 }
 ```
 
 Wrapping the calls in `Promise.all` lets unrelated asset categories load in parallel.
+
+For value assets such as `Json` (and `TextAsset`, `CsvAsset`, and the other data tokens), `loader.get(...)` hands back a lightweight `AssetRef` rather than the raw data. Read its `.value` to get the parsed result — after `load` has resolved, as above, `.value` is available synchronously. Resource assets like `Texture` and `AudioStream` still return their instance directly.
 
 ## Mixed asset map
 

@@ -5,7 +5,7 @@ import { materializeAssetBindings } from '#extensions/materialize';
 import { Texture } from '#rendering/texture/Texture';
 import { coreAssetBindings } from '#resources/coreAssetBindings';
 import { Loader } from '#resources/Loader';
-import { Json } from '#resources/tokens';
+import { textureSeamlessAdapter } from '#resources/seamless';
 
 /** Loader with all core asset bindings (mirrors createCoreLoader in loader.test.ts). */
 function createCoreLoader(): Loader {
@@ -130,7 +130,11 @@ describe('Loader seamless get (Texture)', () => {
   test('legacy alias lookup still throws for adapterless types', () => {
     const loader = createCoreLoader();
 
-    expect(() => loader.get(Json, 'never-loaded')).toThrow('Missing resource');
+    // A type that is neither a seamless handle nor a value token still falls
+    // through to the throwing legacy lookup (value tokens now return AssetRef).
+    class Adapterless {}
+
+    expect(() => loader.get(Adapterless, 'never-loaded')).toThrow('Missing resource');
   });
 
   test('array form returns deferred handles in input order and dedups', async () => {
@@ -142,6 +146,7 @@ describe('Loader seamless get (Texture)', () => {
     expect(a).toBeInstanceOf(Texture);
     expect(b).not.toBe(a);
     expect(aAgain).toBe(a);
+    expect(a).toBe(loader.get(Texture, 'a.png'));
 
     await Promise.all([a.loaded, b.loaded]);
     expect(a.loadState).toBe('ready');
@@ -160,6 +165,9 @@ describe('Loader seamless get (Texture)', () => {
 
     await ship.loaded;
     expect(ship.loadState).toBe('ready');
+
+    await gradient.loaded;
+    expect(gradient.loadState).toBe('ready');
   });
 
   test('conflicting options warn once and the first call wins', async () => {
@@ -170,18 +178,20 @@ describe('Loader seamless get (Texture)', () => {
       if (entry.severity === LogSeverity.Warning) warnings.push(entry.message);
     });
 
-    const handle = loader.get(Texture, 'ship.png', { samplerOptions: { flipY: true } });
+    try {
+      const handle = loader.get(Texture, 'ship.png', { samplerOptions: { flipY: true } });
 
-    loader.get(Texture, 'ship.png', { samplerOptions: { flipY: false } });
-    loader.get(Texture, 'ship.png', { samplerOptions: { flipY: false } });
+      loader.get(Texture, 'ship.png', { samplerOptions: { flipY: false } });
+      loader.get(Texture, 'ship.png', { samplerOptions: { flipY: false } });
 
-    expect(warnings).toHaveLength(1);
-    expect(warnings[0]).toContain('first call');
+      expect(warnings).toHaveLength(1);
+      expect(warnings[0]).toContain('first call');
 
-    await handle.loaded;
-    expect(handle.flipY).toBe(true); // first options reached the factory; fill transplanted them
-
-    removeSink();
+      await handle.loaded;
+      expect(handle.flipY).toBe(true); // first options reached the factory; fill transplanted them
+    } finally {
+      removeSink();
+    }
   });
 
   test('same options (deep-equal) do not warn', () => {
@@ -192,11 +202,14 @@ describe('Loader seamless get (Texture)', () => {
       if (entry.severity === LogSeverity.Warning) warnings.push(entry.message);
     });
 
-    loader.get(Texture, 'ship.png', { samplerOptions: { flipY: true } });
-    loader.get(Texture, 'ship.png', { samplerOptions: { flipY: true } });
+    try {
+      loader.get(Texture, 'ship.png', { samplerOptions: { flipY: true } });
+      loader.get(Texture, 'ship.png', { samplerOptions: { flipY: true } });
 
-    expect(warnings).toHaveLength(0);
-    removeSink();
+      expect(warnings).toHaveLength(0);
+    } finally {
+      removeSink();
+    }
   });
 
   test('unload() while the fetch is in flight fails the handle; a later get() heals it', async () => {
@@ -260,7 +273,7 @@ describe('Loader seamless get (Texture)', () => {
     await expect(rejectedPromise).rejects.toThrow(); // the old promise stays rejected
   });
 
-  test('a failed handle without retry keeps returning the same instance', async () => {
+  test('repeated get() on a persistently failing source retries and fails again on the same instance', async () => {
     mockFetch404();
     const loader = createCoreLoader();
 
@@ -272,6 +285,7 @@ describe('Loader seamless get (Texture)', () => {
     const again = loader.get(Texture, 'gone.png');
 
     expect(again).toBe(handle);
+    expect(again.loadState).toBe('loading');
     await expect(again.loaded).rejects.toThrow();
     expect(again.loadState).toBe('failed');
   });
@@ -296,6 +310,57 @@ describe('Loader seamless get (Texture)', () => {
     await expect(rejectedPromise).rejects.toThrow(); // the old promise stays rejected
   });
 
+  test('a failed seamless get dispatches onError exactly once', async () => {
+    mockFetch404();
+    const loader = createCoreLoader();
+    const errors: string[] = [];
+
+    loader.onError.add((_type, alias) => errors.push(alias));
+
+    const handle = loader.get(Texture, 'gone.png');
+
+    await expect(handle.loaded).rejects.toThrow();
+    expect(errors).toEqual(['gone.png']);
+  });
+
+  test('background + boosting get for the same source dispatch onError exactly once', async () => {
+    mockFetch404();
+    const loader = createCoreLoader();
+    const errors: string[] = [];
+
+    loader.onError.add((_type, alias) => errors.push(alias));
+    loader.backgroundLoad(Texture, ['gone.png']);
+
+    const handle = loader.get(Texture, 'gone.png');
+
+    await expect(handle.loaded).rejects.toThrow();
+    expect(errors).toEqual(['gone.png']);
+  });
+
+  test('plain load() failures do NOT dispatch onError (legacy semantics unchanged)', async () => {
+    mockFetch404();
+    const loader = createCoreLoader();
+    const errors: string[] = [];
+
+    loader.onError.add((_type, alias) => errors.push(alias));
+
+    await expect(loader.load(Texture, 'gone.png')).rejects.toThrow();
+    expect(errors).toEqual([]);
+  });
+
+  test('a load()-initiated retry that fails again refreshes the handle error', async () => {
+    mockFetch404();
+    const loader = createCoreLoader();
+
+    const handle = loader.get(Texture, 'gone.png');
+
+    await expect(handle.loaded).rejects.toThrow();
+
+    global.fetch = vi.fn(async (): Promise<Response> => ({ ok: false, status: 500, statusText: 'Server Error' }) as Response);
+    await expect(loader.load(Texture, 'gone.png')).rejects.toThrow();
+    await expect(handle.loaded).rejects.toThrow('500'); // fresh error, fresh promise
+  });
+
   test('type-level: seamless get forms', () => {
     const loader = createCoreLoader();
 
@@ -303,5 +368,60 @@ describe('Loader seamless get (Texture)', () => {
     expectTypeOf(loader.get(Texture, ['a.png', 'b.png'])).toEqualTypeOf<Texture[]>();
     expectTypeOf(loader.get(Texture, { a: 'a.png', b: 'b.png' })).toEqualTypeOf<Record<'a' | 'b', Texture>>();
     expectTypeOf(new Texture(null).loaded).toEqualTypeOf<Promise<Texture>>();
+  });
+
+  test("get('ship.png') infers Texture via extension and is seamless", async () => {
+    mockFetchImage();
+    const loader = createCoreLoader();
+
+    const handle = loader.get('ship.png');
+
+    expect(handle).toBeInstanceOf(Texture);
+    expect(handle.loadState).toBe('loading');
+    expect(loader.get(Texture, 'ship.png')).toBe(handle);
+
+    await expect(handle.loaded).resolves.toBe(handle);
+    expect(handle.width).toBe(16);
+  });
+
+  test('get(path) with an unregistered extension throws a clear error (dynamic strings)', () => {
+    const loader = createCoreLoader();
+
+    expect(() => loader.get('theme.custom' as never)).toThrow('no type registered');
+  });
+
+  test('get(path) whose inferred type has no seamless adapter throws with guidance', () => {
+    const loader = createCoreLoader();
+
+    // .fnt → BmFont has no seamless adapter in this slice.
+    expect(() => loader.get('fonts/ui.fnt' as never)).toThrow('no seamless adapter');
+  });
+
+  test('get with pre-size options reserves layout and heals to real size', async () => {
+    mockFetchImage();
+    const loader = createCoreLoader();
+
+    const handle = loader.get(Texture, 'ship.png', { width: 16, height: 16 });
+
+    expect(handle.width).toBe(16); // reserved immediately, while loading
+    await handle.loaded;
+    expect(handle.width).toBe(16); // matches payload — no warning path
+  });
+
+  test('type-level: get(path) accepts only seamless-inferrable extensions', () => {
+    const loader = createCoreLoader();
+
+    expectTypeOf(loader.get('ship.png')).toEqualTypeOf<Texture>();
+    expectTypeOf(loader.get('sprites/hero.jpeg')).toEqualTypeOf<Texture>();
+    // @ts-expect-error — BmFont is not seamless in slice 2
+    void (() => loader.get('fonts/ui.fnt'));
+    // @ts-expect-error — unregistered extension
+    void (() => loader.get('theme.custom'));
+  });
+
+  test('registering a second seamless adapter for the same type throws', () => {
+    const loader = createCoreLoader();
+
+    expect(() => loader.registerSeamlessAdapter(Texture, textureSeamlessAdapter)).toThrow('already registered');
   });
 });

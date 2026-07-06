@@ -31,7 +31,7 @@ export type { DeserializeContext, NodeSerializer, SerializeContext } from './ser
 export { Prefab } from './serialization/Prefab';
 export type { SceneNodeConstructor } from './serialization/SerializationRegistry';
 export { registerSerializer, SerializationRegistry } from './serialization/SerializationRegistry';
-export type { AssetRef, SerializedNode, SerializedScene } from './serialization/types';
+export type { SerializedAssetRef, SerializedNode, SerializedScene } from './serialization/types';
 export { SERIALIZATION_VERSION } from './serialization/types';
 export { Signal } from './Signal';
 export type { System } from './System';

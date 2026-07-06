@@ -1,0 +1,72 @@
+{
+  "title": "SerializedAssetRef",
+  "description": "Serialized reference to a loaded asset (e.g. a Texture). Stores the loader **source key** the asset was loaded under, not the asset data itself. The contract is that referenced assets are pre-loaded into the target Loader before Scene.deserialize runs.",
+  "symbol": "SerializedAssetRef",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 1,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Serialized reference to a loaded asset (e.g. a Texture).",
+        "Stores the loader **source key** the asset was loaded under, not the asset data itself. The contract is that referenced assets are pre-loaded into the target Loader before Scene.deserialize runs."
+      ],
+      "importLine": "import { SerializedAssetRef } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "source",
+          "signature": "source: string",
+          "signatureTokens": [
+            {
+              "text": "source",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Loader alias/source the asset was originally loaded under."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/serialization/types.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/serialization/types.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/serialization/types.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/serialization/types.ts"
+}

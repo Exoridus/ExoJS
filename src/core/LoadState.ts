@@ -79,8 +79,16 @@ export class LoadState<Owner> {
     this._reject = null;
   }
 
-  /** Enter `'failed'`; rejects a promise materialized while `'loading'`. */
+  /**
+   * Enter `'failed'`; rejects a promise materialized while `'loading'`. A
+   * repeated failure (failed → failed) drops the cached rejected promise so
+   * the next `loaded` access re-materializes with the fresh error.
+   */
   public fail(error: Error): void {
+    if (this._reject === null) {
+      this._promise = null;
+    }
+
     this._value = 'failed';
     this._error = error;
     this._reject?.(error);

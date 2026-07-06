@@ -4,6 +4,7 @@ export type { AnyAssetConfig, AssetDefinitions, AssetInput, InferAssetResource }
 export type { AssetFactory } from './AssetFactory';
 export type { AssetEntry, AssetManifest, LoadBundleOptions } from './AssetManifest';
 export { BundleLoadError, defineAssetManifest } from './AssetManifest';
+export { AssetRef } from './AssetRef';
 export type { InferAssetsEntries } from './Assets';
 export { Assets } from './Assets';
 export { CacheFirstStrategy } from './CacheFirstStrategy';
@@ -28,13 +29,14 @@ export type {
   LoadByPath,
   LoaderOptions,
   LoadReturn,
+  PathExtension,
 } from './Loader';
 export { Loader } from './Loader';
 export type { LoadingProgress } from './LoadingQueue';
 export { LoadingQueue } from './LoadingQueue';
 export { MemoryStore } from './MemoryStore';
 export { NetworkOnlyStrategy } from './NetworkOnlyStrategy';
-export type { SeamlessAdapter } from './seamless';
+export type { PreSizeOptions, SeamlessAdapter } from './seamless';
 export { BinaryAsset, CsvAsset, FontAsset, ImageAsset, Json, SubtitleAsset, SvgAsset, TextAsset, WasmAsset, XmlAsset } from './tokens';
 export type { WebStorageStoreOptions } from './WebStorageStore';
 export { WebStorageStore } from './WebStorageStore';

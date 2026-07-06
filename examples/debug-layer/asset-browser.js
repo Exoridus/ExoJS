@@ -194,7 +194,7 @@ class AssetBrowserScene extends Scene {
                     await loader.load(Json, jsonBatch);
                 }
                 for (const k of Object.keys(assets.demo.sprites ?? {})) {
-                    const ss = new Spritesheet(loader.get(Texture, `spr_${k}`), loader.get(Json, `spr_${k}`));
+                    const ss = new Spritesheet(loader.get(Texture, `spr_${k}`), loader.get(Json, `spr_${k}`).value);
                     this.sprSheets.set(k, ss);
                     for (const s of ss.sprites.values())
                         s.setAnchor(0.5);
@@ -213,7 +213,7 @@ class AssetBrowserScene extends Scene {
                     await loader.load(Json, jsonBatch);
                 }
                 for (const k of Object.keys(assets.demo.spritesheets ?? {})) {
-                    const ss = new Spritesheet(loader.get(Texture, `ssh_${k}`), loader.get(Json, `ssh_${k}`));
+                    const ss = new Spritesheet(loader.get(Texture, `ssh_${k}`), loader.get(Json, `ssh_${k}`).value);
                     this.sshSheets.set(k, ss);
                     for (const s of ss.sprites.values())
                         s.setAnchor(0.5);
@@ -246,7 +246,7 @@ class AssetBrowserScene extends Scene {
                     await loader.load(Json, jsonBatch);
                 }
                 for (const k of Object.keys(assets.demo.inputPrompts ?? {})) {
-                    const ss = new Spritesheet(loader.get(Texture, `inp_${k}`), loader.get(Json, `inp_${k}`));
+                    const ss = new Spritesheet(loader.get(Texture, `inp_${k}`), loader.get(Json, `inp_${k}`).value);
                     this.inpSheets.set(k, ss);
                     for (const s of ss.sprites.values())
                         s.setAnchor(0.5);
@@ -302,7 +302,7 @@ class AssetBrowserScene extends Scene {
                 }
                 for (const k of Object.keys(assets.demo.soundSprites ?? {})) {
                     this.soundSpriteAudio.set(k, loader.get(AudioStream, `sds_${k}`));
-                    this.soundSpriteData.set(k, loader.get(Json, `sds_${k}`));
+                    this.soundSpriteData.set(k, loader.get(Json, `sds_${k}`).value);
                 }
                 break;
             }
@@ -388,7 +388,7 @@ class AssetBrowserScene extends Scene {
                 if (Object.keys(batch).length)
                     await loader.load(Json, batch);
                 for (const k of Object.keys(assets.demo.vendor ?? {})) {
-                    this.vendorData.set(k, loader.get(Json, `vnd_${k}`));
+                    this.vendorData.set(k, loader.get(Json, `vnd_${k}`).value);
                 }
                 break;
             }

@@ -78,7 +78,7 @@
         },
         {
           "name": "createPlaceholder",
-          "signature": "createPlaceholder(): T",
+          "signature": "createPlaceholder(options?: unknown): T",
           "signatureTokens": [
             {
               "text": "createPlaceholder",
@@ -87,6 +87,22 @@
             {
               "text": "(",
               "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
             },
             {
               "text": ")",
@@ -101,7 +117,13 @@
               "kind": "type"
             }
           ],
-          "params": [],
+          "params": [
+            {
+              "name": "options",
+              "type": "unknown",
+              "optional": true
+            }
+          ],
           "returnType": "T",
           "description": "Create a fresh deferred handle, already in the 'loading' state."
         },

@@ -10,6 +10,7 @@ import type { AssetDefinitions, AssetInput, InferAssetResource } from './AssetDe
 import type { AssetFactory } from './AssetFactory';
 import type { AssetManifest, LoadBundleOptions } from './AssetManifest';
 import { BundleLoadError, defineAssetManifest } from './AssetManifest';
+import { AssetRef } from './AssetRef';
 import { type Assets, AssetsImpl } from './Assets';
 import { CacheFirstStrategy } from './CacheFirstStrategy';
 import type { CacheStore } from './CacheStore';
@@ -18,19 +19,8 @@ import type { TextureFactoryOptions } from './factories/TextureFactory';
 import type { AssetConstructor } from './FactoryRegistry';
 import { FactoryRegistry } from './FactoryRegistry';
 import { LoadingQueue } from './LoadingQueue';
-import type { SeamlessAdapter } from './seamless';
-import {
-  type BinaryAsset,
-  type CsvAsset,
-  FontAsset,
-  type ImageAsset,
-  type Json,
-  type SubtitleAsset,
-  type SvgAsset,
-  type TextAsset,
-  type WasmAsset,
-  type XmlAsset,
-} from './tokens';
+import type { PreSizeOptions, SeamlessAdapter } from './seamless';
+import { BinaryAsset, CsvAsset, FontAsset, type ImageAsset, Json, SubtitleAsset, type SvgAsset, TextAsset, WasmAsset, XmlAsset } from './tokens';
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -100,17 +90,49 @@ export interface ExtensionTypeMap {
   woff2: FontFace;
   ttf: FontFace;
   otf: FontFace;
+  png: Texture;
+  jpg: Texture;
+  jpeg: Texture;
+  webp: Texture;
+  avif: Texture;
+  gif: Texture;
 }
 
-type PathExtension<S extends string> = S extends `${string}.${infer E}?${string}` ? Lowercase<E> : S extends `${string}.${infer E}` ? Lowercase<E> : never;
+/** Last path segment of `S` (everything after the final `/`). */
+type Basename<S extends string> = S extends `${string}/${infer Rest}` ? Basename<Rest> : S;
+
+/** `S` without a trailing `?query` or `#fragment` part. */
+type StripQueryHash<S extends string> = S extends `${infer P}?${string}` ? P : S extends `${infer P}#${string}` ? P : S;
+
+/**
+ * Longest registered dot-suffix of a basename. Walks dots left to right, so
+ * the longest candidate (`aseprite.json`) is checked before shorter ones
+ * (`json`); resolves to `never` when no suffix is a registered extension.
+ */
+type MatchExtension<S extends string> = S extends `${string}.${infer Rest}`
+  ? Lowercase<Rest> extends keyof ExtensionTypeMap
+    ? Lowercase<Rest>
+    : MatchExtension<Rest>
+  : never;
+
+/**
+ * The registered extension key inferred from a path literal — basename-only,
+ * longest-suffix-first (Entscheidung #14) — or `never` when no dot-suffix of
+ * the basename is registered in {@link ExtensionTypeMap}.
+ */
+export type PathExtension<S extends string> = MatchExtension<Basename<StripQueryHash<S>>>;
 
 /**
  * Resolves the return type for {@link Loader.load} when called with a plain
  * path string. Returns `unknown` when the extension is not in
  * {@link ExtensionTypeMap} — the string-path overload rejects such paths at
  * compile time; use the token form (`load(MyType, path)`) instead.
+ *
+ * The `[PathExtension<S>] extends [never]` guard is load-bearing: indexing
+ * {@link ExtensionTypeMap} with `never` would silently produce `never` rather
+ * than the intended `unknown` fallback.
  */
-export type LoadByPath<S extends string> = PathExtension<S> extends keyof ExtensionTypeMap ? ExtensionTypeMap[PathExtension<S>] : unknown;
+export type LoadByPath<S extends string> = [PathExtension<S>] extends [never] ? unknown : ExtensionTypeMap[PathExtension<S>];
 
 /**
  * Additional asset types accepted by the **token form** of {@link Loader.load}
@@ -310,6 +332,12 @@ export class Loader {
   private readonly _seamlessAdapters = new Map<AssetConstructor, SeamlessAdapter<unknown>>();
   private readonly _deferred = new Map<string, { readonly handle: unknown; readonly options: unknown }>();
 
+  // Value-asset refs (asset-system v2 §4.6): the ref is the stable identity —
+  // entries persist for the loader's lifetime (fill keeps them, fail keeps
+  // them for retry), unlike _deferred whose handles move into _resources.
+  private readonly _refs = new Map<string, { readonly ref: AssetRef<unknown>; readonly options: unknown }>();
+  private readonly _valueTokens: ReadonlySet<Loadable> = new Set<Loadable>([Json, TextAsset, CsvAsset, XmlAsset, SubtitleAsset, BinaryAsset, WasmAsset]);
+
   private _basePath: string;
   private _fetchOptions: RequestInit;
   private _concurrency: number;
@@ -483,46 +511,6 @@ export class Loader {
     }
 
     this._seamlessAdapters.set(type, adapter);
-
-    return this;
-  }
-
-  // -----------------------------------------------------------------------
-  // Alias registration (add without loading)
-  // -----------------------------------------------------------------------
-
-  /**
-   * Registers one or more asset aliases in the manifest without immediately
-   * loading them.
-   *
-   * - Single path: the path is used as both the alias and the URL.
-   * - Array of paths: each path becomes its own alias.
-   * - Record: keys are aliases, values are URLs.
-   *
-   * Assets pre-registered here can later be loaded by alias, included in
-   * background loads via {@link backgroundLoad}, or used as the source of
-   * truth when resolving conflicts in {@link registerManifest}.
-   */
-  public add(type: Loadable, path: string): this;
-  public add(type: Loadable, paths: readonly string[]): this;
-  public add(type: Loadable, items: Readonly<Record<string, string>>): this;
-  public add(type: Loadable, source: string | readonly string[] | Readonly<Record<string, string>>): this {
-    const ctor = type;
-
-    if (typeof source === 'string') {
-      this._addManifestEntry(ctor, source, source);
-    } else if (Array.isArray(source)) {
-      // `Array.isArray` narrows the union to `any[]`, dropping the element type;
-      // the only array member of the union is `readonly string[]`.
-      const paths: readonly string[] = source;
-      for (const path of paths) {
-        this._addManifestEntry(ctor, path, path);
-      }
-    } else {
-      for (const [alias, path] of Object.entries(source)) {
-        this._addManifestEntry(ctor, alias, path);
-      }
-    }
 
     return this;
   }
@@ -751,9 +739,12 @@ export class Loader {
    */
   // Generic form — caller narrows R while extension still must be registered.
 
-  public load<R, S extends string>(path: PathExtension<S> extends keyof ExtensionTypeMap ? S : never): LoadingQueue<R>;
+  // The `[PathExtension<S>] extends [never]` tuple guard is deliberate: the
+  // distributive `never extends keyof …` is vacuously TRUE, which would wrongly
+  // ACCEPT paths whose extension is unregistered.
+  public load<R, S extends string>(path: [PathExtension<S>] extends [never] ? never : S): LoadingQueue<R>;
   // Inferred form — R comes from ExtensionTypeMap.
-  public load<S extends string>(path: PathExtension<S> extends keyof ExtensionTypeMap ? S : never): LoadingQueue<LoadByPath<S>>;
+  public load<S extends string>(path: [PathExtension<S>] extends [never] ? never : S): LoadingQueue<LoadByPath<S>>;
 
   // -----------------------------------------------------------------------
   // Loading — generic overloads (return type inferred from class)
@@ -798,11 +789,10 @@ export class Loader {
     // 2b. Extension-based: single path string with no type token
     if (typeof arg0 === 'string' && arg1 === undefined) {
       const path = arg0;
-      const ext = path.match(/\.([^./?#]+)(?:[?#]|$)/)?.[1]?.toLowerCase();
-      const ctor = ext ? this._extensionMap.get(ext) : undefined;
+      const ctor = this._resolveExtensionType(path);
 
       if (ctor === undefined) {
-        throw new Error(`Loader: no type registered for extension ".${ext ?? '?'}" in "${path}". ` + 'Register one via loader.registerExtension().');
+        throw new Error(`Loader: no type registered for any extension of "${path}". Register one via loader.registerExtension().`);
       }
 
       // FontAsset requires a family option — infer it from the filename when not provided
@@ -941,15 +931,17 @@ export class Loader {
   // -----------------------------------------------------------------------
 
   /**
-   * Enqueues all manifest-registered assets that have not yet been loaded
-   * into the background fetch queue and begins draining the queue up to
-   * {@link setConcurrency | concurrency} simultaneous connections.
-   *
-   * Progress is reported via {@link onProgress}. In-flight assets and
-   * already-loaded assets are skipped automatically. Call {@link loadAll}
-   * instead if you need to await completion.
+   * Declares sources and enqueues them for low-priority background fetching in
+   * one step (replaces the removed `add()`; PixiJS model). Progress is
+   * reported via {@link onProgress}; already-loaded, in-flight, and
+   * already-queued sources are skipped. `get()`/`load()` on a queued source
+   * boosts it to the front. The zero-argument form enqueues everything
+   * registered in the manifest (bundles/manifest die with the asset graph).
    */
-  public backgroundLoad(): void {
+  public backgroundLoad(): void;
+  public backgroundLoad(type: Loadable, source: string, options?: unknown): void;
+  public backgroundLoad(type: Loadable, sources: readonly string[], options?: unknown): void;
+  public backgroundLoad(type?: Loadable, source?: string | readonly string[], options?: unknown): void {
     // Start a fresh progress batch only when idle; a re-entrant call while the
     // queue is draining extends the running batch instead (mirrors the
     // accounting in _loadSingleBackground).
@@ -958,17 +950,37 @@ export class Loader {
       this._backgroundTotal = 0;
     }
 
-    for (const [type, entries] of this._manifest) {
-      for (const [alias, entry] of entries) {
-        if (this._hasResource(type, alias)) continue;
+    if (type !== undefined && source !== undefined) {
+      const ctor: AssetConstructor = type;
+      const sources: readonly string[] = typeof source === 'string' ? [source] : source;
 
-        const key = this._key(type, alias);
+      for (const src of sources) {
+        this._addManifestEntry(ctor, src, src, options);
+
+        if (this._hasResource(ctor, src)) continue;
+        if (this._inFlight.has(this._key(ctor, src))) continue;
+        if (this._isQueuedInBackground(ctor, src)) continue;
+
+        this._backgroundQueue.push({ type: ctor, alias: src, path: src, options });
+        this._backgroundTotal++;
+      }
+
+      this._drainBackground();
+
+      return;
+    }
+
+    for (const [manifestType, entries] of this._manifest) {
+      for (const [alias, entry] of entries) {
+        if (this._hasResource(manifestType, alias)) continue;
+
+        const key = this._key(manifestType, alias);
 
         if (this._inFlight.has(key)) continue;
-        if (this._isQueuedInBackground(type, alias)) continue;
+        if (this._isQueuedInBackground(manifestType, alias)) continue;
 
         this._backgroundQueue.push({
-          type,
+          type: manifestType,
           alias,
           path: entry.path,
           options: entry.options,
@@ -1026,19 +1038,32 @@ export class Loader {
    * {@link load} — and options are first-wins: conflicting options on a
    * later call are ignored with a one-time dev warning.
    */
-  public get(type: typeof Texture, source: string, options?: TextureFactoryOptions): Texture;
-  public get(type: typeof Texture, sources: readonly string[], options?: TextureFactoryOptions): Texture[];
-  public get<K extends string>(type: typeof Texture, items: Readonly<Record<K, string>>, options?: TextureFactoryOptions): Record<K, Texture>;
+  public get(type: typeof Texture, source: string, options?: TextureFactoryOptions & PreSizeOptions): Texture;
+  public get(type: typeof Texture, sources: readonly string[], options?: TextureFactoryOptions & PreSizeOptions): Texture[];
+  public get<K extends string>(type: typeof Texture, items: Readonly<Record<K, string>>, options?: TextureFactoryOptions & PreSizeOptions): Record<K, Texture>;
 
   /**
-   * Retrieves a previously loaded asset by type and alias (legacy lookup for
-   * types without a seamless adapter; replaced by the asset graph in a later
-   * slice).
-   *
-   * Throws if the asset has not been loaded. Use {@link peek} for a
-   * non-throwing alternative, or {@link has} to guard the call.
+   * Seamless access by path alone — the asset type is inferred from the file
+   * extension (basename-only, longest-suffix-first; see {@link ExtensionTypeMap}).
+   * Accepts only paths whose inferred type has a seamless adapter (compile-time
+   * gate); dynamic strings resolving to an unregistered extension or a
+   * non-seamless type throw with guidance.
    */
-  public get<T = unknown>(type: typeof Json, alias: string): T;
+  public get<S extends string>(path: LoadByPath<S> extends Texture ? S : never, options?: TextureFactoryOptions & PreSizeOptions): Texture;
+
+  /**
+   * Seamless access to a value asset: returns a stable {@link AssetRef}
+   * synchronously and never throws. The ref fills when the payload arrives
+   * (`loaded` resolves with the parsed value); failed refs retry in place on
+   * the next `get`. `load()` keeps resolving the raw value.
+   */
+  public get<T = unknown>(type: typeof Json, source: string, options?: unknown): AssetRef<T>;
+  public get(type: typeof TextAsset, source: string, options?: unknown): AssetRef<string>;
+  public get(type: typeof CsvAsset, source: string, options?: unknown): AssetRef<string[][]>;
+  public get(type: typeof XmlAsset, source: string, options?: unknown): AssetRef<Document>;
+  public get(type: typeof SubtitleAsset, source: string, options?: unknown): AssetRef<VTTCue[]>;
+  public get(type: typeof BinaryAsset, source: string, options?: unknown): AssetRef<ArrayBuffer>;
+  public get(type: typeof WasmAsset, source: string, options?: unknown): AssetRef<WebAssembly.Module>;
 
   /**
    * Retrieves a previously loaded asset by type and alias (legacy lookup form
@@ -1047,8 +1072,25 @@ export class Loader {
    * for a non-throwing alternative, or {@link has} to guard the call.
    */
   public get<T extends Loadable>(type: T, alias: string): LoadReturn<T>;
-  public get(type: Loadable, source: string | readonly string[] | Readonly<Record<string, string>>, options?: unknown): unknown {
-    const ctor = type;
+  public get(typeOrPath: Loadable | string, source?: unknown, options?: unknown): unknown {
+    if (typeof typeOrPath === 'string') {
+      const path = typeOrPath;
+      const ctor = this._resolveExtensionType(path);
+
+      if (ctor === undefined) {
+        throw new Error(`Loader: no type registered for any extension of "${path}". Register one via loader.registerExtension().`);
+      }
+
+      const pathAdapter = this._seamlessAdapters.get(ctor);
+
+      if (pathAdapter === undefined) {
+        throw new Error(`Loader: type ${this._describeType(ctor)} inferred from "${path}" has no seamless adapter — use load() instead.`);
+      }
+
+      return this._getSeamless(ctor, pathAdapter, path, source);
+    }
+
+    const ctor = typeOrPath;
     const adapter = this._seamlessAdapters.get(ctor);
 
     if (adapter !== undefined) {
@@ -1063,12 +1105,17 @@ export class Loader {
       }
 
       const out: Record<string, unknown> = {};
+      const items = source as Readonly<Record<string, string>>;
 
-      for (const [key, path] of Object.entries(source)) {
+      for (const [key, path] of Object.entries(items)) {
         out[key] = this._getSeamless(ctor, adapter, path, options);
       }
 
       return out;
+    }
+
+    if (this._valueTokens.has(ctor) && typeof source === 'string') {
+      return this._getRef(ctor, source, options);
     }
 
     const alias = source as string;
@@ -1427,6 +1474,7 @@ export class Loader {
     this._identityKeyToAliases.clear();
     this._handlerFunctions.clear();
     this._deferred.clear();
+    this._refs.clear();
     this._seamlessAdapters.clear();
     this._backgroundQueue.length = 0;
     this.onProgress.destroy();
@@ -1468,28 +1516,74 @@ export class Loader {
 
       if (adapter.stateOf(entry.handle) === 'failed') {
         adapter.begin(entry.handle);
-        this._startSeamlessFetch(type, adapter, source, entry.handle, entry.options);
+        this._startSeamlessFetch(type, source, entry.options);
       }
 
       return entry.handle;
     }
 
-    const handle = adapter.createPlaceholder();
+    const handle = adapter.createPlaceholder(options);
 
     this._deferred.set(key, { handle, options });
-    this._startSeamlessFetch(type, adapter, source, handle, options);
+    this._startSeamlessFetch(type, source, options);
 
     return handle;
   }
 
   /**
-   * Start (or on retry, restart) the fetch backing a deferred handle. Success
-   * fills the handle inside {@link _storeResource}; failure marks it
-   * `'failed'` and keeps the deferred entry so a later `get` can retry.
+   * Start (or on retry, restart) the fetch backing a deferred handle or value
+   * ref. Failure handling (adapter/ref fail + onError) lives centrally in
+   * {@link _onTrackedFailure}; the catch here only silences the void'd rejection.
    */
-  private _startSeamlessFetch(type: AssetConstructor, adapter: SeamlessAdapter<unknown>, source: string, handle: unknown, options: unknown): void {
-    void this._loadSingle(type, source, options).catch((error: unknown) => {
-      adapter.fail(handle, this._normalizeError(error));
+  private _startSeamlessFetch(type: AssetConstructor, source: string, options: unknown): void {
+    void this._loadSingle(type, source, options).catch(() => {
+      /* Failure handled centrally in _onTrackedFailure. */
+    });
+  }
+
+  /** Value-asset twin of {@link _getSeamless}: stable ref, options first-wins, retry-on-failed. */
+  private _getRef(type: AssetConstructor, source: string, options?: unknown): AssetRef<unknown> {
+    const key = this._key(type, source);
+    const entry = this._refs.get(key);
+
+    if (entry !== undefined) {
+      if (options !== undefined && !this._areOptionsEquivalent(entry.options, options)) {
+        logger.warn(`get(${this._describeType(type)}, "${source}"): conflicting options ignored — the first call's options win.`, {
+          source: 'Loader',
+          once: `loader:seamless-options:${key}`,
+        });
+      }
+
+      if (entry.ref.loadState === 'failed') {
+        entry.ref._begin();
+        this._startRefFetch(type, source, entry.options);
+      }
+
+      return entry.ref;
+    }
+
+    const ref = new AssetRef<unknown>();
+
+    this._refs.set(key, { ref, options });
+
+    const stored = this._resources.get(type)?.get(source);
+
+    if (stored !== undefined) {
+      ref._fill(stored);
+
+      return ref;
+    }
+
+    this._startRefFetch(type, source, options);
+
+    return ref;
+  }
+
+  /** Start (or restart) the fetch backing a value ref; the fill happens in
+   *  {@link _storeResource} and failure handling in {@link _onTrackedFailure}. */
+  private _startRefFetch(type: AssetConstructor, source: string, options: unknown): void {
+    void this._loadSingle(type, source, options).catch(() => {
+      /* Failure handled centrally in _onTrackedFailure. */
     });
   }
 
@@ -1517,23 +1611,7 @@ export class Loader {
     const path = explicitPath ?? entry?.path ?? alias;
     const resolvedOptions = options ?? entry?.options;
 
-    // Check handler path first (for extension types registered via bindAsset)
-    const handlerEntry = this._handlerFunctions.get(type);
-
-    if (handlerEntry) {
-      const identityKey = this._identityKey(type, path);
-      const config: Record<string, unknown> = { source: path };
-
-      if (resolvedOptions !== null && resolvedOptions !== undefined && typeof resolvedOptions === 'object') {
-        Object.assign(config, resolvedOptions as Record<string, unknown>);
-      }
-
-      const context = this._buildHandlerContext(identityKey);
-
-      return this._trackInFlight(key, this._fetchWithHandler(type, alias, path, config, handlerEntry.load, context));
-    }
-
-    return this._trackInFlight(key, this._fetch(type, alias, path, resolvedOptions));
+    return this._trackInFlight(type, alias, this._dispatchFetch(type, alias, path, resolvedOptions));
   }
 
   private _loadSingleBackground(type: AssetConstructor, alias: string, path: string, options?: unknown): Promise<unknown> {
@@ -1780,6 +1858,32 @@ export class Loader {
     this._storeResource(type, alias, resource);
   }
 
+  /**
+   * Dispatches a load through the `bindAsset` handler path if one is
+   * registered for `type`, otherwise through the plain `register()`-based
+   * {@link _fetch}. Shared by the foreground ({@link _loadSingle}) and
+   * background ({@link _startBackgroundEntry}) fetch dispatchers so both
+   * honor `bindAsset` handlers identically.
+   */
+  private _dispatchFetch(type: AssetConstructor, alias: string, path: string, options?: unknown): Promise<unknown> {
+    const handlerEntry = this._handlerFunctions.get(type);
+
+    if (!handlerEntry) {
+      return this._fetch(type, alias, path, options);
+    }
+
+    const identityKey = this._identityKey(type, path);
+    const config: Record<string, unknown> = { source: path };
+
+    if (options !== null && options !== undefined && typeof options === 'object') {
+      Object.assign(config, options as Record<string, unknown>);
+    }
+
+    const context = this._buildHandlerContext(identityKey);
+
+    return this._fetchWithHandler(type, alias, path, config, handlerEntry.load, context);
+  }
+
   private async _fetch(type: AssetConstructor, alias: string, path: string, options?: unknown): Promise<unknown> {
     const factory = this._registry.resolve(type);
     const url = this._resolveUrl(path);
@@ -1942,15 +2046,16 @@ export class Loader {
   }
 
   private _startBackgroundEntry(entry: QueueEntry): void {
-    const key = this._key(entry.type, entry.alias);
-
     this._backgroundActive++;
 
-    this._trackInFlight(key, this._fetch(entry.type, entry.alias, entry.path, entry.options))
+    this._trackInFlight(entry.type, entry.alias, this._dispatchFetch(entry.type, entry.alias, entry.path, entry.options))
       .catch(error => {
-        const err = error instanceof Error ? error : new Error(String(error));
+        const err = this._normalizeError(error);
+        const key2 = this._key(entry.type, entry.alias);
 
-        this.onError.dispatch(entry.type, entry.alias, err);
+        if (!this._deferred.has(key2) && !this._refs.has(key2)) {
+          this.onError.dispatch(entry.type, entry.alias, err);
+        }
       })
       .finally(() => {
         this._backgroundActive--;
@@ -1960,15 +2065,39 @@ export class Loader {
       });
   }
 
-  private _trackInFlight(key: string, promise: Promise<unknown>): Promise<unknown> {
+  private _trackInFlight(type: AssetConstructor, alias: string, promise: Promise<unknown>): Promise<unknown> {
+    const key = this._key(type, alias);
     const trackedPromise = promise.finally(() => {
       this._inFlight.delete(key);
       this._preventStoreKeys.delete(key);
     });
 
+    // Non-swallowing observer: fails deferred handles / value refs (fresh
+    // error each attempt) and dispatches onError for entry-backed fetches —
+    // regardless of which verb (get/load/background) started the attempt.
+    trackedPromise.catch((error: unknown) => this._onTrackedFailure(type, alias, key, error));
     this._inFlight.set(key, trackedPromise);
 
     return trackedPromise;
+  }
+
+  private _onTrackedFailure(type: AssetConstructor, alias: string, key: string, error: unknown): void {
+    const err = this._normalizeError(error);
+    const deferredEntry = this._deferred.get(key);
+
+    if (deferredEntry !== undefined) {
+      this._seamlessAdapters.get(type)?.fail(deferredEntry.handle, err);
+      this.onError.dispatch(type, alias, err);
+
+      return;
+    }
+
+    const refEntry = this._refs.get(key);
+
+    if (refEntry !== undefined) {
+      refEntry.ref._fail(err);
+      this.onError.dispatch(type, alias, err);
+    }
   }
 
   private _emitBundleProgress(name: string, loaded: number, total: number, onProgress?: (loaded: number, total: number) => void): void {
@@ -2103,6 +2232,12 @@ export class Loader {
         this._seamlessAdapters.get(type)?.fail(preventedEntry.handle, new Error(`Asset "${alias}" was unloaded while its fetch was in flight.`));
       }
 
+      const preventedRef = this._refs.get(key);
+
+      if (preventedRef?.ref.loadState === 'loading') {
+        preventedRef.ref._fail(new Error(`Asset "${alias}" was unloaded while its fetch was in flight.`));
+      }
+
       return resource;
     }
 
@@ -2131,6 +2266,10 @@ export class Loader {
       this._deferred.delete(key);
       resource = deferredEntry.handle;
     }
+
+    // Value-asset refs fill from whatever producer stores the value; the raw
+    // value stays the stored resource (load() keeps resolving it).
+    this._refs.get(key)?.ref._fill(resource);
 
     let typeResources = this._resources.get(type);
     if (!typeResources) {
@@ -2189,5 +2328,26 @@ export class Loader {
     }
 
     return `${this._basePath}${path}`;
+  }
+
+  /**
+   * Resolve the registered asset type for a path by matching the basename's
+   * dot-suffixes longest-first (Entscheidung #14): `hero.aseprite.json` tries
+   * `aseprite.json` before `json`. Query/hash suffixes are ignored.
+   */
+  private _resolveExtensionType(path: string): AssetConstructor | undefined {
+    const [withoutQueryHash = ''] = path.split(/[?#]/, 1);
+    const basename = withoutQueryHash.split('/').pop() ?? '';
+    const parts = basename.split('.');
+
+    for (let i = 1; i < parts.length; i++) {
+      const ctor = this._extensionMap.get(parts.slice(i).join('.').toLowerCase());
+
+      if (ctor !== undefined) {
+        return ctor;
+      }
+    }
+
+    return undefined;
   }
 }
