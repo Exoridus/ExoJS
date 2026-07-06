@@ -304,4 +304,42 @@ describe('Loader seamless get (Texture)', () => {
     expectTypeOf(loader.get(Texture, { a: 'a.png', b: 'b.png' })).toEqualTypeOf<Record<'a' | 'b', Texture>>();
     expectTypeOf(new Texture(null).loaded).toEqualTypeOf<Promise<Texture>>();
   });
+
+  test("get('ship.png') infers Texture via extension and is seamless", async () => {
+    mockFetchImage();
+    const loader = createCoreLoader();
+
+    const handle = loader.get('ship.png');
+
+    expect(handle).toBeInstanceOf(Texture);
+    expect(handle.loadState).toBe('loading');
+    expect(loader.get(Texture, 'ship.png')).toBe(handle);
+
+    await expect(handle.loaded).resolves.toBe(handle);
+    expect(handle.width).toBe(16);
+  });
+
+  test('get(path) with an unregistered extension throws a clear error (dynamic strings)', () => {
+    const loader = createCoreLoader();
+
+    expect(() => loader.get('theme.custom' as never)).toThrow('no type registered');
+  });
+
+  test('get(path) whose inferred type has no seamless adapter throws with guidance', () => {
+    const loader = createCoreLoader();
+
+    // .fnt → BmFont has no seamless adapter in this slice.
+    expect(() => loader.get('fonts/ui.fnt' as never)).toThrow('no seamless adapter');
+  });
+
+  test('type-level: get(path) accepts only seamless-inferrable extensions', () => {
+    const loader = createCoreLoader();
+
+    expectTypeOf(loader.get('ship.png')).toEqualTypeOf<Texture>();
+    expectTypeOf(loader.get('sprites/hero.jpeg')).toEqualTypeOf<Texture>();
+    // @ts-expect-error — BmFont is not seamless in slice 2
+    void (() => loader.get('fonts/ui.fnt'));
+    // @ts-expect-error — unregistered extension
+    void (() => loader.get('theme.custom'));
+  });
 });

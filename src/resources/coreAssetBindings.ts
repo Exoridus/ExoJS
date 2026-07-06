@@ -105,7 +105,7 @@ export function resolveSubAssetPath(ref: string, source: string): string {
 
 const textureBinding = binding(
   Texture,
-  { typeNames: ['texture'], seamless: textureSeamlessAdapter },
+  { typeNames: ['texture'], extensions: ['png', 'jpg', 'jpeg', 'webp', 'avif', 'gif'], seamless: textureSeamlessAdapter },
   binaryFactoryHandler(() => new TextureFactory()),
 );
 

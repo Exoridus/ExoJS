@@ -100,6 +100,12 @@ export interface ExtensionTypeMap {
   woff2: FontFace;
   ttf: FontFace;
   otf: FontFace;
+  png: Texture;
+  jpg: Texture;
+  jpeg: Texture;
+  webp: Texture;
+  avif: Texture;
+  gif: Texture;
 }
 
 /** Last path segment of `S` (everything after the final `/`). */
@@ -1055,6 +1061,15 @@ export class Loader {
   public get<K extends string>(type: typeof Texture, items: Readonly<Record<K, string>>, options?: TextureFactoryOptions): Record<K, Texture>;
 
   /**
+   * Seamless access by path alone — the asset type is inferred from the file
+   * extension (basename-only, longest-suffix-first; see {@link ExtensionTypeMap}).
+   * Accepts only paths whose inferred type has a seamless adapter (compile-time
+   * gate); dynamic strings resolving to an unregistered extension or a
+   * non-seamless type throw with guidance.
+   */
+  public get<S extends string>(path: LoadByPath<S> extends Texture ? S : never, options?: TextureFactoryOptions): Texture;
+
+  /**
    * Retrieves a previously loaded asset by type and alias (legacy lookup for
    * types without a seamless adapter; replaced by the asset graph in a later
    * slice).
@@ -1071,8 +1086,25 @@ export class Loader {
    * for a non-throwing alternative, or {@link has} to guard the call.
    */
   public get<T extends Loadable>(type: T, alias: string): LoadReturn<T>;
-  public get(type: Loadable, source: string | readonly string[] | Readonly<Record<string, string>>, options?: unknown): unknown {
-    const ctor = type;
+  public get(typeOrPath: Loadable | string, source?: unknown, options?: unknown): unknown {
+    if (typeof typeOrPath === 'string') {
+      const path = typeOrPath;
+      const ctor = this._resolveExtensionType(path);
+
+      if (ctor === undefined) {
+        throw new Error(`Loader: no type registered for any extension of "${path}". Register one via loader.registerExtension().`);
+      }
+
+      const pathAdapter = this._seamlessAdapters.get(ctor);
+
+      if (pathAdapter === undefined) {
+        throw new Error(`Loader: type ${this._describeType(ctor)} inferred from "${path}" has no seamless adapter — use load() instead.`);
+      }
+
+      return this._getSeamless(ctor, pathAdapter, path, source);
+    }
+
+    const ctor = typeOrPath;
     const adapter = this._seamlessAdapters.get(ctor);
 
     if (adapter !== undefined) {
@@ -1087,8 +1119,9 @@ export class Loader {
       }
 
       const out: Record<string, unknown> = {};
+      const items = source as Readonly<Record<string, string>>;
 
-      for (const [key, path] of Object.entries(source)) {
+      for (const [key, path] of Object.entries(items)) {
         out[key] = this._getSeamless(ctor, adapter, path, options);
       }
 
