@@ -80,12 +80,8 @@ class GraphicsGradientScene extends Scene {
         context.render(this.sceneRoot);
     }
 
-    override unload(): void {
-        this.sceneRoot?.destroy();
-    }
-
     override destroy(): void {
-        this.unload();
+        this.sceneRoot?.destroy();
     }
 }
 

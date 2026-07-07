@@ -58,14 +58,10 @@ class ColorFilterScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
     private cycle!: ReturnType<ReturnType<typeof mountControlPanel>['addCycle']>;
 
-    override async load(loader): Promise<void> {
-        await loader.load(Texture, { hueRamp: HUE_RAMP });
-    }
-
-    override init(loader): void {
+    override init(): void {
         const { width, height } = this.app.canvas;
 
-        this.sprite = new Sprite(loader.get(Texture, 'hueRamp')).setAnchor(0.5).setScale(4).setPosition(width / 2, height / 2);
+        this.sprite = new Sprite(this.loader.get(Texture, HUE_RAMP)).setAnchor(0.5).setScale(4).setPosition(width / 2, height / 2);
 
         // The built-in ColorFilter multiplies by a solid colour (warm tint here).
         this.tint = new ColorFilter(new Color(255, 160, 120));
