@@ -17,11 +17,9 @@ class WebFontsScene extends Scene {
     private default!: Text;
     private loaded!: Text;
 
-    override async load(loader): Promise<void> {
-        await loader.load(FontAsset, { andy: 'font/Kenney Future.ttf' }, { family: 'Kenney Future' });
-    }
+    override async init(): Promise<void> {
+        await this.loader.load(FontAsset, 'font/Kenney Future.ttf', { family: 'Kenney Future' });
 
-    override init(): void {
         const { width, height } = this.app.canvas;
 
         this.default = new Text('Default Font', { fillColor: Color.white, fontSize: 52, align: 'center' });

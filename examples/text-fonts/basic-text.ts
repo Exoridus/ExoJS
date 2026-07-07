@@ -17,11 +17,9 @@ class BasicTextScene extends Scene {
     private time!: Time;
     private text!: Text;
 
-    override async load(loader): Promise<void> {
-        await loader.load(FontAsset, { example: 'font/Kenney Future.ttf' }, { family: 'Kenney Future' });
-    }
+    override async init(): Promise<void> {
+        await this.loader.load(FontAsset, 'font/Kenney Future.ttf', { family: 'Kenney Future' });
 
-    override init(): void {
         const { width, height } = this.app.canvas;
 
         this.time = new Time();

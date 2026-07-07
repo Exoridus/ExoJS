@@ -18,11 +18,9 @@ class BitmapTextBasicScene extends Scene {
     private counter!: BitmapText;
     private frame = 0;
 
-    override async load(loader): Promise<void> {
-        this.font = await loader.load(BmFont, assets.demo.fonts.kenneyBlocksFnt);
-    }
+    override async init(): Promise<void> {
+        this.font = await this.loader.load(BmFont, assets.demo.fonts.kenneyBlocksFnt);
 
-    override init(): void {
         const font = this.font;
         const { width, height } = this.app.canvas;
         const marginX = width * 0.08;
