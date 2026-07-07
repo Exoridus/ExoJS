@@ -23,14 +23,10 @@ class VinylRecordScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
     private tapPrompt!: Text;
 
-    override async load(loader): Promise<void> {
-        await loader.load(AudioStream, { track: assets.demo.audio.musicLoop });
-    }
-
-    override init(loader): void {
+    override init(): void {
         const { width, height } = this.app.canvas;
 
-        this.music = loader.get(AudioStream, 'track');
+        this.music = this.loader.get(AudioStream, assets.demo.audio.musicLoop);
         this.analyser = new AudioAnalyser({ fftSize: 1024, source: this.app.audio.music });
         this.disc = new Graphics();
         this.bars = new Graphics();

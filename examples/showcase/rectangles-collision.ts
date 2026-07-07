@@ -23,13 +23,9 @@ class RectanglesCollisionScene extends Scene {
     private overlap!: Graphics;
     private hud!: ReturnType<typeof mountControls>;
 
-    override async load(loader): Promise<void> {
-        await loader.load(Texture, { gradient: 'image/hue-ramp.png' });
-    }
-
-    override init(loader): void {
+    override init(): void {
         const { width, height } = this.app.canvas;
-        const texture = loader.get(Texture, 'gradient');
+        const texture = this.loader.get(Texture, 'image/hue-ramp.png');
 
         // Two axis-aligned rectangles (no rotation) so collision is a true AABB
         // test. Explicit width/height drive the sprite scale; anchor 0.5 keeps the

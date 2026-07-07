@@ -35,15 +35,10 @@ class AudioReactiveParticlesScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
     private tapPrompt!: Text;
 
-    override async load(loader): Promise<void> {
-        await loader.load(AudioStream, { track: assets.demo.audio.musicLoop });
-        await loader.load(Texture, { particle: assets.demo.textures.particleLight });
-    }
-
-    override init(loader): void {
+    override init(): void {
         const { width, height } = this.app.canvas;
 
-        this.music = loader.get(AudioStream, 'track');
+        this.music = this.loader.get(AudioStream, assets.demo.audio.musicLoop);
 
         // Two parallel taps of the same track: the analyser gives per-band
         // energy (drives emission), the detector gives beats (recolours).
@@ -51,7 +46,7 @@ class AudioReactiveParticlesScene extends Scene {
         this.detector = new BeatDetector();
         this.detector.source = this.app.audio.music;
 
-        this.ps = new ParticleSystem(loader.get(Texture, 'particle'), { capacity: 6000 });
+        this.ps = new ParticleSystem(this.loader.get(Texture, assets.demo.textures.particleLight), { capacity: 6000 });
         this.ps.setPosition(width / 2, height / 2);
 
         // The rate (density) and the cone speed range (spread) are mutated every

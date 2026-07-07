@@ -28,15 +28,11 @@ class ScreenShakeOnExplosionScene extends Scene {
     private burstPos!: Vector;
     private burst!: BurstSpawn;
 
-    override async load(loader): Promise<void> {
-        await loader.load(Texture, { particle: 'image/particle-light.png' });
-    }
-
-    override init(loader): void {
+    override init(): void {
         const { width, height } = this.app.canvas;
 
         this.view = new View(width / 2, height / 2, width, height);
-        this.ps = new ParticleSystem(loader.get(Texture, 'particle'), { capacity: 5000 });
+        this.ps = new ParticleSystem(this.loader.get(Texture, 'image/particle-light.png'), { capacity: 5000 });
         this.ps.setPosition(width / 2, height / 2);
         this.burstPos = new Vector(0, 0);
         this.burst = new BurstSpawn({
