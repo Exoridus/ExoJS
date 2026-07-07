@@ -40,16 +40,19 @@ class ListenerAndSourceScene extends Scene {
     private tapPrompt!: Text;
     private hud!: ReturnType<typeof mountControls>;
 
-    override async load(loader): Promise<void> {
-        // A continuous music loop, not a one-shot: spatialization is only
-        // audible while there is sustained signal to pan/attenuate.
-        await loader.load(Sound, { source: 'audio/demo-loop-main.ogg' });
-    }
-
-    override init(loader): void {
+    override async init(): Promise<void> {
         const { width, height } = this.app.canvas;
 
-        this.sound = new Sound(loader.get(Sound, 'source').audioBuffer, {
+        // A continuous music loop, not a one-shot: spatialization is only
+        // audible while there is sustained signal to pan/attenuate. The derived
+        // Sound below reads .audioBuffer synchronously, so await load() instead
+        // of the deferred get() (whose placeholder audioBuffer is null until fill).
+        // The explicit Sound token also hits a compile-time overload ambiguity
+        // with the Json token form (both resolve zero-arg-constructible
+        // instance types), so the awaited result is cast — the runtime
+        // seamless/factory resolution is unaffected.
+        const source = (await this.loader.load(Sound, 'audio/demo-loop-main.ogg')) as Sound;
+        this.sound = new Sound(source.audioBuffer, {
             distanceModel: 'linear',
             refDistance: REF_DISTANCE,
             maxDistance: MAX_DISTANCE,

@@ -45,12 +45,10 @@ class FrequencyBandsScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
     private tapPrompt!: Text;
 
-    override async load(loader): Promise<void> {
-        await loader.load(AudioStream, { track: 'audio/demo-loop-main.ogg' });
-    }
-
-    override init(loader): void {
-        this.music = loader.get(AudioStream, 'track');
+    override async init(): Promise<void> {
+        // AudioStream has no seamless adapter — await it explicitly.
+        const { track } = await this.loader.load(AudioStream, { track: 'audio/demo-loop-main.ogg' });
+        this.music = track;
 
         this.analyser = new AudioAnalyser({ fftSize: 2048, smoothingTimeConstant: 0.75 });
         this.analyser.source = this.app.audio.music;

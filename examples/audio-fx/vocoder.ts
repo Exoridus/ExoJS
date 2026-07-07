@@ -29,14 +29,7 @@ class VocoderScene extends Scene {
     private tapPrompt!: Text;
     private hud!: ReturnType<typeof mountControls>;
 
-    override async load(loader): Promise<void> {
-        await loader.load(
-            Sound,
-            Object.fromEntries(PHRASES.map(phrase => [phrase.key, phrase.asset])),
-        );
-    }
-
-    override init(loader): void {
+    override init(): void {
         const { width, height } = this.app.canvas;
 
         // The spoken voice is the modulator: route every phrase onto its own bus
@@ -45,7 +38,13 @@ class VocoderScene extends Scene {
         app.audio.registerBus(this.modulatorBus);
 
         for (const phrase of PHRASES) {
-            this.phrases.set(phrase.key, loader.get(Sound, phrase.key));
+            // phrase.asset is a widened `string` (not a path literal), so the
+            // path-only get() overload can't infer Sound from the extension;
+            // the explicit Sound token form is ambiguous with the Json token
+            // overload at compile time (both resolve zero-arg-constructible
+            // instance types) even though the runtime seamless adapter is
+            // correct — cast through `unknown` to bridge it.
+            this.phrases.set(phrase.key, this.loader.get(Sound, phrase.asset) as unknown as Sound);
         }
 
         this.vocoder = new VocoderEffect({ modulator: this.modulatorBus, numBands: 16, wet: 1 });

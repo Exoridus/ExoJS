@@ -60,11 +60,7 @@ class FalloffCurvesScene extends Scene {
     private plot = { x: 0, y: 0, w: 0, h: 0 };
     private hud!: ReturnType<typeof mountControls>;
 
-    override async load(loader): Promise<void> {
-        await loader.load(Sound, { source: 'audio/impact-light.ogg' });
-    }
-
-    override init(loader): void {
+    override async init(): Promise<void> {
         const { width, height } = this.app.canvas;
 
         // Sources spread across the lower half; the listener starts centred.
@@ -75,8 +71,16 @@ class FalloffCurvesScene extends Scene {
         this.listener = { x: width / 2, y: height / 2 };
         app.audio.listener.target = this.listener;
 
+        // Each derived Sound below reads .audioBuffer synchronously, so the
+        // shared source must be fully decoded first — await load() instead of
+        // the deferred get() (whose placeholder audioBuffer is null until fill).
+        // The explicit Sound token also hits a compile-time overload ambiguity
+        // with the Json token form (both resolve zero-arg-constructible
+        // instance types), so the awaited result is cast — the runtime
+        // seamless/factory resolution is unaffected.
+        const source = (await this.loader.load(Sound, 'audio/impact-light.ogg')) as Sound;
         this.sounds = this.sources.map(({ model, x, y }) => {
-            const sound = new Sound(loader.get(Sound, 'source').audioBuffer, {
+            const sound = new Sound(source.audioBuffer, {
                 distanceModel: model,
                 refDistance: REF_DISTANCE,
                 maxDistance: MAX_DISTANCE,

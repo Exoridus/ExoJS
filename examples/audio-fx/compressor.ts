@@ -46,11 +46,7 @@ class CompressorScene extends Scene {
     private meterY = 0;
     private hud!: ReturnType<typeof mountControls>;
 
-    override async load(loader): Promise<void> {
-        await loader.load(AudioStream, { music: 'audio/demo-loop-main.ogg' });
-    }
-
-    override init(loader): void {
+    override async init(): Promise<void> {
         const { width, height } = this.app.canvas;
 
         // Wide horizontal bars centred on the 16:9 canvas; labels sit to the left.
@@ -60,7 +56,9 @@ class CompressorScene extends Scene {
         this.rowY = sliders.map((_, i) => height * 0.26 + i * 90);
         this.meterY = this.rowY[this.rowY.length - 1] + 100;
 
-        this.music = loader.get(AudioStream, 'music');
+        // AudioStream has no seamless adapter — await it explicitly.
+        const { music } = await this.loader.load(AudioStream, { music: 'audio/demo-loop-main.ogg' });
+        this.music = music;
         this.filter = new CompressorEffect();
         app.audio.music.addEffect(this.filter);
 

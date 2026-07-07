@@ -29,17 +29,16 @@ class ReverbAndDelayScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
     private panel!: ReturnType<typeof mountControlPanel>;
 
-    override async load(loader): Promise<void> {
-        await loader.load(Sound, { sfx: 'audio/impact-light.ogg' });
-    }
-
-    override init(loader): void {
+    override init(): void {
         const { width, height } = this.app.canvas;
 
         // A large click pad centred on the canvas.
         this.pad = { x: width / 2 - 240, y: height * 0.36, w: 480, h: 160 };
 
-        this.sound = loader.get(Sound, 'sfx');
+        // Path-only get() infers Sound from the .ogg extension — sidesteps a
+        // compile-time overload ambiguity between Sound and the Json token form
+        // when passing the Sound token explicitly.
+        this.sound = this.loader.get('audio/impact-light.ogg');
 
         // Reverb (room tail) → Delay (echoes) chained on the sound bus.
         this.reverb = new ReverbEffect({ wet: 0.4, decay: 2 });
