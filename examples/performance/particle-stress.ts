@@ -178,10 +178,6 @@ class ParticleStressScene extends Scene {
         }
     }
 
-    override unload(): void {
-        this.destroySystems();
-    }
-
     override destroy(): void {
         this.destroySystems();
     }

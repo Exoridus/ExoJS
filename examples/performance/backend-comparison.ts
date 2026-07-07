@@ -21,15 +21,11 @@ let backendType: 'webgl2' | 'webgpu' = 'webgpu';
 class DemoScene extends Scene {
     private sprites!: { sprite: Sprite; vx: number; vy: number }[];
 
-    override async load(loader): Promise<void> {
-        await loader.load(Texture, { bunny: 'image/ship-a.png' });
-    }
-
-    override init(loader): void {
+    override init(): void {
         const { width, height } = this.app.canvas;
 
         this.sprites = Array.from({ length: 2200 }, () => {
-            const sprite = new Sprite(loader.get(Texture, 'bunny'));
+            const sprite = new Sprite(this.loader.get(Texture, 'image/ship-a.png'));
             sprite.setAnchor(0.5);
             sprite.setScale(0.35);
             sprite.setPosition(Math.random() * width, Math.random() * height);
