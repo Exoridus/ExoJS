@@ -17,14 +17,10 @@ class InterruptAndReplaceScene extends Scene {
     private sprite!: Sprite;
     private moveTween: Tween | null = null;
 
-    override async load(loader): Promise<void> {
-        await loader.load(Texture, { bunny: 'image/ship-a.png' });
-    }
-
-    override init(loader): void {
+    override init(): void {
         const { width, height } = this.app.canvas;
 
-        this.sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setPosition(width / 2, height / 2);
+        this.sprite = new Sprite(this.loader.get(Texture, 'image/ship-a.png')).setAnchor(0.5).setPosition(width / 2, height / 2);
         this.app.input.onPointerTap.add(pointer => {
             if (this.moveTween !== null) {
                 this.moveTween.stop();

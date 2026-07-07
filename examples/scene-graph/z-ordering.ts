@@ -18,12 +18,9 @@ class ZOrderingScene extends Scene {
     private label!: Text;
     private sprites!: Sprite[];
 
-    override async load(loader): Promise<void> {
-        await loader.load(Texture, { bunny: 'image/ship-a.png' });
-    }
-
-    override init(loader): void {
+    override init(): void {
         const { width, height } = this.app.canvas;
+        const texture = this.loader.get(Texture, 'image/ship-a.png');
 
         this.group = new Container();
         this.label = new Text('Press 1, 2, 3 — front: 3 (blue)', { fillColor: Color.white, fontSize: 18 });
@@ -32,7 +29,7 @@ class ZOrderingScene extends Scene {
         // Large, tightly spaced sprites so they clearly overlap — otherwise a
         // zIndex change has nothing visible to reorder.
         this.sprites = [0, 1, 2].map(index => {
-            const sprite = new Sprite(loader.get(Texture, 'bunny'))
+            const sprite = new Sprite(texture)
                 .setAnchor(0.5)
                 .setScale(2.4)
                 .setPosition(width / 2 - 90 + index * 90, height / 2);

@@ -18,13 +18,9 @@ class MasksScene extends Scene {
     private gfxSprite!: Sprite;
     private time = 0;
 
-    override async load(loader): Promise<void> {
-        await loader.load(Texture, { alphaRings: ALPHA_RINGS });
-    }
-
-    override init(loader): void {
+    override init(): void {
         const { width, height } = this.app.canvas;
-        const tex = loader.get(Texture, 'alphaRings');
+        const tex = this.loader.get(Texture, ALPHA_RINGS);
 
         this.rectSprite = new Sprite(tex);
         this.rectSprite.setScale(1);

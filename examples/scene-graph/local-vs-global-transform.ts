@@ -20,13 +20,9 @@ class LocalVsGlobalTransformScene extends Scene {
     private localLabel!: Text;
     private globalLabel!: Text;
 
-    override async load(loader): Promise<void> {
-        await loader.load(Texture, { bunny: 'image/ship-a.png' });
-    }
-
-    override init(loader): void {
+    override init(): void {
         const { width, height } = this.app.canvas;
-        const texture = loader.get(Texture, 'bunny');
+        const texture = this.loader.get(Texture, 'image/ship-a.png');
 
         this.parent = new Container().setPosition(width / 4, height / 2);
         this.localSprite = new Sprite(texture)

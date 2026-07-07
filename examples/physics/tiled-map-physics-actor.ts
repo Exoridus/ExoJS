@@ -44,21 +44,13 @@ class TiledMapPhysicsActorScene extends Scene {
     private debug!: PhysicsDebugDraw;
     private hud!: ReturnType<typeof mountControls>;
 
-    override async load(loader): Promise<void> {
-        await loader.load(Texture, {
-            tiles: assets.demo.tilesets.map.image,
-            characters: assets.demo.spritesheets.platformerCharacters.image,
-        });
-        await loader.load(Json, { characters: assets.demo.spritesheets.platformerCharacters.data });
-    }
-
-    override init(loader): void {
+    override async init(): Promise<void> {
         this.world = new PhysicsWorld({ gravity: { x: 0, y: 1500 } });
 
         // ── Tileset + a single ground tile layer ──────────────────────────
         // The map-pack tilesheet is a uniform 64×64 grid (17 columns), so it
         // works as a classic grid tileset. We only need one solid-looking tile.
-        const tilesTexture = loader.get(Texture, 'tiles');
+        const tilesTexture = this.loader.get(Texture, assets.demo.tilesets.map.image);
         const tileset = new TileSet({
             name: 'map',
             texture: new TextureRegion(tilesTexture, { x: 0, y: 0, width: tilesTexture.width, height: tilesTexture.height }),
@@ -129,7 +121,10 @@ class TiledMapPhysicsActorScene extends Scene {
         }
 
         // ── Dynamic actor ─────────────────────────────────────────────────
-        const characters = new Spritesheet(loader.get(Texture, 'characters'), loader.get(Json, 'characters').value as SpritesheetData);
+        const characters = new Spritesheet(
+            this.loader.get(Texture, assets.demo.spritesheets.platformerCharacters.image),
+            (await this.loader.load(Json, assets.demo.spritesheets.platformerCharacters.data)) as SpritesheetData,
+        );
 
         this.actor = characters.getFrameSprite('character_green_front').setAnchor(0.5);
         this.actorBody = this.world.attach(this.actor, {

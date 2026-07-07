@@ -1,4 +1,4 @@
-import { AnimatedSprite, Application, Color, Json, Scene, Spritesheet, Texture } from '@codexo/exojs';
+import { AnimatedSprite, Application, Color, Json, Scene, Spritesheet, type SpritesheetData, Texture } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -21,15 +21,10 @@ class FrameAnimationScene extends Scene {
     private frameCount = 0;
     private hud!: ReturnType<typeof mountControls>;
 
-    override async load(loader): Promise<void> {
-        await loader.load(Texture, { characters: 'image/platformer-characters.png' });
-        await loader.load(Json, { characters: 'json/platformer-characters.json' });
-    }
-
-    override init(loader): void {
+    override async init(): Promise<void> {
         const { width, height } = this.app.canvas;
-        const texture = loader.get(Texture, 'characters');
-        const data = loader.get(Json, 'characters').value;
+        const texture = this.loader.get(Texture, 'image/platformer-characters.png');
+        const data = (await this.loader.load(Json, 'json/platformer-characters.json')) as SpritesheetData;
         const sheet = new Spritesheet(texture, data);
 
         const walkFrames = ['character_beige_walk_a', 'character_beige_walk_b'].map(name => sheet.getFrame(name));

@@ -26,21 +26,16 @@ class SpriteFollowsBodyScene extends Scene {
     private settled = 0;
     private hud!: ReturnType<typeof mountControls>;
 
-    override async load(loader): Promise<void> {
-        await loader.load(Texture, {
-            characters: assets.demo.spritesheets.platformerCharacters.image,
-            pixel: assets.demo.textures.pixelWhite,
-        });
-        await loader.load(Json, { characters: assets.demo.spritesheets.platformerCharacters.data });
-    }
-
-    override init(loader): void {
+    override async init(): Promise<void> {
         const { width, height } = this.app.canvas;
 
         // Gravity in px/s², +Y down — matches the engine's screen space.
         this.world = new PhysicsWorld({ gravity: { x: 0, y: 1400 } });
 
-        const characters = new Spritesheet(loader.get(Texture, 'characters'), loader.get(Json, 'characters').value as SpritesheetData);
+        const characters = new Spritesheet(
+            this.loader.get(Texture, assets.demo.spritesheets.platformerCharacters.image),
+            (await this.loader.load(Json, assets.demo.spritesheets.platformerCharacters.data)) as SpritesheetData,
+        );
 
         this.floorY = height - 80;
 
@@ -50,7 +45,7 @@ class SpriteFollowsBodyScene extends Scene {
         const floorWidth = width - 120;
         const floorHeight = 48;
 
-        this.floor = new Sprite(loader.get(Texture, 'pixel')).setAnchor(0.5);
+        this.floor = new Sprite(this.loader.get(Texture, assets.demo.textures.pixelWhite)).setAnchor(0.5);
         this.floor.width = floorWidth;
         this.floor.height = floorHeight;
         this.floor.tint = new Color(70, 92, 120);

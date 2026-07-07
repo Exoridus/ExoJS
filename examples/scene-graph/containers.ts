@@ -17,27 +17,21 @@ class ContainersScene extends Scene {
     private rainbow!: Sprite;
     private bunnies!: Container;
 
-    override async load(loader): Promise<void> {
-        await loader.load(Texture, {
-            bunny: 'image/ship-a.png',
-            rainbow: 'image/hue-ramp.png',
-        });
-    }
-
-    override init(loader): void {
+    override init(): void {
         const { width, height } = this.app.canvas;
+        const { bunny, rainbow } = this.loader.get(Texture, { bunny: 'image/ship-a.png', rainbow: 'image/hue-ramp.png' });
 
-        this.rainbow = new Sprite(loader.get(Texture, 'rainbow'));
+        this.rainbow = new Sprite(rainbow);
 
         this.bunnies = new Container();
         this.bunnies.setPosition((width / 2) | 0, (height / 2) | 0);
 
         for (let i = 0; i < 25; i++) {
-            const bunny = new Sprite(loader.get(Texture, 'bunny'));
+            const sprite = new Sprite(bunny);
 
-            bunny.setPosition((i % 5) * (bunny.width + 15), ((i / 5) | 0) * (bunny.height + 10));
+            sprite.setPosition((i % 5) * (sprite.width + 15), ((i / 5) | 0) * (sprite.height + 10));
 
-            this.bunnies.addChild(bunny);
+            this.bunnies.addChild(sprite);
         }
 
         this.bunnies.setAnchor(0.5);
