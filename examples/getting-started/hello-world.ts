@@ -17,13 +17,10 @@ const app = new Application({
 class HelloWorldScene extends Scene {
     private sprite!: Sprite;
 
-    override async load(loader): Promise<void> {
-        this.sprite = new Sprite(await loader.load(Texture, 'image/ship-a.png'));
-    }
-
     override init(): void {
         const { width, height } = this.app.canvas;
 
+        this.sprite = new Sprite(this.loader.get(Texture, 'image/ship-a.png'));
         this.sprite.setAnchor(0.5);
         this.sprite.setPosition(width / 2, height / 2);
     }

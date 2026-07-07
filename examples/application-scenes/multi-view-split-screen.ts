@@ -31,12 +31,10 @@ class SplitScreenScene extends Scene {
         down: 0,
     };
 
-    override async load(loader): Promise<void> {
-        this.texture = await loader.load(Texture, 'image/ship-a.png');
-    }
-
     override init(): void {
         const { width, height } = this.app.canvas;
+
+        this.texture = this.loader.get(Texture, 'image/ship-a.png');
 
         this.leftView = new View(0, 0, width / 2, height).setViewport(0, 0, 0.5, 1);
         this.rightView = new View(0, 0, width / 2, height).setViewport(0.5, 0, 0.5, 1);

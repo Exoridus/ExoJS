@@ -21,14 +21,10 @@ class SpriteBasicsScene extends Scene {
     private elapsed = 0;
     private hud!: ReturnType<typeof mountControls>;
 
-    override async load(loader): Promise<void> {
-        await loader.load(Texture, { ship: 'image/ship-a.png' });
-    }
-
-    override init(loader): void {
+    override init(): void {
         const { width, height } = this.app.canvas;
 
-        this.ship = new Sprite(loader.get(Texture, 'ship'));
+        this.ship = new Sprite(this.loader.get(Texture, 'image/ship-a.png'));
         this.ship.setPosition((width / 2) | 0, (height / 2) | 0);
         this.ship.setAnchor(0.5);
         this.ship.setScale(3);

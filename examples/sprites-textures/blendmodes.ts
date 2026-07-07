@@ -47,8 +47,17 @@ class BlendmodesScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
     private cycle!: { set(value: number): void };
 
-    override async load(loader): Promise<void> {
-        await loader.load(
+    // Note: passing `options` as a 3rd argument to `loader.get(Texture, …)` or
+    // `loader.load(Texture, …)` alongside a non-Json type currently mis-resolves
+    // the overload (falls through to the `Json` generic and types the result as
+    // `unknown`) — see the flagged deviation in the migration report. `load()`
+    // is awaited here purely to seed the fetch with `scaleMode: Nearest`; its
+    // return value is intentionally unused. The subsequent 2-argument `get()`
+    // calls for the same sources are unaffected and stay seamless.
+    override async init(): Promise<void> {
+        const { width, height } = this.app.canvas;
+
+        await this.loader.load(
             Texture,
             {
                 background: ALPHA_RINGS,
@@ -58,12 +67,11 @@ class BlendmodesScene extends Scene {
                 scaleMode: ScaleModes.Nearest,
             },
         );
-    }
 
-    override init(loader): void {
-        const { width, height } = this.app.canvas;
+        const backgroundTexture = this.loader.get(Texture, ALPHA_RINGS);
+        const shipTexture = this.loader.get(Texture, assets.demo.textures.shipA);
 
-        this.background = new Sprite(loader.get(Texture, 'background'));
+        this.background = new Sprite(backgroundTexture);
         this.background.setPosition(width / 2, height / 2);
         this.background.setAnchor(0.5, 0.5);
         this.background.setScale(Math.max(width, height) / 256);
@@ -71,12 +79,12 @@ class BlendmodesScene extends Scene {
 
         // Two overlapping sprites in complementary hues so the composite in the
         // overlap region differs clearly between modes.
-        this.left = new Sprite(loader.get(Texture, 'ship'));
+        this.left = new Sprite(shipTexture);
         this.left.setAnchor(0.5, 0.5);
         this.left.setScale(5);
         this.left.setTint(new Color(80, 210, 255));
 
-        this.right = new Sprite(loader.get(Texture, 'ship'));
+        this.right = new Sprite(shipTexture);
         this.right.setAnchor(0.5, 0.5);
         this.right.setScale(5);
         this.right.setTint(new Color(255, 96, 200));

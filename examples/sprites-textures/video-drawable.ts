@@ -26,27 +26,25 @@ class VideoDrawableScene extends Scene {
     private overlay!: Sprite;
     private elapsed = 0;
     private hud!: ReturnType<typeof mountControls>;
-    private assetLoader: any = null;
     private videoIdx = 0;
     private readonly loadedVideos = new Set<string>();
     private switching = false;
 
-    override async load(loader): Promise<void> {
-        this.assetLoader = loader;
-        await loader.load(Video, { [VIDEOS[0].name]: VIDEOS[0].url });
-        this.loadedVideos.add(VIDEOS[0].name);
-        await loader.load(Texture, { ship: assets.demo.textures.shipA });
-    }
-
-    override init(loader): void {
+    override async init(): Promise<void> {
         const { width, height } = this.app.canvas;
 
-        this.video = loader.get(Video, VIDEOS[0].name);
+        // Video has no seamless adapter (unlike Texture/Sound), so it is
+        // awaited via `load()` rather than fetched synchronously via `get()`.
+        await this.loader.load(Video, { [VIDEOS[0].name]: VIDEOS[0].url });
+        this.loadedVideos.add(VIDEOS[0].name);
+
+        this.video = this.loader.get(Video, VIDEOS[0].name);
         this.configureVideo();
 
         // A sprite composited on top of the live video texture — the same scene
-        // graph draws video frames and regular sprites side by side.
-        this.overlay = new Sprite(loader.get(Texture, 'ship'));
+        // graph draws video frames and regular sprites side by side. Texture IS
+        // seamless, so it is fetched directly by source with no preload step.
+        this.overlay = new Sprite(this.loader.get(Texture, assets.demo.textures.shipA));
         this.overlay.setAnchor(0.5);
         this.overlay.setScale(3);
         this.overlay.setPosition(width / 2, height / 2);
@@ -91,12 +89,12 @@ class VideoDrawableScene extends Scene {
         this.hud.setStatus(`Loading — ${entry.label}…`);
         try {
             if (!this.loadedVideos.has(entry.name)) {
-                await this.assetLoader.load(Video, { [entry.name]: entry.url });
+                await this.loader.load(Video, { [entry.name]: entry.url });
                 this.loadedVideos.add(entry.name);
             }
             this.video.pause();
             this.videoIdx = idx;
-            this.video = this.assetLoader.get(Video, entry.name);
+            this.video = this.loader.get(Video, entry.name);
             this.configureVideo();
             this.video.play();
             this.hud.setStatus(`Playing — ${entry.label}`);

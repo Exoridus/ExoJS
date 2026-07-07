@@ -20,12 +20,10 @@ class PictureInPictureScene extends Scene {
     private velocity = 220;
     private frame!: Graphics;
 
-    override async load(loader): Promise<void> {
-        this.sprite = new Sprite(await loader.load(Texture, 'image/ship-a.png'));
-    }
-
     override init(): void {
         const { width, height } = this.app.canvas;
+
+        this.sprite = new Sprite(this.loader.get(Texture, 'image/ship-a.png'));
 
         this.mainView = new View(0, 0, width, height);
         this.pipView = new View(0, 0, width * 0.3, height * 0.3).setViewport(0.68, 0.04, 0.28, 0.28);
