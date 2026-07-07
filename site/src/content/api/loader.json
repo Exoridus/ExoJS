@@ -6,10 +6,10 @@
   "subsystem": "resources",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 60,
+  "memberCount": 62,
   "counts": {
     "constructors": 1,
-    "methods": 49,
+    "methods": 51,
     "properties": 2,
     "events": 8
   },
@@ -740,7 +740,7 @@
         },
         {
           "name": "get",
-          "signature": "get(path: LoadByPath<S> extends Texture ? S : never, options?: TextureFactoryOptions & PreSizeOptions): Texture",
+          "signature": "get(path: LoadByPath<S> extends Sound | Texture ? S : never, options?: unknown): LoadByPath<S>",
           "signatureTokens": [
             {
               "text": "get",
@@ -787,6 +787,14 @@
               "kind": "punctuation"
             },
             {
+              "text": "Sound",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
               "text": "Texture",
               "kind": "type"
             },
@@ -823,16 +831,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "TextureFactoryOptions",
-              "kind": "type"
-            },
-            {
-              "text": " & ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "PreSizeOptions",
-              "kind": "type"
+              "text": "unknown",
+              "kind": "keyword"
             },
             {
               "text": ")",
@@ -843,23 +843,35 @@
               "kind": "punctuation"
             },
             {
-              "text": "Texture",
+              "text": "LoadByPath",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "S",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             }
           ],
           "params": [
             {
               "name": "path",
-              "type": "LoadByPath<S> extends Texture ? S : never",
+              "type": "LoadByPath<S> extends Sound | Texture ? S : never",
               "optional": false
             },
             {
               "name": "options",
-              "type": "TextureFactoryOptions & PreSizeOptions",
+              "type": "unknown",
               "optional": true
             }
           ],
-          "returnType": "Texture",
+          "returnType": "LoadByPath<S>",
           "description": "Seamless access by path alone — the asset type is inferred from the file extension (basename-only, longest-suffix-first; see ExtensionTypeMap). Accepts only paths whose inferred type has a seamless adapter (compile-time gate); dynamic strings resolving to an unregistered extension or a non-seamless type throw with guidance."
         },
         {
@@ -4316,6 +4328,121 @@
           ],
           "returnType": "this",
           "description": "Registers the seamless-handle adapter for type, enabling the deferred get(type, source) form for it. One adapter per type."
+        },
+        {
+          "name": "release",
+          "signature": "release(handle: object): void",
+          "signatureTokens": [
+            {
+              "text": "release",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "handle",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "object",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "handle",
+              "type": "object",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Releases the app-lifetime claim on an asset. When the released claim is the last one on that key, the payload is evicted immediately: a seamless handle's payload is dropped in place (identity preserved, loadState → 'loading') so a later get heals every dangling consumer, and a not-yet-started background entry is dropped from the queue. Accepts either the deferred handle / value-ref returned by get, or the (type, source) pair. Releasing an unclaimed or unknown asset is a no-op."
+        },
+        {
+          "name": "release",
+          "signature": "release(type: AssetConstructor, source: string): void",
+          "signatureTokens": [
+            {
+              "text": "release",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "type",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetConstructor",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "type",
+              "type": "AssetConstructor",
+              "optional": false
+            },
+            {
+              "name": "source",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Releases the app-lifetime claim on an asset. When the released claim is the last one on that key, the payload is evicted immediately: a seamless handle's payload is dropped in place (identity preserved, loadState → 'loading') so a later get heals every dangling consumer, and a not-yet-started background entry is dropped from the queue. Accepts either the deferred handle / value-ref returned by get, or the (type, source) pair. Releasing an unclaimed or unknown asset is a no-op."
         },
         {
           "name": "setConcurrency",

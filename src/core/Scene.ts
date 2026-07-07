@@ -1,9 +1,19 @@
 import type { Tween } from '#animation/Tween';
+import type { Sound } from '#audio/Sound';
 import type { InputBinding, InputBindingOptions, InputChannel } from '#input/InputBinding';
 import { Container } from '#rendering/Container';
 import type { RenderingContext } from '#rendering/RenderingContext';
 import type { RenderNode } from '#rendering/RenderNode';
-import type { Loader } from '#resources/Loader';
+import type { Texture } from '#rendering/texture/Texture';
+import type { Asset } from '#resources/Asset';
+import type { AssetInput } from '#resources/AssetDefinitions';
+import type { AssetRef } from '#resources/AssetRef';
+import type { Assets } from '#resources/Assets';
+import type { TextureFactoryOptions } from '#resources/factories/TextureFactory';
+import type { BatchValue, ConstrainedLoadable, InferLoadedMap, Loadable, LoadByPath, Loader, LoadReturn, PathExtension } from '#resources/Loader';
+import type { LoadingQueue } from '#resources/LoadingQueue';
+import type { PreSizeOptions } from '#resources/seamless';
+import type { BinaryAsset, CsvAsset, Json, SubtitleAsset, TextAsset, WasmAsset, XmlAsset } from '#resources/tokens';
 import { UIRoot } from '#ui/UIRoot';
 
 import type { Application } from './Application';
@@ -88,6 +98,67 @@ class SceneTweens implements Destroyable {
 }
 
 /**
+ * Scene-scoped claim view over the application {@link Loader}. Assets claimed
+ * through `scene.loader.get/load(…)` are held under this scene's claim scope
+ * and released automatically when the scene is destroyed (refcount −1), so
+ * scene-private assets are evicted on unload without manual bookkeeping.
+ * App-lifetime assets stay on `app.loader`.
+ */
+class SceneLoader implements Destroyable {
+  private readonly _scope = Symbol('scene-loader');
+
+  public constructor(private readonly _scene: Scene) {}
+
+  private get _loader(): Loader {
+    return this._scene.app!.loader;
+  }
+
+  public get(type: typeof Texture, source: string, options?: TextureFactoryOptions & PreSizeOptions): Texture;
+  public get(type: typeof Texture, sources: readonly string[], options?: TextureFactoryOptions & PreSizeOptions): Texture[];
+  public get<K extends string>(type: typeof Texture, items: Readonly<Record<K, string>>, options?: TextureFactoryOptions & PreSizeOptions): Record<K, Texture>;
+  public get<S extends string>(path: LoadByPath<S> extends Texture | Sound ? S : never, options?: unknown): LoadByPath<S>;
+  public get<T = unknown>(type: typeof Json, source: string, options?: unknown): AssetRef<T>;
+  public get(type: typeof TextAsset, source: string, options?: unknown): AssetRef<string>;
+  public get(type: typeof CsvAsset, source: string, options?: unknown): AssetRef<string[][]>;
+  public get(type: typeof XmlAsset, source: string, options?: unknown): AssetRef<Document>;
+  public get(type: typeof SubtitleAsset, source: string, options?: unknown): AssetRef<VTTCue[]>;
+  public get(type: typeof BinaryAsset, source: string, options?: unknown): AssetRef<ArrayBuffer>;
+  public get(type: typeof WasmAsset, source: string, options?: unknown): AssetRef<WebAssembly.Module>;
+  public get<T extends Loadable>(type: T, alias: string): LoadReturn<T>;
+  public get(typeOrPath: Loadable | string, source?: unknown, options?: unknown): unknown {
+    return this._loader._getClaimed(this._scope, typeOrPath, source, options);
+  }
+
+  public load<T = unknown>(type: typeof Json, path: string, options?: unknown): LoadingQueue<T>;
+  public load<T = unknown>(type: typeof Json, paths: readonly string[], options?: unknown): LoadingQueue<T[]>;
+  public load<T = unknown, K extends string = string>(type: typeof Json, items: Readonly<Record<K, string>>, options?: unknown): LoadingQueue<Record<K, T>>;
+  public load<T>(asset: Asset<T>): LoadingQueue<T>;
+  public load<M extends Record<string, AssetInput>>(assets: Assets<M>): LoadingQueue<InferLoadedMap<M>>;
+  // eslint-disable-next-line @typescript-eslint/unified-signatures -- mirrors Loader.load verbatim (rule disabled there too)
+  public load<M extends Record<string, AssetInput>>(config: M): LoadingQueue<InferLoadedMap<M>>;
+  public load<R, S extends string>(path: [PathExtension<S>] extends [never] ? never : S): LoadingQueue<R>;
+  public load<S extends string>(path: [PathExtension<S>] extends [never] ? never : S): LoadingQueue<LoadByPath<S>>;
+  public load<T extends Loadable, S extends string>(type: ConstrainedLoadable<T, S>, path: S, options?: unknown): LoadingQueue<LoadReturn<T>>;
+  public load<T extends Loadable>(type: T, paths: readonly string[], options?: unknown): LoadingQueue<Array<LoadReturn<T>>>;
+  public load<T extends Loadable, K extends string>(type: T, items: Readonly<Record<K, BatchValue>>, options?: unknown): LoadingQueue<Record<K, LoadReturn<T>>>;
+  public load(arg0: unknown, arg1?: unknown, arg2?: unknown): LoadingQueue<unknown> {
+    return this._loader._loadClaimed(this._scope, arg0, arg1, arg2);
+  }
+
+  public backgroundLoad(): void;
+  public backgroundLoad(type: Loadable, source: string, options?: unknown): void;
+  // eslint-disable-next-line @typescript-eslint/unified-signatures -- mirrors Loader.backgroundLoad verbatim (rule disabled there too)
+  public backgroundLoad(type: Loadable, sources: readonly string[], options?: unknown): void;
+  public backgroundLoad(type?: Loadable, source?: string | readonly string[], options?: unknown): void {
+    this._loader._backgroundClaimed(this._scope, type, source, options);
+  }
+
+  public destroy(): void {
+    this._loader._releaseScope(this._scope);
+  }
+}
+
+/**
  * A scene's lifecycle host. Subclass to define scene behavior:
  *
  *   class GameScene extends Scene {
@@ -124,6 +195,7 @@ export class Scene {
 
   private _inputs: SceneInputs | null = null;
   private _tweens: SceneTweens | null = null;
+  private _loader: SceneLoader | null = null;
   private _systems: SystemRegistry | null = null;
   private readonly _disposal = new DisposalScope();
 
@@ -188,6 +260,27 @@ export class Scene {
     }
 
     return this._tweens;
+  }
+
+  /**
+   * Scene-scoped claim view over the application {@link Loader}. Assets
+   * claimed via `this.loader.get/load(...)` are held under this scene's own
+   * claim scope and released automatically when the scene is destroyed —
+   * scene-private assets are evicted on unload with zero manual bookkeeping.
+   * App-lifetime assets stay on `app.loader`.
+   *
+   * Throws if accessed before the scene is attached to an {@link Application}.
+   */
+  public get loader(): SceneLoader {
+    if (this._loader === null) {
+      if (this._app === null) {
+        throw new Error('Scene.loader is unavailable before the scene is attached to an Application.');
+      }
+
+      this._loader = this._disposal.track(new SceneLoader(this));
+    }
+
+    return this._loader;
   }
 
   /**
@@ -385,6 +478,7 @@ export class Scene {
     this._disposal.destroy();
     this._inputs = null;
     this._tweens = null;
+    this._loader = null;
     this._systems = null;
     this.onLoad.destroy();
     this.onUnload.destroy();

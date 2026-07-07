@@ -6,11 +6,11 @@
   "subsystem": "resources",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 11,
+  "memberCount": 16,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 11,
+    "properties": 16,
     "events": 0
   },
   "sections": [
@@ -29,6 +29,27 @@
       "id": "properties",
       "title": "Properties",
       "members": [
+        {
+          "name": "aac",
+          "signature": "aac: Sound",
+          "signatureTokens": [
+            {
+              "text": "aac",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Sound",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
         {
           "name": "avif",
           "signature": "avif: Texture",
@@ -135,6 +156,69 @@
           "description": ""
         },
         {
+          "name": "m4a",
+          "signature": "m4a: Sound",
+          "signatureTokens": [
+            {
+              "text": "m4a",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Sound",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "mp3",
+          "signature": "mp3: Sound",
+          "signatureTokens": [
+            {
+              "text": "mp3",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Sound",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "ogg",
+          "signature": "ogg: Sound",
+          "signatureTokens": [
+            {
+              "text": "ogg",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Sound",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
           "name": "otf",
           "signature": "otf: FontFace",
           "signatureTokens": [
@@ -190,6 +274,27 @@
             },
             {
               "text": "FontFace",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "wav",
+          "signature": "wav: Sound",
+          "signatureTokens": [
+            {
+              "text": "wav",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Sound",
               "kind": "type"
             }
           ],

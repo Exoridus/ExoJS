@@ -6,11 +6,11 @@
   "subsystem": "audio",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 25,
+  "memberCount": 27,
   "counts": {
     "constructors": 1,
     "methods": 9,
-    "properties": 15,
+    "properties": 17,
     "events": 0
   },
   "sections": [
@@ -33,7 +33,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(audioBuffer: AudioBuffer, options: SoundOptions): Sound",
+          "signature": "new(audioBuffer: AudioBuffer | null, options: SoundOptions): Sound",
           "signatureTokens": [
             {
               "text": "new",
@@ -54,6 +54,14 @@
             {
               "text": "AudioBuffer",
               "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
             },
             {
               "text": ", ",
@@ -87,7 +95,7 @@
           "params": [
             {
               "name": "audioBuffer",
-              "type": "AudioBuffer",
+              "type": "AudioBuffer | null",
               "optional": false
             },
             {
@@ -685,7 +693,7 @@
         },
         {
           "name": "audioBuffer",
-          "signature": "audioBuffer: AudioBuffer",
+          "signature": "audioBuffer: AudioBuffer | null",
           "signatureTokens": [
             {
               "text": "audioBuffer",
@@ -698,11 +706,19 @@
             {
               "text": "AudioBuffer",
               "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "The underlying decoded audio data. Useful for sharing a single decoded buffer across multiple Sound instances."
+          "description": "The underlying decoded audio data, or null for a deferred handle whose payload hasn't finished loading yet. Useful for sharing a single decoded buffer across multiple Sound instances."
         },
         {
           "name": "distanceModel",
@@ -745,6 +761,60 @@
           "params": [],
           "returnType": null,
           "description": "Playable duration in seconds — the full buffer, or the clip span for a Sound.clip."
+        },
+        {
+          "name": "loaded",
+          "signature": "loaded: Promise<this>",
+          "signatureTokens": [
+            {
+              "text": "loaded",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Promise that settles with this sound once its payload has loaded — resolved immediately for 'ready' sounds, rejected with the load error for 'failed' ones. Re-materialized when a failed load is retried, so read it fresh from this getter rather than caching it across load cycles."
+        },
+        {
+          "name": "loadState",
+          "signature": "loadState: LoadStateValue",
+          "signatureTokens": [
+            {
+              "text": "loadState",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LoadStateValue",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Load lifecycle of this sound. Directly constructed sounds are 'ready'; deferred handles returned by loader.get(Sound, …) start 'loading' and become 'ready' once the payload fills in, or 'failed' when the load errors."
         },
         {
           "name": "maxDistance",

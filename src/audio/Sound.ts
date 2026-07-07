@@ -1,7 +1,10 @@
+import { LoadState, type LoadStateValue } from '#core/LoadState';
+import { logger } from '#core/logging';
 import { clamp } from '#math/utils';
 import { Vector } from '#math/Vector';
 
 import { getAudioContext, isAudioContextReady } from './audio-context';
+import type { AudioBus } from './AudioBus';
 import type { AudioManager } from './AudioManager';
 import { NoopVoice } from './NoopVoice';
 import type { Playable, PlayOptions, Voice } from './Playable';
@@ -119,7 +122,9 @@ interface PooledVoice {
  * lazily) — `Sound` is best for short, frequently-triggered clips.
  */
 export class Sound implements Playable {
-  private readonly _audioBuffer: AudioBuffer;
+  private _audioBuffer: AudioBuffer | null;
+  /** @internal — load lifecycle, driven by the Loader's seamless pipeline. */
+  public readonly _loadState = new LoadState<Sound>();
   private readonly _sprites = new Map<string, NormalizedAudioSpriteClip>();
 
   // Playable buffer window (seconds). Full buffer by default; narrowed by clip().
@@ -150,14 +155,38 @@ export class Sound implements Playable {
   // Active voice pool — tracks concurrent voices for eviction logic.
   private readonly _activeVoices: PooledVoice[] = [];
 
-  /** The underlying decoded audio data. Useful for sharing a single decoded buffer across multiple `Sound` instances. */
-  public get audioBuffer(): AudioBuffer {
+  /**
+   * The underlying decoded audio data, or `null` for a deferred handle whose
+   * payload hasn't finished loading yet. Useful for sharing a single decoded
+   * buffer across multiple `Sound` instances.
+   */
+  public get audioBuffer(): AudioBuffer | null {
     return this._audioBuffer;
   }
 
   /** Playable duration in seconds — the full buffer, or the clip span for a {@link Sound.clip}. */
   public get duration(): number {
     return this._clipEnd - this._clipStart;
+  }
+
+  /**
+   * Load lifecycle of this sound. Directly constructed sounds are `'ready'`;
+   * deferred handles returned by `loader.get(Sound, …)` start `'loading'` and
+   * become `'ready'` once the payload fills in, or `'failed'` when the load
+   * errors.
+   */
+  public get loadState(): LoadStateValue {
+    return this._loadState.value;
+  }
+
+  /**
+   * Promise that settles with this sound once its payload has loaded —
+   * resolved immediately for `'ready'` sounds, rejected with the load error
+   * for `'failed'` ones. Re-materialized when a failed load is retried, so
+   * read it fresh from this getter rather than caching it across load cycles.
+   */
+  public get loaded(): Promise<this> {
+    return this._loadState.loaded(this) as Promise<this>;
   }
 
   public get poolSize(): number {
@@ -267,9 +296,9 @@ export class Sound implements Playable {
     this._rolloffFactor = Math.max(0, value);
   }
 
-  public constructor(audioBuffer: AudioBuffer, options: SoundOptions = {}) {
+  public constructor(audioBuffer: AudioBuffer | null = null, options: SoundOptions = {}) {
     this._audioBuffer = audioBuffer;
-    this._clipEnd = audioBuffer.duration;
+    this._clipEnd = audioBuffer?.duration ?? 0;
 
     const { poolSize, poolStrategy, priority, sprites, volume, loop, playbackRate, muted, distanceModel, refDistance, maxDistance, rolloffFactor } = options;
 
@@ -370,6 +399,10 @@ export class Sound implements Playable {
    * own independent voice pool.
    */
   public clip(offset: number, duration: number): Sound {
+    if (this._audioBuffer === null) {
+      throw new Error('Sound.clip() is unavailable: the sound is not loaded yet.');
+    }
+
     const start = clamp(offset, 0, this._audioBuffer.duration);
     const end = clamp(start + duration, start, this._audioBuffer.duration);
 
@@ -393,6 +426,28 @@ export class Sound implements Playable {
   }
 
   /**
+   * Transplant a decoded buffer into this handle in place (seamless fill).
+   * Resets the clip window to the full buffer.
+   * @internal
+   */
+  public _setBuffer(buffer: AudioBuffer): void {
+    this._audioBuffer = buffer;
+    this._clipStart = 0;
+    this._clipEnd = buffer.duration;
+  }
+
+  /**
+   * Drop the decoded payload back to the placeholder state (refcount-0 eviction).
+   * Identity is preserved; a later load heals in place.
+   * @internal
+   */
+  public _evictBuffer(): void {
+    this._audioBuffer = null;
+    this._clipStart = 0;
+    this._clipEnd = 0;
+  }
+
+  /**
    * Implements {@link Playable}. Called by {@link AudioManager.play}; do not
    * call directly — use `manager.play(sound, options)` instead.
    *
@@ -401,10 +456,17 @@ export class Sound implements Playable {
    * strategy picks a victim to stop before the new voice starts.
    */
   public _createVoice(manager: AudioManager, options: PlayOptions): Voice {
+    const bus = options.bus ?? manager.sound;
+    const notLoaded = this._notLoadedVoice(bus);
+
+    if (notLoaded !== null) {
+      return notLoaded;
+    }
+
     const offset = this._clipStart + Math.max(0, options.time ?? 0);
 
     if (offset >= this._clipEnd) {
-      return new NoopVoice(options.bus ?? manager.sound);
+      return new NoopVoice(bus);
     }
 
     return this._buildVoice(manager, options, offset, {
@@ -426,6 +488,13 @@ export class Sound implements Playable {
       throw new Error(`Sound sprite "${name}" is not defined.`);
     }
 
+    const bus = options.bus ?? manager.sound;
+    const notLoaded = this._notLoadedVoice(bus);
+
+    if (notLoaded !== null) {
+      return notLoaded;
+    }
+
     const clipOffset = Math.max(0, options.time ?? 0);
     const offset = clip.start + clipOffset;
 
@@ -444,11 +513,43 @@ export class Sound implements Playable {
   }
 
   /**
+   * If the sound is not playable-loaded, return a {@link NoopVoice} with a
+   * differentiated warning; otherwise return `null` so the caller builds a
+   * real voice. Both the main path ({@link Sound._createVoice}) and the sprite
+   * path ({@link Sound._createSpriteVoice}) route through this before reaching
+   * {@link Sound._buildVoice} — after eviction the sprite path can otherwise
+   * hand `_buildVoice` a `null` buffer (a sprite defined while loaded, then
+   * evicted and replayed before the reload settles).
+   */
+  private _notLoadedVoice(bus: AudioBus): Voice | null {
+    if (this._loadState.value === 'failed') {
+      logger.warn('Sound.play() called on a sound that failed to load; playing silence.', { source: 'Sound' });
+      return new NoopVoice(bus);
+    }
+
+    if (this._audioBuffer === null || this._loadState.value === 'loading') {
+      logger.warn('Sound.play() called on a sound that is not yet loaded; playing silence. Await sound.loaded or use loader.load().', { source: 'Sound' });
+      return new NoopVoice(bus);
+    }
+
+    return null;
+  }
+
+  /**
    * Shared voice construction for full-buffer and sprite playback. Enforces the
    * pool limit, builds the {@link SoundVoice}, seeds spatialization from the
    * descriptor's position, and tracks the voice for eviction.
    */
   private _buildVoice(manager: AudioManager, options: PlayOptions, offset: number, window: SoundVoiceWindow): Voice {
+    // @internal invariant: the buffer is non-null here. Both `_createVoice` and
+    // `_createSpriteVoice` route through `_notLoadedVoice` before reaching this
+    // method, so a null buffer can no longer arrive through any real caller.
+    const buffer = this._audioBuffer;
+
+    if (buffer === null) {
+      throw new Error('Sound._buildVoice() invariant violated: called with a null buffer.');
+    }
+
     const loop = options.loop ?? this.loop;
     const playbackRate = clamp(options.playbackRate ?? this.playbackRate, 0.1, 20);
     const detune = options.detune ?? 0;
@@ -482,7 +583,7 @@ export class Sound implements Playable {
         maxDistance: this._maxDistance,
         rolloffFactor: this._rolloffFactor,
       },
-      buffer: this._audioBuffer,
+      buffer,
       loop,
       playbackRate,
       detune,

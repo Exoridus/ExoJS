@@ -20,7 +20,7 @@ import { XmlFactory } from '#resources/factories/XmlFactory';
 
 import type { AssetConstructor } from './FactoryRegistry';
 import type { AssetLoaderContext, Loader } from './Loader';
-import { type SeamlessAdapter, textureSeamlessAdapter } from './seamless';
+import { type SeamlessAdapter, soundSeamlessAdapter, textureSeamlessAdapter } from './seamless';
 import { BinaryAsset, CsvAsset, FontAsset, ImageAsset, Json, SubtitleAsset, SvgAsset, TextAsset, WasmAsset, XmlAsset } from './tokens';
 
 // ---------------------------------------------------------------------------
@@ -111,7 +111,7 @@ const textureBinding = binding(
 
 const soundBinding = binding(
   Sound,
-  { typeNames: ['sound'] },
+  { typeNames: ['sound'], extensions: ['ogg', 'mp3', 'wav', 'm4a', 'aac'], seamless: soundSeamlessAdapter },
   binaryFactoryHandler(() => new SoundFactory()),
 );
 

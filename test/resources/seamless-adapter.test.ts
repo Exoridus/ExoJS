@@ -1,6 +1,11 @@
+import { Sound } from '#audio/Sound';
 import { logger, LogSeverity } from '#core/logging';
 import { Texture } from '#rendering/texture/Texture';
-import { textureSeamlessAdapter } from '#resources/seamless';
+import { soundSeamlessAdapter, textureSeamlessAdapter } from '#resources/seamless';
+
+function bufferStub(duration = 2): AudioBuffer {
+  return { duration } as AudioBuffer;
+}
 
 describe('textureSeamlessAdapter', () => {
   test("createPlaceholder returns an empty 'loading' texture", () => {
@@ -113,5 +118,71 @@ describe('textureSeamlessAdapter', () => {
     } finally {
       removeSink();
     }
+  });
+});
+
+describe('soundSeamlessAdapter', () => {
+  test('createPlaceholder yields a loading Sound with no buffer', () => {
+    const handle = soundSeamlessAdapter.createPlaceholder();
+    expect(handle).toBeInstanceOf(Sound);
+    expect(handle.loadState).toBe('loading');
+    expect(handle.audioBuffer).toBeNull();
+  });
+
+  test('fill transplants the donor buffer in place and settles ready', async () => {
+    const handle = soundSeamlessAdapter.createPlaceholder();
+    const donor = new Sound(bufferStub(3));
+    soundSeamlessAdapter.fill(handle, donor);
+    expect(handle.loadState).toBe('ready');
+    expect(handle.duration).toBe(3);
+    await expect(handle.loaded).resolves.toBe(handle);
+  });
+
+  test('fail settles failed and .loaded rejects', async () => {
+    const handle = soundSeamlessAdapter.createPlaceholder();
+    soundSeamlessAdapter.fail(handle, new Error('nope'));
+    expect(handle.loadState).toBe('failed');
+    await expect(handle.loaded).rejects.toThrow('nope');
+  });
+
+  test('evict drops the payload and re-arms for a heal', () => {
+    const handle = soundSeamlessAdapter.createPlaceholder();
+    soundSeamlessAdapter.fill(handle, new Sound(bufferStub(3)));
+    soundSeamlessAdapter.evict(handle);
+    expect(handle.audioBuffer).toBeNull();
+    expect(handle.loadState).toBe('loading');
+  });
+
+  test('fill throws when the donor carries no decoded buffer', () => {
+    const handle = soundSeamlessAdapter.createPlaceholder();
+    expect(() => soundSeamlessAdapter.fill(handle, new Sound(null))).toThrow('no decoded buffer');
+  });
+});
+
+describe('textureSeamlessAdapter.evict', () => {
+  test('drops the real source and re-arms for a heal', () => {
+    const handle = textureSeamlessAdapter.createPlaceholder();
+    const canvas = document.createElement('canvas');
+
+    canvas.width = 16;
+    canvas.height = 16;
+
+    const donor = new Texture(canvas);
+
+    textureSeamlessAdapter.fill(handle, donor);
+
+    // Precondition: a real payload is present after the fill.
+    expect(handle.loadState).toBe('ready');
+    expect(handle.source).toBe(canvas);
+    expect(handle.width).toBe(16);
+    expect(handle.height).toBe(16);
+
+    textureSeamlessAdapter.evict(handle);
+
+    // The drop must actually free the source and reset the size — these fail on a no-op evict.
+    expect(handle.source).toBeNull();
+    expect(handle.width).toBe(0);
+    expect(handle.height).toBe(0);
+    expect(handle.loadState).toBe('loading');
   });
 });

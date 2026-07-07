@@ -1,3 +1,4 @@
+import { Sound } from '#audio/Sound';
 import type { LoadStateValue } from '#core/LoadState';
 import { logger } from '#core/logging';
 import { Texture } from '#rendering/texture/Texture';
@@ -29,6 +30,8 @@ export interface SeamlessAdapter<T> {
   fill(handle: T, donor: T): void;
   /** Show the error payload on the handle and settle `'failed'`. */
   fail(handle: T, error: Error): void;
+  /** Drop the payload back to a placeholder in place (refcount-0 eviction); identity is kept so a later fill heals every consumer. */
+  evict(handle: T): void;
   /** Current load state of the handle. */
   stateOf(handle: T): LoadStateValue;
 }
@@ -87,7 +90,54 @@ export const textureSeamlessAdapter: SeamlessAdapter<Texture> = {
     handle._loadState.fail(error);
   },
 
+  evict(handle: Texture): void {
+    presizes.delete(handle);
+    handle.setSource(null); // frees the GPU upload via the version bump in updateSource()
+    handle._loadState.begin();
+  },
+
   stateOf(handle: Texture): LoadStateValue {
+    return handle.loadState;
+  },
+};
+
+/**
+ * Seamless adapter for {@link Sound}: placeholder is a bufferless Sound;
+ * fill transplants the decoded {@link AudioBuffer} in place via `_setBuffer`;
+ * fail leaves the handle bufferless (play() renders silence + warns);
+ * evict drops the buffer back to placeholder for a later heal.
+ * @internal
+ */
+export const soundSeamlessAdapter: SeamlessAdapter<Sound> = {
+  createPlaceholder(): Sound {
+    const handle = new Sound(null);
+    handle._loadState.begin();
+    return handle;
+  },
+
+  begin(handle: Sound): void {
+    handle._loadState.begin();
+  },
+
+  fill(handle: Sound, donor: Sound): void {
+    if (donor.audioBuffer === null) {
+      throw new Error('soundSeamlessAdapter.fill: donor has no decoded buffer.');
+    }
+    handle._setBuffer(donor.audioBuffer);
+    handle._loadState.settle(handle);
+  },
+
+  fail(handle: Sound, error: Error): void {
+    handle._evictBuffer();
+    handle._loadState.fail(error);
+  },
+
+  evict(handle: Sound): void {
+    handle._evictBuffer();
+    handle._loadState.begin();
+  },
+
+  stateOf(handle: Sound): LoadStateValue {
     return handle.loadState;
   },
 };
