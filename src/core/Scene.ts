@@ -116,6 +116,9 @@ class SceneLoader implements Destroyable {
   public get(type: typeof Texture, source: string, options?: TextureFactoryOptions & PreSizeOptions): Texture;
   public get(type: typeof Texture, sources: readonly string[], options?: TextureFactoryOptions & PreSizeOptions): Texture[];
   public get<K extends string>(type: typeof Texture, items: Readonly<Record<K, string>>, options?: TextureFactoryOptions & PreSizeOptions): Record<K, Texture>;
+  public get(type: typeof Sound, source: string, options?: unknown): Sound;
+  public get(type: typeof Sound, sources: readonly string[], options?: unknown): Sound[];
+  public get<K extends string>(type: typeof Sound, items: Readonly<Record<K, string>>, options?: unknown): Record<K, Sound>;
   public get<S extends string>(path: LoadByPath<S> extends Texture | Sound ? S : never, options?: unknown): LoadByPath<S>;
   public get<T = unknown>(type: typeof Json, source: string, options?: unknown): AssetRef<T>;
   public get(type: typeof TextAsset, source: string, options?: unknown): AssetRef<string>;
@@ -129,6 +132,9 @@ class SceneLoader implements Destroyable {
     return this._loader._getClaimed(this._scope, typeOrPath, source, options);
   }
 
+  public load(type: typeof Sound, path: string, options?: unknown): LoadingQueue<Sound>;
+  public load(type: typeof Sound, paths: readonly string[], options?: unknown): LoadingQueue<Sound[]>;
+  public load<K extends string>(type: typeof Sound, items: Readonly<Record<K, string>>, options?: unknown): LoadingQueue<Record<K, Sound>>;
   public load<T = unknown>(type: typeof Json, path: string, options?: unknown): LoadingQueue<T>;
   public load<T = unknown>(type: typeof Json, paths: readonly string[], options?: unknown): LoadingQueue<T[]>;
   public load<T = unknown, K extends string = string>(type: typeof Json, items: Readonly<Record<K, string>>, options?: unknown): LoadingQueue<Record<K, T>>;

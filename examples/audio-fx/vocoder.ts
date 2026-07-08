@@ -39,12 +39,9 @@ class VocoderScene extends Scene {
 
         for (const phrase of PHRASES) {
             // phrase.asset is a widened `string` (not a path literal), so the
-            // path-only get() overload can't infer Sound from the extension;
-            // the explicit Sound token form is ambiguous with the Json token
-            // overload at compile time (both resolve zero-arg-constructible
-            // instance types) even though the runtime seamless adapter is
-            // correct — cast through `unknown` to bridge it.
-            this.phrases.set(phrase.key, this.loader.get(Sound, phrase.asset) as unknown as Sound);
+            // path-only get() overload can't infer Sound from the extension —
+            // use the explicit Sound token form.
+            this.phrases.set(phrase.key, this.loader.get(Sound, phrase.asset));
         }
 
         this.vocoder = new VocoderEffect({ modulator: this.modulatorBus, numBands: 16, wet: 1 });

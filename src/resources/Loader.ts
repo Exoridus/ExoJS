@@ -717,6 +717,10 @@ export class Loader {
    * Supply a custom `options` object to pass factory-specific configuration
    * (e.g. audio decoding hints or image format overrides).
    */
+  public load(type: typeof Sound, path: string, options?: unknown): LoadingQueue<Sound>;
+  public load(type: typeof Sound, paths: readonly string[], options?: unknown): LoadingQueue<Sound[]>;
+  public load<K extends string>(type: typeof Sound, items: Readonly<Record<K, string>>, options?: unknown): LoadingQueue<Record<K, Sound>>;
+
   public load<T = unknown>(type: typeof Json, path: string, options?: unknown): LoadingQueue<T>;
   public load<T = unknown>(type: typeof Json, paths: readonly string[], options?: unknown): LoadingQueue<T[]>;
   public load<T = unknown, K extends string = string>(type: typeof Json, items: Readonly<Record<K, string>>, options?: unknown): LoadingQueue<Record<K, T>>;
@@ -1095,6 +1099,10 @@ export class Loader {
   public get(type: typeof Texture, source: string, options?: TextureFactoryOptions & PreSizeOptions): Texture;
   public get(type: typeof Texture, sources: readonly string[], options?: TextureFactoryOptions & PreSizeOptions): Texture[];
   public get<K extends string>(type: typeof Texture, items: Readonly<Record<K, string>>, options?: TextureFactoryOptions & PreSizeOptions): Record<K, Texture>;
+
+  public get(type: typeof Sound, source: string, options?: unknown): Sound;
+  public get(type: typeof Sound, sources: readonly string[], options?: unknown): Sound[];
+  public get<K extends string>(type: typeof Sound, items: Readonly<Record<K, string>>, options?: unknown): Record<K, Sound>;
 
   /**
    * Seamless access by path alone — the asset type is inferred from the file

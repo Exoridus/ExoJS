@@ -1,11 +1,15 @@
 import { expectTypeOf } from 'vitest';
 
+import { Sound } from '#audio/Sound';
 import { logger, LogSeverity } from '#core/logging';
 import { materializeAssetBindings } from '#extensions/materialize';
 import { Texture } from '#rendering/texture/Texture';
+import type { AssetRef } from '#resources/AssetRef';
 import { coreAssetBindings } from '#resources/coreAssetBindings';
 import { Loader } from '#resources/Loader';
+import type { LoadingQueue } from '#resources/LoadingQueue';
 import { textureSeamlessAdapter } from '#resources/seamless';
+import { Json } from '#resources/tokens';
 
 /** Loader with all core asset bindings (mirrors createCoreLoader in loader.test.ts). */
 function createCoreLoader(): Loader {
@@ -368,6 +372,26 @@ describe('Loader seamless get (Texture)', () => {
     expectTypeOf(loader.get(Texture, ['a.png', 'b.png'])).toEqualTypeOf<Texture[]>();
     expectTypeOf(loader.get(Texture, { a: 'a.png', b: 'b.png' })).toEqualTypeOf<Record<'a' | 'b', Texture>>();
     expectTypeOf(new Texture(null).loaded).toEqualTypeOf<Promise<Texture>>();
+  });
+
+  test('type-level: Sound token get/load resolve to Sound (not AssetRef<unknown>)', () => {
+    const loader = createCoreLoader();
+
+    // Assertions live in a never-invoked closure: tsc still checks them (pnpm
+    // typecheck covers test files) but no runtime get/load fires a real fetch.
+    // Regression: Sound's all-optional constructor made `typeof Sound` structurally
+    // assignable to `typeof Json`, so get(Sound, …) fell through to the value-asset
+    // overload and resolved AssetRef<unknown>. Explicit Sound token overloads fix it.
+    void (() => {
+      expectTypeOf(loader.get(Sound, 'x.ogg')).toEqualTypeOf<Sound>();
+      expectTypeOf(loader.get(Sound, ['a.ogg', 'b.ogg'])).toEqualTypeOf<Sound[]>();
+      expectTypeOf(loader.get(Sound, { a: 'a.ogg', b: 'b.ogg' })).toEqualTypeOf<Record<'a' | 'b', Sound>>();
+      expectTypeOf(loader.load(Sound, 'x.ogg')).toEqualTypeOf<LoadingQueue<Sound>>();
+
+      // No regression to the other tokens.
+      expectTypeOf(loader.get(Texture, 'x.png')).toEqualTypeOf<Texture>();
+      expectTypeOf(loader.get(Json, 'x.json')).toEqualTypeOf<AssetRef<unknown>>();
+    });
   });
 
   test("get('ship.png') infers Texture via extension and is seamless", async () => {
