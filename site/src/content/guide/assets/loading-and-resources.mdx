@@ -67,7 +67,7 @@ The `loader.basePath` option in `ApplicationOptions` prepends a base prefix to a
 Because the path is the identity, `loader.get('image/hero.png')` returns the very same `Texture` instance from anywhere else in your code — `init`, a later scene, a system — as long as the string matches.
 
 <Callout type="hint" title="get() never throws for seamless types">
-For `Texture`, `Sound`, and the data tokens, `loader.get(...)` always returns synchronously — even before the fetch finishes. Ask for a path you haven't loaded yet and you get a placeholder handle back immediately, which then heals in place once the network request resolves. Check `.ready` / `.state` (see [Status channel](#status-channel-instead-of-throwing) below) instead of guarding with `has()` or try/catch.
+For `Texture`, `Sound`, and the data tokens, `loader.get(...)` always returns synchronously — even before the fetch finishes. Ask for a path you haven't loaded yet and you get a placeholder handle back immediately, which then heals in place once the network request resolves. Check `.ready` / `.state` (see [Status channel](#status-channel-instead-of-throwing) below) instead of an existence check or try/catch.
 </Callout>
 
 ## Dynamic paths and non-seamless types
@@ -243,7 +243,7 @@ async load(loader) {
 
 ## Signals for a global loading screen
 
-`LoadingQueue.onProgress` and `onBundleProgress` (above) are scoped to one call or one bundle. When you want a single loading screen that reflects *everything* the loader is doing — regardless of how many separate `loader.load(...)` calls triggered it — subscribe to the loader instance's own signals instead: `onLoadStart`, `onLoadProgress`, `onLoadComplete`, and `onLoadError`. These track one shared, loader-wide batch: as long as any foreground load is in flight, new loads join the same batch instead of starting a new one.
+`LoadingQueue.onProgress` (above) is scoped to a single `loader.load(...)` call. When you want a single loading screen that reflects *everything* the loader is doing — regardless of how many separate `loader.load(...)` calls triggered it — subscribe to the loader instance's own signals instead: `onLoadStart`, `onLoadProgress`, `onLoadComplete`, and `onLoadError`. These track one shared, loader-wide batch: as long as any foreground load is in flight, new loads join the same batch instead of starting a new one.
 
 | Signal | Payload | Fires |
 |--------|---------|-------|
@@ -321,8 +321,8 @@ console.log(config.value.startLevel);
 loader.unload(TitleAssets); // releases every leaf in the catalog
 ```
 
-<Callout type="hint" title="Legacy alias types still throw">
-Types that aren't seamless — `AudioStream`, `Video`, `BmFont`, `FontAsset`, custom `registerAssetType` types — don't have a placeholder to hand back synchronously, so `loader.get(...)` on one of those still throws if it hasn't finished loading. Guard with `loader.has(...)` or `loader.peek(...)` for those, same as before.
+<Callout type="hint" title="Non-seamless types have no placeholder">
+Types that aren't seamless — `AudioStream`, `Video`, `BmFont`, `FontAsset`, and custom types — have no placeholder to hand back, so there's nothing to `get()` speculatively. Load them by reference and hold onto the resolved value: `const music = await loader.load(AudioStream.of('audio/theme.ogg'))`. There is no `has()`/`peek()` guard — for a seamless handle read `.ready` / `.state`; for a non-seamless resource, `await` the load (or its returned handle's `.loaded` promise) before you use it.
 </Callout>
 
 ## When are resources available?
@@ -349,99 +349,85 @@ async _changeLevel(levelName) {
 
 The frame loop continues running while the promise is pending.
 
-## Manifests and bundles
+## Loading per game phase
 
-For larger projects, declare all assets in a manifest and load bundles on demand:
+Split a large project into per-phase catalogs and load each one as the player reaches it, instead of fetching everything up front. A catalog is just an `Assets.from(...)` group (see [Reusable asset references](#reusable-asset-references)):
 
-```js
-import { defineAssetManifest } from '@codexo/exojs';
+```ts
+import { Assets, AudioStream, Json } from '@codexo/exojs';
 
-const manifest = defineAssetManifest({
-    bundles: {
-        menu: [
-            { type: Texture,     alias: 'logo',  path: 'image/logo.png' },
-            { type: AudioStream, alias: 'theme', path: 'audio/theme.ogg' },
-        ],
-        'level-1': [
-            { type: Texture, alias: 'tiles', path: 'image/level-1/tiles.png' },
-            { type: Json,    alias: 'map',   path: 'data/level-1.json' },
-        ],
-    },
+export const MenuAssets = Assets.from({
+    logo:  'image/logo.png',
+    music: AudioStream.of('audio/theme.ogg'),
 });
 
-loader.registerManifest(manifest);
-
-// Later:
-await loader.loadBundle('menu');
-await loader.loadBundle('level-1');
+export const Level1Assets = Assets.from({
+    tiles: 'image/level-1/tiles.png',
+    map:   Json.of<{ spawn: [number, number] }>('data/level-1.json'),
+});
 ```
 
-`defineAssetManifest` validates the shape at authoring time — non-empty bundle names, valid entries, no duplicate aliases within a type — so a typo throws where you declare it, not deep inside a load. After a bundle resolves, read its assets by the aliases you declared, exactly like a direct load:
+Load the menu catalog once and keep it resident, then load level catalogs as the player progresses:
 
 ```js
-await loader.loadBundle('menu');
+// In the menu scene
+async load(loader) {
+    await loader.load(MenuAssets);
+}
 
-this.logo  = new Sprite(loader.get(Texture, 'logo'));
-this.theme = loader.get(AudioStream, 'theme');
+// Later, when entering gameplay
+async _enterLevel1() {
+    await this.app.loader.load(Level1Assets);
+    this.tiles = Level1Assets.tiles;
+    this.map   = Level1Assets.map.value;
+}
 ```
 
-Bundles are useful when scene loads should be granular — load the menu bundle once and keep it resident, then load level bundles as the player progresses. Treat bundle names and aliases as part of your project's asset contract.
+Loading is idempotent: a catalog whose leaves are already resident resolves immediately without re-fetching, so you can call `loader.load(Level1Assets)` again from anywhere without a guard. Treat catalog names and their keys as part of your project's asset contract.
 
 ### Progress for a loading screen
 
-`loadBundle` accepts an `onProgress` callback that fires after each asset in the bundle settles — drive a progress bar with it:
+`loader.load(catalog)` returns a `LoadingQueue` — attach `onProgress` for a per-catalog bar, exactly as in [Progress and parallel loading](#progress-and-parallel-loading):
 
 ```js
-await loader.loadBundle('level-1', {
-    onProgress: (loaded, total) => {
-        this.bar.value = loaded / total;
-    },
+const loading = loader.load(Level1Assets);
+
+loading.onProgress.add((p) => {
+    this.bar.value = p.loaded / p.total;
 });
+
+await loading;
 ```
 
-For a single screen that reflects every bundle, subscribe to the loader-wide `onBundleProgress` signal instead. It reports the bundle name alongside the counts:
-
-```js
-loader.onBundleProgress.add((name, loaded, total) => {
-    console.log(`${name}: ${loaded}/${total}`);
-});
-```
+For one screen that reflects every load regardless of how many catalogs are in flight, use the loader-wide signals from [Signals for a global loading screen](#signals-for-a-global-loading-screen).
 
 ### Handling failures
 
-If any asset in a bundle fails, `loadBundle` waits for the rest to settle and then throws a `BundleLoadError`. Its `failures` array lists every entry that errored — the type, alias, and underlying error — so you can show a retry prompt or fall back to a placeholder rather than dropping the whole bundle:
+Awaiting a catalog rejects if any leaf fails. Wrap the await and read each leaf's status channel to find which one — a failed seamless handle still renders a visible "missing" fallback, so the scene keeps running:
 
 ```js
-import { BundleLoadError } from '@codexo/exojs';
-
 try {
-    await loader.loadBundle('level-1');
-} catch (error) {
-    if (error instanceof BundleLoadError) {
-        for (const failure of error.failures) {
-            console.warn(`Failed: ${failure.alias}`, failure.error);
-        }
-        // retry, substitute a fallback asset, or surface a message
+    await loader.load(Level1Assets);
+} catch {
+    if (Level1Assets.tiles.state === 'failed') {
+        console.warn('tiles failed:', Level1Assets.tiles.error);
+        // substitute a fallback, or surface a retry prompt
     }
 }
 ```
 
+There is no separate bundle error type — every leaf carries its own `.state` / `.error` (see [Status channel](#status-channel-instead-of-throwing)).
+
 ### Pre-warming in the background
 
-To load a bundle ahead of time without blocking the current scene, pass `background: true`. The bundle loads through a low-priority queue while the frame loop keeps running:
+To fetch a catalog ahead of time without blocking the current scene, pass `{ background: true }`. Every leaf is still claimed and heals in place, but its fetch is routed through a low-priority queue while the frame loop keeps running:
 
 ```js
 // Kick off the next level while the player is still in this one
-loader.loadBundle('level-2', { background: true });
+loader.load(Level2Assets, { background: true });
 ```
 
-Guard against re-loading with `loader.hasBundle(name)`, which returns `true` once every asset in the bundle is resident in memory:
-
-```js
-if (!loader.hasBundle('level-2')) {
-    await loader.loadBundle('level-2');
-}
-```
+A backgrounded leaf is boosted to fetch immediately if something `get()`s or foreground-`load()`s it before the queue reaches it — so there's nothing to guard against. Request it in the background early, then `await loader.load(Level2Assets)` when you actually need it and it resolves as soon as the in-flight fetch finishes. `loader.loadAll()` resolves once the background queue has fully drained.
 
 ## Caching and IndexedDB
 
@@ -498,60 +484,92 @@ All three share one async interface, so swapping `WebStorageStore` for `IndexedD
 
 ## Custom asset types (advanced)
 
-Register a string type name to teach the loader about domain-specific resources. First, extend `AssetDefinitions` via declaration merging:
+Teach the loader about a domain-specific resource with `defineAsset`. One descriptor feeds three consumers: the loader-local handler, the kind's placeholder strategy, and — for leaf-capable kinds — bare-path inference.
+
+First extend `AssetDefinitions` via declaration merging so the type system knows the new kind, then call `defineAsset`:
 
 ```ts
+import { Asset, defineAsset } from '@codexo/exojs';
+import type { AssetHandler } from '@codexo/exojs/extensions';
+
+// 1. The resource your handler produces.
+export class HeightField {
+    public constructor(public readonly rows: readonly number[][]) {}
+
+    // Annotation static — how the type is loaded by reference (a dynamic path,
+    // per-asset options, or a key inside `Assets.from({...})`).
+    public static of(source: string): Asset<HeightField> {
+        return new Asset({ type: 'heightField', source }) as unknown as Asset<HeightField>;
+    }
+}
+
+// 2. Register the kind with the type system (declaration merging).
 declare module '@codexo/exojs' {
     interface AssetDefinitions {
-        tileMap: {
-            resource: TileMapData;
-            config: {
-                source: string;
-                format: 'tmx' | 'tiled-json';
-            };
-        };
+        heightField: { resource: HeightField; config: { source: string } };
     }
+}
+
+// 3. Bind the kind to a loader-local handler. Returns an AssetBinding.
+export const heightFieldBinding = defineAsset({
+    type:    HeightField,
+    kind:    'heightField',
+    isValue: false, // a resource loaded by reference — see the note below
+    create() {
+        return {
+            async load(req, ctx) {
+                const text = await ctx.fetchText(req.source);
+                return new HeightField(parseHeightField(text));
+            },
+        } satisfies AssetHandler<HeightField>;
+    },
+});
+
+function parseHeightField(text: string): number[][] {
+    return text.split('\n').map((row) => row.split(',').map(Number));
 }
 ```
 
-Then register the handler:
+The handler `context` routes fetches through the loader's cache strategy and IndexedDB stores:
 
-```ts
-loader.registerAssetType('tileMap', {
-    getIdentityKey(config) {
-        // Two configs with the same source but different format are distinct assets
-        return `${config.source}:${config.format}`;
-    },
-
-    async load(config, context) {
-        const text = await context.fetchText(config.source);
-        return parseTileMap(text, config.format);
-    },
-});
-```
-
-The handler context provides:
-
-| Method | Returns |
+| Member | Returns |
 |--------|---------|
 | `context.fetchText(source)` | `Promise<string>` |
 | `context.fetchJson<T>(source)` | `Promise<T>` |
 | `context.fetchArrayBuffer(source)` | `Promise<ArrayBuffer>` |
-| `context.identityKey` | `string` — the active in-flight key for diagnostics |
+| `context.loader` | the `Loader` — load sub-assets (e.g. a texture the file references) through it |
 
-Using `context.fetch*` routes through the loader's cache strategy and IDB stores. `getIdentityKey` controls in-flight deduplication — omit it when `source` alone determines the result; supply it when extra config fields change the output.
+Supply an optional `getIdentityKey(req)` on the handler to control in-flight deduplication — omit it when `source` alone determines the result; supply it when extra config fields change the output.
 
-Once registered, all `Asset` and `Assets` APIs work for your type:
+Install the binding by passing it on an [`Extension`](/ExoJS/en/api/extension/) to `ApplicationOptions.extensions`. Once installed, the type works everywhere the built-ins do:
 
-```ts
-const map = new Asset({
-    type:   'tileMap',
-    source: 'maps/level-1.tmx',
-    format: 'tmx',
+```js
+// Dynamic path or explicit reference
+const field = await loader.load(HeightField.of('maps/level-1.hf'));
+
+// Or grouped in a catalog
+const World = Assets.from({ level1: HeightField.of('maps/level-1.hf') });
+```
+
+<Callout type="hint" title="Bare-path inference is opt-in">
+`HeightField.of(...)` always works. To *also* allow a bare `loader.load('maps/level-1.hf')` (extension-inferred), the kind must be **leaf-capable** — either a value kind (`isValue: true`) or a resource with a `seamless` adapter that heals in place — and it must declare its file suffixes. Register them on the descriptor and mirror the suffix→kind mapping in the type system:
+
+```ts no-check
+export const heightFieldBinding = defineAsset({
+    type: HeightField,
+    kind: 'heightField',
+    seamless: heightFieldSeamlessAdapter, // heals in place, like Texture/Sound
+    extensions: ['hf'],
+    create() { /* … */ },
 });
 
-const tileMap: TileMapData = await loader.load(map);
+declare module '@codexo/exojs' {
+    interface ExtensionKindMap { hf: 'heightField'; }
+}
 ```
+
+The built-in `texture` and `sound` bindings are the reference for a seamless resource; `json` / `text` for a value kind.
+</Callout>
 
 ## Examples
 
