@@ -9,7 +9,7 @@ import type { CacheStore } from '#resources/CacheStore';
 import { coreAssetBindings } from '#resources/coreAssetBindings';
 import { defineAsset } from '#resources/defineAsset';
 import { Loader } from '#resources/Loader';
-import { BinaryAsset, Json, TextAsset } from '#resources/tokens';
+import { TextAsset } from '#resources/tokens';
 
 /** Create a Loader with all core asset bindings pre-installed. */
 function createCoreLoader(options?: ConstructorParameters<typeof Loader>[0]): Loader {
@@ -204,7 +204,7 @@ describe('Loader', () => {
     // A fetch that never settles keeps the adopted ref in its 'loading' state.
     global.fetch = vi.fn((): Promise<Response> => new Promise<Response>(() => {}));
 
-    const ref = loader.get(TextAsset.of('nope'));
+    const ref = loader.get(Asset.kind('text', 'nope'));
 
     expect(ref.loadState).toBe('loading');
     expect(() => ref.value).toThrow("'loading'");
@@ -1408,9 +1408,9 @@ describe('loadContainer()', () => {
     const loader = createCoreLoaderLocal();
     await loader.loadContainer('assets/pack.exoa');
 
-    expect(loader.get(Json.of('level')).value).toEqual({ score: 42 });
-    expect(loader.get(TextAsset.of('readme')).value).toBe('hello world');
-    expect(new Uint8Array(loader.get(BinaryAsset.of('blob')).value)).toEqual(new Uint8Array([1, 2, 3, 4]));
+    expect(loader.get(Asset.kind('json', 'level')).value).toEqual({ score: 42 });
+    expect(loader.get(Asset.kind('text', 'readme')).value).toBe('hello world');
+    expect(new Uint8Array(loader.get(Asset.kind('binary', 'blob')).value)).toEqual(new Uint8Array([1, 2, 3, 4]));
   });
 
   test('throws on an unknown asset type and stores nothing', async () => {

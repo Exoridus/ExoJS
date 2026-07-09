@@ -2,6 +2,7 @@ import { expectTypeOf } from 'vitest';
 
 import { Sound } from '#audio/Sound';
 import { materializeAssetBindings } from '#extensions/materialize';
+import { Asset } from '#resources/Asset';
 import { Assets } from '#resources/Assets';
 import { coreAssetBindings } from '#resources/coreAssetBindings';
 import { Loader, type LoaderOptions } from '#resources/Loader';
@@ -131,8 +132,8 @@ describe('refcount / claims', () => {
     const loader = createCoreLoader();
     const scopeA = Symbol('A');
     const scopeB = Symbol('B');
-    const handle = loader._getClaimed(scopeA, Sound.of('boom.ogg')) as Sound;
-    loader._getClaimed(scopeB, Sound.of('boom.ogg'));
+    const handle = loader._getClaimed(scopeA, Asset.kind('sound', 'boom.ogg')) as Sound;
+    loader._getClaimed(scopeB, Asset.kind('sound', 'boom.ogg'));
     await handle.loaded;
 
     loader._release(loader['_key'](Sound, 'boom.ogg'), scopeA);

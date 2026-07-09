@@ -2,10 +2,10 @@ import { expectTypeOf } from 'vitest';
 
 import { materializeAssetBindings } from '#extensions/materialize';
 import { Texture } from '#rendering/texture/Texture';
+import { Asset } from '#resources/Asset';
 import { AssetRef } from '#resources/AssetRef';
 import { coreAssetBindings } from '#resources/coreAssetBindings';
 import { Loader } from '#resources/Loader';
-import { Json } from '#resources/tokens';
 
 function createCoreLoader(): Loader {
   const loader = new Loader();
@@ -38,11 +38,11 @@ describe('AssetRef value assets', () => {
     global.fetch = originalFetch;
   });
 
-  test('get(Json.of(src)) returns a loading ref whose value throws until ready', async () => {
+  test('get(Asset.kind(json, src)) returns a loading ref whose value throws until ready', async () => {
     mockFetchJson({ hp: 3 });
     const loader = createCoreLoader();
 
-    const ref = loader.get(Json.of('cfg.json'));
+    const ref = loader.get(Asset.kind('json', 'cfg.json'));
 
     expect(ref).toBeInstanceOf(AssetRef);
     expect(ref.loadState).toBe('loading');
@@ -72,8 +72,8 @@ describe('AssetRef value assets', () => {
     mockFetchJson({ b: 2 });
     const loader = createCoreLoader();
 
-    await loader.load(Json.of('cfg.json'));
-    const ref = loader.get(Json.of('cfg.json'));
+    await loader.load(Asset.kind('json', 'cfg.json'));
+    const ref = loader.get(Asset.kind('json', 'cfg.json'));
 
     expect(ref.loadState).toBe('ready');
     expect(ref.value).toEqual({ b: 2 });

@@ -2,11 +2,11 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { materializeAssetBindings } from '#extensions/materialize';
 import { Texture } from '#rendering/texture/Texture';
+import { Asset } from '#resources/Asset';
 import { AssetRef } from '#resources/AssetRef';
 import { Assets } from '#resources/Assets';
 import { coreAssetBindings } from '#resources/coreAssetBindings';
 import { Loader } from '#resources/Loader';
-import { Json } from '#resources/tokens';
 
 /** Loader with all core asset bindings (mirrors createCoreLoader in the sibling loader tests). */
 function createCoreLoader(): Loader {
@@ -53,7 +53,7 @@ describe('S2 asset-access surface (integration)', () => {
     const assets = Assets.from({
       ship: 'sprites/ship.png', // bare → Texture (resource leaf)
       config: 'data/config.json', // bare → AssetRef (value leaf)
-      level: Json.of<{ hp: number }>('levels/1.json'), // .of → AssetRef
+      level: Asset.kind<{ hp: number }>('json', 'levels/1.json'), // .of → AssetRef
     });
 
     // Constructed in a field-initializer position — NO loader involved yet.
@@ -75,7 +75,7 @@ describe('S2 asset-access surface (integration)', () => {
 
     const assets = Assets.from({
       ship: 'sprites/ship.png',
-      level: Json.of<{ hp: number }>('levels/1.json'),
+      level: Asset.kind<{ hp: number }>('json', 'levels/1.json'),
     });
     const ship = assets.ship; // capture identity to prove in-place heal
 

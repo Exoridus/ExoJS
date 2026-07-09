@@ -18,6 +18,7 @@ import { VideoFactory } from '#resources/factories/VideoFactory';
 import { WasmFactory } from '#resources/factories/WasmFactory';
 import { XmlFactory } from '#resources/factories/XmlFactory';
 
+import { Asset } from './Asset';
 import { registerAssetKind } from './assetKindRegistry';
 import { defineAsset } from './defineAsset';
 import { registerExtensionKind } from './extensionKindRegistry';
@@ -225,7 +226,7 @@ const bmFontBinding = defineAsset({
     async load({ source }: AssetLoadRequest, context: AssetLoaderContext): Promise<BmFont> {
       const text = await context.fetchText(source);
       const fontData = parseBmFontText(text);
-      const textures = await Promise.all(fontData.pages.map(page => loader.load(Texture.of(resolveSubAssetPath(page, source)))));
+      const textures = await Promise.all(fontData.pages.map(page => loader.load(Asset.kind('texture', resolveSubAssetPath(page, source)))));
       return new BmFont(fontData, textures);
     },
   }),

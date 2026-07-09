@@ -1,12 +1,11 @@
 import { afterEach, beforeEach, describe, expect, expectTypeOf, test, vi } from 'vitest';
 
 import { materializeAssetBindings } from '#extensions/materialize';
-import { BmFont } from '#rendering/text/BmFont';
 import { Texture } from '#rendering/texture/Texture';
+import { Asset } from '#resources/Asset';
 import { AssetRef } from '#resources/AssetRef';
 import { coreAssetBindings } from '#resources/coreAssetBindings';
 import { Loader } from '#resources/Loader';
-import { Json, TextAsset } from '#resources/tokens';
 
 /** Loader with all core asset bindings (mirrors the sibling asset-access tests). */
 function createCoreLoader(): Loader {
@@ -48,11 +47,11 @@ describe('get(X.of()) descriptor access', () => {
     global.fetch = originalFetch;
   });
 
-  test('get(Json.of(...)) returns a stable AssetRef that fills on load', async () => {
+  test('get(Asset.kind(json, ...)) returns a stable AssetRef that fills on load', async () => {
     mockFetch({ n: 7 });
     const loader = createCoreLoader();
 
-    const ref = loader.get(Json.of<{ n: number }>('levels/1.json'));
+    const ref = loader.get(Asset.kind<{ n: number }>('json', 'levels/1.json'));
     expect(ref).toBeInstanceOf(AssetRef);
     expect(ref.ready).toBe(false);
 
@@ -60,18 +59,18 @@ describe('get(X.of()) descriptor access', () => {
     expect(ref.value).toEqual({ n: 7 });
   });
 
-  test('get(TextAsset.of(...)) returns an AssetRef for a primitive value kind', () => {
+  test('get(Asset.kind(text, ...)) returns an AssetRef for a primitive value kind', () => {
     mockFetch('hello');
     const loader = createCoreLoader();
 
-    expect(loader.get(TextAsset.of('greeting.txt'))).toBeInstanceOf(AssetRef);
+    expect(loader.get(Asset.kind('text', 'greeting.txt'))).toBeInstanceOf(AssetRef);
   });
 
-  test('get(Texture.of(...)) returns a placeholder Texture that heals in place on load', async () => {
+  test('get(Asset.kind(texture, ...)) returns a placeholder Texture that heals in place on load', async () => {
     mockFetch({});
     const loader = createCoreLoader();
 
-    const texture = loader.get(Texture.of('sprites/ship.png'));
+    const texture = loader.get(Asset.kind('texture', 'sprites/ship.png'));
     expect(texture).toBeInstanceOf(Texture);
     expect(texture.state).toBe('loading');
 
@@ -79,27 +78,27 @@ describe('get(X.of()) descriptor access', () => {
     expect(texture.state).toBe('ready');
   });
 
-  test('get(dynamic Texture.of(path)) works — the removed get(Texture, dynamicSource) replacement', () => {
+  test('get(dynamic Asset.kind(texture, path)) works — the removed get(Texture, dynamicSource) replacement', () => {
     mockFetch({});
     const loader = createCoreLoader();
 
     const dynamicPath = ['sprites', 'dyn.png'].join('/');
-    expect(loader.get(Texture.of(dynamicPath))).toBeInstanceOf(Texture);
+    expect(loader.get(Asset.kind('texture', dynamicPath))).toBeInstanceOf(Texture);
   });
 
   test('get(X.of()) on a non-leaf resource kind throws with guidance to use load()', () => {
     const loader = createCoreLoader();
 
     // bmFont is a non-leaf resource kind (no seamless adapter, not a value kind).
-    expect(() => loader.get(BmFont.of('font.fnt'))).toThrow(/get\(\) is for seamless\/value assets/);
+    expect(() => loader.get(Asset.kind('bmFont', 'font.fnt'))).toThrow(/get\(\) is for seamless\/value assets/);
   });
 
   test('type: get(Json.of<primitive>) is AssetRef, get(Texture.of) is Texture', () => {
     const loader = createCoreLoader();
 
     // Value descriptor with a primitive payload → AssetRef<primitive>.
-    expectTypeOf(loader.get(Json.of<number>('n.json'))).toEqualTypeOf<AssetRef<number>>();
+    expectTypeOf(loader.get(Asset.kind<number>('json', 'n.json'))).toEqualTypeOf<AssetRef<number>>();
     // Resource descriptor → its heal-in-place handle.
-    expectTypeOf(loader.get(Texture.of('x.png'))).toEqualTypeOf<Texture>();
+    expectTypeOf(loader.get(Asset.kind('texture', 'x.png'))).toEqualTypeOf<Texture>();
   });
 });
