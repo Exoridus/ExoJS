@@ -32,7 +32,7 @@ describe('assetKindRegistry', () => {
   });
 
   it('registerAssetKind throws when re-registering a kind with a different adapter', () => {
-    // texture is already registered by the '#resources/seamless' side-effect import above.
+    // texture is already registered by the '#resources/coreAssetBindings' side-effect import above.
     // Re-registering with a different adapter must throw and must NOT mutate the registry.
     expect(() => registerAssetKind('texture', { adapter: soundSeamlessAdapter, isValue: false })).toThrow(/already registered/);
     // Confirm the throw left the original registration intact.
