@@ -1,4 +1,4 @@
-import { Application, Color, Graphics, Scene, Sprite, Text, Texture } from '@codexo/exojs';
+import { Application, Color, Graphics, Scene, Sprite, Text } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -27,13 +27,13 @@ class PivotAndAnchorScene extends Scene {
     private timer = 0;
 
     override async load(loader): Promise<void> {
-        await loader.load(Texture, { bunny: 'image/ship-a.png' });
+        await loader.load('image/ship-a.png');
     }
 
     override init(loader): void {
         const { width, height } = this.app.canvas;
 
-        this.sprite = new Sprite(loader.get(Texture, 'bunny')).setPosition(width / 2, height / 2);
+        this.sprite = new Sprite(loader.get('image/ship-a.png')).setPosition(width / 2, height / 2);
         this.pivotMarker = new Graphics();
         this.label = new Text('', { fillColor: Color.white, fontSize: 18 });
         this.label.setPosition(20, 20);

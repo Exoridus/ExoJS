@@ -1,4 +1,4 @@
-import { Application, Color, Ease, Scene, Sprite, Texture, Tween } from '@codexo/exojs';
+import { Application, Color, Ease, Scene, Sprite, Tween } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -31,14 +31,14 @@ class TweenFromArrayScene extends Scene {
     private waypoints: Array<{ x: number; y: number }> = [];
 
     override async load(loader): Promise<void> {
-        await loader.load(Texture, { bunny: 'image/ship-a.png' });
+        await loader.load('image/ship-a.png');
     }
 
     override init(loader): void {
         const { width, height } = this.app.canvas;
 
         this.waypoints = waypointFractions.map(({ fx, fy }) => ({ x: fx * width, y: fy * height }));
-        this.sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setPosition(this.waypoints[0].x, this.waypoints[0].y);
+        this.sprite = new Sprite(loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(this.waypoints[0].x, this.waypoints[0].y);
         this.buildPath();
     }
 

@@ -1,4 +1,4 @@
-import { Application, Color, Graphics, Rectangle, Scene, Sprite, Texture } from '@codexo/exojs';
+import { Application, Color, Graphics, Rectangle, Scene, Sprite } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -19,12 +19,12 @@ class MasksScene extends Scene {
     private time = 0;
 
     override async load(loader): Promise<void> {
-        await loader.load(Texture, { alphaRings: ALPHA_RINGS });
+        await loader.load(ALPHA_RINGS);
     }
 
     override init(loader): void {
         const { width, height } = this.app.canvas;
-        const tex = loader.get(Texture, 'alphaRings');
+        const tex = loader.get(ALPHA_RINGS);
 
         this.rectSprite = new Sprite(tex);
         this.rectSprite.setScale(1);

@@ -1,4 +1,4 @@
-import { Application, Color, Container, Keyboard, Scene, Sprite, Text, Texture } from '@codexo/exojs';
+import { Application, Color, Container, Keyboard, Scene, Sprite, Text } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -19,7 +19,7 @@ class ZOrderingScene extends Scene {
     private sprites!: Sprite[];
 
     override async load(loader): Promise<void> {
-        await loader.load(Texture, { bunny: 'image/ship-a.png' });
+        await loader.load('image/ship-a.png');
     }
 
     override init(loader): void {
@@ -32,7 +32,7 @@ class ZOrderingScene extends Scene {
         // Large, tightly spaced sprites so they clearly overlap — otherwise a
         // zIndex change has nothing visible to reorder.
         this.sprites = [0, 1, 2].map(index => {
-            const sprite = new Sprite(loader.get(Texture, 'bunny'))
+            const sprite = new Sprite(loader.get('image/ship-a.png'))
                 .setAnchor(0.5)
                 .setScale(2.4)
                 .setPosition(width / 2 - 90 + index * 90, height / 2);

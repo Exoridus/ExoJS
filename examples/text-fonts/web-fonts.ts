@@ -18,7 +18,7 @@ class WebFontsScene extends Scene {
     private loaded!: Text;
 
     override async load(loader): Promise<void> {
-        await loader.load(FontAsset, { andy: 'font/Kenney Future.ttf' }, { family: 'Kenney Future' });
+        await loader.load(FontAsset.of('font/Kenney Future.ttf', { family: 'Kenney Future' }));
     }
 
     override init(): void {

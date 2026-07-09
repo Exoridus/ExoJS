@@ -18,7 +18,7 @@ class BasicTextScene extends Scene {
     private text!: Text;
 
     override async load(loader): Promise<void> {
-        await loader.load(FontAsset, { example: 'font/Kenney Future.ttf' }, { family: 'Kenney Future' });
+        await loader.load(FontAsset.of('font/Kenney Future.ttf', { family: 'Kenney Future' }));
     }
 
     override init(): void {

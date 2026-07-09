@@ -1,4 +1,4 @@
-import { Application, Color, Scene, Sprite, Texture, Tween } from '@codexo/exojs';
+import { Application, Color, Scene, Sprite, Tween } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -18,13 +18,13 @@ class InterruptAndReplaceScene extends Scene {
     private moveTween: Tween | null = null;
 
     override async load(loader): Promise<void> {
-        await loader.load(Texture, { bunny: 'image/ship-a.png' });
+        await loader.load('image/ship-a.png');
     }
 
     override init(loader): void {
         const { width, height } = this.app.canvas;
 
-        this.sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setPosition(width / 2, height / 2);
+        this.sprite = new Sprite(loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(width / 2, height / 2);
         this.app.input.onPointerTap.add(pointer => {
             if (this.moveTween !== null) {
                 this.moveTween.stop();

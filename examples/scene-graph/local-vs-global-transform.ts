@@ -1,4 +1,4 @@
-import { Application, Color, Container, Scene, Sprite, Text, Texture } from '@codexo/exojs';
+import { Application, Color, Container, Scene, Sprite, Text } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -21,12 +21,12 @@ class LocalVsGlobalTransformScene extends Scene {
     private globalLabel!: Text;
 
     override async load(loader): Promise<void> {
-        await loader.load(Texture, { bunny: 'image/ship-a.png' });
+        await loader.load('image/ship-a.png');
     }
 
     override init(loader): void {
         const { width, height } = this.app.canvas;
-        const texture = loader.get(Texture, 'bunny');
+        const texture = loader.get('image/ship-a.png');
 
         this.parent = new Container().setPosition(width / 4, height / 2);
         this.localSprite = new Sprite(texture)

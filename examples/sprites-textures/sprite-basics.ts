@@ -1,4 +1,4 @@
-import { Application, Color, Scene, Sprite, Texture } from '@codexo/exojs';
+import { Application, Color, Scene, Sprite } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -22,13 +22,13 @@ class SpriteBasicsScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
 
     override async load(loader): Promise<void> {
-        await loader.load(Texture, { ship: 'image/ship-a.png' });
+        await loader.load('image/ship-a.png');
     }
 
     override init(loader): void {
         const { width, height } = this.app.canvas;
 
-        this.ship = new Sprite(loader.get(Texture, 'ship'));
+        this.ship = new Sprite(loader.get('image/ship-a.png'));
         this.ship.setPosition((width / 2) | 0, (height / 2) | 0);
         this.ship.setAnchor(0.5);
         this.ship.setScale(3);

@@ -48,22 +48,16 @@ class BlendmodesScene extends Scene {
     private cycle!: { set(value: number): void };
 
     override async load(loader): Promise<void> {
-        await loader.load(
-            Texture,
-            {
-                background: ALPHA_RINGS,
-                ship: assets.demo.textures.shipA,
-            },
-            {
-                scaleMode: ScaleModes.Nearest,
-            },
-        );
+        const samplerOptions = { ...Texture.defaultSamplerOptions, scaleMode: ScaleModes.Nearest };
+
+        await loader.load(Texture.of(ALPHA_RINGS, { samplerOptions }));
+        await loader.load(Texture.of(assets.demo.textures.shipA, { samplerOptions }));
     }
 
     override init(loader): void {
         const { width, height } = this.app.canvas;
 
-        this.background = new Sprite(loader.get(Texture, 'background'));
+        this.background = new Sprite(loader.get(ALPHA_RINGS));
         this.background.setPosition(width / 2, height / 2);
         this.background.setAnchor(0.5, 0.5);
         this.background.setScale(Math.max(width, height) / 256);
@@ -71,12 +65,12 @@ class BlendmodesScene extends Scene {
 
         // Two overlapping sprites in complementary hues so the composite in the
         // overlap region differs clearly between modes.
-        this.left = new Sprite(loader.get(Texture, 'ship'));
+        this.left = new Sprite(loader.get(assets.demo.textures.shipA));
         this.left.setAnchor(0.5, 0.5);
         this.left.setScale(5);
         this.left.setTint(new Color(80, 210, 255));
 
-        this.right = new Sprite(loader.get(Texture, 'ship'));
+        this.right = new Sprite(loader.get(assets.demo.textures.shipA));
         this.right.setAnchor(0.5, 0.5);
         this.right.setScale(5);
         this.right.setTint(new Color(255, 96, 200));

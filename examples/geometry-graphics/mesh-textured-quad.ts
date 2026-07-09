@@ -1,4 +1,4 @@
-import { Application, Color, Mesh, Scene, Texture } from '@codexo/exojs';
+import { Application, Color, Mesh, Scene } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -17,7 +17,7 @@ class MeshTexturedQuadScene extends Scene {
     private quad!: Mesh;
 
     override async load(loader): Promise<void> {
-        await loader.load(Texture, { uvGrid: UV_GRID });
+        await loader.load(UV_GRID);
     }
 
     override init(loader): void {
@@ -36,7 +36,7 @@ class MeshTexturedQuadScene extends Scene {
             ]),
             uvs: new Float32Array([0, 0, 1, 0, 1, 1, 0, 1]),
             indices: new Uint16Array([0, 1, 2, 0, 2, 3]),
-            texture: loader.get(Texture, 'uvGrid'),
+            texture: loader.get(UV_GRID),
         });
 
         this.quad.setPosition((width / 2) | 0, (height / 2) | 0);

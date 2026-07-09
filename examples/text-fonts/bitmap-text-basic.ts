@@ -19,7 +19,7 @@ class BitmapTextBasicScene extends Scene {
     private frame = 0;
 
     override async load(loader): Promise<void> {
-        this.font = await loader.load(BmFont, assets.demo.fonts.kenneyBlocksFnt);
+        this.font = await loader.load(BmFont.of(assets.demo.fonts.kenneyBlocksFnt));
     }
 
     override init(): void {
