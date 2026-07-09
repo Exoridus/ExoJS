@@ -1670,7 +1670,9 @@ export class Loader {
     const key = this._key(ctor, meta.src);
 
     if (handle instanceof AssetRef) {
-      if (!this._refs.has(key)) {
+      const existingRef = this._refs.get(key);
+
+      if (existingRef === undefined) {
         this._refs.set(key, { ref: handle, options: meta.opts });
         this._handleKeys.set(handle, key);
 
@@ -1684,6 +1686,16 @@ export class Loader {
         } else {
           this._startRefFetch(ctor, meta.src, meta.opts);
         }
+      } else if (existingRef.ref !== handle) {
+        // §7 accepted gap: a different AssetRef is already registered for this
+        // key and nothing is stored yet, so this ref cannot be filled from
+        // either path — it will hang at 'loading' until §7's per-key
+        // multi-handle tracking lands. Surface a dev-warning instead of a
+        // silent hang. See 07-asset-access-design.md §12.
+        logger.warn(
+          `Loader._adopt: duplicate source "${meta.src}" adopted while a different handle for it is still loading — this second handle will not fill until §7 per-key multi-handle tracking. Use a single catalog field for a shared source.`,
+          { source: 'Loader' },
+        );
       }
 
       this._claim(key, ctor, meta.src, claimer);
@@ -1717,10 +1729,19 @@ export class Loader {
       // entered into per-key bookkeeping, so a later evict+heal of this key will
       // not touch it (it keeps the stale payload). Reachable via a duplicate
       // source in one catalog (second leaf hangs at 'loading'); no shipped
-      // example does this. §7's per-key multi-handle tracking closes it and
-      // should prefer a dev-warn over a silent hang. See 07-asset-access-design.md §12.
+      // example does this. §7's per-key multi-handle tracking closes it.
       adapter?.fill(handle, stored);
       this._handleKeys.set(handle, key);
+    } else if (deferredEntry !== undefined && stored === undefined && deferredEntry.handle !== handle) {
+      // §7 accepted gap: a different handle is already in flight for this key
+      // and nothing is stored yet, so this handle cannot be filled from either
+      // path — it will hang at 'loading' until §7's per-key multi-handle
+      // tracking lands. Surface a dev-warning instead of a silent hang.
+      // See 07-asset-access-design.md §12.
+      logger.warn(
+        `Loader._adopt: duplicate source "${meta.src}" adopted while a different handle for it is still loading — this second handle will not fill until §7 per-key multi-handle tracking. Use a single catalog field for a shared source.`,
+        { source: 'Loader' },
+      );
     }
 
     this._claim(key, ctor, meta.src, claimer);

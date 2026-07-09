@@ -1,5 +1,6 @@
 import '#resources/seamless';
 
+import { logger } from '#core/logging';
 import { materializeAssetBindings } from '#extensions/materialize';
 import { Texture } from '#rendering/texture/Texture';
 import { createLeaf } from '#resources/assetKindRegistry';
@@ -84,6 +85,7 @@ describe('Loader._adopt', () => {
     const loader = createCoreLoader();
     const leaf = createLeaf('texture', 'ship.png') as Texture;
     const claimer = Symbol('claimer');
+    const warnSpy = vi.spyOn(logger, 'warn');
 
     loader._adopt(leaf, claimer);
     loader._adopt(leaf, claimer);
@@ -91,6 +93,27 @@ describe('Loader._adopt', () => {
     await expect(leaf.loaded).resolves.toBe(leaf);
     expect(leaf.loadState).toBe('ready');
     expect(global.fetch).toHaveBeenCalledTimes(1);
+    // Idempotent re-adopt of the SAME handle must stay a silent no-op.
+    expect(warnSpy).not.toHaveBeenCalled();
+
+    warnSpy.mockRestore();
+  });
+
+  test('duplicate source, different handle, still in flight: dev-warns instead of hanging silently (§7 gap)', async () => {
+    mockFetchImage();
+    const loader = createCoreLoader();
+    const warnSpy = vi.spyOn(logger, 'warn');
+
+    const a = createLeaf('texture', 'x.png') as Texture;
+    const b = createLeaf('texture', 'x.png') as Texture;
+
+    loader._adopt(a, Symbol('claimer-a'));
+    loader._adopt(b, Symbol('claimer-b'));
+
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(warnSpy.mock.calls[0]?.[0]).toContain('duplicate source "x.png"');
+
+    warnSpy.mockRestore();
   });
 
   test('resource already stored elsewhere before adopt: fills the adopted handle in place, preserves per-catalog identity, and release() finds its claim', async () => {
@@ -307,5 +330,29 @@ describe('Loader.get / load — Assets catalog adoption (end-to-end)', () => {
     expect(b.ship.width).toBe(4);
     expect(b.ship).not.toBe(a.ship); // still distinct objects
     expect(global.fetch).toHaveBeenCalledTimes(1); // one network fetch for the shared source
+  });
+
+  // §7 accepted gap: a single catalog with two fields pointing at the same
+  // source produces two DIFFERENT leaves for the same key. The first leaf
+  // registers and starts the fetch; the second leaf's key is already taken by
+  // an in-flight (not-yet-stored) handle, so it can't be filled by either the
+  // fresh-registration path or the already-stored fast path — it hangs at
+  // 'loading' forever. §7's per-key multi-handle tracking closes this gap;
+  // until then, `_adopt` dev-warns instead of hanging silently.
+  test('duplicate source within one catalog: adopting the second leaf while the first is in flight dev-warns exactly once', () => {
+    mockFetchImage();
+    const loader = createCoreLoader();
+    const warnSpy = vi.spyOn(logger, 'warn');
+    const catalog = new Assets({
+      a: { type: 'texture', source: 'x.png' },
+      b: { type: 'texture', source: 'x.png' },
+    });
+
+    loader.get(catalog);
+
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(warnSpy.mock.calls[0]?.[0]).toContain('duplicate source "x.png"');
+
+    warnSpy.mockRestore();
   });
 });
