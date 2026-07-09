@@ -1631,25 +1631,51 @@ export class Loader {
       if (!this._refs.has(key)) {
         this._refs.set(key, { ref: handle, options: meta.opts });
         this._handleKeys.set(handle, key);
+
+        // Mirrors _getRef's stored-fast-path: a value already sitting in
+        // `_resources` (stored elsewhere before this leaf was adopted) fills
+        // this ref immediately instead of leaving it 'loading' forever.
+        const stored = this._resources.get(ctor)?.get(meta.src);
+
+        if (stored !== undefined) {
+          handle._fill(stored);
+        } else {
+          this._startRefFetch(ctor, meta.src, meta.opts);
+        }
       }
 
       this._claim(key, ctor, meta.src, claimer);
-
-      if (this._resources.get(ctor)?.get(meta.src) === undefined) {
-        this._startRefFetch(ctor, meta.src, meta.opts);
-      }
 
       return;
     }
 
-    if (this._deferred.get(key) === undefined && this._resources.get(ctor)?.get(meta.src) === undefined) {
+    const deferredEntry = this._deferred.get(key);
+    const stored = this._resources.get(ctor)?.get(meta.src);
+
+    if (deferredEntry === undefined && stored === undefined) {
       this._deferred.set(key, { handle, options: meta.opts });
       this._handleKeys.set(handle, key);
       this._claim(key, ctor, meta.src, claimer);
       this._startSeamlessFetch(ctor, meta.src, meta.opts);
-    } else {
-      this._claim(key, ctor, meta.src, claimer);
+
+      return;
     }
+
+    // Already stored for this key (e.g. loaded elsewhere before this leaf was
+    // adopted — the core catalog scenario) and this exact handle has not been
+    // filled/registered yet: transplant the stored donor into THIS handle in
+    // place (per-catalog identity — do NOT swap to the stored object; the
+    // caller already holds this leaf) and register it so `release(handle)`
+    // can resolve its key. A handle already filled by an earlier `_adopt`
+    // call (or by the normal fetch-completion path) is a no-op here.
+    if (stored !== undefined && this._handleKeys.get(handle) !== key) {
+      const adapter = this._seamlessAdapters.get(ctor);
+
+      adapter?.fill(handle, stored);
+      this._handleKeys.set(handle, key);
+    }
+
+    this._claim(key, ctor, meta.src, claimer);
   }
 
   /**
