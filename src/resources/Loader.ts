@@ -371,14 +371,10 @@ export class Loader {
         return BinaryAsset;
       case 'wasm':
         return WasmAsset;
-      case 'texture':
-      case 'sound':
-      case 'music':
-      case 'image':
-      case 'video':
-      case 'svg':
-      case 'font':
-      case 'bmFont':
+      // Non-value core kinds have no value token; extension-package kinds
+      // (declaration-merged into AssetDefinitions) fall through here too, so a
+      // default is required — `keyof AssetDefinitions` is an open set.
+      default:
         return undefined;
     }
   }
