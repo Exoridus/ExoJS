@@ -5,7 +5,7 @@
 // is a strongly typed builder, not a `string`-keyed helper — without it,
 // `Asset.kind` would be a regression over the `.of()` statics it replaces.
 
-import { Asset, type Texture } from '@codexo/exojs';
+import { Asset, type Texture, type ValueAsset } from '@codexo/exojs';
 
 // Compile-time exact-type assertion, independent of vitest/expectTypeOf so a bare
 // `tsc --noEmit` validates it (mirrors assets-strict-false.type-test.ts).
@@ -21,13 +21,13 @@ interface LevelData {
 const shipDesc = Asset.kind('texture', 'p.png');
 type _ShipIsTexture = Expect<Equal<typeof shipDesc, Asset<Texture>>>;
 
-// (2) value kind: <T> annotates the decoded value.
+// (2) value kind: <T> annotates the decoded value — branded ValueAsset.
 const levelDesc = Asset.kind<LevelData>('json', 'l.json');
-type _LevelIsTyped = Expect<Equal<typeof levelDesc, Asset<LevelData>>>;
+type _LevelIsTyped = Expect<Equal<typeof levelDesc, ValueAsset<LevelData>>>;
 
-// (3) value kind without <T> stays unknown.
+// (3) value kind without <T> stays unknown — still branded.
 const rawJson = Asset.kind('json', 'l.json');
-type _RawJsonUnknown = Expect<Equal<typeof rawJson, Asset<unknown>>>;
+type _RawJsonUnknown = Expect<Equal<typeof rawJson, ValueAsset<unknown>>>;
 
 // (4) kind-specific options are accepted.
 const withOpts = Asset.kind('texture', 'p.png', { mimeType: 'image/png' });

@@ -36,6 +36,17 @@ export interface Asset<T> {
   readonly _resource?: T;
 }
 
+declare const VALUE_ASSET: unique symbol;
+
+/**
+ * A value/ref-kind asset descriptor (asset-system v2 delta §4). Structurally an
+ * {@link Asset}, but branded so a catalog classifies its leaf as a deferred
+ * `AssetRef<T>` — even when `T` is an object type (e.g. typed JSON), where the
+ * plain `T extends object` heuristic would otherwise misread it as a resource.
+ * The brand is a phantom (never present at runtime).
+ */
+export type ValueAsset<T> = Asset<T> & { readonly [VALUE_ASSET]: true };
+
 type AssetConstructorFn = new <K extends keyof AssetDefinitions>(config: { kind: K } & AssetDefinitions[K]['config']) => Asset<AssetDefinitions[K]['resource']>;
 
 type AssetFacade = AssetConstructorFn & {
@@ -48,12 +59,16 @@ type AssetFacade = AssetConstructorFn & {
    *
    * @example
    * ```ts
-   * Asset.kind('texture', 'player.png');            // Asset<Texture>
-   * Asset.kind<LevelData>('json', 'levels/01.json'); // Asset<LevelData>
+   * Asset.kind('texture', 'player.png');             // Asset<Texture>
+   * Asset.kind<LevelData>('json', 'levels/01.json'); // ValueAsset<LevelData> → AssetRef in a catalog
    * ```
    */
-  kind<K extends keyof AssetDefinitions>(kind: K, source: string, options?: OptionsForKind<K>): Asset<AssetDefinitions[K]['resource']>;
-  kind<T>(kind: ValueAssetKind, source: string, options?: OptionsForKind<ValueAssetKind>): Asset<T>;
+  kind<K extends keyof AssetDefinitions>(
+    kind: K,
+    source: string,
+    options?: OptionsForKind<K>,
+  ): K extends ValueAssetKind ? ValueAsset<AssetDefinitions[K]['resource']> : Asset<AssetDefinitions[K]['resource']>;
+  kind<T>(kind: ValueAssetKind, source: string, options?: OptionsForKind<ValueAssetKind>): ValueAsset<T>;
 };
 
 export const Asset = AssetImpl as unknown as AssetFacade;

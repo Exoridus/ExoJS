@@ -7,7 +7,7 @@ import type { SamplerOptions } from '#rendering/texture/Sampler';
 import type { Texture } from '#rendering/texture/Texture';
 import type { Video } from '#rendering/video/Video';
 
-import type { Asset } from './Asset';
+import type { Asset, ValueAsset } from './Asset';
 import type { AssetRef } from './AssetRef';
 import type { ExtensionTypeMap } from './Loader';
 
@@ -138,18 +138,25 @@ export type LeafForPath<S extends string> = [KindByPath<S>] extends [never]
 /** A single catalog field input: a bare path string, an `X.of()` descriptor, or an explicit config. */
 export type CatalogEntry = string | Asset<unknown> | AnyAssetConfig;
 
-/** The leaf type a {@link CatalogEntry} materializes as. */
+/**
+ * The leaf type a {@link CatalogEntry} materializes as. A {@link ValueAsset}
+ * brand (from `Asset.kind<T>('json', …)`) classifies as `AssetRef<T>` FIRST,
+ * before the `T extends object` heuristic that (only) the unbranded legacy
+ * `X.of()` descriptors still rely on.
+ */
 export type InferCatalogLeaf<E extends CatalogEntry> = E extends string
   ? LeafForPath<E>
-  : E extends Asset<infer T>
-    ? T extends object
-      ? T
-      : AssetRef<T>
-    : E extends { kind: infer K extends keyof AssetDefinitions }
-      ? K extends ValueAssetKind
-        ? AssetRef<AssetDefinitions[K]['resource']>
-        : AssetDefinitions[K]['resource']
-      : never;
+  : E extends ValueAsset<infer V>
+    ? AssetRef<V>
+    : E extends Asset<infer T>
+      ? T extends object
+        ? T
+        : AssetRef<T>
+      : E extends { kind: infer K extends keyof AssetDefinitions }
+        ? K extends ValueAssetKind
+          ? AssetRef<AssetDefinitions[K]['resource']>
+          : AssetDefinitions[K]['resource']
+        : never;
 
 // Compile-time guard: every ExtensionKindMap value is a real AssetDefinitions kind.
 type AssertKindMapValid = ExtensionKindMap[keyof ExtensionKindMap] extends keyof AssetDefinitions ? true : never;
