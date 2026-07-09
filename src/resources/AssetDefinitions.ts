@@ -8,6 +8,7 @@ import type { Texture } from '#rendering/texture/Texture';
 import type { Video } from '#rendering/video/Video';
 
 import type { Asset } from './Asset';
+import type { AssetRef } from './AssetRef';
 
 export interface AssetDefinitions {
   bmFont: { resource: BmFont; config: { source: string } };
@@ -63,3 +64,70 @@ export type AssetInput = AnyAssetConfig | Asset<unknown>;
 
 export type InferAssetResource<I extends AssetInput> =
   I extends Asset<infer T> ? T : I extends { type: infer K extends keyof AssetDefinitions } ? AssetDefinitions[K]['resource'] : never;
+
+// ---------------------------------------------------------------------------
+// Type-level bare-path inference (mirror of the runtime extensionKindRegistry)
+// ---------------------------------------------------------------------------
+
+/**
+ * Type-level twin of the runtime `extensionKindRegistry`: file suffix → asset
+ * kind, for bare-string path inference in `Assets.from()`/`get()`/`load()`
+ * (asset-system v2 §5). Restricted to LEAF-CAPABLE kinds, exactly mirroring the
+ * runtime `registerExtensionKind` calls in `seamless.ts`. Extend by declaration
+ * merging, like {@link ExtensionTypeMap}:
+ * ```ts
+ * declare module '@codexo/exojs' {
+ *   interface ExtensionKindMap { 'atlas.json': 'spriteAtlas'; }
+ * }
+ * ```
+ */
+export interface ExtensionKindMap {
+  png: 'texture'; jpg: 'texture'; jpeg: 'texture'; webp: 'texture'; avif: 'texture'; gif: 'texture';
+  ogg: 'sound'; mp3: 'sound'; wav: 'sound'; m4a: 'sound'; aac: 'sound';
+  json: 'json'; txt: 'text'; csv: 'csv'; xml: 'xml';
+  vtt: 'vtt'; srt: 'srt'; bin: 'binary'; wasm: 'wasm';
+}
+
+/** Last path segment (after the final `/`). */
+type KindBasename<S extends string> = S extends `${string}/${infer R}` ? KindBasename<R> : S;
+/** Strip a trailing `?query`/`#fragment`. */
+type KindStripQuery<S extends string> = S extends `${infer P}?${string}` ? P : S extends `${infer P}#${string}` ? P : S;
+/** Longest registered dot-suffix of a basename, or `never`. */
+type MatchKind<S extends string> = S extends `${string}.${infer Rest}`
+  ? Lowercase<Rest> extends keyof ExtensionKindMap
+    ? ExtensionKindMap[Lowercase<Rest>]
+    : MatchKind<Rest>
+  : never;
+
+/** The asset kind inferred from a path literal, or `never` when unregistered. */
+export type KindByPath<S extends string> = MatchKind<KindBasename<KindStripQuery<S>>>;
+
+/** The resource type of a kind. */
+export type ResourceForKind<K extends keyof AssetDefinitions> = AssetDefinitions[K]['resource'];
+
+/**
+ * The handle-hybrid leaf type a bare path string materializes as: a resource
+ * kind yields its resource (`Texture`/`Sound`), a {@link ValueAssetKind} yields
+ * a deferred `AssetRef<resource>`. `unknown` when the suffix is unregistered.
+ */
+export type LeafForPath<S extends string> = [KindByPath<S>] extends [never]
+  ? unknown
+  : KindByPath<S> extends ValueAssetKind
+    ? AssetRef<ResourceForKind<KindByPath<S>>>
+    : ResourceForKind<KindByPath<S>>;
+
+/** A single catalog field input: a bare path string, an `X.of()` descriptor, or an explicit config. */
+export type CatalogEntry = string | Asset<unknown> | AnyAssetConfig;
+
+/** The leaf type a {@link CatalogEntry} materializes as. */
+export type InferCatalogLeaf<E extends CatalogEntry> =
+  E extends string ? LeafForPath<E>
+  : E extends Asset<infer T> ? (T extends object ? T : AssetRef<T>)
+  : E extends { type: infer K extends keyof AssetDefinitions }
+    ? K extends ValueAssetKind ? AssetRef<AssetDefinitions[K]['resource']> : AssetDefinitions[K]['resource']
+    : never;
+
+// Compile-time guard: every ExtensionKindMap value is a real AssetDefinitions kind.
+type AssertKindMapValid = ExtensionKindMap[keyof ExtensionKindMap] extends keyof AssetDefinitions ? true : never;
+const _extensionKindMapIsValid: AssertKindMapValid = true;
+void _extensionKindMapIsValid;
