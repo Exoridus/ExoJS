@@ -18,8 +18,17 @@ describe('textureSeamlessAdapter', () => {
     expect(handle.height).toBe(0);
   });
 
-  test('fill transplants source and sampler state in place and settles ready', async () => {
-    const handle = textureSeamlessAdapter.createPlaceholder();
+  test('createPlaceholder applies the handle-OWN sampler options from samplerOptions', () => {
+    const handle = textureSeamlessAdapter.createPlaceholder({ samplerOptions: { flipY: true, generateMipMap: false } });
+
+    expect(handle.flipY).toBe(true);
+    expect(handle.generateMipMap).toBe(false);
+  });
+
+  test('fill transplants ONLY the decoded source and settles ready — the handle keeps its own sampler', async () => {
+    // Per-handle sampler: the placeholder carries flipY:false; fill must NOT copy
+    // the donor's flipY:true (shared decode, independent samplers).
+    const handle = textureSeamlessAdapter.createPlaceholder({ samplerOptions: { flipY: false, generateMipMap: true } });
     const versionBefore = handle.version;
     const canvas = document.createElement('canvas');
 
@@ -31,10 +40,10 @@ describe('textureSeamlessAdapter', () => {
     textureSeamlessAdapter.fill(handle, donor);
 
     expect(handle.loadState).toBe('ready');
-    expect(handle.source).toBe(donor.source);
+    expect(handle.source).toBe(donor.source); // decoded source transplanted
     expect(handle.width).toBe(16);
-    expect(handle.flipY).toBe(true);
-    expect(handle.generateMipMap).toBe(false);
+    expect(handle.flipY).toBe(false); // kept its OWN sampler, not the donor's
+    expect(handle.generateMipMap).toBe(true);
     expect(handle.version).toBeGreaterThan(versionBefore);
     await expect(handle.loaded).resolves.toBe(handle);
   });

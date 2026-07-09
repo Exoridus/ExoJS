@@ -3,6 +3,7 @@ import '#resources/seamless';
 import { logger } from '#core/logging';
 import { materializeAssetBindings } from '#extensions/materialize';
 import { Texture } from '#rendering/texture/Texture';
+import { ScaleModes } from '#rendering/types';
 import { createLeaf } from '#resources/assetKindRegistry';
 import { type AssetRef } from '#resources/AssetRef';
 import { Assets } from '#resources/Assets';
@@ -99,7 +100,7 @@ describe('Loader._adopt', () => {
     warnSpy.mockRestore();
   });
 
-  test('duplicate source, different handle, still in flight: dev-warns instead of hanging silently (§7 gap)', async () => {
+  test('duplicate source, two distinct handles adopted while in flight: BOTH heal from ONE fetch, no warn (§7 multi-handle fill)', async () => {
     mockFetchImage();
     const loader = createCoreLoader();
     const warnSpy = vi.spyOn(logger, 'warn');
@@ -108,10 +109,98 @@ describe('Loader._adopt', () => {
     const b = createLeaf('texture', 'x.png') as Texture;
 
     loader._adopt(a, Symbol('claimer-a'));
+    loader._adopt(b, Symbol('claimer-b')); // second distinct handle, first still in flight
+
+    await Promise.all([a.loaded, b.loaded]);
+
+    expect(a.loadState).toBe('ready');
+    expect(b.loadState).toBe('ready');
+    expect(a).not.toBe(b); // distinct objects, both filled in place
+    expect(a.width).toBe(4);
+    expect(b.width).toBe(4);
+    expect(global.fetch).toHaveBeenCalledTimes(1); // ONE decode shared across both handles
+    // Same (default) sampler on both → the former §7 hang-warn must NOT fire.
+    expect(warnSpy).not.toHaveBeenCalled();
+
+    warnSpy.mockRestore();
+  });
+
+  test('duplicate source, two handles with DIFFERENT samplerOptions: one fetch, independent per-handle samplers (Q2)', async () => {
+    mockFetchImage();
+    const loader = createCoreLoader();
+
+    const a = createLeaf('texture', 'x.png', { samplerOptions: { scaleMode: ScaleModes.Nearest } }) as Texture;
+    const b = createLeaf('texture', 'x.png', { samplerOptions: { scaleMode: ScaleModes.Linear } }) as Texture;
+
+    expect(a.scaleMode).toBe(ScaleModes.Nearest); // applied at createPlaceholder
+    expect(b.scaleMode).toBe(ScaleModes.Linear);
+
+    loader._adopt(a, Symbol('claimer-a'));
     loader._adopt(b, Symbol('claimer-b'));
 
+    await Promise.all([a.loaded, b.loaded]);
+
+    expect(a.loadState).toBe('ready');
+    expect(b.loadState).toBe('ready');
+    expect(a.width).toBe(4); // shared decode reached both
+    expect(b.width).toBe(4);
+    // fill transplanted ONLY the decoded source — each handle kept its OWN sampler.
+    expect(a.scaleMode).toBe(ScaleModes.Nearest);
+    expect(b.scaleMode).toBe(ScaleModes.Linear);
+    expect(a.scaleMode).not.toBe(b.scaleMode);
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  test('duplicate source in flight: a failing fetch fails BOTH co-handles', async () => {
+    global.fetch = vi.fn(async () => ({ ok: false, status: 404, statusText: 'Not Found' }) as unknown as Response);
+    const loader = createCoreLoader();
+
+    const a = createLeaf('texture', 'x.png') as Texture;
+    const b = createLeaf('texture', 'x.png') as Texture;
+
+    loader._adopt(a, Symbol('claimer-a'));
+    loader._adopt(b, Symbol('claimer-b'));
+
+    await expect(a.loaded).rejects.toThrow();
+    await expect(b.loaded).rejects.toThrow();
+    expect(a.loadState).toBe('failed');
+    expect(b.loadState).toBe('failed');
+  });
+
+  test('duplicate source, two value refs (json) adopted while in flight: BOTH fill from ONE fetch', async () => {
+    mockFetchJson({ hp: 5 });
+    const loader = createCoreLoader();
+
+    const a = createLeaf('json', 'cfg.json') as AssetRef<unknown>;
+    const b = createLeaf('json', 'cfg.json') as AssetRef<unknown>;
+
+    loader._adopt(a, Symbol('claimer-a'));
+    loader._adopt(b, Symbol('claimer-b'));
+
+    await Promise.all([a.loaded, b.loaded]);
+
+    expect(a.value).toEqual({ hp: 5 });
+    expect(b.value).toEqual({ hp: 5 });
+    expect(a).not.toBe(b);
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  test('duplicate source in flight with a genuinely conflicting FETCH option (mimeType) warns once; sampler differences do not', async () => {
+    mockFetchImage();
+    const loader = createCoreLoader();
+    const warnSpy = vi.spyOn(logger, 'warn');
+
+    const a = createLeaf('texture', 'x.png', { mimeType: 'image/png' }) as Texture;
+    const b = createLeaf('texture', 'x.png', { mimeType: 'image/webp' }) as Texture;
+
+    loader._adopt(a, Symbol('claimer-a'));
+    loader._adopt(b, Symbol('claimer-b'));
+
+    await Promise.all([a.loaded, b.loaded]);
+
+    // Different mimeType for one source cannot share a decode → the first call wins, second warns.
     expect(warnSpy).toHaveBeenCalledTimes(1);
-    expect(warnSpy.mock.calls[0]?.[0]).toContain('duplicate source "x.png"');
+    expect(warnSpy.mock.calls[0]?.[0]).toContain('first call');
 
     warnSpy.mockRestore();
   });
@@ -332,14 +421,12 @@ describe('Loader.get / load — Assets catalog adoption (end-to-end)', () => {
     expect(global.fetch).toHaveBeenCalledTimes(1); // one network fetch for the shared source
   });
 
-  // §7 accepted gap: a single catalog with two fields pointing at the same
-  // source produces two DIFFERENT leaves for the same key. The first leaf
-  // registers and starts the fetch; the second leaf's key is already taken by
-  // an in-flight (not-yet-stored) handle, so it can't be filled by either the
-  // fresh-registration path or the already-stored fast path — it hangs at
-  // 'loading' forever. §7's per-key multi-handle tracking closes this gap;
-  // until then, `_adopt` dev-warns instead of hanging silently.
-  test('duplicate source within one catalog: adopting the second leaf while the first is in flight dev-warns exactly once', () => {
+  // §7 fix: a single catalog with two fields pointing at the same source
+  // produces two DIFFERENT leaves for the same key. The first leaf registers
+  // and starts the fetch; the second distinct leaf is added to the key's
+  // in-flight handle set, so ONE decode heals BOTH leaves in place — no hang,
+  // no warn (same sampler).
+  test('duplicate source within one catalog: both leaves heal from ONE fetch (no hang, no warn)', async () => {
     mockFetchImage();
     const loader = createCoreLoader();
     const warnSpy = vi.spyOn(logger, 'warn');
@@ -350,8 +437,15 @@ describe('Loader.get / load — Assets catalog adoption (end-to-end)', () => {
 
     loader.get(catalog);
 
-    expect(warnSpy).toHaveBeenCalledTimes(1);
-    expect(warnSpy.mock.calls[0]?.[0]).toContain('duplicate source "x.png"');
+    await Promise.all([catalog.a.loaded, catalog.b.loaded]);
+
+    expect(catalog.a.loadState).toBe('ready');
+    expect(catalog.b.loadState).toBe('ready');
+    expect(catalog.a).not.toBe(catalog.b);
+    expect(catalog.a.width).toBe(4);
+    expect(catalog.b.width).toBe(4);
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(warnSpy).not.toHaveBeenCalled();
 
     warnSpy.mockRestore();
   });

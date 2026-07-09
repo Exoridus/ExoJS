@@ -3,6 +3,7 @@ import { expectTypeOf } from 'vitest';
 import { logger, LogSeverity } from '#core/logging';
 import { materializeAssetBindings } from '#extensions/materialize';
 import { Texture } from '#rendering/texture/Texture';
+import { ScaleModes } from '#rendering/types';
 import { coreAssetBindings } from '#resources/coreAssetBindings';
 import { Loader } from '#resources/Loader';
 import { textureSeamlessAdapter } from '#resources/seamless';
@@ -170,7 +171,7 @@ describe('Loader seamless get (Texture)', () => {
     expect(gradient.loadState).toBe('ready');
   });
 
-  test('conflicting options warn once and the first call wins', async () => {
+  test('conflicting FETCH options (mimeType) warn once and the first call wins', async () => {
     mockFetchImage();
     const loader = createCoreLoader();
     const warnings: string[] = [];
@@ -179,16 +180,42 @@ describe('Loader seamless get (Texture)', () => {
     });
 
     try {
-      const handle = loader.get(Texture, 'ship.png', { samplerOptions: { flipY: true } });
+      const handle = loader.get(Texture, 'ship.png', { mimeType: 'image/png' });
 
-      loader.get(Texture, 'ship.png', { samplerOptions: { flipY: false } });
-      loader.get(Texture, 'ship.png', { samplerOptions: { flipY: false } });
+      // A different mimeType for one source cannot share the source-keyed decode.
+      loader.get(Texture, 'ship.png', { mimeType: 'image/webp' });
+      loader.get(Texture, 'ship.png', { mimeType: 'image/webp' });
 
       expect(warnings).toHaveLength(1);
       expect(warnings[0]).toContain('first call');
 
       await handle.loaded;
-      expect(handle.flipY).toBe(true); // first options reached the factory; fill transplanted them
+      expect(handle.loadState).toBe('ready');
+    } finally {
+      removeSink();
+    }
+  });
+
+  test('differing per-handle samplerOptions across get() do NOT warn; the first sampler wins on the shared handle', async () => {
+    mockFetchImage();
+    const loader = createCoreLoader();
+    const warnings: string[] = [];
+    const removeSink = logger.addSink(entry => {
+      if (entry.severity === LogSeverity.Warning) warnings.push(entry.message);
+    });
+
+    try {
+      // get() returns the SAME handle per source; sampler options are per-handle
+      // now, so a later differing sampler is silently first-wins (no warn). Use a
+      // distinct handle (e.g. an Assets catalog leaf) for an independent sampler.
+      const handle = loader.get(Texture, 'ship.png', { samplerOptions: { scaleMode: ScaleModes.Nearest } });
+
+      expect(handle).toBe(loader.get(Texture, 'ship.png', { samplerOptions: { scaleMode: ScaleModes.Linear } }));
+      expect(warnings).toHaveLength(0);
+      expect(handle.scaleMode).toBe(ScaleModes.Nearest); // first call's sampler, baked at createPlaceholder
+
+      await handle.loaded;
+      expect(handle.scaleMode).toBe(ScaleModes.Nearest); // fill transplanted source only — sampler kept
     } finally {
       removeSink();
     }

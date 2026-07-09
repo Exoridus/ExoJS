@@ -334,15 +334,22 @@ export class Loader {
 
   // ── Seamless deferred handles (asset-system v2) ───────────────────────────
   // Adapter per seamless type; handles pending or failed, keyed by _key(type, source).
-  // Successful fills remove the entry (the handle moves to _resources); failed
-  // entries stay so a later get() retries and heals the SAME handle in place.
+  // Each entry tracks the SET of distinct handles in flight for the key (§7
+  // multi-handle fill): two catalog leaves for one source share a single
+  // source-keyed decode yet are each filled in place. The first handle inserted
+  // is the representative — the object that becomes the canonical `_resources`
+  // entry on store, mirroring the old single-handle contract. Successful fills
+  // remove the entry (the representative moves to _resources); failed entries
+  // stay so a later get() retries and heals the SAME handles in place.
   private readonly _seamlessAdapters = new Map<AssetConstructor, SeamlessAdapter<unknown>>();
-  private readonly _deferred = new Map<string, { readonly handle: unknown; readonly options: unknown }>();
+  private readonly _deferred = new Map<string, { readonly handles: Set<object>; readonly options: unknown }>();
 
   // Value-asset refs (asset-system v2 §4.6): the ref is the stable identity —
   // entries persist for the loader's lifetime (fill keeps them, fail keeps
-  // them for retry), unlike _deferred whose handles move into _resources.
-  private readonly _refs = new Map<string, { readonly ref: AssetRef<unknown>; readonly options: unknown }>();
+  // them for retry), unlike _deferred whose handles move into _resources. Like
+  // _deferred, an entry tracks the SET of distinct refs adopted for one source
+  // so a single fetch fills every in-flight ref (§7 multi-handle fill).
+  private readonly _refs = new Map<string, { readonly refs: Set<AssetRef<unknown>>; readonly options: unknown }>();
   private readonly _valueTokens: ReadonlySet<Loadable> = new Set<Loadable>([Json, TextAsset, CsvAsset, XmlAsset, SubtitleAsset, BinaryAsset, WasmAsset]);
 
   // ── Refcount / claims (asset-system v2 §4.7) ──────────────────────────────
@@ -1671,32 +1678,35 @@ export class Loader {
 
     if (handle instanceof AssetRef) {
       const existingRef = this._refs.get(key);
+      const stored = this._resources.get(ctor)?.get(meta.src);
 
       if (existingRef === undefined) {
-        this._refs.set(key, { ref: handle, options: meta.opts });
+        this._refs.set(key, { refs: new Set([handle]), options: meta.opts });
         this._handleKeys.set(handle, key);
 
         // Mirrors _getRef's stored-fast-path: a value already sitting in
         // `_resources` (stored elsewhere before this leaf was adopted) fills
         // this ref immediately instead of leaving it 'loading' forever.
-        const stored = this._resources.get(ctor)?.get(meta.src);
-
         if (stored !== undefined) {
           handle._fill(stored);
         } else {
           this._startRefFetch(ctor, meta.src, meta.opts);
         }
-      } else if (existingRef.ref !== handle) {
-        // §7 accepted gap: a different AssetRef is already registered for this
-        // key and nothing is stored yet, so this ref cannot be filled from
-        // either path — it will hang at 'loading' until §7's per-key
-        // multi-handle tracking lands. Surface a dev-warning instead of a
-        // silent hang. See 07-asset-access-design.md §12.
-        logger.warn(
-          `Loader._adopt: duplicate source "${meta.src}" adopted while a different handle for it is still loading — this second handle will not fill until §7 per-key multi-handle tracking. Use a single catalog field for a shared source.`,
-          { source: 'Loader' },
-        );
+      } else if (!existingRef.refs.has(handle)) {
+        // A distinct ref for a key already in flight (or already stored): join
+        // the key's ref set so the single fetch fills it too (§7 multi-handle
+        // fill). If the value already converged, fill immediately; otherwise a
+        // conflicting FETCH option (source-keyed decode can't differ) warns.
+        existingRef.refs.add(handle);
+        this._handleKeys.set(handle, key);
+
+        if (stored !== undefined) {
+          handle._fill(stored);
+        } else {
+          this._warnOnFetchOptionConflict(ctor, meta.src, key, existingRef.options, meta.opts);
+        }
       }
+      // else: the SAME ref re-adopted — Set membership makes this a no-op.
 
       this._claim(key, ctor, meta.src, claimer);
 
@@ -1707,7 +1717,7 @@ export class Loader {
     const stored = this._resources.get(ctor)?.get(meta.src);
 
     if (deferredEntry === undefined && stored === undefined) {
-      this._deferred.set(key, { handle, options: meta.opts });
+      this._deferred.set(key, { handles: new Set([handle]), options: meta.opts });
       this._handleKeys.set(handle, key);
       this._claim(key, ctor, meta.src, claimer);
       this._startSeamlessFetch(ctor, meta.src, meta.opts);
@@ -1715,34 +1725,33 @@ export class Loader {
       return;
     }
 
-    // Already stored for this key (e.g. loaded elsewhere before this leaf was
-    // adopted — the core catalog scenario) and this exact handle has not been
-    // filled/registered yet: transplant the stored donor into THIS handle in
-    // place (per-catalog identity — do NOT swap to the stored object; the
-    // caller already holds this leaf) and register it so `release(handle)`
-    // can resolve its key. A handle already filled by an earlier `_adopt`
-    // call (or by the normal fetch-completion path) is a no-op here.
     if (stored !== undefined && this._handleKeys.get(handle) !== key) {
+      // Already stored for this key (e.g. loaded elsewhere before this leaf was
+      // adopted — the core catalog scenario) and this exact handle has not been
+      // filled/registered yet: transplant the stored donor into THIS handle in
+      // place (per-catalog identity — do NOT swap to the stored object; the
+      // caller already holds this leaf) and register it so `release(handle)`
+      // can resolve its key.
+      //
+      // §7 remainder: this co-handle fills once from the stored payload but is
+      // NOT entered into the (already-cleared) deferred set, so a LATER
+      // evict+heal of this key will not touch it (it keeps the stale payload).
+      // Weak-retention over the full lifetime is the §7 follow-up; out of scope.
       const adapter = this._seamlessAdapters.get(ctor);
 
-      // §7 accepted gap: this leaf fills once from the stored payload but is not
-      // entered into per-key bookkeeping, so a later evict+heal of this key will
-      // not touch it (it keeps the stale payload). Reachable via a duplicate
-      // source in one catalog (second leaf hangs at 'loading'); no shipped
-      // example does this. §7's per-key multi-handle tracking closes it.
       adapter?.fill(handle, stored);
       this._handleKeys.set(handle, key);
-    } else if (deferredEntry !== undefined && stored === undefined && deferredEntry.handle !== handle) {
-      // §7 accepted gap: a different handle is already in flight for this key
-      // and nothing is stored yet, so this handle cannot be filled from either
-      // path — it will hang at 'loading' until §7's per-key multi-handle
-      // tracking lands. Surface a dev-warning instead of a silent hang.
-      // See 07-asset-access-design.md §12.
-      logger.warn(
-        `Loader._adopt: duplicate source "${meta.src}" adopted while a different handle for it is still loading — this second handle will not fill until §7 per-key multi-handle tracking. Use a single catalog field for a shared source.`,
-        { source: 'Loader' },
-      );
+    } else if (deferredEntry !== undefined && stored === undefined && !deferredEntry.handles.has(handle)) {
+      // A distinct handle is in flight for this key and nothing is stored yet:
+      // join the key's handle set so `_storeResource` fills THIS handle too
+      // (§7 multi-handle fill — this is the former silent hang). A conflicting
+      // FETCH option (source-keyed decode can't differ) warns; differing
+      // per-handle sampler options are fine (each handle carries its own).
+      deferredEntry.handles.add(handle);
+      this._handleKeys.set(handle, key);
+      this._warnOnFetchOptionConflict(ctor, meta.src, key, deferredEntry.options, meta.opts);
     }
+    // else: the SAME handle re-adopted, or already filled — a no-op.
 
     this._claim(key, ctor, meta.src, claimer);
   }
@@ -1763,24 +1772,23 @@ export class Loader {
     const entry = this._deferred.get(key);
 
     if (entry !== undefined) {
-      if (options !== undefined && !this._areOptionsEquivalent(entry.options, options)) {
-        logger.warn(`get(${this._describeType(type)}, "${source}"): conflicting options ignored — the first call's options win.`, {
-          source: 'Loader',
-          once: `loader:seamless-options:${key}`,
-        });
-      }
+      // get() reuses the representative handle (first-wins); only a conflicting
+      // FETCH option warns — per-handle sampler/pre-size differences are fine.
+      this._warnOnFetchOptionConflict(type, source, key, entry.options, options);
 
-      if (adapter.stateOf(entry.handle) === 'failed') {
-        adapter.begin(entry.handle);
+      const representative = this._representative(entry.handles);
+
+      if (representative !== undefined && adapter.stateOf(representative) === 'failed') {
+        adapter.begin(representative);
         this._startSeamlessFetch(type, source, entry.options);
       }
 
-      return entry.handle;
+      return representative;
     }
 
     const handle = adapter.createPlaceholder(options);
 
-    this._deferred.set(key, { handle, options });
+    this._deferred.set(key, { handles: new Set([handle as object]), options });
     this._handleKeys.set(handle as object, key);
     this._startSeamlessFetch(type, source, options);
 
@@ -1804,24 +1812,25 @@ export class Loader {
     const entry = this._refs.get(key);
 
     if (entry !== undefined) {
-      if (options !== undefined && !this._areOptionsEquivalent(entry.options, options)) {
-        logger.warn(`get(${this._describeType(type)}, "${source}"): conflicting options ignored — the first call's options win.`, {
-          source: 'Loader',
-          once: `loader:seamless-options:${key}`,
-        });
-      }
+      // get() reuses the representative ref (first-wins); only a conflicting
+      // FETCH option warns.
+      this._warnOnFetchOptionConflict(type, source, key, entry.options, options);
 
-      if (entry.ref.loadState === 'failed') {
-        entry.ref._begin();
-        this._startRefFetch(type, source, entry.options);
-      }
+      const representative = this._representative(entry.refs);
 
-      return entry.ref;
+      if (representative !== undefined) {
+        if (representative.loadState === 'failed') {
+          representative._begin();
+          this._startRefFetch(type, source, entry.options);
+        }
+
+        return representative;
+      }
     }
 
     const ref = new AssetRef<unknown>();
 
-    this._refs.set(key, { ref, options });
+    this._refs.set(key, { refs: new Set([ref]), options });
     this._handleKeys.set(ref, key);
 
     const stored = this._resources.get(type)?.get(source);
@@ -1927,15 +1936,17 @@ export class Loader {
     // unclaimed — handle; §4.7 minimal). Only a payload that already converged
     // into `_resources` is dropped in place here.
     const deferred = this._deferred.get(key);
-    const handle = deferred?.handle ?? this._resources.get(type)?.get(source);
+    const handle = this._representative(deferred?.handles) ?? this._resources.get(type)?.get(source);
 
     if (adapter !== undefined && deferred === undefined && handle !== undefined) {
       adapter.evict(handle);
       this._resources.get(type)?.delete(source);
       // The original options were consumed when the payload converged into
       // `_resources` (the pre-fill `_deferred` entry is gone); the re-fetch
-      // re-derives them from the manifest entry, if any.
-      this._deferred.set(key, { handle, options: undefined });
+      // re-derives them from the manifest entry, if any. Only the canonical
+      // representative is re-armed here — co-handles filled alongside it keep
+      // their payload (the §7 remainder gap).
+      this._deferred.set(key, { handles: new Set([handle as object]), options: undefined });
       this._handleKeys.set(handle as object, key);
       this._evicted.add(key);
       // A load that just settled may leave a resolved-but-not-yet-cleaned
@@ -2509,7 +2520,13 @@ export class Loader {
     const deferredEntry = this._deferred.get(key);
 
     if (deferredEntry !== undefined) {
-      this._seamlessAdapters.get(type)?.fail(deferredEntry.handle, err);
+      const adapter = this._seamlessAdapters.get(type);
+
+      // Fail EVERY in-flight handle for the key so all co-adopters settle.
+      for (const handle of deferredEntry.handles) {
+        adapter?.fail(handle, err);
+      }
+
       this.onError.dispatch(type, alias, err);
 
       return;
@@ -2518,7 +2535,10 @@ export class Loader {
     const refEntry = this._refs.get(key);
 
     if (refEntry !== undefined) {
-      refEntry.ref._fail(err);
+      for (const ref of refEntry.refs) {
+        ref._fail(err);
+      }
+
       this.onError.dispatch(type, alias, err);
     }
   }
@@ -2553,6 +2573,55 @@ export class Loader {
 
   private _isManifestDefinitionEquivalent(entry: ManifestEntry, path: string, options?: unknown): boolean {
     return entry.path === path && this._areOptionsEquivalent(entry.options, options);
+  }
+
+  /** The representative (first-inserted) member of a handle/ref set, or `undefined` if empty. @internal */
+  private _representative<T>(members: ReadonlySet<T> | undefined): T | undefined {
+    return members === undefined ? undefined : members.values().next().value;
+  }
+
+  /**
+   * Warn once per key when a second handle/ref for the same source carries an
+   * incompatible FETCH option (e.g. a different `mimeType`): the decode is
+   * source-keyed, so only the first call's fetch options take effect and the
+   * later one is silently dropped. Per-handle sampler / pre-size options never
+   * conflict — each handle carries its own — so they are stripped before the
+   * comparison and never warn. A `undefined` second option is a plain reuse.
+   * @internal
+   */
+  private _warnOnFetchOptionConflict(type: AssetConstructor, source: string, key: string, existingOptions: unknown, newOptions: unknown): void {
+    if (newOptions === undefined || this._fetchOptionsEquivalent(existingOptions, newOptions)) {
+      return;
+    }
+
+    logger.warn(`get(${this._describeType(type)}, "${source}"): conflicting options ignored — the first call's options win.`, {
+      source: 'Loader',
+      once: `loader:seamless-options:${key}`,
+    });
+  }
+
+  /** Structural equality of the FETCH-relevant option subset (per-handle sampler / pre-size keys stripped). @internal */
+  private _fetchOptionsEquivalent(left: unknown, right: unknown): boolean {
+    return this._areOptionsEquivalent(this._stripPerHandleOptions(left), this._stripPerHandleOptions(right));
+  }
+
+  /** Drop the per-handle option keys (`samplerOptions`, `width`, `height`) that never gate the shared decode. @internal */
+  private _stripPerHandleOptions(options: unknown): unknown {
+    if (options === null || typeof options !== 'object' || Array.isArray(options)) {
+      return options;
+    }
+
+    const result: Record<string, unknown> = {};
+
+    for (const [key, value] of Object.entries(options as Record<string, unknown>)) {
+      if (key === 'samplerOptions' || key === 'width' || key === 'height') {
+        continue;
+      }
+
+      result[key] = value;
+    }
+
+    return result;
   }
 
   private _areOptionsEquivalent(left: unknown, right: unknown): boolean {
@@ -2652,13 +2721,22 @@ export class Loader {
       const preventedEntry = this._deferred.get(key);
 
       if (preventedEntry !== undefined) {
-        this._seamlessAdapters.get(type)?.fail(preventedEntry.handle, new Error(`Asset "${alias}" was unloaded while its fetch was in flight.`));
+        const adapter = this._seamlessAdapters.get(type);
+        const unloadError = new Error(`Asset "${alias}" was unloaded while its fetch was in flight.`);
+
+        for (const handle of preventedEntry.handles) {
+          adapter?.fail(handle, unloadError);
+        }
       }
 
       const preventedRef = this._refs.get(key);
 
-      if (preventedRef?.ref.loadState === 'loading') {
-        preventedRef.ref._fail(new Error(`Asset "${alias}" was unloaded while its fetch was in flight.`));
+      if (preventedRef !== undefined) {
+        for (const ref of preventedRef.refs) {
+          if (ref.loadState === 'loading') {
+            ref._fail(new Error(`Asset "${alias}" was unloaded while its fetch was in flight.`));
+          }
+        }
       }
 
       return resource;
@@ -2671,30 +2749,60 @@ export class Loader {
     const deferredEntry = this._deferred.get(key);
     let filledDeferredHandle = false;
 
-    if (deferredEntry !== undefined && deferredEntry.handle !== resource) {
+    if (deferredEntry !== undefined) {
       const adapter = this._seamlessAdapters.get(type);
+      let representative: object | undefined;
 
-      if (adapter !== undefined) {
+      // Fill EVERY in-flight handle for the key from the single decoded donor
+      // (§7 multi-handle fill). The first handle is the representative — it
+      // becomes the canonical `_resources` entry, mirroring the old
+      // single-handle contract (which object is canonical for eviction).
+      for (const handle of deferredEntry.handles) {
+        representative ??= handle;
+
+        if (handle === resource || adapter === undefined) {
+          continue;
+        }
+
         // A non-get producer (load(), bundle, background) may store into a key
         // whose handle is 'failed' (e.g. an earlier get() 404'd). fill() → settle()
         // must run from a re-armed state so `.loaded` re-materializes a resolved
         // promise; without begin() the handle would read 'ready' while its cached
-        // `.loaded` stayed permanently rejected.
-        if (adapter.stateOf(deferredEntry.handle) === 'failed') {
-          adapter.begin(deferredEntry.handle);
+        // `.loaded` stayed permanently rejected. Skip a handle already 'ready'
+        // (filled by an earlier producer) — filling twice is a no-op at best.
+        const state = adapter.stateOf(handle);
+
+        if (state === 'ready') {
+          continue;
         }
 
-        adapter.fill(deferredEntry.handle, resource);
+        if (state === 'failed') {
+          adapter.begin(handle);
+        }
+
+        adapter.fill(handle, resource);
       }
 
       this._deferred.delete(key);
-      resource = deferredEntry.handle;
-      filledDeferredHandle = true;
+
+      if (representative !== undefined && representative !== resource) {
+        resource = representative;
+        filledDeferredHandle = true;
+      }
     }
 
     // Value-asset refs fill from whatever producer stores the value; the raw
-    // value stays the stored resource (load() keeps resolving it).
-    this._refs.get(key)?.ref._fill(resource);
+    // value stays the stored resource (load() keeps resolving it). Fill every
+    // in-flight ref for the key (§7 multi-handle fill).
+    const refEntry = this._refs.get(key);
+
+    if (refEntry !== undefined) {
+      for (const ref of refEntry.refs) {
+        if (ref.loadState !== 'ready') {
+          ref._fill(resource);
+        }
+      }
+    }
 
     let typeResources = this._resources.get(type);
     if (!typeResources) {
