@@ -6,10 +6,10 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 24,
+  "memberCount": 23,
   "counts": {
     "constructors": 0,
-    "methods": 17,
+    "methods": 16,
     "properties": 7,
     "events": 0
   },
@@ -413,53 +413,6 @@
           ],
           "returnType": "AssetBinding<Result, Options>",
           "description": "Declare a built-in asset type in one place. For a **leaf-capable** kind — one with a SeamlessAdapter (resource) or isValue: true (value) — this registers its placeholder strategy and suffix→kind inference GLOBALLY at import time, so a loader-free Assets.from resolves it before any Application exists. A **non-leaf** resource kind (isValue: false and no adapter — e.g. bmFont, font) has no placeholder strategy, so it is deliberately NOT registered globally: its bare path cannot be inferred and must be declared via X.of() or an explicit config. Its extensions still travel on the returned binding for the per-Loader map. The returned AssetBinding flows through the unchanged materializeAssetBindings path exactly like any extension package's binding — defineAsset adds no second per-loader registration channel."
-        },
-        {
-          "name": "defineAssetManifest",
-          "signature": "defineAssetManifest(manifest: M): M",
-          "signatureTokens": [
-            {
-              "text": "defineAssetManifest",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "manifest",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "M",
-              "kind": "type"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "M",
-              "kind": "type"
-            }
-          ],
-          "params": [
-            {
-              "name": "manifest",
-              "type": "M",
-              "optional": false
-            }
-          ],
-          "returnType": "M",
-          "description": "Validates and returns a strongly-typed AssetManifest. Validates the manifest shape at runtime (non-empty bundle names, valid entry fields, no duplicate aliases per type/bundle) and preserves the literal types of the input for downstream type inference. Throws a descriptive Error on any validation failure."
         },
         {
           "name": "getAudioContext",

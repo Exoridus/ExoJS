@@ -964,7 +964,7 @@
         },
         {
           "name": "drawOrder",
-          "signature": "drawOrder: \"index\" | \"topdown\"",
+          "signature": "drawOrder: \"topdown\" | \"index\"",
           "signatureTokens": [
             {
               "text": "drawOrder",
@@ -975,7 +975,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"index\"",
+              "text": "\"topdown\"",
               "kind": "keyword"
             },
             {
@@ -983,7 +983,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"topdown\"",
+              "text": "\"index\"",
               "kind": "keyword"
             }
           ],
