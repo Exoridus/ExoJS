@@ -1,8 +1,10 @@
 import '#resources/seamless';
 
+import { Sound } from '#audio/Sound';
 import { Texture } from '#rendering/texture/Texture';
 import { Asset } from '#resources/Asset';
 import { _readMeta } from '#resources/assetMeta';
+import { AssetRef } from '#resources/AssetRef';
 import { Assets } from '#resources/Assets';
 
 describe('Assets', () => {
@@ -39,5 +41,25 @@ describe('Assets', () => {
 
   test('rejects a definition that defines a reserved "entries" key', () => {
     expect(() => new Assets({ entries: { type: 'texture', source: '/x.png' } } as never)).toThrow(/reserved/);
+  });
+});
+
+describe('Assets.from bare-string inference', () => {
+  it('builds a Texture leaf from a .png string, meta-stamped', () => {
+    const a = Assets.from({ ship: 'sprites/ship.png' });
+    expect(a.ship).toBeInstanceOf(Texture);
+    expect(_readMeta(a.ship)).toMatchObject({ kind: 'texture', src: 'sprites/ship.png' });
+  });
+  it('builds a Sound leaf from an .ogg string', () => {
+    expect(Assets.from({ boom: 'sfx/boom.ogg' }).boom).toBeInstanceOf(Sound);
+  });
+  it('builds an AssetRef leaf from a .json string', () => {
+    expect(Assets.from({ level: 'levels/1.json' }).level).toBeInstanceOf(AssetRef);
+  });
+  it('throws a guiding error for an unregistered suffix', () => {
+    expect(() => Assets.from({ x: 'a/b.zzz' })).toThrow(/no asset kind|X\.of\(\)/);
+  });
+  it('still accepts explicit configs (existing form) unchanged', () => {
+    expect(Assets.from({ ship: { type: 'texture', source: 's.png' } }).ship).toBeInstanceOf(Texture);
   });
 });

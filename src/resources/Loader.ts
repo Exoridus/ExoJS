@@ -1183,7 +1183,8 @@ export class Loader {
     if (typeOrPath instanceof AssetsImpl) {
       const out: Record<string, unknown> = {};
 
-      for (const [k, leaf] of Object.entries(typeOrPath.entries)) {
+      const entries = Object.entries((typeOrPath as AssetsImpl<Record<string, AssetInput>>).entries) as Array<[string, object]>;
+      for (const [k, leaf] of entries) {
         this._adopt(leaf, claimer);
         out[k] = leaf;
       }
