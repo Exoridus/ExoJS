@@ -17,11 +17,6 @@ describe('core extension→kind registrations', () => {
     ['a/b.wav', 'sound'],
     ['a/b.m4a', 'sound'],
     ['a/b.aac', 'sound'],
-    ['a/b.fnt', 'bmFont'],
-    ['a/b.woff', 'font'],
-    ['a/b.woff2', 'font'],
-    ['a/b.ttf', 'font'],
-    ['a/b.otf', 'font'],
     ['a/b.json', 'json'],
     ['a/b.txt', 'text'],
     ['a/b.csv', 'csv'],
@@ -30,8 +25,14 @@ describe('core extension→kind registrations', () => {
     ['a/b.srt', 'srt'],
     ['a/b.bin', 'binary'],
     ['a/b.wasm', 'wasm'],
-    ['a/b.svg', 'svg'],
   ])('resolves %s → %s', (path, kind) => {
     expect(resolveKindByPath(path)).toBe(kind);
   });
+
+  it.each([['a/b.woff'], ['a/b.fnt'], ['a/b.svg'], ['a/b.mp4']])(
+    'does NOT infer non-leaf-capable / unregistered suffix %s (use X.of or a config)',
+    path => {
+      expect(resolveKindByPath(path)).toBeUndefined();
+    },
+  );
 });

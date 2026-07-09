@@ -170,7 +170,12 @@ for (const valueKind of ['json', 'text', 'csv', 'xml', 'srt', 'vtt', 'binary', '
 }
 
 // Core suffix → kind registrations for bare-path inference (asset-system v2 §5).
-// Mirror of ExtensionTypeMap plus the value-kind suffixes (json/txt/csv/xml/…).
+// Restricted to LEAF-CAPABLE kinds — those registered above with either a
+// seamless adapter (texture, sound) or `isValue: true` (json/text/csv/xml/vtt/
+// srt/binary/wasm). `createLeaf` can only build a placeholder for those, so a
+// bare path is only inferable for them. Non-leaf resource kinds (font, bmFont,
+// music, image, video, svg) are loaded via `X.of(...)` or an explicit config;
+// bare-path support for them is a follow-up (needs a placeholder strategy).
 const coreExtensionKinds: ReadonlyArray<[string, keyof AssetDefinitions]> = [
   ['png', 'texture'],
   ['jpg', 'texture'],
@@ -183,11 +188,6 @@ const coreExtensionKinds: ReadonlyArray<[string, keyof AssetDefinitions]> = [
   ['wav', 'sound'],
   ['m4a', 'sound'],
   ['aac', 'sound'],
-  ['fnt', 'bmFont'],
-  ['woff', 'font'],
-  ['woff2', 'font'],
-  ['ttf', 'font'],
-  ['otf', 'font'],
   ['json', 'json'],
   ['txt', 'text'],
   ['csv', 'csv'],
@@ -196,7 +196,6 @@ const coreExtensionKinds: ReadonlyArray<[string, keyof AssetDefinitions]> = [
   ['srt', 'srt'],
   ['bin', 'binary'],
   ['wasm', 'wasm'],
-  ['svg', 'svg'],
 ];
 for (const [ext, kind] of coreExtensionKinds) {
   registerExtensionKind(ext, kind);
