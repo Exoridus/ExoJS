@@ -1,5 +1,6 @@
 // Auto-generated from audio-visualisation.ts — edit the .ts source, not this file.
-import { Application, AudioStream, Color, Scene, Sprite, Text, Texture } from '@codexo/exojs';
+import { Asset } from '@codexo/exojs';
+import { Application, Color, Scene, Sprite, Text, Texture } from '@codexo/exojs';
 import { AudioAnalyser, BeatDetector } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 const app = new Application({
@@ -25,7 +26,7 @@ class AudioVisualisationScene extends Scene {
     hud;
     tapPrompt;
     async load(loader) {
-        this.music = await loader.load(AudioStream.of(assets.demo.audio.musicLoop));
+        this.music = await loader.load(Asset.kind('music', assets.demo.audio.musicLoop));
     }
     init() {
         const { width, height } = this.app.canvas;

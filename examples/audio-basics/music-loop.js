@@ -1,5 +1,6 @@
 // Auto-generated from music-loop.ts — edit the .ts source, not this file.
-import { Application, AudioStream, Color, Graphics, Scene, Text } from '@codexo/exojs';
+import { Asset } from '@codexo/exojs';
+import { Application, Color, Graphics, Scene, Text } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {
@@ -21,7 +22,7 @@ class MusicLoopScene extends Scene {
     hud;
     panel;
     async load(loader) {
-        this.music = await loader.load(AudioStream.of(assets.demo.audio.musicLoop));
+        this.music = await loader.load(Asset.kind('music', assets.demo.audio.musicLoop));
     }
     init() {
         const { width, height } = this.app.canvas;

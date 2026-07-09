@@ -1,5 +1,6 @@
 // Auto-generated from asset-browser.ts — edit the .ts source, not this file.
-import { Application, AudioStream, Color, FontAsset, Graphics, Json, Scene, Sprite, Spritesheet, SvgAsset, Text, Texture, } from '@codexo/exojs';
+import { Asset } from '@codexo/exojs';
+import { Application, Color, Graphics, Scene, Sprite, Spritesheet, Text, Texture, } from '@codexo/exojs';
 // Dynamic category accessor: maps a category key to the correct sub-object
 // in the hierarchical assets catalog. Technical assets live under
 // assets.technical; everything else is under assets.demo.
@@ -175,7 +176,7 @@ class AssetBrowserScene extends Scene {
         switch (catId) {
             case 'textures': {
                 await Promise.all(Object.entries(assets.demo.textures ?? {}).map(async ([k, url]) => {
-                    const s = new Sprite(await loader.load(Texture.of(url)));
+                    const s = new Sprite(await loader.load(Asset.kind('texture', url)));
                     s.setAnchor(0.5);
                     this.texSprites.set(k, s);
                 }));
@@ -184,8 +185,8 @@ class AssetBrowserScene extends Scene {
             case 'sprites': {
                 await Promise.all(Object.entries(assets.demo.sprites ?? {}).map(async ([k, entry]) => {
                     const [tex, data] = await Promise.all([
-                        loader.load(Texture.of(entry.image)),
-                        loader.load(Json.of(entry.data)),
+                        loader.load(Asset.kind('texture', entry.image)),
+                        loader.load(Asset.kind('json', entry.data)),
                     ]);
                     const ss = new Spritesheet(tex, data);
                     this.sprSheets.set(k, ss);
@@ -197,8 +198,8 @@ class AssetBrowserScene extends Scene {
             case 'spritesheets': {
                 await Promise.all(Object.entries(assets.demo.spritesheets ?? {}).map(async ([k, entry]) => {
                     const [tex, data] = await Promise.all([
-                        loader.load(Texture.of(entry.image)),
-                        loader.load(Json.of(entry.data)),
+                        loader.load(Asset.kind('texture', entry.image)),
+                        loader.load(Asset.kind('json', entry.data)),
                     ]);
                     const ss = new Spritesheet(tex, data);
                     this.sshSheets.set(k, ss);
@@ -209,7 +210,7 @@ class AssetBrowserScene extends Scene {
             }
             case 'svg': {
                 await Promise.all(Object.entries(assets.demo.svg ?? {}).map(async ([k, url]) => {
-                    const s = new Sprite(new Texture(await loader.load(SvgAsset.of(url))));
+                    const s = new Sprite(new Texture(await loader.load(Asset.kind('svg', url))));
                     s.setAnchor(0.5);
                     this.svgSprites.set(k, s);
                 }));
@@ -218,8 +219,8 @@ class AssetBrowserScene extends Scene {
             case 'inputPrompts': {
                 await Promise.all(Object.entries(assets.demo.inputPrompts ?? {}).map(async ([k, entry]) => {
                     const [tex, data] = await Promise.all([
-                        loader.load(Texture.of(entry.image)),
-                        loader.load(Json.of(entry.data)),
+                        loader.load(Asset.kind('texture', entry.image)),
+                        loader.load(Asset.kind('json', entry.data)),
                     ]);
                     const ss = new Spritesheet(tex, data);
                     this.inpSheets.set(k, ss);
@@ -230,27 +231,27 @@ class AssetBrowserScene extends Scene {
             }
             case 'audio': {
                 await Promise.all(Object.entries(assets.demo.audio ?? {}).map(async ([k, url]) => {
-                    this.audioMusics.set(k, await loader.load(AudioStream.of(url)));
+                    this.audioMusics.set(k, await loader.load(Asset.kind('music', url)));
                 }));
                 break;
             }
             case 'sound': {
                 await Promise.all(Object.entries(assets.demo.sound ?? {}).map(async ([k, url]) => {
-                    this.soundMusics.set(k, await loader.load(AudioStream.of(url)));
+                    this.soundMusics.set(k, await loader.load(Asset.kind('music', url)));
                 }));
                 break;
             }
             case 'music': {
                 await Promise.all(Object.entries(assets.demo.music ?? {}).map(async ([k, url]) => {
-                    this.musicMusics.set(k, await loader.load(AudioStream.of(url)));
+                    this.musicMusics.set(k, await loader.load(Asset.kind('music', url)));
                 }));
                 break;
             }
             case 'soundSprites': {
                 await Promise.all(Object.entries(assets.demo.soundSprites ?? {}).map(async ([k, entry]) => {
                     const [audio, data] = await Promise.all([
-                        loader.load(AudioStream.of(entry.audio)),
-                        loader.load(Json.of(entry.data)),
+                        loader.load(Asset.kind('music', entry.audio)),
+                        loader.load(Asset.kind('json', entry.data)),
                     ]);
                     this.soundSpriteAudio.set(k, audio);
                     this.soundSpriteData.set(k, data);
@@ -266,14 +267,14 @@ class AssetBrowserScene extends Scene {
                     if (!/\.(ttf|otf|woff2?)$/i.test(url))
                         return;
                     const family = `assetbrowser_${k}`;
-                    await loader.load(FontAsset.of(url, { family }));
+                    await loader.load(Asset.kind('font', url, { family }));
                     this.fontFamilies.set(k, family);
                 }));
                 break;
             }
             case 'technical': {
                 await Promise.all(Object.entries(assets.technical ?? {}).flatMap(([subcat, items]) => Object.entries(items).map(async ([k, u]) => {
-                    const s = new Sprite(await loader.load(Texture.of(u)));
+                    const s = new Sprite(await loader.load(Asset.kind('texture', u)));
                     s.setAnchor(0.5);
                     this.techSprites.set(`${subcat}.${k}`, s);
                 })));
@@ -281,7 +282,7 @@ class AssetBrowserScene extends Scene {
             }
             case 'backgrounds': {
                 await Promise.all(Object.entries(assets.demo.backgrounds ?? {}).map(async ([k, url]) => {
-                    const s = new Sprite(await loader.load(Texture.of(url)));
+                    const s = new Sprite(await loader.load(Asset.kind('texture', url)));
                     s.setAnchor(0.5);
                     this.bgSprites.set(k, s);
                 }));
@@ -289,7 +290,7 @@ class AssetBrowserScene extends Scene {
             }
             case 'cursors': {
                 await Promise.all(Object.entries(assets.demo.cursors ?? {}).map(async ([k, url]) => {
-                    const s = new Sprite(new Texture(await loader.load(SvgAsset.of(url))));
+                    const s = new Sprite(new Texture(await loader.load(Asset.kind('svg', url))));
                     s.setAnchor(0.5);
                     this.cursorSprites.set(k, s);
                 }));
@@ -297,7 +298,7 @@ class AssetBrowserScene extends Scene {
             }
             case 'tilesets': {
                 await Promise.all(Object.entries(assets.demo.tilesets ?? {}).map(async ([k, entry]) => {
-                    const s = new Sprite(await loader.load(Texture.of(entry.image)));
+                    const s = new Sprite(await loader.load(Asset.kind('texture', entry.image)));
                     s.setAnchor(0.5);
                     this.tilesetSprites.set(k, s);
                 }));
@@ -305,7 +306,7 @@ class AssetBrowserScene extends Scene {
             }
             case 'vendor': {
                 await Promise.all(Object.entries(assets.demo.vendor ?? {}).map(async ([k, url]) => {
-                    this.vendorData.set(k, await loader.load(Json.of(url)));
+                    this.vendorData.set(k, await loader.load(Asset.kind('json', url)));
                 }));
                 break;
             }

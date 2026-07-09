@@ -1,5 +1,6 @@
 // Auto-generated from tempo-tracking.ts — edit the .ts source, not this file.
-import { Application, AudioStream, Color, Graphics, Scene, Text } from '@codexo/exojs';
+import { Asset } from '@codexo/exojs';
+import { Application, Color, Graphics, Scene, Text } from '@codexo/exojs';
 import { BeatDetector } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 const app = new Application({
@@ -28,7 +29,7 @@ class TempoTrackingScene extends Scene {
     hud;
     tapPrompt;
     async load(loader) {
-        this.music = await loader.load(AudioStream.of('audio/demo-loop-main.ogg'));
+        this.music = await loader.load(Asset.kind('music', 'audio/demo-loop-main.ogg'));
     }
     init() {
         const { width, height } = this.app.canvas;

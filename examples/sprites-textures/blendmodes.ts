@@ -1,3 +1,4 @@
+import { Asset } from '@codexo/exojs';
 import { Application, BlendModes, Color, ScaleModes, Scene, Sprite, Texture } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
@@ -50,8 +51,8 @@ class BlendmodesScene extends Scene {
     override async load(loader): Promise<void> {
         const samplerOptions = { ...Texture.defaultSamplerOptions, scaleMode: ScaleModes.Nearest };
 
-        await loader.load(Texture.of(ALPHA_RINGS, { samplerOptions }));
-        await loader.load(Texture.of(assets.demo.textures.shipA, { samplerOptions }));
+        await loader.load(Asset.kind('texture', ALPHA_RINGS, { samplerOptions }));
+        await loader.load(Asset.kind('texture', assets.demo.textures.shipA, { samplerOptions }));
     }
 
     override init(loader): void {

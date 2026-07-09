@@ -1,3 +1,4 @@
+import { Asset } from '@codexo/exojs';
 import { Application, AudioBus, AudioStream, Color, Graphics, Scene, Sound, Text } from '@codexo/exojs';
 import { AudioAnalyser, DuckingEffect } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
@@ -34,7 +35,7 @@ class DuckingScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
 
     override async load(loader): Promise<void> {
-        this.music = await loader.load(AudioStream.of(assets.demo.audio.musicLoop));
+        this.music = await loader.load(Asset.kind('music', assets.demo.audio.musicLoop));
         await loader.load(assets.demo.voice.congratulations);
     }
 

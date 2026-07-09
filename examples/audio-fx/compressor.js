@@ -1,5 +1,6 @@
 // Auto-generated from compressor.ts — edit the .ts source, not this file.
-import { Application, AudioStream, Color, Graphics, Scene, Text } from '@codexo/exojs';
+import { Asset } from '@codexo/exojs';
+import { Application, Color, Graphics, Scene, Text } from '@codexo/exojs';
 import { CompressorEffect } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 const app = new Application({
@@ -36,7 +37,7 @@ class CompressorScene extends Scene {
     meterY = 0;
     hud;
     async load(loader) {
-        this.music = await loader.load(AudioStream.of('audio/demo-loop-main.ogg'));
+        this.music = await loader.load(Asset.kind('music', 'audio/demo-loop-main.ogg'));
     }
     init() {
         const { width, height } = this.app.canvas;

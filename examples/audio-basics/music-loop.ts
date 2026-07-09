@@ -1,3 +1,4 @@
+import { Asset } from '@codexo/exojs';
 import { Application, AudioStream, Color, Graphics, type Loopable, type Pausable, type RatePitched, Scene, type Seekable, Text, type Voice } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
@@ -23,7 +24,7 @@ class MusicLoopScene extends Scene {
     private panel!: ReturnType<typeof mountControlPanel>;
 
     override async load(loader): Promise<void> {
-        this.music = await loader.load(AudioStream.of(assets.demo.audio.musicLoop));
+        this.music = await loader.load(Asset.kind('music', assets.demo.audio.musicLoop));
     }
 
     override init(): void {

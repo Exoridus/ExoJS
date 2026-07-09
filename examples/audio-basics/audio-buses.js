@@ -1,5 +1,6 @@
 // Auto-generated from audio-buses.ts — edit the .ts source, not this file.
-import { Application, AudioStream, Color, Graphics, Scene, Text } from '@codexo/exojs';
+import { Asset } from '@codexo/exojs';
+import { Application, Color, Graphics, Scene, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {
@@ -33,7 +34,7 @@ class AudioBusesScene extends Scene {
     sfxButton = { x: 0, y: 0, w: 0, h: 0 };
     hud;
     async load(loader) {
-        this.music = await loader.load(AudioStream.of(assets.demo.audio.musicLoop));
+        this.music = await loader.load(Asset.kind('music', assets.demo.audio.musicLoop));
         await loader.load(assets.demo.audio.uiClick);
     }
     init(loader) {

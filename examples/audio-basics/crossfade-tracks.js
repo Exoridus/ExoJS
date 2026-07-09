@@ -1,5 +1,6 @@
 // Auto-generated from crossfade-tracks.ts — edit the .ts source, not this file.
-import { Application, AudioStream, Color, crossFade, Graphics, Scene, Text } from '@codexo/exojs';
+import { Asset } from '@codexo/exojs';
+import { Application, Color, crossFade, Graphics, Scene, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {
@@ -35,7 +36,7 @@ class CrossfadeTracksScene extends Scene {
     meterBaseY = 0;
     hud;
     async load(loader) {
-        [this.trackA, this.trackB] = await Promise.all([loader.load(AudioStream.of(assets.demo.audio.musicA)), loader.load(AudioStream.of(assets.demo.audio.musicB))]);
+        [this.trackA, this.trackB] = await Promise.all([loader.load(Asset.kind('music', assets.demo.audio.musicA)), loader.load(Asset.kind('music', assets.demo.audio.musicB))]);
     }
     init() {
         const { width, height } = this.app.canvas;

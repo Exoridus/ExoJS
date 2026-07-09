@@ -1,5 +1,6 @@
 // Auto-generated from frequency-bands.ts — edit the .ts source, not this file.
-import { Application, AudioStream, Color, Graphics, Scene, Text } from '@codexo/exojs';
+import { Asset } from '@codexo/exojs';
+import { Application, Color, Graphics, Scene, Text } from '@codexo/exojs';
 import { AudioAnalyser } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 const app = new Application({
@@ -42,7 +43,7 @@ class FrequencyBandsScene extends Scene {
     hud;
     tapPrompt;
     async load(loader) {
-        this.music = await loader.load(AudioStream.of('audio/demo-loop-main.ogg'));
+        this.music = await loader.load(Asset.kind('music', 'audio/demo-loop-main.ogg'));
     }
     init() {
         this.analyser = new AudioAnalyser({ fftSize: 2048, smoothingTimeConstant: 0.75 });

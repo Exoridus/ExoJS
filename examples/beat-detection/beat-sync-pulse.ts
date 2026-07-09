@@ -1,3 +1,4 @@
+import { Asset } from '@codexo/exojs';
 import { Application, AudioStream, Color, Scene, Sprite, Text, Vector } from '@codexo/exojs';
 import { BeatDetector } from '@codexo/exojs-audio-fx';
 import {
@@ -38,7 +39,7 @@ class BeatSyncPulseScene extends Scene {
 
     override async load(loader): Promise<void> {
         await Promise.all([loader.load('image/ship-a.png'), loader.load('image/particle-light.png')]);
-        this.music = await loader.load(AudioStream.of('audio/demo-loop-main.ogg'));
+        this.music = await loader.load(Asset.kind('music', 'audio/demo-loop-main.ogg'));
     }
 
     override init(loader): void {

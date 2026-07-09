@@ -1,4 +1,5 @@
 // Auto-generated from blendmodes.ts — edit the .ts source, not this file.
+import { Asset } from '@codexo/exojs';
 import { Application, BlendModes, Color, ScaleModes, Scene, Sprite, Texture } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 const app = new Application({
@@ -45,8 +46,8 @@ class BlendmodesScene extends Scene {
     cycle;
     async load(loader) {
         const samplerOptions = { ...Texture.defaultSamplerOptions, scaleMode: ScaleModes.Nearest };
-        await loader.load(Texture.of(ALPHA_RINGS, { samplerOptions }));
-        await loader.load(Texture.of(assets.demo.textures.shipA, { samplerOptions }));
+        await loader.load(Asset.kind('texture', ALPHA_RINGS, { samplerOptions }));
+        await loader.load(Asset.kind('texture', assets.demo.textures.shipA, { samplerOptions }));
     }
     init(loader) {
         const { width, height } = this.app.canvas;

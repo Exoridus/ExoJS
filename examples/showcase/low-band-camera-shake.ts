@@ -1,3 +1,4 @@
+import { Asset } from '@codexo/exojs';
 import { Application, AudioStream, Color, Scene, Sprite, Text, View, type Voice } from '@codexo/exojs';
 import { AudioAnalyser } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
@@ -22,7 +23,7 @@ class LowBandCameraShakeScene extends Scene {
     private tapPrompt!: Text;
 
     override async load(loader): Promise<void> {
-        this.music = await loader.load(AudioStream.of(assets.demo.audio.musicLoop));
+        this.music = await loader.load(Asset.kind('music', assets.demo.audio.musicLoop));
         await loader.load(assets.demo.textures.shipA);
     }
 

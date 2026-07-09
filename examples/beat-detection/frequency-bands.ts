@@ -1,3 +1,4 @@
+import { Asset } from '@codexo/exojs';
 import { Application, AudioStream, Color, Graphics, Scene, Text } from '@codexo/exojs';
 import { AudioAnalyser } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
@@ -46,7 +47,7 @@ class FrequencyBandsScene extends Scene {
     private tapPrompt!: Text;
 
     override async load(loader): Promise<void> {
-        this.music = await loader.load(AudioStream.of('audio/demo-loop-main.ogg'));
+        this.music = await loader.load(Asset.kind('music', 'audio/demo-loop-main.ogg'));
     }
 
     override init(): void {

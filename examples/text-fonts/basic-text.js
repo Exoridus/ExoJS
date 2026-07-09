@@ -1,5 +1,6 @@
 // Auto-generated from basic-text.ts — edit the .ts source, not this file.
-import { Application, Color, FontAsset, Scene, Text, Time } from '@codexo/exojs';
+import { Asset } from '@codexo/exojs';
+import { Application, Color, Scene, Text, Time } from '@codexo/exojs';
 const app = new Application({
     canvas: {
         width: 1280,
@@ -16,7 +17,7 @@ class BasicTextScene extends Scene {
     time;
     text;
     async load(loader) {
-        await loader.load(FontAsset.of('font/Kenney Future.ttf', { family: 'Kenney Future' }));
+        await loader.load(Asset.kind('font', 'font/Kenney Future.ttf', { family: 'Kenney Future' }));
     }
     init() {
         const { width, height } = this.app.canvas;

@@ -1,3 +1,4 @@
+import { Asset } from '@codexo/exojs';
 import { Application, Color, Keyboard, Scene, Sprite, Video } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
@@ -33,7 +34,7 @@ class VideoDrawableScene extends Scene {
 
     override async load(loader): Promise<void> {
         this.assetLoader = loader;
-        const first = await loader.load(Video.of(VIDEOS[0].url));
+        const first = await loader.load(Asset.kind('video', VIDEOS[0].url));
         this.loadedVideos.set(VIDEOS[0].name, first);
         await loader.load(assets.demo.textures.shipA);
     }
@@ -92,7 +93,7 @@ class VideoDrawableScene extends Scene {
         try {
             let video = this.loadedVideos.get(entry.name);
             if (!video) {
-                video = await this.assetLoader.load(Video.of(entry.url));
+                video = await this.assetLoader.load(Asset.kind('video', entry.url));
                 this.loadedVideos.set(entry.name, video);
             }
             this.video.pause();

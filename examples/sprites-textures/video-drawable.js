@@ -1,5 +1,6 @@
 // Auto-generated from video-drawable.ts — edit the .ts source, not this file.
-import { Application, Color, Keyboard, Scene, Sprite, Video } from '@codexo/exojs';
+import { Asset } from '@codexo/exojs';
+import { Application, Color, Keyboard, Scene, Sprite } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 // Every video in the asset catalog, switchable at runtime with the number
 // keys. Only the first entry is fetched up front — the others lazy-load on
@@ -30,7 +31,7 @@ class VideoDrawableScene extends Scene {
     switching = false;
     async load(loader) {
         this.assetLoader = loader;
-        const first = await loader.load(Video.of(VIDEOS[0].url));
+        const first = await loader.load(Asset.kind('video', VIDEOS[0].url));
         this.loadedVideos.set(VIDEOS[0].name, first);
         await loader.load(assets.demo.textures.shipA);
     }
@@ -82,7 +83,7 @@ class VideoDrawableScene extends Scene {
         try {
             let video = this.loadedVideos.get(entry.name);
             if (!video) {
-                video = await this.assetLoader.load(Video.of(entry.url));
+                video = await this.assetLoader.load(Asset.kind('video', entry.url));
                 this.loadedVideos.set(entry.name, video);
             }
             this.video.pause();

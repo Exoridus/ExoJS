@@ -1,5 +1,6 @@
 // Auto-generated from beat-sync-pulse.ts — edit the .ts source, not this file.
-import { Application, AudioStream, Color, Scene, Sprite, Text, Vector } from '@codexo/exojs';
+import { Asset } from '@codexo/exojs';
+import { Application, Color, Scene, Sprite, Text, Vector } from '@codexo/exojs';
 import { BeatDetector } from '@codexo/exojs-audio-fx';
 import { AlphaFadeOverLifetime, BurstSpawn, ConeDirection, Constant, particlesExtension, ParticleSystem, } from '@codexo/exojs-particles';
 import { mountControlPanel, mountControls } from '@examples/runtime';
@@ -29,7 +30,7 @@ class BeatSyncPulseScene extends Scene {
     tapPrompt;
     async load(loader) {
         await Promise.all([loader.load('image/ship-a.png'), loader.load('image/particle-light.png')]);
-        this.music = await loader.load(AudioStream.of('audio/demo-loop-main.ogg'));
+        this.music = await loader.load(Asset.kind('music', 'audio/demo-loop-main.ogg'));
     }
     init(loader) {
         const { width, height } = this.app.canvas;

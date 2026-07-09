@@ -1,3 +1,4 @@
+import { Asset } from '@codexo/exojs';
 import { Application, AudioBus, AudioGenerator, Color, Scene, Sound, Text } from '@codexo/exojs';
 import { VocoderEffect } from '@codexo/exojs-audio-fx';
 import { mountControlPanel, mountControls } from '@examples/runtime';
@@ -32,11 +33,11 @@ class VocoderScene extends Scene {
     override async load(loader): Promise<void> {
         // Each phrase's asset path is widened to `string` by the PHRASES array's
         // type annotation, so it is a dynamic (non-literal) path from the type
-        // system's point of view — Sound.of() disambiguates and load() (not
+        // system's point of view — Asset.kind('sound', ) disambiguates and load() (not
         // get()) resolves the handle here, up front.
         await Promise.all(
             PHRASES.map(async phrase => {
-                this.phrases.set(phrase.key, await loader.load(Sound.of(phrase.asset)));
+                this.phrases.set(phrase.key, await loader.load(Asset.kind('sound', phrase.asset)));
             }),
         );
     }

@@ -1,3 +1,4 @@
+import { Asset } from '@codexo/exojs';
 import { Application, AudioStream, Color, Graphics, Scene, Text, type Voice } from '@codexo/exojs';
 import { AudioAnalyser } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
@@ -24,7 +25,7 @@ class VinylRecordScene extends Scene {
     private tapPrompt!: Text;
 
     override async load(loader): Promise<void> {
-        this.music = await loader.load(AudioStream.of(assets.demo.audio.musicLoop));
+        this.music = await loader.load(Asset.kind('music', assets.demo.audio.musicLoop));
     }
 
     override init(): void {

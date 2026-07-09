@@ -1,3 +1,4 @@
+import { Asset } from '@codexo/exojs';
 import { Application, AudioStream, Color, Graphics, Keyboard, type Pausable, Scene, type Seekable, Sprite, Text, View, type Voice } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
@@ -30,7 +31,7 @@ class BossIntroCinematicScene extends Scene {
 
     override async load(loader): Promise<void> {
         await loader.load(assets.demo.textures.shipA);
-        this.music = await loader.load(AudioStream.of(assets.demo.music.loopMain));
+        this.music = await loader.load(Asset.kind('music', assets.demo.music.loopMain));
     }
 
     override init(loader): void {

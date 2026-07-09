@@ -1,5 +1,6 @@
 // Auto-generated from bitmap-text-basic.ts — edit the .ts source, not this file.
-import { Application, BitmapText, BmFont, Color, Scene } from '@codexo/exojs';
+import { Asset } from '@codexo/exojs';
+import { Application, BitmapText, Color, Scene } from '@codexo/exojs';
 const app = new Application({
     canvas: {
         width: 1280,
@@ -17,7 +18,7 @@ class BitmapTextBasicScene extends Scene {
     counter;
     frame = 0;
     async load(loader) {
-        this.font = await loader.load(BmFont.of(assets.demo.fonts.kenneyBlocksFnt));
+        this.font = await loader.load(Asset.kind('bmFont', assets.demo.fonts.kenneyBlocksFnt));
     }
     init() {
         const font = this.font;

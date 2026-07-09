@@ -1,3 +1,4 @@
+import { Asset } from '@codexo/exojs';
 import { Application, AudioStream, Color, Graphics, Scene, Sound, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
@@ -36,7 +37,7 @@ class AudioBusesScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
 
     override async load(loader): Promise<void> {
-        this.music = await loader.load(AudioStream.of(assets.demo.audio.musicLoop));
+        this.music = await loader.load(Asset.kind('music', assets.demo.audio.musicLoop));
         await loader.load(assets.demo.audio.uiClick);
     }
 

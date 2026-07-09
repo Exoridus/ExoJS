@@ -1,3 +1,4 @@
+import { Asset } from '@codexo/exojs';
 import { Application, AudioStream, Color, Scene, Text, Vector, type Voice } from '@codexo/exojs';
 import { AudioAnalyser, BeatDetector } from '@codexo/exojs-audio-fx';
 import {
@@ -36,7 +37,7 @@ class AudioReactiveParticlesScene extends Scene {
     private tapPrompt!: Text;
 
     override async load(loader): Promise<void> {
-        this.music = await loader.load(AudioStream.of(assets.demo.audio.musicLoop));
+        this.music = await loader.load(Asset.kind('music', assets.demo.audio.musicLoop));
         await loader.load(assets.demo.textures.particleLight);
     }
 

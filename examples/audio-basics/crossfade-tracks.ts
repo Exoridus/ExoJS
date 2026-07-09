@@ -1,3 +1,4 @@
+import { Asset } from '@codexo/exojs';
 import { Application, AudioStream, Color, crossFade, Graphics, Scene, Text, type Voice } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
@@ -39,7 +40,7 @@ class CrossfadeTracksScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
 
     override async load(loader): Promise<void> {
-        [this.trackA, this.trackB] = await Promise.all([loader.load(AudioStream.of(assets.demo.audio.musicA)), loader.load(AudioStream.of(assets.demo.audio.musicB))]);
+        [this.trackA, this.trackB] = await Promise.all([loader.load(Asset.kind('music', assets.demo.audio.musicA)), loader.load(Asset.kind('music', assets.demo.audio.musicB))]);
     }
 
     override init(): void {
