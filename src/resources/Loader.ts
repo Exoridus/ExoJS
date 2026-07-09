@@ -371,9 +371,18 @@ export class Loader {
         return BinaryAsset;
       case 'wasm':
         return WasmAsset;
-      // Non-value core kinds have no value token; extension-package kinds
-      // (declaration-merged into AssetDefinitions) fall through here too, so a
-      // default is required — `keyof AssetDefinitions` is an open set.
+      case 'texture':
+      case 'sound':
+      case 'music':
+      case 'image':
+      case 'video':
+      case 'svg':
+      case 'font':
+      case 'bmFont':
+        return undefined;
+      // Extension-package kinds (declaration-merged into AssetDefinitions) fall
+      // through here — `keyof AssetDefinitions` is an open set, so a default is
+      // required to stay exhaustive under a package tsconfig (avoids TS7030).
       default:
         return undefined;
     }
