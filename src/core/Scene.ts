@@ -8,7 +8,7 @@ import type { Texture } from '#rendering/texture/Texture';
 import type { Asset } from '#resources/Asset';
 import type { AssetInput } from '#resources/AssetDefinitions';
 import type { AssetRef } from '#resources/AssetRef';
-import type { Assets } from '#resources/Assets';
+import type { Assets, InferAssetsProperties } from '#resources/Assets';
 import type { TextureFactoryOptions } from '#resources/factories/TextureFactory';
 import type { BatchValue, ConstrainedLoadable, InferLoadedMap, Loadable, LoadByPath, Loader, LoadReturn, PathExtension } from '#resources/Loader';
 import type { LoadingQueue } from '#resources/LoadingQueue';
@@ -125,7 +125,11 @@ class SceneLoader implements Destroyable {
   public get(type: typeof BinaryAsset, source: string, options?: unknown): AssetRef<ArrayBuffer>;
   public get(type: typeof WasmAsset, source: string, options?: unknown): AssetRef<WebAssembly.Module>;
   public get<T extends Loadable>(type: T, alias: string): LoadReturn<T>;
-  public get(typeOrPath: Loadable | string, source?: unknown, options?: unknown): unknown {
+  // Adopts an Assets catalog under the scene scope (mirrors Loader.get(catalog)).
+  public get<M extends Record<string, AssetInput>>(catalog: Assets<M>): InferAssetsProperties<M>;
+  // Adopts a single handle-hybrid leaf under the scene scope (mirrors Loader.get(leaf)).
+  public get<T extends object>(leaf: T): T;
+  public get(typeOrPath: Loadable | string | object, source?: unknown, options?: unknown): unknown {
     return this._loader._getClaimed(this._scope, typeOrPath, source, options);
   }
 
