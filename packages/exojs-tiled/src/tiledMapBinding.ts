@@ -8,7 +8,7 @@ import { resolveTiledOptions,type TiledLoadOptions } from './tiledOptions';
 /**
  * Declarative asset binding for {@link TiledMap}.
  *
- * Token-only: `loader.load(TiledMap, 'world.tmj')` resolves through this
+ * `loader.load(TiledMap.of('world.tmj'))` resolves through this
  * binding, but no `extensions` are claimed, so a plain
  * `loader.load('world.tmj')` does not resolve to `TiledMap`. The `.tmj`
  * extension (and generic `.json` Tiled loading) is reserved for the

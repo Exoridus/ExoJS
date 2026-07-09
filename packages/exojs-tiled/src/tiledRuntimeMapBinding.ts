@@ -11,7 +11,7 @@ import { resolveTiledOptions,type TiledLoadOptions } from './tiledOptions';
  *
  * This is the common-case binding: `loader.load(TileMap, 'world.tmj')` fetches
  * and validates the TMJ, resolves external `.tsj` tilesets, loads tileset
- * textures via the sub-load `loader.load(TiledMap, source)`, and synchronously
+ * textures via the sub-load `loader.load(TiledMap.of(source))`, and synchronously
  * converts the parsed {@link TiledMap} source model into a format-independent
  * runtime {@link TileMap} via {@link TiledMap.toTileMap}.
  *

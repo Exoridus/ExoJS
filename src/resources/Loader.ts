@@ -726,6 +726,11 @@ export class Loader {
    * the runtime value is an `AssetRef` — the descriptor carries only its payload
    * type `T`, not its value/resource kind, so the structural heuristic cannot
    * distinguish an object payload from a resource handle.
+   *
+   * Unlike bare-path `get('x.png')`, this form is **not instance-deduped by
+   * source**: each call builds a fresh leaf, so repeated `get(X.of(sameSrc))`
+   * accumulates distinct handles (all healing to the same deduped backend
+   * payload). It is the dynamic-source escape hatch — capture the handle once.
    */
   public get<T>(asset: Asset<T>): T extends object ? T : AssetRef<T>;
 

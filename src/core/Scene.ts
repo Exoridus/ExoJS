@@ -9,7 +9,7 @@ import type { Asset } from '#resources/Asset';
 import type { AssetInput } from '#resources/AssetDefinitions';
 import type { AssetRef } from '#resources/AssetRef';
 import type { Assets, InferAssetsProperties } from '#resources/Assets';
-import type { InferLoadedMap, Loadable, LoadByPath, Loader, LoadReturn, PathExtension } from '#resources/Loader';
+import type { InferLoadedMap, Loadable, LoadByPath, Loader, LoadOptions, LoadReturn, PathExtension } from '#resources/Loader';
 import type { LoadingQueue } from '#resources/LoadingQueue';
 import { UIRoot } from '#ui/UIRoot';
 
@@ -121,14 +121,14 @@ class SceneLoader implements Destroyable {
   }
 
   public load<T>(asset: Asset<T>): LoadingQueue<T>;
-  public load<M extends Record<string, AssetInput>>(assets: Assets<M>): LoadingQueue<InferLoadedMap<M>>;
+  public load<M extends Record<string, AssetInput>>(assets: Assets<M>, options?: LoadOptions): LoadingQueue<InferLoadedMap<M>>;
   // eslint-disable-next-line @typescript-eslint/unified-signatures -- mirrors Loader.load verbatim (rule disabled there too)
-  public load<M extends Record<string, AssetInput>>(config: M): LoadingQueue<InferLoadedMap<M>>;
+  public load<M extends Record<string, AssetInput>>(config: M, options?: LoadOptions): LoadingQueue<InferLoadedMap<M>>;
   // Single value-leaf (an `Assets.from()` AssetRef property): mirrors Loader.load(leaf).
   // eslint-disable-next-line @typescript-eslint/unified-signatures -- mirrors Loader.load verbatim (rule disabled there too)
-  public load<T>(leaf: AssetRef<T>): LoadingQueue<T>;
+  public load<T>(leaf: AssetRef<T>, options?: LoadOptions): LoadingQueue<T>;
   // Single handle-hybrid leaf (an `Assets.from()` property): mirrors Loader.load(leaf).
-  public load<T extends object>(leaf: T): LoadingQueue<T>;
+  public load<T extends object>(leaf: T, options?: LoadOptions): LoadingQueue<T>;
   public load<R, S extends string>(path: [PathExtension<S>] extends [never] ? never : S): LoadingQueue<R>;
   public load<S extends string>(path: [PathExtension<S>] extends [never] ? never : S): LoadingQueue<LoadByPath<S>>;
   public load(arg0: unknown, arg1?: unknown): LoadingQueue<unknown> {
