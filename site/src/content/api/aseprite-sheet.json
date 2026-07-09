@@ -6,10 +6,10 @@
   "subsystem": "aseprite",
   "importPath": "@codexo/exojs-aseprite",
   "tier": "stable",
-  "memberCount": 6,
+  "memberCount": 7,
   "counts": {
     "constructors": 0,
-    "methods": 3,
+    "methods": 4,
     "properties": 3,
     "events": 0
   },
@@ -87,6 +87,65 @@
           "params": [],
           "returnType": "void",
           "description": "Destroy the underlying Spritesheet and release its frame resources."
+        },
+        {
+          "name": "of",
+          "signature": "of(source: string): Asset<AsepriteSheet>",
+          "signatureTokens": [
+            {
+              "text": "of",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Asset",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AsepriteSheet",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "source",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "Asset<AsepriteSheet>",
+          "description": "Annotation descriptor for an Aseprite sheet asset, for Assets.from({...}) / loader.get(...) / loader.load(...) (asset-system v2 §5). Use for dynamic paths or per-asset options — AsepriteSheet has no bare-path suffix inference (non-leaf resource kind), so AsepriteSheet.of(...) is the way to load it by annotation."
         },
         {
           "name": "parse",

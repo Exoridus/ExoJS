@@ -1,3 +1,4 @@
+import { Asset } from '@codexo/exojs';
 import type { TileMap } from '@codexo/exojs-tilemap';
 
 import type { LdtkData } from './LdtkData';
@@ -16,6 +17,15 @@ import { getLdtkLevelEntries } from './ldtkLevelEntries';
  * **not** own tileset textures; those remain in the Loader cache.
  */
 export class LdtkMap {
+  /**
+   * Annotation descriptor for an LDtk map asset, for `Assets.from({...})` /
+   * `loader.get(...)` / `loader.load(...)` (asset-system v2 §5). Use for dynamic
+   * paths — prefer a bare `'world.ldtk'` string when the suffix is a literal.
+   */
+  public static of(source: string): Asset<LdtkMap> {
+    return new Asset({ type: 'ldtkMap', source }) as unknown as Asset<LdtkMap>;
+  }
+
   /** Resolved URL this map was loaded from. */
   public readonly source: string;
   /** The raw parsed LDtk document. */

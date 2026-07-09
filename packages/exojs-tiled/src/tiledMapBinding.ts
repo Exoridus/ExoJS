@@ -1,4 +1,5 @@
-import type { AssetBinding, AssetHandler } from '@codexo/exojs/extensions';
+import { defineAsset } from '@codexo/exojs';
+import type { AssetHandler } from '@codexo/exojs/extensions';
 
 import { loadTiledMap } from './loadTiledMap';
 import { TiledMap } from './TiledMap';
@@ -13,9 +14,9 @@ import { resolveTiledOptions,type TiledLoadOptions } from './tiledOptions';
  * extension (and generic `.json` Tiled loading) is reserved for the
  * format-independent `TileMap` runtime asset binding.
  */
-export const tiledMapBinding = {
+export const tiledMapBinding = defineAsset<TiledMap, TiledLoadOptions>({
   type: TiledMap,
-  typeNames: ['tiledMap'],
+  kind: 'tiledMap',
   create() {
     return {
       getIdentityKey(req) {
@@ -27,4 +28,4 @@ export const tiledMapBinding = {
       },
     } satisfies AssetHandler<TiledMap, TiledLoadOptions>;
   },
-} satisfies AssetBinding<TiledMap, TiledLoadOptions>;
+});

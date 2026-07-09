@@ -1,4 +1,4 @@
-import { AnimatedSprite, type AnimatedSpriteClipDefinition, Spritesheet, type Texture } from '@codexo/exojs';
+import { AnimatedSprite, type AnimatedSpriteClipDefinition, Asset, Spritesheet, type Texture } from '@codexo/exojs';
 
 import { type AsepriteData, type AsepriteFrameData, type AsepriteFrameTag, type AsepriteSlice,isAsepriteArrayData } from './AsepriteData';
 
@@ -102,6 +102,17 @@ function avgFps(frameArray: AsepriteFrameData[], indices: number[]): number {
  * ```
  */
 export class AsepriteSheet {
+  /**
+   * Annotation descriptor for an Aseprite sheet asset, for `Assets.from({...})` /
+   * `loader.get(...)` / `loader.load(...)` (asset-system v2 §5). Use for dynamic
+   * paths or per-asset options — `AsepriteSheet` has no bare-path suffix
+   * inference (non-leaf resource kind), so `AsepriteSheet.of(...)` is the way
+   * to load it by annotation.
+   */
+  public static of(source: string): Asset<AsepriteSheet> {
+    return new Asset({ type: 'asepriteSheet', source }) as unknown as Asset<AsepriteSheet>;
+  }
+
   /** The underlying {@link Spritesheet} whose frames are keyed by index string. */
   public readonly spritesheet: Spritesheet;
 

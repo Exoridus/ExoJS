@@ -12,6 +12,8 @@ export { CacheFirstStrategy } from './CacheFirstStrategy';
 export type { CacheStore } from './CacheStore';
 export type { CacheRequest, CacheStrategy } from './CacheStrategy';
 export type { Database } from './Database';
+export type { DefineAssetDescriptor } from './defineAsset';
+export { defineAsset } from './defineAsset';
 export type { AssetConstructor } from './FactoryRegistry';
 export { IndexedDbDatabase } from './IndexedDbDatabase';
 export type { IndexedDbKeyValueStoreOptions } from './IndexedDbKeyValueStore';

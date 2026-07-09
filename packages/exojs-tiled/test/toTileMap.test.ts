@@ -46,9 +46,13 @@ function makeContext(fixtures: Record<string, unknown>) {
   };
 
   loaderLoad.mockImplementation(async (token: unknown, url: string): Promise<unknown> => {
-    if (token === Texture) {
+    // Texture sub-loads now arrive as `Texture.of(src)` descriptors (asset form);
+    // read the source from the descriptor. The parsed-source TiledMap sub-load is
+    // still dispatched by token (+ url positional arg).
+    if ((token as { type?: unknown } | null)?.type === 'texture') {
+      const src = (token as { source: string }).source;
       const tex = new Texture();
-      const size = TEXTURE_SIZES[url] ?? { w: 256, h: 256 };
+      const size = TEXTURE_SIZES[src] ?? { w: 256, h: 256 };
       tex.width = size.w;
       tex.height = size.h;
       return tex;

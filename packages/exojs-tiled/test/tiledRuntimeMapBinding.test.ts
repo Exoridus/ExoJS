@@ -42,7 +42,9 @@ function makeContext(fixtures: Record<string, unknown>) {
 
   // Configure loaderLoad after context is defined so the closure captures it.
   loaderLoad.mockImplementation(async (token: unknown, url: string, _opts?: unknown): Promise<unknown> => {
-    if (token === Texture) {
+    // Texture sub-loads now arrive as `Texture.of(src)` descriptors (asset form);
+    // the parsed-source TiledMap sub-load is still dispatched by token.
+    if ((token as { type?: unknown } | null)?.type === 'texture') {
       const tex = new Texture();
       tex.width = 32;
       tex.height = 32;
@@ -150,7 +152,7 @@ describe('tiledRuntimeMapBinding.load — with atlas tileset image', () => {
     const result = await handler.load({ source: 'with-tileset-image.tmj' }, context);
     expect(result.tilesets).toHaveLength(1);
     // Texture is loaded transitively via the TiledMap sub-load
-    expect(loaderLoad).toHaveBeenCalledWith(Texture, 'tiles.png');
+    expect(loaderLoad).toHaveBeenCalledWith(Texture.of('tiles.png'));
   });
 });
 
@@ -174,7 +176,7 @@ describe('tiledRuntimeMapBinding.load — external tileset (.tsj)', () => {
   it('loads the external tileset texture', async () => {
     const handler = tiledRuntimeMapBinding.create();
     await handler.load({ source: 'external-tileset.tmj' }, context);
-    expect(loaderLoad).toHaveBeenCalledWith(Texture, 'external-tileset.png');
+    expect(loaderLoad).toHaveBeenCalledWith(Texture.of('external-tileset.png'));
   });
 });
 

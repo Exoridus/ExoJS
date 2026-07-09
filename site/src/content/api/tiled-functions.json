@@ -6,11 +6,11 @@
   "subsystem": "tiled",
   "importPath": "@codexo/exojs-tiled",
   "tier": "stable",
-  "memberCount": 4,
+  "memberCount": 6,
   "counts": {
     "constructors": 0,
     "methods": 2,
-    "properties": 2,
+    "properties": 4,
     "events": 0
   },
   "sections": [
@@ -201,6 +201,88 @@
           "params": [],
           "returnType": null,
           "description": "Default immutable Tiled extension descriptor. Registers two asset bindings: - tiledRuntimeMapBinding — loader.load(TileMap, 'world.tmj') → returns a format-independent runtime TileMap (common case). - tiledMapBinding — loader.load(TiledMap, 'world.tmj') → returns the raw parsed TiledMap source model (advanced/diagnostic). Depends on tilemapExtension so that snapshot construction always materialises the generic tilemap runtime before the Tiled adapter. Use with ApplicationOptions.extensions or call import '@codexo/exojs-tiled/register' for global auto-registration."
+        },
+        {
+          "name": "tiledMapBinding",
+          "signature": "tiledMapBinding: AssetBinding<TiledMap, TiledLoadOptions>",
+          "signatureTokens": [
+            {
+              "text": "tiledMapBinding",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetBinding",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TiledMap",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TiledLoadOptions",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Declarative asset binding for TiledMap. Token-only: loader.load(TiledMap, 'world.tmj') resolves through this binding, but no extensions are claimed, so a plain loader.load('world.tmj') does not resolve to TiledMap. The .tmj extension (and generic .json Tiled loading) is reserved for the format-independent TileMap runtime asset binding."
+        },
+        {
+          "name": "tiledRuntimeMapBinding",
+          "signature": "tiledRuntimeMapBinding: AssetBinding<TileMap, TiledLoadOptions>",
+          "signatureTokens": [
+            {
+              "text": "tiledRuntimeMapBinding",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetBinding",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileMap",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TiledLoadOptions",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Declarative asset binding for the runtime TileMap produced from a .tmj Tiled map file. This is the common-case binding: loader.load(TileMap, 'world.tmj') fetches and validates the TMJ, resolves external .tsj tilesets, loads tileset textures via the sub-load loader.load(TiledMap, source), and synchronously converts the parsed TiledMap source model into a format-independent runtime TileMap via TiledMap.toTileMap. The sub-load flow guarantees that calling both load(TileMap) and load(TiledMap) for the same URL shares the Loader's cached TiledMap (no duplicate JSON fetches). Claiming the tmj extension enables the auto-routing shorthand loader.load('world.tmj') — the ExtensionTypeMap augmentation in this package maps 'tmj' → TileMap."
         }
       ],
       "paragraphs": [],

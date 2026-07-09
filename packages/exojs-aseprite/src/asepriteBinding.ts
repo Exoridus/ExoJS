@@ -3,8 +3,8 @@
 // path relative to the JSON file; asset sources are often themselves relative,
 // so plain `new URL(ref, base)` cannot be used when `base` has no scheme.
 
-import { Texture } from '@codexo/exojs';
-import type { AssetBinding, AssetHandler } from '@codexo/exojs/extensions';
+import { defineAsset, Texture } from '@codexo/exojs';
+import type { AssetHandler } from '@codexo/exojs/extensions';
 
 import type { AsepriteData } from './AsepriteData';
 import { AsepriteSheet } from './AsepriteSheet';
@@ -111,19 +111,19 @@ function validateAsepriteData(raw: unknown, source: string): AsepriteData {
  * The `aseprite` type name enables the asset-config shorthand:
  * `{ type: 'aseprite', source: 'hero.aseprite.json' }`.
  */
-export const asepriteBinding = {
+export const asepriteBinding = defineAsset({
   type: AsepriteSheet,
-  typeNames: ['asepriteSheet'],
+  kind: 'asepriteSheet',
   create() {
     return {
       async load(req, ctx): Promise<AsepriteSheet> {
         const raw = await ctx.fetchJson(req.source);
         const data = validateAsepriteData(raw, req.source);
         const imageUrl = resolveAsepriteUrl(data.meta.image, req.source);
-        const texture = (await ctx.loader.load(Texture, imageUrl)) as Texture;
+        const texture = await ctx.loader.load(Texture.of(imageUrl));
 
         return AsepriteSheet.parse(data, texture);
       },
     } satisfies AssetHandler<AsepriteSheet>;
   },
-} satisfies AssetBinding<AsepriteSheet>;
+});

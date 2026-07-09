@@ -6,10 +6,10 @@
   "subsystem": "ldtk",
   "importPath": "@codexo/exojs-ldtk",
   "tier": "stable",
-  "memberCount": 6,
+  "memberCount": 7,
   "counts": {
     "constructors": 1,
-    "methods": 2,
+    "methods": 3,
     "properties": 3,
     "events": 0
   },
@@ -223,6 +223,65 @@
           ],
           "returnType": "TileMap | undefined",
           "description": "Find a level's runtime TileMap by the LDtk level identifier, or undefined when no level with that name exists. Searches across import('./ldtkLevelEntries').getLdtkLevelEntries's flattened level set rather than data.levels directly, so this works for both single-world and multi-world documents — data.levels alone is empty for the latter. The lookup is O(n) in the number of levels."
+        },
+        {
+          "name": "of",
+          "signature": "of(source: string): Asset<LdtkMap>",
+          "signatureTokens": [
+            {
+              "text": "of",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Asset",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LdtkMap",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "source",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "Asset<LdtkMap>",
+          "description": "Annotation descriptor for an LDtk map asset, for Assets.from({...}) / loader.get(...) / loader.load(...) (asset-system v2 §5). Use for dynamic paths — prefer a bare 'world.ldtk' string when the suffix is a literal."
         }
       ],
       "paragraphs": [],

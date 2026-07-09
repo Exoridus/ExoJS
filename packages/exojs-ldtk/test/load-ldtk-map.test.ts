@@ -86,7 +86,7 @@ describe('loadLdtkMap — happy path (absolute source)', () => {
     const { context: ctx, loaderLoad } = context();
     await loadLdtkMap(ABS_SOURCE, ctx);
     // resolveLdtkUrl('tiles.png', 'https://example.com/maps/world.ldtk')
-    expect(loaderLoad).toHaveBeenCalledWith(Texture, 'https://example.com/maps/tiles.png');
+    expect(loaderLoad).toHaveBeenCalledWith(Texture.of('https://example.com/maps/tiles.png'));
   });
 
   it('populates the Tiles layer with the gridTiles once the tileset is available', async () => {
@@ -529,7 +529,7 @@ describe('loadLdtkMap — atlas too small for any tile', () => {
     const map = await loadLdtkMap(ABS_SOURCE, context);
 
     // The texture load happens before the column check, so it IS requested.
-    expect(loaderLoad).toHaveBeenCalledWith(Texture, 'https://example.com/maps/tiny.png');
+    expect(loaderLoad).toHaveBeenCalledWith(Texture.of('https://example.com/maps/tiny.png'));
     expect(map.levels[0]!.layers[0]!.countNonEmptyTiles()).toBe(0);
   });
 });

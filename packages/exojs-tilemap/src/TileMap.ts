@@ -1,3 +1,5 @@
+import { Asset } from '@codexo/exojs';
+
 import { type ImageLayer } from './ImageLayer';
 import type { ObjectLayer, ObjectSchema } from './ObjectLayer';
 import { type TileLayer } from './TileLayer';
@@ -64,6 +66,24 @@ export interface TileMapOptions {
  * @advanced
  */
 export class TileMap {
+  /**
+   * Annotation descriptor for a runtime tile map asset, for `Assets.from({...})` /
+   * `loader.get(...)` / `loader.load(...)` (asset-system v2 §5). The concrete
+   * loader binding (and the `tileMap` asset kind) is provided by a format
+   * package such as `@codexo/exojs-tiled`; use for dynamic paths, or prefer a
+   * bare `'world.tmj'` string when the suffix is a literal.
+   */
+  public static of(source: string): Asset<TileMap> {
+    // The `tileMap` AssetDefinitions key is declared by the format package that
+    // owns the loader binding (e.g. @codexo/exojs-tiled), so this package's own
+    // compilation cannot see it. Construct through a loosened constructor
+    // signature — the runtime `Asset` (AssetImpl) only stores `{ type, source }`.
+    return new (Asset as unknown as new (config: { type: string; source: string }) => Asset<TileMap>)({
+      type: 'tileMap',
+      source,
+    });
+  }
+
   /** Map name (debug). */
   public readonly name: string;
 

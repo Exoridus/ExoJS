@@ -77,7 +77,7 @@ describe('loadTiledMap — embedded tileset with atlas image', () => {
 
   it('calls loader.load(Texture, imageUrl) for the atlas image', async () => {
     await loadTiledMap('with-tileset-image.tmj', context);
-    expect(loaderLoad).toHaveBeenCalledWith(Texture, 'tiles.png');
+    expect(loaderLoad).toHaveBeenCalledWith(Texture.of('tiles.png'));
   });
 
   it('stores the loaded texture on the tileset', async () => {
@@ -106,7 +106,7 @@ describe('loadTiledMap — external .tsj tileset', () => {
   it('loads the tileset image relative to the .tsj location', async () => {
     await loadTiledMap('external-tileset.tmj', context);
     // resolveTiledUrl('external-tileset.png', 'external-tileset.tsj') → 'external-tileset.png'
-    expect(loaderLoad).toHaveBeenCalledWith(Texture, 'external-tileset.png');
+    expect(loaderLoad).toHaveBeenCalledWith(Texture.of('external-tileset.png'));
   });
 
   it('stores the tsj source URL on the tileset', async () => {
@@ -130,8 +130,8 @@ describe('loadTiledMap — collection-of-images tileset', () => {
 
   it('calls loader.load for each per-tile image', async () => {
     await loadTiledMap('collection-tileset.tmj', context);
-    expect(loaderLoad).toHaveBeenCalledWith(Texture, 'tile0.png');
-    expect(loaderLoad).toHaveBeenCalledWith(Texture, 'tile1.png');
+    expect(loaderLoad).toHaveBeenCalledWith(Texture.of('tile0.png'));
+    expect(loaderLoad).toHaveBeenCalledWith(Texture.of('tile1.png'));
   });
 
   it('does NOT call loader.load for the atlas image — exactly 2 per-tile calls', async () => {
@@ -168,7 +168,7 @@ describe('loadTiledMap — image layer nested inside a group layer', () => {
 
   it('loads the texture for an image layer nested inside a group layer', async () => {
     await loadTiledMap('nested-image.tmj', context);
-    expect(loaderLoad).toHaveBeenCalledWith(Texture, 'bg.png');
+    expect(loaderLoad).toHaveBeenCalledWith(Texture.of('bg.png'));
   });
 
   it('attaches the preloaded texture to the nested image layer via toTileMap()', async () => {

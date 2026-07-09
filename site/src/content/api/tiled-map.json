@@ -6,10 +6,10 @@
   "subsystem": "tiled",
   "importPath": "@codexo/exojs-tiled",
   "tier": "stable",
-  "memberCount": 19,
+  "memberCount": 20,
   "counts": {
     "constructors": 1,
-    "methods": 4,
+    "methods": 5,
     "properties": 14,
     "events": 0
   },
@@ -348,6 +348,65 @@
           "params": [],
           "returnType": "TileMap",
           "description": "Convert this parsed Tiled source model into a format-independent runtime TileMap from @codexo/exojs-tilemap. Only finite orthogonal maps with atlas tilesets are supported. A non-orthogonal or infinite map, or a collection-of-images tileset, throws TiledFormatError rather than silently producing wrong (misplaced) or empty geometry. Tile layers become renderable TileLayers, object groups become data-only ObjectLayers, and image layers become data-only ImageLayers; group layer children are flattened in document order. The returned TileMap does **not** own the tileset textures — they remain in the Loader cache. Destroying the returned map does not unload textures."
+        },
+        {
+          "name": "of",
+          "signature": "of(source: string): Asset<TiledMap>",
+          "signatureTokens": [
+            {
+              "text": "of",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Asset",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TiledMap",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "source",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "Asset<TiledMap>",
+          "description": "Annotation descriptor for the parsed Tiled source map, for Assets.from({...}) / loader.get(...) / loader.load(...) (asset-system v2 §5). This is the advanced parsed-source token; prefer the runtime TileMap (TileMap.of('world.tmj') or a bare 'world.tmj') for rendering. Use for dynamic paths or per-asset options."
         }
       ],
       "paragraphs": [],

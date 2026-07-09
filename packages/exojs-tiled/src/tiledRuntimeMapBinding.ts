@@ -1,4 +1,5 @@
-import type { AssetBinding, AssetHandler } from '@codexo/exojs/extensions';
+import { defineAsset } from '@codexo/exojs';
+import type { AssetHandler } from '@codexo/exojs/extensions';
 import { TileMap } from '@codexo/exojs-tilemap';
 
 import { TiledMap } from './TiledMap';
@@ -22,9 +23,9 @@ import { resolveTiledOptions,type TiledLoadOptions } from './tiledOptions';
  * `loader.load('world.tmj')` — the {@link ExtensionTypeMap} augmentation in
  * this package maps `'tmj' → TileMap`.
  */
-export const tiledRuntimeMapBinding = {
+export const tiledRuntimeMapBinding = defineAsset<TileMap, TiledLoadOptions>({
   type: TileMap,
-  typeNames: ['tileMap'],
+  kind: 'tileMap',
   extensions: ['tmj'],
   create() {
     return {
@@ -38,4 +39,4 @@ export const tiledRuntimeMapBinding = {
       },
     } satisfies AssetHandler<TileMap, TiledLoadOptions>;
   },
-} satisfies AssetBinding<TileMap, TiledLoadOptions>;
+});

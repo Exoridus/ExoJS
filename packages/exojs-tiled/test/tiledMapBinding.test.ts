@@ -38,7 +38,9 @@ function makeContext(fixtures: Record<string, unknown>) {
 
   // Handles both Texture and TiledMap sub-loads (for the runtime binding below).
   loaderLoad.mockImplementation(async (token: unknown, url: string, _opts?: unknown): Promise<unknown> => {
-    if (token === Texture) {
+    // Texture sub-loads now arrive as `Texture.of(src)` descriptors (asset form);
+    // the parsed-source TiledMap sub-load is still dispatched by token.
+    if ((token as { type?: unknown } | null)?.type === 'texture') {
       const tex = new Texture();
       tex.width = 32;
       tex.height = 32;
