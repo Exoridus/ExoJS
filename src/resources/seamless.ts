@@ -4,7 +4,9 @@ import { logger } from '#core/logging';
 import type { SamplerOptions } from '#rendering/texture/Sampler';
 import { Texture } from '#rendering/texture/Texture';
 
+import type { AssetDefinitions } from './AssetDefinitions';
 import { registerAssetKind } from './assetKindRegistry';
+import { registerExtensionKind } from './extensionKindRegistry';
 
 /** Pre-sizing options for deferred texture handles (spec §4.1 — the layout-jump fix). */
 export interface PreSizeOptions {
@@ -165,4 +167,37 @@ registerAssetKind('texture', { adapter: textureSeamlessAdapter, isValue: false }
 registerAssetKind('sound', { adapter: soundSeamlessAdapter, isValue: false });
 for (const valueKind of ['json', 'text', 'csv', 'xml', 'srt', 'vtt', 'binary', 'wasm'] as const) {
   registerAssetKind(valueKind, { isValue: true });
+}
+
+// Core suffix → kind registrations for bare-path inference (asset-system v2 §5).
+// Mirror of ExtensionTypeMap plus the value-kind suffixes (json/txt/csv/xml/…).
+const coreExtensionKinds: ReadonlyArray<[string, keyof AssetDefinitions]> = [
+  ['png', 'texture'],
+  ['jpg', 'texture'],
+  ['jpeg', 'texture'],
+  ['webp', 'texture'],
+  ['avif', 'texture'],
+  ['gif', 'texture'],
+  ['ogg', 'sound'],
+  ['mp3', 'sound'],
+  ['wav', 'sound'],
+  ['m4a', 'sound'],
+  ['aac', 'sound'],
+  ['fnt', 'bmFont'],
+  ['woff', 'font'],
+  ['woff2', 'font'],
+  ['ttf', 'font'],
+  ['otf', 'font'],
+  ['json', 'json'],
+  ['txt', 'text'],
+  ['csv', 'csv'],
+  ['xml', 'xml'],
+  ['vtt', 'vtt'],
+  ['srt', 'srt'],
+  ['bin', 'binary'],
+  ['wasm', 'wasm'],
+  ['svg', 'svg'],
+];
+for (const [ext, kind] of coreExtensionKinds) {
+  registerExtensionKind(ext, kind);
 }

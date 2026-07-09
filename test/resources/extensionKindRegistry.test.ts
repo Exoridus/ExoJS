@@ -1,5 +1,6 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { registerExtensionKind, resolveKindByPath, _resetExtensionKindsForTest } from '#resources/extensionKindRegistry';
+import { beforeEach, describe, expect, it } from 'vitest';
+
+import { _resetExtensionKindsForTest, registerExtensionKind, resolveKindByPath } from '#resources/extensionKindRegistry';
 
 describe('extensionKindRegistry', () => {
   beforeEach(() => _resetExtensionKindsForTest());
