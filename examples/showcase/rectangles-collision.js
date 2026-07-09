@@ -1,5 +1,5 @@
 // Auto-generated from rectangles-collision.ts — edit the .ts source, not this file.
-import { Application, Color, Graphics, Scene, Sprite, Texture } from '@codexo/exojs';
+import { Application, Color, Graphics, Scene, Sprite } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {
@@ -21,11 +21,11 @@ class RectanglesCollisionScene extends Scene {
     overlap;
     hud;
     async load(loader) {
-        await loader.load(Texture, { gradient: 'image/hue-ramp.png' });
+        await loader.load('image/hue-ramp.png');
     }
     init(loader) {
         const { width, height } = this.app.canvas;
-        const texture = loader.get(Texture, 'gradient');
+        const texture = loader.get('image/hue-ramp.png');
         // Two axis-aligned rectangles (no rotation) so collision is a true AABB
         // test. Explicit width/height drive the sprite scale; anchor 0.5 keeps the
         // drag offset and the bounds centred on the pointer-grabbed point.

@@ -1,5 +1,5 @@
 // Auto-generated from bounding-boxes.ts — edit the .ts source, not this file.
-import { Application, Color, Scene, Sprite, Texture } from '@codexo/exojs';
+import { Application, Color, Scene, Sprite } from '@codexo/exojs';
 import { DebugOverlay } from '@codexo/exojs/debug';
 const app = new Application({
     canvas: {
@@ -19,7 +19,7 @@ class BoundingBoxesScene extends Scene {
     sprites;
     time = 0;
     async load(loader) {
-        await loader.load(Texture, { bunny: 'image/ship-a.png' });
+        await loader.load('image/ship-a.png');
     }
     init(loader) {
         const { width, height } = this.app.canvas;
@@ -27,7 +27,7 @@ class BoundingBoxesScene extends Scene {
         const margin = width * 0.12;
         const step = (width - 2 * margin) / (count - 1);
         this.sprites = Array.from({ length: count }, (_, i) => {
-            const sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setScale(0.8);
+            const sprite = new Sprite(loader.get('image/ship-a.png')).setAnchor(0.5).setScale(0.8);
             sprite.setPosition(margin + i * step, height / 2 + Math.sin(i) * 80);
             // The boundingBoxes layer walks the SCENE GRAPH (scene.root), so
             // the sprites must be attached to it — nodes that are only passed

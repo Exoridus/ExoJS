@@ -41,7 +41,7 @@ class VocoderScene extends Scene {
         );
     }
 
-    override init(loader): void {
+    override init(): void {
         const { width, height } = this.app.canvas;
 
         // The spoken voice is the modulator: route every phrase onto its own bus

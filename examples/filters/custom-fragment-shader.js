@@ -1,5 +1,5 @@
 // Auto-generated from custom-fragment-shader.ts — edit the .ts source, not this file.
-import { Application, Color, RenderBackendType, Scene, Sprite, Texture, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
+import { Application, Color, RenderBackendType, Scene, Sprite, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {
@@ -34,7 +34,7 @@ class CustomFragmentShaderScene extends Scene {
     sprite;
     hud;
     async load(loader) {
-        await loader.load(Texture, { hueRamp: HUE_RAMP });
+        await loader.load(HUE_RAMP);
     }
     init(loader) {
         const { width, height } = this.app.canvas;
@@ -42,7 +42,7 @@ class CustomFragmentShaderScene extends Scene {
             app.backend.backendType === RenderBackendType.WebGpu
                 ? new WebGpuShaderFilter({ fragmentSource: wgsl, uniforms: { uTime: 0 } })
                 : new WebGl2ShaderFilter({ fragmentSource: glsl, uniforms: { uTime: 0 } });
-        this.sprite = new Sprite(loader.get(Texture, 'hueRamp')).setAnchor(0.5).setScale(4).setPosition(width / 2, height / 2);
+        this.sprite = new Sprite(loader.get(HUE_RAMP)).setAnchor(0.5).setScale(4).setPosition(width / 2, height / 2);
         this.sprite.filters = [this.filter];
         this.hud = mountControls({
             title: 'Custom Fragment Shader',

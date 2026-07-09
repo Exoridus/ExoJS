@@ -37,11 +37,11 @@ class MovingSourceScene extends Scene {
     async load(loader) {
         // A continuous music loop, not a one-shot: spatialization is only
         // audible while there is sustained signal to pan/attenuate.
-        await loader.load(Sound, { tone: 'audio/demo-loop-main.ogg' });
+        await loader.load('audio/demo-loop-main.ogg');
     }
     init(loader) {
         const { width, height } = this.app.canvas;
-        this.sound = new Sound(loader.get(Sound, 'tone').audioBuffer, {
+        this.sound = new Sound(loader.get('audio/demo-loop-main.ogg').audioBuffer, {
             distanceModel: 'linear',
             refDistance: REF_DISTANCE,
             maxDistance: MAX_DISTANCE,

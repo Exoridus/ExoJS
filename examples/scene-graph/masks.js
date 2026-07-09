@@ -1,5 +1,5 @@
 // Auto-generated from masks.ts — edit the .ts source, not this file.
-import { Application, Color, Graphics, Rectangle, Scene, Sprite, Texture } from '@codexo/exojs';
+import { Application, Color, Graphics, Rectangle, Scene, Sprite } from '@codexo/exojs';
 const app = new Application({
     canvas: {
         width: 1280,
@@ -16,11 +16,11 @@ class MasksScene extends Scene {
     gfxSprite;
     time = 0;
     async load(loader) {
-        await loader.load(Texture, { alphaRings: ALPHA_RINGS });
+        await loader.load(ALPHA_RINGS);
     }
     init(loader) {
         const { width, height } = this.app.canvas;
-        const tex = loader.get(Texture, 'alphaRings');
+        const tex = loader.get(ALPHA_RINGS);
         this.rectSprite = new Sprite(tex);
         this.rectSprite.setScale(1);
         this.rectSprite.setPosition((width / 4) | 0, (height / 2) | 0);

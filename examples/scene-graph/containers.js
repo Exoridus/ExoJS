@@ -1,5 +1,5 @@
 // Auto-generated from containers.ts — edit the .ts source, not this file.
-import { Application, Color, Container, Scene, Sprite, Texture } from '@codexo/exojs';
+import { Application, Color, Container, Scene, Sprite } from '@codexo/exojs';
 const app = new Application({
     canvas: {
         width: 1280,
@@ -16,18 +16,16 @@ class ContainersScene extends Scene {
     rainbow;
     bunnies;
     async load(loader) {
-        await loader.load(Texture, {
-            bunny: 'image/ship-a.png',
-            rainbow: 'image/hue-ramp.png',
-        });
+        await loader.load('image/ship-a.png');
+        await loader.load('image/hue-ramp.png');
     }
     init(loader) {
         const { width, height } = this.app.canvas;
-        this.rainbow = new Sprite(loader.get(Texture, 'rainbow'));
+        this.rainbow = new Sprite(loader.get('image/hue-ramp.png'));
         this.bunnies = new Container();
         this.bunnies.setPosition((width / 2) | 0, (height / 2) | 0);
         for (let i = 0; i < 25; i++) {
-            const bunny = new Sprite(loader.get(Texture, 'bunny'));
+            const bunny = new Sprite(loader.get('image/ship-a.png'));
             bunny.setPosition((i % 5) * (bunny.width + 15), ((i / 5) | 0) * (bunny.height + 10));
             this.bunnies.addChild(bunny);
         }

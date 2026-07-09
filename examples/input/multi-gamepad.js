@@ -1,5 +1,5 @@
 // Auto-generated from multi-gamepad.ts — edit the .ts source, not this file.
-import { Application, Color, GamepadAxis, Scene, Sprite, Text, Texture } from '@codexo/exojs';
+import { Application, Color, GamepadAxis, Scene, Sprite, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {
@@ -24,12 +24,12 @@ class MultiGamepadScene extends Scene {
     connectPrompt;
     hud;
     async load(loader) {
-        await loader.load(Texture, { ship: 'image/ship-a.png' });
+        await loader.load('image/ship-a.png');
     }
     init(loader) {
         const { width, height } = this.app.canvas;
         this.players = this.app.input.gamepads.map((pad, index) => {
-            const sprite = new Sprite(loader.get(Texture, 'ship'))
+            const sprite = new Sprite(loader.get('image/ship-a.png'))
                 .setAnchor(0.5)
                 .setScale(0.6)
                 .setPosition(width * (0.2 + index * 0.2), height / 2)

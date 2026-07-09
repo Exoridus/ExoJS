@@ -50,7 +50,7 @@ class CompressorScene extends Scene {
         this.music = await loader.load(AudioStream.of('audio/demo-loop-main.ogg'));
     }
 
-    override init(loader): void {
+    override init(): void {
         const { width, height } = this.app.canvas;
 
         // Wide horizontal bars centred on the 16:9 canvas; labels sit to the left.

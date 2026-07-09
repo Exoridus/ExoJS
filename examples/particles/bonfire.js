@@ -1,5 +1,5 @@
 // Auto-generated from bonfire.ts — edit the .ts source, not this file.
-import { Application, BlendModes, Color, Scene, Texture, } from '@codexo/exojs';
+import { Application, BlendModes, Color, Scene } from '@codexo/exojs';
 import { ColorGradient, ColorOverLifetime, ConeDirection, Constant, particlesExtension, ParticleSystem, Range, RateSpawn, VectorRange, } from '@codexo/exojs-particles';
 const app = new Application({
     canvas: {
@@ -15,11 +15,11 @@ class BonfireScene extends Scene {
     fireSystem;
     smokeSystem;
     async load(loader) {
-        await loader.load(Texture, { flame: assets.demo.textures.particleFlame, smoke: assets.demo.textures.particleSmoke });
+        await Promise.all([loader.load(assets.demo.textures.particleFlame), loader.load(assets.demo.textures.particleSmoke)]);
     }
     init(loader) {
         const { width, height } = this.app.canvas;
-        this.fireSystem = new ParticleSystem(loader.get(Texture, 'flame'));
+        this.fireSystem = new ParticleSystem(loader.get(assets.demo.textures.particleFlame));
         this.fireSystem.setPosition(width * 0.5, height * 0.75);
         this.fireSystem.setBlendMode(BlendModes.Additive);
         this.fireSystem.addSpawnModule(new RateSpawn({
@@ -32,7 +32,7 @@ class BonfireScene extends Scene {
             { t: 0, color: new Color(194, 64, 30, 1) },
             { t: 1, color: new Color(0, 0, 0, 0) },
         ])));
-        this.smokeSystem = new ParticleSystem(loader.get(Texture, 'smoke'));
+        this.smokeSystem = new ParticleSystem(loader.get(assets.demo.textures.particleSmoke));
         this.smokeSystem.setPosition(width * 0.5, height * 0.75 - 40);
         this.smokeSystem.setBlendMode(BlendModes.Normal);
         this.smokeSystem.addSpawnModule(new RateSpawn({

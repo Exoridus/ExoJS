@@ -25,11 +25,10 @@ class AudioVisualisationScene extends Scene {
     hud;
     tapPrompt;
     async load(loader) {
-        await loader.load(AudioStream, { example: assets.demo.audio.musicLoop });
+        this.music = await loader.load(AudioStream.of(assets.demo.audio.musicLoop));
     }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
-        this.music = loader.get(AudioStream, 'example');
         // One analyser tap for spectrum/waveform, one beat detector for the
         // beat-pulse ring. Both read the music bus the stream plays through,
         // without altering playback.

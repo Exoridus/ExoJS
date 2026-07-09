@@ -1,5 +1,5 @@
 // Auto-generated from camera-basic.ts — edit the .ts source, not this file.
-import { Application, Color, Graphics, Scene, Sprite, Texture } from '@codexo/exojs';
+import { Application, Color, Graphics, Scene, Sprite } from '@codexo/exojs';
 const app = new Application({
     canvas: {
         width: 1280,
@@ -18,7 +18,7 @@ class CameraBasicScene extends Scene {
     uiBar;
     zoom = 1;
     async load(loader) {
-        this.bunny = new Sprite(await loader.load(Texture, 'image/ship-a.png'));
+        this.bunny = new Sprite(await loader.load('image/ship-a.png'));
     }
     init() {
         const { width, height } = this.app.canvas;

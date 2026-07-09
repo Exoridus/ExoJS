@@ -1,5 +1,5 @@
 // Auto-generated from sound-pool.ts — edit the .ts source, not this file.
-import { Application, Color, Graphics, Keyboard, Scene, Sound, Text } from '@codexo/exojs';
+import { Application, Color, Graphics, Keyboard, Scene, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {
@@ -30,11 +30,11 @@ class SoundPoolScene extends Scene {
     async load(loader) {
         // impactHeavy is long enough (~0.5 s) that rapid fire actually overlaps -
         // a short click ends before the next shot and the pool never fills.
-        await loader.load(Sound, { shot: assets.demo.audio.impactHeavy });
+        await loader.load(assets.demo.audio.impactHeavy);
     }
     init(loader) {
         const { width, height } = this.app.canvas;
-        this.sound = loader.get(Sound, 'shot');
+        this.sound = loader.get(assets.demo.audio.impactHeavy);
         this.sound.poolSize = POOL_SIZE;
         this.graphics = new Graphics();
         this.label = new Text('Hold Space to fire faster than voices finish', { fillColor: Color.white, fontSize: 22, align: 'center' })

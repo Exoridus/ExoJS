@@ -35,9 +35,9 @@ class CrossfadeTracksScene extends Scene {
     meterBaseY = 0;
     hud;
     async load(loader) {
-        await loader.load(AudioStream, { a: assets.demo.audio.musicA, b: assets.demo.audio.musicB });
+        [this.trackA, this.trackB] = await Promise.all([loader.load(AudioStream.of(assets.demo.audio.musicA)), loader.load(AudioStream.of(assets.demo.audio.musicB))]);
     }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
         // Spread the two meters across the wide canvas: each sits a third of the
         // way in from its side, centred on the meter width.
@@ -45,8 +45,6 @@ class CrossfadeTracksScene extends Scene {
         this.meterBX = width * 0.67 - METER_W / 2;
         this.meterBaseY = height * 0.82;
         // Both tracks loop; the crossfade only swaps which one is audible.
-        this.trackA = loader.get(AudioStream, 'a');
-        this.trackB = loader.get(AudioStream, 'b');
         this.graphics = new Graphics();
         this.labelA = new Text('Track A', { fillColor: Color.white, fontSize: 22, align: 'center' })
             .setAnchor(0.5, 0.5)

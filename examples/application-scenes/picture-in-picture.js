@@ -1,5 +1,5 @@
 // Auto-generated from picture-in-picture.ts — edit the .ts source, not this file.
-import { Application, Color, Graphics, Scene, Sprite, Texture, View } from '@codexo/exojs';
+import { Application, Color, Graphics, Scene, Sprite, View } from '@codexo/exojs';
 const app = new Application({
     canvas: {
         width: 1280,
@@ -19,7 +19,7 @@ class PictureInPictureScene extends Scene {
     velocity = 220;
     frame;
     async load(loader) {
-        this.sprite = new Sprite(await loader.load(Texture, 'image/ship-a.png'));
+        this.sprite = new Sprite(await loader.load('image/ship-a.png'));
     }
     init() {
         const { width, height } = this.app.canvas;

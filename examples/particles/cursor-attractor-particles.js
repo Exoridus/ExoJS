@@ -1,5 +1,5 @@
 // Auto-generated from cursor-attractor-particles.ts — edit the .ts source, not this file.
-import { Application, Color, Scene, Texture, Vector } from '@codexo/exojs';
+import { Application, Color, Scene, Vector } from '@codexo/exojs';
 import { AlphaFadeOverLifetime, AttractToPoint, ConeDirection, Constant, particlesExtension, ParticleSystem, RateSpawn, RepelFromPoint, } from '@codexo/exojs-particles';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 const app = new Application({
@@ -22,11 +22,11 @@ class CursorAttractorParticlesScene extends Scene {
     mode = 'attract';
     hud;
     async load(loader) {
-        await loader.load(Texture, { particle: assets.demo.textures.particleLight });
+        await loader.load(assets.demo.textures.particleLight);
     }
     init(loader) {
         const { width, height } = this.app.canvas;
-        this.system = new ParticleSystem(loader.get(Texture, 'particle'), { capacity: 32000 });
+        this.system = new ParticleSystem(loader.get(assets.demo.textures.particleLight), { capacity: 32000 });
         this.system.setPosition(width / 2, height / 2);
         this.system.addSpawnModule(new RateSpawn({
             rate: new Constant(2200),

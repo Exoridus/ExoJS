@@ -16,7 +16,7 @@ class WebFontsScene extends Scene {
     default;
     loaded;
     async load(loader) {
-        await loader.load(FontAsset, { andy: 'font/Kenney Future.ttf' }, { family: 'Kenney Future' });
+        await loader.load(FontAsset.of('font/Kenney Future.ttf', { family: 'Kenney Future' }));
     }
     init() {
         const { width, height } = this.app.canvas;

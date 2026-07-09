@@ -33,7 +33,7 @@ class TempoTrackingScene extends Scene {
         this.music = await loader.load(AudioStream.of('audio/demo-loop-main.ogg'));
     }
 
-    override init(loader): void {
+    override init(): void {
         const { width, height } = this.app.canvas;
         const marginX = width * 0.08;
 

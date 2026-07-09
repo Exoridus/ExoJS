@@ -1,5 +1,5 @@
 // Auto-generated from emitter-basics.ts — edit the .ts source, not this file.
-import { Application, Color, Scene, Texture } from '@codexo/exojs';
+import { Application, Color, Scene } from '@codexo/exojs';
 import { ApplyForce, ColorGradient, ColorOverLifetime, ConeDirection, Constant, Curve, particlesExtension, ParticleSystem, Range, RateSpawn, ScaleOverLifetime, } from '@codexo/exojs-particles';
 import { mountControls } from '@examples/runtime';
 const app = new Application({
@@ -16,11 +16,11 @@ class EmitterBasicsScene extends Scene {
     system;
     hud;
     async load(loader) {
-        await loader.load(Texture, { particle: assets.demo.textures.particleLight });
+        await loader.load(assets.demo.textures.particleLight);
     }
     init(loader) {
         const { width, height } = this.app.canvas;
-        this.system = new ParticleSystem(loader.get(Texture, 'particle'), { capacity: 4000 });
+        this.system = new ParticleSystem(loader.get(assets.demo.textures.particleLight), { capacity: 4000 });
         this.system.setPosition(width / 2, height - 80);
         // Rate, lifetime, and a cone-shaped velocity spread: a fountain that
         // shoots upward (-π/2) with a ±36° spread and 70–180 px/s speed.

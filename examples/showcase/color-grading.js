@@ -1,5 +1,5 @@
 // Auto-generated from color-grading.ts — edit the .ts source, not this file.
-import { Application, Color, Keyboard, LutFilter, Scene, Sprite, Texture } from '@codexo/exojs';
+import { Application, Color, Keyboard, LutFilter, Scene, Sprite } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {
@@ -77,13 +77,13 @@ class ColorGradingScene extends Scene {
     hud;
     cycle;
     async load(loader) {
-        await loader.load(Texture, { ramp: PRIMARY_RAMP });
+        await loader.load(PRIMARY_RAMP);
     }
     init(loader) {
         const { width, height } = this.app.canvas;
         this.luts = LOOKS.map(look => LutFilter.fromImage(buildLut3D(look.transform)));
         this.filter = new LutFilter({ mode: '3d', size: LUT_SIZE }).setLut(this.luts[0]);
-        this.sprite = new Sprite(loader.get(Texture, 'ramp')).setAnchor(0.5).setScale(3.5);
+        this.sprite = new Sprite(loader.get(PRIMARY_RAMP)).setAnchor(0.5).setScale(3.5);
         this.sprite.setPosition(width / 2, height / 2);
         this.sprite.filters = [this.filter];
         this.hud = mountControls({

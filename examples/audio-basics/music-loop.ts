@@ -26,7 +26,7 @@ class MusicLoopScene extends Scene {
         this.music = await loader.load(AudioStream.of(assets.demo.audio.musicLoop));
     }
 
-    override init(loader): void {
+    override init(): void {
         const { width, height } = this.app.canvas;
 
         // Wide progress bar centred horizontally on the 16:9 canvas.

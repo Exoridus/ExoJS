@@ -28,12 +28,11 @@ class TempoTrackingScene extends Scene {
     hud;
     tapPrompt;
     async load(loader) {
-        await loader.load(AudioStream, { track: 'audio/demo-loop-main.ogg' });
+        this.music = await loader.load(AudioStream.of('audio/demo-loop-main.ogg'));
     }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
         const marginX = width * 0.08;
-        this.music = loader.get(AudioStream, 'track');
         this.detector = new BeatDetector();
         this.detector.source = this.app.audio.music;
         this.readout = new Text('BPM —', { fillColor: Color.white, fontSize: 40 });

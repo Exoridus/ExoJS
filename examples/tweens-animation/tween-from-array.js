@@ -1,5 +1,5 @@
 // Auto-generated from tween-from-array.ts — edit the .ts source, not this file.
-import { Application, Color, Ease, Scene, Sprite, Texture } from '@codexo/exojs';
+import { Application, Color, Ease, Scene, Sprite } from '@codexo/exojs';
 const app = new Application({
     canvas: {
         width: 1280,
@@ -28,12 +28,12 @@ class TweenFromArrayScene extends Scene {
     sprite;
     waypoints = [];
     async load(loader) {
-        await loader.load(Texture, { bunny: 'image/ship-a.png' });
+        await loader.load('image/ship-a.png');
     }
     init(loader) {
         const { width, height } = this.app.canvas;
         this.waypoints = waypointFractions.map(({ fx, fy }) => ({ x: fx * width, y: fy * height }));
-        this.sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setPosition(this.waypoints[0].x, this.waypoints[0].y);
+        this.sprite = new Sprite(loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(this.waypoints[0].x, this.waypoints[0].y);
         this.buildPath();
     }
     buildPath() {

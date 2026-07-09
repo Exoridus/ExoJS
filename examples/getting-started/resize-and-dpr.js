@@ -1,5 +1,5 @@
 // Auto-generated from resize-and-dpr.ts — edit the .ts source, not this file.
-import { Application, Color, Scene, Sprite, Text, Texture } from '@codexo/exojs';
+import { Application, Color, Scene, Sprite, Text } from '@codexo/exojs';
 // #region guide:app-setup
 const app = new Application({
     canvas: {
@@ -29,7 +29,7 @@ class ResizeScene extends Scene {
     sprite;
     info;
     async load(loader) {
-        this.sprite = new Sprite(await loader.load(Texture, 'image/ship-a.png'));
+        this.sprite = new Sprite(await loader.load('image/ship-a.png'));
     }
     init() {
         this.sprite.setAnchor(0.5);

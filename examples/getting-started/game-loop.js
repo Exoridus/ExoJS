@@ -1,5 +1,5 @@
 // Auto-generated from game-loop.ts — edit the .ts source, not this file.
-import { Application, Color, Scene, Sprite, Texture } from '@codexo/exojs';
+import { Application, Color, Scene, Sprite } from '@codexo/exojs';
 const app = new Application({
     canvas: {
         width: 1280,
@@ -15,7 +15,7 @@ const app = new Application({
 class GameLoopScene extends Scene {
     sprite;
     async load(loader) {
-        this.sprite = new Sprite(await loader.load(Texture, 'image/ship-a.png'));
+        this.sprite = new Sprite(await loader.load('image/ship-a.png'));
     }
     init() {
         const { width, height } = this.app.canvas;

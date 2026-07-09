@@ -1,5 +1,5 @@
 // Auto-generated from infinite-grid.ts — edit the .ts source, not this file.
-import { Application, Color, Keyboard, RenderBackendType, Scene, Sprite, Texture, View, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
+import { Application, Color, Keyboard, RenderBackendType, Scene, Sprite, View, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
 const app = new Application({
     canvas: {
         width: 1280,
@@ -59,12 +59,12 @@ class InfiniteGridScene extends Scene {
     sprite;
     filter;
     async load(loader) {
-        await loader.load(Texture, { uvGrid: 'image/uv-grid-256.png' });
+        await loader.load('image/uv-grid-256.png');
     }
     init(loader) {
         const { width, height } = this.app.canvas;
         this.view = new View(0, 0, width, height);
-        this.sprite = new Sprite(loader.get(Texture, 'uvGrid'));
+        this.sprite = new Sprite(loader.get('image/uv-grid-256.png'));
         this.sprite.width = width;
         this.sprite.height = height;
         this.filter =

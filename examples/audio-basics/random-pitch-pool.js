@@ -1,5 +1,5 @@
 // Auto-generated from random-pitch-pool.ts — edit the .ts source, not this file.
-import { Application, Color, Graphics, Keyboard, Scene, Sound, Text } from '@codexo/exojs';
+import { Application, Color, Graphics, Keyboard, Scene, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {
@@ -28,14 +28,14 @@ class RandomPitchPoolScene extends Scene {
     trackHalf = 0;
     hud;
     async load(loader) {
-        await loader.load(Sound, { blip: assets.demo.audio.impactLight });
+        await loader.load(assets.demo.audio.impactLight);
     }
     init(loader) {
         const { width, height } = this.app.canvas;
         this.centerX = width / 2;
         this.trackY = height * 0.55;
         this.trackHalf = width * 0.38;
-        this.sound = loader.get(Sound, 'blip');
+        this.sound = loader.get(assets.demo.audio.impactLight);
         this.sound.poolSize = 20;
         this.graphics = new Graphics();
         this.label = new Text('Hold Space to retrigger with a random pitch', { fillColor: Color.white, fontSize: 22, align: 'center' })

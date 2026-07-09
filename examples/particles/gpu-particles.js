@@ -1,5 +1,5 @@
 // Auto-generated from gpu-particles.ts — edit the .ts source, not this file.
-import { Application, Color, RenderBackendType, Scene, Texture, Vector } from '@codexo/exojs';
+import { Application, Color, RenderBackendType, Scene, Vector } from '@codexo/exojs';
 import { AlphaFadeOverLifetime, ApplyForce, ConeDirection, Constant, particlesExtension, ParticleSystem, Range, RateSpawn, } from '@codexo/exojs-particles';
 import { mountControls } from '@examples/runtime';
 const app = new Application({
@@ -26,11 +26,11 @@ class GpuParticlesScene extends Scene {
     system;
     hud;
     async load(loader) {
-        await loader.load(Texture, { particle: 'image/particle-light.png' });
+        await loader.load('image/particle-light.png');
     }
     init(loader) {
         const { width, height } = this.app.canvas;
-        this.system = new ParticleSystem(loader.get(Texture, 'particle'), { capacity: CAPACITY });
+        this.system = new ParticleSystem(loader.get('image/particle-light.png'), { capacity: CAPACITY });
         this.system.setPosition(width / 2, height - 80);
         this.system.addSpawnModule(new RateSpawn({
             rate: new Constant(RATE),

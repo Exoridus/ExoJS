@@ -1,5 +1,5 @@
 // Auto-generated from multi-view-split-screen.ts — edit the .ts source, not this file.
-import { Application, Color, Graphics, Keyboard, Scene, Sprite, Texture, View } from '@codexo/exojs';
+import { Application, Color, Graphics, Keyboard, Scene, Sprite, View } from '@codexo/exojs';
 const app = new Application({
     canvas: {
         width: 1280,
@@ -30,7 +30,7 @@ class SplitScreenScene extends Scene {
         down: 0,
     };
     async load(loader) {
-        this.texture = await loader.load(Texture, 'image/ship-a.png');
+        this.texture = await loader.load('image/ship-a.png');
     }
     init() {
         const { width, height } = this.app.canvas;

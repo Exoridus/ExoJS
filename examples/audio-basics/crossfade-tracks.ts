@@ -42,7 +42,7 @@ class CrossfadeTracksScene extends Scene {
         [this.trackA, this.trackB] = await Promise.all([loader.load(AudioStream.of(assets.demo.audio.musicA)), loader.load(AudioStream.of(assets.demo.audio.musicB))]);
     }
 
-    override init(loader): void {
+    override init(): void {
         const { width, height } = this.app.canvas;
 
         // Spread the two meters across the wide canvas: each sits a third of the

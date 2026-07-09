@@ -1,5 +1,5 @@
 // Auto-generated from texture-loader.ts — edit the .ts source, not this file.
-import { Application, Color, Graphics, Scene, Sprite, Text, Texture } from '@codexo/exojs';
+import { Application, Color, Graphics, Scene, Sprite, Text } from '@codexo/exojs';
 const app = new Application({
     canvas: {
         width: 1280,
@@ -12,6 +12,7 @@ const app = new Application({
         basePath: 'assets/',
     },
 });
+const PATHS = ['image/ship-a.png', 'image/hue-ramp.png', 'image/uv-grid-256.png'];
 class TextureLoaderScene extends Scene {
     sprites;
     bar;
@@ -19,21 +20,17 @@ class TextureLoaderScene extends Scene {
     barX = 0;
     barY = 0;
     barWidth = 0;
-    progress = { loaded: 0, total: 3 };
+    progress = { loaded: 0, total: PATHS.length };
     async load(loader) {
-        const loading = loader.load(Texture, {
-            bunny: 'image/ship-a.png',
-            gradient: 'image/hue-ramp.png',
-            uvGrid: 'image/uv-grid-256.png',
-        });
-        loading.onProgress.add((progress) => {
-            this.progress = progress;
-        });
-        await loading;
+        let loaded = 0;
+        await Promise.all(PATHS.map(path => loader.load(path).then(() => {
+            loaded++;
+            this.progress = { loaded, total: PATHS.length };
+        })));
     }
     init(loader) {
         const { width, height } = this.app.canvas;
-        const textures = [loader.get(Texture, 'bunny'), loader.get(Texture, 'gradient'), loader.get(Texture, 'uvGrid')];
+        const textures = PATHS.map(path => loader.get(path));
         // Spread the three textures evenly across the width, one per third.
         this.sprites = textures.map((texture, index) => {
             const sprite = new Sprite(texture);

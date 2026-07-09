@@ -1,5 +1,5 @@
 // Auto-generated from gamepad.ts — edit the .ts source, not this file.
-import { Application, Color, Container, GamepadAxis, GamepadButton, Json, lerp, Scene, Spritesheet, Texture, Vector } from '@codexo/exojs';
+import { Application, Color, Container, GamepadAxis, GamepadButton, lerp, Scene, Spritesheet, Vector } from '@codexo/exojs';
 const app = new Application({
     canvas: {
         width: 1280,
@@ -23,11 +23,11 @@ class GamepadScene extends Scene {
     status;
     container;
     async load(loader) {
-        await loader.load(Texture, { buttons: 'image/buttons.png' });
-        await loader.load(Json, { buttons: 'json/buttons.json' });
+        await loader.load('image/buttons.png');
+        await loader.load('json/buttons.json');
     }
     init(loader) {
-        this.buttons = new Spritesheet(loader.get(Texture, 'buttons'), loader.get(Json, 'buttons').value);
+        this.buttons = new Spritesheet(loader.get('image/buttons.png'), loader.get('json/buttons.json').value);
         this.status = this.createStatus();
         this.container = this.createGamepad();
         for (const sprite of this.mappingButtons.values()) {

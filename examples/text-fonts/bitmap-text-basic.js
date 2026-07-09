@@ -17,7 +17,7 @@ class BitmapTextBasicScene extends Scene {
     counter;
     frame = 0;
     async load(loader) {
-        this.font = await loader.load(BmFont, assets.demo.fonts.kenneyBlocksFnt);
+        this.font = await loader.load(BmFont.of(assets.demo.fonts.kenneyBlocksFnt));
     }
     init() {
         const font = this.font;

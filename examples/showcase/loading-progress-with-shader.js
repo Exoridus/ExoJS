@@ -1,5 +1,5 @@
 // Auto-generated from loading-progress-with-shader.ts — edit the .ts source, not this file.
-import { Application, Color, RenderBackendType, Scene, Sprite, Text, Texture, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
+import { Application, Color, RenderBackendType, Scene, Sprite, Text, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
 const app = new Application({
     canvas: {
         width: 1280,
@@ -32,14 +32,14 @@ class LoadingProgressWithShaderScene extends Scene {
     ring;
     filter;
     async load(loader) {
-        await loader.load(Texture, { uvGrid: 'image/uv-grid-256.png' });
+        await loader.load('image/uv-grid-256.png');
     }
     init(loader) {
         const { width, height } = this.app.canvas;
         this.progress = { v: 0 };
         this.label = new Text('0%', { fillColor: Color.white, fontSize: 42, align: 'center' });
         this.label.setAnchor(0.5, 0.5).setPosition(width / 2, height / 2);
-        this.ring = new Sprite(loader.get(Texture, 'uvGrid')).setAnchor(0.5).setScale(2.4).setPosition(width / 2, height / 2);
+        this.ring = new Sprite(loader.get('image/uv-grid-256.png')).setAnchor(0.5).setScale(2.4).setPosition(width / 2, height / 2);
         this.filter =
             app.backend.backendType === RenderBackendType.WebGpu
                 ? new WebGpuShaderFilter({ fragmentSource: wgsl, uniforms: { uProgress: 0 } })

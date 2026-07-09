@@ -36,9 +36,9 @@ class CompressorScene extends Scene {
     meterY = 0;
     hud;
     async load(loader) {
-        await loader.load(AudioStream, { music: 'audio/demo-loop-main.ogg' });
+        this.music = await loader.load(AudioStream.of('audio/demo-loop-main.ogg'));
     }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
         // Wide horizontal bars centred on the 16:9 canvas; labels sit to the left.
         this.barW = width * 0.45;
@@ -46,7 +46,6 @@ class CompressorScene extends Scene {
         this.labelX = width * 0.1;
         this.rowY = sliders.map((_, i) => height * 0.26 + i * 90);
         this.meterY = this.rowY[this.rowY.length - 1] + 100;
-        this.music = loader.get(AudioStream, 'music');
         this.filter = new CompressorEffect();
         app.audio.music.addEffect(this.filter);
         this.gfx = new Graphics();

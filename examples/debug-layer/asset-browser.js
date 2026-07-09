@@ -167,229 +167,146 @@ class AssetBrowserScene extends Scene {
     }
     async loadCategory(catId) {
         const loader = this.assetLoader;
+        // Every category below fetches its assets by real (dynamic, non-literal)
+        // path via `X.of(path)` + `load()` — the old alias-keyed batch-record form
+        // (`load(Type, { alias: path })` + `get(Type, alias)`) is gone; there is no
+        // alias indirection to reconstruct, so each item is loaded directly and its
+        // resolved handle/value is stored under the catalog's own key.
         switch (catId) {
             case 'textures': {
-                const batch = {};
-                for (const [k, url] of Object.entries(assets.demo.textures ?? {})) {
-                    batch[`tex_${k}`] = url;
-                }
-                if (Object.keys(batch).length)
-                    await loader.load(Texture, batch);
-                for (const k of Object.keys(assets.demo.textures ?? {})) {
-                    const s = new Sprite(loader.get(Texture, `tex_${k}`));
+                await Promise.all(Object.entries(assets.demo.textures ?? {}).map(async ([k, url]) => {
+                    const s = new Sprite(await loader.load(Texture.of(url)));
                     s.setAnchor(0.5);
                     this.texSprites.set(k, s);
-                }
+                }));
                 break;
             }
             case 'sprites': {
-                const imgBatch = {};
-                const jsonBatch = {};
-                for (const [k, entry] of Object.entries(assets.demo.sprites ?? {})) {
-                    imgBatch[`spr_${k}`] = entry.image;
-                    jsonBatch[`spr_${k}`] = entry.data;
-                }
-                if (Object.keys(imgBatch).length) {
-                    await loader.load(Texture, imgBatch);
-                    await loader.load(Json, jsonBatch);
-                }
-                for (const k of Object.keys(assets.demo.sprites ?? {})) {
-                    const ss = new Spritesheet(loader.get(Texture, `spr_${k}`), loader.get(Json, `spr_${k}`).value);
+                await Promise.all(Object.entries(assets.demo.sprites ?? {}).map(async ([k, entry]) => {
+                    const [tex, data] = await Promise.all([
+                        loader.load(Texture.of(entry.image)),
+                        loader.load(Json.of(entry.data)),
+                    ]);
+                    const ss = new Spritesheet(tex, data);
                     this.sprSheets.set(k, ss);
                     for (const s of ss.sprites.values())
                         s.setAnchor(0.5);
-                }
+                }));
                 break;
             }
             case 'spritesheets': {
-                const imgBatch = {};
-                const jsonBatch = {};
-                for (const [k, entry] of Object.entries(assets.demo.spritesheets ?? {})) {
-                    imgBatch[`ssh_${k}`] = entry.image;
-                    jsonBatch[`ssh_${k}`] = entry.data;
-                }
-                if (Object.keys(imgBatch).length) {
-                    await loader.load(Texture, imgBatch);
-                    await loader.load(Json, jsonBatch);
-                }
-                for (const k of Object.keys(assets.demo.spritesheets ?? {})) {
-                    const ss = new Spritesheet(loader.get(Texture, `ssh_${k}`), loader.get(Json, `ssh_${k}`).value);
+                await Promise.all(Object.entries(assets.demo.spritesheets ?? {}).map(async ([k, entry]) => {
+                    const [tex, data] = await Promise.all([
+                        loader.load(Texture.of(entry.image)),
+                        loader.load(Json.of(entry.data)),
+                    ]);
+                    const ss = new Spritesheet(tex, data);
                     this.sshSheets.set(k, ss);
                     for (const s of ss.sprites.values())
                         s.setAnchor(0.5);
-                }
+                }));
                 break;
             }
             case 'svg': {
-                const batch = {};
-                for (const [k, url] of Object.entries(assets.demo.svg ?? {})) {
-                    batch[`svg_${k}`] = url;
-                }
-                if (Object.keys(batch).length)
-                    await loader.load(SvgAsset, batch);
-                for (const k of Object.keys(assets.demo.svg ?? {})) {
-                    const s = new Sprite(new Texture(loader.get(SvgAsset, `svg_${k}`)));
+                await Promise.all(Object.entries(assets.demo.svg ?? {}).map(async ([k, url]) => {
+                    const s = new Sprite(new Texture(await loader.load(SvgAsset.of(url))));
                     s.setAnchor(0.5);
                     this.svgSprites.set(k, s);
-                }
+                }));
                 break;
             }
             case 'inputPrompts': {
-                const imgBatch = {};
-                const jsonBatch = {};
-                for (const [k, entry] of Object.entries(assets.demo.inputPrompts ?? {})) {
-                    imgBatch[`inp_${k}`] = entry.image;
-                    jsonBatch[`inp_${k}`] = entry.data;
-                }
-                if (Object.keys(imgBatch).length) {
-                    await loader.load(Texture, imgBatch);
-                    await loader.load(Json, jsonBatch);
-                }
-                for (const k of Object.keys(assets.demo.inputPrompts ?? {})) {
-                    const ss = new Spritesheet(loader.get(Texture, `inp_${k}`), loader.get(Json, `inp_${k}`).value);
+                await Promise.all(Object.entries(assets.demo.inputPrompts ?? {}).map(async ([k, entry]) => {
+                    const [tex, data] = await Promise.all([
+                        loader.load(Texture.of(entry.image)),
+                        loader.load(Json.of(entry.data)),
+                    ]);
+                    const ss = new Spritesheet(tex, data);
                     this.inpSheets.set(k, ss);
                     for (const s of ss.sprites.values())
                         s.setAnchor(0.5);
-                }
+                }));
                 break;
             }
             case 'audio': {
-                const batch = {};
-                for (const [k, url] of Object.entries(assets.demo.audio ?? {})) {
-                    batch[`aud_${k}`] = url;
-                }
-                if (Object.keys(batch).length)
-                    await loader.load(AudioStream, batch);
-                for (const k of Object.keys(assets.demo.audio ?? {})) {
-                    this.audioMusics.set(k, loader.get(AudioStream, `aud_${k}`));
-                }
+                await Promise.all(Object.entries(assets.demo.audio ?? {}).map(async ([k, url]) => {
+                    this.audioMusics.set(k, await loader.load(AudioStream.of(url)));
+                }));
                 break;
             }
             case 'sound': {
-                const batch = {};
-                for (const [k, url] of Object.entries(assets.demo.sound ?? {})) {
-                    batch[`snd_${k}`] = url;
-                }
-                if (Object.keys(batch).length)
-                    await loader.load(AudioStream, batch);
-                for (const k of Object.keys(assets.demo.sound ?? {})) {
-                    this.soundMusics.set(k, loader.get(AudioStream, `snd_${k}`));
-                }
+                await Promise.all(Object.entries(assets.demo.sound ?? {}).map(async ([k, url]) => {
+                    this.soundMusics.set(k, await loader.load(AudioStream.of(url)));
+                }));
                 break;
             }
             case 'music': {
-                const batch = {};
-                for (const [k, url] of Object.entries(assets.demo.music ?? {})) {
-                    batch[`mus_${k}`] = url;
-                }
-                if (Object.keys(batch).length)
-                    await loader.load(AudioStream, batch);
-                for (const k of Object.keys(assets.demo.music ?? {})) {
-                    this.musicMusics.set(k, loader.get(AudioStream, `mus_${k}`));
-                }
+                await Promise.all(Object.entries(assets.demo.music ?? {}).map(async ([k, url]) => {
+                    this.musicMusics.set(k, await loader.load(AudioStream.of(url)));
+                }));
                 break;
             }
             case 'soundSprites': {
-                const audioBatch = {};
-                const jsonBatch = {};
-                for (const [k, entry] of Object.entries(assets.demo.soundSprites ?? {})) {
-                    audioBatch[`sds_${k}`] = entry.audio;
-                    jsonBatch[`sds_${k}`] = entry.data;
-                }
-                if (Object.keys(audioBatch).length) {
-                    await loader.load(AudioStream, audioBatch);
-                    await loader.load(Json, jsonBatch);
-                }
-                for (const k of Object.keys(assets.demo.soundSprites ?? {})) {
-                    this.soundSpriteAudio.set(k, loader.get(AudioStream, `sds_${k}`));
-                    this.soundSpriteData.set(k, loader.get(Json, `sds_${k}`).value);
-                }
+                await Promise.all(Object.entries(assets.demo.soundSprites ?? {}).map(async ([k, entry]) => {
+                    const [audio, data] = await Promise.all([
+                        loader.load(AudioStream.of(entry.audio)),
+                        loader.load(Json.of(entry.data)),
+                    ]);
+                    this.soundSpriteAudio.set(k, audio);
+                    this.soundSpriteData.set(k, data);
+                }));
                 break;
             }
             case 'fonts': {
-                for (const [k, url] of Object.entries(assets.demo.fonts ?? {})) {
+                await Promise.all(Object.entries(assets.demo.fonts ?? {}).map(async ([k, url]) => {
                     // The fonts category mixes vector fonts (.ttf/.otf) with
                     // bitmap-font sidecars (.fnt/.png) that FontFace cannot
                     // parse. Load only the vector entries — the bitmap ones
                     // fall back to a path readout.
                     if (!/\.(ttf|otf|woff2?)$/i.test(url))
-                        continue;
+                        return;
                     const family = `assetbrowser_${k}`;
-                    await loader.load(FontAsset, { [`fnt_${k}`]: url }, { family });
+                    await loader.load(FontAsset.of(url, { family }));
                     this.fontFamilies.set(k, family);
-                }
+                }));
                 break;
             }
             case 'technical': {
-                const batch = {};
-                for (const [subcat, items] of Object.entries(assets.technical ?? {})) {
-                    for (const [k, u] of Object.entries(items)) {
-                        batch[`tech_${subcat}_${k}`] = u;
-                    }
-                }
-                if (Object.keys(batch).length)
-                    await loader.load(Texture, batch);
-                for (const [subcat, items] of Object.entries(assets.technical ?? {})) {
-                    for (const k of Object.keys(items)) {
-                        const s = new Sprite(loader.get(Texture, `tech_${subcat}_${k}`));
-                        s.setAnchor(0.5);
-                        this.techSprites.set(`${subcat}.${k}`, s);
-                    }
-                }
+                await Promise.all(Object.entries(assets.technical ?? {}).flatMap(([subcat, items]) => Object.entries(items).map(async ([k, u]) => {
+                    const s = new Sprite(await loader.load(Texture.of(u)));
+                    s.setAnchor(0.5);
+                    this.techSprites.set(`${subcat}.${k}`, s);
+                })));
                 break;
             }
             case 'backgrounds': {
-                const batch = {};
-                for (const [k, url] of Object.entries(assets.demo.backgrounds ?? {})) {
-                    batch[`bg_${k}`] = url;
-                }
-                if (Object.keys(batch).length)
-                    await loader.load(Texture, batch);
-                for (const k of Object.keys(assets.demo.backgrounds ?? {})) {
-                    const s = new Sprite(loader.get(Texture, `bg_${k}`));
+                await Promise.all(Object.entries(assets.demo.backgrounds ?? {}).map(async ([k, url]) => {
+                    const s = new Sprite(await loader.load(Texture.of(url)));
                     s.setAnchor(0.5);
                     this.bgSprites.set(k, s);
-                }
+                }));
                 break;
             }
             case 'cursors': {
-                const batch = {};
-                for (const [k, url] of Object.entries(assets.demo.cursors ?? {})) {
-                    batch[`cur_${k}`] = url;
-                }
-                if (Object.keys(batch).length)
-                    await loader.load(SvgAsset, batch);
-                for (const k of Object.keys(assets.demo.cursors ?? {})) {
-                    const s = new Sprite(new Texture(loader.get(SvgAsset, `cur_${k}`)));
+                await Promise.all(Object.entries(assets.demo.cursors ?? {}).map(async ([k, url]) => {
+                    const s = new Sprite(new Texture(await loader.load(SvgAsset.of(url))));
                     s.setAnchor(0.5);
                     this.cursorSprites.set(k, s);
-                }
+                }));
                 break;
             }
             case 'tilesets': {
-                const batch = {};
-                for (const [k, entry] of Object.entries(assets.demo.tilesets ?? {})) {
-                    batch[`tls_${k}`] = entry.image;
-                }
-                if (Object.keys(batch).length)
-                    await loader.load(Texture, batch);
-                for (const k of Object.keys(assets.demo.tilesets ?? {})) {
-                    const s = new Sprite(loader.get(Texture, `tls_${k}`));
+                await Promise.all(Object.entries(assets.demo.tilesets ?? {}).map(async ([k, entry]) => {
+                    const s = new Sprite(await loader.load(Texture.of(entry.image)));
                     s.setAnchor(0.5);
                     this.tilesetSprites.set(k, s);
-                }
+                }));
                 break;
             }
             case 'vendor': {
-                const batch = {};
-                for (const [k, url] of Object.entries(assets.demo.vendor ?? {})) {
-                    batch[`vnd_${k}`] = url;
-                }
-                if (Object.keys(batch).length)
-                    await loader.load(Json, batch);
-                for (const k of Object.keys(assets.demo.vendor ?? {})) {
-                    this.vendorData.set(k, loader.get(Json, `vnd_${k}`).value);
-                }
+                await Promise.all(Object.entries(assets.demo.vendor ?? {}).map(async ([k, url]) => {
+                    this.vendorData.set(k, await loader.load(Json.of(url)));
+                }));
                 break;
             }
             default:

@@ -42,10 +42,9 @@ class FrequencyBandsScene extends Scene {
     hud;
     tapPrompt;
     async load(loader) {
-        await loader.load(AudioStream, { track: 'audio/demo-loop-main.ogg' });
+        this.music = await loader.load(AudioStream.of('audio/demo-loop-main.ogg'));
     }
-    init(loader) {
-        this.music = loader.get(AudioStream, 'track');
+    init() {
         this.analyser = new AudioAnalyser({ fftSize: 2048, smoothingTimeConstant: 0.75 });
         this.analyser.source = this.app.audio.music;
         // Log-spaced bin boundaries across the spectrum. Index 0 (DC) is skipped

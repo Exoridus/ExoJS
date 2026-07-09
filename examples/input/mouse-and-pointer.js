@@ -1,5 +1,5 @@
 // Auto-generated from mouse-and-pointer.ts — edit the .ts source, not this file.
-import { Application, Color, Graphics, Scene, Sprite, Texture } from '@codexo/exojs';
+import { Application, Color, Graphics, Scene, Sprite } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {
@@ -30,13 +30,13 @@ class MouseAndPointerScene extends Scene {
     clicks = 0;
     hud;
     async load(loader) {
-        await loader.load(Texture, { ship: 'image/ship-a.png' });
+        await loader.load('image/ship-a.png');
     }
     init(loader) {
         const { width, height } = this.app.canvas;
         this.pointer = { x: width / 2, y: height / 2 };
         this.previous = { x: width / 2, y: height / 2 };
-        this.ship = new Sprite(loader.get(Texture, 'ship')).setAnchor(0.5).setPosition(width / 2, height / 2);
+        this.ship = new Sprite(loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(width / 2, height / 2);
         this.ship.interactive = true;
         this.ship.draggable = true;
         this.crosshair = new Graphics();

@@ -1,5 +1,5 @@
 // Auto-generated from custom-render-pass.ts — edit the .ts source, not this file.
-import { Application, CallbackRenderPass, Color, Graphics, RenderNodePass, RenderPipeline, Scene, Sprite, Texture } from '@codexo/exojs';
+import { Application, CallbackRenderPass, Color, Graphics, RenderNodePass, RenderPipeline, Scene, Sprite } from '@codexo/exojs';
 const app = new Application({
     canvas: {
         width: 1280,
@@ -19,16 +19,16 @@ class CustomRenderPassScene extends Scene {
     pipeline;
     angle = 0;
     async load(loader) {
-        await loader.load(Texture, { bunny: 'image/ship-a.png' });
+        await loader.load('image/ship-a.png');
     }
     init(loader) {
         const { width, height } = this.app.canvas;
-        this.back = new Sprite(loader.get(Texture, 'bunny'))
+        this.back = new Sprite(loader.get('image/ship-a.png'))
             .setAnchor(0.5)
             .setPosition(width / 2 - 200, height / 2)
             .setScale(2.2)
             .setTint(new Color(120, 170, 255));
-        this.front = new Sprite(loader.get(Texture, 'bunny'))
+        this.front = new Sprite(loader.get('image/ship-a.png'))
             .setAnchor(0.5)
             .setPosition(width / 2 + 200, height / 2)
             .setScale(2.2)

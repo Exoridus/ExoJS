@@ -45,7 +45,7 @@ class FalloffCurvesScene extends Scene {
     plot = { x: 0, y: 0, w: 0, h: 0 };
     hud;
     async load(loader) {
-        await loader.load(Sound, { source: 'audio/impact-light.ogg' });
+        await loader.load('audio/impact-light.ogg');
     }
     init(loader) {
         const { width, height } = this.app.canvas;
@@ -56,7 +56,7 @@ class FalloffCurvesScene extends Scene {
         this.listener = { x: width / 2, y: height / 2 };
         app.audio.listener.target = this.listener;
         this.sounds = this.sources.map(({ model, x, y }) => {
-            const sound = new Sound(loader.get(Sound, 'source').audioBuffer, {
+            const sound = new Sound(loader.get('audio/impact-light.ogg').audioBuffer, {
                 distanceModel: model,
                 refDistance: REF_DISTANCE,
                 maxDistance: MAX_DISTANCE,

@@ -22,11 +22,10 @@ class VinylRecordScene extends Scene {
     hud;
     tapPrompt;
     async load(loader) {
-        await loader.load(AudioStream, { track: assets.demo.audio.musicLoop });
+        this.music = await loader.load(AudioStream.of(assets.demo.audio.musicLoop));
     }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
-        this.music = loader.get(AudioStream, 'track');
         this.analyser = new AudioAnalyser({ fftSize: 1024, source: this.app.audio.music });
         this.disc = new Graphics();
         this.bars = new Graphics();

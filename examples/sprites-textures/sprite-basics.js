@@ -1,5 +1,5 @@
 // Auto-generated from sprite-basics.ts — edit the .ts source, not this file.
-import { Application, Color, Scene, Sprite, Texture } from '@codexo/exojs';
+import { Application, Color, Scene, Sprite } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {
@@ -20,11 +20,11 @@ class SpriteBasicsScene extends Scene {
     elapsed = 0;
     hud;
     async load(loader) {
-        await loader.load(Texture, { ship: 'image/ship-a.png' });
+        await loader.load('image/ship-a.png');
     }
     init(loader) {
         const { width, height } = this.app.canvas;
-        this.ship = new Sprite(loader.get(Texture, 'ship'));
+        this.ship = new Sprite(loader.get('image/ship-a.png'));
         this.ship.setPosition((width / 2) | 0, (height / 2) | 0);
         this.ship.setAnchor(0.5);
         this.ship.setScale(3);

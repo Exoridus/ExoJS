@@ -49,7 +49,7 @@ class FrequencyBandsScene extends Scene {
         this.music = await loader.load(AudioStream.of('audio/demo-loop-main.ogg'));
     }
 
-    override init(loader): void {
+    override init(): void {
         this.analyser = new AudioAnalyser({ fftSize: 2048, smoothingTimeConstant: 0.75 });
         this.analyser.source = this.app.audio.music;
 

@@ -1,5 +1,5 @@
 // Auto-generated from palette-cycling.ts — edit the .ts source, not this file.
-import { Application, Color, LutFilter, Scene, Sprite, Texture } from '@codexo/exojs';
+import { Application, Color, LutFilter, Scene, Sprite } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {
@@ -39,13 +39,13 @@ class PaletteCyclingScene extends Scene {
     offset = 0;
     hud;
     async load(loader) {
-        await loader.load(Texture, { ramp: PRIMARY_RAMP });
+        await loader.load(PRIMARY_RAMP);
     }
     init(loader) {
         const { width, height } = this.app.canvas;
         this.palette = LutFilter.fromImage(buildPaletteCanvas(0));
         this.filter = new LutFilter({ mode: '1d' }).setLut(this.palette);
-        this.sprite = new Sprite(loader.get(Texture, 'ramp')).setAnchor(0.5).setScale(4);
+        this.sprite = new Sprite(loader.get(PRIMARY_RAMP)).setAnchor(0.5).setScale(4);
         this.sprite.setPosition(width / 2, height / 2);
         this.sprite.filters = [this.filter];
         this.hud = mountControls({
