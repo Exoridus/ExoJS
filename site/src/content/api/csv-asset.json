@@ -1,6 +1,6 @@
 {
   "title": "CsvAsset",
-  "description": "Dispatch token for CSV loading. `loader.load(CsvAsset, 'table.csv')` returns `Promise<string[][]>`. Each inner array is one row; values are raw strings (no type coercion).",
+  "description": "Dispatch token for CSV loading. `loader.load(CsvAsset.of('table.csv'))` returns `Promise<string[][]>`. Each inner array is one row; values are raw strings (no type coercion).",
   "symbol": "CsvAsset",
   "kind": "class",
   "subsystem": "resources",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Dispatch token for CSV loading.",
-        "`loader.load(CsvAsset, 'table.csv')` returns `Promise<string[][]>`. Each inner array is one row; values are raw strings (no type coercion)."
+        "`loader.load(CsvAsset.of('table.csv'))` returns `Promise<string[][]>`. Each inner array is one row; values are raw strings (no type coercion)."
       ],
       "importLine": "import { CsvAsset } from '@codexo/exojs'",
       "sourceLink": null

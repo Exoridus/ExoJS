@@ -1,6 +1,6 @@
 {
   "title": "TextAsset",
-  "description": "Dispatch token for plain text loading. `loader.load(TextAsset, 'greeting.txt')` returns `Promise<string>`.",
+  "description": "Dispatch token for plain text loading. `loader.load(TextAsset.of('greeting.txt'))` returns `Promise<string>`.",
   "symbol": "TextAsset",
   "kind": "class",
   "subsystem": "resources",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Dispatch token for plain text loading.",
-        "`loader.load(TextAsset, 'greeting.txt')` returns `Promise<string>`."
+        "`loader.load(TextAsset.of('greeting.txt'))` returns `Promise<string>`."
       ],
       "importLine": "import { TextAsset } from '@codexo/exojs'",
       "sourceLink": null

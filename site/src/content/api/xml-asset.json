@@ -1,6 +1,6 @@
 {
   "title": "XmlAsset",
-  "description": "Dispatch token for XML document loading. `loader.load(XmlAsset, 'data.xml')` returns `Promise<Document>`. Throws if the file cannot be parsed as well-formed XML.",
+  "description": "Dispatch token for XML document loading. `loader.load(XmlAsset.of('data.xml'))` returns `Promise<Document>`. Throws if the file cannot be parsed as well-formed XML.",
   "symbol": "XmlAsset",
   "kind": "class",
   "subsystem": "resources",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Dispatch token for XML document loading.",
-        "`loader.load(XmlAsset, 'data.xml')` returns `Promise<Document>`. Throws if the file cannot be parsed as well-formed XML."
+        "`loader.load(XmlAsset.of('data.xml'))` returns `Promise<Document>`. Throws if the file cannot be parsed as well-formed XML."
       ],
       "importLine": "import { XmlAsset } from '@codexo/exojs'",
       "sourceLink": null

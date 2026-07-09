@@ -1,6 +1,6 @@
 {
   "title": "BinaryAsset",
-  "description": "Dispatch token for binary data loading. `loader.load(BinaryAsset, 'data.bin')` returns `Promise<ArrayBuffer>`.",
+  "description": "Dispatch token for binary data loading. `loader.load(BinaryAsset.of('data.bin'))` returns `Promise<ArrayBuffer>`.",
   "symbol": "BinaryAsset",
   "kind": "class",
   "subsystem": "resources",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Dispatch token for binary data loading.",
-        "`loader.load(BinaryAsset, 'data.bin')` returns `Promise<ArrayBuffer>`."
+        "`loader.load(BinaryAsset.of('data.bin'))` returns `Promise<ArrayBuffer>`."
       ],
       "importLine": "import { BinaryAsset } from '@codexo/exojs'",
       "sourceLink": null

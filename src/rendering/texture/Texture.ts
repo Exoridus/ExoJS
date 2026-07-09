@@ -220,9 +220,10 @@ export class Texture {
 
   /**
    * Load lifecycle of this texture. Directly constructed textures are
-   * `'ready'`; deferred handles returned by `loader.get(Texture, …)` start
-   * `'loading'` and become `'ready'` once the payload fills in, or `'failed'`
-   * (showing the {@link Texture.missing} checker) when the load errors.
+   * `'ready'`; deferred handles returned by `loader.get('hero.png')` /
+   * `loader.get(Texture.of(src))` start `'loading'` and become `'ready'` once
+   * the payload fills in, or `'failed'` (showing the {@link Texture.missing}
+   * checker) when the load errors.
    */
   public get loadState(): LoadStateValue {
     return this._loadState.value;

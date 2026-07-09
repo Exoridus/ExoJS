@@ -21,9 +21,6 @@ export { IndexedDbStore } from './IndexedDbStore';
 export type { KeyValueStore } from './KeyValueStore';
 export type {
   AssetLoaderContext,
-  BatchValue,
-  ConstrainedLoadable,
-  ExtensionTokenTypeMap,
   ExtensionTypeMap,
   InferLoadedMap,
   Loadable,

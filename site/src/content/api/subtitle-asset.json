@@ -1,6 +1,6 @@
 {
   "title": "SubtitleAsset",
-  "description": "Dispatch token for subtitle loading (WebVTT and SRT). `loader.load(SubtitleAsset, 'subs.vtt')` returns `Promise<VTTCue[]>`. `loader.load(SubtitleAsset, 'subs.srt')` returns `Promise<VTTCue[]>`. Format is detected from the file extension; unknown extensions default to VTT.",
+  "description": "Dispatch token for subtitle loading (WebVTT and SRT). `loader.load(SubtitleAsset.of('subs.vtt'))` returns `Promise<VTTCue[]>`. `loader.load(SubtitleAsset.of('subs.srt'))` returns `Promise<VTTCue[]>`. Format is detected from the file extension; unknown extensions default to VTT.",
   "symbol": "SubtitleAsset",
   "kind": "class",
   "subsystem": "resources",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Dispatch token for subtitle loading (WebVTT and SRT).",
-        "`loader.load(SubtitleAsset, 'subs.vtt')` returns `Promise<VTTCue[]>`. `loader.load(SubtitleAsset, 'subs.srt')` returns `Promise<VTTCue[]>`. Format is detected from the file extension; unknown extensions default to VTT."
+        "`loader.load(SubtitleAsset.of('subs.vtt'))` returns `Promise<VTTCue[]>`. `loader.load(SubtitleAsset.of('subs.srt'))` returns `Promise<VTTCue[]>`. Format is detected from the file extension; unknown extensions default to VTT."
       ],
       "importLine": "import { SubtitleAsset } from '@codexo/exojs'",
       "sourceLink": null

@@ -14,7 +14,6 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import type { AssetBinding, AssetHandler, AssetLoadRequest } from '#extensions/Extension';
 import { materializeAssetBindings } from '#extensions/materialize';
 import { Asset } from '#resources/Asset';
-import type { AssetDefinitions } from '#resources/AssetDefinitions';
 import { defineAsset } from '#resources/defineAsset';
 import type { AssetLoaderContext } from '#resources/Loader';
 import { Loader } from '#resources/Loader';

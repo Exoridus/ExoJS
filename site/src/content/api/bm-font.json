@@ -1,6 +1,6 @@
 {
   "title": "BmFont",
-  "description": "A loaded BMFont asset: the parsed descriptor plus all page textures. Loaded by the built-in BMFont factory — no extra setup required. Pass directly to BitmapText. ```ts const font = await loader.load('fonts/ui.fnt'); // BmFont via extension const font = await loader.load(BmFont, 'fonts/ui.fnt'); // explicit token const label = new BitmapText('Score: 0', font); ```",
+  "description": "A loaded BMFont asset: the parsed descriptor plus all page textures. Loaded by the built-in BMFont factory — no extra setup required. Pass directly to BitmapText. ```ts const font = await loader.load('fonts/ui.fnt'); // BmFont via extension const font = await loader.load(BmFont.of('fonts/ui.fnt')); // explicit descriptor const label = new BitmapText('Score: 0', font); ```",
   "symbol": "BmFont",
   "kind": "class",
   "subsystem": "rendering",
@@ -21,7 +21,7 @@
       "paragraphs": [
         "A loaded BMFont asset: the parsed descriptor plus all page textures.",
         "Loaded by the built-in BMFont factory — no extra setup required. Pass directly to BitmapText.",
-        "```ts const font = await loader.load('fonts/ui.fnt'); // BmFont via extension const font = await loader.load(BmFont, 'fonts/ui.fnt'); // explicit token const label = new BitmapText('Score: 0', font); ```"
+        "```ts const font = await loader.load('fonts/ui.fnt'); // BmFont via extension const font = await loader.load(BmFont.of('fonts/ui.fnt')); // explicit descriptor const label = new BitmapText('Score: 0', font); ```"
       ],
       "importLine": "import { BmFont } from '@codexo/exojs'",
       "sourceLink": null

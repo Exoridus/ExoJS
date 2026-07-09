@@ -187,9 +187,9 @@ export class Sound implements Playable {
 
   /**
    * Load lifecycle of this sound. Directly constructed sounds are `'ready'`;
-   * deferred handles returned by `loader.get(Sound, …)` start `'loading'` and
-   * become `'ready'` once the payload fills in, or `'failed'` when the load
-   * errors.
+   * deferred handles returned by `loader.get('theme.ogg')` / `loader.get(Sound.of(src))`
+   * start `'loading'` and become `'ready'` once the payload fills in, or
+   * `'failed'` when the load errors.
    */
   public get loadState(): LoadStateValue {
     return this._loadState.value;

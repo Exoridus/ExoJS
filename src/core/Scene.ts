@@ -9,11 +9,8 @@ import type { Asset } from '#resources/Asset';
 import type { AssetInput } from '#resources/AssetDefinitions';
 import type { AssetRef } from '#resources/AssetRef';
 import type { Assets, InferAssetsProperties } from '#resources/Assets';
-import type { TextureFactoryOptions } from '#resources/factories/TextureFactory';
-import type { BatchValue, ConstrainedLoadable, InferLoadedMap, Loadable, LoadByPath, Loader, LoadReturn, PathExtension } from '#resources/Loader';
+import type { InferLoadedMap, Loadable, LoadByPath, Loader, LoadReturn, PathExtension } from '#resources/Loader';
 import type { LoadingQueue } from '#resources/LoadingQueue';
-import type { PreSizeOptions } from '#resources/seamless';
-import type { BinaryAsset, CsvAsset, Json, SubtitleAsset, TextAsset, WasmAsset, XmlAsset } from '#resources/tokens';
 import { UIRoot } from '#ui/UIRoot';
 
 import type { Application } from './Application';
@@ -113,29 +110,16 @@ class SceneLoader implements Destroyable {
     return this._scene.app!.loader;
   }
 
-  public get(type: typeof Texture, source: string, options?: TextureFactoryOptions & PreSizeOptions): Texture;
-  public get(type: typeof Texture, sources: readonly string[], options?: TextureFactoryOptions & PreSizeOptions): Texture[];
-  public get<K extends string>(type: typeof Texture, items: Readonly<Record<K, string>>, options?: TextureFactoryOptions & PreSizeOptions): Record<K, Texture>;
   public get<S extends string>(path: LoadByPath<S> extends Texture | Sound ? S : never, options?: unknown): LoadByPath<S>;
-  public get<T = unknown>(type: typeof Json, source: string, options?: unknown): AssetRef<T>;
-  public get(type: typeof TextAsset, source: string, options?: unknown): AssetRef<string>;
-  public get(type: typeof CsvAsset, source: string, options?: unknown): AssetRef<string[][]>;
-  public get(type: typeof XmlAsset, source: string, options?: unknown): AssetRef<Document>;
-  public get(type: typeof SubtitleAsset, source: string, options?: unknown): AssetRef<VTTCue[]>;
-  public get(type: typeof BinaryAsset, source: string, options?: unknown): AssetRef<ArrayBuffer>;
-  public get(type: typeof WasmAsset, source: string, options?: unknown): AssetRef<WebAssembly.Module>;
   public get<T extends Loadable>(type: T, alias: string): LoadReturn<T>;
   // Adopts an Assets catalog under the scene scope (mirrors Loader.get(catalog)).
   public get<M extends Record<string, AssetInput>>(catalog: Assets<M>): InferAssetsProperties<M>;
   // Adopts a single handle-hybrid leaf under the scene scope (mirrors Loader.get(leaf)).
   public get<T extends object>(leaf: T): T;
-  public get(typeOrPath: Loadable | string | object, source?: unknown, options?: unknown): unknown {
-    return this._loader._getClaimed(this._scope, typeOrPath, source, options);
+  public get(typeOrPath: Loadable | string | object, source?: unknown): unknown {
+    return this._loader._getClaimed(this._scope, typeOrPath, source);
   }
 
-  public load<T = unknown>(type: typeof Json, path: string, options?: unknown): LoadingQueue<T>;
-  public load<T = unknown>(type: typeof Json, paths: readonly string[], options?: unknown): LoadingQueue<T[]>;
-  public load<T = unknown, K extends string = string>(type: typeof Json, items: Readonly<Record<K, string>>, options?: unknown): LoadingQueue<Record<K, T>>;
   public load<T>(asset: Asset<T>): LoadingQueue<T>;
   public load<M extends Record<string, AssetInput>>(assets: Assets<M>): LoadingQueue<InferLoadedMap<M>>;
   // eslint-disable-next-line @typescript-eslint/unified-signatures -- mirrors Loader.load verbatim (rule disabled there too)
@@ -147,11 +131,8 @@ class SceneLoader implements Destroyable {
   public load<T extends object>(leaf: T): LoadingQueue<T>;
   public load<R, S extends string>(path: [PathExtension<S>] extends [never] ? never : S): LoadingQueue<R>;
   public load<S extends string>(path: [PathExtension<S>] extends [never] ? never : S): LoadingQueue<LoadByPath<S>>;
-  public load<T extends Loadable, S extends string>(type: ConstrainedLoadable<T, S>, path: S, options?: unknown): LoadingQueue<LoadReturn<T>>;
-  public load<T extends Loadable>(type: T, paths: readonly string[], options?: unknown): LoadingQueue<Array<LoadReturn<T>>>;
-  public load<T extends Loadable, K extends string>(type: T, items: Readonly<Record<K, BatchValue>>, options?: unknown): LoadingQueue<Record<K, LoadReturn<T>>>;
-  public load(arg0: unknown, arg1?: unknown, arg2?: unknown): LoadingQueue<unknown> {
-    return this._loader._loadClaimed(this._scope, arg0, arg1, arg2);
+  public load(arg0: unknown, arg1?: unknown): LoadingQueue<unknown> {
+    return this._loader._loadClaimed(this._scope, arg0, arg1);
   }
 
   public destroy(): void {

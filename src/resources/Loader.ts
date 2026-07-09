@@ -17,11 +17,10 @@ import { CacheFirstStrategy } from './CacheFirstStrategy';
 import type { CacheStore } from './CacheStore';
 import type { CacheStrategy } from './CacheStrategy';
 import { resolveKindByPath } from './extensionKindRegistry';
-import type { TextureFactoryOptions } from './factories/TextureFactory';
 import type { AssetConstructor } from './FactoryRegistry';
 import { FactoryRegistry } from './FactoryRegistry';
 import { LoadingQueue } from './LoadingQueue';
-import type { PreSizeOptions, SeamlessAdapter } from './seamless';
+import type { SeamlessAdapter } from './seamless';
 import { BinaryAsset, CsvAsset, FontAsset, type ImageAsset, Json, SubtitleAsset, type SvgAsset, TextAsset, WasmAsset, XmlAsset } from './tokens';
 
 // ---------------------------------------------------------------------------
@@ -133,64 +132,13 @@ export type PathExtension<S extends string> = MatchExtension<Basename<StripQuery
  * Resolves the return type for {@link Loader.load} when called with a plain
  * path string. Returns `unknown` when the extension is not in
  * {@link ExtensionTypeMap} — the string-path overload rejects such paths at
- * compile time; use the token form (`load(MyType, path)`) instead.
+ * compile time; use the descriptor form (`load(MyType.of(path))`) instead.
  *
  * The `[PathExtension<S>] extends [never]` guard is load-bearing: indexing
  * {@link ExtensionTypeMap} with `never` would silently produce `never` rather
  * than the intended `unknown` fallback.
  */
 export type LoadByPath<S extends string> = [PathExtension<S>] extends [never] ? unknown : ExtensionTypeMap[PathExtension<S>];
-
-/**
- * Additional asset types accepted by the **token form** of {@link Loader.load}
- * (`load(MyType, 'file.ext')`) for a given file extension, beyond the
- * path-only type registered in {@link ExtensionTypeMap}.
- *
- * Augment via declaration merging when a format package ships an advanced
- * source-model token that shares a file extension with its common-case
- * runtime type. The path-only form (`load('file.ext')`) is unaffected and
- * keeps resolving to the {@link ExtensionTypeMap} entry alone:
- * ```ts
- * declare module '@codexo/exojs' {
- *   interface ExtensionTypeMap { tmj: TileMap }       // load('world.tmj') → TileMap
- *   interface ExtensionTokenTypeMap { tmj: TiledMap } // load(TiledMap, 'world.tmj') also allowed
- * }
- * ```
- */
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface ExtensionTokenTypeMap {}
-
-/** Resolves the additional token types allowed for extension `E`, or `never` when none are registered. */
-type TokenTypesFor<E> = E extends keyof ExtensionTokenTypeMap ? ExtensionTokenTypeMap[E] : never;
-
-/**
- * Constrains a {@link Loadable} token against the types registered for a
- * given path's extension. When the extension is in {@link ExtensionTypeMap},
- * `T` must produce a value assignable to the registered union (including any
- * extra token types from {@link ExtensionTokenTypeMap}) — otherwise resolves
- * to `never`, triggering a compile-time error.
- *
- * For paths with an unregistered extension — including non-literal `string`
- * paths and extension-less paths, where no extension can be derived — the
- * constraint is skipped and any `T` is accepted (runtime behaviour is
- * unchanged).
- *
- * ```ts
- * // ExtensionTypeMap: { ogg: Sound | Video }
- * loader.load(Sound, 'effect.ogg')      // ✓ Sound ∈ Sound | Video
- * loader.load(BitmapText, 'effect.ogg') // ✗ BitmapText ∉ Sound | Video
- * loader.load(Sound, 'theme.custom')    // ✓ .custom not in map → unconstrained
- * loader.load(Sound, dynamicPath)       // ✓ string path → unconstrained
- * ```
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type ConstrainedLoadable<T extends abstract new (...args: any[]) => unknown, S extends string> = [PathExtension<S>] extends [never]
-  ? T
-  : PathExtension<S> extends keyof ExtensionTypeMap
-    ? LoadReturn<T> extends ExtensionTypeMap[PathExtension<S>] | TokenTypesFor<PathExtension<S>>
-      ? T
-      : never
-    : T;
 
 /**
  * Context object passed to custom asset-type load handlers bound via
@@ -218,14 +166,6 @@ export interface AssetLoaderContext {
    */
   fetchJson<T = unknown>(source: string): Promise<T>;
 }
-
-/**
- * Accepted value types in the homogeneous batch load API.
- *
- * Either a raw source string or a flat config object containing at least
- * `source` plus any type-specific extra fields.
- */
-export type BatchValue = string | ({ source: string } & Record<string, unknown>);
 
 /**
  * Construction options for {@link Loader}.
@@ -369,7 +309,6 @@ export class Loader {
     binary: BinaryAsset,
     wasm: WasmAsset,
   };
-  private readonly _valueTokens: ReadonlySet<Loadable> = new Set<Loadable>(Object.values(this._valueTokenByKind));
 
   /** The value-asset token for a value kind name, or `undefined` for non-value / extension kinds. @internal */
   private _valueTokenForKind(kind: keyof AssetDefinitions): AssetConstructor | undefined {
@@ -499,16 +438,14 @@ export class Loader {
   }
 
   // -----------------------------------------------------------------------
-  // Loading — Json overloads (generic widening)
+  // Loading — new Asset / Assets / config-map overloads
   // -----------------------------------------------------------------------
 
   /**
-   * Fetches and processes one or more assets of the given type.
+   * Fetches and processes one or more assets.
    *
-   * - **Single path** — resolves with the finished asset.
-   * - **Array of paths** — resolves with an ordered array of assets.
-   * - **Record** — resolves with a record whose keys match the input keys.
-   * - **Asset<T>** — single typed asset reference.
+   * - **Path string** — inferred from the file extension; resolves the asset.
+   * - **Asset<T>** — a single typed asset reference (from `X.of(...)` or a config).
    * - **Assets<M>** — typed asset container; keys become aliases.
    * - **Config map** — inline `{ alias: { type, source, … } }` definition.
    *
@@ -516,17 +453,9 @@ export class Loader {
    * for the same (type, alias) pair while a fetch is in progress attaches
    * to the existing promise rather than issuing a second request.
    *
-   * Supply a custom `options` object to pass factory-specific configuration
-   * (e.g. audio decoding hints or image format overrides).
+   * Per-asset options ride on the `X.of(source, options)` descriptor (or the
+   * extra fields of a config object).
    */
-  public load<T = unknown>(type: typeof Json, path: string, options?: unknown): LoadingQueue<T>;
-  public load<T = unknown>(type: typeof Json, paths: readonly string[], options?: unknown): LoadingQueue<T[]>;
-  public load<T = unknown, K extends string = string>(type: typeof Json, items: Readonly<Record<K, string>>, options?: unknown): LoadingQueue<Record<K, T>>;
-
-  // -----------------------------------------------------------------------
-  // Loading — new Asset / Assets / config-map overloads
-  // -----------------------------------------------------------------------
-
   public load<T>(asset: Asset<T>): LoadingQueue<T>;
   public load<M extends Record<string, AssetInput>>(assets: Assets<M>, options?: LoadOptions): LoadingQueue<InferLoadedMap<M>>;
   public load<M extends Record<string, AssetInput>>(config: M, options?: LoadOptions): LoadingQueue<InferLoadedMap<M>>;
@@ -551,8 +480,8 @@ export class Loader {
    * Extend the return type by augmenting {@link ExtensionTypeMap}.
    *
    * Paths whose extension is **not** in {@link ExtensionTypeMap} are rejected at
-   * compile time — use the token form (`load(MyType, path)`) for unregistered
-   * extensions.
+   * compile time — use the descriptor form (`load(MyType.of(path))`) for
+   * unregistered extensions.
    *
    * ```ts
    * const font = await loader.load('fonts/ui.fnt');           // BmFont
@@ -576,19 +505,11 @@ export class Loader {
   public load<S extends string>(path: [KindByPath<S>] extends [never] ? never : S): LoadingQueue<ResourceForKind<KindByPath<S>>>;
 
   // -----------------------------------------------------------------------
-  // Loading — generic overloads (return type inferred from class)
-  // -----------------------------------------------------------------------
-
-  public load<T extends Loadable, S extends string>(type: ConstrainedLoadable<T, S>, path: S, options?: unknown): LoadingQueue<LoadReturn<T>>;
-  public load<T extends Loadable>(type: T, paths: readonly string[], options?: unknown): LoadingQueue<Array<LoadReturn<T>>>;
-  public load<T extends Loadable, K extends string>(type: T, items: Readonly<Record<K, BatchValue>>, options?: unknown): LoadingQueue<Record<K, LoadReturn<T>>>;
-
-  // -----------------------------------------------------------------------
   // Loading — implementation
   // -----------------------------------------------------------------------
 
-  public load(arg0: unknown, arg1?: unknown, arg2?: unknown): LoadingQueue<unknown> {
-    return this._loadClaimed(this._rootClaimer, arg0, arg1, arg2);
+  public load(arg0: unknown, arg1?: unknown): LoadingQueue<unknown> {
+    return this._loadClaimed(this._rootClaimer, arg0, arg1);
   }
 
   /**
@@ -599,7 +520,7 @@ export class Loader {
    * frees) is observationally a no-op for existing callers.
    * @internal
    */
-  public _loadClaimed(claimer: symbol, arg0: unknown, arg1?: unknown, arg2?: unknown): LoadingQueue<unknown> {
+  public _loadClaimed(claimer: symbol, arg0: unknown, arg1?: unknown): LoadingQueue<unknown> {
     // 1. Single Asset<T>
     if (arg0 instanceof AssetImpl) {
       const asset = arg0 as Asset<unknown>;
@@ -681,101 +602,7 @@ export class Loader {
       return queue;
     }
 
-    // 3. Old path: first arg is a Loadable constructor
-    if (typeof arg0 === 'function') {
-      const ctor = arg0 as Loadable;
-      const source = arg1 as string | readonly string[] | Readonly<Record<string, string>>;
-      const options = arg2;
-
-      if (typeof source === 'string') {
-        this._claim(this._key(ctor, source), ctor, source, claimer);
-        this._onFgBatchStart(source, source);
-        let notifyFn: ((success: boolean) => void) | null = null;
-        const promise = this._loadSingle(ctor, source, options).then(
-          v => {
-            notifyFn?.(true);
-            this._onFgBatchSettled(source, true);
-            return v;
-          },
-          e => {
-            notifyFn?.(false);
-            this._onFgBatchSettled(source, false, this._normalizeError(e));
-            throw e;
-          },
-        );
-
-        const queue = new LoadingQueue(promise, 1);
-        notifyFn = queue._notifyItem.bind(queue);
-
-        return queue;
-      }
-
-      if (Array.isArray(source)) {
-        const paths = source as readonly string[];
-        let notifyFn: ((success: boolean) => void) | null = null;
-        const results: unknown[] = new Array(paths.length);
-        const promises = paths.map((path, i) => {
-          this._claim(this._key(ctor, path), ctor, path, claimer);
-          this._onFgBatchStart(path, path);
-          return this._loadSingle(ctor, path, options).then(
-            v => {
-              results[i] = v;
-              notifyFn?.(true);
-              this._onFgBatchSettled(path, true);
-            },
-            e => {
-              notifyFn?.(false);
-              this._onFgBatchSettled(path, false, this._normalizeError(e));
-              throw e;
-            },
-          );
-        });
-
-        const promise = Promise.all(promises).then(() => results);
-
-        const queue = new LoadingQueue(promise, paths.length);
-        notifyFn = queue._notifyItem.bind(queue);
-
-        return queue;
-      }
-
-      // Record<string, BatchValue>
-      const entries = Object.entries(source as Record<string, BatchValue>);
-      const result: Record<string, unknown> = {};
-      let notifyFn: ((success: boolean) => void) | null = null;
-      const promises = entries.map(([alias, pathOrConfig]) => {
-        const path = typeof pathOrConfig === 'string' ? pathOrConfig : pathOrConfig.source;
-        const itemOptions =
-          typeof pathOrConfig === 'string'
-            ? options
-            : { ...pathOrConfig, ...(typeof options === 'object' && options !== null ? (options as Record<string, unknown>) : {}) };
-
-        this._claim(this._key(ctor, alias), ctor, alias, claimer);
-        this._onFgBatchStart(alias, path);
-
-        return this._loadSingle(ctor, alias, itemOptions, path).then(
-          v => {
-            result[alias] = v;
-            notifyFn?.(true);
-            this._onFgBatchSettled(alias, true);
-          },
-          e => {
-            notifyFn?.(false);
-            this._onFgBatchSettled(alias, false, this._normalizeError(e));
-            throw e;
-          },
-        );
-      });
-
-      const promise = Promise.all(promises).then(() => result);
-
-      const queue = new LoadingQueue(promise, entries.length);
-      notifyFn = queue._notifyItem.bind(queue);
-
-      return queue;
-    }
-
-    // 4. Plain config map: Record<string, AssetInput>
+    // 3. Plain config map: Record<string, AssetInput>
     const configMap = arg0 as Record<string, AssetInput>;
     const items = Object.entries(configMap).map(([alias, value]) => ({
       alias,
@@ -831,39 +658,33 @@ export class Loader {
   }
 
   // -----------------------------------------------------------------------
-  // Retrieval — Json overloads
+  // Retrieval
   // -----------------------------------------------------------------------
 
   /**
-   * Seamless deferred access (asset-system v2). Returns SYNCHRONOUSLY and
-   * never throws: an already-loaded source returns the stored texture; an
+   * Seamless deferred access by path (asset-system v2). Returns SYNCHRONOUSLY
+   * and never throws: an already-loaded source returns the stored resource; an
    * unknown source returns a placeholder handle immediately, starts the
    * fetch, and fills the handle in place when the payload arrives (track it
    * via {@link Texture.loadState} / {@link Texture.loaded}). Failed loads
    * show the {@link Texture.missing} checker; calling `get` again for a
    * `'failed'` source retries and heals the same handle in place.
    *
-   * The same source always yields the same instance — also across
-   * {@link load} — and options are first-wins: conflicting options on a
+   * The asset type is inferred from the file extension (basename-only,
+   * longest-suffix-first; see {@link ExtensionTypeMap}). Accepts only paths
+   * whose inferred type has a seamless adapter (compile-time gate); dynamic
+   * strings resolving to an unregistered extension or a non-seamless type throw
+   * with guidance. The same source always yields the same instance — also
+   * across {@link load} — and options are first-wins: conflicting options on a
    * later call are ignored with a one-time dev warning.
    *
-   * @remarks For a seamless type, `get(Type, source)` on an unloaded source
+   * @remarks For a seamless type, `get('sprite.png')` on an unloaded source
    * returns a `'loading'` placeholder and fetches URL `<source>` — it no longer
    * throws "missing resource". A bare alias that isn't a real path (a typo, or a
    * not-yet-preloaded alias) therefore fetches that string and can 404 quietly
    * instead of throwing; preloaded aliases still return the stored payload. This
    * is intended seamless-by-default behaviour — the note is for debuggability.
-   */
-  public get(type: typeof Texture, source: string, options?: TextureFactoryOptions & PreSizeOptions): Texture;
-  public get(type: typeof Texture, sources: readonly string[], options?: TextureFactoryOptions & PreSizeOptions): Texture[];
-  public get<K extends string>(type: typeof Texture, items: Readonly<Record<K, string>>, options?: TextureFactoryOptions & PreSizeOptions): Record<K, Texture>;
-
-  /**
-   * Seamless access by path alone — the asset type is inferred from the file
-   * extension (basename-only, longest-suffix-first; see {@link ExtensionTypeMap}).
-   * Accepts only paths whose inferred type has a seamless adapter (compile-time
-   * gate); dynamic strings resolving to an unregistered extension or a
-   * non-seamless type throw with guidance.
+   * For a dynamic source, use `get(Texture.of(dynamicPath))`.
    */
   public get<S extends string>(path: LoadByPath<S> extends Texture | Sound ? S : never, options?: unknown): LoadByPath<S>;
 
@@ -873,20 +694,6 @@ export class Loader {
    * extension. Broader fallback below the resource-only overload above.
    */
   public get<S extends string>(path: [KindByPath<S>] extends [never] ? never : S, options?: unknown): LeafForPath<S>;
-
-  /**
-   * Seamless access to a value asset: returns a stable {@link AssetRef}
-   * synchronously and never throws. The ref fills when the payload arrives
-   * (`loaded` resolves with the parsed value); failed refs retry in place on
-   * the next `get`. `load()` keeps resolving the raw value.
-   */
-  public get<T = unknown>(type: typeof Json, source: string, options?: unknown): AssetRef<T>;
-  public get(type: typeof TextAsset, source: string, options?: unknown): AssetRef<string>;
-  public get(type: typeof CsvAsset, source: string, options?: unknown): AssetRef<string[][]>;
-  public get(type: typeof XmlAsset, source: string, options?: unknown): AssetRef<Document>;
-  public get(type: typeof SubtitleAsset, source: string, options?: unknown): AssetRef<VTTCue[]>;
-  public get(type: typeof BinaryAsset, source: string, options?: unknown): AssetRef<ArrayBuffer>;
-  public get(type: typeof WasmAsset, source: string, options?: unknown): AssetRef<WebAssembly.Module>;
 
   /**
    * Retrieves a previously loaded asset by type and alias (legacy lookup form
@@ -927,8 +734,8 @@ export class Loader {
    * it — the same object, healing in place once its payload arrives.
    */
   public get<T extends object>(leaf: T): T;
-  public get(typeOrPath: Loadable | string | object, source?: unknown, options?: unknown): unknown {
-    return this._getClaimed(this._rootClaimer, typeOrPath, source, options);
+  public get(typeOrPath: Loadable | string | object, source?: unknown): unknown {
+    return this._getClaimed(this._rootClaimer, typeOrPath, source);
   }
 
   /**
@@ -940,7 +747,7 @@ export class Loader {
    * `'loading'`, which `_getSeamless` alone would not re-fetch).
    * @internal
    */
-  public _getClaimed(claimer: symbol, typeOrPath: Loadable | string | object, source?: unknown, options?: unknown): unknown {
+  public _getClaimed(claimer: symbol, typeOrPath: Loadable | string | object, source?: unknown): unknown {
     // Assets<M> container — adopt every handle-hybrid leaf (fill in place, claim
     // under `claimer`) and return the leaves keyed by their record key.
     if (typeOrPath instanceof AssetsImpl) {
@@ -1021,49 +828,11 @@ export class Loader {
     }
 
     // Not a container, meta-leaf, or path string: a Loadable type token.
-    const ctor = typeOrPath as Loadable;
-    const adapter = this._seamlessAdapters.get(ctor);
-
-    if (adapter !== undefined) {
-      if (typeof source === 'string') {
-        const handle = this._getSeamless(ctor, adapter, source, options);
-        this._claim(this._key(ctor, source), ctor, source, claimer);
-
-        return handle;
-      }
-
-      if (Array.isArray(source)) {
-        const paths: readonly string[] = source;
-
-        return paths.map(path => {
-          const handle = this._getSeamless(ctor, adapter, path, options);
-          this._claim(this._key(ctor, path), ctor, path, claimer);
-
-          return handle;
-        });
-      }
-
-      const out: Record<string, unknown> = {};
-      const items = source as Readonly<Record<string, string>>;
-
-      for (const [key, path] of Object.entries(items)) {
-        out[key] = this._getSeamless(ctor, adapter, path, options);
-        this._claim(this._key(ctor, path), ctor, path, claimer);
-      }
-
-      return out;
-    }
-
-    if (this._valueTokens.has(ctor) && typeof source === 'string') {
-      const ref = this._getRef(ctor, source, options);
-      this._claim(this._key(ctor, source), ctor, source, claimer);
-
-      return ref;
-    }
-
     // In-memory lookup for a non-seamless / non-value type (e.g. a bindAsset-
     // bound custom type populated by loadContainer): read the stored resource by
-    // source key.
+    // source key. Seamless/value fetch-by-token has been removed — use `X.of(...)`
+    // or a bare path for those.
+    const ctor = typeOrPath as Loadable;
     const src = source as string;
     const typeMap = this._resources.get(ctor);
 

@@ -1,6 +1,6 @@
 {
   "title": "SvgAsset",
-  "description": "Dispatch token for SVG loading. `loader.load(SvgAsset, 'icon.svg')` returns `Promise<HTMLImageElement>`.",
+  "description": "Dispatch token for SVG loading. `loader.load(SvgAsset.of('icon.svg'))` returns `Promise<HTMLImageElement>`.",
   "symbol": "SvgAsset",
   "kind": "class",
   "subsystem": "resources",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Dispatch token for SVG loading.",
-        "`loader.load(SvgAsset, 'icon.svg')` returns `Promise<HTMLImageElement>`."
+        "`loader.load(SvgAsset.of('icon.svg'))` returns `Promise<HTMLImageElement>`."
       ],
       "importLine": "import { SvgAsset } from '@codexo/exojs'",
       "sourceLink": null

@@ -75,7 +75,7 @@ describe('loadTiledMap — embedded tileset with atlas image', () => {
     'with-tileset-image.tmj': loadFixture('with-tileset-image.tmj'),
   });
 
-  it('calls loader.load(Texture, imageUrl) for the atlas image', async () => {
+  it('calls loader.load(Texture.of(imageUrl)) for the atlas image', async () => {
     await loadTiledMap('with-tileset-image.tmj', context);
     expect(loaderLoad).toHaveBeenCalledWith(Texture.of('tiles.png'));
   });

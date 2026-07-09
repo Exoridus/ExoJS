@@ -1,6 +1,6 @@
 {
   "title": "WasmAsset",
-  "description": "Dispatch token for WebAssembly module loading. `loader.load(WasmAsset, 'module.wasm')` returns `Promise<WebAssembly.Module>`.",
+  "description": "Dispatch token for WebAssembly module loading. `loader.load(WasmAsset.of('module.wasm'))` returns `Promise<WebAssembly.Module>`.",
   "symbol": "WasmAsset",
   "kind": "class",
   "subsystem": "resources",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Dispatch token for WebAssembly module loading.",
-        "`loader.load(WasmAsset, 'module.wasm')` returns `Promise<WebAssembly.Module>`."
+        "`loader.load(WasmAsset.of('module.wasm'))` returns `Promise<WebAssembly.Module>`."
       ],
       "importLine": "import { WasmAsset } from '@codexo/exojs'",
       "sourceLink": null

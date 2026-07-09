@@ -131,8 +131,8 @@ describe('refcount / claims', () => {
     const loader = createCoreLoader();
     const scopeA = Symbol('A');
     const scopeB = Symbol('B');
-    const handle = loader._getClaimed(scopeA, Sound, 'boom.ogg') as Sound;
-    loader._getClaimed(scopeB, Sound, 'boom.ogg');
+    const handle = loader._getClaimed(scopeA, Sound.of('boom.ogg')) as Sound;
+    loader._getClaimed(scopeB, Sound.of('boom.ogg'));
     await handle.loaded;
 
     loader._release(loader['_key'](Sound, 'boom.ogg'), scopeA);
