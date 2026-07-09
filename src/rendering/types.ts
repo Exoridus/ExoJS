@@ -73,6 +73,21 @@ export enum WrapModes {
 }
 
 /**
+ * Color attachment format for an offscreen {@link RenderTexture}.
+ *
+ * - `'rgba8'` — 8-bit fixed-point RGBA (the default; universally supported).
+ * - `'rgba16f'` — half-float RGBA. Stores values outside `[0, 1]` at reduced
+ *   precision; usually enough for feedback/state buffers.
+ * - `'rgba32f'` — full-float RGBA. Highest precision, 16 bytes per pixel.
+ *
+ * The float formats require `EXT_color_buffer_float` to be *rendered into*
+ * (WebGL2). Allocating one on a context without the extension throws at
+ * render-target preparation. Float render targets default to `nearest`
+ * sampling; linear filtering additionally requires `OES_texture_float_linear`.
+ */
+export type ColorTextureFormat = 'rgba8' | 'rgba16f' | 'rgba32f';
+
+/**
  * GPU primitive topology used when issuing draw calls.
  * Values are WebGL2 GLenum constants (e.g. `gl.TRIANGLES`).
  */
