@@ -129,10 +129,33 @@ type AssetsFacade = AssetsConstructorFn & {
    * test `test/type-tests/assets-strict-false.type-test.ts`.
    */
   from<const M extends Record<string, CatalogEntry>>(definition: M): Assets<M>;
+
+  /**
+   * Build a single meta-stamped leaf (a usable placeholder resource or an
+   * `AssetRef`) from ONE descriptor — the explicit single-asset alternative to
+   * wrapping it in a one-field {@link from} catalog (asset-system v2 §5). Accepts
+   * the same descriptor set as a catalog field: a bare path, an `X.of()`
+   * descriptor, or an explicit `{ kind, source, ...opts }` config. The leaf
+   * starts `'idle'` until a loader adopts it.
+   *
+   * @example
+   * ```ts
+   * const chunk = Assets.one({ kind: 'json', source: `chunks/${cx}_${cy}.json` });
+   * loader.load(chunk, { background: true });
+   * await chunk.loaded;
+   * ```
+   */
+  one<const E extends CatalogEntry>(entry: E): InferCatalogLeaf<E>;
 };
 
 (AssetsImpl as unknown as { from: unknown }).from = function from<const M extends Record<string, CatalogEntry>>(definition: M): Assets<M> {
   return new (AssetsImpl as unknown as AssetsConstructorFn)(definition as never);
+};
+
+(AssetsImpl as unknown as { one: unknown }).one = function one<const E extends CatalogEntry>(entry: E): InferCatalogLeaf<E> {
+  const { kind, source, ...rest } = _normalizeEntry(entry);
+  const opts = Object.keys(rest).length > 0 ? rest : undefined;
+  return createLeaf(kind, source, opts) as unknown as InferCatalogLeaf<E>;
 };
 
 export const Assets = AssetsImpl as unknown as AssetsFacade;
