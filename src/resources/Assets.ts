@@ -31,7 +31,7 @@ export type InferAssetsProperties<M extends Record<string, CatalogEntry>> = {
  * Normalize a single catalog entry to a plain `{ type, source, ...opts }`
  * config. A bare path string is resolved to its asset kind by file suffix
  * (asset-system v2 §5); an unregistered/ambiguous suffix throws a guiding
- * error pointing at `registerAsset()`, compound suffixes, or `X.of()`. An
+ * error pointing at `X.of()`, compound suffixes, or extension registration. An
  * already-constructed `Asset` contributes its `_config`; a plain config passes
  * through unchanged.
  */
@@ -41,7 +41,7 @@ function _normalizeEntry(value: CatalogEntry): AnyAssetConfig {
     if (kind === undefined) {
       throw new Error(
         `Assets: no asset kind is registered for the extension of "${value}". ` +
-          `Register one via registerAsset(), use a compound suffix, or annotate with X.of().`,
+          `Annotate it with X.of(), use a compound suffix, or register the type's extension (registerExtensionKind / an AssetBinding).`,
       );
     }
     const config = { type: kind, source: value };
