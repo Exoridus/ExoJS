@@ -63,7 +63,7 @@ describe('load(target, { background: true })', () => {
 
     loader.setConcurrency(0); // park the queue so the divert is observable
 
-    const catalog = new Assets({ ship: { type: 'texture', source: 'ship.png' } });
+    const catalog = new Assets({ ship: { kind: 'texture', source: 'ship.png' } });
     loader.load(catalog, { background: true });
 
     // Adopted (registered + claimed) but NOT fetched — the leaf sits in the background queue.
@@ -88,8 +88,8 @@ describe('load(target, { background: true })', () => {
     loader.setConcurrency(0); // keep the queue parked so boost is observable
 
     const catalog = new Assets({
-      ship: { type: 'texture', source: 'ship.png' },
-      logo: { type: 'texture', source: 'logo.png' },
+      ship: { kind: 'texture', source: 'ship.png' },
+      logo: { kind: 'texture', source: 'logo.png' },
     });
     loader.load(catalog, { background: true });
 
@@ -112,7 +112,7 @@ describe('load(target, { background: true })', () => {
 
     loader.setConcurrency(0); // background parked, but the foreground path ignores concurrency
 
-    const catalog = new Assets({ ship: { type: 'texture', source: 'ship.png' } });
+    const catalog = new Assets({ ship: { kind: 'texture', source: 'ship.png' } });
     loader.load(catalog);
 
     expect(isQueued(loader, 'ship.png')).toBe(false);
@@ -140,7 +140,7 @@ describe('load(target, { background: true })', () => {
 
     loader.setConcurrency(0);
 
-    const catalog = new Assets({ config: { type: 'json', source: 'cfg.json' } });
+    const catalog = new Assets({ config: { kind: 'json', source: 'cfg.json' } });
     loader.load(catalog, { background: true });
 
     expect(catalog.config.loadState).toBe('loading');
@@ -160,7 +160,7 @@ describe('load(target, { background: true })', () => {
 
     loader.setConcurrency(0);
 
-    const catalog = new Assets({ ship: { type: 'texture', source: 'ship.png' } });
+    const catalog = new Assets({ ship: { kind: 'texture', source: 'ship.png' } });
     loader.load(catalog, { background: true });
 
     expect(isQueued(loader, 'ship.png')).toBe(true);

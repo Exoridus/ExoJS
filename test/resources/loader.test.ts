@@ -246,7 +246,7 @@ describe('Loader', () => {
     ]);
     mockFetch('raw');
 
-    const result = await loader.load(new Asset({ type: 'dummyAsset', source: 'thing.dat' }));
+    const result = await loader.load(new Asset({ kind: 'dummyAsset', source: 'thing.dat' }));
 
     expect(result).toBeInstanceOf(DummyAsset);
     expect(result.value).toBe('raw');
@@ -388,8 +388,8 @@ describe('Loader', () => {
     mockFetch();
 
     const [first, second] = await Promise.all([
-      loader.load(new Asset({ type: 'firstType', source: 'shared.asset' })),
-      loader.load(new Asset({ type: 'secondType', source: 'shared.asset' })),
+      loader.load(new Asset({ kind: 'firstType', source: 'shared.asset' })),
+      loader.load(new Asset({ kind: 'secondType', source: 'shared.asset' })),
     ]);
 
     expect(first).toBeInstanceOf(FirstType);
@@ -410,7 +410,7 @@ describe('LoadingQueue progress tracking', () => {
     // 'mockAsset' is in AssetDefinitions (via declaration merge above) but we
     // deliberately do NOT call loader.registerAssetType() so that the runtime
     // has no constructor registered for it → "no constructor" rejection path.
-    const asset = new Asset({ type: 'mockAsset', source: 'test.dat' });
+    const asset = new Asset({ kind: 'mockAsset', source: 'test.dat' });
 
     const queue = loader.load(asset);
     let lastProgress = queue.progress;
@@ -446,8 +446,8 @@ describe('LoadingQueue progress tracking', () => {
     );
     mockFetch();
 
-    const goodAsset = new Asset({ type: 'mockAsset', source: 'good.dat' });
-    const badAsset = new Asset({ type: 'mockAsset', source: 'bad.dat' });
+    const goodAsset = new Asset({ kind: 'mockAsset', source: 'good.dat' });
+    const badAsset = new Asset({ kind: 'mockAsset', source: 'bad.dat' });
 
     const queue = loader.load({ good: goodAsset, bad: badAsset });
     let lastProgress = queue.progress;
@@ -524,7 +524,7 @@ describe('Asset / Assets identity and alias semantics', () => {
     bindMockAsset(loader);
     mockFetch();
 
-    const hero = new Asset({ type: 'mockAsset', source: 'images/hero.dat' });
+    const hero = new Asset({ kind: 'mockAsset', source: 'images/hero.dat' });
 
     await loader.load({ heroA: hero, heroB: hero });
 
@@ -539,7 +539,7 @@ describe('Asset / Assets identity and alias semantics', () => {
     bindMockAsset(loader);
     mockFetch();
 
-    const hero = new Asset({ type: 'mockAsset', source: 'images/hero.dat' });
+    const hero = new Asset({ kind: 'mockAsset', source: 'images/hero.dat' });
 
     await loader.load({ heroA: hero, heroB: hero });
 
@@ -552,7 +552,7 @@ describe('Asset / Assets identity and alias semantics', () => {
     bindMockAsset(loader);
     mockFetch();
 
-    const hero = new Asset({ type: 'mockAsset', source: 'images/hero.dat' });
+    const hero = new Asset({ kind: 'mockAsset', source: 'images/hero.dat' });
 
     await loader.load(hero);
 
@@ -569,7 +569,7 @@ describe('Asset / Assets identity and alias semantics', () => {
     bindMockAsset(loader);
     mockFetch();
 
-    const hero = new Asset({ type: 'mockAsset', source: 'images/hero.dat' });
+    const hero = new Asset({ kind: 'mockAsset', source: 'images/hero.dat' });
 
     await loader.load({ heroA: hero, heroB: hero });
 
@@ -595,8 +595,8 @@ describe('Asset / Assets identity and alias semantics', () => {
     );
 
     const container = new Assets({
-      hero: { type: 'texture', source: 'hero.png' },
-      logo: { type: 'texture', source: 'logo.png' },
+      hero: { kind: 'texture', source: 'hero.png' },
+      logo: { kind: 'texture', source: 'logo.png' },
     });
 
     await loader.load(container);
@@ -621,7 +621,7 @@ describe('Asset / Assets identity and alias semantics', () => {
     bindMockAsset(loader);
     mockFetch();
 
-    const hero = new Asset({ type: 'mockAsset', source: 'hero.dat' });
+    const hero = new Asset({ kind: 'mockAsset', source: 'hero.dat' });
 
     await loader.load({ a: hero, b: hero, c: hero });
 
@@ -647,7 +647,7 @@ describe('Assets reserved "entries" key', () => {
   test('does not throw for a normal asset name', () => {
     expect(() => {
       new Assets({
-        logo: { type: 'texture', source: '/logo.png' },
+        logo: { kind: 'texture', source: '/logo.png' },
       });
     }).not.toThrow();
   });
@@ -691,7 +691,7 @@ describe('bindAsset() handler — cache-aware AssetLoaderContext', () => {
       },
     );
 
-    await loader.load(new Asset({ type: 'richAsset', source: 'a.json', format: 'x' }));
+    await loader.load(new Asset({ kind: 'richAsset', source: 'a.json', format: 'x' }));
     expect(capturedKey).toMatch(/^id:\d+:/);
   });
 
@@ -701,7 +701,7 @@ describe('bindAsset() handler — cache-aware AssetLoaderContext', () => {
 
     loader.bindAsset<string>({ type: RichAsset, typeNames: ['richAsset'] }, { load: async (request, ctx) => ctx.fetchText(request.source) });
 
-    const result = await loader.load(new Asset({ type: 'richAsset', source: 'file.txt', format: 'txt' }));
+    const result = await loader.load(new Asset({ kind: 'richAsset', source: 'file.txt', format: 'txt' }));
     expect(result).toBe('hello world');
     expect(global.fetch).toHaveBeenCalledWith('/assets/file.txt', expect.anything());
   });
@@ -713,11 +713,11 @@ describe('bindAsset() handler — cache-aware AssetLoaderContext', () => {
     loader.bindAsset<string>({ type: RichAsset, typeNames: ['richAsset'] }, { load: async (request, ctx) => ctx.fetchText(request.source) });
 
     // First load — populates in-memory result
-    await loader.load(new Asset({ type: 'richAsset', source: 'file.txt', format: 'txt' }));
+    await loader.load(new Asset({ kind: 'richAsset', source: 'file.txt', format: 'txt' }));
     // Reset the mock so we can check if it was called during the second load
     (global.fetch as MockInstance).mockClear();
     // Second load — same asset, should be served from _resources (no new fetch call)
-    await loader.load(new Asset({ type: 'richAsset', source: 'file.txt', format: 'txt' }));
+    await loader.load(new Asset({ kind: 'richAsset', source: 'file.txt', format: 'txt' }));
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
@@ -735,7 +735,7 @@ describe('bindAsset() handler — cache-aware AssetLoaderContext', () => {
       },
     );
 
-    const result = await loader.load(new Asset({ type: 'richAsset', source: 'data.json', format: 'json' }));
+    const result = await loader.load(new Asset({ kind: 'richAsset', source: 'data.json', format: 'json' }));
     expect(result).toBe('42');
   });
 
@@ -753,7 +753,7 @@ describe('bindAsset() handler — cache-aware AssetLoaderContext', () => {
       },
     );
 
-    const result = await loader.load(new Asset({ type: 'richAsset', source: 'data.bin', format: 'bin' }));
+    const result = await loader.load(new Asset({ kind: 'richAsset', source: 'data.bin', format: 'bin' }));
     expect(Number(result)).toBeGreaterThan(0);
   });
 
@@ -772,8 +772,8 @@ describe('bindAsset() handler — cache-aware AssetLoaderContext', () => {
       },
     );
 
-    const tmx = new Asset({ type: 'richAsset', source: 'map.tmx', format: 'tmx' });
-    const json = new Asset({ type: 'richAsset', source: 'map.tmx', format: 'tiled-json' });
+    const tmx = new Asset({ kind: 'richAsset', source: 'map.tmx', format: 'tmx' });
+    const json = new Asset({ kind: 'richAsset', source: 'map.tmx', format: 'tiled-json' });
 
     const [resTmx, resJson] = await Promise.all([loader.load(tmx), loader.load(json)]);
 
@@ -798,8 +798,8 @@ describe('bindAsset() handler — cache-aware AssetLoaderContext', () => {
       },
     );
 
-    const a1 = new Asset({ type: 'richAsset', source: 'shared.dat', format: 'x' });
-    const a2 = new Asset({ type: 'richAsset', source: 'shared.dat', format: 'x' });
+    const a1 = new Asset({ kind: 'richAsset', source: 'shared.dat', format: 'x' });
+    const a2 = new Asset({ kind: 'richAsset', source: 'shared.dat', format: 'x' });
 
     const [r1, r2] = await Promise.all([loader.load(a1), loader.load(a2)]);
 
@@ -854,7 +854,7 @@ describe('handler context.fetch* — IDB store names (Fix 1 regression)', () => 
 
     loader.bindAsset<string>({ type: RichAsset, typeNames: ['richAsset'] }, { load: async (request, ctx) => ctx.fetchText(request.source) });
 
-    await loader.load(new Asset({ type: 'richAsset', source: 'file.txt', format: 'txt' }));
+    await loader.load(new Asset({ kind: 'richAsset', source: 'file.txt', format: 'txt' }));
 
     expect(saves).toContainEqual({ storageName: '__ctx_text', key: 'file.txt' });
   });
@@ -874,7 +874,7 @@ describe('handler context.fetch* — IDB store names (Fix 1 regression)', () => 
       },
     );
 
-    await loader.load(new Asset({ type: 'richAsset', source: 'data.json', format: 'json' }));
+    await loader.load(new Asset({ kind: 'richAsset', source: 'data.json', format: 'json' }));
 
     expect(saves).toContainEqual({ storageName: '__ctx_json', key: 'data.json' });
   });
@@ -894,7 +894,7 @@ describe('handler context.fetch* — IDB store names (Fix 1 regression)', () => 
       },
     );
 
-    await loader.load(new Asset({ type: 'richAsset', source: 'data.bin', format: 'bin' }));
+    await loader.load(new Asset({ kind: 'richAsset', source: 'data.bin', format: 'bin' }));
 
     expect(saves).toContainEqual({ storageName: '__ctx_binary', key: 'data.bin' });
   });
@@ -921,10 +921,10 @@ describe('handler context.fetch* — IDB store names (Fix 1 regression)', () => 
     loader.bindAsset<string>({ type: RichAsset, typeNames: ['richAsset'] }, { load: async (request, ctx) => ctx.fetchText(request.source) });
 
     // First load — populates _resources; context.fetchText goes to network, store has no entry yet
-    await loader.load(new Asset({ type: 'richAsset', source: 'file.txt', format: 'txt' }));
+    await loader.load(new Asset({ kind: 'richAsset', source: 'file.txt', format: 'txt' }));
     // Second load — served from _resources, handler not called, store not consulted
     (global.fetch as MockInstance).mockClear();
-    await loader.load(new Asset({ type: 'richAsset', source: 'file.txt', format: 'txt' }));
+    await loader.load(new Asset({ kind: 'richAsset', source: 'file.txt', format: 'txt' }));
     expect(global.fetch).not.toHaveBeenCalled();
   });
 });
@@ -943,8 +943,8 @@ describe('unload(asset) + getIdentityKey — identity discrimination (Fix 2 regr
       },
     );
 
-    const tmxMap = new Asset({ type: 'richAsset', source: 'map.dat', format: 'tmx' });
-    const rpgMap = new Asset({ type: 'richAsset', source: 'map.dat', format: 'rpg-maker' });
+    const tmxMap = new Asset({ kind: 'richAsset', source: 'map.dat', format: 'tmx' });
+    const rpgMap = new Asset({ kind: 'richAsset', source: 'map.dat', format: 'rpg-maker' });
 
     await loader.load({ tmxA: tmxMap, tmxB: tmxMap, rpgA: rpgMap });
 
@@ -966,7 +966,7 @@ describe('unload(asset) + getIdentityKey — identity discrimination (Fix 2 regr
 
     loader.bindAsset<string>({ type: RichAsset, typeNames: ['richAsset'] }, { load: async request => `result:${request.source}` });
 
-    const asset = new Asset({ type: 'richAsset', source: 'shared.dat', format: 'x' });
+    const asset = new Asset({ kind: 'richAsset', source: 'shared.dat', format: 'x' });
 
     await loader.load({ a: asset, b: asset });
 
@@ -992,8 +992,8 @@ describe('unload(asset) + getIdentityKey — identity discrimination (Fix 2 regr
       },
     );
 
-    const tmxMap = new Asset({ type: 'richAsset', source: 'map.dat', format: 'tmx' });
-    const rpgMap = new Asset({ type: 'richAsset', source: 'map.dat', format: 'rpg-maker' });
+    const tmxMap = new Asset({ kind: 'richAsset', source: 'map.dat', format: 'tmx' });
+    const rpgMap = new Asset({ kind: 'richAsset', source: 'map.dat', format: 'rpg-maker' });
 
     await loader.load({ tmxA: tmxMap, rpgA: rpgMap });
 
@@ -1066,7 +1066,7 @@ describe('keyFor()', () => {
     ]);
     mockFetch();
 
-    const result = await loader.load(new Asset({ type: 'dummyAsset', source: 'thing.dat' }));
+    const result = await loader.load(new Asset({ kind: 'dummyAsset', source: 'thing.dat' }));
 
     expect(loader.keyFor(result)).toEqual({ type: DummyAsset, source: 'thing.dat' });
   });
@@ -1085,7 +1085,7 @@ describe('keyFor()', () => {
 describe('unload() edge cases', () => {
   test('unload(asset) is a no-op when the asset type was never registered', () => {
     const loader = new Loader({ basePath: '/' });
-    const orphan = new Asset({ type: 'mockAsset', source: 'x.dat' });
+    const orphan = new Asset({ kind: 'mockAsset', source: 'x.dat' });
 
     expect(() => loader.unload(orphan)).not.toThrow();
   });
@@ -1095,7 +1095,7 @@ describe('unload() edge cases', () => {
 
     loader.bindAsset<string>({ type: MockAssetType, typeNames: ['mockAsset'] }, { load: async request => `loaded:${request.source}` });
 
-    const neverLoaded = new Asset({ type: 'mockAsset', source: 'never.dat' });
+    const neverLoaded = new Asset({ kind: 'mockAsset', source: 'never.dat' });
 
     expect(() => loader.unload(neverLoaded)).not.toThrow();
     expect(loader._peekResource(MockAssetType, 'never.dat')).toBeNull();
@@ -1106,7 +1106,7 @@ describe('unload() edge cases', () => {
     // thrown. A bare loader (no core bindings) never adopted the leaf, so its
     // release finds no registered key and does nothing.
     const loader = new Loader({ basePath: '/' });
-    const container = new Assets({ orphan: { type: 'texture', source: 'x.png' } });
+    const container = new Assets({ orphan: { kind: 'texture', source: 'x.png' } });
 
     expect(() => loader.unload(container)).not.toThrow();
   });
@@ -1114,7 +1114,7 @@ describe('unload() edge cases', () => {
   test('unload(assets) is a silent no-op when the container was never adopted/loaded', () => {
     // Intent preserved: unloading entries that were never tracked does nothing.
     const loader = createCoreLoader({ basePath: '/' });
-    const container = new Assets({ orphan: { type: 'texture', source: 'never.png' } });
+    const container = new Assets({ orphan: { kind: 'texture', source: 'never.png' } });
 
     expect(() => loader.unload(container)).not.toThrow();
     expect(loader._peekResource(Texture, 'never.png')).toBeNull();
@@ -1240,7 +1240,7 @@ describe('bindAsset() — direct handler binding', () => {
       }),
     ]);
 
-    const result = (await loader.load(new Asset({ type: 'boundAsset', source: 'thing.bin' }))) as BoundAsset;
+    const result = (await loader.load(new Asset({ kind: 'boundAsset', source: 'thing.bin' }))) as BoundAsset;
 
     expect(result).toBeInstanceOf(BoundAsset);
     expect(result.value).toBe('thing.bin');
@@ -1264,7 +1264,7 @@ describe('bindAsset() — direct handler binding', () => {
       }),
     ]);
 
-    await loader.load(new Asset({ type: 'boundAsset', source: 'thing.bin', scale: 3 }));
+    await loader.load(new Asset({ kind: 'boundAsset', source: 'thing.bin', scale: 3 }));
 
     expect(receivedConfig).toMatchObject({ source: 'thing.bin', options: { scale: 3 } });
   });
@@ -1274,7 +1274,7 @@ describe('bindAsset() — direct handler binding', () => {
 
     loader.bindAsset<BoundAsset>({ type: BoundAsset, typeNames: ['boundAsset'] }, { load: async request => new BoundAsset(request.source) });
 
-    const result = await loader.load(new Asset({ type: 'boundAsset', source: 'level.dat' }));
+    const result = await loader.load(new Asset({ kind: 'boundAsset', source: 'level.dat' }));
 
     expect(result).toBeInstanceOf(BoundAsset);
   });
@@ -1304,8 +1304,8 @@ describe('bindAsset() — direct handler binding', () => {
       },
     );
 
-    const a = new Asset({ type: 'boundAsset', source: 'shared.dat', scale: 2 });
-    const b = new Asset({ type: 'boundAsset', source: 'shared.dat', scale: 2 });
+    const a = new Asset({ kind: 'boundAsset', source: 'shared.dat', scale: 2 });
+    const b = new Asset({ kind: 'boundAsset', source: 'shared.dat', scale: 2 });
 
     await Promise.all([loader.load(a), loader.load(b)]);
 
@@ -1517,7 +1517,7 @@ describe('handler load() rejection is wrapped with url + cause', () => {
       },
     );
 
-    const asset = new Asset({ type: 'richAsset', source: 'x.json', format: 'x' });
+    const asset = new Asset({ kind: 'richAsset', source: 'x.json', format: 'x' });
     const error: Error = await loader.load(asset).catch((e: unknown) => e as Error);
 
     expect(error.message).toMatch(/Failed to load "x\.json" from "\/assets\/x\.json": handler exploded/);
@@ -1554,7 +1554,7 @@ describe('Asset-based load() — extra config fields as handler options', () => 
       }),
     ]);
 
-    await loader.load(new Asset({ type: 'mockAsset', source: 'extra.dat', format: 'tiled' }));
+    await loader.load(new Asset({ kind: 'mockAsset', source: 'extra.dat', format: 'tiled' }));
 
     expect(receivedOptions[0]).toMatchObject({ format: 'tiled' });
   });
@@ -1590,7 +1590,7 @@ describe('unload()-during-in-flight identity cleanup on rejection', () => {
 
     loader.bindAsset<unknown>({ type: RichAsset, typeNames: ['richAsset'] }, { load: async () => deferred.promise });
 
-    const asset = new Asset({ type: 'richAsset', source: 'x.dat', format: 'x' });
+    const asset = new Asset({ kind: 'richAsset', source: 'x.dat', format: 'x' });
     const pending = loader.load(asset);
 
     // Unload while still in flight: this clears `_identityKeyToAliases` for this
@@ -1624,7 +1624,7 @@ describe('unloadAll() with no type argument', () => {
     global.fetch = vi.fn(async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', text: async () => 'raw' }) as unknown as Response);
 
     await loader.load('a.txt');
-    await loader.load(new Asset({ type: 'dummyAsset', source: 'b.dat' }));
+    await loader.load(new Asset({ kind: 'dummyAsset', source: 'b.dat' }));
 
     expect(loader._peekResource(TextAsset, 'a.txt')).not.toBeNull();
     expect(loader._peekResource(DummyAsset, 'b.dat')).not.toBeNull();
@@ -1642,7 +1642,7 @@ describe('load({ alias: config }) — plain object values are auto-wrapped in an
 
     loader.bindAsset<string>({ type: MockAssetType, typeNames: ['mockAsset'] }, { load: async request => `loaded:${request.source}` });
 
-    await loader.load({ hero: { type: 'mockAsset', source: 'hero.dat' } });
+    await loader.load({ hero: { kind: 'mockAsset', source: 'hero.dat' } });
 
     expect(loader._peekResource(MockAssetType, 'hero')).not.toBeNull();
   });
@@ -1670,7 +1670,7 @@ describe('non-Error throws are stringified when wrapping fetch/handler failures'
       },
     );
 
-    const asset = new Asset({ type: 'richAsset', source: 'y.json', format: 'y' });
+    const asset = new Asset({ kind: 'richAsset', source: 'y.json', format: 'y' });
 
     await expect(loader.load(asset)).rejects.toThrow(/Failed to load "y\.json" from "\/assets\/y\.json": plain string failure/);
   });

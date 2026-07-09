@@ -109,7 +109,7 @@ describe('materializeAssetBindings', () => {
     const loader = new Loader();
     materializeAssetBindings(loader, [binding]);
 
-    await loader.load(new Asset({ type: 'withOpts', source: 'thing.dat', family: 'Kenney Future', size: 32 })).catch(() => undefined);
+    await loader.load(new Asset({ kind: 'withOpts', source: 'thing.dat', family: 'Kenney Future', size: 32 })).catch(() => undefined);
 
     expect(seen?.source).toBe('thing.dat');
     expect(seen?.options).toEqual({ family: 'Kenney Future', size: 32 });
@@ -128,7 +128,7 @@ describe('materializeAssetBindings', () => {
     const loader = new Loader();
     materializeAssetBindings(loader, [binding]);
 
-    await loader.load(new Asset({ type: 'noOpts', source: 'thing.dat' })).catch(() => undefined);
+    await loader.load(new Asset({ kind: 'noOpts', source: 'thing.dat' })).catch(() => undefined);
 
     expect(seen?.source).toBe('thing.dat');
     expect(seen?.options).toBeUndefined();
@@ -229,7 +229,7 @@ describe('materializeAssetBindings', () => {
     const hasSpy = vi.spyOn(ExtensionRegistry, 'has');
 
     // Load via the config (typeName) path
-    await loader.load(new Asset({ type: 'testType', source: 'test.tstx' })).catch(() => {
+    await loader.load(new Asset({ kind: 'testType', source: 'test.tstx' })).catch(() => {
       // ignore load error (no actual fetch)
     });
 

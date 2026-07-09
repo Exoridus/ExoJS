@@ -110,7 +110,7 @@ export class AsepriteSheet {
    * to load it by annotation.
    */
   public static of(source: string): Asset<AsepriteSheet> {
-    return new Asset({ type: 'asepriteSheet', source }) as unknown as Asset<AsepriteSheet>;
+    return new Asset({ kind: 'asepriteSheet', source });
   }
 
   /** The underlying {@link Spritesheet} whose frames are keyed by index string. */

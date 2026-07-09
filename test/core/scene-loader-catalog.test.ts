@@ -64,7 +64,7 @@ describe('SceneLoader catalog adopt', () => {
 
   test('claims catalog leaves under the scene scope and releases on destroy', async () => {
     const { scene, loader } = makeSceneWithTextureLoader();
-    const assets = new Assets({ ship: { type: 'texture', source: 'ship.png' } });
+    const assets = new Assets({ ship: { kind: 'texture', source: 'ship.png' } });
 
     scene.loader.load(assets);
     await assets.ship.loaded;
@@ -80,7 +80,7 @@ describe('SceneLoader catalog adopt', () => {
 
   test('get(catalog) through this.loader adopts every leaf under the scene scope', async () => {
     const { scene, loader } = makeSceneWithTextureLoader();
-    const assets = new Assets({ ship: { type: 'texture', source: 'ship.png' } });
+    const assets = new Assets({ ship: { kind: 'texture', source: 'ship.png' } });
 
     const got = scene.loader.get(assets);
     expect(got.ship).toBe(assets.ship);
@@ -102,7 +102,7 @@ describe('SceneLoader catalog adopt', () => {
   // overloads (including the M1 AssetRef discriminator) verbatim.
   test('load(single resource leaf) forwards through this.loader, claiming under the scene scope', async () => {
     const { scene, loader } = makeSceneWithTextureLoader();
-    const assets = new Assets({ ship: { type: 'texture', source: 'ship.png' } });
+    const assets = new Assets({ ship: { kind: 'texture', source: 'ship.png' } });
 
     const result = await scene.loader.load(assets.ship);
 
@@ -119,7 +119,7 @@ describe('SceneLoader catalog adopt', () => {
   test('load(single value leaf) resolves the raw value, mirroring Loader.load(AssetRef leaf)', async () => {
     mockFetchJson({ hp: 3 });
     const { scene } = makeSceneWithTextureLoader(); // loader carries coreAssetBindings, incl. json
-    const assets = new Assets({ config: { type: 'json', source: 'cfg.json' } });
+    const assets = new Assets({ config: { kind: 'json', source: 'cfg.json' } });
 
     const result = await scene.loader.load(assets.config);
 
@@ -130,8 +130,8 @@ describe('SceneLoader catalog adopt', () => {
   test('type-level: SceneLoader.load leaf/catalog overloads mirror Loader.load', () => {
     const { scene } = makeSceneWithTextureLoader();
     const assets = new Assets({
-      ship: { type: 'texture', source: 'ship.png' },
-      config: { type: 'json', source: 'cfg.json' },
+      ship: { kind: 'texture', source: 'ship.png' },
+      config: { kind: 'json', source: 'cfg.json' },
     });
 
     // Each assertion is wrapped in an uncalled arrow so only the overload

@@ -24,14 +24,14 @@ function loadFixture(name: string): unknown {
 describe('Tiled .of annotation statics', () => {
   it('TiledMap.of carries the tiledMap kind + source', () => {
     const a = TiledMap.of('world.tmj');
-    expect(a.type).toBe('tiledMap');
+    expect(a.kind).toBe('tiledMap');
     expect(a.source).toBe('world.tmj');
     expectTypeOf(a).toEqualTypeOf<Asset<TiledMap>>();
   });
 
   it('TileMap.of carries the tileMap kind + source', () => {
     const a = TileMap.of('world.tmj');
-    expect(a.type).toBe('tileMap');
+    expect(a.kind).toBe('tileMap');
     expect(a.source).toBe('world.tmj');
     expectTypeOf(a).toEqualTypeOf<Asset<TileMap>>();
   });

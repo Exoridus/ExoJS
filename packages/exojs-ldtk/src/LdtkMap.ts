@@ -23,7 +23,7 @@ export class LdtkMap {
    * paths — prefer a bare `'world.ldtk'` string when the suffix is a literal.
    */
   public static of(source: string): Asset<LdtkMap> {
-    return new Asset({ type: 'ldtkMap', source }) as unknown as Asset<LdtkMap>;
+    return new Asset({ kind: 'ldtkMap', source });
   }
 
   /** Resolved URL this map was loaded from. */

@@ -9,7 +9,7 @@ import { AsepriteSheet } from '../src/AsepriteSheet';
 describe('AsepriteSheet.of annotation static', () => {
   it('carries the asepriteSheet kind + source', () => {
     const a = AsepriteSheet.of('hero.aseprite.json');
-    expect(a.type).toBe('asepriteSheet');
+    expect(a.kind).toBe('asepriteSheet');
     expect(a.source).toBe('hero.aseprite.json');
   });
 

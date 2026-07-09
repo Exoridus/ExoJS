@@ -47,8 +47,8 @@ function makeContext(fixtures: Record<string, unknown>) {
   loaderLoad.mockImplementation(async (token: unknown): Promise<unknown> => {
     // Both Texture and TiledMap sub-loads now arrive as `X.of(src)` descriptors
     // (asset form); read the source from the descriptor.
-    const asset = token as { type?: unknown; source?: unknown } | null;
-    if (asset?.type === 'texture') {
+    const asset = token as { kind?: unknown; source?: unknown } | null;
+    if (asset?.kind === 'texture') {
       const src = asset.source as string;
       const tex = new Texture();
       const size = TEXTURE_SIZES[src] ?? { w: 256, h: 256 };
@@ -56,7 +56,7 @@ function makeContext(fixtures: Record<string, unknown>) {
       tex.height = size.h;
       return tex;
     }
-    if (asset?.type === 'tiledMap') {
+    if (asset?.kind === 'tiledMap') {
       return loadTiledMap(asset.source as string, context);
     }
     throw new Error(`toTileMap.test: unexpected loader.load token: ${String(token)}`);

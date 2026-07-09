@@ -109,7 +109,7 @@ function validateAsepriteData(raw: unknown, source: string): AsepriteData {
  * sub-load deduplication, and constructs a fully-parsed {@link AsepriteSheet}.
  *
  * The `aseprite` type name enables the asset-config shorthand:
- * `{ type: 'aseprite', source: 'hero.aseprite.json' }`.
+ * `{ kind: 'aseprite', source: 'hero.aseprite.json' }`.
  */
 export const asepriteBinding = defineAsset({
   type: AsepriteSheet,

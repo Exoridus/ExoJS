@@ -10,7 +10,7 @@ import { LdtkMap } from '../src/LdtkMap';
 describe('LdtkMap.of annotation static', () => {
   it('carries the ldtkMap kind + source', () => {
     const a = LdtkMap.of('world.ldtk');
-    expect(a.type).toBe('ldtkMap');
+    expect(a.kind).toBe('ldtkMap');
     expect(a.source).toBe('world.ldtk');
   });
 

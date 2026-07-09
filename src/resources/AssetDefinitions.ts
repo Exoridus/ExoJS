@@ -47,7 +47,7 @@ export interface AssetDefinitions {
 }
 
 export type AnyAssetConfig = {
-  [K in keyof AssetDefinitions]: { type: K } & AssetDefinitions[K]['config'];
+  [K in keyof AssetDefinitions]: { kind: K } & AssetDefinitions[K]['config'];
 }[keyof AssetDefinitions];
 
 /**
@@ -64,7 +64,7 @@ export type ValueAssetKind = 'json' | 'text' | 'csv' | 'xml' | 'srt' | 'vtt' | '
 export type AssetInput = AnyAssetConfig | Asset<unknown>;
 
 export type InferAssetResource<I extends AssetInput> =
-  I extends Asset<infer T> ? T : I extends { type: infer K extends keyof AssetDefinitions } ? AssetDefinitions[K]['resource'] : never;
+  I extends Asset<infer T> ? T : I extends { kind: infer K extends keyof AssetDefinitions } ? AssetDefinitions[K]['resource'] : never;
 
 // ---------------------------------------------------------------------------
 // Type-level bare-path inference (mirror of the runtime extensionKindRegistry)
@@ -145,7 +145,7 @@ export type InferCatalogLeaf<E extends CatalogEntry> = E extends string
     ? T extends object
       ? T
       : AssetRef<T>
-    : E extends { type: infer K extends keyof AssetDefinitions }
+    : E extends { kind: infer K extends keyof AssetDefinitions }
       ? K extends ValueAssetKind
         ? AssetRef<AssetDefinitions[K]['resource']>
         : AssetDefinitions[K]['resource']

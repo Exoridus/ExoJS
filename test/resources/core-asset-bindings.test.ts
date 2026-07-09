@@ -200,7 +200,7 @@ chars count=0
 
     expect(font).toBeInstanceOf(BmFont);
     expect(font.textures).toEqual([fakeTexture]);
-    expect(loaderMock.load).toHaveBeenCalledWith(expect.objectContaining({ _config: expect.objectContaining({ type: 'texture', source: 'fonts/page0.png' }) }));
+    expect(loaderMock.load).toHaveBeenCalledWith(expect.objectContaining({ _config: expect.objectContaining({ kind: 'texture', source: 'fonts/page0.png' }) }));
   });
 });
 

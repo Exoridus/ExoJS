@@ -40,14 +40,14 @@ function makeContext(fixtures: Record<string, unknown>) {
   // Both now arrive as `X.of(src)` descriptors (asset form) rather than a
   // `(constructor, url, opts)` token call.
   loaderLoad.mockImplementation(async (token: unknown): Promise<unknown> => {
-    const asset = token as { type?: unknown; source?: unknown } | null;
-    if (asset?.type === 'texture') {
+    const asset = token as { kind?: unknown; source?: unknown } | null;
+    if (asset?.kind === 'texture') {
       const tex = new Texture();
       tex.width = 32;
       tex.height = 32;
       return tex;
     }
-    if (asset?.type === 'tiledMap') {
+    if (asset?.kind === 'tiledMap') {
       return loadTiledMap(asset.source as string, context);
     }
     throw new Error(`tiledMapBinding.test: unexpected loader.load token: ${String(token)}`);

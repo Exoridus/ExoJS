@@ -11,23 +11,23 @@ describe('X.of() options', () => {
   it('SvgAsset.of forwards { width, height } into the descriptor config (G3)', () => {
     const asset = SvgAsset.of('icon.svg', { width: 32, height: 24 });
     expect(asset).toBeInstanceOf(AssetImpl);
-    expect(asset._config).toMatchObject({ type: 'svg', source: 'icon.svg', width: 32, height: 24 });
+    expect(asset._config).toMatchObject({ kind: 'svg', source: 'icon.svg', width: 32, height: 24 });
   });
 
   it('SvgAsset.of still works with no options (G3)', () => {
-    expect(SvgAsset.of('icon.svg')._config).toEqual({ type: 'svg', source: 'icon.svg' });
+    expect(SvgAsset.of('icon.svg')._config).toEqual({ kind: 'svg', source: 'icon.svg' });
   });
 
   it('Texture.of accepts a PARTIAL samplerOptions (G4)', () => {
     // Before the fix this required a full SamplerOptions object.
     const asset = Texture.of('ship.png', { samplerOptions: { scaleMode: ScaleModes.Nearest } });
-    expect(asset._config).toMatchObject({ type: 'texture', source: 'ship.png', samplerOptions: { scaleMode: ScaleModes.Nearest } });
+    expect(asset._config).toMatchObject({ kind: 'texture', source: 'ship.png', samplerOptions: { scaleMode: ScaleModes.Nearest } });
   });
 
   it('Texture.of accepts a full samplerOptions too (G4)', () => {
     const asset = Texture.of('ship.png', {
       samplerOptions: { scaleMode: ScaleModes.Linear, wrapMode: WrapModes.ClampToEdge, premultiplyAlpha: true, generateMipMap: true, flipY: false },
     });
-    expect(asset._config).toMatchObject({ type: 'texture', source: 'ship.png' });
+    expect(asset._config).toMatchObject({ kind: 'texture', source: 'ship.png' });
   });
 });

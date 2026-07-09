@@ -81,12 +81,12 @@ export class TileMap {
     // compilation cannot see it — `options` is loosely typed here rather than
     // importing a format package's option shape (that would invert the
     // dependency direction). Construct through a loosened constructor
-    // signature — the runtime `Asset` (AssetImpl) only stores `{ type, source,
+    // signature — the runtime `Asset` (AssetImpl) only stores `{ kind, source,
     // ...opts }`.
     return new (Asset as unknown as new (
-      config: { type: string; source: string } & Record<string, unknown>,
+      config: { kind: string; source: string } & Record<string, unknown>,
     ) => Asset<TileMap>)({
-      type: 'tileMap',
+      kind: 'tileMap',
       source,
       ...options,
     });

@@ -172,7 +172,7 @@ describe('BmFontLoaderFactory', () => {
     expect(font.fontData.lineHeight).toBe(40);
     expect(loader.load).toHaveBeenCalledTimes(1);
     expect(loader.load).toHaveBeenCalledWith(
-      expect.objectContaining({ _config: expect.objectContaining({ type: 'texture', source: 'https://example.com/fonts/test.png' }) }),
+      expect.objectContaining({ _config: expect.objectContaining({ kind: 'texture', source: 'https://example.com/fonts/test.png' }) }),
     );
   });
 

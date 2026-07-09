@@ -39,7 +39,7 @@ export class TiledMap {
    * explicit {@link TiledLoadOptions.format} hint for a `.json` path.
    */
   public static of(source: string, options?: TiledLoadOptions): Asset<TiledMap> {
-    return new Asset({ type: 'tiledMap', source, ...options });
+    return new Asset({ kind: 'tiledMap', source, ...options });
   }
 
   /** Resolved URL this map was loaded from. */

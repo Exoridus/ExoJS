@@ -33,7 +33,7 @@ function makeContext(fixtures: Record<string, unknown>) {
   };
 
   loaderLoad.mockImplementation(async (token: unknown): Promise<unknown> => {
-    if ((token as { type?: unknown } | null)?.type === 'texture') {
+    if ((token as { kind?: unknown } | null)?.kind === 'texture') {
       const tex = new Texture();
       tex.width = 48;
       tex.height = 16;

@@ -774,14 +774,14 @@ export class Loader {
     // branch and the single-meta-leaf path below. Must precede the string branch
     // (an AssetImpl carries no stamped meta, so the guard above misses it).
     if (typeOrPath instanceof AssetImpl) {
-      const { type, source: src, ...rest } = typeOrPath._config;
+      const { kind, source: src, ...rest } = typeOrPath._config;
       const opts = Object.keys(rest).length > 0 ? rest : undefined;
 
       let leaf: object;
       try {
-        leaf = createLeaf(type, src, opts);
+        leaf = createLeaf(kind, src, opts);
       } catch {
-        throw new Error(`Loader: get() is for seamless/value assets; the "${type}" kind has neither — use load(...of(...)) instead.`);
+        throw new Error(`Loader: get() is for seamless/value assets; the "${kind}" kind has neither — use load(...of(...)) instead.`);
       }
 
       this._adopt(leaf, claimer);
@@ -922,7 +922,7 @@ export class Loader {
   public unload(arg0: unknown, arg1?: unknown): this {
     if (arg0 instanceof AssetImpl) {
       const asset = arg0 as Asset<unknown>;
-      const ctor = this._assetTypeMap.get(asset.type);
+      const ctor = this._assetTypeMap.get(asset.kind);
 
       if (!ctor) return this;
 
@@ -1619,12 +1619,12 @@ export class Loader {
 
     const itemPromises = items.map(({ alias, asset }) => {
       this._onFgBatchStart(alias, asset.source);
-      const ctor = this._assetTypeMap.get(asset.type);
+      const ctor = this._assetTypeMap.get(asset.kind);
 
       if (!ctor) {
         // Must call _notifyItem(false) so LoadingProgress doesn't remain stuck.
         return Promise.reject<unknown>(
-          new Error(`No constructor registered for asset type "${asset.type}". Bind it via defineAsset()/bindAsset() first.`),
+          new Error(`No constructor registered for asset type "${asset.kind}". Bind it via defineAsset()/bindAsset() first.`),
         ).then(
           () => {
             notifyFn?.(true);
@@ -1717,7 +1717,7 @@ export class Loader {
 
     const source = asset.source;
     const rawConfig = asset._config as Record<string, unknown>;
-    const { type: _type, source: _src, ...extraOnly } = rawConfig;
+    const { kind: _kind, source: _src, ...extraOnly } = rawConfig;
 
     // Identity key: use handler's getIdentityKey if provided (config-sensitive dedup),
     // otherwise fall back to source-based identity (correct for URL-only assets).

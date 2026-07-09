@@ -11,7 +11,7 @@ import { TileMap } from '../src/TileMap';
 describe('TileMap.of annotation static', () => {
   it('carries the tileMap kind + source', () => {
     const a = TileMap.of('world.tmj');
-    expect(a.type).toBe('tileMap');
+    expect(a.kind).toBe('tileMap');
     expect(a.source).toBe('world.tmj');
   });
 

@@ -28,7 +28,7 @@ export type InferAssetsProperties<M extends Record<string, CatalogEntry>> = {
 // ---------------------------------------------------------------------------
 
 /**
- * Normalize a single catalog entry to a plain `{ type, source, ...opts }`
+ * Normalize a single catalog entry to a plain `{ kind, source, ...opts }`
  * config. A bare path string is resolved to its asset kind by file suffix
  * (asset-system v2 §5); an unregistered/ambiguous suffix throws a guiding
  * error pointing at `X.of()`, compound suffixes, or extension registration. An
@@ -44,7 +44,7 @@ function _normalizeEntry(value: CatalogEntry): AnyAssetConfig {
           `Annotate it with X.of(), use a compound suffix, or register the type's extension (registerExtensionKind / an AssetBinding).`,
       );
     }
-    const config = { type: kind, source: value };
+    const config = { kind, source: value };
     return config as AnyAssetConfig;
   }
   return value instanceof AssetImpl ? value._config : (value as AnyAssetConfig);
@@ -63,14 +63,14 @@ export class AssetsImpl<M extends Record<string, CatalogEntry>> {
 
     for (const [key, value] of Object.entries(definition)) {
       // A bare path string, an already-constructed Asset (which carries its
-      // `_config`), or a plain config all normalize to `{ type, source, ...opts }`,
+      // `_config`), or a plain config all normalize to `{ kind, source, ...opts }`,
       // then to a meta-stamped handle-hybrid leaf. An already-constructed Asset is
       // CONVERTED to a leaf — it is no longer passed through by reference (pre-1.0
       // breaking change).
       const config = _normalizeEntry(value);
-      const { type, source, ...rest } = config;
+      const { kind, source, ...rest } = config;
       const opts = Object.keys(rest).length > 0 ? rest : undefined;
-      const leaf = createLeaf(type, source, opts);
+      const leaf = createLeaf(kind, source, opts);
 
       entries[key] = leaf;
 
@@ -102,7 +102,7 @@ export class AssetsImpl<M extends Record<string, CatalogEntry>> {
  * ```ts
  * const TitleAssets = Assets.from({
  *   logo:   'sprites/logo.png', // bare path — kind inferred from suffix
- *   config: { type: 'json', source: '/title.json' },
+ *   config: { kind: 'json', source: '/title.json' },
  * });
  *
  * TitleAssets.logo;    // Texture (placeholder until adopted)

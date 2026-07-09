@@ -193,7 +193,7 @@ describe('Loader seamless get (Texture)', () => {
     mockFetchImage();
     const loader = createCoreLoader();
 
-    const catalog = new Assets({ ship: { type: 'texture', source: 'ship.png', samplerOptions: { scaleMode: ScaleModes.Nearest } } });
+    const catalog = new Assets({ ship: { kind: 'texture', source: 'ship.png', samplerOptions: { scaleMode: ScaleModes.Nearest } } });
     loader.load(catalog, { background: true });
 
     // A bare get() for the same source returns the adopted leaf, whose sampler

@@ -6,10 +6,10 @@ describe('_makeAsset', () => {
   it('builds an AssetImpl with kind + source + spread opts', () => {
     const a = _makeAsset('texture', 's.png', { mimeType: 'image/png' });
     expect(a).toBeInstanceOf(AssetImpl);
-    expect(a._config).toMatchObject({ type: 'texture', source: 's.png', mimeType: 'image/png' });
+    expect(a._config).toMatchObject({ kind: 'texture', source: 's.png', mimeType: 'image/png' });
   });
 
   it('works with no opts', () => {
-    expect(_makeAsset('json', 'a.json')._config).toEqual({ type: 'json', source: 'a.json' });
+    expect(_makeAsset('json', 'a.json')._config).toEqual({ kind: 'json', source: 'a.json' });
   });
 });

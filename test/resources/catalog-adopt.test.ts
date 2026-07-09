@@ -322,8 +322,8 @@ describe('Loader.get / load — Assets catalog adoption (end-to-end)', () => {
     mockFetchImage();
     const loader = createCoreLoader();
     const catalog = new Assets({
-      ship: { type: 'texture', source: 'ship.png' },
-      logo: { type: 'texture', source: 'logo.png' },
+      ship: { kind: 'texture', source: 'ship.png' },
+      logo: { kind: 'texture', source: 'logo.png' },
     });
 
     const got = loader.get(catalog);
@@ -345,8 +345,8 @@ describe('Loader.get / load — Assets catalog adoption (end-to-end)', () => {
     mockFetchImage();
     const loader = createCoreLoader();
     const catalog = new Assets({
-      ship: { type: 'texture', source: 'ship.png' },
-      logo: { type: 'texture', source: 'logo.png' },
+      ship: { kind: 'texture', source: 'ship.png' },
+      logo: { kind: 'texture', source: 'logo.png' },
     });
 
     const progress: number[] = [];
@@ -366,7 +366,7 @@ describe('Loader.get / load — Assets catalog adoption (end-to-end)', () => {
   test('load(catalog) resolves a value leaf to its raw parsed value while healing its ref in place', async () => {
     mockFetchJson({ hp: 7 });
     const loader = createCoreLoader();
-    const catalog = new Assets({ config: { type: 'json', source: 'cfg.json' } });
+    const catalog = new Assets({ config: { kind: 'json', source: 'cfg.json' } });
 
     const result = await loader.load(catalog);
 
@@ -382,8 +382,8 @@ describe('Loader.get / load — Assets catalog adoption (end-to-end)', () => {
   // AssetRef<T>): LoadingQueue<T>` overload must be declared first so it wins.
   test('type-level: load(AssetRef leaf) resolves LoadingQueue<T>, not LoadingQueue<AssetRef<T>>', () => {
     const loader = createCoreLoader();
-    const catalog = new Assets({ config: { type: 'json', source: 'cfg.json' } });
-    const textureCatalog = new Assets({ ship: { type: 'texture', source: 'ship.png' } });
+    const catalog = new Assets({ config: { kind: 'json', source: 'cfg.json' } });
+    const textureCatalog = new Assets({ ship: { kind: 'texture', source: 'ship.png' } });
 
     // Each assertion is wrapped in an uncalled arrow so only the overload
     // resolution is checked — invoking `load()` for real here would fire an
@@ -400,8 +400,8 @@ describe('Loader.get / load — Assets catalog adoption (end-to-end)', () => {
   test('two catalogs with the same source get DISTINCT leaf objects that both heal from ONE fetch (source-keyed dedup)', async () => {
     mockFetchImage();
     const loader = createCoreLoader();
-    const a = new Assets({ ship: { type: 'texture', source: 'ship.png' } });
-    const b = new Assets({ ship: { type: 'texture', source: 'ship.png' } });
+    const a = new Assets({ ship: { kind: 'texture', source: 'ship.png' } });
+    const b = new Assets({ ship: { kind: 'texture', source: 'ship.png' } });
 
     expect(a.ship).not.toBe(b.ship); // per-catalog identity
 
@@ -429,8 +429,8 @@ describe('Loader.get / load — Assets catalog adoption (end-to-end)', () => {
     const loader = createCoreLoader();
     const warnSpy = vi.spyOn(logger, 'warn');
     const catalog = new Assets({
-      a: { type: 'texture', source: 'x.png' },
-      b: { type: 'texture', source: 'x.png' },
+      a: { kind: 'texture', source: 'x.png' },
+      b: { kind: 'texture', source: 'x.png' },
     });
 
     loader.get(catalog);
