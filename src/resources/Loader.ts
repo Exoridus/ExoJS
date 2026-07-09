@@ -9,6 +9,7 @@ import { Asset, AssetImpl } from './Asset';
 import { parseContainer } from './AssetContainer';
 import type { AssetDefinitions, AssetInput, InferAssetResource, KindByPath, LeafForPath, ResourceForKind, ValueAssetKind } from './AssetDefinitions';
 import type { AssetFactory } from './AssetFactory';
+import { createLeaf } from './assetKindRegistry';
 import type { AssetManifest, LoadBundleOptions } from './AssetManifest';
 import { BundleLoadError, defineAssetManifest } from './AssetManifest';
 import { _readMeta } from './assetMeta';
@@ -1218,6 +1219,24 @@ export class Loader {
   public get<M extends Record<string, AssetInput>>(catalog: Assets<M>): InferAssetsProperties<M>;
 
   /**
+   * Seamless/value access from an `X.of()` descriptor (asset-system v2 §4.2) —
+   * the replacement for the removed `get(Type, dynamicSource)` form. Builds and
+   * adopts the descriptor's handle-hybrid leaf: a resource kind (`Texture.of`,
+   * …) yields its heal-in-place handle, a value kind (`Json.of`, `TextAsset.of`,
+   * …) a stable {@link AssetRef}. A kind with neither a seamless adapter nor a
+   * value channel throws with guidance to use `load(X.of(...))`.
+   *
+   * @remarks The `T extends object ? T : AssetRef<T>` return mirrors the catalog
+   * leaf inference ({@link InferCatalogLeaf}): a value descriptor with a
+   * primitive payload (`Json.of<number>`) surfaces as `AssetRef<number>`, while
+   * an object payload (`Json.of<{ … }>`) surfaces as the object type even though
+   * the runtime value is an `AssetRef` — the descriptor carries only its payload
+   * type `T`, not its value/resource kind, so the structural heuristic cannot
+   * distinguish an object payload from a resource handle.
+   */
+  public get<T>(asset: Asset<T>): T extends object ? T : AssetRef<T>;
+
+  /**
    * Adopts a single handle-hybrid leaf (an `Assets.from()` property) and returns
    * it — the same object, healing in place once its payload arrives.
    */
@@ -1248,6 +1267,28 @@ export class Loader {
       }
 
       return out;
+    }
+
+    // Single `X.of()` descriptor (e.g. `get(Json.of('x.json'))` /
+    // `get(Texture.of(dynamicPath))`) — build its handle-hybrid leaf from the
+    // config, adopt it, and return it. A value kind yields an AssetRef, a
+    // resource kind the seamless placeholder handle. Mirrors `load`'s AssetImpl
+    // branch and the single-meta-leaf path below. Must precede the string branch
+    // (an AssetImpl carries no stamped meta, so the guard above misses it).
+    if (typeOrPath instanceof AssetImpl) {
+      const { type, source: src, ...rest } = typeOrPath._config;
+      const opts = Object.keys(rest).length > 0 ? rest : undefined;
+
+      let leaf: object;
+      try {
+        leaf = createLeaf(type, src, opts);
+      } catch {
+        throw new Error(`Loader: get() is for seamless/value assets; the "${type}" kind has neither — use load(...of(...)) instead.`);
+      }
+
+      this._adopt(leaf, claimer);
+
+      return leaf;
     }
 
     // Single meta-stamped leaf (e.g. `get(assets.ship)`) — adopt and return it.
