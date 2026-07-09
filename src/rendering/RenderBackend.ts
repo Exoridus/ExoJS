@@ -5,6 +5,7 @@ import type { Geometry } from '#rendering/geometry/Geometry';
 import type { Mesh } from '#rendering/mesh/Mesh';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
+import type { ColorTextureFormat } from '#rendering/types';
 
 import type { BackendRenderPass } from './BackendRenderPass';
 import type { Drawable } from './Drawable';
@@ -78,6 +79,13 @@ export interface RenderBackend {
    * level (or disabling the stencil test at the outermost level).
    */
   popStencilClip(): this;
+
+  /**
+   * Whether a {@link RenderTexture} of the given color format can be rendered
+   * into on this backend/context. `'rgba8'` is always supported; float formats
+   * depend on hardware/extension support. Check before allocating a float target.
+   */
+  supportsColorFormat(format: ColorTextureFormat): boolean;
 
   acquireRenderTexture(width: number, height: number): RenderTexture;
   releaseRenderTexture(texture: RenderTexture): this;
