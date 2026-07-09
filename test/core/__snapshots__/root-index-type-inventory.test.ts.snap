@@ -201,6 +201,7 @@ exports[`root index type-level export inventory > all exported symbols with kind
   "LinearGradient: class",
   "LoadBundleOptions: interface",
   "LoadByPath: type alias",
+  "LoadOptions: interface",
   "LoadReturn: type alias",
   "LoadStateValue: type alias",
   "Loadable: type alias",

@@ -246,6 +246,20 @@ export interface LoaderOptions {
   concurrency?: number;
 }
 
+/**
+ * Options for the catalog/asset/leaf {@link Loader.load} forms.
+ *
+ * With `background: true` every adopted leaf is still claimed and registered
+ * (so it heals in place and a later {@link Loader.get} returns the same
+ * instance), but its fetch is routed through the low-priority background queue
+ * instead of started immediately: it streams concurrency-capped, drops from the
+ * queue if released at refcount 0, and is boosted to fetch now on a direct
+ * `get()`. Foreground loading (no options) is unaffected.
+ */
+export interface LoadOptions {
+  background?: boolean;
+}
+
 // ---------------------------------------------------------------------------
 // Internal types
 // ---------------------------------------------------------------------------
@@ -754,13 +768,13 @@ export class Loader {
   // -----------------------------------------------------------------------
 
   public load<T>(asset: Asset<T>): LoadingQueue<T>;
-  public load<M extends Record<string, AssetInput>>(assets: Assets<M>): LoadingQueue<InferLoadedMap<M>>;
-  public load<M extends Record<string, AssetInput>>(config: M): LoadingQueue<InferLoadedMap<M>>;
+  public load<M extends Record<string, AssetInput>>(assets: Assets<M>, options?: LoadOptions): LoadingQueue<InferLoadedMap<M>>;
+  public load<M extends Record<string, AssetInput>>(config: M, options?: LoadOptions): LoadingQueue<InferLoadedMap<M>>;
   // Single value-leaf (an `Assets.from()` AssetRef property): `AssetRef.loaded` resolves
   // to the raw value, not the ref — this overload must win over the generic leaf one below.
-  public load<T>(leaf: AssetRef<T>): LoadingQueue<T>;
+  public load<T>(leaf: AssetRef<T>, options?: LoadOptions): LoadingQueue<T>;
   // Single handle-hybrid leaf (an `Assets.from()` property): adopt + resolve its value.
-  public load<T extends object>(leaf: T): LoadingQueue<T>;
+  public load<T extends object>(leaf: T, options?: LoadOptions): LoadingQueue<T>;
 
   // -----------------------------------------------------------------------
   // Loading — extension-based (type inferred from file extension)
@@ -839,9 +853,10 @@ export class Loader {
     // loaded values/handles. The container's own leaves heal in place.
     if (arg0 instanceof AssetsImpl) {
       const entries = Object.entries((arg0 as AssetsImpl<Record<string, AssetInput>>).entries) as Array<[string, object]>;
+      const background = (arg1 as LoadOptions | undefined)?.background === true;
 
       for (const [, leaf] of entries) {
-        this._adopt(leaf, claimer);
+        this._adopt(leaf, claimer, background);
       }
 
       return this._createAdoptedQueue(entries, results => {
@@ -859,7 +874,8 @@ export class Loader {
     // resolve its loaded value/handle directly.
     if (_readMeta(arg0) !== undefined) {
       const leaf = arg0 as object;
-      this._adopt(leaf, claimer);
+      const background = (arg1 as LoadOptions | undefined)?.background === true;
+      this._adopt(leaf, claimer, background);
 
       return this._createAdoptedQueue([['value', leaf]], results => results.get('value'));
     }
@@ -1718,9 +1734,14 @@ export class Loader {
    * ({@link _storeResource}) transplants the fetched payload into this exact
    * object, so every consumer that already holds the leaf pops in. Idempotent
    * for a handle already adopted under the same key (no duplicate fetch).
+   *
+   * With `background`, the leaf is still registered + claimed + healed in place,
+   * but its fetch is diverted into the low-priority background queue (see
+   * {@link _enqueueBackgroundFetch}) instead of started immediately —
+   * `load(target, { background: true })`.
    * @internal
    */
-  public _adopt(handle: object, claimer: symbol): void {
+  public _adopt(handle: object, claimer: symbol, background = false): void {
     const meta = _readMeta(handle);
 
     if (meta === undefined) {
@@ -1748,6 +1769,8 @@ export class Loader {
         // this ref immediately instead of leaving it 'loading' forever.
         if (stored !== undefined) {
           handle._fill(stored);
+        } else if (background) {
+          this._enqueueBackgroundFetch(ctor, meta.src, meta.opts);
         } else {
           this._startRefFetch(ctor, meta.src, meta.opts);
         }
@@ -1779,7 +1802,12 @@ export class Loader {
       this._deferred.set(key, { handles: new Set([handle]), options: meta.opts });
       this._handleKeys.set(handle, key);
       this._claim(key, ctor, meta.src, claimer);
-      this._startSeamlessFetch(ctor, meta.src, meta.opts);
+
+      if (background) {
+        this._enqueueBackgroundFetch(ctor, meta.src, meta.opts);
+      } else {
+        this._startSeamlessFetch(ctor, meta.src, meta.opts);
+      }
 
       return;
     }
@@ -1841,6 +1869,11 @@ export class Loader {
         if (adapter.stateOf(representative) === 'failed') {
           adapter.begin(representative);
           this._startSeamlessFetch(type, source, entry.options);
+        } else {
+          // A background-adopted source (`load(catalog, { background: true })`)
+          // is registered here yet still parked in the queue; a direct get()
+          // promotes it to fetch now. No-op when the source is not queued.
+          this._boostFromQueue(type, source);
         }
 
         return representative;
@@ -1890,6 +1923,10 @@ export class Loader {
         if (representative.loadState === 'failed') {
           representative._begin();
           this._startRefFetch(type, source, entry.options);
+        } else {
+          // A background-adopted value ref parked in the queue is boosted to
+          // fetch now on a direct get(). No-op when the source is not queued.
+          this._boostFromQueue(type, source);
         }
 
         return representative;
@@ -1920,6 +1957,30 @@ export class Loader {
     void this._loadSingle(type, source, options).catch(() => {
       /* Failure handled centrally in _onTrackedFailure. */
     });
+  }
+
+  /**
+   * Divert an adopted leaf's fetch into the low-priority background queue
+   * (the `background: true` path of {@link _adopt}). The leaf is already
+   * registered in `_deferred`/`_refs` and claimed, so the fetch — whenever the
+   * queue drains it, or a `get()` boosts it — fills that same handle in place
+   * via {@link _storeResource}. Mirrors the enqueue accounting of
+   * {@link _loadSingleBackground}: a fresh progress batch starts only while
+   * idle, and the drain kicks the concurrency-capped processor.
+   */
+  private _enqueueBackgroundFetch(type: AssetConstructor, source: string, options: unknown): void {
+    if (this._hasResource(type, source)) return;
+    if (this._inFlight.has(this._key(type, source))) return;
+    if (this._isQueuedInBackground(type, source)) return;
+
+    if (this._backgroundQueue.length === 0 && this._backgroundActive === 0) {
+      this._backgroundLoaded = 0;
+      this._backgroundTotal = 0;
+    }
+
+    this._backgroundQueue.push({ type, alias: source, path: source, options });
+    this._backgroundTotal++;
+    this._drainBackground();
   }
 
   /**

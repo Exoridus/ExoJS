@@ -2842,7 +2842,7 @@
         },
         {
           "name": "load",
-          "signature": "load(assets: Assets<M>): LoadingQueue<InferLoadedMap<M>>",
+          "signature": "load(assets: Assets<M>, options?: LoadOptions): LoadingQueue<InferLoadedMap<M>>",
           "signatureTokens": [
             {
               "text": "load",
@@ -2875,6 +2875,26 @@
             {
               "text": ">",
               "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LoadOptions",
+              "kind": "type"
             },
             {
               "text": ")",
@@ -2918,6 +2938,11 @@
               "name": "assets",
               "type": "Assets<M>",
               "optional": false
+            },
+            {
+              "name": "options",
+              "type": "LoadOptions",
+              "optional": true
             }
           ],
           "returnType": "LoadingQueue<InferLoadedMap<M>>",
@@ -2925,7 +2950,7 @@
         },
         {
           "name": "load",
-          "signature": "load(config: M): LoadingQueue<InferLoadedMap<M>>",
+          "signature": "load(config: M, options?: LoadOptions): LoadingQueue<InferLoadedMap<M>>",
           "signatureTokens": [
             {
               "text": "load",
@@ -2945,6 +2970,26 @@
             },
             {
               "text": "M",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LoadOptions",
               "kind": "type"
             },
             {
@@ -2989,6 +3034,11 @@
               "name": "config",
               "type": "M",
               "optional": false
+            },
+            {
+              "name": "options",
+              "type": "LoadOptions",
+              "optional": true
             }
           ],
           "returnType": "LoadingQueue<InferLoadedMap<M>>",
@@ -2996,7 +3046,7 @@
         },
         {
           "name": "load",
-          "signature": "load(leaf: AssetRef<T>): LoadingQueue<T>",
+          "signature": "load(leaf: AssetRef<T>, options?: LoadOptions): LoadingQueue<T>",
           "signatureTokens": [
             {
               "text": "load",
@@ -3031,6 +3081,26 @@
               "kind": "punctuation"
             },
             {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LoadOptions",
+              "kind": "type"
+            },
+            {
               "text": ")",
               "kind": "punctuation"
             },
@@ -3060,6 +3130,11 @@
               "name": "leaf",
               "type": "AssetRef<T>",
               "optional": false
+            },
+            {
+              "name": "options",
+              "type": "LoadOptions",
+              "optional": true
             }
           ],
           "returnType": "LoadingQueue<T>",
@@ -3067,7 +3142,7 @@
         },
         {
           "name": "load",
-          "signature": "load(leaf: T): LoadingQueue<T>",
+          "signature": "load(leaf: T, options?: LoadOptions): LoadingQueue<T>",
           "signatureTokens": [
             {
               "text": "load",
@@ -3087,6 +3162,26 @@
             },
             {
               "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LoadOptions",
               "kind": "type"
             },
             {
@@ -3119,6 +3214,11 @@
               "name": "leaf",
               "type": "T",
               "optional": false
+            },
+            {
+              "name": "options",
+              "type": "LoadOptions",
+              "optional": true
             }
           ],
           "returnType": "LoadingQueue<T>",

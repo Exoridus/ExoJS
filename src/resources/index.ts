@@ -29,6 +29,7 @@ export type {
   Loadable,
   LoadByPath,
   LoaderOptions,
+  LoadOptions,
   LoadReturn,
   PathExtension,
 } from './Loader';
