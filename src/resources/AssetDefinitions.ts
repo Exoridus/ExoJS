@@ -9,6 +9,7 @@ import type { Video } from '#rendering/video/Video';
 
 import type { Asset } from './Asset';
 import type { AssetRef } from './AssetRef';
+import type { ExtensionTypeMap } from './Loader';
 
 export interface AssetDefinitions {
   bmFont: { resource: BmFont; config: { source: string } };
@@ -151,3 +152,19 @@ export type InferCatalogLeaf<E extends CatalogEntry> = E extends string
 type AssertKindMapValid = ExtensionKindMap[keyof ExtensionKindMap] extends keyof AssetDefinitions ? true : never;
 const _extensionKindMapIsValid: AssertKindMapValid = true;
 void _extensionKindMapIsValid;
+
+// Compile-time cross-check: {@link ExtensionKindMap} (suffix→kind, this file) and
+// {@link ExtensionTypeMap} (suffix→resource, Loader.ts) are hand-maintained twins
+// of one runtime `defineAsset` binding. On every suffix they SHARE, the kind's
+// resource must be the type map's resource — otherwise `Assets.from('x.png')`
+// (kind-driven) and `loader.load('x.png')` (type-driven) would disagree. A drift
+// (e.g. mapping `png` to a non-Texture kind in one map only) turns the offending
+// entry to `false` and fails this assignment.
+type SharedSuffix = keyof ExtensionKindMap & keyof ExtensionTypeMap;
+type KindResourceForSuffix<K extends SharedSuffix> = AssetDefinitions[ExtensionKindMap[K]]['resource'];
+type KindTypeAgreement = {
+  [K in SharedSuffix]: [KindResourceForSuffix<K>, ExtensionTypeMap[K]] extends [ExtensionTypeMap[K], KindResourceForSuffix<K>] ? true : false;
+};
+type AssertKindTypeMapsAgree = KindTypeAgreement extends Record<SharedSuffix, true> ? true : never;
+const _kindTypeMapsAgree: AssertKindTypeMapsAgree = true;
+void _kindTypeMapsAgree;

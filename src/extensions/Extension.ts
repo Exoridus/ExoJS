@@ -4,6 +4,7 @@ import type { SceneNodeConstructor } from '#core/serialization/SerializationRegi
 import type { Drawable } from '#rendering/Drawable';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { DrawableConstructor, Renderer } from '#rendering/Renderer';
+import type { AssetDefinitions } from '#resources/AssetDefinitions';
 import type { AssetConstructor } from '#resources/FactoryRegistry';
 import type { AssetLoaderContext, Loader } from '#resources/Loader';
 import type { SeamlessAdapter } from '#resources/seamless';
@@ -105,6 +106,14 @@ export interface AssetBinding<Result = unknown, Options = undefined> {
    */
   readonly typeNames?: readonly string[];
   readonly extensions?: readonly string[];
+  /**
+   * The {@link AssetDefinitions} key this binding produces. When present, the
+   * binding was built by `defineAsset`, which registered the kind's placeholder
+   * strategy and suffix→kind inference GLOBALLY at import (so loader-free
+   * `Assets.from` resolves it). Purely informational on the binding itself —
+   * `materializeAssetBindings` does not consume it.
+   */
+  readonly kind?: keyof AssetDefinitions;
   /** Optional seamless-handle adapter (asset-system v2), registered alongside the handler. */
   readonly seamless?: SeamlessAdapter<Result>;
   create(loader: Loader): AssetHandler<Result, Options>;
