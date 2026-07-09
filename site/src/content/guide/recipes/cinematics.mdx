@@ -20,11 +20,11 @@ The key technique: **tween chains and delays**. Each tween starts at a specific 
 class CinematicScene extends Scene {
     async load(loader) {
         // AudioStream has no bare-path form, so use `.of(...)` — and since
-        // `get(AudioStream.of(...))` isn't supported, keep the loaded
+        // `get(Asset.kind('music', ...))` isn't supported, keep the loaded
         // instances as direct references instead of looking them up later.
         [this.bossTexture, this.trackStream] = await Promise.all([
             loader.load('image/boss.png'),
-            loader.load(AudioStream.of('audio/track.ogg')),
+            loader.load(Asset.kind('music', 'audio/track.ogg')),
         ]);
     }
 

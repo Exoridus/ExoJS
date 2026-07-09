@@ -28,7 +28,7 @@
       "members": [
         {
           "name": "InferAssetResource",
-          "signature": "I extends Asset<T> ? T : I extends { kind: K } ? AssetDefinitions[K][\"resource\"] : never",
+          "signature": "I extends Asset<T> ? T : I extends { parse: (raw: never) => R } ? R : I extends { kind: K } ? AssetDefinitions[K][\"resource\"] : never",
           "signatureTokens": [
             {
               "text": "I",
@@ -68,6 +68,74 @@
             },
             {
               "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": " : ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "I",
+              "kind": "type"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "extends",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "parse",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "raw",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "never",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "R",
+              "kind": "type"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            },
+            {
+              "text": " ? ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "R",
               "kind": "type"
             },
             {

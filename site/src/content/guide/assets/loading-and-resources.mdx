@@ -25,9 +25,9 @@ The loader offers several forms. Pick the smallest one that covers your case:
 | Form | Best for |
 |------|----------|
 | `loader.load('hero.png')` | One asset, path doubles as its identity — no alias needed |
-| `Texture.of(path)` / `Sound.of(path)` / `Json.of<T>(path)` | The path is computed at runtime (not a literal), or you want an explicit type |
+| `Asset.kind('texture', path)` / `Asset.kind('sound', path)` / `Asset.kind<T>('json', path)` | The path is computed at runtime (not a literal), or you want an explicit type |
 | `Assets.from({ hero: 'hero.png', … })` | A reusable, named group of assets shared across scenes |
-| `loader.load({ hero: { type: 'texture', … }, … })` | Mixed types in one call, config objects with type-specific options |
+| `loader.load({ hero: { kind: 'texture', … }, … })` | Mixed types in one call, config objects with type-specific options |
 
 When in doubt, start with a bare path string. Reach for `Assets.from` when the same group of assets is referenced from more than one place, and `X.of(...)` whenever the path isn't a string literal.
 
@@ -75,17 +75,17 @@ For `Texture`, `Sound`, and the data tokens, `loader.get(...)` always returns sy
 A bare string only works for a *literal* path — the type is inferred at compile time from the extension. When the path is computed at runtime, or the type can't be inferred from a path at all, use the type's `X.of(...)` factory:
 
 ```ts
-import { Texture, AudioStream } from '@codexo/exojs';
+import { Asset, Texture, AudioStream } from '@codexo/exojs';
 
 // Dynamic path — not a string literal, so it needs an explicit token
 async _changeLevel(levelName: string) {
-    const bg = await this.app.loader.load(Texture.of(`image/levels/${levelName}.png`));
+    const bg = await this.app.loader.load(Asset.kind('texture', `image/levels/${levelName}.png`));
     this.background.setTexture(bg);
 }
 
 // AudioStream, Video, BmFont, FontAsset, ImageAsset don't have a bare-path
 // form at all — they always need .of(), even for a literal path
-const music = await loader.load(AudioStream.of('audio/theme.ogg'));
+const music = await loader.load(Asset.kind('music', 'audio/theme.ogg'));
 ```
 
 <Callout type="pitfall" title="Never call get(X.of(...))">
@@ -100,7 +100,7 @@ When a scene needs different asset types, load them in parallel with `Promise.al
 async load(loader) {
     [this.sky, this.ambient, this.coin, this.jump, this.levels] = await Promise.all([
         loader.load('image/sky.png'),
-        loader.load(AudioStream.of('audio/ambient.ogg')),
+        loader.load(Asset.kind('music', 'audio/ambient.ogg')),
         loader.load('audio/coin.wav'),
         loader.load('audio/jump.wav'),
         loader.load('data/levels.json'),
@@ -145,12 +145,12 @@ The result is an object whose keys match the input and whose values are the reso
 For assets used in multiple scenes, define a named catalog with `Assets.from`:
 
 ```ts
-import { Assets, AudioStream, Json } from '@codexo/exojs';
+import { Asset, Assets, AudioStream, Json } from '@codexo/exojs';
 
 export const TitleAssets = Assets.from({
     logo:   'sprites/logo.png',                        // bare path → Texture
-    music:  AudioStream.of('audio/title.ogg'),          // non-seamless → needs .of()
-    config: Json.of<{ startLevel: string }>('data/config.json'),
+    music:  Asset.kind('music', 'audio/title.ogg'),          // non-seamless → needs .of()
+    config: Asset.kind<{ startLevel: string }>('json', 'data/config.json'),
 });
 ```
 
@@ -322,7 +322,7 @@ loader.unload(TitleAssets); // releases every leaf in the catalog
 ```
 
 <Callout type="hint" title="Non-seamless types have no placeholder">
-Types that aren't seamless — `AudioStream`, `Video`, `BmFont`, `FontAsset`, and custom types — have no placeholder to hand back, so there's nothing to `get()` speculatively. Load them by reference and hold onto the resolved value: `const music = await loader.load(AudioStream.of('audio/theme.ogg'))`. There is no `has()`/`peek()` guard — for a seamless handle read `.ready` / `.state`; for a non-seamless resource, `await` the load (or its returned handle's `.loaded` promise) before you use it.
+Types that aren't seamless — `AudioStream`, `Video`, `BmFont`, `FontAsset`, and custom types — have no placeholder to hand back, so there's nothing to `get()` speculatively. Load them by reference and hold onto the resolved value: `const music = await loader.load(Asset.kind('music', 'audio/theme.ogg'))`. There is no `has()`/`peek()` guard — for a seamless handle read `.ready` / `.state`; for a non-seamless resource, `await` the load (or its returned handle's `.loaded` promise) before you use it.
 </Callout>
 
 ## When are resources available?
@@ -336,12 +336,12 @@ The lifecycle guarantees that:
 
 ## Loading on demand
 
-`loader.load(...)` works any time, not just inside the `load` hook. A computed path isn't a string literal, so use `Texture.of(...)`:
+`loader.load(...)` works any time, not just inside the `load` hook. A computed path isn't a string literal, so use `Asset.kind('texture', ...)`:
 
 ```js
 async _changeLevel(levelName) {
     const bg = await this.app.loader.load(
-        Texture.of(`image/levels/${levelName}.png`)
+        Asset.kind('texture', `image/levels/${levelName}.png`)
     );
     this.background.setTexture(bg);
 }
@@ -354,16 +354,16 @@ The frame loop continues running while the promise is pending.
 Split a large project into per-phase catalogs and load each one as the player reaches it, instead of fetching everything up front. A catalog is just an `Assets.from(...)` group (see [Reusable asset references](#reusable-asset-references)):
 
 ```ts
-import { Assets, AudioStream, Json } from '@codexo/exojs';
+import { Asset, Assets, AudioStream, Json } from '@codexo/exojs';
 
 export const MenuAssets = Assets.from({
     logo:  'image/logo.png',
-    music: AudioStream.of('audio/theme.ogg'),
+    music: Asset.kind('music', 'audio/theme.ogg'),
 });
 
 export const Level1Assets = Assets.from({
     tiles: 'image/level-1/tiles.png',
-    map:   Json.of<{ spawn: [number, number] }>('data/level-1.json'),
+    map:   Asset.kind<{ spawn: [number, number] }>('json', 'data/level-1.json'),
 });
 ```
 
@@ -427,7 +427,7 @@ To fetch a catalog ahead of time without blocking the current scene, pass `{ bac
 loader.load(Level2Assets, { background: true });
 ```
 
-A backgrounded leaf is boosted to fetch immediately if something `get()`s or foreground-`load()`s it before the queue reaches it — so there's nothing to guard against. Request it in the background early, then `await loader.load(Level2Assets)` when you actually need it and it resolves as soon as the in-flight fetch finishes. `loader.loadAll()` resolves once the background queue has fully drained.
+A backgrounded leaf is boosted to fetch immediately if something `get()`s or foreground-`load()`s it before the queue reaches it — so there's nothing to guard against. Request it in the background early, then `await loader.load(Level2Assets)` when you actually need it and it resolves as soon as the in-flight fetch finishes. `loader.awaitBackground()` resolves once the background queue has fully drained.
 
 ## Caching and IndexedDB
 
@@ -499,7 +499,7 @@ export class HeightField {
     // Annotation static — how the type is loaded by reference (a dynamic path,
     // per-asset options, or a key inside `Assets.from({...})`).
     public static of(source: string): Asset<HeightField> {
-        return new Asset({ type: 'heightField', source }) as unknown as Asset<HeightField>;
+        return new Asset({ kind: 'heightField', source }) as unknown as Asset<HeightField>;
     }
 }
 

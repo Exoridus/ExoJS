@@ -28,13 +28,13 @@ Use `Sound` when you need many overlapping instances of the same short clip. Use
 Both types are loaded through the `Loader`, like textures, then played through `app.audio`:
 
 ```js
-import { AudioStream, Scene } from '@codexo/exojs';
+import { Asset, AudioStream, Scene } from '@codexo/exojs';
 
 class AudioScene extends Scene {
     async load(loader) {
         const [laser, theme] = await Promise.all([
             loader.load('audio/laser.ogg'),
-            loader.load(AudioStream.of('audio/theme.ogg')),
+            loader.load(Asset.kind('music', 'audio/theme.ogg')),
         ]);
         this.laser = laser;
         this.theme = theme;

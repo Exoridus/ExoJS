@@ -25,12 +25,12 @@ Both the analyser and the beat detector connect as parallel taps. They never aff
 An `AudioAnalyser` wraps a Web Audio `AnalyserNode` and exposes frequency and time-domain data. You point it at a source, then call its getters each frame:
 
 ```js
-import { AudioStream, Scene } from '@codexo/exojs';
+import { Asset, AudioStream, Scene } from '@codexo/exojs';
 import { AudioAnalyser } from '@codexo/exojs-audio-fx';
 
 class VisualizerScene extends Scene {
     async load(loader) {
-        this.music = await loader.load(AudioStream.of('audio/track.ogg'));
+        this.music = await loader.load(Asset.kind('music', 'audio/track.ogg'));
     }
 
     init() {
@@ -191,10 +191,8 @@ For ring-buffer patterns where only the newest column changes, `commitRect(col, 
 Here is a complete scene that combines an analyser-driven bar graph with beat-triggered background color changes:
 
 ```js
-import {
-    Application, AudioStream,
-    Color, Graphics, Scene,
-} from '@codexo/exojs';
+import { Asset, Application, AudioStream,
+    Color, Graphics, Scene } from '@codexo/exojs';
 import { AudioAnalyser, BeatDetector } from '@codexo/exojs-audio-fx';
 
 const app = new Application({ canvas: { width: 800, height: 600 } });
@@ -202,7 +200,7 @@ document.body.append(app.canvas);
 
 class AudioReactiveScene extends Scene {
     async load(loader) {
-        this.music = await loader.load(AudioStream.of('audio/track.ogg'));
+        this.music = await loader.load(Asset.kind('music', 'audio/track.ogg'));
     }
 
     init() {

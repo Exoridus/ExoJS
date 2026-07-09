@@ -22,10 +22,8 @@ Three systems run in parallel, each driven by a different facet of the audio ana
 One analyser for frequency data, one beat detector for rhythm, one particle system for visual feedback:
 
 ```js
-import {
-    Application, AudioStream,
-    Scene, View, Vector, Color, Ease,
-} from '@codexo/exojs';
+import { Asset, Application, AudioStream,
+    Scene, View, Vector, Color, Ease } from '@codexo/exojs';
 import { AudioAnalyser, BeatDetector } from '@codexo/exojs-audio-fx';
 import {
     AlphaFadeOverLifetime, BurstSpawn, ConeDirection, Constant,
@@ -37,7 +35,7 @@ const app = new Application({ extensions: [particlesExtension] });
 class AudioReactiveScene extends Scene {
     async load(loader) {
         const [music, particleTexture] = await Promise.all([
-            loader.load(AudioStream.of('audio/track.ogg')),
+            loader.load(Asset.kind('music', 'audio/track.ogg')),
             loader.load('image/particle.png'),
         ]);
         this.music = music;

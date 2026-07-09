@@ -32,11 +32,11 @@ label.style.fillColor = Color.tomato; // updates only the mesh tint — no atlas
 
 ## Font loading
 
-System fonts (Arial, Times New Roman, etc.) work immediately. For custom web fonts, load one via `FontAsset.of(...)` in the scene's `load` hook — fonts aren't a seamless type, so a bare path isn't enough; `.of()` is required even for a literal path, and `family` is a required option:
+System fonts (Arial, Times New Roman, etc.) work immediately. For custom web fonts, load one via `Asset.kind('font', ...)` in the scene's `load` hook — fonts aren't a seamless type, so a bare path isn't enough; `.of()` is required even for a literal path, and `family` is a required option:
 
 ```js
 async load(loader) {
-    await loader.load(FontAsset.of('font/MyFont.woff2', { family: 'MyFont' }));
+    await loader.load(Asset.kind('font', 'font/MyFont.woff2', { family: 'MyFont' }));
 }
 
 init(loader) {
