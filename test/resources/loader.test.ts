@@ -1,5 +1,8 @@
-﻿import type { AssetHandler } from '#extensions/Extension';
+﻿import '#resources/seamless';
+
+import type { AssetHandler } from '#extensions/Extension';
 import { materializeAssetBindings } from '#extensions/materialize';
+import { Texture } from '#rendering/texture/Texture';
 import { Asset } from '#resources/Asset';
 import { encodeContainer } from '#resources/AssetContainer';
 import type { AssetFactory } from '#resources/AssetFactory';
@@ -1116,27 +1119,35 @@ describe('Asset / Assets identity and alias semantics', () => {
     expect(loader.has(MockAssetType, 'heroB')).toBe(false);
   });
 
-  test('unload(assets) unloads all entries from an Assets container', async () => {
-    const factory = new MockAssetFactory();
-    const loader = new Loader({ basePath: '/' });
-
-    loader.registerAssetType('mockAsset', MockAssetType as never, factory as AssetFactory<MockAssetType>);
-    mockFetch();
+  test('unload(assets) releases every leaf claim, evicting the adopted resources', async () => {
+    // Intent preserved: unloading a container drops all of its entries. Under
+    // adoption this means releasing each leaf's root claim → last-claim eviction.
+    vi.stubGlobal(
+      'createImageBitmap',
+      vi.fn(async () => ({ width: 4, height: 4 })),
+    );
+    const loader = createCoreLoader({ basePath: '/' });
+    global.fetch = vi.fn(async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', arrayBuffer: async () => new ArrayBuffer(8) }) as unknown as Response);
 
     const container = new Assets({
-      hero: { type: 'mockAsset', source: 'hero.dat' },
-      logo: { type: 'mockAsset', source: 'logo.dat' },
+      hero: { type: 'texture', source: 'hero.png' },
+      logo: { type: 'texture', source: 'logo.png' },
     });
 
     await loader.load(container);
 
-    expect(loader.has(MockAssetType, 'hero')).toBe(true);
-    expect(loader.has(MockAssetType, 'logo')).toBe(true);
+    expect(loader.has(Texture, 'hero.png')).toBe(true);
+    expect(loader.has(Texture, 'logo.png')).toBe(true);
+    expect((container.hero as Texture).loadState).toBe('ready');
 
     loader.unload(container);
 
-    expect(loader.has(MockAssetType, 'hero')).toBe(false);
-    expect(loader.has(MockAssetType, 'logo')).toBe(false);
+    // Last claim released → payload evicted; the leaves heal back to 'loading'.
+    expect(loader.has(Texture, 'hero.png')).toBe(false);
+    expect(loader.has(Texture, 'logo.png')).toBe(false);
+    expect((container.hero as Texture).loadState).toBe('loading');
+
+    vi.unstubAllGlobals();
   });
 
   test('aliases are cleared from tracking when underlying asset unloads', async () => {
@@ -1172,7 +1183,7 @@ describe('Assets reserved "entries" key', () => {
   test('does not throw for a normal asset name', () => {
     expect(() => {
       new Assets({
-        logo: { type: 'mockAsset', source: '/logo.dat' },
+        logo: { type: 'texture', source: '/logo.png' },
       });
     }).not.toThrow();
   });
@@ -1920,22 +1931,23 @@ describe('unload() edge cases', () => {
     expect(loader.has(MockAssetType, 'never.dat')).toBe(false);
   });
 
-  test('unload(assets) skips container entries whose asset type was never registered', () => {
+  test('unload(assets) is a silent no-op for a leaf whose kind this loader never bound', () => {
+    // Intent preserved: a catalog entry the loader doesn't know is skipped, not
+    // thrown. A bare loader (no core bindings) never adopted the leaf, so its
+    // release finds no registered key and does nothing.
     const loader = new Loader({ basePath: '/' });
-    const container = new Assets({ orphan: { type: 'mockAsset', source: 'x.dat' } });
+    const container = new Assets({ orphan: { type: 'texture', source: 'x.png' } });
 
     expect(() => loader.unload(container)).not.toThrow();
   });
 
-  test('unload(assets) falls back to per-alias unload when identity was never tracked', () => {
-    const factory = new MockAssetFactory();
-    const loader = new Loader({ basePath: '/' });
-
-    loader.registerAssetType('mockAsset', MockAssetType as never, factory as AssetFactory<MockAssetType>);
-
-    const container = new Assets({ orphan: { type: 'mockAsset', source: 'never.dat' } });
+  test('unload(assets) is a silent no-op when the container was never adopted/loaded', () => {
+    // Intent preserved: unloading entries that were never tracked does nothing.
+    const loader = createCoreLoader({ basePath: '/' });
+    const container = new Assets({ orphan: { type: 'texture', source: 'never.png' } });
 
     expect(() => loader.unload(container)).not.toThrow();
+    expect(loader.has(Texture, 'never.png')).toBe(false);
   });
 });
 

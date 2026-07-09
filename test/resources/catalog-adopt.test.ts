@@ -4,6 +4,7 @@ import { materializeAssetBindings } from '#extensions/materialize';
 import { Texture } from '#rendering/texture/Texture';
 import { createLeaf } from '#resources/assetKindRegistry';
 import { type AssetRef } from '#resources/AssetRef';
+import { Assets } from '#resources/Assets';
 import { coreAssetBindings } from '#resources/coreAssetBindings';
 import { Loader } from '#resources/Loader';
 import { Json } from '#resources/tokens';
@@ -190,5 +191,97 @@ describe('Loader._adopt', () => {
     const loader = createCoreLoader();
 
     expect(() => loader._adopt({}, Symbol('claimer'))).toThrow('no assetMeta');
+  });
+});
+
+describe('Loader.get / load — Assets catalog adoption (end-to-end)', () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      'createImageBitmap',
+      vi.fn(async () => ({ width: 4, height: 4 })),
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    global.fetch = originalFetch;
+  });
+
+  test('get(catalog) adopts every leaf, returns the SAME leaf objects, and they heal after fetch', async () => {
+    mockFetchImage();
+    const loader = createCoreLoader();
+    const catalog = new Assets({
+      ship: { type: 'texture', source: 'ship.png' },
+      logo: { type: 'texture', source: 'logo.png' },
+    });
+
+    const got = loader.get(catalog);
+
+    // Per-catalog identity: the returned map holds the catalog's own leaves.
+    expect(got.ship).toBe(catalog.ship);
+    expect(got.logo).toBe(catalog.logo);
+    expect(catalog.ship.loadState).toBe('loading');
+
+    await Promise.all([catalog.ship.loaded, catalog.logo.loaded]);
+
+    expect(catalog.ship.loadState).toBe('ready');
+    expect(catalog.ship.width).toBe(4);
+    // The loader's own get() for the same source resolves to the adopted leaf.
+    expect(loader.get(Texture, 'ship.png')).toBe(catalog.ship);
+  });
+
+  test('load(catalog) resolves to a map of loaded values, forwards onProgress, and heals the SAME leaves as get', async () => {
+    mockFetchImage();
+    const loader = createCoreLoader();
+    const catalog = new Assets({
+      ship: { type: 'texture', source: 'ship.png' },
+      logo: { type: 'texture', source: 'logo.png' },
+    });
+
+    const progress: number[] = [];
+    const queue = loader.load(catalog);
+    queue.onProgress.add(p => progress.push(p.loaded));
+
+    const result = await queue;
+
+    // A resource leaf's `.loaded` resolves to the handle itself → the resolved
+    // map holds the catalog's own leaves, which have healed in place.
+    expect(result.ship).toBe(catalog.ship);
+    expect(result.logo).toBe(catalog.logo);
+    expect(catalog.ship.loadState).toBe('ready');
+    expect(progress.at(-1)).toBe(2);
+  });
+
+  test('load(catalog) resolves a value leaf to its raw parsed value while healing its ref in place', async () => {
+    mockFetchJson({ hp: 7 });
+    const loader = createCoreLoader();
+    const catalog = new Assets({ config: { type: 'json', source: 'cfg.json' } });
+
+    const result = await loader.load(catalog);
+
+    expect(result.config).toEqual({ hp: 7 }); // raw value in the resolved map
+    expect(catalog.config.value).toEqual({ hp: 7 }); // the ref healed in place
+  });
+
+  test('two catalogs with the same source get DISTINCT leaf objects that both heal from ONE fetch (source-keyed dedup)', async () => {
+    mockFetchImage();
+    const loader = createCoreLoader();
+    const a = new Assets({ ship: { type: 'texture', source: 'ship.png' } });
+    const b = new Assets({ ship: { type: 'texture', source: 'ship.png' } });
+
+    expect(a.ship).not.toBe(b.ship); // per-catalog identity
+
+    loader.get(a);
+    await a.ship.loaded;
+    expect(a.ship.loadState).toBe('ready');
+
+    // Adopting b's leaf fills it in place from the already-stored payload.
+    loader.get(b);
+    await b.ship.loaded;
+
+    expect(b.ship.loadState).toBe('ready');
+    expect(b.ship.width).toBe(4);
+    expect(b.ship).not.toBe(a.ship); // still distinct objects
+    expect(global.fetch).toHaveBeenCalledTimes(1); // one network fetch for the shared source
   });
 });

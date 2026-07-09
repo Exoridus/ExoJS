@@ -48,6 +48,17 @@ export type AnyAssetConfig = {
   [K in keyof AssetDefinitions]: { type: K } & AssetDefinitions[K]['config'];
 }[keyof AssetDefinitions];
 
+/**
+ * Kinds whose catalog leaf is a deferred {@link AssetRef} rather than a
+ * heal-in-place resource handle. This is the type-level mirror of the
+ * `isValue: true` registrations in `seamless.ts` — keep the two in sync.
+ *
+ * A structural `R extends object` heuristic cannot classify these, because
+ * several value resources (`Document`, `VTTCue[]`, `ArrayBuffer`,
+ * `WebAssembly.Module`) are object types; only an explicit kind list is correct.
+ */
+export type ValueAssetKind = 'json' | 'text' | 'csv' | 'xml' | 'srt' | 'vtt' | 'binary' | 'wasm';
+
 export type AssetInput = AnyAssetConfig | Asset<unknown>;
 
 export type InferAssetResource<I extends AssetInput> =

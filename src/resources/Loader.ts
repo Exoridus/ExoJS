@@ -13,7 +13,7 @@ import type { AssetManifest, LoadBundleOptions } from './AssetManifest';
 import { BundleLoadError, defineAssetManifest } from './AssetManifest';
 import { _readMeta } from './assetMeta';
 import { AssetRef } from './AssetRef';
-import { type Assets, AssetsImpl } from './Assets';
+import { type Assets, AssetsImpl, type InferAssetsProperties } from './Assets';
 import { CacheFirstStrategy } from './CacheFirstStrategy';
 import type { CacheStore } from './CacheStore';
 import type { CacheStrategy } from './CacheStrategy';
@@ -729,6 +729,8 @@ export class Loader {
   public load<T>(asset: Asset<T>): LoadingQueue<T>;
   public load<M extends Record<string, AssetInput>>(assets: Assets<M>): LoadingQueue<InferLoadedMap<M>>;
   public load<M extends Record<string, AssetInput>>(config: M): LoadingQueue<InferLoadedMap<M>>;
+  // Single handle-hybrid leaf (an `Assets.from()` property): adopt + resolve its value.
+  public load<T extends object>(leaf: T): LoadingQueue<T>;
 
   // -----------------------------------------------------------------------
   // Loading — extension-based (type inferred from file extension)
@@ -796,23 +798,34 @@ export class Loader {
       return this._createLoadingQueue(claimer, [{ alias, asset }], results => results.get(alias));
     }
 
-    // 2. Assets<M> container
+    // 2. Assets<M> container — adopt every handle-hybrid leaf (fill in place,
+    // claim under `claimer`) and resolve the adopted queue to a map of the
+    // loaded values/handles. The container's own leaves heal in place.
     if (arg0 instanceof AssetsImpl) {
-      const container = arg0 as Assets<Record<string, AssetInput>>;
-      const items = Object.entries(container.entries).map(([alias, a]) => ({
-        alias,
-        asset: a,
-      }));
+      const entries = Object.entries((arg0 as AssetsImpl<Record<string, AssetInput>>).entries) as Array<[string, object]>;
 
-      return this._createLoadingQueue(claimer, items, results => {
+      for (const [, leaf] of entries) {
+        this._adopt(leaf, claimer);
+      }
+
+      return this._createAdoptedQueue(entries, results => {
         const out: Record<string, unknown> = {};
 
-        for (const { alias } of items) {
+        for (const [alias] of entries) {
           out[alias] = results.get(alias);
         }
 
         return out;
       });
+    }
+
+    // 2a. Single meta-stamped leaf (e.g. `load(assets.ship)`) — adopt it and
+    // resolve its loaded value/handle directly.
+    if (_readMeta(arg0) !== undefined) {
+      const leaf = arg0 as object;
+      this._adopt(leaf, claimer);
+
+      return this._createAdoptedQueue([['value', leaf]], results => results.get('value'));
     }
 
     // 2b. Extension-based: single path string with no type token
@@ -1127,7 +1140,21 @@ export class Loader {
    * for a non-throwing alternative, or {@link has} to guard the call.
    */
   public get<T extends Loadable>(type: T, alias: string): LoadReturn<T>;
-  public get(typeOrPath: Loadable | string, source?: unknown, options?: unknown): unknown {
+
+  /**
+   * Adopts an {@link Assets} catalog: every handle-hybrid leaf is registered,
+   * claimed, and driven to load, and the same leaf objects are returned keyed by
+   * their record key. The catalog's own properties heal in place as payloads
+   * arrive — the returned map holds those very leaves.
+   */
+  public get<M extends Record<string, AssetInput>>(catalog: Assets<M>): InferAssetsProperties<M>;
+
+  /**
+   * Adopts a single handle-hybrid leaf (an `Assets.from()` property) and returns
+   * it — the same object, healing in place once its payload arrives.
+   */
+  public get<T extends object>(leaf: T): T;
+  public get(typeOrPath: Loadable | string | object, source?: unknown, options?: unknown): unknown {
     return this._getClaimed(this._rootClaimer, typeOrPath, source, options);
   }
 
@@ -1140,7 +1167,27 @@ export class Loader {
    * `'loading'`, which `_getSeamless` alone would not re-fetch).
    * @internal
    */
-  public _getClaimed(claimer: symbol, typeOrPath: Loadable | string, source?: unknown, options?: unknown): unknown {
+  public _getClaimed(claimer: symbol, typeOrPath: Loadable | string | object, source?: unknown, options?: unknown): unknown {
+    // Assets<M> container — adopt every handle-hybrid leaf (fill in place, claim
+    // under `claimer`) and return the leaves keyed by their record key.
+    if (typeOrPath instanceof AssetsImpl) {
+      const out: Record<string, unknown> = {};
+
+      for (const [k, leaf] of Object.entries(typeOrPath.entries)) {
+        this._adopt(leaf, claimer);
+        out[k] = leaf;
+      }
+
+      return out;
+    }
+
+    // Single meta-stamped leaf (e.g. `get(assets.ship)`) — adopt and return it.
+    if (_readMeta(typeOrPath) !== undefined) {
+      this._adopt(typeOrPath as object, claimer);
+
+      return typeOrPath;
+    }
+
     if (typeof typeOrPath === 'string') {
       const path = typeOrPath;
       const ctor = this._resolveExtensionType(path);
@@ -1161,7 +1208,8 @@ export class Loader {
       return handle;
     }
 
-    const ctor = typeOrPath;
+    // Not a container, meta-leaf, or path string: a Loadable type token.
+    const ctor = typeOrPath as Loadable;
     const adapter = this._seamlessAdapters.get(ctor);
 
     if (adapter !== undefined) {
@@ -1316,25 +1364,16 @@ export class Loader {
     }
 
     if (arg0 instanceof AssetsImpl) {
-      const container = arg0 as Assets<Record<string, AssetInput>>;
+      // Under adoption a catalog no longer maps to legacy alias entries: its
+      // leaves are handle-hybrids claimed under the app-lifetime root scope by
+      // `get`/`load`. Unloading a catalog therefore RELEASES each leaf's root
+      // claim — the last release evicts the payload in place (resource handles
+      // heal to 'loading'). A never-adopted leaf has no registered key, so its
+      // release is a silent no-op.
+      const container = arg0 as AssetsImpl<Record<string, AssetInput>>;
 
-      for (const [alias, a] of Object.entries(container.entries)) {
-        const assetRef = a;
-        const ctor = this._assetTypeMap.get(assetRef.type);
-
-        if (!ctor) continue;
-
-        const identityKey = this._resolveAssetIdentityKey(ctor, assetRef);
-        const aliasSet = this._identityKeyToAliases.get(identityKey);
-
-        if (aliasSet?.has(alias)) {
-          // Also remove all other aliases that share this resource identity
-          for (const a2 of [...aliasSet]) {
-            this._unloadOne(ctor, a2);
-          }
-        } else {
-          this._unloadOne(ctor, alias);
-        }
+      for (const leaf of Object.values(container.entries)) {
+        this.release(leaf as object);
       }
 
       return this;
@@ -1671,6 +1710,11 @@ export class Loader {
     if (stored !== undefined && this._handleKeys.get(handle) !== key) {
       const adapter = this._seamlessAdapters.get(ctor);
 
+      // §7 accepted gap: this leaf fills once from the stored payload but is not
+      // entered into per-key bookkeeping, so a later evict+heal of this key will
+      // not touch it (it keeps the stale payload). Closes when §7 introduces
+      // per-key multi-handle tracking. Unreachable in S1's usage surface. See
+      // 07-asset-access-design.md §12.
       adapter?.fill(handle, stored);
       this._handleKeys.set(handle, key);
     }
@@ -1995,6 +2039,47 @@ export class Loader {
     const promise = Promise.all(itemPromises).then(() => buildResult(results));
 
     const queue = new LoadingQueue<T>(promise, items.length);
+    notifyFn = queue._notifyItem.bind(queue);
+
+    return queue;
+  }
+
+  /**
+   * Progress-aware queue over already-{@link _adopt}ed handle-hybrid leaves.
+   *
+   * Mirrors {@link _createLoadingQueue}'s progress/settle machinery, but the
+   * fetch is already driven by `_adopt`; each item's promise is simply the
+   * leaf's own readiness promise (`leaf.loaded` — `Promise<this>` for a resource
+   * handle, `Promise<T>` for an `AssetRef`). No `_claim` here: adoption already
+   * claimed each key. `buildResult` shapes the resolved values into the return.
+   * @internal
+   */
+  private _createAdoptedQueue<T>(entries: Array<[string, object]>, buildResult: (results: Map<string, unknown>) => T): LoadingQueue<T> {
+    const results = new Map<string, unknown>();
+    let notifyFn: ((success: boolean) => void) | null = null;
+
+    const itemPromises = entries.map(([alias, leaf]) => {
+      const src = _readMeta(leaf)?.src ?? alias;
+      this._onFgBatchStart(alias, src);
+      const loaded = (leaf as { loaded: Promise<unknown> }).loaded;
+
+      return loaded.then(
+        value => {
+          results.set(alias, value);
+          notifyFn?.(true);
+          this._onFgBatchSettled(alias, true);
+        },
+        error => {
+          notifyFn?.(false);
+          this._onFgBatchSettled(alias, false, this._normalizeError(error));
+          throw error;
+        },
+      );
+    });
+
+    const promise = Promise.all(itemPromises).then(() => buildResult(results));
+
+    const queue = new LoadingQueue<T>(promise, entries.length);
     notifyFn = queue._notifyItem.bind(queue);
 
     return queue;
