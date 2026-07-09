@@ -11,6 +11,7 @@ import type { AssetDefinitions, AssetInput, InferAssetResource } from './AssetDe
 import type { AssetFactory } from './AssetFactory';
 import type { AssetManifest, LoadBundleOptions } from './AssetManifest';
 import { BundleLoadError, defineAssetManifest } from './AssetManifest';
+import { _readMeta } from './assetMeta';
 import { AssetRef } from './AssetRef';
 import { type Assets, AssetsImpl } from './Assets';
 import { CacheFirstStrategy } from './CacheFirstStrategy';
@@ -1601,6 +1602,55 @@ export class Loader {
   // -----------------------------------------------------------------------
   // Internal — loading
   // -----------------------------------------------------------------------
+
+  /**
+   * Adopt an externally-created handle-hybrid leaf (from `Assets.from()`) into
+   * this loader: register it as the deferred/ref handle under its normalized
+   * key, claim it under `claimer`, and drive the fetch. The existing fill site
+   * ({@link _storeResource}) transplants the fetched payload into this exact
+   * object, so every consumer that already holds the leaf pops in. Idempotent
+   * for a handle already adopted under the same key (no duplicate fetch).
+   * @internal
+   */
+  public _adopt(handle: object, claimer: symbol): void {
+    const meta = _readMeta(handle);
+
+    if (meta === undefined) {
+      throw new Error('Loader._adopt: value is not an Assets.from() leaf (no assetMeta).');
+    }
+
+    const ctor = this._assetTypeMap.get(meta.kind);
+
+    if (ctor === undefined) {
+      throw new Error(`Loader._adopt: no constructor registered for kind "${meta.kind}".`);
+    }
+
+    const key = this._key(ctor, meta.src);
+
+    if (handle instanceof AssetRef) {
+      if (!this._refs.has(key)) {
+        this._refs.set(key, { ref: handle, options: meta.opts });
+        this._handleKeys.set(handle, key);
+      }
+
+      this._claim(key, ctor, meta.src, claimer);
+
+      if (this._resources.get(ctor)?.get(meta.src) === undefined) {
+        this._startRefFetch(ctor, meta.src, meta.opts);
+      }
+
+      return;
+    }
+
+    if (this._deferred.get(key) === undefined && this._resources.get(ctor)?.get(meta.src) === undefined) {
+      this._deferred.set(key, { handle, options: meta.opts });
+      this._handleKeys.set(handle, key);
+      this._claim(key, ctor, meta.src, claimer);
+      this._startSeamlessFetch(ctor, meta.src, meta.opts);
+    } else {
+      this._claim(key, ctor, meta.src, claimer);
+    }
+  }
 
   /**
    * Seamless single-source resolution: an already-stored asset, an existing
