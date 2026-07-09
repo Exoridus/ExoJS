@@ -112,7 +112,7 @@ export class AssetsImpl<M extends Record<string, CatalogEntry>> {
  */
 export type Assets<M extends Record<string, CatalogEntry>> = AssetsImpl<M> & InferAssetsProperties<M>;
 
-type AssetsConstructorFn = new <M extends Record<string, CatalogEntry>>(definition: M) => Assets<M>;
+type AssetsConstructorFn = new <const M extends Record<string, CatalogEntry>>(definition: M) => Assets<M>;
 
 type AssetsFacade = AssetsConstructorFn & {
   /**
@@ -120,11 +120,18 @@ type AssetsFacade = AssetsConstructorFn & {
    * from its suffix), an `X.of()` descriptor, or an explicit config. Bare
    * strings only resolve for leaf-capable kinds; ambiguous/unregistered
    * suffixes need `X.of()`. (asset-system v2 §4.1, §5)
+   *
+   * @remarks The `const` type parameter preserves each field's string LITERAL
+   * (e.g. `'ship.png'`) so the file suffix can be classified. Without it, under
+   * a `strictNullChecks: false` tsconfig (e.g. the examples config) the literal
+   * widens to `string`, `KindByPath<string>` collapses to `never`, and every
+   * leaf degrades to `unknown` (surfacing as `{}`) — see the strict:false type
+   * test `test/type-tests/assets-strict-false.type-test.ts`.
    */
-  from<M extends Record<string, CatalogEntry>>(definition: M): Assets<M>;
+  from<const M extends Record<string, CatalogEntry>>(definition: M): Assets<M>;
 };
 
-(AssetsImpl as unknown as { from: unknown }).from = function from<M extends Record<string, CatalogEntry>>(definition: M): Assets<M> {
+(AssetsImpl as unknown as { from: unknown }).from = function from<const M extends Record<string, CatalogEntry>>(definition: M): Assets<M> {
   return new (AssetsImpl as unknown as AssetsConstructorFn)(definition as never);
 };
 
