@@ -48,5 +48,6 @@ export const Asset = AssetImpl as unknown as AssetConstructorFn;
  * @internal
  */
 export function _makeAsset<K extends keyof AssetDefinitions>(kind: K, source: string, opts?: object): Asset<AssetDefinitions[K]['resource']> {
-  return new AssetImpl({ type: kind, source, ...(opts ?? {}) } as AnyAssetConfig) as unknown as Asset<AssetDefinitions[K]['resource']>;
+  // eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- generic `K` widens to `keyof AssetDefinitions` in a typed local, losing the type/config correlation `AnyAssetConfig` needs; the cast is required here, not just stylistic.
+  return new AssetImpl({ type: kind, source, ...(opts ?? {}) } as AnyAssetConfig);
 }

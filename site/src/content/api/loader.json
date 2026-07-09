@@ -6,10 +6,10 @@
   "subsystem": "resources",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 66,
+  "memberCount": 68,
   "counts": {
     "constructors": 1,
-    "methods": 55,
+    "methods": 57,
     "properties": 2,
     "events": 8
   },
@@ -740,7 +740,7 @@
         },
         {
           "name": "get",
-          "signature": "get(path: LoadByPath<S> extends Sound | Texture ? S : never, options?: unknown): LoadByPath<S>",
+          "signature": "get(path: LoadByPath<S> extends Texture | Sound ? S : never, options?: unknown): LoadByPath<S>",
           "signatureTokens": [
             {
               "text": "get",
@@ -787,7 +787,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Sound",
+              "text": "Texture",
               "kind": "type"
             },
             {
@@ -795,7 +795,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Texture",
+              "text": "Sound",
               "kind": "type"
             },
             {
@@ -862,7 +862,7 @@
           "params": [
             {
               "name": "path",
-              "type": "LoadByPath<S> extends Sound | Texture ? S : never",
+              "type": "LoadByPath<S> extends Texture | Sound ? S : never",
               "optional": false
             },
             {
@@ -873,6 +873,150 @@
           ],
           "returnType": "LoadByPath<S>",
           "description": "Seamless access by path alone — the asset type is inferred from the file extension (basename-only, longest-suffix-first; see ExtensionTypeMap). Accepts only paths whose inferred type has a seamless adapter (compile-time gate); dynamic strings resolving to an unregistered extension or a non-seamless type throw with guidance."
+        },
+        {
+          "name": "get",
+          "signature": "get(path: [KindByPath<S>] extends [never] ? never : S, options?: unknown): LeafForPath<S>",
+          "signatureTokens": [
+            {
+              "text": "get",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "path",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "KindByPath",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "S",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "extends",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "never",
+              "kind": "keyword"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": " ? ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "never",
+              "kind": "keyword"
+            },
+            {
+              "text": " : ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "S",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LeafForPath",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "S",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "path",
+              "type": "[KindByPath<S>] extends [never] ? never : S",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "unknown",
+              "optional": true
+            }
+          ],
+          "returnType": "LeafForPath<S>",
+          "description": "Bare-path seamless/value access: a resource suffix yields its handle, a value suffix yields a stable AssetRef, inferred from the file extension. Broader fallback below the resource-only overload above."
         },
         {
           "name": "get",
@@ -3276,6 +3420,174 @@
             }
           ],
           "returnType": "LoadingQueue<LoadByPath<S>>",
+          "description": "Fetches and processes one or more assets of the given type. - **Single path** — resolves with the finished asset. - **Array of paths** — resolves with an ordered array of assets. - **Record** — resolves with a record whose keys match the input keys. - **Asset<T>** — single typed asset reference. - **Assets<M>** — typed asset container; keys become aliases. - **Config map** — inline { alias: { type, source, … } } definition. In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Supply a custom options object to pass factory-specific configuration (e.g. audio decoding hints or image format overrides)."
+        },
+        {
+          "name": "load",
+          "signature": "load(path: [KindByPath<S>] extends [never] ? never : S, options?: unknown): LoadingQueue<ResourceForKind<KindByPath<S>>>",
+          "signatureTokens": [
+            {
+              "text": "load",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "path",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "KindByPath",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "S",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "extends",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "never",
+              "kind": "keyword"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": " ? ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "never",
+              "kind": "keyword"
+            },
+            {
+              "text": " : ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "S",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LoadingQueue",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ResourceForKind",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "KindByPath",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "S",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "path",
+              "type": "[KindByPath<S>] extends [never] ? never : S",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "unknown",
+              "optional": true
+            }
+          ],
+          "returnType": "LoadingQueue<ResourceForKind<KindByPath<S>>>",
           "description": "Fetches and processes one or more assets of the given type. - **Single path** — resolves with the finished asset. - **Array of paths** — resolves with an ordered array of assets. - **Record** — resolves with a record whose keys match the input keys. - **Asset<T>** — single typed asset reference. - **Assets<M>** — typed asset container; keys become aliases. - **Config map** — inline { alias: { type, source, … } } definition. In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Supply a custom options object to pass factory-specific configuration (e.g. audio decoding hints or image format overrides)."
         },
         {

@@ -8,6 +8,8 @@ import type { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { Sprite } from '#rendering/sprite/Sprite';
 import type { SamplerOptions } from '#rendering/texture/Sampler';
 import { Texture } from '#rendering/texture/Texture';
+import type { Asset } from '#resources/Asset';
+import { _makeAsset } from '#resources/Asset';
 
 interface VideoAudioSetup {
   readonly audioContext: AudioContext;
@@ -32,6 +34,16 @@ type FrameCallbackVideoElement = HTMLVideoElement &
  * node and can be directed to any {@link AudioBus}.
  */
 export class Video extends Sprite {
+  /**
+   * Annotation descriptor for a video asset, for `Assets.from({...})` /
+   * `loader.get(...)` / `loader.load(...)` (asset-system v2 §5). Prefer a bare
+   * `'x.mp4'` string when the suffix is unambiguous; use `Video.of(...)` for
+   * dynamic paths, ambiguous suffixes, or per-asset options.
+   */
+  public static of(source: string, options?: object): Asset<Video> {
+    return _makeAsset('video', source, options);
+  }
+
   public readonly onStart = new Signal();
   public readonly onStop = new Signal();
 

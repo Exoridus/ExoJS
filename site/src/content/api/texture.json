@@ -6,10 +6,10 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 32,
+  "memberCount": 33,
   "counts": {
     "constructors": 1,
-    "methods": 10,
+    "methods": 11,
     "properties": 21,
     "events": 0
   },
@@ -622,6 +622,98 @@
           ],
           "returnType": "Texture",
           "description": "Create a solid-colour texture of the given square size (default 1×1). Accepts a Color instance or any CSS colour string; a Color with alpha below 1 is rendered with that alpha. Generalizes the fixed Texture.black/Texture.white helpers."
+        },
+        {
+          "name": "of",
+          "signature": "of(source: string, options?: TextureFactoryOptions & PreSizeOptions): Asset<Texture>",
+          "signatureTokens": [
+            {
+              "text": "of",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextureFactoryOptions",
+              "kind": "type"
+            },
+            {
+              "text": " & ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PreSizeOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Asset",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Texture",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "source",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "TextureFactoryOptions & PreSizeOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "Asset<Texture>",
+          "description": "Annotation descriptor for a texture asset, for Assets.from({...}) / loader.get(...) / loader.load(...) (asset-system v2 §5). Prefer a bare 'x.png' string when the suffix is unambiguous; use Texture.of(...) for dynamic paths, ambiguous suffixes, or per-asset options."
         }
       ],
       "paragraphs": [],

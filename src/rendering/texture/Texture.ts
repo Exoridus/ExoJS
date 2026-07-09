@@ -6,6 +6,10 @@ import { Size } from '#math/Size';
 import { isPowerOfTwo } from '#math/utils';
 import { ScaleModes, WrapModes } from '#rendering/types';
 import { createCanvas, createCheckerCanvas } from '#rendering/utils';
+import type { Asset } from '#resources/Asset';
+import { _makeAsset } from '#resources/Asset';
+import type { TextureFactoryOptions } from '#resources/factories/TextureFactory';
+import type { PreSizeOptions } from '#resources/seamless';
 
 import type { SamplerOptions } from './Sampler';
 
@@ -83,6 +87,16 @@ export class Texture {
     }
 
     return Texture._missing;
+  }
+
+  /**
+   * Annotation descriptor for a texture asset, for `Assets.from({...})` /
+   * `loader.get(...)` / `loader.load(...)` (asset-system v2 §5). Prefer a bare
+   * `'x.png'` string when the suffix is unambiguous; use `Texture.of(...)` for
+   * dynamic paths, ambiguous suffixes, or per-asset options.
+   */
+  public static of(source: string, options?: TextureFactoryOptions & PreSizeOptions): Asset<Texture> {
+    return _makeAsset('texture', source, options);
   }
 
   private _version = 0;
