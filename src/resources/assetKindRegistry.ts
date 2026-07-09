@@ -11,11 +11,11 @@ export interface AssetKindEntry {
 
 const kinds = new Map<string, AssetKindEntry>();
 
-/** Register a kind's placeholder strategy. Idempotent for the same entry; throws on a conflicting adapter. @internal */
+/** Register a kind's placeholder strategy. Idempotent for the same entry; throws on a conflicting registration. @internal */
 export function registerAssetKind(kind: keyof AssetDefinitions, entry: AssetKindEntry): void {
   const existing = kinds.get(kind);
-  if (existing !== undefined && existing.adapter !== entry.adapter) {
-    throw new Error(`assetKindRegistry: kind "${kind}" already registered with a different adapter.`);
+  if (existing !== undefined && (existing.isValue !== entry.isValue || existing.adapter !== entry.adapter)) {
+    throw new Error(`assetKindRegistry: kind "${kind}" already registered with a conflicting entry.`);
   }
   kinds.set(kind, entry);
 }
