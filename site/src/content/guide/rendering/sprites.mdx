@@ -169,7 +169,7 @@ The `animations` map feeds into `AnimatedSprite.fromSpritesheet()`, covered in t
 // Video as a sprite texture
 import { RenderTexture, Sprite, Video } from '@codexo/exojs';
 
-const video = loader.get(Video, 'intro');
+const video = await loader.load(Video.of('intro.mp4'));
 const sprite = new Sprite(video.texture);
 
 // A RenderTexture (offscreen render) as a sprite texture

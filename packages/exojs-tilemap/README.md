@@ -39,7 +39,7 @@ custom-format maps.
 ## Usage — procedural map
 
 ```ts
-import { Application, Texture, TextureRegion } from '@codexo/exojs';
+import { Application, TextureRegion } from '@codexo/exojs';
 import {
   TileLayer,
   TileMap,
@@ -52,7 +52,7 @@ import {
 const app = new Application({ extensions: [tilemapExtension] /* canvas, … */ });
 
 // Tileset over a Loader-owned atlas texture (the runtime never destroys it).
-const atlas = await app.loader.load(Texture, 'tiles.png');
+const atlas = await app.loader.load('tiles.png');
 const terrain = new TileSet({
   name: 'terrain',
   texture: new TextureRegion(atlas, { x: 0, y: 0, width: atlas.width, height: atlas.height }),
