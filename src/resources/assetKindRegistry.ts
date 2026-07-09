@@ -33,12 +33,16 @@ export function createLeaf(kind: keyof AssetDefinitions, src: string, opts?: unk
   }
 
   if (entry.isValue) {
-    return _stampMeta(new AssetRef<unknown>(), { kind, src, opts });
+    const ref = new AssetRef<unknown>();
+    ref._loadState.markIdle(); // a catalog leaf is idle until a loader adopts it
+    return _stampMeta(ref, { kind, src, opts });
   }
 
   if (entry.adapter === undefined) {
     throw new Error(`assetKindRegistry: resource kind "${kind}" has no seamless adapter.`);
   }
 
-  return _stampMeta(entry.adapter.createPlaceholder(opts) as object, { kind, src, opts });
+  const placeholder = entry.adapter.createPlaceholder(opts) as { _loadState: { markIdle(): void } };
+  placeholder._loadState.markIdle(); // idle until adopted (overrides createPlaceholder's 'loading')
+  return _stampMeta(placeholder as object, { kind, src, opts });
 }

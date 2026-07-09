@@ -17,7 +17,7 @@ describe('defineAsset import-timing regression', () => {
 
     // Resource kind → a real placeholder handle.
     expect(catalog.ship).toBeInstanceOf(Texture);
-    expect((catalog.ship as Texture).loadState).toBe('loading');
+    expect((catalog.ship as Texture).loadState).toBe('idle');
 
     // Value kind → a deferred AssetRef.
     expect(catalog.level).toBeInstanceOf(AssetRef);

@@ -1246,6 +1246,12 @@ export class Loader {
       throw new Error(`Loader._adopt: no constructor registered for kind "${meta.kind}".`);
     }
 
+    // A freshly-created catalog leaf is 'idle' until adopted; entering the loader
+    // here transitions it to 'loading' (asset-system v2 §7). A re-adopted handle
+    // already loading/ready/failed is left untouched.
+    const leafState = (handle as { _loadState?: { value: string; begin(): void } })._loadState;
+    if (leafState?.value === 'idle') leafState.begin();
+
     const key = this._key(ctor, meta.src);
 
     if (handle instanceof AssetRef) {

@@ -62,10 +62,10 @@ describe('S2 asset-access surface (integration)', () => {
     expect(assets.level).toBeInstanceOf(AssetRef);
 
     // Status channel present on every leaf, all pending.
-    expect(assets.ship.state).toBe('loading');
+    expect(assets.ship.state).toBe('idle');
     expect(assets.ship.ready).toBe(false);
     expect(assets.ship.error).toBeNull();
-    expect(assets.level.state).toBe('loading');
+    expect(assets.level.state).toBe('idle');
     expect(assets.level.ready).toBe(false);
   });
 

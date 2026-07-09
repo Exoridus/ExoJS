@@ -21,7 +21,7 @@ describe('assetKindRegistry', () => {
   it('createLeaf builds a meta-stamped placeholder Texture for a resource kind', () => {
     const leaf = createLeaf('texture', 'ship.png', { width: 32, height: 16 });
     expect(leaf).toBeInstanceOf(Texture);
-    expect((leaf as Texture).loadState).toBe('loading');
+    expect((leaf as Texture).loadState).toBe('idle');
     expect(_readMeta(leaf)).toEqual({ kind: 'texture', src: 'ship.png', opts: { width: 32, height: 16 } });
   });
 

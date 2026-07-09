@@ -65,7 +65,7 @@ describe('Loader._adopt', () => {
     // Built with NO loader at all — mirrors what Assets.from() hands back.
     const leaf = createLeaf('texture', 'ship.png') as Texture;
 
-    expect(leaf.loadState).toBe('loading');
+    expect(leaf.loadState).toBe('idle');
     expect(leaf.width).toBe(0);
 
     loader._adopt(leaf, Symbol('claimer'));
@@ -218,7 +218,7 @@ describe('Loader._adopt', () => {
     // Built with NO loader at all — mirrors what Assets.from() hands back —
     // and is a DISTINCT object from the already-stored resource.
     const leaf = createLeaf('texture', 'x.png') as Texture;
-    expect(leaf.loadState).toBe('loading');
+    expect(leaf.loadState).toBe('idle');
     expect(leaf).not.toBe(stored);
 
     const claimer = Symbol('adopter');
@@ -256,8 +256,8 @@ describe('Loader._adopt', () => {
 
     const leaf = createLeaf('json', 'cfg.json') as AssetRef<unknown>;
 
-    expect(leaf.loadState).toBe('loading');
-    expect(() => leaf.value).toThrow("'loading'");
+    expect(leaf.loadState).toBe('idle');
+    expect(() => leaf.value).toThrow("'idle'");
 
     loader._adopt(leaf, Symbol('claimer'));
 
@@ -278,7 +278,7 @@ describe('Loader._adopt', () => {
     await loader.load('cfg.json');
 
     const leaf = createLeaf('json', 'cfg.json') as AssetRef<unknown>;
-    expect(leaf.loadState).toBe('loading');
+    expect(leaf.loadState).toBe('idle');
 
     const claimer = Symbol('adopter');
     loader._adopt(leaf, claimer);
