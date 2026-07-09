@@ -1,4 +1,4 @@
-import { Application, Color, Graphics, Scene, Sprite, Texture, View } from '@codexo/exojs';
+import { Application, Color, Graphics, Scene, Sprite, View } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -21,7 +21,7 @@ class PictureInPictureScene extends Scene {
     private frame!: Graphics;
 
     override async load(loader): Promise<void> {
-        this.sprite = new Sprite(await loader.load(Texture, 'image/ship-a.png'));
+        this.sprite = new Sprite(await loader.load('image/ship-a.png'));
     }
 
     override init(): void {

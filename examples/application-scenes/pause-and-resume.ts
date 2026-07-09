@@ -1,4 +1,4 @@
-import { Application, Color, Keyboard, Scene, Sprite, Text, Texture } from '@codexo/exojs';
+import { Application, Color, Keyboard, Scene, Sprite, Text } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -18,7 +18,7 @@ class PauseResumeScene extends Scene {
     private label!: Text;
 
     override async load(loader): Promise<void> {
-        this.sprite = new Sprite(await loader.load(Texture, 'image/ship-a.png'));
+        this.sprite = new Sprite(await loader.load('image/ship-a.png'));
     }
 
     override init(): void {

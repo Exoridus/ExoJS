@@ -32,7 +32,7 @@ class SplitScreenScene extends Scene {
     };
 
     override async load(loader): Promise<void> {
-        this.texture = await loader.load(Texture, 'image/ship-a.png');
+        this.texture = await loader.load('image/ship-a.png');
     }
 
     override init(): void {

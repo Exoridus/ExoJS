@@ -1,4 +1,4 @@
-import { Application, Color, Scene, Sprite, Texture } from '@codexo/exojs';
+import { Application, Color, Scene, Sprite } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -17,7 +17,7 @@ class GameLoopScene extends Scene {
     private sprite!: Sprite;
 
     override async load(loader): Promise<void> {
-        this.sprite = new Sprite(await loader.load(Texture, 'image/ship-a.png'));
+        this.sprite = new Sprite(await loader.load('image/ship-a.png'));
     }
 
     override init(): void {

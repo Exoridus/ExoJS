@@ -1,4 +1,4 @@
-import { Application, Color, Json, Scene, Sprite, Spritesheet, type SpritesheetData, Texture, TextureRegion, Vector } from '@codexo/exojs';
+import { Application, Color, Scene, Sprite, Spritesheet, type SpritesheetData, TextureRegion, Vector } from '@codexo/exojs';
 import { BoxShape, type PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
 import { PhysicsDebugDraw } from '@codexo/exojs-physics/debug';
 import { ObjectKind, ObjectLayer, type RectangleObject, TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, tilemapExtension, TileMapNode, TileSet } from '@codexo/exojs-tilemap';
@@ -45,11 +45,9 @@ class TiledMapPhysicsActorScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
 
     override async load(loader): Promise<void> {
-        await loader.load(Texture, {
-            tiles: assets.demo.tilesets.map.image,
-            characters: assets.demo.spritesheets.platformerCharacters.image,
-        });
-        await loader.load(Json, { characters: assets.demo.spritesheets.platformerCharacters.data });
+        await loader.load(assets.demo.tilesets.map.image);
+        await loader.load(assets.demo.spritesheets.platformerCharacters.image);
+        await loader.load(assets.demo.spritesheets.platformerCharacters.data);
     }
 
     override init(loader): void {
@@ -58,7 +56,7 @@ class TiledMapPhysicsActorScene extends Scene {
         // ── Tileset + a single ground tile layer ──────────────────────────
         // The map-pack tilesheet is a uniform 64×64 grid (17 columns), so it
         // works as a classic grid tileset. We only need one solid-looking tile.
-        const tilesTexture = loader.get(Texture, 'tiles');
+        const tilesTexture = loader.get(assets.demo.tilesets.map.image);
         const tileset = new TileSet({
             name: 'map',
             texture: new TextureRegion(tilesTexture, { x: 0, y: 0, width: tilesTexture.width, height: tilesTexture.height }),
@@ -129,7 +127,10 @@ class TiledMapPhysicsActorScene extends Scene {
         }
 
         // ── Dynamic actor ─────────────────────────────────────────────────
-        const characters = new Spritesheet(loader.get(Texture, 'characters'), loader.get(Json, 'characters').value as SpritesheetData);
+        const characters = new Spritesheet(
+            loader.get(assets.demo.spritesheets.platformerCharacters.image),
+            loader.get(assets.demo.spritesheets.platformerCharacters.data).value as SpritesheetData,
+        );
 
         this.actor = characters.getFrameSprite('character_green_front').setAnchor(0.5);
         this.actorBody = this.world.attach(this.actor, {

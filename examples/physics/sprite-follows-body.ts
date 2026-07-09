@@ -1,4 +1,4 @@
-import { Application, Color, Json, Scene, Sprite, Spritesheet, type SpritesheetData, Texture, Vector } from '@codexo/exojs';
+import { Application, Color, Scene, Sprite, Spritesheet, type SpritesheetData, Vector } from '@codexo/exojs';
 import { BoxShape, type PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
 import { mountControls } from '@examples/runtime';
 
@@ -27,11 +27,9 @@ class SpriteFollowsBodyScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
 
     override async load(loader): Promise<void> {
-        await loader.load(Texture, {
-            characters: assets.demo.spritesheets.platformerCharacters.image,
-            pixel: assets.demo.textures.pixelWhite,
-        });
-        await loader.load(Json, { characters: assets.demo.spritesheets.platformerCharacters.data });
+        await loader.load(assets.demo.spritesheets.platformerCharacters.image);
+        await loader.load(assets.demo.textures.pixelWhite);
+        await loader.load(assets.demo.spritesheets.platformerCharacters.data);
     }
 
     override init(loader): void {
@@ -40,7 +38,10 @@ class SpriteFollowsBodyScene extends Scene {
         // Gravity in px/s², +Y down — matches the engine's screen space.
         this.world = new PhysicsWorld({ gravity: { x: 0, y: 1400 } });
 
-        const characters = new Spritesheet(loader.get(Texture, 'characters'), loader.get(Json, 'characters').value as SpritesheetData);
+        const characters = new Spritesheet(
+            loader.get(assets.demo.spritesheets.platformerCharacters.image),
+            loader.get(assets.demo.spritesheets.platformerCharacters.data).value as SpritesheetData,
+        );
 
         this.floorY = height - 80;
 
@@ -50,7 +51,7 @@ class SpriteFollowsBodyScene extends Scene {
         const floorWidth = width - 120;
         const floorHeight = 48;
 
-        this.floor = new Sprite(loader.get(Texture, 'pixel')).setAnchor(0.5);
+        this.floor = new Sprite(loader.get(assets.demo.textures.pixelWhite)).setAnchor(0.5);
         this.floor.width = floorWidth;
         this.floor.height = floorHeight;
         this.floor.tint = new Color(70, 92, 120);

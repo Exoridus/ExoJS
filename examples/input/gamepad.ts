@@ -1,4 +1,4 @@
-import { Application, Color, Container, GamepadAxis, GamepadButton, Json, lerp, Scene, Sprite, Spritesheet, Texture, Vector } from '@codexo/exojs';
+import { Application, Color, Container, GamepadAxis, GamepadButton, lerp, Scene, Sprite, Spritesheet, Vector } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -25,12 +25,12 @@ class GamepadScene extends Scene {
     private container!: Container;
 
     override async load(loader): Promise<void> {
-        await loader.load(Texture, { buttons: 'image/buttons.png' });
-        await loader.load(Json, { buttons: 'json/buttons.json' });
+        await loader.load('image/buttons.png');
+        await loader.load('json/buttons.json');
     }
 
     override init(loader): void {
-        this.buttons = new Spritesheet(loader.get(Texture, 'buttons'), loader.get(Json, 'buttons').value);
+        this.buttons = new Spritesheet(loader.get('image/buttons.png'), loader.get('json/buttons.json').value);
         this.status = this.createStatus();
         this.container = this.createGamepad();
 

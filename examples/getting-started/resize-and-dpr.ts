@@ -1,4 +1,4 @@
-import { Application, Color, Scene, Sprite, Text, Texture } from '@codexo/exojs';
+import { Application, Color, Scene, Sprite, Text } from '@codexo/exojs';
 
 // #region guide:app-setup
 const app = new Application({
@@ -34,7 +34,7 @@ class ResizeScene extends Scene {
     private info!: Text;
 
     override async load(loader): Promise<void> {
-        this.sprite = new Sprite(await loader.load(Texture, 'image/ship-a.png'));
+        this.sprite = new Sprite(await loader.load('image/ship-a.png'));
     }
 
     override init(): void {
