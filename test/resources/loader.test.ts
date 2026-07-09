@@ -7,6 +7,7 @@ import type { AssetFactory } from '#resources/AssetFactory';
 import { Assets } from '#resources/Assets';
 import type { CacheStore } from '#resources/CacheStore';
 import { coreAssetBindings } from '#resources/coreAssetBindings';
+import { defineAsset } from '#resources/defineAsset';
 import { Loader } from '#resources/Loader';
 import { BinaryAsset, Json, TextAsset } from '#resources/tokens';
 
@@ -20,9 +21,12 @@ function createCoreLoader(options?: ConstructorParameters<typeof Loader>[0]): Lo
 // Declaration merges for test-only asset types
 declare module '#resources/AssetDefinitions' {
   interface AssetDefinitions {
-    mockAsset: { resource: string; config: { source: string } };
+    mockAsset: { resource: string; config: { source: string; format?: string; scale?: number; locale?: string } };
     richAsset: { resource: string; config: { source: string; format: string } };
     boundAsset: { resource: unknown; config: { source: string; scale?: number } };
+    dummyAsset: { resource: DummyAsset; config: { source: string } };
+    firstType: { resource: unknown; config: { source: string } };
+    secondType: { resource: unknown; config: { source: string } };
   }
 }
 
@@ -42,18 +46,6 @@ class DummyFactory implements AssetFactory<DummyAsset> {
   public readonly storageName = 'dummy';
   public readonly process = vi.fn(async (response: Response): Promise<string> => 'raw');
   public readonly create = vi.fn(async (source: string): Promise<DummyAsset> => new DummyAsset(source));
-
-  public destroy(): void {}
-}
-
-class InstanceFactory<T> implements AssetFactory<T> {
-  public readonly storageName = 'instance';
-  public readonly process = vi.fn(async (_response: Response): Promise<string> => 'raw');
-  public readonly create: (source: string) => Promise<T>;
-
-  public constructor(resource: T) {
-    this.create = vi.fn(async (_source: string): Promise<T> => resource);
-  }
 
   public destroy(): void {}
 }
@@ -237,14 +229,24 @@ describe('Loader', () => {
     expect(loader._peekResource(TextAsset, 'b.txt')).toBeNull();
   });
 
-  test('custom factory via register() with user-defined class', async () => {
-    const factory = new DummyFactory();
+  test('custom asset via defineAsset() with user-defined class', async () => {
     const loader = new Loader({ basePath: '/' });
 
-    loader.register(DummyAsset, factory);
-    mockFetch();
+    materializeAssetBindings(loader, [
+      defineAsset<DummyAsset>({
+        type: DummyAsset,
+        kind: 'dummyAsset',
+        isValue: false,
+        create: () => ({
+          async load(request, ctx) {
+            return new DummyAsset(await ctx.fetchText(request.source));
+          },
+        }),
+      }),
+    ]);
+    mockFetch('raw');
 
-    const result = await loader.load(DummyAsset, 'thing.dat');
+    const result = await loader.load(new Asset({ type: 'dummyAsset', source: 'thing.dat' }));
 
     expect(result).toBeInstanceOf(DummyAsset);
     expect(result.value).toBe('raw');
@@ -356,16 +358,39 @@ describe('Loader', () => {
     Object.defineProperty(FirstType, 'name', { value: 'MinifiedType' });
     Object.defineProperty(SecondType, 'name', { value: 'MinifiedType' });
 
-    const firstFactory = new InstanceFactory(new FirstType());
-    const secondFactory = new InstanceFactory(new SecondType());
     const loader = new Loader({ basePath: '/' });
 
-    loader.register(FirstType, firstFactory as AssetFactory<FirstType>);
-    loader.register(SecondType, secondFactory as AssetFactory<SecondType>);
+    materializeAssetBindings(loader, [
+      defineAsset<FirstType>({
+        type: FirstType,
+        kind: 'firstType',
+        isValue: false,
+        create: () => ({
+          async load(request, ctx) {
+            await ctx.fetchText(request.source);
+            return new FirstType();
+          },
+        }),
+      }),
+      defineAsset<SecondType>({
+        type: SecondType,
+        kind: 'secondType',
+        isValue: false,
+        create: () => ({
+          async load(request, ctx) {
+            await ctx.fetchText(request.source);
+            return new SecondType();
+          },
+        }),
+      }),
+    ]);
 
     mockFetch();
 
-    const [first, second] = await Promise.all([loader.load(FirstType, 'shared.asset'), loader.load(SecondType, 'shared.asset')]);
+    const [first, second] = await Promise.all([
+      loader.load(new Asset({ type: 'firstType', source: 'shared.asset' })),
+      loader.load(new Asset({ type: 'secondType', source: 'shared.asset' })),
+    ]);
 
     expect(first).toBeInstanceOf(FirstType);
     expect(second).toBeInstanceOf(SecondType);
@@ -376,13 +401,6 @@ describe('Loader', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 // New Asset / Assets / LoadingQueue stabilisation tests
 // ─────────────────────────────────────────────────────────────────────────────
-
-class MockAssetFactory implements AssetFactory<string> {
-  public readonly storageName = 'mockAsset';
-  public readonly process = vi.fn(async (_response: Response): Promise<string> => 'raw');
-  public readonly create = vi.fn(async (source: string): Promise<string> => `loaded:${source}`);
-  public destroy(): void {}
-}
 
 class MockAssetType {}
 
@@ -791,66 +809,6 @@ describe('bindAsset() handler — cache-aware AssetLoaderContext', () => {
   });
 });
 
-describe('load(Type, { alias: BatchValue }) — extended legacy batch API', () => {
-  const originalFetch = global.fetch;
-
-  afterEach(() => {
-    global.fetch = originalFetch;
-  });
-
-  function mockFetch(): void {
-    global.fetch = vi.fn(
-      async (): Promise<Response> =>
-        ({
-          ok: true,
-          status: 200,
-          statusText: 'OK',
-          text: async () => 'raw',
-          json: async () => ({}),
-          arrayBuffer: async () => new ArrayBuffer(0),
-        }) as unknown as Response,
-    );
-  }
-
-  test('accepts a config object value with source and extra fields', async () => {
-    const factory = new MockAssetFactory();
-    const receivedOptions: unknown[] = [];
-
-    factory.create.mockImplementation(async (source: string, options?: unknown) => {
-      receivedOptions.push(options);
-      return `loaded:${source}`;
-    });
-
-    const loader = new Loader({ basePath: '/' });
-
-    loader.register(MockAssetType, factory as AssetFactory<MockAssetType>);
-    mockFetch();
-
-    const result = await loader.load(MockAssetType, {
-      heroA: 'images/hero.png',
-      heroB: { source: 'images/hero-alt.png', scale: 2, format: 'png' },
-    });
-
-    expect(result.heroA).toBe('loaded:raw');
-    expect(result.heroB).toBe('loaded:raw');
-    // heroB's extra fields must be forwarded to factory.create as options
-    expect(receivedOptions).toContainEqual(expect.objectContaining({ source: 'images/hero-alt.png', scale: 2, format: 'png' }));
-  });
-
-  test('string values in batch continue to work unchanged', async () => {
-    const factory = new MockAssetFactory();
-    const loader = new Loader({ basePath: '/' });
-
-    loader.register(MockAssetType, factory as AssetFactory<MockAssetType>);
-    mockFetch();
-
-    const result = await loader.load(MockAssetType, { heroA: 'images/hero.png' });
-
-    expect(result.heroA).toBe('loaded:raw');
-    expect(global.fetch).toHaveBeenCalledWith('/images/hero.png', expect.anything());
-  });
-});
-
 describe('handler context.fetch* — IDB store names (Fix 1 regression)', () => {
   class RichAsset {}
 
@@ -1092,13 +1050,23 @@ describe('keyFor()', () => {
   }
 
   test('returns the type + first alias for a loaded object resource', async () => {
-    const factory = new DummyFactory();
     const loader = new Loader({ basePath: '/' });
 
-    loader.register(DummyAsset, factory);
+    materializeAssetBindings(loader, [
+      defineAsset<DummyAsset>({
+        type: DummyAsset,
+        kind: 'dummyAsset',
+        isValue: false,
+        create: () => ({
+          async load(request, ctx) {
+            return new DummyAsset(await ctx.fetchText(request.source));
+          },
+        }),
+      }),
+    ]);
     mockFetch();
 
-    const result = await loader.load(DummyAsset, 'thing.dat');
+    const result = await loader.load(new Asset({ type: 'dummyAsset', source: 'thing.dat' }));
 
     expect(loader.keyFor(result)).toEqual({ type: DummyAsset, source: 'thing.dat' });
   });
@@ -1260,32 +1228,43 @@ describe('bindAsset() — direct handler binding', () => {
     global.fetch = originalFetch;
   });
 
-  test('binds by type token: load(Type, path) resolves via the handler', async () => {
+  test('binds by kind: load(Asset) resolves via the handler', async () => {
     const loader = new Loader({ basePath: '/' });
 
-    loader.bindAsset<BoundAsset>({ type: BoundAsset }, { load: async request => new BoundAsset(request.source) });
+    materializeAssetBindings(loader, [
+      defineAsset<BoundAsset>({
+        type: BoundAsset,
+        kind: 'boundAsset',
+        isValue: false,
+        create: () => ({ load: async request => new BoundAsset(request.source) }),
+      }),
+    ]);
 
-    const result = await loader.load(BoundAsset, 'thing.bin');
+    const result = (await loader.load(new Asset({ type: 'boundAsset', source: 'thing.bin' }))) as BoundAsset;
 
     expect(result).toBeInstanceOf(BoundAsset);
     expect(result.value).toBe('thing.bin');
   });
 
-  test('load(Type, path, options) forwards an options object into the handler request', async () => {
+  test('extra config fields are forwarded as an options object into the handler request', async () => {
     const loader = new Loader({ basePath: '/' });
     let receivedConfig: unknown;
 
-    loader.bindAsset<BoundAsset, { scale: number }>(
-      { type: BoundAsset },
-      {
-        load: async request => {
-          receivedConfig = request;
-          return new BoundAsset(request.source);
-        },
-      },
-    );
+    materializeAssetBindings(loader, [
+      defineAsset<BoundAsset, { scale: number }>({
+        type: BoundAsset,
+        kind: 'boundAsset',
+        isValue: false,
+        create: () => ({
+          load: async request => {
+            receivedConfig = request;
+            return new BoundAsset(request.source);
+          },
+        }),
+      }),
+    ]);
 
-    await loader.load(BoundAsset, 'thing.bin', { scale: 3 });
+    await loader.load(new Asset({ type: 'boundAsset', source: 'thing.bin', scale: 3 }));
 
     expect(receivedConfig).toMatchObject({ source: 'thing.bin', options: { scale: 3 } });
   });
@@ -1547,31 +1526,35 @@ describe('handler load() rejection is wrapped with url + cause', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Coverage sweep — _loadSingleAsset non-handler branch: extra config fields
-// forwarded as fetch options for a plain register()/registerAssetType() factory
+// Coverage sweep — Asset config: extra config fields surface as handler options
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe('Asset-based load() without a handler — extra config fields as options', () => {
+describe('Asset-based load() — extra config fields as handler options', () => {
   const originalFetch = global.fetch;
 
   afterEach(() => {
     global.fetch = originalFetch;
   });
 
-  test('extra options are forwarded to factory.create()', async () => {
-    const factory = new MockAssetFactory();
+  test('extra config fields are forwarded to the handler request options', async () => {
     const loader = new Loader({ basePath: '/' });
 
-    loader.register(MockAssetType, factory as AssetFactory<MockAssetType>);
-    global.fetch = vi.fn(async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', text: async () => 'raw' }) as unknown as Response);
-
     const receivedOptions: unknown[] = [];
-    factory.create.mockImplementation(async (source: string, options?: unknown) => {
-      receivedOptions.push(options);
-      return `loaded:${source}`;
-    });
+    materializeAssetBindings(loader, [
+      defineAsset<string, { format: string }>({
+        type: MockAssetType,
+        kind: 'mockAsset',
+        isValue: false,
+        create: () => ({
+          async load(request) {
+            receivedOptions.push(request.options);
+            return `loaded:${request.source}`;
+          },
+        }),
+      }),
+    ]);
 
-    await loader.load(MockAssetType, 'extra.dat', { format: 'tiled' });
+    await loader.load(new Asset({ type: 'mockAsset', source: 'extra.dat', format: 'tiled' }));
 
     expect(receivedOptions[0]).toMatchObject({ format: 'tiled' });
   });
@@ -1623,15 +1606,25 @@ describe('unload()-during-in-flight identity cleanup on rejection', () => {
 describe('unloadAll() with no type argument', () => {
   test('clears every loaded type', async () => {
     const textFactory = new MockTextFactory();
-    const dummyFactory = new DummyFactory();
     const loader = new Loader({ basePath: '/' });
 
     loader.register(TextAsset, textFactory as AssetFactory<TextAsset>);
-    loader.register(DummyAsset, dummyFactory);
+    materializeAssetBindings(loader, [
+      defineAsset<DummyAsset>({
+        type: DummyAsset,
+        kind: 'dummyAsset',
+        isValue: false,
+        create: () => ({
+          async load(request, ctx) {
+            return new DummyAsset(await ctx.fetchText(request.source));
+          },
+        }),
+      }),
+    ]);
     global.fetch = vi.fn(async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', text: async () => 'raw' }) as unknown as Response);
 
     await loader.load('a.txt');
-    await loader.load(DummyAsset, 'b.dat');
+    await loader.load(new Asset({ type: 'dummyAsset', source: 'b.dat' }));
 
     expect(loader._peekResource(TextAsset, 'a.txt')).not.toBeNull();
     expect(loader._peekResource(DummyAsset, 'b.dat')).not.toBeNull();
@@ -1640,26 +1633,6 @@ describe('unloadAll() with no type argument', () => {
 
     expect(loader._peekResource(TextAsset, 'a.txt')).toBeNull();
     expect(loader._peekResource(DummyAsset, 'b.dat')).toBeNull();
-  });
-});
-
-describe('legacy Record<string, BatchValue> — third-argument options merge', () => {
-  test('merges third-argument options into an object-shaped BatchValue', async () => {
-    const factory = new MockAssetFactory();
-    const loader = new Loader({ basePath: '/' });
-
-    loader.register(MockAssetType, factory as AssetFactory<MockAssetType>);
-    global.fetch = vi.fn(async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', text: async () => 'raw' }) as unknown as Response);
-
-    const receivedOptions: unknown[] = [];
-    factory.create.mockImplementation(async (source: string, options?: unknown) => {
-      receivedOptions.push(options);
-      return `loaded:${source}`;
-    });
-
-    await loader.load(MockAssetType, { hero: { source: 'images/hero.png', scale: 2 } }, { locale: 'en' });
-
-    expect(receivedOptions[0]).toMatchObject({ source: 'images/hero.png', scale: 2, locale: 'en' });
   });
 });
 

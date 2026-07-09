@@ -14,6 +14,8 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import type { AssetBinding, AssetHandler, AssetLoadRequest } from '#extensions/Extension';
 import { materializeAssetBindings } from '#extensions/materialize';
 import { Asset } from '#resources/Asset';
+import type { AssetDefinitions } from '#resources/AssetDefinitions';
+import { defineAsset } from '#resources/defineAsset';
 import type { AssetLoaderContext } from '#resources/Loader';
 import { Loader } from '#resources/Loader';
 
@@ -395,23 +397,22 @@ describe('declarative bindAsset identity propagation', () => {
   it('handler receives options nested under request.options via declarative path', async () => {
     let seenRequest: AssetLoadRequest<ExampleLoadOptions> | undefined;
 
-    const capturingBinding: AssetBinding<ExampleAsset, ExampleLoadOptions> = {
+    const capturingBinding = defineAsset<ExampleAsset, ExampleLoadOptions>({
       type: ExampleAsset,
-      typeNames: ['captureExample'],
+      kind: 'captureExample',
+      isValue: false,
 
-      create() {
-        return {
-          async load(request) {
-            seenRequest = request;
-            return new ExampleAsset();
-          },
-        };
-      },
-    };
+      create: () => ({
+        async load(request) {
+          seenRequest = request;
+          return new ExampleAsset();
+        },
+      }),
+    });
 
     materializeAssetBindings(loader, [capturingBinding]);
 
-    await expect(loader.load(ExampleAsset, 'thing.dat', { format: 'alt', strict: false } as ExampleLoadOptions)).resolves.toBeInstanceOf(ExampleAsset);
+    await expect(loader.load(new Asset({ type: 'captureExample', source: 'thing.dat', format: 'alt', strict: false }))).resolves.toBeInstanceOf(ExampleAsset);
 
     expect(seenRequest?.source).toBe('thing.dat');
     expect(seenRequest?.options).toEqual({ format: 'alt', strict: false });
@@ -421,23 +422,22 @@ describe('declarative bindAsset identity propagation', () => {
   it('handler receives no options key when none are passed (declarative path)', async () => {
     let seenRequest: AssetLoadRequest<ExampleLoadOptions> | undefined;
 
-    const capturingBinding: AssetBinding<ExampleAsset, ExampleLoadOptions> = {
+    const capturingBinding = defineAsset<ExampleAsset, ExampleLoadOptions>({
       type: ExampleAsset,
-      typeNames: ['captureNoOpts'],
+      kind: 'captureNoOpts',
+      isValue: false,
 
-      create() {
-        return {
-          async load(request) {
-            seenRequest = request;
-            return new ExampleAsset();
-          },
-        };
-      },
-    };
+      create: () => ({
+        async load(request) {
+          seenRequest = request;
+          return new ExampleAsset();
+        },
+      }),
+    });
 
     materializeAssetBindings(loader, [capturingBinding]);
 
-    await expect(loader.load(ExampleAsset, 'thing.dat')).resolves.toBeInstanceOf(ExampleAsset);
+    await expect(loader.load(new Asset({ type: 'captureNoOpts', source: 'thing.dat' }))).resolves.toBeInstanceOf(ExampleAsset);
 
     expect(seenRequest?.source).toBe('thing.dat');
     expect(seenRequest?.options).toBeUndefined();
@@ -457,6 +457,14 @@ declare module '#resources/AssetDefinitions' {
     example: {
       resource: ExampleAsset;
       config: { source: string; format?: 'example' | 'alt'; strict?: boolean };
+    };
+    captureExample: {
+      resource: ExampleAsset;
+      config: { source: string; format?: 'example' | 'alt'; strict?: boolean; trace?: boolean };
+    };
+    captureNoOpts: {
+      resource: ExampleAsset;
+      config: { source: string };
     };
   }
 }
