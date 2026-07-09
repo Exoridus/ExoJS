@@ -39,3 +39,14 @@ export interface Asset<T> {
 type AssetConstructorFn = new <K extends keyof AssetDefinitions>(config: { type: K } & AssetDefinitions[K]['config']) => Asset<AssetDefinitions[K]['resource']>;
 
 export const Asset = AssetImpl as unknown as AssetConstructorFn;
+
+/**
+ * Build an {@link Asset} descriptor for an `X.of(source, opts?)` annotation
+ * static (asset-system v2 §5). Lives here (not in each resource class) so
+ * `Texture`/`Sound`/… import only this light POJO factory from `#resources/Asset`,
+ * with no runtime edge back into the `#resources` barrel.
+ * @internal
+ */
+export function _makeAsset<K extends keyof AssetDefinitions>(kind: K, source: string, opts?: object): Asset<AssetDefinitions[K]['resource']> {
+  return new AssetImpl({ type: kind, source, ...(opts ?? {}) } as AnyAssetConfig) as unknown as Asset<AssetDefinitions[K]['resource']>;
+}
