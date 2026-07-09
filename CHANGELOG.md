@@ -4,6 +4,37 @@ All notable changes to ExoJS are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.3] - 2026-07-09
+
+Adds floating-point offscreen render targets, unblocking multi-pass feedback
+effects — velocity/flow fields, HDR intensity accumulators, high-precision
+feedback trails — that band or die out when quantized to 8-bit intermediates.
+Supported on **both** the WebGL2 and WebGPU backends.
+
+### Added
+
+- **Float `RenderTexture` color formats.** `new RenderTexture(w, h, { format })`
+  now accepts `'rgba16f'` / `'rgba32f'` alongside the default `'rgba8'` (fully
+  backward compatible — every existing call site is unchanged). Float targets
+  default to `nearest` sampling; `RenderTexture.format` exposes the format. On
+  WebGL2 the target is a floating-point color attachment via
+  `EXT_color_buffer_float`; on WebGPU `rgba16float`/`rgba32float` are core
+  color-renderable (no device feature required).
+- **`RenderingContext.supportsColorFormat(format)`** (and the corresponding
+  `RenderBackend` method) to query float-render-target support before
+  allocating. `CaptureOptions.format` threads the format through
+  `RenderingContext.capture`. On WebGL2, requesting a float format without
+  `EXT_color_buffer_float` throws a clear, actionable error at render-target
+  preparation rather than yielding a silently broken framebuffer — callers
+  choose their own fallback (no automatic format negotiation).
+
+### Fixed
+
+- **WebGPU offscreen render pipelines now match the bound target's color
+  format.** `renderTargetFormat` previously reported `rgba8unorm` for every
+  offscreen target, so pipelines built from it mismatched a non-`rgba8`
+  attachment. (Latent until float targets existed; required for the above.)
+
 ## [0.15.2] - 2026-07-04
 
 Bugfix release. Ten defects found by the coverage-fleet passes on the v0.16
