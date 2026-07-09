@@ -729,6 +729,9 @@ export class Loader {
   public load<T>(asset: Asset<T>): LoadingQueue<T>;
   public load<M extends Record<string, AssetInput>>(assets: Assets<M>): LoadingQueue<InferLoadedMap<M>>;
   public load<M extends Record<string, AssetInput>>(config: M): LoadingQueue<InferLoadedMap<M>>;
+  // Single value-leaf (an `Assets.from()` AssetRef property): `AssetRef.loaded` resolves
+  // to the raw value, not the ref — this overload must win over the generic leaf one below.
+  public load<T>(leaf: AssetRef<T>): LoadingQueue<T>;
   // Single handle-hybrid leaf (an `Assets.from()` property): adopt + resolve its value.
   public load<T extends object>(leaf: T): LoadingQueue<T>;
 
@@ -1712,9 +1715,10 @@ export class Loader {
 
       // §7 accepted gap: this leaf fills once from the stored payload but is not
       // entered into per-key bookkeeping, so a later evict+heal of this key will
-      // not touch it (it keeps the stale payload). Closes when §7 introduces
-      // per-key multi-handle tracking. Unreachable in S1's usage surface. See
-      // 07-asset-access-design.md §12.
+      // not touch it (it keeps the stale payload). Reachable via a duplicate
+      // source in one catalog (second leaf hangs at 'loading'); no shipped
+      // example does this. §7's per-key multi-handle tracking closes it and
+      // should prefer a dev-warn over a silent hang. See 07-asset-access-design.md §12.
       adapter?.fill(handle, stored);
       this._handleKeys.set(handle, key);
     }

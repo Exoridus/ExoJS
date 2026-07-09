@@ -7,6 +7,7 @@ import { type AssetRef } from '#resources/AssetRef';
 import { Assets } from '#resources/Assets';
 import { coreAssetBindings } from '#resources/coreAssetBindings';
 import { Loader } from '#resources/Loader';
+import type { LoadingQueue } from '#resources/LoadingQueue';
 import { Json } from '#resources/tokens';
 
 /** Loader with all core asset bindings (mirrors createCoreLoader in loader-seamless.test.ts / asset-ref.test.ts). */
@@ -261,6 +262,29 @@ describe('Loader.get / load — Assets catalog adoption (end-to-end)', () => {
 
     expect(result.config).toEqual({ hp: 7 }); // raw value in the resolved map
     expect(catalog.config.value).toEqual({ hp: 7 }); // the ref healed in place
+  });
+
+  // M1: `load(leaf)` had a single generic overload (`<T extends object>(leaf: T):
+  // LoadingQueue<T>`) that types a value leaf's result as the AssetRef itself,
+  // while at runtime `AssetRef.loaded` resolves to the raw parsed value (see the
+  // `_createAdoptedQueue` "value leaf" case above `LoadingQueue<T>` is right for a
+  // resource leaf, but wrong for `AssetRef<T>`). A discriminating `load<T>(leaf:
+  // AssetRef<T>): LoadingQueue<T>` overload must be declared first so it wins.
+  test('type-level: load(AssetRef leaf) resolves LoadingQueue<T>, not LoadingQueue<AssetRef<T>>', () => {
+    const loader = createCoreLoader();
+    const catalog = new Assets({ config: { type: 'json', source: 'cfg.json' } });
+    const textureCatalog = new Assets({ ship: { type: 'texture', source: 'ship.png' } });
+
+    // Each assertion is wrapped in an uncalled arrow so only the overload
+    // resolution is checked — invoking `load()` for real here would fire an
+    // unmocked fetch.
+    //
+    // catalog.config: AssetRef<unknown> — load() must resolve to the raw value
+    // type (`unknown`), never to `LoadingQueue<AssetRef<unknown>>`.
+    expectTypeOf(() => loader.load(catalog.config)).returns.toEqualTypeOf<LoadingQueue<unknown>>();
+
+    // A resource leaf (Texture) is unaffected: it still resolves to itself.
+    expectTypeOf(() => loader.load(textureCatalog.ship)).returns.toEqualTypeOf<LoadingQueue<Texture>>();
   });
 
   test('two catalogs with the same source get DISTINCT leaf objects that both heal from ONE fetch (source-keyed dedup)', async () => {

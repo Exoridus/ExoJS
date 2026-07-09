@@ -140,6 +140,11 @@ class SceneLoader implements Destroyable {
   public load<M extends Record<string, AssetInput>>(assets: Assets<M>): LoadingQueue<InferLoadedMap<M>>;
   // eslint-disable-next-line @typescript-eslint/unified-signatures -- mirrors Loader.load verbatim (rule disabled there too)
   public load<M extends Record<string, AssetInput>>(config: M): LoadingQueue<InferLoadedMap<M>>;
+  // Single value-leaf (an `Assets.from()` AssetRef property): mirrors Loader.load(leaf).
+  // eslint-disable-next-line @typescript-eslint/unified-signatures -- mirrors Loader.load verbatim (rule disabled there too)
+  public load<T>(leaf: AssetRef<T>): LoadingQueue<T>;
+  // Single handle-hybrid leaf (an `Assets.from()` property): mirrors Loader.load(leaf).
+  public load<T extends object>(leaf: T): LoadingQueue<T>;
   public load<R, S extends string>(path: [PathExtension<S>] extends [never] ? never : S): LoadingQueue<R>;
   public load<S extends string>(path: [PathExtension<S>] extends [never] ? never : S): LoadingQueue<LoadByPath<S>>;
   public load<T extends Loadable, S extends string>(type: ConstrainedLoadable<T, S>, path: S, options?: unknown): LoadingQueue<LoadReturn<T>>;
