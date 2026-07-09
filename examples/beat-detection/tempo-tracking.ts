@@ -30,14 +30,12 @@ class TempoTrackingScene extends Scene {
     private tapPrompt!: Text;
 
     override async load(loader): Promise<void> {
-        await loader.load(AudioStream, { track: 'audio/demo-loop-main.ogg' });
+        this.music = await loader.load(AudioStream.of('audio/demo-loop-main.ogg'));
     }
 
     override init(loader): void {
         const { width, height } = this.app.canvas;
         const marginX = width * 0.08;
-
-        this.music = loader.get(AudioStream, 'track');
 
         this.detector = new BeatDetector();
         this.detector.source = this.app.audio.music;

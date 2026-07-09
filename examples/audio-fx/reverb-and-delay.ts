@@ -30,7 +30,7 @@ class ReverbAndDelayScene extends Scene {
     private panel!: ReturnType<typeof mountControlPanel>;
 
     override async load(loader): Promise<void> {
-        await loader.load(Sound, { sfx: 'audio/impact-light.ogg' });
+        await loader.load('audio/impact-light.ogg');
     }
 
     override init(loader): void {
@@ -39,7 +39,7 @@ class ReverbAndDelayScene extends Scene {
         // A large click pad centred on the canvas.
         this.pad = { x: width / 2 - 240, y: height * 0.36, w: 480, h: 160 };
 
-        this.sound = loader.get(Sound, 'sfx');
+        this.sound = loader.get('audio/impact-light.ogg');
 
         // Reverb (room tail) → Delay (echoes) chained on the sound bus.
         this.reverb = new ReverbEffect({ wet: 0.4, decay: 2 });

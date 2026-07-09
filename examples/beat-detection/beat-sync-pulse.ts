@@ -1,4 +1,4 @@
-import { Application, AudioStream, Color, Scene, Sprite, Text, Texture, Vector } from '@codexo/exojs';
+import { Application, AudioStream, Color, Scene, Sprite, Text, Vector } from '@codexo/exojs';
 import { BeatDetector } from '@codexo/exojs-audio-fx';
 import {
     AlphaFadeOverLifetime,
@@ -37,22 +37,21 @@ class BeatSyncPulseScene extends Scene {
     private tapPrompt!: Text;
 
     override async load(loader): Promise<void> {
-        await loader.load(Texture, { bunny: 'image/ship-a.png', particle: 'image/particle-light.png' });
-        await loader.load(AudioStream, { track: 'audio/demo-loop-main.ogg' });
+        await Promise.all([loader.load('image/ship-a.png'), loader.load('image/particle-light.png')]);
+        this.music = await loader.load(AudioStream.of('audio/demo-loop-main.ogg'));
     }
 
     override init(loader): void {
         const { width, height } = this.app.canvas;
 
-        this.music = loader.get(AudioStream, 'track');
-        this.sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setPosition(width / 2, height / 2);
+        this.sprite = new Sprite(loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(width / 2, height / 2);
 
         this.hud = mountControls({
             title: 'Beat Sync Pulse',
             hint: 'The ring and particle burst fire on each detected beat.',
         });
 
-        this.particles = new ParticleSystem(loader.get(Texture, 'particle'), { capacity: 3500 });
+        this.particles = new ParticleSystem(loader.get('image/particle-light.png'), { capacity: 3500 });
         this.particles.setPosition(width / 2, height / 2);
         this.burst = new BurstSpawn({
             schedule: [{ time: 0, count: 90 }],

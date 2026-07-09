@@ -1,4 +1,4 @@
-import { Application, Color, Scene, Texture, Vector } from '@codexo/exojs';
+import { Application, Color, Scene, Vector } from '@codexo/exojs';
 import {
     ApplyForce,
     ColorGradient,
@@ -30,13 +30,13 @@ class EmitterBasicsScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
 
     override async load(loader): Promise<void> {
-        await loader.load(Texture, { particle: assets.demo.textures.particleLight });
+        await loader.load(assets.demo.textures.particleLight);
     }
 
     override init(loader): void {
         const { width, height } = this.app.canvas;
 
-        this.system = new ParticleSystem(loader.get(Texture, 'particle'), { capacity: 4000 });
+        this.system = new ParticleSystem(loader.get(assets.demo.textures.particleLight), { capacity: 4000 });
         this.system.setPosition(width / 2, height - 80);
 
         // Rate, lifetime, and a cone-shaped velocity spread: a fountain that

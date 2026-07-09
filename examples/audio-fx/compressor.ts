@@ -47,7 +47,7 @@ class CompressorScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
 
     override async load(loader): Promise<void> {
-        await loader.load(AudioStream, { music: 'audio/demo-loop-main.ogg' });
+        this.music = await loader.load(AudioStream.of('audio/demo-loop-main.ogg'));
     }
 
     override init(loader): void {
@@ -60,7 +60,6 @@ class CompressorScene extends Scene {
         this.rowY = sliders.map((_, i) => height * 0.26 + i * 90);
         this.meterY = this.rowY[this.rowY.length - 1] + 100;
 
-        this.music = loader.get(AudioStream, 'music');
         this.filter = new CompressorEffect();
         app.audio.music.addEffect(this.filter);
 

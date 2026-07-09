@@ -61,7 +61,7 @@ class FalloffCurvesScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
 
     override async load(loader): Promise<void> {
-        await loader.load(Sound, { source: 'audio/impact-light.ogg' });
+        await loader.load('audio/impact-light.ogg');
     }
 
     override init(loader): void {
@@ -76,7 +76,7 @@ class FalloffCurvesScene extends Scene {
         app.audio.listener.target = this.listener;
 
         this.sounds = this.sources.map(({ model, x, y }) => {
-            const sound = new Sound(loader.get(Sound, 'source').audioBuffer, {
+            const sound = new Sound(loader.get('audio/impact-light.ogg').audioBuffer, {
                 distanceModel: model,
                 refDistance: REF_DISTANCE,
                 maxDistance: MAX_DISTANCE,

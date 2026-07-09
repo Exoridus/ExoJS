@@ -39,7 +39,7 @@ class CrossfadeTracksScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
 
     override async load(loader): Promise<void> {
-        await loader.load(AudioStream, { a: assets.demo.audio.musicA, b: assets.demo.audio.musicB });
+        [this.trackA, this.trackB] = await Promise.all([loader.load(AudioStream.of(assets.demo.audio.musicA)), loader.load(AudioStream.of(assets.demo.audio.musicB))]);
     }
 
     override init(loader): void {
@@ -52,9 +52,6 @@ class CrossfadeTracksScene extends Scene {
         this.meterBaseY = height * 0.82;
 
         // Both tracks loop; the crossfade only swaps which one is audible.
-        this.trackA = loader.get(AudioStream, 'a');
-        this.trackB = loader.get(AudioStream, 'b');
-
         this.graphics = new Graphics();
         this.labelA = new Text('Track A', { fillColor: Color.white, fontSize: 22, align: 'center' })
             .setAnchor(0.5, 0.5)

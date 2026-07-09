@@ -30,9 +30,14 @@ class VocoderScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
 
     override async load(loader): Promise<void> {
-        await loader.load(
-            Sound,
-            Object.fromEntries(PHRASES.map(phrase => [phrase.key, phrase.asset])),
+        // Each phrase's asset path is widened to `string` by the PHRASES array's
+        // type annotation, so it is a dynamic (non-literal) path from the type
+        // system's point of view — Sound.of() disambiguates and load() (not
+        // get()) resolves the handle here, up front.
+        await Promise.all(
+            PHRASES.map(async phrase => {
+                this.phrases.set(phrase.key, await loader.load(Sound.of(phrase.asset)));
+            }),
         );
     }
 
@@ -43,10 +48,6 @@ class VocoderScene extends Scene {
         // so the vocoder can read its spectral envelope.
         this.modulatorBus = new AudioBus('modulator', { parent: app.audio.master });
         app.audio.registerBus(this.modulatorBus);
-
-        for (const phrase of PHRASES) {
-            this.phrases.set(phrase.key, loader.get(Sound, phrase.key));
-        }
 
         this.vocoder = new VocoderEffect({ modulator: this.modulatorBus, numBands: 16, wet: 1 });
         app.audio.sound.addEffect(this.vocoder);

@@ -33,13 +33,13 @@ class SoundPoolScene extends Scene {
     override async load(loader): Promise<void> {
         // impactHeavy is long enough (~0.5 s) that rapid fire actually overlaps -
         // a short click ends before the next shot and the pool never fills.
-        await loader.load(Sound, { shot: assets.demo.audio.impactHeavy });
+        await loader.load(assets.demo.audio.impactHeavy);
     }
 
     override init(loader): void {
         const { width, height } = this.app.canvas;
 
-        this.sound = loader.get(Sound, 'shot');
+        this.sound = loader.get(assets.demo.audio.impactHeavy);
         this.sound.poolSize = POOL_SIZE;
 
         this.graphics = new Graphics();

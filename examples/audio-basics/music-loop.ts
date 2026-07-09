@@ -23,7 +23,7 @@ class MusicLoopScene extends Scene {
     private panel!: ReturnType<typeof mountControlPanel>;
 
     override async load(loader): Promise<void> {
-        await loader.load(AudioStream, { track: assets.demo.audio.musicLoop });
+        this.music = await loader.load(AudioStream.of(assets.demo.audio.musicLoop));
     }
 
     override init(loader): void {
@@ -34,8 +34,6 @@ class MusicLoopScene extends Scene {
 
         // A single streaming track — the browser's media pipeline loops it
         // seamlessly when `loop` is on, so no duplicate/silent track is needed.
-        this.music = loader.get(AudioStream, 'track');
-
         // Core defers playback until the AudioContext unlocks on the first
         // gesture, then starts automatically — play() returns the Voice now,
         // and all live control (volume, rate, loop, seek) lives on it.

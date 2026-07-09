@@ -36,8 +36,8 @@ class AudioBusesScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
 
     override async load(loader): Promise<void> {
-        await loader.load(AudioStream, { music: assets.demo.audio.musicLoop });
-        await loader.load(Sound, { sfx: assets.demo.audio.uiClick });
+        this.music = await loader.load(AudioStream.of(assets.demo.audio.musicLoop));
+        await loader.load(assets.demo.audio.uiClick);
     }
 
     override init(loader): void {
@@ -50,8 +50,7 @@ class AudioBusesScene extends Scene {
         this.rowY = rows.map((_, i) => height * 0.34 + i * 90);
         this.sfxButton = { x: width / 2 - 150, y: height * 0.74, w: 300, h: 36 };
 
-        this.music = loader.get(AudioStream, 'music');
-        this.sfx = loader.get(Sound, 'sfx');
+        this.sfx = loader.get(assets.demo.audio.uiClick);
 
         this.graphics = new Graphics();
         this.labels = rows.map((_, i) => new Text('', { fillColor: Color.white, fontSize: 18 }).setPosition(this.trackX - 50, this.rowY[i] - 34));

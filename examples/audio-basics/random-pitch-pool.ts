@@ -31,7 +31,7 @@ class RandomPitchPoolScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
 
     override async load(loader): Promise<void> {
-        await loader.load(Sound, { blip: assets.demo.audio.impactLight });
+        await loader.load(assets.demo.audio.impactLight);
     }
 
     override init(loader): void {
@@ -41,7 +41,7 @@ class RandomPitchPoolScene extends Scene {
         this.trackY = height * 0.55;
         this.trackHalf = width * 0.38;
 
-        this.sound = loader.get(Sound, 'blip');
+        this.sound = loader.get(assets.demo.audio.impactLight);
         this.sound.poolSize = 20;
 
         this.graphics = new Graphics();

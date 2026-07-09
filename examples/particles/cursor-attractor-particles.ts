@@ -1,4 +1,4 @@
-import { Application, Color, Scene, Texture, Vector } from '@codexo/exojs';
+import { Application, Color, Scene, Vector } from '@codexo/exojs';
 import {
     AlphaFadeOverLifetime,
     AttractToPoint,
@@ -34,13 +34,13 @@ class CursorAttractorParticlesScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
 
     override async load(loader): Promise<void> {
-        await loader.load(Texture, { particle: assets.demo.textures.particleLight });
+        await loader.load(assets.demo.textures.particleLight);
     }
 
     override init(loader): void {
         const { width, height } = this.app.canvas;
 
-        this.system = new ParticleSystem(loader.get(Texture, 'particle'), { capacity: 32000 });
+        this.system = new ParticleSystem(loader.get(assets.demo.textures.particleLight), { capacity: 32000 });
         this.system.setPosition(width / 2, height / 2);
 
         this.system.addSpawnModule(

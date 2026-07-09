@@ -19,7 +19,7 @@ class PlaySoundScene extends Scene {
     private index = 0;
 
     override async load(loader): Promise<void> {
-        await Promise.all(SOUND_KEYS.map(key => loader.load(Sound, { [key]: assets.demo.audio[key] })));
+        await Promise.all(SOUND_KEYS.map(key => loader.load(assets.demo.audio[key])));
     }
 
     override init(loader): void {
@@ -28,7 +28,7 @@ class PlaySoundScene extends Scene {
         // Keep example SFX comfortable — full volume is jarring in the docs.
         this.app.audio.sound.volume = 0.5;
 
-        this.sounds = SOUND_KEYS.map(key => loader.get(Sound, key));
+        this.sounds = SOUND_KEYS.map(key => loader.get(assets.demo.audio[key]));
         this.text = new Text('Click anywhere to play SFX', { fillColor: Color.white, fontSize: 24, align: 'center' })
             .setAnchor(0.5, 0.5)
             .setPosition(width / 2, height / 2);
