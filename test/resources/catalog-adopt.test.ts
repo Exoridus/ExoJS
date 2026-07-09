@@ -76,7 +76,7 @@ describe('Loader._adopt', () => {
     expect(leaf.width).toBe(4);
 
     // The loader's own get() for the same source resolves to the adopted handle.
-    expect(loader.get(Texture, 'ship.png')).toBe(leaf);
+    expect(loader.get('ship.png')).toBe(leaf);
   });
 
   test('adopting the same handle twice does not restart the fetch (idempotent)', async () => {
@@ -210,7 +210,7 @@ describe('Loader._adopt', () => {
     // "Loaded elsewhere earlier" — the core catalog scenario: some other
     // consumer already claimed and fully loaded this source under its own
     // scope, well before this leaf is ever adopted.
-    const stored = loader.get(Texture, 'x.png');
+    const stored = loader.get('x.png');
     await stored.loaded;
     expect(stored.loadState).toBe('ready');
     expect(stored.width).toBe(4);
@@ -275,7 +275,7 @@ describe('Loader._adopt', () => {
     // before this leaf is ever adopted, and — crucially — WITHOUT ever
     // creating an AssetRef for the key (load() never touches `_refs`), so
     // this exercises the exact stored-raw-value fast path `_getRef` uses.
-    await loader.load(Json, 'cfg.json');
+    await loader.load('cfg.json');
 
     const leaf = createLeaf('json', 'cfg.json') as AssetRef<unknown>;
     expect(leaf.loadState).toBe('loading');
@@ -338,7 +338,7 @@ describe('Loader.get / load — Assets catalog adoption (end-to-end)', () => {
     expect(catalog.ship.loadState).toBe('ready');
     expect(catalog.ship.width).toBe(4);
     // The loader's own get() for the same source resolves to the adopted leaf.
-    expect(loader.get(Texture, 'ship.png')).toBe(catalog.ship);
+    expect(loader.get('ship.png')).toBe(catalog.ship);
   });
 
   test('load(catalog) resolves to a map of loaded values, forwards onProgress, and heals the SAME leaves as get', async () => {

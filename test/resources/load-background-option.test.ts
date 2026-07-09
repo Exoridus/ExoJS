@@ -1,5 +1,4 @@
 import { materializeAssetBindings } from '#extensions/materialize';
-import { Texture } from '#rendering/texture/Texture';
 import { Assets } from '#resources/Assets';
 import { coreAssetBindings } from '#resources/coreAssetBindings';
 import { Loader } from '#resources/Loader';
@@ -79,7 +78,7 @@ describe('load(target, { background: true })', () => {
     expect(catalog.ship.width).toBe(4);
     expect(fetchMock).toHaveBeenCalledTimes(1);
     // The loader's own get() for the same source resolves to the adopted, healed leaf.
-    expect(loader.get(Texture, 'ship.png')).toBe(catalog.ship);
+    expect(loader.get('ship.png')).toBe(catalog.ship);
   });
 
   test('get() on a background-queued source boosts it past the parked queue and heals the SAME leaf', async () => {
@@ -97,7 +96,7 @@ describe('load(target, { background: true })', () => {
     expect(fetchMock).not.toHaveBeenCalled();
     expect(isQueued(loader, 'ship.png')).toBe(true);
 
-    const ship = loader.get(Texture, 'ship.png'); // boosts ship past the parked queue
+    const ship = loader.get('ship.png'); // boosts ship past the parked queue
 
     await expect(ship.loaded).resolves.toBe(ship);
     expect(ship).toBe(catalog.ship); // the adopted handle healed, not a new instance

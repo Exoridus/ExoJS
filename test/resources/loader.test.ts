@@ -123,7 +123,7 @@ describe('Loader', () => {
     loader.register(TextAsset, factory as AssetFactory<TextAsset>);
     mockFetch();
 
-    const result = await loader.load(TextAsset, 'demo.txt');
+    const result = await loader.load('demo.txt');
 
     expect(result).toBe('resource:fresh-source');
   });
@@ -134,7 +134,7 @@ describe('Loader', () => {
 
     loader.register(TextAsset, factory as AssetFactory<TextAsset>);
     mockFetch();
-    await loader.load(TextAsset, 'demo.txt');
+    await loader.load('demo.txt');
 
     expect(global.fetch).toHaveBeenCalledWith('/assets/demo.txt', expect.anything());
   });
@@ -146,36 +146,9 @@ describe('Loader', () => {
 
     loader.register(TextAsset, factory as AssetFactory<TextAsset>);
     mockFetch();
-    await loader.load(TextAsset, 'demo.txt');
+    await loader.load('demo.txt');
 
     expect(global.fetch).toHaveBeenCalledWith('/demo.txt', fetchOptions);
-  });
-
-  test('load(Type, [paths]) returns an array of resources', async () => {
-    const factory = new MockTextFactory();
-    const loader = new Loader({ basePath: '/' });
-
-    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
-    mockFetch();
-
-    const results = await loader.load(TextAsset, ['a.txt', 'b.txt']);
-
-    expect(results).toHaveLength(2);
-    expect(results[0]).toBe('resource:fresh-source');
-    expect(results[1]).toBe('resource:fresh-source');
-  });
-
-  test('load(Type, { alias: path }) returns a record', async () => {
-    const factory = new MockTextFactory();
-    const loader = new Loader({ basePath: '/' });
-
-    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
-    mockFetch();
-
-    const result = await loader.load(TextAsset, { greeting: 'hello.txt', farewell: 'bye.txt' });
-
-    expect(result.greeting).toBe('resource:fresh-source');
-    expect(result.farewell).toBe('resource:fresh-source');
   });
 
   test('load() deduplicates concurrent requests for the same alias', async () => {
@@ -185,7 +158,7 @@ describe('Loader', () => {
     loader.register(TextAsset, factory as AssetFactory<TextAsset>);
     mockFetch();
 
-    const [a, b] = await Promise.all([loader.load(TextAsset, 'same.txt'), loader.load(TextAsset, 'same.txt')]);
+    const [a, b] = await Promise.all([loader.load('same.txt'), loader.load('same.txt')]);
 
     expect(a).toBe(b);
     expect(factory.process).toHaveBeenCalledTimes(1);
@@ -198,7 +171,7 @@ describe('Loader', () => {
     loader.register(TextAsset, factory as AssetFactory<TextAsset>);
     mockFetch404();
 
-    await expect(loader.load(TextAsset, 'missing.txt')).rejects.toThrow('404 Not Found');
+    await expect(loader.load('missing.txt')).rejects.toThrow('404 Not Found');
   });
 
   test('load() continues independently per item (fail-tolerant via Promise.allSettled pattern)', async () => {
@@ -213,8 +186,8 @@ describe('Loader', () => {
       throw new Error('broken');
     });
 
-    const good = loader.load(TextAsset, 'good.txt');
-    const bad = loader.load(TextAsset, 'bad.txt');
+    const good = loader.load('good.txt');
+    const bad = loader.load('bad.txt');
 
     await expect(good).resolves.toBe('ok');
     await expect(bad).rejects.toThrow('broken');
@@ -229,15 +202,17 @@ describe('Loader', () => {
 
     expect(loader._peekResource(TextAsset, 'demo.txt')).toBeNull();
 
-    await loader.load(TextAsset, 'demo.txt');
+    await loader.load('demo.txt');
 
-    expect(loader.get(TextAsset, 'demo.txt').value).toBe('resource:fresh-source');
+    expect(loader.get('demo.txt').value).toBe('resource:fresh-source');
   });
 
   test('get() returns a loading ref whose value throws for a never-loaded value asset', () => {
-    const loader = new Loader({ basePath: '/' });
+    const loader = createCoreLoader({ basePath: '/' });
+    // A fetch that never settles keeps the adopted ref in its 'loading' state.
+    global.fetch = vi.fn((): Promise<Response> => new Promise<Response>(() => {}));
 
-    const ref = loader.get(TextAsset, 'nope');
+    const ref = loader.get(TextAsset.of('nope'));
 
     expect(ref.loadState).toBe('loading');
     expect(() => ref.value).toThrow("'loading'");
@@ -250,15 +225,16 @@ describe('Loader', () => {
     loader.register(TextAsset, factory as AssetFactory<TextAsset>);
     mockFetch();
 
-    await loader.load(TextAsset, { a: 'a.txt', b: 'b.txt' });
+    await loader.load('a.txt');
+    await loader.load('b.txt');
 
-    expect(loader._peekResource(TextAsset, 'a')).not.toBeNull();
-    loader.unload(TextAsset, 'a');
-    expect(loader._peekResource(TextAsset, 'a')).toBeNull();
-    expect(loader._peekResource(TextAsset, 'b')).not.toBeNull();
+    expect(loader._peekResource(TextAsset, 'a.txt')).not.toBeNull();
+    loader.unload(TextAsset, 'a.txt');
+    expect(loader._peekResource(TextAsset, 'a.txt')).toBeNull();
+    expect(loader._peekResource(TextAsset, 'b.txt')).not.toBeNull();
 
     loader.unloadAll(TextAsset);
-    expect(loader._peekResource(TextAsset, 'b')).toBeNull();
+    expect(loader._peekResource(TextAsset, 'b.txt')).toBeNull();
   });
 
   test('custom factory via register() with user-defined class', async () => {
@@ -286,7 +262,7 @@ describe('Loader', () => {
       throw new Error('Unexpected network fetch on cache hit.');
     });
 
-    const result = await loader.load(TextAsset, 'cached.txt');
+    const result = await loader.load('cached.txt');
 
     expect(result).toBe('resource:cached-source');
     expect(cacheStore.load).toHaveBeenCalledWith('text', 'cached.txt');
@@ -303,7 +279,7 @@ describe('Loader', () => {
     loader.register(TextAsset, factory as AssetFactory<TextAsset>);
     mockFetch();
 
-    const result = await loader.load(TextAsset, 'miss.txt');
+    const result = await loader.load('miss.txt');
 
     expect(result).toBe('resource:fresh-source');
     expect(cacheStore.load).toHaveBeenCalledWith('text', 'miss.txt');
@@ -324,7 +300,7 @@ describe('Loader', () => {
       throw new Error('corrupt-cache');
     });
 
-    const result = await loader.load(TextAsset, 'corrupt.txt');
+    const result = await loader.load('corrupt.txt');
 
     expect(result).toBe('resource:fresh-source');
     expect(cacheStore.delete).toHaveBeenCalledWith('text', 'corrupt.txt');
@@ -345,7 +321,7 @@ describe('Loader', () => {
         }) as unknown as Response,
     );
 
-    const result = await loader.load(Json, 'data.json');
+    const result = await loader.load('data.json');
 
     expect(result).toBe(42);
   });
@@ -359,7 +335,7 @@ describe('Loader', () => {
 
     global.fetch = vi.fn((_input: RequestInfo | URL): Promise<Response> => deferredFetch.promise);
 
-    const loadPromise = loader.load(TextAsset, 'inflight.txt');
+    const loadPromise = loader.load('inflight.txt');
 
     loader.unload(TextAsset, 'inflight.txt');
 
@@ -1072,60 +1048,6 @@ describe('unload(asset) + getIdentityKey — identity discrimination (Fix 2 regr
   });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Coverage sweep — legacy batch load() failure branches (array / record forms)
-// ─────────────────────────────────────────────────────────────────────────────
-
-describe('load(Type, ...) legacy batch forms — per-item failure branches', () => {
-  const originalFetch = global.fetch;
-
-  afterEach(() => {
-    global.fetch = originalFetch;
-  });
-
-  function mockFetch(): void {
-    global.fetch = vi.fn(
-      async (): Promise<Response> =>
-        ({
-          ok: true,
-          status: 200,
-          statusText: 'OK',
-          text: async () => 'raw',
-          json: async () => ({}),
-          arrayBuffer: async () => new ArrayBuffer(0),
-        }) as unknown as Response,
-    );
-  }
-
-  test('load(Type, [paths]) rejects when one array item fails', async () => {
-    const factory = new MockTextFactory();
-    const loader = new Loader({ basePath: '/' });
-
-    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
-    mockFetch();
-    factory.create.mockImplementationOnce(async () => 'ok');
-    factory.create.mockImplementationOnce(async () => {
-      throw new Error('array-item-broken');
-    });
-
-    await expect(loader.load(TextAsset, ['good-array.txt', 'bad-array.txt'])).rejects.toThrow('array-item-broken');
-  });
-
-  test('load(Type, { alias: BatchValue }) rejects when one record item fails', async () => {
-    const factory = new MockTextFactory();
-    const loader = new Loader({ basePath: '/' });
-
-    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
-    mockFetch();
-    factory.create.mockImplementationOnce(async () => 'ok');
-    factory.create.mockImplementationOnce(async () => {
-      throw new Error('record-item-broken');
-    });
-
-    await expect(loader.load(TextAsset, { good: 'good-rec.txt', bad: 'bad-rec.txt' })).rejects.toThrow('record-item-broken');
-  });
-});
-
 describe('loadAll() early exit', () => {
   test('resolves immediately when nothing is queued', async () => {
     const loader = new Loader({ basePath: '/' });
@@ -1248,7 +1170,7 @@ describe('basePath / fetchOptions property accessors', () => {
     loader.register(TextAsset, factory as AssetFactory<TextAsset>);
     global.fetch = vi.fn(async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', text: async () => 'raw' }) as unknown as Response);
 
-    await loader.load(TextAsset, 'demo.txt');
+    await loader.load('demo.txt');
 
     expect(global.fetch).toHaveBeenCalledWith('/b/demo.txt', expect.anything());
   });
@@ -1265,7 +1187,7 @@ describe('basePath / fetchOptions property accessors', () => {
     loader.register(TextAsset, factory as AssetFactory<TextAsset>);
     global.fetch = vi.fn(async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', text: async () => 'raw' }) as unknown as Response);
 
-    await loader.load(TextAsset, 'demo.txt');
+    await loader.load('demo.txt');
 
     expect(global.fetch).toHaveBeenCalledWith('/demo.txt', { mode: 'no-cors' });
   });
@@ -1283,7 +1205,7 @@ describe('absolute URL passthrough', () => {
     loader.register(TextAsset, factory as AssetFactory<TextAsset>);
     global.fetch = vi.fn(async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', text: async () => 'raw' }) as unknown as Response);
 
-    await loader.load(TextAsset, 'https://cdn.example.com/x.txt');
+    await loader.load('https://cdn.example.com/x.txt');
 
     expect(global.fetch).toHaveBeenCalledWith('https://cdn.example.com/x.txt', expect.anything());
   });
@@ -1507,9 +1429,9 @@ describe('loadContainer()', () => {
     const loader = createCoreLoaderLocal();
     await loader.loadContainer('assets/pack.exoa');
 
-    expect(loader.get(Json, 'level').value).toEqual({ score: 42 });
-    expect(loader.get(TextAsset, 'readme').value).toBe('hello world');
-    expect(new Uint8Array(loader.get(BinaryAsset, 'blob').value)).toEqual(new Uint8Array([1, 2, 3, 4]));
+    expect(loader.get(Json.of('level')).value).toEqual({ score: 42 });
+    expect(loader.get(TextAsset.of('readme')).value).toBe('hello world');
+    expect(new Uint8Array(loader.get(BinaryAsset.of('blob')).value)).toEqual(new Uint8Array([1, 2, 3, 4]));
   });
 
   test('throws on an unknown asset type and stores nothing', async () => {
@@ -1669,7 +1591,7 @@ describe('Loader constructor — cache option as an array of stores', () => {
     loader.register(TextAsset, factory as AssetFactory<TextAsset>);
     global.fetch = vi.fn(async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', text: async () => 'raw' }) as unknown as Response);
 
-    await loader.load(TextAsset, 'demo.txt');
+    await loader.load('demo.txt');
 
     expect(storeA.load).toHaveBeenCalledWith('text', 'demo.txt');
     expect(storeB.load).toHaveBeenCalledWith('text', 'demo.txt');
@@ -1708,7 +1630,7 @@ describe('unloadAll() with no type argument', () => {
     loader.register(DummyAsset, dummyFactory);
     global.fetch = vi.fn(async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', text: async () => 'raw' }) as unknown as Response);
 
-    await loader.load(TextAsset, 'a.txt');
+    await loader.load('a.txt');
     await loader.load(DummyAsset, 'b.dat');
 
     expect(loader._peekResource(TextAsset, 'a.txt')).not.toBeNull();
@@ -1791,6 +1713,6 @@ describe('non-Error throws are stringified when wrapping fetch/handler failures'
       throw 'raw string boom';
     });
 
-    await expect(loader.load(TextAsset, 'boom.txt')).rejects.toThrow(/raw string boom/);
+    await expect(loader.load('boom.txt')).rejects.toThrow(/raw string boom/);
   });
 });
