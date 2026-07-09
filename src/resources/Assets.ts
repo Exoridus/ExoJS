@@ -1,5 +1,5 @@
 import { AssetImpl } from './Asset';
-import type { AnyAssetConfig, CatalogEntry, InferCatalogLeaf } from './AssetDefinitions';
+import type { AnyAssetConfig, AssetDefinitions, CatalogEntry, InferCatalogLeaf, OptionsForKind } from './AssetDefinitions';
 import { createLeaf } from './assetKindRegistry';
 import { resolveKindByPath } from './extensionKindRegistry';
 
@@ -146,6 +146,26 @@ type AssetsFacade = AssetsConstructorFn & {
    * ```
    */
   one<const E extends CatalogEntry>(entry: E): InferCatalogLeaf<E>;
+
+  /**
+   * Build a record of same-`kind` configs to SPREAD into {@link from} (or into
+   * another group), applying `shared` options to every entry (asset-system v2
+   * §6). A per-entry object overrides the shared options; a bare-string entry
+   * takes just the shared options. Entries do not repeat the `kind`.
+   *
+   * @example
+   * ```ts
+   * Assets.from({
+   *   ...Assets.group('texture', { player: 'player.png', enemy: 'enemy.png' }, { samplerOptions: { minFilter: 'nearest' } }),
+   *   ...Assets.group('sound',   { jump: 'jump.wav', hit: 'hit.wav' }),
+   * });
+   * ```
+   */
+  group<K extends keyof AssetDefinitions, E extends Record<string, string | ({ source: string } & OptionsForKind<K>)>>(
+    kind: K,
+    entries: E,
+    shared?: OptionsForKind<K>,
+  ): { readonly [P in keyof E]: { kind: K } & AssetDefinitions[K]['config'] };
 };
 
 (AssetsImpl as unknown as { from: unknown }).from = function from<const M extends Record<string, CatalogEntry>>(definition: M): Assets<M> {
@@ -156,6 +176,23 @@ type AssetsFacade = AssetsConstructorFn & {
   const { kind, source, ...rest } = _normalizeEntry(entry);
   const opts = Object.keys(rest).length > 0 ? rest : undefined;
   return createLeaf(kind, source, opts) as unknown as InferCatalogLeaf<E>;
+};
+
+(AssetsImpl as unknown as { group: unknown }).group = function group(
+  kind: keyof AssetDefinitions,
+  entries: Record<string, string | ({ source: string } & Record<string, unknown>)>,
+  shared?: object,
+): Record<string, AnyAssetConfig> {
+  const out: Record<string, AnyAssetConfig> = {};
+  const base = shared ?? {};
+
+  for (const [key, entry] of Object.entries(entries)) {
+    // A per-entry object overrides the shared options; a bare string takes only
+    // the shared options. Either way the group's `kind` is stamped on.
+    out[key] = (typeof entry === 'string' ? { kind, source: entry, ...base } : { kind, ...base, ...entry }) as AnyAssetConfig;
+  }
+
+  return out;
 };
 
 export const Assets = AssetsImpl as unknown as AssetsFacade;
