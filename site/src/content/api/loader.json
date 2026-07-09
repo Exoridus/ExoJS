@@ -3424,7 +3424,7 @@
         },
         {
           "name": "load",
-          "signature": "load(path: [KindByPath<S>] extends [never] ? never : S, options?: unknown): LoadingQueue<ResourceForKind<KindByPath<S>>>",
+          "signature": "load(path: [KindByPath<S>] extends [never] ? never : S): LoadingQueue<ResourceForKind<KindByPath<S>>>",
           "signatureTokens": [
             {
               "text": "load",
@@ -3507,26 +3507,6 @@
               "kind": "type"
             },
             {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "options",
-              "kind": "param"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "unknown",
-              "kind": "keyword"
-            },
-            {
               "text": ")",
               "kind": "punctuation"
             },
@@ -3580,11 +3560,6 @@
               "name": "path",
               "type": "[KindByPath<S>] extends [never] ? never : S",
               "optional": false
-            },
-            {
-              "name": "options",
-              "type": "unknown",
-              "optional": true
             }
           ],
           "returnType": "LoadingQueue<ResourceForKind<KindByPath<S>>>",

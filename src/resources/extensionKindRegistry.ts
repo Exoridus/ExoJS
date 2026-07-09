@@ -37,7 +37,7 @@ export function getExtensionKind(ext: string): (keyof AssetDefinitions) | undefi
 
 /**
  * Resolve a path string to its asset kind — basename-only, longest-suffix-first
- * (mirrors the type-level `MatchExtension`). Query/hash are stripped. Returns
+ * (mirrors the type-level `MatchKind`/`KindByPath`). Query/hash are stripped. Returns
  * `undefined` when no dot-suffix of the basename is registered. @internal
  */
 export function resolveKindByPath(path: string): (keyof AssetDefinitions) | undefined {

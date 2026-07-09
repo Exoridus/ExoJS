@@ -796,7 +796,10 @@ export class Loader {
   public load<S extends string>(path: [PathExtension<S>] extends [never] ? never : S): LoadingQueue<LoadByPath<S>>;
   // Value-inclusive form — a bare value suffix (json/txt/csv/…) resolves the raw
   // resource value (asset-system v2 §4.4); `ResourceForKind<'json'>` = `unknown`.
-  public load<S extends string>(path: [KindByPath<S>] extends [never] ? never : S, options?: unknown): LoadingQueue<ResourceForKind<KindByPath<S>>>;
+  // Single-arg only: the runtime bare-path branch fires solely for
+  // `arg1 === undefined`, so an `options?` param here would advertise a
+  // parameter the runtime ignores (per-asset options go through `X.of(src, opts)`).
+  public load<S extends string>(path: [KindByPath<S>] extends [never] ? never : S): LoadingQueue<ResourceForKind<KindByPath<S>>>;
 
   // -----------------------------------------------------------------------
   // Loading — generic overloads (return type inferred from class)
