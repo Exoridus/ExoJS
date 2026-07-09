@@ -22,6 +22,7 @@ exports[`root index type-level export inventory > all exported symbols with kind
   "AssetLoaderContext: interface",
   "AssetManifest: interface",
   "AssetRef: class",
+  "AssetStatus: interface",
   "Assets: type alias",
   "AtlasMode: type alias",
   "AttributeType: type alias",
