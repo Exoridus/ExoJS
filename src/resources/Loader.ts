@@ -7,7 +7,7 @@ import type { Texture } from '#rendering/texture/Texture';
 
 import { Asset, AssetImpl } from './Asset';
 import { parseContainer } from './AssetContainer';
-import type { AssetDefinitions, AssetInput, InferAssetResource, KindByPath, LeafForPath, ResourceForKind } from './AssetDefinitions';
+import type { AssetDefinitions, AssetInput, InferAssetResource, KindByPath, LeafForPath, ResourceForKind, ValueAssetKind } from './AssetDefinitions';
 import type { AssetFactory } from './AssetFactory';
 import type { AssetManifest, LoadBundleOptions } from './AssetManifest';
 import { BundleLoadError, defineAssetManifest } from './AssetManifest';
@@ -351,41 +351,25 @@ export class Loader {
   // _deferred, an entry tracks the SET of distinct refs adopted for one source
   // so a single fetch fills every in-flight ref (§7 multi-handle fill).
   private readonly _refs = new Map<string, { readonly refs: Set<AssetRef<unknown>>; readonly options: unknown }>();
-  private readonly _valueTokens: ReadonlySet<Loadable> = new Set<Loadable>([Json, TextAsset, CsvAsset, XmlAsset, SubtitleAsset, BinaryAsset, WasmAsset]);
+  // Single source for the value kind ↔ dispatch token mapping: both the
+  // membership set below and `_valueTokenForKind` derive from it, and a
+  // `Record<ValueAssetKind, …>` is compile-checked to cover exactly the value
+  // kinds (vtt + srt share the SubtitleAsset token). @internal
+  private readonly _valueTokenByKind: Readonly<Record<ValueAssetKind, AssetConstructor>> = {
+    json: Json,
+    text: TextAsset,
+    csv: CsvAsset,
+    xml: XmlAsset,
+    vtt: SubtitleAsset,
+    srt: SubtitleAsset,
+    binary: BinaryAsset,
+    wasm: WasmAsset,
+  };
+  private readonly _valueTokens: ReadonlySet<Loadable> = new Set<Loadable>(Object.values(this._valueTokenByKind));
 
-  /** The value-asset token for a value kind name, or `undefined` for non-value kinds. @internal */
+  /** The value-asset token for a value kind name, or `undefined` for non-value / extension kinds. @internal */
   private _valueTokenForKind(kind: keyof AssetDefinitions): AssetConstructor | undefined {
-    switch (kind) {
-      case 'json':
-        return Json;
-      case 'text':
-        return TextAsset;
-      case 'csv':
-        return CsvAsset;
-      case 'xml':
-        return XmlAsset;
-      case 'vtt':
-      case 'srt':
-        return SubtitleAsset;
-      case 'binary':
-        return BinaryAsset;
-      case 'wasm':
-        return WasmAsset;
-      case 'texture':
-      case 'sound':
-      case 'music':
-      case 'image':
-      case 'video':
-      case 'svg':
-      case 'font':
-      case 'bmFont':
-        return undefined;
-      // Extension-package kinds (declaration-merged into AssetDefinitions) fall
-      // through here — `keyof AssetDefinitions` is an open set, so a default is
-      // required to stay exhaustive under a package tsconfig (avoids TS7030).
-      default:
-        return undefined;
-    }
+    return (this._valueTokenByKind as Partial<Record<string, AssetConstructor>>)[kind];
   }
 
   // ── Refcount / claims (asset-system v2 §4.7) ──────────────────────────────
