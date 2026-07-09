@@ -171,7 +171,9 @@ describe('BmFontLoaderFactory', () => {
     expect(font.textures).toEqual([texture]);
     expect(font.fontData.lineHeight).toBe(40);
     expect(loader.load).toHaveBeenCalledTimes(1);
-    expect(loader.load).toHaveBeenCalledWith(expect.objectContaining({ _config: expect.objectContaining({ type: 'texture', source: 'https://example.com/fonts/test.png' }) }));
+    expect(loader.load).toHaveBeenCalledWith(
+      expect.objectContaining({ _config: expect.objectContaining({ type: 'texture', source: 'https://example.com/fonts/test.png' }) }),
+    );
   });
 
   test('create() resolves page URLs relative to the .fnt descriptor URL, not the page filename alone', async () => {
