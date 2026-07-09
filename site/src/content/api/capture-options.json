@@ -6,11 +6,11 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 3,
+  "memberCount": 4,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 3,
+    "properties": 4,
     "events": 0
   },
   "sections": [
@@ -52,6 +52,31 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "format",
+          "signature": "format?: ColorTextureFormat",
+          "signatureTokens": [
+            {
+              "text": "format",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ColorTextureFormat",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Color attachment format for the allocated target. Defaults to 'rgba8'. Float formats require EXT_color_buffer_float — check RenderingContext.supportsColorFormat first."
         },
         {
           "name": "height",

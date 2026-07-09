@@ -24,7 +24,7 @@ import { RenderTarget } from '#rendering/RenderTarget';
 import { DataTexture, type DataTextureFormat } from '#rendering/texture/DataTexture';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
-import type { BlendModes } from '#rendering/types';
+import type { BlendModes, ColorTextureFormat } from '#rendering/types';
 import { ScaleModes, WrapModes } from '#rendering/types';
 import type { View } from '#rendering/View';
 
@@ -224,7 +224,18 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   public get renderTargetFormat(): GPUTextureFormat {
-    return this._renderTarget === this._rootRenderTarget ? this.format : managedTextureFormat;
+    if (this._renderTarget === this._rootRenderTarget) {
+      return this.format;
+    }
+
+    // Offscreen targets carry their own color format (rgba8unorm by default, or a
+    // float format for a float RenderTexture). Renderers key their pipelines on
+    // this, so it must match the bound attachment or WebGPU rejects the draw.
+    if (this._renderTarget instanceof RenderTexture) {
+      return this._getGpuTextureFormat(this._renderTarget);
+    }
+
+    return managedTextureFormat;
   }
 
   public get clearRequested(): boolean {
@@ -639,6 +650,14 @@ export class WebGpuBackend implements RenderBackend {
     };
   }
 
+  public supportsColorFormat(_format: ColorTextureFormat): boolean {
+    // rgba8, rgba16float and rgba32float are all core color-renderable in WebGPU.
+    // (Linear filtering / blending of float32 targets needs the optional
+    // float32-filterable / float32-blendable features, requested at init when
+    // available; float RenderTextures default to nearest, unblended feedback.)
+    return true;
+  }
+
   public acquireRenderTexture(width: number, height: number): RenderTexture {
     for (let index = 0; index < this._temporaryRenderTextures.length; index++) {
       // index is bounded by the array length via the for-loop guard.
@@ -977,7 +996,13 @@ export class WebGpuBackend implements RenderBackend {
     let device: GPUDevice | null;
 
     try {
-      device = await adapter.requestDevice();
+      // rgba16float and rgba32float are both core color-renderable in WebGPU (no
+      // feature needed). Opt into the optional float features the adapter offers
+      // so float32 targets can additionally be linear-sampled / blended when used
+      // that way (float RenderTextures default to nearest, so this is a bonus).
+      const floatFeatures = (['float32-filterable', 'float32-blendable'] as const).filter(feature => adapter.features?.has(feature) ?? false);
+
+      device = await adapter.requestDevice(floatFeatures.length > 0 ? { requiredFeatures: floatFeatures } : undefined);
     } catch (error) {
       throw this._createInitializationError('Failed to request a WebGPU device.', error);
     }
@@ -1473,6 +1498,9 @@ export class WebGpuBackend implements RenderBackend {
       const format: DataTextureFormat = texture.format;
       return webgpuDataTextureFormat(format).gpuFormat;
     }
+    if (texture instanceof RenderTexture) {
+      return webgpuColorTextureFormat(texture.format);
+    }
     return managedTextureFormat;
   }
 
@@ -1681,6 +1709,18 @@ interface WebGpuDataTextureFormatInfo {
   readonly gpuFormat: GPUTextureFormat;
   readonly bytesPerPixel: number;
   readonly channels: number;
+}
+
+/** Map a {@link RenderTexture} color format to its WebGPU render-target format. */
+function webgpuColorTextureFormat(format: ColorTextureFormat): GPUTextureFormat {
+  switch (format) {
+    case 'rgba8':
+      return 'rgba8unorm';
+    case 'rgba16f':
+      return 'rgba16float';
+    case 'rgba32f':
+      return 'rgba32float';
+  }
 }
 
 function webgpuDataTextureFormat(format: DataTextureFormat): WebGpuDataTextureFormatInfo {
