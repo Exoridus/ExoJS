@@ -6,10 +6,10 @@
   "subsystem": "resources",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 62,
+  "memberCount": 65,
   "counts": {
     "constructors": 1,
-    "methods": 51,
+    "methods": 54,
     "properties": 2,
     "events": 8
   },
@@ -1758,6 +1758,124 @@
           "description": "Retrieves a previously loaded asset by type and alias (legacy lookup form for types without a seamless adapter; replaced by the asset graph in a later slice). Throws if the asset has not been loaded — use peek for a non-throwing alternative, or has to guard the call."
         },
         {
+          "name": "get",
+          "signature": "get(catalog: Assets<M>): InferAssetsProperties<M>",
+          "signatureTokens": [
+            {
+              "text": "get",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "catalog",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Assets",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "M",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "InferAssetsProperties",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "M",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "catalog",
+              "type": "Assets<M>",
+              "optional": false
+            }
+          ],
+          "returnType": "InferAssetsProperties<M>",
+          "description": "Adopts an Assets catalog: every handle-hybrid leaf is registered, claimed, and driven to load, and the same leaf objects are returned keyed by their record key. The catalog's own properties heal in place as payloads arrive — the returned map holds those very leaves."
+        },
+        {
+          "name": "get",
+          "signature": "get(leaf: T): T",
+          "signatureTokens": [
+            {
+              "text": "get",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "leaf",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "leaf",
+              "type": "T",
+              "optional": false
+            }
+          ],
+          "returnType": "T",
+          "description": "Adopts a single handle-hybrid leaf (an Assets.from() property) and returns it — the same object, healing in place once its payload arrives."
+        },
+        {
           "name": "has",
           "signature": "has(type: Loadable, alias: string): boolean",
           "signatureTokens": [
@@ -2730,6 +2848,65 @@
             }
           ],
           "returnType": "LoadingQueue<InferLoadedMap<M>>",
+          "description": "Fetches and processes one or more assets of the given type. - **Single path** — resolves with the finished asset. - **Array of paths** — resolves with an ordered array of assets. - **Record** — resolves with a record whose keys match the input keys. - **Asset<T>** — single typed asset reference. - **Assets<M>** — typed asset container; keys become aliases. - **Config map** — inline { alias: { type, source, … } } definition. In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Supply a custom options object to pass factory-specific configuration (e.g. audio decoding hints or image format overrides)."
+        },
+        {
+          "name": "load",
+          "signature": "load(leaf: T): LoadingQueue<T>",
+          "signatureTokens": [
+            {
+              "text": "load",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "leaf",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LoadingQueue",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "leaf",
+              "type": "T",
+              "optional": false
+            }
+          ],
+          "returnType": "LoadingQueue<T>",
           "description": "Fetches and processes one or more assets of the given type. - **Single path** — resolves with the finished asset. - **Array of paths** — resolves with an ordered array of assets. - **Record** — resolves with a record whose keys match the input keys. - **Asset<T>** — single typed asset reference. - **Assets<M>** — typed asset container; keys become aliases. - **Config map** — inline { alias: { type, source, … } } definition. In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Supply a custom options object to pass factory-specific configuration (e.g. audio decoding hints or image format overrides)."
         },
         {

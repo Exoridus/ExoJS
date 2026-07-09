@@ -1,6 +1,6 @@
 {
   "title": "Assets",
-  "description": "A reusable, typed asset container. Plain configs are converted to `Asset<T>` instances; already-created `Asset<T>` values are passed through. The container exposes direct typed properties and an `entries` record for spread loading.",
+  "description": "A reusable, typed asset container. Each field is materialized as a handle-hybrid leaf: a resource kind's leaf IS a usable placeholder resource (`Texture`/`Sound`) that heals in place once adopted by a loader; a value kind's leaf is an AssetRef. The container exposes those leaves as direct typed properties and via an `entries` record.",
   "symbol": "Assets",
   "kind": "type",
   "subsystem": "resources",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "A reusable, typed asset container.",
-        "Plain configs are converted to `Asset<T>` instances; already-created `Asset<T>` values are passed through. The container exposes direct typed properties and an `entries` record for spread loading."
+        "Each field is materialized as a handle-hybrid leaf: a resource kind's leaf IS a usable placeholder resource (`Texture`/`Sound`) that heals in place once adopted by a loader; a value kind's leaf is an AssetRef. The container exposes those leaves as direct typed properties and via an `entries` record."
       ],
       "importLine": "import { Assets } from '@codexo/exojs'",
       "sourceLink": null
