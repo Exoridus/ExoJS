@@ -82,7 +82,7 @@ registered), or by the `'ldtkMap'` config-map type name:
 import { LdtkMap } from '@codexo/exojs-ldtk';
 
 // By type token (most explicit)
-const world = await loader.load(LdtkMap, 'https://example.com/levels/world.ldtk');
+const world = await loader.load(LdtkMap.of('https://example.com/levels/world.ldtk'));
 
 // By path — the `.ldtk` extension is registered, so the type is inferred
 const sameWorld = await loader.load('https://example.com/levels/world.ldtk');

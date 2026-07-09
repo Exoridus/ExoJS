@@ -20,7 +20,7 @@ init(loader) {
         'All wings hold formation and await my signal.',
     ];
 
-    this.portrait = new Sprite(loader.get(Texture, 'portrait'))
+    this.portrait = new Sprite(loader.get('image/portrait.png'))
         .setAnchor(0.5).setScale(1.7).setPosition(170, 420);
 
     this.box = new Text('', {
@@ -30,7 +30,7 @@ init(loader) {
     });
     this.box.setPosition(270, 360);
 
-    this.beep = loader.get(Sound, 'beep');
+    this.beep = loader.get('audio/beep.ogg');
 
     this.lineIndex = 0;
     this.chars = 0;
@@ -90,7 +90,7 @@ init(loader) {
     this.label = new Text('0%', { fillColor: Color.white, fontSize: 42 });
     this.label.setPosition(360, 410);
 
-    this.ring = new Sprite(loader.get(Texture, 'uv')).setScale(2.2);
+    this.ring = new Sprite(loader.get('image/uv.png')).setScale(2.2);
     this.filter = new WebGl2ShaderFilter({
         fragmentSource: progressGlsl,
         uniforms: { uProgress: 0 },

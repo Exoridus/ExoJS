@@ -153,14 +153,14 @@ You override the hooks you need. Empty hooks like `update` and `draw` do nothing
 The `load` hook is the async setup hook. Use it to register everything the scene needs and await the loader:
 
 ```js
-import { Scene, Texture } from '@codexo/exojs';
+import { Scene } from '@codexo/exojs';
 
 class GameScene extends Scene {
     async load(loader) {
-        await loader.load(Texture, {
-            hero: 'image/hero.png',
-            ground: 'image/ground.png',
-        });
+        await Promise.all([
+            loader.load('image/hero.png'),
+            loader.load('image/ground.png'),
+        ]);
     }
 }
 ```
@@ -173,7 +173,7 @@ The `init` hook is where you create the scene's actual objects. The same `loader
 
 ```js
 init(loader) {
-    this.hero = new Sprite(loader.get(Texture, 'hero'));
+    this.hero = new Sprite(loader.get('image/hero.png'));
     this.hero.setAnchor(0.5);
     this.hero.setPosition(400, 300);
     this.addChild(this.hero);

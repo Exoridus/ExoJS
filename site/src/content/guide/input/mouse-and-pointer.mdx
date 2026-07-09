@@ -139,7 +139,7 @@ A `Sprite` (or any `RenderNode`) can be made interactive and draggable directly:
 
 ```js
 init(loader) {
-    this.sprite = new Sprite(loader.get(Texture, 'hero'));
+    this.sprite = new Sprite(loader.get('image/hero.png'));
     this.sprite.setAnchor(0.5);
     this.sprite.setPosition(400, 300);
 

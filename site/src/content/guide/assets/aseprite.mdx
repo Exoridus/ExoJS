@@ -90,7 +90,7 @@ Once the extension is active, load the JSON export by the `AsepriteSheet` type t
 import { AsepriteSheet } from '@codexo/exojs-aseprite';
 
 // By type token (most explicit)
-const sheet = await loader.load(AsepriteSheet, 'sprites/hero.json');
+const sheet = await loader.load(AsepriteSheet.of('sprites/hero.json'));
 
 // By config-map type name — the public `'asepriteSheet'` lookup
 const fromConfig = await loader.load({
@@ -112,7 +112,7 @@ playable clip. Call `play(tag)` with a tag name to start it:
 
 ```js
 async load(loader) {
-    this.sheet = await loader.load(AsepriteSheet, 'sprites/hero.json');
+    this.sheet = await loader.load(AsepriteSheet.of('sprites/hero.json'));
 }
 
 init() {
@@ -179,7 +179,7 @@ maps it directly onto [`AnimatedSpriteClipDefinition.repeat`](/ExoJS/en/api/anim
 ```ts no-check
 import { AsepriteSheet } from '@codexo/exojs-aseprite';
 
-const sheet = await loader.load(AsepriteSheet, 'sprites/hero.json');
+const sheet = await loader.load(AsepriteSheet.of('sprites/hero.json'));
 const player = sheet.createAnimatedSprite();
 
 player.onComplete.add(clip => {

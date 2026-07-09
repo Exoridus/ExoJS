@@ -30,11 +30,10 @@ import { AudioAnalyser } from '@codexo/exojs-audio-fx';
 
 class VisualizerScene extends Scene {
     async load(loader) {
-        await loader.load(AudioStream, { track: 'audio/track.ogg' });
+        this.music = await loader.load(AudioStream.of('audio/track.ogg'));
     }
 
-    init(loader) {
-        this.music = loader.get(AudioStream, 'track');
+    init() {
         this.app.audio.play(this.music, { loop: true });
 
         // Tap the bus the track plays through.
@@ -203,13 +202,12 @@ document.body.append(app.canvas);
 
 class AudioReactiveScene extends Scene {
     async load(loader) {
-        await loader.load(AudioStream, { track: 'audio/track.ogg' });
+        this.music = await loader.load(AudioStream.of('audio/track.ogg'));
     }
 
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
 
-        this.music = loader.get(AudioStream, 'track');
         this.app.audio.play(this.music, { loop: true });
 
         // Both taps read the music bus the track plays through.

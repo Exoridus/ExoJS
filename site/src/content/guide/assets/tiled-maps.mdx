@@ -87,7 +87,7 @@ XML (`.tmx`/`.tsx`), infinite maps, isometric or hexagonal orientations, collect
 import { TiledMap } from '@codexo/exojs-tiled';
 
 // By type token (most explicit)
-const map = await loader.load(TiledMap, 'levels/forest.tmj');
+const map = await loader.load(TiledMap.of('levels/forest.tmj'));
 
 // By path — the `.tmj` extension is registered, so the type is inferred
 const sameMap = await loader.load('levels/forest.tmj');

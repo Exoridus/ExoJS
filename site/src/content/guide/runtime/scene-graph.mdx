@@ -18,8 +18,8 @@ Every scene starts with one container already in place — `this.root`. Adding a
 
 ```js
 init(loader) {
-    this.hero = new Sprite(loader.get(Texture, 'hero'));
-    this.coin = new Sprite(loader.get(Texture, 'coin'));
+    this.hero = new Sprite(loader.get('hero.png'));
+    this.coin = new Sprite(loader.get('coin.png'));
 
     this.addChild(this.hero);
     this.addChild(this.coin);
@@ -33,8 +33,8 @@ init(loader) {
     this.world = new Container();
     this.hud = new Container();
 
-    this.world.addChild(new Sprite(loader.get(Texture, 'level')));
-    this.hud.addChild(new Sprite(loader.get(Texture, 'health-bar')));
+    this.world.addChild(new Sprite(loader.get('level.png')));
+    this.hud.addChild(new Sprite(loader.get('health-bar.png')));
 
     this.addChild(this.world);
     this.addChild(this.hud);
@@ -51,8 +51,8 @@ When a parent transforms, its children move with it. If you set the parent's pos
 this.player = new Container();
 this.player.setPosition(100, 0);
 
-const body = new Sprite(loader.get(Texture, 'body'));
-const head = new Sprite(loader.get(Texture, 'head'));
+const body = new Sprite(loader.get('body.png'));
+const head = new Sprite(loader.get('head.png'));
 head.setPosition(0, -32);
 
 this.player.addChild(body);

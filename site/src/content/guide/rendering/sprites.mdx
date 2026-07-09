@@ -15,15 +15,15 @@ A [`Sprite`](/ExoJS/en/api/sprite/) is the primary drawable for textured quads â
 A sprite needs a texture. The shortest path from file to visible quad:
 
 ```js
-import { Scene, Sprite, Texture } from '@codexo/exojs';
+import { Scene, Sprite } from '@codexo/exojs';
 
 class MyScene extends Scene {
     async load(loader) {
-        await loader.load(Texture, { hero: 'image/hero.png' });
+        await loader.load('image/hero.png');
     }
 
     init(loader) {
-        this.hero = new Sprite(loader.get(Texture, 'hero'));
+        this.hero = new Sprite(loader.get('image/hero.png'));
         this.addChild(this.hero);
     }
 
@@ -46,7 +46,7 @@ A sprite's position places its anchor point in the parent's coordinate space. By
 init(loader) {
     const { width, height } = this.app.canvas;
 
-    this.hero = new Sprite(loader.get(Texture, 'hero'));
+    this.hero = new Sprite(loader.get('image/hero.png'));
     this.hero.setAnchor(0.5);
     this.hero.setPosition(width / 2, height / 2);
     this.addChild(this.hero);

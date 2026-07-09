@@ -116,8 +116,8 @@ Asset load failures typically produce network errors in the browser's developer 
 **Vite `public/` path confusion.** Files in `public/` are served from the site root. A file at `public/assets/bunny.png` is available at `/assets/bunny.png`, not `public/assets/bunny.png`. Reference it without the `public/` prefix:
 
 ```js no-check
-await loader.load(Texture, { bunny: 'assets/bunny.png' }); // correct
-await loader.load(Texture, { bunny: 'public/assets/bunny.png' }); // wrong
+await loader.load('assets/bunny.png'); // correct
+await loader.load('public/assets/bunny.png'); // wrong
 ```
 
 **Files not included in the build.** Only files in `public/` or explicitly imported by source code are copied to `dist/`. Assets referenced by path string (not `import`) must live in `public/`.
