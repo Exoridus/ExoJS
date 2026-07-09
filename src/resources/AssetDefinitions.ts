@@ -82,10 +82,25 @@ export type InferAssetResource<I extends AssetInput> =
  * ```
  */
 export interface ExtensionKindMap {
-  png: 'texture'; jpg: 'texture'; jpeg: 'texture'; webp: 'texture'; avif: 'texture'; gif: 'texture';
-  ogg: 'sound'; mp3: 'sound'; wav: 'sound'; m4a: 'sound'; aac: 'sound';
-  json: 'json'; txt: 'text'; csv: 'csv'; xml: 'xml';
-  vtt: 'vtt'; srt: 'srt'; bin: 'binary'; wasm: 'wasm';
+  png: 'texture';
+  jpg: 'texture';
+  jpeg: 'texture';
+  webp: 'texture';
+  avif: 'texture';
+  gif: 'texture';
+  ogg: 'sound';
+  mp3: 'sound';
+  wav: 'sound';
+  m4a: 'sound';
+  aac: 'sound';
+  json: 'json';
+  txt: 'text';
+  csv: 'csv';
+  xml: 'xml';
+  vtt: 'vtt';
+  srt: 'srt';
+  bin: 'binary';
+  wasm: 'wasm';
 }
 
 /** Last path segment (after the final `/`). */
@@ -120,12 +135,17 @@ export type LeafForPath<S extends string> = [KindByPath<S>] extends [never]
 export type CatalogEntry = string | Asset<unknown> | AnyAssetConfig;
 
 /** The leaf type a {@link CatalogEntry} materializes as. */
-export type InferCatalogLeaf<E extends CatalogEntry> =
-  E extends string ? LeafForPath<E>
-  : E extends Asset<infer T> ? (T extends object ? T : AssetRef<T>)
-  : E extends { type: infer K extends keyof AssetDefinitions }
-    ? K extends ValueAssetKind ? AssetRef<AssetDefinitions[K]['resource']> : AssetDefinitions[K]['resource']
-    : never;
+export type InferCatalogLeaf<E extends CatalogEntry> = E extends string
+  ? LeafForPath<E>
+  : E extends Asset<infer T>
+    ? T extends object
+      ? T
+      : AssetRef<T>
+    : E extends { type: infer K extends keyof AssetDefinitions }
+      ? K extends ValueAssetKind
+        ? AssetRef<AssetDefinitions[K]['resource']>
+        : AssetDefinitions[K]['resource']
+      : never;
 
 // Compile-time guard: every ExtensionKindMap value is a real AssetDefinitions kind.
 type AssertKindMapValid = ExtensionKindMap[keyof ExtensionKindMap] extends keyof AssetDefinitions ? true : never;

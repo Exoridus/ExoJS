@@ -31,7 +31,7 @@ export function registerExtensionKind(ext: string, kind: keyof AssetDefinitions)
 }
 
 /** The kind registered for a bare/compound suffix, or `undefined`. @internal */
-export function getExtensionKind(ext: string): (keyof AssetDefinitions) | undefined {
+export function getExtensionKind(ext: string): keyof AssetDefinitions | undefined {
   return extToKind.get(normalizeExt(ext));
 }
 
@@ -40,7 +40,7 @@ export function getExtensionKind(ext: string): (keyof AssetDefinitions) | undefi
  * (mirrors the type-level `MatchKind`/`KindByPath`). Query/hash are stripped. Returns
  * `undefined` when no dot-suffix of the basename is registered. @internal
  */
-export function resolveKindByPath(path: string): (keyof AssetDefinitions) | undefined {
+export function resolveKindByPath(path: string): keyof AssetDefinitions | undefined {
   const noQuery = path.split(/[?#]/)[0] ?? path;
   const basename = noQuery.split('/').pop() ?? noQuery;
   const parts = basename.toLowerCase().split('.');

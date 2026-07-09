@@ -29,10 +29,7 @@ describe('core extension→kind registrations', () => {
     expect(resolveKindByPath(path)).toBe(kind);
   });
 
-  it.each([['a/b.woff'], ['a/b.fnt'], ['a/b.svg'], ['a/b.mp4']])(
-    'does NOT infer non-leaf-capable / unregistered suffix %s (use X.of or a config)',
-    path => {
-      expect(resolveKindByPath(path)).toBeUndefined();
-    },
-  );
+  it.each([['a/b.woff'], ['a/b.fnt'], ['a/b.svg'], ['a/b.mp4']])('does NOT infer non-leaf-capable / unregistered suffix %s (use X.of or a config)', path => {
+    expect(resolveKindByPath(path)).toBeUndefined();
+  });
 });

@@ -18,7 +18,7 @@ import { _makeAsset } from './Asset';
  * Handles all JSON shapes — objects, arrays, scalars.
  */
 export abstract class Json {
-  protected declare readonly _token: 'json';
+  declare protected readonly _token: 'json';
   /**
    * Annotation descriptor for a JSON asset (asset-system v2 §5). Supply `T` to
    * type the parsed value: `Json.of<LevelData>('levels/1.json')`. Use in
@@ -35,7 +35,7 @@ export abstract class Json {
  * `loader.load(TextAsset, 'greeting.txt')` returns `Promise<string>`.
  */
 export abstract class TextAsset {
-  protected declare readonly _token: 'text';
+  declare protected readonly _token: 'text';
   /**
    * Annotation descriptor for a plain-text asset (asset-system v2 §5). Use in
    * `Assets.from({...})` or `loader.get(...)`/`loader.load(...)`.
@@ -51,7 +51,7 @@ export abstract class TextAsset {
  * `loader.load(SvgAsset, 'icon.svg')` returns `Promise<HTMLImageElement>`.
  */
 export abstract class SvgAsset {
-  protected declare readonly _token: 'svg';
+  declare protected readonly _token: 'svg';
   /**
    * Annotation descriptor for an SVG asset (asset-system v2 §5). Use in
    * `Assets.from({...})` or `loader.get(...)`/`loader.load(...)`.
@@ -69,7 +69,7 @@ export abstract class SvgAsset {
  * Format is detected from the file extension; unknown extensions default to VTT.
  */
 export abstract class SubtitleAsset {
-  protected declare readonly _token: 'subtitle';
+  declare protected readonly _token: 'subtitle';
   /**
    * Annotation descriptor for a subtitle asset (asset-system v2 §5). Use in
    * `Assets.from({...})` or `loader.get(...)`/`loader.load(...)`.
@@ -86,7 +86,7 @@ export abstract class SubtitleAsset {
  * Throws if the file cannot be parsed as well-formed XML.
  */
 export abstract class XmlAsset {
-  protected declare readonly _token: 'xml';
+  declare protected readonly _token: 'xml';
   /**
    * Annotation descriptor for an XML asset (asset-system v2 §5). Use in
    * `Assets.from({...})` or `loader.get(...)`/`loader.load(...)`.
@@ -103,7 +103,7 @@ export abstract class XmlAsset {
  * Each inner array is one row; values are raw strings (no type coercion).
  */
 export abstract class CsvAsset {
-  protected declare readonly _token: 'csv';
+  declare protected readonly _token: 'csv';
   /**
    * Annotation descriptor for a CSV asset (asset-system v2 §5). Use in
    * `Assets.from({...})` or `loader.get(...)`/`loader.load(...)`.
@@ -119,7 +119,7 @@ export abstract class CsvAsset {
  * `loader.load(ImageAsset, 'img.png')` returns `Promise<HTMLImageElement>`.
  */
 export abstract class ImageAsset {
-  protected declare readonly _token: 'image';
+  declare protected readonly _token: 'image';
   /**
    * Annotation descriptor for a plain `<img>`-loaded image asset (asset-system
    * v2 §5) — no GPU upload, unlike {@link Texture.of}. Use in
@@ -136,7 +136,7 @@ export abstract class ImageAsset {
  * `loader.load(FontAsset, 'font.woff2', { family: 'MyFont' })` returns `Promise<FontFace>`.
  */
 export abstract class FontAsset {
-  protected declare readonly _token: 'font';
+  declare protected readonly _token: 'font';
   /**
    * Annotation descriptor for a font-face asset (asset-system v2 §5). `family`
    * is required — it names the `FontFace` registered with the document. Use in
@@ -153,7 +153,7 @@ export abstract class FontAsset {
  * `loader.load(BinaryAsset, 'data.bin')` returns `Promise<ArrayBuffer>`.
  */
 export abstract class BinaryAsset {
-  protected declare readonly _token: 'binary';
+  declare protected readonly _token: 'binary';
   /**
    * Annotation descriptor for a raw binary asset (asset-system v2 §5). Use in
    * `Assets.from({...})` or `loader.get(...)`/`loader.load(...)`.
@@ -169,7 +169,7 @@ export abstract class BinaryAsset {
  * `loader.load(WasmAsset, 'module.wasm')` returns `Promise<WebAssembly.Module>`.
  */
 export abstract class WasmAsset {
-  protected declare readonly _token: 'wasm';
+  declare protected readonly _token: 'wasm';
   /**
    * Annotation descriptor for a WebAssembly module asset (asset-system v2 §5).
    * Use in `Assets.from({...})` or `loader.get(...)`/`loader.load(...)`.

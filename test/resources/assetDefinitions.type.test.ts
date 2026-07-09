@@ -1,4 +1,4 @@
-import { describe, expectTypeOf,it } from 'vitest';
+import { describe, expectTypeOf, it } from 'vitest';
 
 import type { Sound } from '#audio/Sound';
 import type { Texture } from '#rendering/texture/Texture';

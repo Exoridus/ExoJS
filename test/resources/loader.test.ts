@@ -1127,7 +1127,9 @@ describe('Asset / Assets identity and alias semantics', () => {
       vi.fn(async () => ({ width: 4, height: 4 })),
     );
     const loader = createCoreLoader({ basePath: '/' });
-    global.fetch = vi.fn(async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', arrayBuffer: async () => new ArrayBuffer(8) }) as unknown as Response);
+    global.fetch = vi.fn(
+      async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', arrayBuffer: async () => new ArrayBuffer(8) }) as unknown as Response,
+    );
 
     const container = new Assets({
       hero: { type: 'texture', source: 'hero.png' },
