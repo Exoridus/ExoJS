@@ -35,7 +35,12 @@ export function createLeaf(kind: keyof AssetDefinitions, src: string, opts?: unk
   if (entry.isValue) {
     const ref = new AssetRef<unknown>();
     ref._loadState.markIdle(); // a catalog leaf is idle until a loader adopts it
-    return _stampMeta(ref, { kind, src, opts });
+    // `parse` is a per-leaf post-load transform, not a fetch option — apply it on
+    // fill and keep it out of the source-keyed fetch opts.
+    const { parse, ...fetchOpts } = (opts ?? {}) as { parse?: (raw: unknown) => unknown };
+    if (typeof parse === 'function') ref._setParse(parse);
+    const cleanOpts = Object.keys(fetchOpts).length > 0 ? fetchOpts : undefined;
+    return _stampMeta(ref, { kind, src, opts: cleanOpts });
   }
 
   if (entry.adapter === undefined) {

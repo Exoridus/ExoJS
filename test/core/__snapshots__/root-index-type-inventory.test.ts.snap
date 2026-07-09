@@ -386,6 +386,7 @@ exports[`root index type-level export inventory > all exported symbols with kind
   "TypedEnum: type alias",
   "UIRoot: class",
   "UniformValue: type alias",
+  "ValueAsset: type alias",
   "ValueOf: type alias",
   "Vector: class",
   "Video: class",

@@ -47,7 +47,9 @@ export interface AssetDefinitions {
 }
 
 export type AnyAssetConfig = {
-  [K in keyof AssetDefinitions]: { kind: K } & AssetDefinitions[K]['config'];
+  [K in keyof AssetDefinitions]: { kind: K } & AssetDefinitions[K]['config'] &
+    // `parse` is a value-kind-only post-load transform (delta §4/§5).
+    (K extends ValueAssetKind ? { parse?: (raw: AssetDefinitions[K]['resource']) => unknown } : object);
 }[keyof AssetDefinitions];
 
 /**
@@ -63,8 +65,13 @@ export type ValueAssetKind = 'json' | 'text' | 'csv' | 'xml' | 'srt' | 'vtt' | '
 
 export type AssetInput = AnyAssetConfig | Asset<unknown>;
 
-export type InferAssetResource<I extends AssetInput> =
-  I extends Asset<infer T> ? T : I extends { kind: infer K extends keyof AssetDefinitions } ? AssetDefinitions[K]['resource'] : never;
+export type InferAssetResource<I extends AssetInput> = I extends Asset<infer T>
+  ? T
+  : I extends { parse: (raw: never) => infer R }
+    ? R
+    : I extends { kind: infer K extends keyof AssetDefinitions }
+      ? AssetDefinitions[K]['resource']
+      : never;
 
 // ---------------------------------------------------------------------------
 // Type-level bare-path inference (mirror of the runtime extensionKindRegistry)
@@ -153,9 +160,13 @@ export type InferCatalogLeaf<E extends CatalogEntry> = E extends string
         ? T
         : AssetRef<T>
       : E extends { kind: infer K extends keyof AssetDefinitions }
-        ? K extends ValueAssetKind
-          ? AssetRef<AssetDefinitions[K]['resource']>
-          : AssetDefinitions[K]['resource']
+        ? E extends { parse: (raw: never) => infer R }
+          ? K extends ValueAssetKind
+            ? AssetRef<R>
+            : AssetDefinitions[K]['resource']
+          : K extends ValueAssetKind
+            ? AssetRef<AssetDefinitions[K]['resource']>
+            : AssetDefinitions[K]['resource']
         : never;
 
 // Compile-time guard: every ExtensionKindMap value is a real AssetDefinitions kind.

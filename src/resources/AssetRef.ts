@@ -12,6 +12,7 @@ export class AssetRef<T> {
   public readonly _loadState = new LoadState<T>();
   private _value: T | undefined;
   private _hasValue = false;
+  private _parse: ((raw: unknown) => T) | undefined;
 
   public constructor() {
     this._loadState.begin();
@@ -56,8 +57,14 @@ export class AssetRef<T> {
     return this._value as T;
   }
 
-  /** @internal */
-  public _fill(value: T): void {
+  /** @internal — set the post-load transform (a config's `parse`) applied to the raw value in {@link _fill}. */
+  public _setParse(parse: (raw: unknown) => T): void {
+    this._parse = parse;
+  }
+
+  /** @internal — fill with the raw loaded value, applying `parse` if one was set. */
+  public _fill(raw: unknown): void {
+    const value = (this._parse ? this._parse(raw) : raw) as T;
     this._value = value;
     this._hasValue = true;
     this._loadState.settle(value);
