@@ -3,6 +3,8 @@ import type { LoadStateValue } from '#core/LoadState';
 import { logger } from '#core/logging';
 import { Texture } from '#rendering/texture/Texture';
 
+import { registerAssetKind } from './assetKindRegistry';
+
 /** Pre-sizing options for deferred texture handles (spec §4.1 — the layout-jump fix). */
 export interface PreSizeOptions {
   /** Width to reserve on the placeholder until the payload arrives. */
@@ -141,3 +143,10 @@ export const soundSeamlessAdapter: SeamlessAdapter<Sound> = {
     return handle.loadState;
   },
 };
+
+// Register core kinds so Assets.from() can build placeholders without a Loader.
+registerAssetKind('texture', { adapter: textureSeamlessAdapter, isValue: false });
+registerAssetKind('sound', { adapter: soundSeamlessAdapter, isValue: false });
+for (const valueKind of ['json', 'text', 'csv', 'xml', 'srt', 'vtt', 'binary', 'wasm'] as const) {
+  registerAssetKind(valueKind, { isValue: true });
+}
