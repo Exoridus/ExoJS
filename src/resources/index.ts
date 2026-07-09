@@ -7,6 +7,7 @@ export { BundleLoadError, defineAssetManifest } from './AssetManifest';
 export { AssetRef } from './AssetRef';
 export type { InferAssetsEntries } from './Assets';
 export { Assets } from './Assets';
+export type { AssetStatus } from './AssetStatus';
 export { CacheFirstStrategy } from './CacheFirstStrategy';
 export type { CacheStore } from './CacheStore';
 export type { CacheRequest, CacheStrategy } from './CacheStrategy';

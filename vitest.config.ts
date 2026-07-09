@@ -128,7 +128,10 @@ export default defineConfig({
       createJsdomTestProject({
         name: 'exojs',
         alias: aliasConfig,
-        include: ['test/**/*.test.ts'],
+        // `src/**/*.test.ts` picks up colocated tests for asset-system v2
+        // internals (e.g. `src/resources/AssetStatus.test.ts`) alongside the
+        // existing `test/**` suite.
+        include: ['test/**/*.test.ts', 'src/**/*.test.ts'],
         exclude: ['test/rendering/browser/**/*.test.ts', 'test/perf/rendering/**/*.test.ts'],
       }),
       createJsdomTestProject({
