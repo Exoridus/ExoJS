@@ -22,6 +22,21 @@ export class AssetRef<T> {
     return this._loadState.value;
   }
 
+  /** Load lifecycle: `'loading' | 'ready' | 'failed'` (asset-system v2 §6). */
+  public get state(): LoadStateValue {
+    return this._loadState.value;
+  }
+
+  /** `true` exactly when {@link state} is `'ready'`. */
+  public get ready(): boolean {
+    return this._loadState.value === 'ready';
+  }
+
+  /** The error the last load failed with, or `null` outside `'failed'`. */
+  public get error(): Error | null {
+    return this._loadState.error;
+  }
+
   /**
    * Promise settling with the parsed value. Re-materialized when a failed
    * load is retried — read it fresh from this getter across load cycles.

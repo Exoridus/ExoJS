@@ -6,10 +6,10 @@
   "subsystem": "resources",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 65,
+  "memberCount": 66,
   "counts": {
     "constructors": 1,
-    "methods": 54,
+    "methods": 55,
     "properties": 2,
     "events": 8
   },
@@ -2848,6 +2848,77 @@
             }
           ],
           "returnType": "LoadingQueue<InferLoadedMap<M>>",
+          "description": "Fetches and processes one or more assets of the given type. - **Single path** — resolves with the finished asset. - **Array of paths** — resolves with an ordered array of assets. - **Record** — resolves with a record whose keys match the input keys. - **Asset<T>** — single typed asset reference. - **Assets<M>** — typed asset container; keys become aliases. - **Config map** — inline { alias: { type, source, … } } definition. In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Supply a custom options object to pass factory-specific configuration (e.g. audio decoding hints or image format overrides)."
+        },
+        {
+          "name": "load",
+          "signature": "load(leaf: AssetRef<T>): LoadingQueue<T>",
+          "signatureTokens": [
+            {
+              "text": "load",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "leaf",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetRef",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LoadingQueue",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "leaf",
+              "type": "AssetRef<T>",
+              "optional": false
+            }
+          ],
+          "returnType": "LoadingQueue<T>",
           "description": "Fetches and processes one or more assets of the given type. - **Single path** — resolves with the finished asset. - **Array of paths** — resolves with an ordered array of assets. - **Record** — resolves with a record whose keys match the input keys. - **Asset<T>** — single typed asset reference. - **Assets<M>** — typed asset container; keys become aliases. - **Config map** — inline { alias: { type, source, … } } definition. In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Supply a custom options object to pass factory-specific configuration (e.g. audio decoding hints or image format overrides)."
         },
         {

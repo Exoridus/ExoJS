@@ -179,6 +179,21 @@ export class Sound implements Playable {
     return this._loadState.value;
   }
 
+  /** Load lifecycle: `'loading' | 'ready' | 'failed'` (asset-system v2 §6). */
+  public get state(): LoadStateValue {
+    return this._loadState.value;
+  }
+
+  /** `true` exactly when {@link state} is `'ready'`. */
+  public get ready(): boolean {
+    return this._loadState.value === 'ready';
+  }
+
+  /** The error the last load failed with, or `null` outside `'failed'`. */
+  public get error(): Error | null {
+    return this._loadState.error;
+  }
+
   /**
    * Promise that settles with this sound once its payload has loaded —
    * resolved immediately for `'ready'` sounds, rejected with the load error

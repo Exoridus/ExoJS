@@ -103,3 +103,27 @@ describe('AssetRef value assets', () => {
     expectTypeOf(loader.get(TextAsset, 'a.txt')).toEqualTypeOf<AssetRef<string>>();
   });
 });
+
+describe('AssetRef status channel', () => {
+  it('a constructed ref is loading with no error', () => {
+    const ref = new AssetRef<number>();
+    expect(ref.state).toBe('loading');
+    expect(ref.ready).toBe(false);
+    expect(ref.error).toBeNull();
+  });
+  it('becomes ready after _fill', () => {
+    const ref = new AssetRef<number>();
+    ref._fill(7);
+    expect(ref.state).toBe('ready');
+    expect(ref.ready).toBe(true);
+    expect(ref.error).toBeNull();
+  });
+  it('surfaces the failure error', () => {
+    const ref = new AssetRef<number>();
+    const err = new Error('nope');
+    ref._fail(err);
+    expect(ref.state).toBe('failed');
+    expect(ref.ready).toBe(false);
+    expect(ref.error).toBe(err);
+  });
+});

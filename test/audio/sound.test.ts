@@ -248,3 +248,21 @@ describe('Sound', () => {
     mutedSound.destroy();
   });
 });
+
+describe('Sound status channel', () => {
+  test('a directly constructed sound is ready', () => {
+    const sound = new Sound(createAudioBufferStub());
+    expect(sound.state).toBe('ready');
+    expect(sound.ready).toBe(true);
+    expect(sound.error).toBeNull();
+    sound.destroy();
+  });
+
+  test('a placeholder in loading state is not ready', () => {
+    const sound = new Sound(createAudioBufferStub());
+    sound._loadState.begin();
+    expect(sound.state).toBe('loading');
+    expect(sound.ready).toBe(false);
+    sound.destroy();
+  });
+});

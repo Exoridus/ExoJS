@@ -6,11 +6,11 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 33,
+  "memberCount": 36,
   "counts": {
     "constructors": 1,
     "methods": 12,
-    "properties": 20,
+    "properties": 23,
     "events": 0
   },
   "sections": [
@@ -875,6 +875,35 @@
           "description": ""
         },
         {
+          "name": "error",
+          "signature": "error: Error | null",
+          "signatureTokens": [
+            {
+              "text": "error",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Error",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The error the last load failed with, or null outside 'failed'."
+        },
+        {
           "name": "flipY",
           "signature": "flipY: boolean",
           "signatureTokens": [
@@ -1034,6 +1063,27 @@
           "description": ""
         },
         {
+          "name": "ready",
+          "signature": "ready: boolean",
+          "signatureTokens": [
+            {
+              "text": "ready",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "true exactly when state is 'ready'."
+        },
+        {
           "name": "scaleMode",
           "signature": "scaleMode: ScaleModes",
           "signatureTokens": [
@@ -1095,6 +1145,27 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "state",
+          "signature": "state: LoadStateValue",
+          "signatureTokens": [
+            {
+              "text": "state",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LoadStateValue",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Load lifecycle: 'loading' | 'ready' | 'failed' (asset-system v2 §6)."
         },
         {
           "name": "version",
