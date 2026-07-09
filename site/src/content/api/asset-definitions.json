@@ -1131,7 +1131,7 @@
         },
         {
           "name": "texture",
-          "signature": "texture: { config: { mimeType?: string; samplerOptions?: SamplerOptions; source: string }; resource: Texture }",
+          "signature": "texture: { config: { mimeType?: string; samplerOptions?: Partial<SamplerOptions>; source: string }; resource: Texture }",
           "signatureTokens": [
             {
               "text": "texture",
@@ -1190,8 +1190,20 @@
               "kind": "punctuation"
             },
             {
+              "text": "Partial",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
               "text": "SamplerOptions",
               "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             },
             {
               "text": "; ",

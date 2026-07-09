@@ -69,7 +69,7 @@
       "members": [
         {
           "name": "of",
-          "signature": "of(source: string): Asset<HTMLImageElement>",
+          "signature": "of(source: string, options?: { height?: number; width?: number }): Asset<HTMLImageElement>",
           "signatureTokens": [
             {
               "text": "of",
@@ -90,6 +90,66 @@
             {
               "text": "string",
               "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "height",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "width",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
             },
             {
               "text": ")",
@@ -121,10 +181,15 @@
               "name": "source",
               "type": "string",
               "optional": false
+            },
+            {
+              "name": "options",
+              "type": "{ height?: number; width?: number }",
+              "optional": true
             }
           ],
           "returnType": "Asset<HTMLImageElement>",
-          "description": "Annotation descriptor for an SVG asset (asset-system v2 §5). Use in Assets.from({...}) or loader.get(...)/loader.load(...)."
+          "description": "Annotation descriptor for an SVG asset (asset-system v2 §5). Pass { width, height } to rasterize the SVG at an explicit size (an unsized SVG decodes at its intrinsic dimensions). Use in Assets.from({...}) or loader.get(...)/loader.load(...)."
         }
       ],
       "paragraphs": [],

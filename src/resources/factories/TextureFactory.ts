@@ -10,8 +10,8 @@ export interface TextureFactoryOptions {
    * omitted.
    */
   mimeType?: string;
-  /** Sampler parameters (wrap mode, filter, etc.) forwarded to the {@link Texture} constructor. */
-  samplerOptions?: SamplerOptions;
+  /** Sampler parameters (wrap mode, filter, etc.) forwarded to the {@link Texture} constructor; any subset. */
+  samplerOptions?: Partial<SamplerOptions>;
 }
 
 /**

@@ -53,11 +53,13 @@ export abstract class TextAsset {
 export abstract class SvgAsset {
   declare protected readonly _token: 'svg';
   /**
-   * Annotation descriptor for an SVG asset (asset-system v2 §5). Use in
-   * `Assets.from({...})` or `loader.get(...)`/`loader.load(...)`.
+   * Annotation descriptor for an SVG asset (asset-system v2 §5). Pass
+   * `{ width, height }` to rasterize the SVG at an explicit size (an unsized SVG
+   * decodes at its intrinsic dimensions). Use in `Assets.from({...})` or
+   * `loader.get(...)`/`loader.load(...)`.
    */
-  public static of(source: string): Asset<HTMLImageElement> {
-    return _makeAsset('svg', source);
+  public static of(source: string, options?: { width?: number; height?: number }): Asset<HTMLImageElement> {
+    return _makeAsset('svg', source, options);
   }
 }
 

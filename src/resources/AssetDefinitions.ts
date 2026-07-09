@@ -13,7 +13,7 @@ import type { ExtensionTypeMap } from './Loader';
 
 export interface AssetDefinitions {
   bmFont: { resource: BmFont; config: { source: string } };
-  texture: { resource: Texture; config: { source: string; mimeType?: string; samplerOptions?: SamplerOptions } };
+  texture: { resource: Texture; config: { source: string; mimeType?: string; samplerOptions?: Partial<SamplerOptions> } };
   sound: {
     resource: Sound;
     config: { source: string; playbackOptions?: Partial<PlaybackOptions>; poolSize?: number; sprites?: Readonly<Record<string, AudioSpriteClip>> };
