@@ -225,7 +225,7 @@ const bmFontBinding = defineAsset({
     async load({ source }: AssetLoadRequest, context: AssetLoaderContext): Promise<BmFont> {
       const text = await context.fetchText(source);
       const fontData = parseBmFontText(text);
-      const textures = await Promise.all(fontData.pages.map(page => loader.load(Texture, resolveSubAssetPath(page, source))));
+      const textures = await Promise.all(fontData.pages.map(page => loader.load(Texture.of(resolveSubAssetPath(page, source)))));
       return new BmFont(fontData, textures);
     },
   }),
