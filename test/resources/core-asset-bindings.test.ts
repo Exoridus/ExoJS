@@ -1,6 +1,6 @@
 import type { AssetBinding, AssetHandler } from '#extensions/Extension';
 import { BmFont } from '#rendering/text/BmFont';
-import { Texture } from '#rendering/texture/Texture';
+import { type Texture } from '#rendering/texture/Texture';
 import { BinaryFactory } from '#resources/factories/BinaryFactory';
 import { SubtitleFactory } from '#resources/factories/SubtitleFactory';
 import { XmlFactory } from '#resources/factories/XmlFactory';
