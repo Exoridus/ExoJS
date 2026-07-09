@@ -121,6 +121,9 @@ export type KindByPath<S extends string> = MatchKind<KindBasename<KindStripQuery
 /** The resource type of a kind. */
 export type ResourceForKind<K extends keyof AssetDefinitions> = AssetDefinitions[K]['resource'];
 
+/** The per-kind option bag: that kind's config minus the `source` field. */
+export type OptionsForKind<K extends keyof AssetDefinitions> = Omit<AssetDefinitions[K]['config'], 'source'>;
+
 /**
  * The handle-hybrid leaf type a bare path string materializes as: a resource
  * kind yields its resource (`Texture`/`Sound`), a {@link ValueAssetKind} yields

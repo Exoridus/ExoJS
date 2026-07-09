@@ -1,4 +1,4 @@
-import type { AnyAssetConfig, AssetDefinitions } from './AssetDefinitions';
+import type { AnyAssetConfig, AssetDefinitions, OptionsForKind, ValueAssetKind } from './AssetDefinitions';
 
 // ---------------------------------------------------------------------------
 // Internal implementation
@@ -38,7 +38,28 @@ export interface Asset<T> {
 
 type AssetConstructorFn = new <K extends keyof AssetDefinitions>(config: { type: K } & AssetDefinitions[K]['config']) => Asset<AssetDefinitions[K]['resource']>;
 
-export const Asset = AssetImpl as unknown as AssetConstructorFn;
+type AssetFacade = AssetConstructorFn & {
+  /**
+   * The single typed descriptor builder (asset-system v2 delta §3). Replaces the
+   * per-class `.of()` statics. `kind` autocompletes from {@link AssetDefinitions};
+   * the resource type is inferred from `kind`; `options` is that kind's option bag.
+   * The `<T>` generic is accepted ONLY for value/ref kinds, where it annotates the
+   * decoded value — passing `<T>` to a resource kind is a type error.
+   *
+   * @example
+   * ```ts
+   * Asset.kind('texture', 'player.png');            // Asset<Texture>
+   * Asset.kind<LevelData>('json', 'levels/01.json'); // Asset<LevelData>
+   * ```
+   */
+  kind<K extends keyof AssetDefinitions>(kind: K, source: string, options?: OptionsForKind<K>): Asset<AssetDefinitions[K]['resource']>;
+  kind<T>(kind: ValueAssetKind, source: string, options?: OptionsForKind<ValueAssetKind>): Asset<T>;
+};
+
+export const Asset = AssetImpl as unknown as AssetFacade;
+
+// Attach the runtime `kind` static onto the facade the constructor cast produced.
+(Asset as unknown as { kind: (kind: keyof AssetDefinitions, source: string, options?: object) => Asset<unknown> }).kind = (kind, source, options) => _makeAsset(kind, source, options);
 
 /**
  * Build an {@link Asset} descriptor for an `X.of(source, opts?)` annotation
