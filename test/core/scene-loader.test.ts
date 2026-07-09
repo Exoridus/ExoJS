@@ -1,4 +1,3 @@
-import { Sound } from '#audio/Sound';
 import type { Application } from '#core/Application';
 import { Scene } from '#core/Scene';
 import { materializeAssetBindings } from '#extensions/materialize';
@@ -55,7 +54,7 @@ describe('Scene.loader', () => {
     const scene = new Scene();
     scene.app = app;
 
-    const handle = scene.loader.get(Sound, 'boom.ogg');
+    const handle = scene.loader.get('boom.ogg');
     await handle.loaded;
     expect(handle.audioBuffer).not.toBeNull();
 
@@ -68,7 +67,7 @@ describe('Scene.loader', () => {
     const { app } = makeAppWithAudio();
     const scene = new Scene();
     scene.app = app;
-    const handle = scene.loader.get(Sound, 'boom.ogg');
+    const handle = scene.loader.get('boom.ogg');
     await handle.loaded;
 
     scene.destroy(); // _disposal.destroy() → SceneLoader.destroy() → release all

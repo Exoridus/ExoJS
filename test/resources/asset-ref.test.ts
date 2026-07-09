@@ -5,7 +5,7 @@ import { Texture } from '#rendering/texture/Texture';
 import { AssetRef } from '#resources/AssetRef';
 import { coreAssetBindings } from '#resources/coreAssetBindings';
 import { Loader } from '#resources/Loader';
-import { Json, TextAsset } from '#resources/tokens';
+import { Json } from '#resources/tokens';
 
 function createCoreLoader(): Loader {
   const loader = new Loader();
@@ -38,11 +38,11 @@ describe('AssetRef value assets', () => {
     global.fetch = originalFetch;
   });
 
-  test('get(Json, src) returns a loading ref whose value throws until ready', async () => {
+  test('get(Json.of(src)) returns a loading ref whose value throws until ready', async () => {
     mockFetchJson({ hp: 3 });
     const loader = createCoreLoader();
 
-    const ref = loader.get(Json, 'cfg.json');
+    const ref = loader.get(Json.of('cfg.json'));
 
     expect(ref).toBeInstanceOf(AssetRef);
     expect(ref.loadState).toBe('loading');
@@ -57,14 +57,14 @@ describe('AssetRef value assets', () => {
     mockFetchJson({ a: 1 });
     const loader = createCoreLoader();
 
-    const ref = loader.get(Json, 'cfg.json');
+    const ref = loader.get('cfg.json');
 
-    expect(loader.get(Json, 'cfg.json')).toBe(ref);
+    expect(loader.get('cfg.json')).toBe(ref);
 
-    const value = await loader.load(Json, 'cfg.json');
+    const value = await loader.load('cfg.json');
 
     expect(value).toEqual({ a: 1 }); // load() still resolves the RAW value
-    expect(loader.get(Json, 'cfg.json')).toBe(ref);
+    expect(loader.get('cfg.json')).toBe(ref);
     expect(ref.value).toEqual({ a: 1 });
   });
 
@@ -72,8 +72,8 @@ describe('AssetRef value assets', () => {
     mockFetchJson({ b: 2 });
     const loader = createCoreLoader();
 
-    await loader.load(Json, 'cfg.json');
-    const ref = loader.get(Json, 'cfg.json');
+    await loader.load(Json.of('cfg.json'));
+    const ref = loader.get(Json.of('cfg.json'));
 
     expect(ref.loadState).toBe('ready');
     expect(ref.value).toEqual({ b: 2 });
@@ -83,25 +83,18 @@ describe('AssetRef value assets', () => {
     mockFetch404();
     const loader = createCoreLoader();
 
-    const ref = loader.get(Json, 'flaky.json');
+    const ref = loader.get('flaky.json');
 
     await expect(ref.loaded).rejects.toThrow();
     expect(ref.loadState).toBe('failed');
     expect(() => ref.value).toThrow("'failed'");
 
     mockFetchJson({ ok: true });
-    const again = loader.get(Json, 'flaky.json');
+    const again = loader.get('flaky.json');
 
     expect(again).toBe(ref);
     expect(ref.loadState).toBe('loading');
     await expect(ref.loaded).resolves.toEqual({ ok: true });
-  });
-
-  test('type-level: token overloads', () => {
-    const loader = createCoreLoader();
-
-    expectTypeOf(loader.get<{ hp: number }>(Json, 'cfg.json')).toEqualTypeOf<AssetRef<{ hp: number }>>();
-    expectTypeOf(loader.get(TextAsset, 'a.txt')).toEqualTypeOf<AssetRef<string>>();
   });
 });
 
@@ -124,16 +117,6 @@ describe('bare-path get()/load() for value kinds (§4.2/§4.4)', () => {
     const loader = createCoreLoader();
 
     expect(loader.get('a/b.txt')).toBeInstanceOf(AssetRef);
-  });
-
-  test('bare-path get() shares ref identity with the token form', () => {
-    mockFetchJson({ a: 1 });
-    const loader = createCoreLoader();
-
-    const viaPath = loader.get('cfg.json');
-    const viaToken = loader.get(Json, 'cfg.json');
-
-    expect(viaPath).toBe(viaToken);
   });
 
   test('bare .json get() ref fills with the parsed value', async () => {

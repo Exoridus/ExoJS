@@ -59,7 +59,7 @@ describe('Loader seamless get (Texture)', () => {
     mockFetchImage();
     const loader = createCoreLoader();
 
-    const handle = loader.get(Texture, 'ship.png');
+    const handle = loader.get('ship.png');
 
     expect(handle).toBeInstanceOf(Texture);
     expect(handle.loadState).toBe('loading');
@@ -70,7 +70,7 @@ describe('Loader seamless get (Texture)', () => {
     mockFetchImage();
     const loader = createCoreLoader();
 
-    const handle = loader.get(Texture, 'ship.png');
+    const handle = loader.get('ship.png');
     const versionBefore = handle.version;
 
     await expect(handle.loaded).resolves.toBe(handle);
@@ -83,14 +83,14 @@ describe('Loader seamless get (Texture)', () => {
     mockFetchImage();
     const loader = createCoreLoader();
 
-    const first = loader.get(Texture, 'ship.png');
-    const second = loader.get(Texture, 'ship.png');
+    const first = loader.get('ship.png');
+    const second = loader.get('ship.png');
 
     expect(second).toBe(first);
 
     await first.loaded;
 
-    expect(loader.get(Texture, 'ship.png')).toBe(first);
+    expect(loader.get('ship.png')).toBe(first);
     expect(loader._peekResource(Texture, 'ship.png')).not.toBeNull();
   });
 
@@ -98,8 +98,8 @@ describe('Loader seamless get (Texture)', () => {
     mockFetchImage();
     const loader = createCoreLoader();
 
-    const handle = loader.get(Texture, 'ship.png');
-    const loaded = await loader.load(Texture, 'ship.png');
+    const handle = loader.get('ship.png');
+    const loaded = await loader.load('ship.png');
 
     expect(loaded).toBe(handle);
     expect(handle.loadState).toBe('ready');
@@ -109,8 +109,8 @@ describe('Loader seamless get (Texture)', () => {
     mockFetchImage();
     const loader = createCoreLoader();
 
-    const loaded = await loader.load(Texture, 'ship.png');
-    const handle = loader.get(Texture, 'ship.png');
+    const loaded = await loader.load('ship.png');
+    const handle = loader.get('ship.png');
 
     expect(handle).toBe(loaded);
     expect(handle.loadState).toBe('ready');
@@ -123,7 +123,7 @@ describe('Loader seamless get (Texture)', () => {
 
     loader.onLoaded.add((_type, _alias, resource) => seen.push(resource));
 
-    const handle = loader.get(Texture, 'ship.png');
+    const handle = loader.get('ship.png');
 
     await handle.loaded;
     expect(seen).toEqual([handle]);
@@ -139,39 +139,6 @@ describe('Loader seamless get (Texture)', () => {
     expect(() => loader.get(Adapterless, 'never-loaded')).toThrow('Missing resource');
   });
 
-  test('array form returns deferred handles in input order and dedups', async () => {
-    mockFetchImage();
-    const loader = createCoreLoader();
-
-    const [a, b, aAgain] = loader.get(Texture, ['a.png', 'b.png', 'a.png']);
-
-    expect(a).toBeInstanceOf(Texture);
-    expect(b).not.toBe(a);
-    expect(aAgain).toBe(a);
-    expect(a).toBe(loader.get(Texture, 'a.png'));
-
-    await Promise.all([a.loaded, b.loaded]);
-    expect(a.loadState).toBe('ready');
-    expect(b.loadState).toBe('ready');
-  });
-
-  test('record form returns handles under the input keys', async () => {
-    mockFetchImage();
-    const loader = createCoreLoader();
-
-    const { ship, gradient } = loader.get(Texture, { ship: 'ship.png', gradient: 'gradient.png' });
-
-    expect(ship).toBeInstanceOf(Texture);
-    expect(gradient).not.toBe(ship);
-    expect(ship).toBe(loader.get(Texture, 'ship.png'));
-
-    await ship.loaded;
-    expect(ship.loadState).toBe('ready');
-
-    await gradient.loaded;
-    expect(gradient.loadState).toBe('ready');
-  });
-
   test('conflicting FETCH options (mimeType) warn once and the first call wins', async () => {
     mockFetchImage();
     const loader = createCoreLoader();
@@ -181,11 +148,11 @@ describe('Loader seamless get (Texture)', () => {
     });
 
     try {
-      const handle = loader.get(Texture, 'ship.png', { mimeType: 'image/png' });
+      const handle = loader.get('ship.png', { mimeType: 'image/png' });
 
       // A different mimeType for one source cannot share the source-keyed decode.
-      loader.get(Texture, 'ship.png', { mimeType: 'image/webp' });
-      loader.get(Texture, 'ship.png', { mimeType: 'image/webp' });
+      loader.get('ship.png', { mimeType: 'image/webp' });
+      loader.get('ship.png', { mimeType: 'image/webp' });
 
       expect(warnings).toHaveLength(1);
       expect(warnings[0]).toContain('first call');
@@ -209,9 +176,9 @@ describe('Loader seamless get (Texture)', () => {
       // get() returns the SAME handle per source; sampler options are per-handle
       // now, so a later differing sampler is silently first-wins (no warn). Use a
       // distinct handle (e.g. an Assets catalog leaf) for an independent sampler.
-      const handle = loader.get(Texture, 'ship.png', { samplerOptions: { scaleMode: ScaleModes.Nearest } });
+      const handle = loader.get('ship.png', { samplerOptions: { scaleMode: ScaleModes.Nearest } });
 
-      expect(handle).toBe(loader.get(Texture, 'ship.png', { samplerOptions: { scaleMode: ScaleModes.Linear } }));
+      expect(handle).toBe(loader.get('ship.png', { samplerOptions: { scaleMode: ScaleModes.Linear } }));
       expect(warnings).toHaveLength(0);
       expect(handle.scaleMode).toBe(ScaleModes.Nearest); // first call's sampler, baked at createPlaceholder
 
@@ -231,7 +198,7 @@ describe('Loader seamless get (Texture)', () => {
 
     // A bare get() for the same source returns the adopted leaf, whose sampler
     // options were baked at createPlaceholder — not just applied at fetch time.
-    const handle = loader.get(Texture, 'ship.png');
+    const handle = loader.get('ship.png');
     expect(handle.scaleMode).toBe(ScaleModes.Nearest);
 
     await handle.loaded;
@@ -242,7 +209,7 @@ describe('Loader seamless get (Texture)', () => {
     mockFetchImage();
     const loader = createCoreLoader();
 
-    const handle = loader.get(Texture, 'ship.png', { samplerOptions: { scaleMode: ScaleModes.Nearest } });
+    const handle = loader.get('ship.png', { samplerOptions: { scaleMode: ScaleModes.Nearest } });
 
     expect(handle.scaleMode).toBe(ScaleModes.Nearest);
   });
@@ -256,8 +223,8 @@ describe('Loader seamless get (Texture)', () => {
     });
 
     try {
-      loader.get(Texture, 'ship.png', { samplerOptions: { flipY: true } });
-      loader.get(Texture, 'ship.png', { samplerOptions: { flipY: true } });
+      loader.get('ship.png', { samplerOptions: { flipY: true } });
+      loader.get('ship.png', { samplerOptions: { flipY: true } });
 
       expect(warnings).toHaveLength(0);
     } finally {
@@ -269,7 +236,7 @@ describe('Loader seamless get (Texture)', () => {
     mockFetchImage();
     const loader = createCoreLoader();
 
-    const handle = loader.get(Texture, 'ship.png');
+    const handle = loader.get('ship.png');
 
     loader.unload(Texture, 'ship.png');
 
@@ -277,7 +244,7 @@ describe('Loader seamless get (Texture)', () => {
     expect(handle.loadState).toBe('failed');
 
     // Fetch mock is still OK — a later get() must retry and heal the SAME handle.
-    const again = loader.get(Texture, 'ship.png');
+    const again = loader.get('ship.png');
 
     expect(again).toBe(handle);
     expect(handle.loadState).toBe('loading');
@@ -290,7 +257,7 @@ describe('Loader seamless get (Texture)', () => {
     mockFetch404();
     const loader = createCoreLoader();
 
-    const handle = loader.get(Texture, 'gone.png');
+    const handle = loader.get('gone.png');
 
     await expect(handle.loaded).rejects.toThrow('Failed to load');
     expect(handle.loadState).toBe('failed');
@@ -302,13 +269,13 @@ describe('Loader seamless get (Texture)', () => {
     mockFetch404();
     const loader = createCoreLoader();
 
-    const handle = loader.get(Texture, 'flaky.png');
+    const handle = loader.get('flaky.png');
 
     await expect(handle.loaded).rejects.toThrow();
     const rejectedPromise = handle.loaded;
 
     mockFetchImage();
-    const retried = loader.get(Texture, 'flaky.png');
+    const retried = loader.get('flaky.png');
 
     expect(retried).toBe(handle);
     expect(handle.loadState).toBe('loading');
@@ -330,12 +297,12 @@ describe('Loader seamless get (Texture)', () => {
     mockFetch404();
     const loader = createCoreLoader();
 
-    const handle = loader.get(Texture, 'gone.png');
+    const handle = loader.get('gone.png');
 
     await expect(handle.loaded).rejects.toThrow();
 
     mockFetch404();
-    const again = loader.get(Texture, 'gone.png');
+    const again = loader.get('gone.png');
 
     expect(again).toBe(handle);
     expect(again.loadState).toBe('loading');
@@ -347,13 +314,13 @@ describe('Loader seamless get (Texture)', () => {
     mockFetch404();
     const loader = createCoreLoader();
 
-    const handle = loader.get(Texture, 'healme.png');
+    const handle = loader.get('healme.png');
 
     await expect(handle.loaded).rejects.toThrow();
     const rejectedPromise = handle.loaded;
 
     mockFetchImage();
-    const loaded = await loader.load(Texture, 'healme.png');
+    const loaded = await loader.load('healme.png');
 
     expect(loaded).toBe(handle);
     expect(handle.loadState).toBe('ready');
@@ -370,7 +337,7 @@ describe('Loader seamless get (Texture)', () => {
 
     loader.onError.add((_type, alias) => errors.push(alias));
 
-    const handle = loader.get(Texture, 'gone.png');
+    const handle = loader.get('gone.png');
 
     await expect(handle.loaded).rejects.toThrow();
     expect(errors).toEqual(['gone.png']);
@@ -387,7 +354,7 @@ describe('Loader seamless get (Texture)', () => {
     // asserted below via `handle.loaded`, so swallow the queue's own rejection.
     loader.load(Assets.from({ gone: 'gone.png' }), { background: true }).catch(() => {});
 
-    const handle = loader.get(Texture, 'gone.png');
+    const handle = loader.get('gone.png');
 
     await expect(handle.loaded).rejects.toThrow();
     expect(errors).toEqual(['gone.png']);
@@ -400,7 +367,7 @@ describe('Loader seamless get (Texture)', () => {
 
     loader.onError.add((_type, alias) => errors.push(alias));
 
-    await expect(loader.load(Texture, 'gone.png')).rejects.toThrow();
+    await expect(loader.load('gone.png')).rejects.toThrow();
     expect(errors).toEqual([]);
   });
 
@@ -408,21 +375,19 @@ describe('Loader seamless get (Texture)', () => {
     mockFetch404();
     const loader = createCoreLoader();
 
-    const handle = loader.get(Texture, 'gone.png');
+    const handle = loader.get('gone.png');
 
     await expect(handle.loaded).rejects.toThrow();
 
     global.fetch = vi.fn(async (): Promise<Response> => ({ ok: false, status: 500, statusText: 'Server Error' }) as Response);
-    await expect(loader.load(Texture, 'gone.png')).rejects.toThrow();
+    await expect(loader.load('gone.png')).rejects.toThrow();
     await expect(handle.loaded).rejects.toThrow('500'); // fresh error, fresh promise
   });
 
   test('type-level: seamless get forms', () => {
     const loader = createCoreLoader();
 
-    expectTypeOf(loader.get(Texture, 'a.png')).toEqualTypeOf<Texture>();
-    expectTypeOf(loader.get(Texture, ['a.png', 'b.png'])).toEqualTypeOf<Texture[]>();
-    expectTypeOf(loader.get(Texture, { a: 'a.png', b: 'b.png' })).toEqualTypeOf<Record<'a' | 'b', Texture>>();
+    expectTypeOf(loader.get('a.png')).toEqualTypeOf<Texture>();
     expectTypeOf(new Texture(null).loaded).toEqualTypeOf<Promise<Texture>>();
   });
 
@@ -434,7 +399,7 @@ describe('Loader seamless get (Texture)', () => {
 
     expect(handle).toBeInstanceOf(Texture);
     expect(handle.loadState).toBe('loading');
-    expect(loader.get(Texture, 'ship.png')).toBe(handle);
+    expect(loader.get('ship.png')).toBe(handle);
 
     await expect(handle.loaded).resolves.toBe(handle);
     expect(handle.width).toBe(16);
@@ -457,7 +422,7 @@ describe('Loader seamless get (Texture)', () => {
     mockFetchImage();
     const loader = createCoreLoader();
 
-    const handle = loader.get(Texture, 'ship.png', { width: 16, height: 16 });
+    const handle = loader.get('ship.png', { width: 16, height: 16 });
 
     expect(handle.width).toBe(16); // reserved immediately, while loading
     await handle.loaded;

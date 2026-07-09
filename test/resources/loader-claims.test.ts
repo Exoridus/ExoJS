@@ -2,7 +2,6 @@ import { expectTypeOf } from 'vitest';
 
 import { Sound } from '#audio/Sound';
 import { materializeAssetBindings } from '#extensions/materialize';
-import { Texture } from '#rendering/texture/Texture';
 import { Assets } from '#resources/Assets';
 import { coreAssetBindings } from '#resources/coreAssetBindings';
 import { Loader, type LoaderOptions } from '#resources/Loader';
@@ -49,11 +48,11 @@ describe('seamless Sound', () => {
     mockFetchAudio();
     const loader = createCoreLoader();
 
-    const handle = loader.get(Sound, 'boom.ogg');
+    const handle = loader.get('boom.ogg');
 
     expect(handle).toBeInstanceOf(Sound);
     expect(handle.loadState).toBe('loading');
-    expect(loader.get(Sound, 'boom.ogg')).toBe(handle); // deduped identity
+    expect(loader.get('boom.ogg')).toBe(handle); // deduped identity
 
     await handle.loaded;
 
@@ -88,7 +87,7 @@ describe('refcount / claims', () => {
   test('app.loader.get claims under app lifetime; release() at refcount 0 evicts the payload', async () => {
     mockFetchAudio();
     const loader = createCoreLoader();
-    const handle = loader.get(Sound, 'boom.ogg');
+    const handle = loader.get('boom.ogg');
     await handle.loaded;
     expect(handle.audioBuffer).not.toBeNull();
 
@@ -100,12 +99,12 @@ describe('refcount / claims', () => {
   test('claiming again re-fetches into the SAME handle (in-place heal)', async () => {
     mockFetchAudio();
     const loader = createCoreLoader();
-    const handle = loader.get(Sound, 'boom.ogg');
+    const handle = loader.get('boom.ogg');
     await handle.loaded;
     loader.release(handle);
     expect(handle.audioBuffer).toBeNull();
 
-    const again = loader.get(Sound, 'boom.ogg');
+    const again = loader.get('boom.ogg');
     expect(again).toBe(handle); // identity preserved
     await handle.loaded;
     expect(handle.audioBuffer).not.toBeNull();
@@ -147,7 +146,7 @@ describe('refcount / claims', () => {
     const loader = createCoreLoader();
     const key = loader['_key'](Sound, 'boom.ogg');
 
-    const handle = loader.get(Sound, 'boom.ogg');
+    const handle = loader.get('boom.ogg');
     // Fetch is in flight: the handle is still deferred, not yet in _resources.
     expect(loader['_deferred'].has(key)).toBe(true);
     expect(handle.loadState).toBe('loading');
@@ -176,7 +175,7 @@ describe('refcount / claims', () => {
     const loader = createCoreLoader();
     const key = loader['_key'](Sound, 'boom.ogg');
 
-    const handle = loader.get(Sound, 'boom.ogg');
+    const handle = loader.get('boom.ogg');
     await handle.loaded;
     expect(loader['_resources'].get(Sound as never)?.get('boom.ogg')).toBe(handle);
 
@@ -190,10 +189,10 @@ describe('refcount / claims', () => {
     // reclaim's live entry, so the concurrent load() below is no longer deduped
     // and re-enters _loadSingle → a second _dispatchFetch whose raw donor
     // overwrites the handle in _resources.
-    const again = loader.get(Sound, 'boom.ogg');
+    const again = loader.get('boom.ogg');
     expect(again).toBe(handle);
     await Promise.resolve();
-    const concurrent = loader.load(Sound, 'boom.ogg');
+    const concurrent = loader.load('boom.ogg');
 
     await handle.loaded;
     await concurrent;
@@ -207,7 +206,7 @@ describe('refcount / claims', () => {
     mockFetchAudio();
     const loader = createCoreLoader();
 
-    const handle = loader.get(Sound, 'boom.ogg');
+    const handle = loader.get('boom.ogg');
     // Capture the pending .loaded before releasing: this is the promise the fill
     // settles, so the awaiter observes the completed asset even after eviction.
     const captured = handle.loaded;
@@ -230,7 +229,7 @@ describe('refcount / claims', () => {
     mockFetchAudio(); // arrayBuffer response feeds the stubbed createImageBitmap
     const loader = createCoreLoader();
 
-    const handle = loader.get(Texture, 'x.png');
+    const handle = loader.get('x.png');
     await handle.loaded;
     expect(handle.source).not.toBeNull();
 
@@ -238,7 +237,7 @@ describe('refcount / claims', () => {
     expect(handle.source).toBeNull();
     expect(handle.loadState).toBe('loading');
 
-    const again = loader.get(Texture, 'x.png');
+    const again = loader.get('x.png');
     expect(again).toBe(handle); // identity preserved across the heal
     await handle.loaded;
     expect(handle.source).not.toBeNull();
