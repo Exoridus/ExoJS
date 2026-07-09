@@ -743,4 +743,72 @@ describe('RenderTo WebGL2 browser', () => {
       backend.destroy();
     }
   });
+
+  test('float RenderTexture round-trips values outside [0,1] (or throws clearly without EXT_color_buffer_float)', async () => {
+    const backend = await createBackend();
+
+    try {
+      expect(backend.supportsColorFormat('rgba8')).toBe(true);
+
+      const floatSupported = backend.supportsColorFormat('rgba32f');
+      const size = 16;
+      const target = new RenderTexture(size, size, { format: 'rgba32f' });
+
+      if (!floatSupported) {
+        // Acceptance #5: without the extension, preparing a float target throws
+        // a clear error rather than yielding an incomplete framebuffer.
+        expect(() => backend.setRenderTarget(target)).toThrow(/EXT_color_buffer_float/);
+        target.destroy();
+        return;
+      }
+
+      // Acceptance #1 + #2: a render-complete float FBO stores values outside
+      // [0, 1] and reads them back within full-float precision.
+      backend.setRenderTarget(target);
+      backend.setView(target.view);
+
+      const gl = backend.context;
+
+      gl.disable(gl.BLEND);
+
+      const vs = gl.createShader(gl.VERTEX_SHADER)!;
+      gl.shaderSource(
+        vs,
+        '#version 300 es\nvoid main() {\n  float x=float((gl_VertexID&1)<<2)-1.0;\n  float y=float((gl_VertexID&2)<<1)-1.0;\n  gl_Position=vec4(x,y,0.0,1.0);\n}',
+      );
+      gl.compileShader(vs);
+
+      const fs = gl.createShader(gl.FRAGMENT_SHADER)!;
+      gl.shaderSource(fs, '#version 300 es\nprecision highp float;\nout vec4 c;\nvoid main(){c=vec4(2.5,-1.0,0.5,3.0);}');
+      gl.compileShader(fs);
+
+      const prog = gl.createProgram()!;
+      gl.attachShader(prog, vs);
+      gl.attachShader(prog, fs);
+      gl.linkProgram(prog);
+      expect(gl.getProgramParameter(prog, gl.LINK_STATUS)).toBe(true);
+      gl.useProgram(prog);
+      gl.viewport(0, 0, size, size);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+      gl.deleteShader(vs);
+      gl.deleteShader(fs);
+      gl.deleteProgram(prog);
+
+      expect(gl.checkFramebufferStatus(gl.FRAMEBUFFER)).toBe(gl.FRAMEBUFFER_COMPLETE);
+
+      const out = new Float32Array(4);
+      gl.readPixels(size / 2, size / 2, 1, 1, gl.RGBA, gl.FLOAT, out);
+
+      expect(out[0]).toBeCloseTo(2.5, 3);
+      expect(out[1]).toBeCloseTo(-1.0, 3);
+      expect(out[2]).toBeCloseTo(0.5, 3);
+      expect(out[3]).toBeCloseTo(3.0, 3);
+
+      backend.setRenderTarget(backend.renderTarget);
+      target.destroy();
+    } finally {
+      backend.destroy();
+    }
+  });
 });

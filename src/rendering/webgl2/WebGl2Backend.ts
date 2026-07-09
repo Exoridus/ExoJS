@@ -24,7 +24,7 @@ import { DataTexture, type DataTextureFormat } from '#rendering/texture/DataText
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
 import { TransformBuffer } from '#rendering/TransformBuffer';
-import { BlendModes } from '#rendering/types';
+import { BlendModes, type ColorTextureFormat } from '#rendering/types';
 import type { View } from '#rendering/View';
 
 import { WebGl2BackdropBlendCompositor } from './WebGl2BackdropBlendCompositor';
@@ -165,6 +165,8 @@ export class WebGl2Backend implements RenderBackend {
 
   private _canvas: HTMLCanvasElement;
   private _contextLost: boolean;
+  /** Whether `EXT_color_buffer_float` is available (float RenderTexture targets are renderable). */
+  private _floatRenderable = false;
   private _renderTarget: RenderTarget;
   private readonly _snapTransform: Matrix = new Matrix();
   private _renderer: Renderer | null = null;
@@ -204,6 +206,10 @@ export class WebGl2Backend implements RenderBackend {
 
     this._context = __DEV__ && debug ? makeWebGl2DebugContext(gl) : gl;
     this._contextLost = this._context.isContextLost();
+
+    // Enable + cache float color-buffer renderability. getExtension() is the
+    // enable call; without it, RGBA16F/RGBA32F are not color-renderable in WebGL2.
+    this._floatRenderable = this._context.getExtension('EXT_color_buffer_float') !== null;
 
     if (this._contextLost) {
       this._restoreContext();
@@ -714,6 +720,16 @@ export class WebGl2Backend implements RenderBackend {
    */
   public _rebindActiveTarget(): void {
     this._bindRenderTarget(this._renderTarget);
+  }
+
+  /**
+   * Whether a {@link RenderTexture} of this color format can be rendered into
+   * on this context. `'rgba8'` is always supported; the float formats require
+   * the `EXT_color_buffer_float` WebGL2 extension. Callers should check this
+   * before allocating a float target and fall back to `'rgba8'` themselves.
+   */
+  public supportsColorFormat(format: ColorTextureFormat): boolean {
+    return format === 'rgba8' || this._floatRenderable;
   }
 
   public acquireRenderTexture(width: number, height: number): RenderTexture {
@@ -1301,6 +1317,12 @@ export class WebGl2Backend implements RenderBackend {
   }
 
   private _prepareRenderTarget(target: RenderTarget): ManagedRenderTargetState {
+    if (target instanceof RenderTexture && target.format !== 'rgba8' && !this._floatRenderable) {
+      throw new Error(
+        `RenderTexture: format '${target.format}' requires the WebGL2 extension 'EXT_color_buffer_float', which this context does not support. Check backend.supportsColorFormat() and fall back to 'rgba8'.`,
+      );
+    }
+
     const state = this._getRenderTargetState(target);
 
     if (target instanceof RenderTexture && state.framebuffer) {
@@ -1475,13 +1497,15 @@ export class WebGl2Backend implements RenderBackend {
 
         gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
       } else if (texture instanceof RenderTexture) {
+        const info = webgl2DataTextureFormat(texture.format);
+
         if (state.version === -1 || state.width !== texture.width || state.height !== texture.height || texture.source === null) {
-          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, texture.width, texture.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, texture.source);
-          this._bookTextureStorage(state, texture, RGBA8_BYTES_PER_PIXEL);
-          this._accountant.recordTextureUpload(texture.width * texture.height * RGBA8_BYTES_PER_PIXEL);
+          gl.texImage2D(gl.TEXTURE_2D, 0, info.internalFormat, texture.width, texture.height, 0, info.format, info.type, texture.source);
+          this._bookTextureStorage(state, texture, info.bytesPerPixel);
+          this._accountant.recordTextureUpload(texture.width * texture.height * info.bytesPerPixel);
         } else {
-          gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, texture.width, texture.height, gl.RGBA, gl.UNSIGNED_BYTE, texture.source);
-          this._accountant.recordTextureUpload(texture.width * texture.height * RGBA8_BYTES_PER_PIXEL);
+          gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, texture.width, texture.height, info.format, info.type, texture.source);
+          this._accountant.recordTextureUpload(texture.width * texture.height * info.bytesPerPixel);
         }
       } else if (texture.source) {
         if (state.version === -1 || state.width !== texture.width || state.height !== texture.height) {
@@ -1572,25 +1596,27 @@ export class WebGl2Backend implements RenderBackend {
 const RGBA8_BYTES_PER_PIXEL = 4;
 
 interface WebGl2DataTextureFormatInfo {
-  readonly internalFormat: number; // gl.R8 / gl.R32F / gl.RGBA8 / gl.RGBA32F
+  readonly internalFormat: number; // gl.R8 / gl.R32F / gl.RGBA8 / gl.RGBA16F / gl.RGBA32F
   readonly format: number; // gl.RED / gl.RGBA
-  readonly type: number; // gl.UNSIGNED_BYTE / gl.FLOAT
+  readonly type: number; // gl.UNSIGNED_BYTE / gl.HALF_FLOAT / gl.FLOAT
   readonly channels: number;
+  readonly bytesPerPixel: number;
 }
 
-// WebGL2RenderingContext is not defined in jsdom; resolve constants from
-// the live gl context instead of the global class so test environments
-// without WebGL2 still load this module.
-function webgl2DataTextureFormat(format: DataTextureFormat): WebGl2DataTextureFormatInfo {
+// Handles both DataTexture (single- and four-channel) and RenderTexture
+// (four-channel color attachment) formats — the four-channel entries overlap.
+function webgl2DataTextureFormat(format: DataTextureFormat | ColorTextureFormat): WebGl2DataTextureFormatInfo {
   const gl = WebGL2RenderingContext;
   switch (format) {
     case 'r8':
-      return { internalFormat: gl.R8, format: gl.RED, type: gl.UNSIGNED_BYTE, channels: 1 };
+      return { internalFormat: gl.R8, format: gl.RED, type: gl.UNSIGNED_BYTE, channels: 1, bytesPerPixel: 1 };
     case 'r32f':
-      return { internalFormat: gl.R32F, format: gl.RED, type: gl.FLOAT, channels: 1 };
+      return { internalFormat: gl.R32F, format: gl.RED, type: gl.FLOAT, channels: 1, bytesPerPixel: 4 };
     case 'rgba8':
-      return { internalFormat: gl.RGBA8, format: gl.RGBA, type: gl.UNSIGNED_BYTE, channels: 4 };
+      return { internalFormat: gl.RGBA8, format: gl.RGBA, type: gl.UNSIGNED_BYTE, channels: 4, bytesPerPixel: 4 };
+    case 'rgba16f':
+      return { internalFormat: gl.RGBA16F, format: gl.RGBA, type: gl.HALF_FLOAT, channels: 4, bytesPerPixel: 8 };
     case 'rgba32f':
-      return { internalFormat: gl.RGBA32F, format: gl.RGBA, type: gl.FLOAT, channels: 4 };
+      return { internalFormat: gl.RGBA32F, format: gl.RGBA, type: gl.FLOAT, channels: 4, bytesPerPixel: 16 };
   }
 }

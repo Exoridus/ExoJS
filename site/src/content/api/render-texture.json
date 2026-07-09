@@ -6,11 +6,11 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 33,
+  "memberCount": 34,
   "counts": {
     "constructors": 1,
     "methods": 16,
-    "properties": 16,
+    "properties": 17,
     "events": 0
   },
   "sections": [
@@ -32,7 +32,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(width: number, height: number, options?: Partial<SamplerOptions>): RenderTexture",
+          "signature": "new(width: number, height: number, options?: RenderTextureOptions): RenderTexture",
           "signatureTokens": [
             {
               "text": "new",
@@ -87,20 +87,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "Partial",
+              "text": "RenderTextureOptions",
               "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "SamplerOptions",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
             },
             {
               "text": ")",
@@ -128,7 +116,7 @@
             },
             {
               "name": "options",
-              "type": "Partial<SamplerOptions>",
+              "type": "RenderTextureOptions",
               "optional": true
             }
           ],
@@ -1023,6 +1011,27 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "format",
+          "signature": "format: ColorTextureFormat",
+          "signatureTokens": [
+            {
+              "text": "format",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ColorTextureFormat",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Color attachment format, fixed at construction. Defaults to 'rgba8'."
         },
         {
           "name": "generateMipMap",
