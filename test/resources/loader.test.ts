@@ -1006,14 +1006,14 @@ describe('unload(asset) + getIdentityKey — identity discrimination (Fix 2 regr
   });
 });
 
-describe('loadAll() early exit', () => {
+describe('awaitBackground() early exit', () => {
   test('resolves immediately when nothing is queued', async () => {
     const loader = new Loader({ basePath: '/' });
     const fetchSpy = vi.fn();
 
     global.fetch = fetchSpy as unknown as typeof fetch;
 
-    await expect(loader.loadAll()).resolves.toBeUndefined();
+    await expect(loader.awaitBackground()).resolves.toBeUndefined();
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 });

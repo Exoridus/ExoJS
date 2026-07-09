@@ -28,7 +28,7 @@
       "members": [
         {
           "name": "InferAssetResource",
-          "signature": "I extends Asset<T> ? T : I extends { type: K } ? AssetDefinitions[K][\"resource\"] : never",
+          "signature": "I extends Asset<T> ? T : I extends { kind: K } ? AssetDefinitions[K][\"resource\"] : never",
           "signatureTokens": [
             {
               "text": "I",
@@ -95,7 +95,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "type",
+              "text": "kind",
               "kind": "name"
             },
             {

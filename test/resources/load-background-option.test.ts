@@ -72,7 +72,7 @@ describe('load(target, { background: true })', () => {
     expect(fetchMock).not.toHaveBeenCalled();
 
     loader.setConcurrency(6);
-    await loader.loadAll();
+    await loader.awaitBackground();
 
     expect(catalog.ship.loadState).toBe('ready');
     expect(catalog.ship.width).toBe(4);
@@ -129,7 +129,7 @@ describe('load(target, { background: true })', () => {
 
     loader.onProgress.add((loaded, total) => ticks.push([loaded, total]));
     loader.load(Assets.from({ ship: 'ship.png', logo: 'logo.png' }), { background: true });
-    await loader.loadAll();
+    await loader.awaitBackground();
 
     expect(ticks.at(-1)).toEqual([2, 2]);
   });
@@ -148,7 +148,7 @@ describe('load(target, { background: true })', () => {
     expect(fetchMock).not.toHaveBeenCalled();
 
     loader.setConcurrency(6);
-    await loader.loadAll();
+    await loader.awaitBackground();
 
     expect(catalog.config.loadState).toBe('ready');
     expect(catalog.config.value).toEqual({ hp: 9 });

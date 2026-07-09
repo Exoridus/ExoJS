@@ -236,7 +236,7 @@ interface HandlerEntry {
  * - **Direct** — `loader.load(Assets.from({ hero: 'hero.png' }))` fetches
  *   immediately and resolves to the finished assets.
  * - **Background** — pass `{ background: true }` to `load(...)` to pre-warm
- *   assets at low priority; {@link loadAll} resolves once the queue drains.
+ *   assets at low priority; {@link awaitBackground} resolves once the queue drains.
  *
  * Once loaded, assets are stored in memory and returned from cache on
  * subsequent `load` or {@link get} calls without re-fetching.
@@ -633,7 +633,7 @@ export class Loader {
    * Individual asset errors are reported via {@link onError} but do not
    * reject the returned promise.
    */
-  public loadAll(): Promise<void> {
+  public awaitBackground(): Promise<void> {
     return new Promise<void>(resolve => {
       this._drainBackground();
 
@@ -649,7 +649,7 @@ export class Loader {
 
   /**
    * Sets the maximum number of simultaneous background-queue fetches.
-   * Takes effect on the next {@link loadAll} call or `load(…, { background })`.
+   * Takes effect on the next {@link awaitBackground} call or `load(…, { background })`.
    */
   public setConcurrency(n: number): this {
     this._concurrency = n;
