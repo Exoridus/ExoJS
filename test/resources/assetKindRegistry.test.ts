@@ -1,4 +1,4 @@
-import '#resources/seamless'; // side-effect: registers core kinds
+import '#resources/coreAssetBindings'; // side-effect: registers core kinds
 
 import { describe, expect, it } from 'vitest';
 

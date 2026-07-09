@@ -1,4 +1,4 @@
-import '#resources/seamless';
+import '#resources/coreAssetBindings';
 
 import { describe, expectTypeOf, it } from 'vitest';
 

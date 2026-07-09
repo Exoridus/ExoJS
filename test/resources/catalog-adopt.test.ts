@@ -1,5 +1,3 @@
-import '#resources/seamless';
-
 import { logger } from '#core/logging';
 import { materializeAssetBindings } from '#extensions/materialize';
 import { Texture } from '#rendering/texture/Texture';

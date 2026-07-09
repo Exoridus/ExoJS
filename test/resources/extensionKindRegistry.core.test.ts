@@ -1,4 +1,4 @@
-import '#resources/seamless'; // trigger core registrations at import
+import '#resources/coreAssetBindings'; // trigger core registrations at import
 
 import { describe, expect, it } from 'vitest';
 

@@ -4,10 +4,6 @@ import { logger } from '#core/logging';
 import type { SamplerOptions } from '#rendering/texture/Sampler';
 import { Texture } from '#rendering/texture/Texture';
 
-import type { AssetDefinitions } from './AssetDefinitions';
-import { registerAssetKind } from './assetKindRegistry';
-import { registerExtensionKind } from './extensionKindRegistry';
-
 /** Pre-sizing options for deferred texture handles (spec §4.1 — the layout-jump fix). */
 export interface PreSizeOptions {
   /** Width to reserve on the placeholder until the payload arrives. */
@@ -161,42 +157,3 @@ export const soundSeamlessAdapter: SeamlessAdapter<Sound> = {
     return handle.loadState;
   },
 };
-
-// Register core kinds so Assets.from() can build placeholders without a Loader.
-registerAssetKind('texture', { adapter: textureSeamlessAdapter, isValue: false });
-registerAssetKind('sound', { adapter: soundSeamlessAdapter, isValue: false });
-for (const valueKind of ['json', 'text', 'csv', 'xml', 'srt', 'vtt', 'binary', 'wasm'] as const) {
-  registerAssetKind(valueKind, { isValue: true });
-}
-
-// Core suffix → kind registrations for bare-path inference (asset-system v2 §5).
-// Restricted to LEAF-CAPABLE kinds — those registered above with either a
-// seamless adapter (texture, sound) or `isValue: true` (json/text/csv/xml/vtt/
-// srt/binary/wasm). `createLeaf` can only build a placeholder for those, so a
-// bare path is only inferable for them. Non-leaf resource kinds (font, bmFont,
-// music, image, video, svg) are loaded via `X.of(...)` or an explicit config;
-// bare-path support for them is a follow-up (needs a placeholder strategy).
-const coreExtensionKinds: ReadonlyArray<[string, keyof AssetDefinitions]> = [
-  ['png', 'texture'],
-  ['jpg', 'texture'],
-  ['jpeg', 'texture'],
-  ['webp', 'texture'],
-  ['avif', 'texture'],
-  ['gif', 'texture'],
-  ['ogg', 'sound'],
-  ['mp3', 'sound'],
-  ['wav', 'sound'],
-  ['m4a', 'sound'],
-  ['aac', 'sound'],
-  ['json', 'json'],
-  ['txt', 'text'],
-  ['csv', 'csv'],
-  ['xml', 'xml'],
-  ['vtt', 'vtt'],
-  ['srt', 'srt'],
-  ['bin', 'binary'],
-  ['wasm', 'wasm'],
-];
-for (const [ext, kind] of coreExtensionKinds) {
-  registerExtensionKind(ext, kind);
-}

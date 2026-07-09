@@ -1,5 +1,3 @@
-import '#resources/seamless'; // trigger core extension→kind registrations at import
-
 import { expectTypeOf } from 'vitest';
 
 import { materializeAssetBindings } from '#extensions/materialize';

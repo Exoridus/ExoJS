@@ -1,5 +1,3 @@
-import '#resources/seamless';
-
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { materializeAssetBindings } from '#extensions/materialize';

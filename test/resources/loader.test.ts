@@ -1,6 +1,4 @@
-﻿import '#resources/seamless';
-
-import type { AssetHandler } from '#extensions/Extension';
+﻿import type { AssetHandler } from '#extensions/Extension';
 import { materializeAssetBindings } from '#extensions/materialize';
 import { Texture } from '#rendering/texture/Texture';
 import { Asset } from '#resources/Asset';

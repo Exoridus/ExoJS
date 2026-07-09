@@ -1,4 +1,4 @@
-import '#resources/seamless';
+import '#resources/coreAssetBindings';
 
 import { Sound } from '#audio/Sound';
 import { Texture } from '#rendering/texture/Texture';
