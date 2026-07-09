@@ -7,7 +7,7 @@ import type { Texture } from '#rendering/texture/Texture';
 
 import { Asset, AssetImpl } from './Asset';
 import { parseContainer } from './AssetContainer';
-import type { AssetDefinitions, AssetInput, InferAssetResource } from './AssetDefinitions';
+import type { AssetDefinitions, AssetInput, InferAssetResource, KindByPath, LeafForPath, ResourceForKind } from './AssetDefinitions';
 import type { AssetFactory } from './AssetFactory';
 import type { AssetManifest, LoadBundleOptions } from './AssetManifest';
 import { BundleLoadError, defineAssetManifest } from './AssetManifest';
@@ -17,6 +17,7 @@ import { type Assets, AssetsImpl, type InferAssetsProperties } from './Assets';
 import { CacheFirstStrategy } from './CacheFirstStrategy';
 import type { CacheStore } from './CacheStore';
 import type { CacheStrategy } from './CacheStrategy';
+import { resolveKindByPath } from './extensionKindRegistry';
 import type { TextureFactoryOptions } from './factories/TextureFactory';
 import type { AssetConstructor } from './FactoryRegistry';
 import { FactoryRegistry } from './FactoryRegistry';
@@ -351,6 +352,36 @@ export class Loader {
   // so a single fetch fills every in-flight ref (§7 multi-handle fill).
   private readonly _refs = new Map<string, { readonly refs: Set<AssetRef<unknown>>; readonly options: unknown }>();
   private readonly _valueTokens: ReadonlySet<Loadable> = new Set<Loadable>([Json, TextAsset, CsvAsset, XmlAsset, SubtitleAsset, BinaryAsset, WasmAsset]);
+
+  /** The value-asset token for a value kind name, or `undefined` for non-value kinds. @internal */
+  private _valueTokenForKind(kind: keyof AssetDefinitions): AssetConstructor | undefined {
+    switch (kind) {
+      case 'json':
+        return Json;
+      case 'text':
+        return TextAsset;
+      case 'csv':
+        return CsvAsset;
+      case 'xml':
+        return XmlAsset;
+      case 'vtt':
+      case 'srt':
+        return SubtitleAsset;
+      case 'binary':
+        return BinaryAsset;
+      case 'wasm':
+        return WasmAsset;
+      case 'texture':
+      case 'sound':
+      case 'music':
+      case 'image':
+      case 'video':
+      case 'svg':
+      case 'font':
+      case 'bmFont':
+        return undefined;
+    }
+  }
 
   // ── Refcount / claims (asset-system v2 §4.7) ──────────────────────────────
   /** App-lifetime claim scope for direct `app.loader.get/load(…)` calls. @internal */
@@ -774,6 +805,9 @@ export class Loader {
   public load<R, S extends string>(path: [PathExtension<S>] extends [never] ? never : S): LoadingQueue<R>;
   // Inferred form — R comes from ExtensionTypeMap.
   public load<S extends string>(path: [PathExtension<S>] extends [never] ? never : S): LoadingQueue<LoadByPath<S>>;
+  // Value-inclusive form — a bare value suffix (json/txt/csv/…) resolves the raw
+  // resource value (asset-system v2 §4.4); `ResourceForKind<'json'>` = `unknown`.
+  public load<S extends string>(path: [KindByPath<S>] extends [never] ? never : S, options?: unknown): LoadingQueue<ResourceForKind<KindByPath<S>>>;
 
   // -----------------------------------------------------------------------
   // Loading — generic overloads (return type inferred from class)
@@ -841,7 +875,16 @@ export class Loader {
     // 2b. Extension-based: single path string with no type token
     if (typeof arg0 === 'string' && arg1 === undefined) {
       const path = arg0;
-      const ctor = this._resolveExtensionType(path);
+      let ctor = this._resolveExtensionType(path);
+
+      // Value-kind fallback: a bare path whose suffix maps to a value kind
+      // resolves the raw value via the value token (asset-system v2 §4.4).
+      if (ctor === undefined) {
+        const kind = resolveKindByPath(path);
+        const valueToken = kind !== undefined ? this._valueTokenForKind(kind) : undefined;
+
+        if (valueToken !== undefined) ctor = valueToken;
+      }
 
       if (ctor === undefined) {
         throw new Error(`Loader: no type registered for any extension of "${path}". Register one via loader.registerExtension().`);
@@ -1130,6 +1173,13 @@ export class Loader {
   public get<S extends string>(path: LoadByPath<S> extends Texture | Sound ? S : never, options?: unknown): LoadByPath<S>;
 
   /**
+   * Bare-path seamless/value access: a resource suffix yields its handle, a
+   * value suffix yields a stable {@link AssetRef}, inferred from the file
+   * extension. Broader fallback below the resource-only overload above.
+   */
+  public get<S extends string>(path: [KindByPath<S>] extends [never] ? never : S, options?: unknown): LeafForPath<S>;
+
+  /**
    * Seamless access to a value asset: returns a stable {@link AssetRef}
    * synchronously and never throws. The ref fills when the payload arrives
    * (`loaded` resolves with the parsed value); failed refs retry in place on
@@ -1203,20 +1253,36 @@ export class Loader {
       const path = typeOrPath;
       const ctor = this._resolveExtensionType(path);
 
+      if (ctor !== undefined) {
+        const pathAdapter = this._seamlessAdapters.get(ctor);
+
+        if (pathAdapter !== undefined) {
+          const handle = this._getSeamless(ctor, pathAdapter, path, source);
+          this._claim(this._key(ctor, path), ctor, path, claimer);
+
+          return handle;
+        }
+      }
+
+      // Value-kind fallback: a bare path whose suffix maps to a value kind →
+      // stable AssetRef (asset-system v2 §4.2/§4.4). get()'s string overload
+      // passes the second arg as options via `source`.
+      const kind = resolveKindByPath(path);
+      const valueToken = kind !== undefined ? this._valueTokenForKind(kind) : undefined;
+
+      if (valueToken !== undefined) {
+        const ref = this._getRef(valueToken, path, source);
+        this._claim(this._key(valueToken, path), valueToken, path, claimer);
+
+        return ref;
+      }
+
+      // Neither seamless nor value: keep the existing guidance errors.
       if (ctor === undefined) {
         throw new Error(`Loader: no type registered for any extension of "${path}". Register one via loader.registerExtension().`);
       }
 
-      const pathAdapter = this._seamlessAdapters.get(ctor);
-
-      if (pathAdapter === undefined) {
-        throw new Error(`Loader: type ${this._describeType(ctor)} inferred from "${path}" has no seamless adapter — use load() instead.`);
-      }
-
-      const handle = this._getSeamless(ctor, pathAdapter, path, source);
-      this._claim(this._key(ctor, path), ctor, path, claimer);
-
-      return handle;
+      throw new Error(`Loader: type ${this._describeType(ctor)} inferred from "${path}" has no seamless adapter — use load() instead.`);
     }
 
     // Not a container, meta-leaf, or path string: a Loadable type token.

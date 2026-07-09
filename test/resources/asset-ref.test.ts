@@ -1,6 +1,9 @@
+import '#resources/seamless'; // trigger core extension→kind registrations at import
+
 import { expectTypeOf } from 'vitest';
 
 import { materializeAssetBindings } from '#extensions/materialize';
+import { Texture } from '#rendering/texture/Texture';
 import { AssetRef } from '#resources/AssetRef';
 import { coreAssetBindings } from '#resources/coreAssetBindings';
 import { Loader } from '#resources/Loader';
@@ -101,6 +104,83 @@ describe('AssetRef value assets', () => {
 
     expectTypeOf(loader.get<{ hp: number }>(Json, 'cfg.json')).toEqualTypeOf<AssetRef<{ hp: number }>>();
     expectTypeOf(loader.get(TextAsset, 'a.txt')).toEqualTypeOf<AssetRef<string>>();
+  });
+});
+
+describe('bare-path get()/load() for value kinds (§4.2/§4.4)', () => {
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  test('get() returns an AssetRef for a .json path instead of throwing', () => {
+    mockFetchJson({ hp: 3 });
+    const loader = createCoreLoader();
+
+    const ref = loader.get('data/config.json');
+
+    expect(ref).toBeInstanceOf(AssetRef);
+  });
+
+  test('get() returns an AssetRef for a .txt path', () => {
+    mockFetchJson('hello');
+    const loader = createCoreLoader();
+
+    expect(loader.get('a/b.txt')).toBeInstanceOf(AssetRef);
+  });
+
+  test('bare-path get() shares ref identity with the token form', () => {
+    mockFetchJson({ a: 1 });
+    const loader = createCoreLoader();
+
+    const viaPath = loader.get('cfg.json');
+    const viaToken = loader.get(Json, 'cfg.json');
+
+    expect(viaPath).toBe(viaToken);
+  });
+
+  test('bare .json get() ref fills with the parsed value', async () => {
+    mockFetchJson({ ok: true });
+    const loader = createCoreLoader();
+
+    const ref = loader.get('cfg.json') as AssetRef<unknown>;
+
+    await expect(ref.loaded).resolves.toEqual({ ok: true });
+  });
+
+  test('await load() on a bare .json path resolves the parsed value', async () => {
+    mockFetchJson({ hp: 7 });
+    const loader = createCoreLoader();
+
+    const value = await loader.load('cfg.json');
+
+    expect(value).toEqual({ hp: 7 });
+  });
+
+  test('get() still returns a Texture for a .png path (seamless unchanged)', () => {
+    vi.stubGlobal(
+      'createImageBitmap',
+      vi.fn(async () => ({ width: 16, height: 16 })),
+    );
+    mockFetchJson({});
+    const loader = createCoreLoader();
+
+    expect(loader.get('a/b.png')).toBeInstanceOf(Texture);
+
+    vi.unstubAllGlobals();
+  });
+
+  test('get() for an unregistered suffix still throws with guidance', () => {
+    const loader = createCoreLoader();
+
+    expect(() => loader.get('theme.custom' as never)).toThrow('no type registered');
+  });
+
+  test('type-level: bare value path → AssetRef, resource path → resource', () => {
+    const loader = createCoreLoader();
+
+    expectTypeOf(loader.get('a.json')).toEqualTypeOf<AssetRef<unknown>>();
+    expectTypeOf(loader.get('a.txt')).toEqualTypeOf<AssetRef<string>>();
+    expectTypeOf(loader.get('a.png')).toEqualTypeOf<Texture>();
   });
 });
 
