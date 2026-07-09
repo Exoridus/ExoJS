@@ -154,14 +154,6 @@ class SceneLoader implements Destroyable {
     return this._loader._loadClaimed(this._scope, arg0, arg1, arg2);
   }
 
-  public backgroundLoad(): void;
-  public backgroundLoad(type: Loadable, source: string, options?: unknown): void;
-  // eslint-disable-next-line @typescript-eslint/unified-signatures -- mirrors Loader.backgroundLoad verbatim (rule disabled there too)
-  public backgroundLoad(type: Loadable, sources: readonly string[], options?: unknown): void;
-  public backgroundLoad(type?: Loadable, source?: string | readonly string[], options?: unknown): void {
-    this._loader._backgroundClaimed(this._scope, type, source, options);
-  }
-
   public destroy(): void {
     this._loader._releaseScope(this._scope);
   }

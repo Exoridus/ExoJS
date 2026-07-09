@@ -10,8 +10,6 @@ import { parseContainer } from './AssetContainer';
 import type { AssetDefinitions, AssetInput, InferAssetResource, KindByPath, LeafForPath, ResourceForKind, ValueAssetKind } from './AssetDefinitions';
 import type { AssetFactory } from './AssetFactory';
 import { createLeaf } from './assetKindRegistry';
-import type { AssetManifest, LoadBundleOptions } from './AssetManifest';
-import { BundleLoadError, defineAssetManifest } from './AssetManifest';
 import { _readMeta } from './assetMeta';
 import { AssetRef } from './AssetRef';
 import { type Assets, AssetsImpl, type InferAssetsProperties } from './Assets';
@@ -195,8 +193,8 @@ export type ConstrainedLoadable<T extends abstract new (...args: any[]) => unkno
     : T;
 
 /**
- * Context object passed to custom asset-type load handlers registered via
- * {@link Loader.registerAssetType}.
+ * Context object passed to custom asset-type load handlers bound via
+ * `bindAsset` / `defineAsset`.
  *
  * The `fetch*` helpers route through the loader's configured cache strategy
  * and IDB stores, giving custom handlers the same caching behaviour as
@@ -265,11 +263,6 @@ export interface LoadOptions {
 // Internal types
 // ---------------------------------------------------------------------------
 
-interface ManifestEntry {
-  readonly path: string;
-  readonly options?: unknown;
-}
-
 interface QueueEntry {
   readonly type: AssetConstructor;
   readonly alias: string;
@@ -277,7 +270,7 @@ interface QueueEntry {
   readonly options?: unknown;
 }
 
-/** Stored entry for handler-based {@link Loader.registerAssetType} registrations. */
+/** Stored entry for handler-based asset bindings (via `bindAsset`). */
 interface HandlerEntry {
   load: (config: unknown, ctx: AssetLoaderContext) => Promise<unknown>;
   /** Optional discriminator for in-flight identity keying; overrides source-only default. */
@@ -299,13 +292,11 @@ interface HandlerEntry {
  * SVG, VTT, binary, and WASM) and allows registering custom factories via
  * {@link register}.
  *
- * Assets can be loaded in three ways:
- * - **Direct** — `loader.load(Texture, 'hero.png')` fetches immediately and
- *   resolves to the finished asset.
- * - **Bundle** — declare assets in a manifest with {@link registerManifest},
- *   then call {@link loadBundle} to load groups on demand.
- * - **Background** — call {@link backgroundLoad} or {@link loadAll} to
- *   pre-warm everything registered in the manifest at low priority.
+ * Assets can be loaded in two ways:
+ * - **Direct** — `loader.load(Assets.from({ hero: 'hero.png' }))` fetches
+ *   immediately and resolves to the finished assets.
+ * - **Background** — pass `{ background: true }` to `load(...)` to pre-warm
+ *   assets at low priority; {@link loadAll} resolves once the queue drains.
  *
  * Once loaded, assets are stored in memory and returned from cache on
  * subsequent `load` or {@link get} calls without re-fetching.
@@ -313,7 +304,7 @@ interface HandlerEntry {
  * @example
  * ```ts
  * const loader = new Loader({ basePath: '/assets/', cache: new IndexedDbStore('game') });
- * const texture = await loader.load(Texture, 'hero.png');
+ * const { hero } = await loader.load(Assets.from({ hero: 'hero.png' }));
  * ```
  */
 export class Loader {
@@ -325,8 +316,6 @@ export class Loader {
   // WeakMap so it never retains resources; only object resources participate
   // (primitive results like parsed JSON/text are not keyable → null).
   private readonly _resourceKeys = new WeakMap<object, { type: AssetConstructor; source: string }>();
-  private readonly _manifest = new Map<AssetConstructor, Map<string, ManifestEntry>>();
-  private readonly _bundles = new Map<string, readonly QueueEntry[]>();
   private readonly _inFlight = new Map<string, Promise<unknown>>();
   private readonly _typeIds = new WeakMap<AssetConstructor, number>();
   private readonly _preventStoreKeys = new Set<string>();
@@ -340,7 +329,7 @@ export class Loader {
   private readonly _identityKeyToAliases = new Map<string, Set<string>>();
   // In-flight promises keyed by identity (source-based) for cross-alias dedup
   private readonly _inFlightByIdentity = new Map<string, Promise<unknown>>();
-  // Handler entries registered via the handler-based registerAssetType overload
+  // Handler entries bound via bindAsset (the AssetBinding handler form)
   private readonly _handlerFunctions = new Map<AssetConstructor, HandlerEntry>();
   // Maps lower-case file extensions (without dot) to the constructor to use
   private readonly _extensionMap = new Map<string, AssetConstructor>();
@@ -414,8 +403,6 @@ export class Loader {
 
   /** Dispatched after each background-queue item completes, with the running loaded/total counts. */
   public readonly onProgress = new Signal<[loaded: number, total: number]>();
-  /** Dispatched after each asset within a named bundle completes loading. */
-  public readonly onBundleProgress = new Signal<[name: string, loaded: number, total: number]>();
   /** Dispatched when any asset finishes loading and is stored in memory. */
   public readonly onLoaded = new Signal<[type: AssetConstructor, alias: string, resource: unknown]>();
   /** Dispatched when an asset fails to load during background or bundle loading. */
@@ -457,109 +444,6 @@ export class Loader {
   }
 
   /**
-   * Associates a string type name with a simple load handler.
-   *
-   * The handler's `load` method receives the full config object (including
-   * `source` and every extra field declared via `AssetDefinitions` augmentation)
-   * plus a {@link AssetLoaderContext} containing the loader instance.
-   *
-   * This form is intended for custom asset types that manage their own
-   * network access; the persistent cache layer is bypassed.
-   *
-   * @example
-   * ```ts
-   * loader.registerAssetType('tileMap', {
-   *   load(config, { loader }) {
-   *     return loadTileMap({ source: config.source, format: config.format, loader });
-   *   },
-   * });
-   * ```
-   */
-  public registerAssetType<K extends keyof AssetDefinitions>(
-    typeName: K,
-    handler: {
-      /**
-       * Optional discriminator for in-flight dedup and identity tracking.
-       *
-       * Return a string that uniquely identifies the conceptual asset given its
-       * full config.  The default (when omitted) is `config.source`, which is
-       * correct for assets where the source URL alone determines the result.
-       * Supply this when extra config fields affect the loaded output — e.g.
-       * `\`${config.source}:${config.format}\`` — so that two assets with the
-       * same source but different format are kept separate in the in-flight map.
-       */
-      getIdentityKey?(config: AssetDefinitions[K]['config']): string;
-      load(config: AssetDefinitions[K]['config'], context: AssetLoaderContext): Promise<AssetDefinitions[K]['resource']>;
-    },
-  ): this;
-
-  /**
-   * Associates a string type name (e.g. `'tileMap'`) with the constructor
-   * used as the asset token and, optionally, registers a factory for it.
-   *
-   * Required for declaration-merge extensions of {@link AssetDefinitions}
-   * so that `loader.load({ map: { type: 'tileMap', source: '…' } })` works.
-   */
-  public registerAssetType(typeName: string, ctor: AssetConstructor, factory?: AssetFactory): this;
-
-  public registerAssetType(
-    typeName: string,
-    ctorOrHandler:
-      | AssetConstructor
-      | {
-          getIdentityKey?(config: unknown): string;
-          load(config: unknown, context: AssetLoaderContext): Promise<unknown>;
-        },
-    factory?: AssetFactory,
-  ): this {
-    if (typeof ctorOrHandler === 'function') {
-      this._assetTypeMap.set(typeName, ctorOrHandler);
-
-      if (factory) {
-        this._registry.register(ctorOrHandler, factory);
-      }
-    } else {
-      // Handler-based form: create a synthetic constructor for type identity
-      const syntheticCtor = class {} as unknown as AssetConstructor;
-
-      Object.defineProperty(syntheticCtor, 'name', { value: typeName });
-      this._assetTypeMap.set(typeName, syntheticCtor);
-
-      const boundIdentityKey = ctorOrHandler.getIdentityKey?.bind(ctorOrHandler);
-
-      this._handlerFunctions.set(syntheticCtor, {
-        load: (config, ctx) => ctorOrHandler.load(config, ctx),
-        ...(boundIdentityKey !== undefined && { getIdentityKey: boundIdentityKey }),
-      });
-    }
-
-    return this;
-  }
-
-  // -----------------------------------------------------------------------
-  // Extension registration
-  // -----------------------------------------------------------------------
-
-  /**
-   * Associates a file extension with an asset type so that
-   * `loader.load('path.ext')` (the single-string overload) can infer the
-   * type automatically.
-   *
-   * `ext` is matched case-insensitively and the leading dot is optional.
-   * The type must already have a registered factory (via {@link register} or
-   * {@link registerAssetType}).
-   *
-   * ```ts
-   * loader.registerExtension('tmj', TiledMap);
-   * const map = await loader.load('world.tmj'); // TiledMap
-   * ```
-   */
-  public registerExtension(ext: string, type: AssetConstructor): this {
-    this._extensionMap.set(ext.replace(/^\./, '').toLowerCase(), type);
-    return this;
-  }
-
-  /**
    * Registers the seamless-handle adapter for `type`, enabling the deferred
    * `get(type, source)` form for it. One adapter per type.
    * @advanced
@@ -575,120 +459,9 @@ export class Loader {
   }
 
   /**
-   * Validates and registers an {@link AssetManifest}, making its bundles
-   * available to {@link loadBundle}.
-   *
-   * Throws if any bundle name is already registered or if two entries for
-   * the same (type, alias) pair have conflicting paths or options.
-   * Equivalent definitions (same path, deeply-equal options) are allowed
-   * and de-duplicated silently.
-   */
-  public registerManifest(manifest: AssetManifest): this {
-    const normalizedManifest = defineAssetManifest(manifest);
-    const plannedDefinitions = new Map<string, ManifestEntry>();
-    const pendingBundles = new Array<[name: string, entries: QueueEntry[]]>();
-
-    for (const [bundleName, bundleEntries] of Object.entries(normalizedManifest.bundles)) {
-      if (this._bundles.has(bundleName)) {
-        throw new Error(`Bundle "${bundleName}" is already registered.`);
-      }
-
-      const normalizedEntries = new Array<QueueEntry>();
-
-      for (const bundleEntry of bundleEntries) {
-        const type = bundleEntry.type;
-        const key = this._key(type, bundleEntry.alias);
-        const existingDefinition = plannedDefinitions.get(key) ?? this._getManifestEntry(type, bundleEntry.alias);
-
-        if (existingDefinition && !this._isManifestDefinitionEquivalent(existingDefinition, bundleEntry.path, bundleEntry.options)) {
-          throw new Error(`Conflicting asset definition for (${this._describeType(type)}, "${bundleEntry.alias}") while registering bundle "${bundleName}".`);
-        }
-
-        plannedDefinitions.set(key, {
-          path: bundleEntry.path,
-          options: bundleEntry.options,
-        });
-
-        normalizedEntries.push({
-          type,
-          alias: bundleEntry.alias,
-          path: bundleEntry.path,
-          options: bundleEntry.options,
-        });
-      }
-
-      pendingBundles.push([bundleName, normalizedEntries]);
-    }
-
-    for (const [bundleName, bundleEntries] of pendingBundles) {
-      for (const entry of bundleEntries) {
-        this._addManifestEntry(entry.type, entry.alias, entry.path, entry.options);
-      }
-
-      this._bundles.set(bundleName, bundleEntries);
-    }
-
-    return this;
-  }
-
-  /**
-   * Loads all assets declared in the named bundle concurrently.
-   *
-   * Dispatches {@link onBundleProgress} (and the optional `onProgress`
-   * callback) after each asset completes. If any assets fail, a
-   * {@link BundleLoadError} is thrown after all assets have settled,
-   * containing every individual failure. Throws immediately if `name` has
-   * not been registered.
-   */
-  public async loadBundle(name: string, options: LoadBundleOptions = {}): Promise<void> {
-    const bundle = this._bundles.get(name);
-
-    if (!bundle) {
-      throw new Error(`Unknown bundle "${name}".`);
-    }
-
-    const total = bundle.length;
-    let loaded = 0;
-    const failures = new Array<{
-      type: Loadable;
-      alias: string;
-      error: Error;
-    }>();
-
-    if (total === 0) {
-      this._emitBundleProgress(name, 0, 0, options.onProgress);
-
-      return;
-    }
-
-    await Promise.all(
-      bundle.map(async entry => {
-        try {
-          await (options.background
-            ? this._loadSingleBackground(entry.type, entry.alias, entry.path, entry.options)
-            : this._loadSingle(entry.type, entry.alias, entry.options, entry.path));
-        } catch (error: unknown) {
-          failures.push({
-            type: entry.type,
-            alias: entry.alias,
-            error: this._normalizeError(error),
-          });
-        } finally {
-          loaded++;
-          this._emitBundleProgress(name, loaded, total, options.onProgress);
-        }
-      }),
-    );
-
-    if (failures.length > 0) {
-      throw new BundleLoadError(name, failures);
-    }
-  }
-
-  /**
    * Load every asset packed into a binary container (`.exoa`) in a **single
-   * request**. Unlike {@link loadBundle} (one fetch per entry), a container is
-   * one file with an embedded index: its bytes are fetched once (and cached
+   * request**. A container is one file with an embedded index: its bytes are
+   * fetched once (and cached
    * cross-session like any asset), then each slice is unpacked through its
    * type's handler and stored under the entry's alias — retrievable with
    * {@link get} exactly as if it had been loaded individually.
@@ -723,20 +496,6 @@ export class Loader {
         return this._injectSource(type, entry.alias, slice, entry.options);
       }),
     );
-  }
-
-  /**
-   * Returns `true` if every asset in the named bundle has been loaded and is
-   * currently held in the in-memory resource store.
-   */
-  public hasBundle(name: string): boolean {
-    const bundle = this._bundles.get(name);
-
-    if (!bundle) {
-      return false;
-    }
-
-    return bundle.every(entry => this._hasResource(entry.type, entry.alias));
   }
 
   // -----------------------------------------------------------------------
@@ -788,7 +547,7 @@ export class Loader {
    * - `.fnt` → {@link BmFont}
    * - `.woff`, `.woff2`, `.ttf`, `.otf` → `FontFace` (family inferred from filename)
    *
-   * Register additional mappings via {@link registerExtension}.
+   * Register additional mappings via `defineAsset` (its `extensions`).
    * Extend the return type by augmenting {@link ExtensionTypeMap}.
    *
    * Paths whose extension is **not** in {@link ExtensionTypeMap} are rejected at
@@ -896,7 +655,7 @@ export class Loader {
       }
 
       if (ctor === undefined) {
-        throw new Error(`Loader: no type registered for any extension of "${path}". Register one via loader.registerExtension().`);
+        throw new Error(`Loader: no type registered for any extension of "${path}". Register one via defineAsset() (its extensions).`);
       }
 
       // FontAsset requires a family option — infer it from the filename when not provided
@@ -1039,104 +798,31 @@ export class Loader {
   // -----------------------------------------------------------------------
 
   /**
-   * Declares sources and enqueues them for low-priority background fetching in
-   * one step (replaces the removed `add()`; PixiJS model). Progress is
-   * reported via {@link onProgress}; already-loaded, in-flight, and
-   * already-queued sources are skipped. `get()`/`load()` on a queued source
-   * boosts it to the front. The zero-argument form enqueues everything
-   * registered in the manifest (bundles/manifest die with the asset graph).
-   */
-  public backgroundLoad(): void;
-  public backgroundLoad(type: Loadable, source: string, options?: unknown): void;
-  public backgroundLoad(type: Loadable, sources: readonly string[], options?: unknown): void;
-  public backgroundLoad(type?: Loadable, source?: string | readonly string[], options?: unknown): void {
-    this._backgroundClaimed(this._rootClaimer, type, source, options);
-  }
-
-  /**
-   * Claimed variant of {@link backgroundLoad}: identical queueing, but every
-   * declared source is claimed under `claimer` (refcount) so a scene-scoped
-   * pre-warm releases correctly and a not-yet-started entry is dropped from the
-   * queue at refcount 0. The public {@link backgroundLoad} delegates here under
-   * the app-lifetime {@link _rootClaimer}.
-   * @internal
-   */
-  public _backgroundClaimed(claimer: symbol, type?: Loadable, source?: string | readonly string[], options?: unknown): void {
-    // Start a fresh progress batch only when idle; a re-entrant call while the
-    // queue is draining extends the running batch instead (mirrors the
-    // accounting in _loadSingleBackground).
-    if (this._backgroundQueue.length === 0 && this._backgroundActive === 0) {
-      this._backgroundLoaded = 0;
-      this._backgroundTotal = 0;
-    }
-
-    if (type !== undefined && source !== undefined) {
-      const ctor: AssetConstructor = type;
-      const sources: readonly string[] = typeof source === 'string' ? [source] : source;
-
-      for (const src of sources) {
-        this._claim(this._key(ctor, src), ctor, src, claimer);
-        this._addManifestEntry(ctor, src, src, options);
-
-        if (this._hasResource(ctor, src)) continue;
-        if (this._inFlight.has(this._key(ctor, src))) continue;
-        if (this._isQueuedInBackground(ctor, src)) continue;
-
-        this._backgroundQueue.push({ type: ctor, alias: src, path: src, options });
-        this._backgroundTotal++;
-      }
-
-      this._drainBackground();
-
-      return;
-    }
-
-    for (const [manifestType, entries] of this._manifest) {
-      for (const [alias, entry] of entries) {
-        this._claim(this._key(manifestType, alias), manifestType, alias, claimer);
-
-        if (this._hasResource(manifestType, alias)) continue;
-
-        const key = this._key(manifestType, alias);
-
-        if (this._inFlight.has(key)) continue;
-        if (this._isQueuedInBackground(manifestType, alias)) continue;
-
-        this._backgroundQueue.push({
-          type: manifestType,
-          alias,
-          path: entry.path,
-          options: entry.options,
-        });
-        this._backgroundTotal++;
-      }
-    }
-
-    this._drainBackground();
-  }
-
-  /**
-   * Starts {@link backgroundLoad} and returns a promise that resolves when
-   * every queued background asset has finished loading (successfully or not).
+   * Resolves when the low-priority background queue has fully drained — every
+   * leaf enqueued via `load(target, { background: true })` has finished loading
+   * (successfully or not). Kicks the queue first, so a concurrency change that
+   * left pending entries unstarted still makes progress.
    *
    * Individual asset errors are reported via {@link onError} but do not
    * reject the returned promise.
    */
   public loadAll(): Promise<void> {
     return new Promise<void>(resolve => {
-      this._backgroundResolve = resolve;
-      this.backgroundLoad();
+      this._drainBackground();
 
       if (this._backgroundQueue.length === 0 && this._backgroundActive === 0) {
-        this._backgroundResolve = null;
         resolve();
+
+        return;
       }
+
+      this._backgroundResolve = resolve;
     });
   }
 
   /**
    * Sets the maximum number of simultaneous background-queue fetches.
-   * Takes effect on the next {@link backgroundLoad} or {@link loadAll} call.
+   * Takes effect on the next {@link loadAll} call or `load(…, { background })`.
    */
   public setConcurrency(n: number): this {
     this._concurrency = n;
@@ -1205,8 +891,8 @@ export class Loader {
   /**
    * Retrieves a previously loaded asset by type and alias (legacy lookup form
    * for types without a seamless adapter; replaced by the asset graph in a
-   * later slice). Throws if the asset has not been loaded — use {@link peek}
-   * for a non-throwing alternative, or {@link has} to guard the call.
+   * later slice). Throws if the type is neither a seamless resource nor a value
+   * asset.
    */
   public get<T extends Loadable>(type: T, alias: string): LoadReturn<T>;
 
@@ -1328,7 +1014,7 @@ export class Loader {
 
       // Neither seamless nor value: keep the existing guidance errors.
       if (ctor === undefined) {
-        throw new Error(`Loader: no type registered for any extension of "${path}". Register one via loader.registerExtension().`);
+        throw new Error(`Loader: no type registered for any extension of "${path}". Register one via defineAsset() (its extensions).`);
       }
 
       throw new Error(`Loader: type ${this._describeType(ctor)} inferred from "${path}" has no seamless adapter — use load() instead.`);
@@ -1375,16 +1061,19 @@ export class Loader {
       return ref;
     }
 
-    const alias = source as string;
+    // In-memory lookup for a non-seamless / non-value type (e.g. a bindAsset-
+    // bound custom type populated by loadContainer): read the stored resource by
+    // source key.
+    const src = source as string;
     const typeMap = this._resources.get(ctor);
 
-    if (!typeMap?.has(alias)) {
-      throw new Error(`Missing resource "${alias}" for type ${ctor.name}.`);
+    if (!typeMap?.has(src)) {
+      throw new Error(`Missing resource "${src}" for type ${ctor.name}.`);
     }
 
-    this._claim(this._key(ctor, alias), ctor, alias, claimer);
+    this._claim(this._key(ctor, src), ctor, src, claimer);
 
-    return typeMap.get(alias);
+    return typeMap.get(src);
   }
 
   /**
@@ -1415,25 +1104,6 @@ export class Loader {
   }
 
   /**
-   * Returns the loaded asset for `alias`, or `null` if it has not been
-   * loaded yet. Non-throwing alternative to {@link get}.
-   */
-  public peek<T = unknown>(type: typeof Json, alias: string): T | null;
-  public peek<T extends Loadable>(type: T, alias: string): LoadReturn<T> | null;
-  public peek(type: Loadable, alias: string): unknown {
-    const ctor = type;
-
-    return this._resources.get(ctor)?.get(alias) ?? null;
-  }
-
-  /** Returns `true` if the asset is currently held in the in-memory store. */
-  public has(type: Loadable, alias: string): boolean {
-    const ctor = type;
-
-    return this._resources.get(ctor)?.has(alias) ?? false;
-  }
-
-  /**
    * Reverse lookup: given a loaded resource object, return the asset type and
    * source key it was first loaded under, or `null` for runtime-created,
    * unloaded, or non-object resources.
@@ -1449,6 +1119,16 @@ export class Loader {
     // WeakMap.get returns undefined for any non-registered or non-weakly-holdable
     // key, so primitive/unkeyed inputs safely resolve to null without a guard.
     return this._resourceKeys.get(resource) ?? null;
+  }
+
+  /**
+   * Non-throwing in-memory lookup: the resource stored under `(type, source)`,
+   * or `null` if none is held. Reads the store directly (no fetch, no seamless
+   * placeholder). Backs scene deserialization, which resolves an asset
+   * reference to a pre-loaded resource. @internal
+   */
+  public _peekResource(type: AssetConstructor, source: string): unknown {
+    return this._resources.get(type)?.get(source) ?? null;
   }
 
   // -----------------------------------------------------------------------
@@ -1719,9 +1399,9 @@ export class Loader {
    * Tears down the loader and all resources it owns.
    *
    * Destroys the factory registry (releasing object URLs), destroys every
-   * cache store, clears all in-memory assets, manifest entries, bundle
-   * definitions, and in-flight tracking, and disconnects all signals.
-   * Also calls `destroy?.()` on every handler registered via `bindAsset`.
+   * cache store, clears all in-memory assets and in-flight tracking, and
+   * disconnects all signals. Also calls `destroy?.()` on every handler
+   * registered via `bindAsset`.
    */
   public destroy(): void {
     this._registry.destroy();
@@ -1742,8 +1422,6 @@ export class Loader {
 
     this._boundHandlers.length = 0;
     this._resources.clear();
-    this._manifest.clear();
-    this._bundles.clear();
     this._inFlight.clear();
     this._preventStoreKeys.clear();
     this._inFlightByIdentity.clear();
@@ -1755,7 +1433,6 @@ export class Loader {
     this._seamlessAdapters.clear();
     this._backgroundQueue.length = 0;
     this.onProgress.destroy();
-    this.onBundleProgress.destroy();
     this.onLoaded.destroy();
     this.onError.destroy();
     this.onLoadStart.destroy();
@@ -1923,12 +1600,9 @@ export class Loader {
       // this as no live handle, creating a fresh placeholder below.
     }
 
-    // Bake the SAME options `_loadSingle` would fetch with (raw `get()` options,
-    // else the manifest/backgroundLoad-registered options for this source) into
-    // the placeholder, so a bare `get()` after a `backgroundLoad(..., options)`
-    // renders with the registered sampler options instead of the default.
-    const resolvedOptions = options ?? this._getManifestEntry(type, source)?.options;
-    const handle = adapter.createPlaceholder(resolvedOptions);
+    // Bake the raw `get()` options into the placeholder so a bare `get()`
+    // renders with the requested sampler options instead of the default.
+    const handle = adapter.createPlaceholder(options);
 
     this._deferred.set(key, { handles: new Set([handle as object]), options });
     this._handleKeys.set(handle as object, key);
@@ -2005,9 +1679,8 @@ export class Loader {
    * (the `background: true` path of {@link _adopt}). The leaf is already
    * registered in `_deferred`/`_refs` and claimed, so the fetch — whenever the
    * queue drains it, or a `get()` boosts it — fills that same handle in place
-   * via {@link _storeResource}. Mirrors the enqueue accounting of
-   * {@link _loadSingleBackground}: a fresh progress batch starts only while
-   * idle, and the drain kicks the concurrency-capped processor.
+   * via {@link _storeResource}. A fresh progress batch starts only while idle,
+   * and the drain kicks the concurrency-capped processor.
    */
   private _enqueueBackgroundFetch(type: AssetConstructor, source: string, options: unknown): void {
     if (this._hasResource(type, source)) return;
@@ -2157,47 +1830,9 @@ export class Loader {
       return this._inFlight.get(key);
     }
 
-    const entry = this._getManifestEntry(type, alias);
-    const path = explicitPath ?? entry?.path ?? alias;
-    const resolvedOptions = options ?? entry?.options;
+    const path = explicitPath ?? alias;
 
-    return this._trackInFlight(type, alias, this._dispatchFetch(type, alias, path, resolvedOptions));
-  }
-
-  private _loadSingleBackground(type: AssetConstructor, alias: string, path: string, options?: unknown): Promise<unknown> {
-    if (this._hasResource(type, alias)) {
-      const typeMap = this._resources.get(type);
-      if (typeMap?.has(alias) === true) {
-        return Promise.resolve(typeMap.get(alias));
-      }
-    }
-
-    const key = this._key(type, alias);
-    const inFlight = this._inFlight.get(key);
-
-    if (inFlight) {
-      return inFlight;
-    }
-
-    if (!this._isQueuedInBackground(type, alias)) {
-      if (this._backgroundQueue.length === 0 && this._backgroundActive === 0) {
-        this._backgroundLoaded = 0;
-        this._backgroundTotal = 0;
-      }
-
-      this._backgroundQueue.push({ type, alias, path, options });
-      this._backgroundTotal++;
-    }
-
-    this._drainBackground();
-
-    const started = this._inFlight.get(key);
-
-    if (started) {
-      return started;
-    }
-
-    return this._waitForBackgroundEntry(type, alias);
+    return this._trackInFlight(type, alias, this._dispatchFetch(type, alias, path, options));
   }
 
   private _createLoadingQueue<T>(
@@ -2214,7 +1849,9 @@ export class Loader {
 
       if (!ctor) {
         // Must call _notifyItem(false) so LoadingProgress doesn't remain stuck.
-        return Promise.reject<unknown>(new Error(`No constructor registered for asset type "${asset.type}". Call registerAssetType() first.`)).then(
+        return Promise.reject<unknown>(
+          new Error(`No constructor registered for asset type "${asset.type}". Bind it via defineAsset()/bindAsset() first.`),
+        ).then(
           () => {
             notifyFn?.(true);
           },
@@ -2578,59 +2215,6 @@ export class Loader {
     return this._backgroundQueue.some(entry => entry.type === type && entry.alias === alias);
   }
 
-  private _waitForBackgroundEntry(type: AssetConstructor, alias: string): Promise<unknown> {
-    if (this._hasResource(type, alias)) {
-      const typeMap = this._resources.get(type);
-      if (typeMap?.has(alias) === true) {
-        return Promise.resolve(typeMap.get(alias));
-      }
-    }
-
-    const key = this._key(type, alias);
-    const inFlight = this._inFlight.get(key);
-
-    if (inFlight) {
-      return inFlight;
-    }
-
-    return new Promise<unknown>((resolve, reject) => {
-      const onLoaded = (loadedType: AssetConstructor, loadedAlias: string, resource: unknown): void => {
-        if (loadedType !== type || loadedAlias !== alias) return;
-
-        cleanup();
-        resolve(resource);
-      };
-      const onError = (errorType: AssetConstructor, errorAlias: string, error: Error): void => {
-        if (errorType !== type || errorAlias !== alias) return;
-
-        cleanup();
-        reject(error);
-      };
-      const cleanup = (): void => {
-        this.onLoaded.remove(onLoaded);
-        this.onError.remove(onError);
-      };
-
-      this.onLoaded.add(onLoaded);
-      this.onError.add(onError);
-
-      const pending = this._inFlight.get(key);
-
-      if (pending) {
-        cleanup();
-        pending.then(resolve, reject);
-
-        return;
-      }
-
-      if (this._hasResource(type, alias)) {
-        cleanup();
-        const typeMap = this._resources.get(type);
-        resolve(typeMap?.get(alias));
-      }
-    });
-  }
-
   private _onBackgroundItemDone(): void {
     this.onProgress.dispatch(this._backgroundLoaded, this._backgroundTotal);
 
@@ -2711,38 +2295,6 @@ export class Loader {
 
       this.onError.dispatch(type, alias, err);
     }
-  }
-
-  private _emitBundleProgress(name: string, loaded: number, total: number, onProgress?: (loaded: number, total: number) => void): void {
-    this.onBundleProgress.dispatch(name, loaded, total);
-
-    if (onProgress) {
-      onProgress(loaded, total);
-    }
-  }
-
-  // -----------------------------------------------------------------------
-  // Internal — manifest & storage
-  // -----------------------------------------------------------------------
-
-  private _addManifestEntry(type: AssetConstructor, alias: string, path: string, options?: unknown): void {
-    if (!this._manifest.has(type)) {
-      this._manifest.set(type, new Map());
-    }
-
-    const typeManifest = this._manifest.get(type);
-    if (!typeManifest) {
-      return;
-    }
-    typeManifest.set(alias, { path, options });
-  }
-
-  private _getManifestEntry(type: AssetConstructor, alias: string): ManifestEntry | undefined {
-    return this._manifest.get(type)?.get(alias);
-  }
-
-  private _isManifestDefinitionEquivalent(entry: ManifestEntry, path: string, options?: unknown): boolean {
-    return entry.path === path && this._areOptionsEquivalent(entry.options, options);
   }
 
   /** The representative (first-inserted) member of a handle/ref set, or `undefined` if empty. @internal */
@@ -2833,8 +2385,8 @@ export class Loader {
     }
 
     // Same-prototype instances compare structurally by their own enumerable
-    // keys — the registerManifest contract allows deeply-equal options of any
-    // shared class, not just plain objects. Built-ins whose state is NOT
+    // keys — deeply-equal options of any shared class, not just plain objects,
+    // count as equivalent. Built-ins whose state is NOT
     // carried in enumerable own keys need explicit handling: Dates compare by
     // timestamp; other exotic containers stay reference-only (Object.is above)
     // so two distinct-but-similar instances never count as equivalent.

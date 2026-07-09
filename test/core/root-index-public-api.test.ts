@@ -6,8 +6,6 @@ describe('root index public API exports', () => {
     expect(exo.Scene).toBeDefined();
     expect(exo.AnimatedSprite).toBeDefined();
     expect(exo.View).toBeDefined();
-    expect(exo.defineAssetManifest).toBeDefined();
-    expect(exo.BundleLoadError).toBeDefined();
     expect(exo.RenderTexture).toBeDefined();
     expect(exo.BlurFilter).toBeDefined();
     expect(exo.ColorFilter).toBeDefined();

@@ -4,12 +4,11 @@ import { Texture } from '#rendering/texture/Texture';
 import { Asset } from '#resources/Asset';
 import { encodeContainer } from '#resources/AssetContainer';
 import type { AssetFactory } from '#resources/AssetFactory';
-import { BundleLoadError, defineAssetManifest } from '#resources/AssetManifest';
 import { Assets } from '#resources/Assets';
 import type { CacheStore } from '#resources/CacheStore';
 import { coreAssetBindings } from '#resources/coreAssetBindings';
 import { Loader } from '#resources/Loader';
-import { BinaryAsset, FontAsset, Json, TextAsset } from '#resources/tokens';
+import { BinaryAsset, Json, TextAsset } from '#resources/tokens';
 
 /** Create a Loader with all core asset bindings pre-installed. */
 function createCoreLoader(options?: ConstructorParameters<typeof Loader>[0]): Loader {
@@ -221,19 +220,17 @@ describe('Loader', () => {
     await expect(bad).rejects.toThrow('broken');
   });
 
-  test('get() retrieves loaded resource, peek() returns null for missing', async () => {
+  test('get() retrieves a loaded value asset', async () => {
     const factory = new MockTextFactory();
     const loader = new Loader({ basePath: '/' });
 
     loader.register(TextAsset, factory as AssetFactory<TextAsset>);
     mockFetch();
 
-    expect(loader.peek(TextAsset, 'demo.txt')).toBeNull();
-    expect(loader.has(TextAsset, 'demo.txt')).toBe(false);
+    expect(loader._peekResource(TextAsset, 'demo.txt')).toBeNull();
 
     await loader.load(TextAsset, 'demo.txt');
 
-    expect(loader.has(TextAsset, 'demo.txt')).toBe(true);
     expect(loader.get(TextAsset, 'demo.txt').value).toBe('resource:fresh-source');
   });
 
@@ -255,13 +252,13 @@ describe('Loader', () => {
 
     await loader.load(TextAsset, { a: 'a.txt', b: 'b.txt' });
 
-    expect(loader.has(TextAsset, 'a')).toBe(true);
+    expect(loader._peekResource(TextAsset, 'a')).not.toBeNull();
     loader.unload(TextAsset, 'a');
-    expect(loader.has(TextAsset, 'a')).toBe(false);
-    expect(loader.has(TextAsset, 'b')).toBe(true);
+    expect(loader._peekResource(TextAsset, 'a')).toBeNull();
+    expect(loader._peekResource(TextAsset, 'b')).not.toBeNull();
 
     loader.unloadAll(TextAsset);
-    expect(loader.has(TextAsset, 'b')).toBe(false);
+    expect(loader._peekResource(TextAsset, 'b')).toBeNull();
   });
 
   test('custom factory via register() with user-defined class', async () => {
@@ -353,103 +350,6 @@ describe('Loader', () => {
     expect(result).toBe(42);
   });
 
-  test('backgroundLoad() + load() priority boost', async () => {
-    const factory = new MockTextFactory();
-    const loader = new Loader({ basePath: '/', concurrency: 1 });
-
-    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
-
-    let fetchCount = 0;
-    global.fetch = vi.fn(async (): Promise<Response> => {
-      fetchCount++;
-      return { ok: true, status: 200, statusText: 'OK' } as Response;
-    });
-
-    loader.backgroundLoad(TextAsset, ['a.txt', 'b.txt', 'c.txt']);
-
-    // Priority boost: load 'c.txt' should resolve even though it was last in queue
-    const cResult = await loader.load(TextAsset, 'c.txt');
-
-    expect(cResult).toBe('resource:fresh-source');
-  });
-
-  test('background load dispatches onLoaded exactly once per successful resource', async () => {
-    const factory = new MockTextFactory();
-    const loader = new Loader({ basePath: '/' });
-    const onLoaded = vi.fn();
-
-    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
-    loader.onLoaded.add(onLoaded);
-    mockFetch();
-
-    loader.backgroundLoad(TextAsset, 'queued.txt');
-    await loader.loadAll();
-
-    expect(onLoaded).toHaveBeenCalledTimes(1);
-    expect(onLoaded).toHaveBeenCalledWith(TextAsset, 'queued.txt', 'resource:fresh-source');
-  });
-
-  test('boosted background items keep loadAll pending and report full progress', async () => {
-    const factory = new MockTextFactory();
-    const loader = new Loader({ basePath: '/', concurrency: 1 });
-    const firstFetch = createDeferred<Response>();
-    const boostedFetch = createDeferred<Response>();
-    const progress: Array<[number, number]> = [];
-
-    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
-    loader.onProgress.add((loaded, total) => {
-      progress.push([loaded, total]);
-    });
-
-    global.fetch = vi.fn((input: RequestInfo | URL): Promise<Response> => {
-      const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
-
-      if (url.endsWith('/first.txt')) {
-        return firstFetch.promise;
-      }
-
-      if (url.endsWith('/boosted.txt')) {
-        return boostedFetch.promise;
-      }
-
-      throw new Error(`Unexpected fetch url: ${url}`);
-    });
-
-    loader.backgroundLoad(TextAsset, ['first.txt', 'boosted.txt']);
-
-    const loadAllPromise = loader.loadAll();
-    let loadAllResolved = false;
-
-    loadAllPromise.then(() => {
-      loadAllResolved = true;
-    });
-
-    const boostedPromise = loader.load(TextAsset, 'boosted.txt');
-
-    firstFetch.resolve({
-      ok: true,
-      status: 200,
-      statusText: 'OK',
-    } as Response);
-
-    await loader.load(TextAsset, 'first.txt');
-    await Promise.resolve();
-
-    expect(loadAllResolved).toBe(false);
-
-    boostedFetch.resolve({
-      ok: true,
-      status: 200,
-      statusText: 'OK',
-    } as Response);
-
-    await expect(boostedPromise).resolves.toBe('resource:fresh-source');
-    await expect(loadAllPromise).resolves.toBeUndefined();
-
-    expect(progress).toContainEqual([1, 2]);
-    expect(progress[progress.length - 1]).toEqual([2, 2]);
-  });
-
   test('does not reinsert a resource when unload() is called during in-flight fetch', async () => {
     const factory = new MockTextFactory();
     const loader = new Loader({ basePath: '/' });
@@ -470,8 +370,7 @@ describe('Loader', () => {
     } as Response);
 
     await expect(loadPromise).resolves.toBe('resource:fresh-source');
-    expect(loader.has(TextAsset, 'inflight.txt')).toBe(false);
-    expect(loader.peek(TextAsset, 'inflight.txt')).toBeNull();
+    expect(loader._peekResource(TextAsset, 'inflight.txt')).toBeNull();
   });
 
   test('uses per-type internal keys instead of constructor names', async () => {
@@ -495,452 +394,6 @@ describe('Loader', () => {
     expect(first).toBeInstanceOf(FirstType);
     expect(second).toBeInstanceOf(SecondType);
     expect(global.fetch).toHaveBeenCalledTimes(2);
-  });
-
-  test('registerManifest() registers one manifest without loading', () => {
-    const loader = new Loader({ basePath: '/' });
-    const manifest = defineAssetManifest({
-      bundles: {
-        boot: [{ type: TextAsset, alias: 'intro', path: 'intro.txt' }],
-      },
-    });
-
-    loader.registerManifest(manifest);
-
-    expect(loader.hasBundle('boot')).toBe(false);
-    expect(loader.peek(TextAsset, 'intro')).toBeNull();
-  });
-
-  test('registerManifest() throws when bundle name is already registered', () => {
-    const loader = new Loader({ basePath: '/' });
-    const firstManifest = defineAssetManifest({
-      bundles: {
-        boot: [{ type: TextAsset, alias: 'intro', path: 'intro.txt' }],
-      },
-    });
-    const secondManifest = defineAssetManifest({
-      bundles: {
-        boot: [{ type: TextAsset, alias: 'menu', path: 'menu.txt' }],
-      },
-    });
-
-    loader.registerManifest(firstManifest);
-
-    expect(() => loader.registerManifest(secondManifest)).toThrow('already registered');
-  });
-
-  test('registerManifest() throws on conflicting (type, alias) across bundles', () => {
-    const loader = new Loader({ basePath: '/' });
-
-    loader.registerManifest(
-      defineAssetManifest({
-        bundles: {
-          boot: [{ type: TextAsset, alias: 'shared', path: 'shared-a.txt' }],
-        },
-      }),
-    );
-
-    expect(() =>
-      loader.registerManifest(
-        defineAssetManifest({
-          bundles: {
-            gameplay: [{ type: TextAsset, alias: 'shared', path: 'shared-b.txt' }],
-          },
-        }),
-      ),
-    ).toThrow('Conflicting asset definition');
-  });
-
-  test('registerManifest() allows equivalent (type, alias) definitions across bundles', () => {
-    const loader = new Loader({ basePath: '/' });
-
-    loader.registerManifest(
-      defineAssetManifest({
-        bundles: {
-          boot: [
-            {
-              type: TextAsset,
-              alias: 'shared',
-              path: 'shared.txt',
-              options: { locale: 'en', retries: [1, 2, 3] },
-            },
-          ],
-        },
-      }),
-    );
-
-    expect(() =>
-      loader.registerManifest(
-        defineAssetManifest({
-          bundles: {
-            gameplay: [
-              {
-                type: TextAsset,
-                alias: 'shared',
-                path: 'shared.txt',
-                options: { locale: 'en', retries: [1, 2, 3] },
-              },
-            ],
-          },
-        }),
-      ),
-    ).not.toThrow();
-  });
-
-  test('registerManifest() throws on conflict with prior manual backgroundLoad()', () => {
-    const loader = new Loader({ basePath: '/' });
-
-    loader.backgroundLoad(TextAsset, ['hero-v1.txt']);
-
-    expect(() =>
-      loader.registerManifest(
-        defineAssetManifest({
-          bundles: {
-            boot: [{ type: TextAsset, alias: 'hero-v1.txt', path: 'hero-v2.txt' }],
-          },
-        }),
-      ),
-    ).toThrow('Conflicting asset definition');
-  });
-
-  test('loadBundle() loads a known bundle successfully', async () => {
-    const factory = new MockTextFactory();
-    const loader = new Loader({ basePath: '/' });
-
-    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
-    loader.registerManifest(
-      defineAssetManifest({
-        bundles: {
-          boot: [
-            { type: TextAsset, alias: 'hero', path: 'hero.txt' },
-            { type: TextAsset, alias: 'menu', path: 'menu.txt' },
-          ],
-        },
-      }),
-    );
-    mockFetch();
-
-    await expect(loader.loadBundle('boot')).resolves.toBeUndefined();
-    expect(loader.get(TextAsset, 'hero').value).toBe('resource:fresh-source');
-    expect(loader.get(TextAsset, 'menu').value).toBe('resource:fresh-source');
-  });
-
-  test('loadBundle() rejects clearly for unknown bundle name', async () => {
-    const loader = new Loader({ basePath: '/' });
-
-    await expect(loader.loadBundle('missing')).rejects.toThrow('Unknown bundle');
-  });
-
-  test('repeated loadBundle() calls are safe and do not refetch cached assets', async () => {
-    const factory = new MockTextFactory();
-    const loader = new Loader({ basePath: '/' });
-
-    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
-    loader.registerManifest(
-      defineAssetManifest({
-        bundles: {
-          boot: [{ type: TextAsset, alias: 'hero', path: 'hero.txt' }],
-        },
-      }),
-    );
-    mockFetch();
-
-    await loader.loadBundle('boot');
-    await loader.loadBundle('boot');
-
-    expect(global.fetch).toHaveBeenCalledTimes(1);
-  });
-
-  test('overlapping bundle loads deduplicate shared assets', async () => {
-    const factory = new MockTextFactory();
-    const loader = new Loader({ basePath: '/' });
-
-    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
-    loader.registerManifest(
-      defineAssetManifest({
-        bundles: {
-          boot: [{ type: TextAsset, alias: 'shared', path: 'shared.txt' }],
-          gameplay: [
-            { type: TextAsset, alias: 'shared', path: 'shared.txt' },
-            { type: TextAsset, alias: 'level', path: 'level.txt' },
-          ],
-        },
-      }),
-    );
-    mockFetch();
-
-    await Promise.all([loader.loadBundle('boot'), loader.loadBundle('gameplay')]);
-
-    expect(global.fetch).toHaveBeenCalledTimes(2);
-  });
-
-  test('loadBundle() rejects with BundleLoadError on partial failure', async () => {
-    const factory = new MockTextFactory();
-    const loader = new Loader({ basePath: '/' });
-
-    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
-    loader.registerManifest(
-      defineAssetManifest({
-        bundles: {
-          boot: [
-            { type: TextAsset, alias: 'ok', path: 'ok.txt' },
-            { type: TextAsset, alias: 'missing', path: 'missing.txt' },
-          ],
-        },
-      }),
-    );
-
-    global.fetch = vi.fn(async (input: RequestInfo | URL): Promise<Response> => {
-      const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
-
-      if (url.endsWith('/missing.txt')) {
-        return {
-          ok: false,
-          status: 404,
-          statusText: 'Not Found',
-        } as Response;
-      }
-
-      return {
-        ok: true,
-        status: 200,
-        statusText: 'OK',
-      } as Response;
-    });
-
-    let thrown: unknown;
-
-    try {
-      await loader.loadBundle('boot');
-    } catch (error: unknown) {
-      thrown = error;
-    }
-
-    expect(thrown).toBeInstanceOf(BundleLoadError);
-
-    const bundleError = thrown as BundleLoadError;
-
-    expect(bundleError.bundle).toBe('boot');
-    expect(bundleError.failures).toHaveLength(1);
-    expect(bundleError.failures[0].alias).toBe('missing');
-    expect(bundleError.failures[0].type).toBe(TextAsset);
-    expect(bundleError.failures[0].error).toBeInstanceOf(Error);
-  });
-
-  test('successful assets remain cached after partial bundle failure', async () => {
-    const factory = new MockTextFactory();
-    const loader = new Loader({ basePath: '/' });
-
-    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
-    loader.registerManifest(
-      defineAssetManifest({
-        bundles: {
-          boot: [
-            { type: TextAsset, alias: 'ok', path: 'ok.txt' },
-            { type: TextAsset, alias: 'missing', path: 'missing.txt' },
-          ],
-        },
-      }),
-    );
-
-    global.fetch = vi.fn(async (input: RequestInfo | URL): Promise<Response> => {
-      const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
-
-      if (url.endsWith('/missing.txt')) {
-        return {
-          ok: false,
-          status: 500,
-          statusText: 'Server Error',
-        } as Response;
-      }
-
-      return {
-        ok: true,
-        status: 200,
-        statusText: 'OK',
-      } as Response;
-    });
-
-    await expect(loader.loadBundle('boot')).rejects.toBeInstanceOf(BundleLoadError);
-    expect(loader.has(TextAsset, 'ok')).toBe(true);
-    expect(loader.has(TextAsset, 'missing')).toBe(false);
-  });
-
-  test('bundle progress callback and signal report expected totals and final completion', async () => {
-    const factory = new MockTextFactory();
-    const loader = new Loader({ basePath: '/' });
-    const callbackProgress: Array<[number, number]> = [];
-    const signalProgress: Array<[string, number, number]> = [];
-
-    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
-    loader.registerManifest(
-      defineAssetManifest({
-        bundles: {
-          boot: [
-            { type: TextAsset, alias: 'cached', path: 'cached.txt' },
-            { type: TextAsset, alias: 'fresh', path: 'fresh.txt' },
-          ],
-        },
-      }),
-    );
-    loader.onBundleProgress.add((name, loaded, total) => {
-      signalProgress.push([name, loaded, total]);
-    });
-    mockFetch();
-
-    await loader.load(TextAsset, { cached: 'cached.txt' });
-    await loader.loadBundle('boot', {
-      onProgress: (loaded, total) => {
-        callbackProgress.push([loaded, total]);
-      },
-    });
-
-    expect(callbackProgress).toContainEqual([1, 2]);
-    expect(callbackProgress[callbackProgress.length - 1]).toEqual([2, 2]);
-    expect(signalProgress).toContainEqual(['boot', 1, 2]);
-    expect(signalProgress[signalProgress.length - 1]).toEqual(['boot', 2, 2]);
-  });
-
-  test('background bundle load works', async () => {
-    const factory = new MockTextFactory();
-    const loader = new Loader({ basePath: '/', concurrency: 1 });
-
-    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
-    loader.registerManifest(
-      defineAssetManifest({
-        bundles: {
-          boot: [
-            { type: TextAsset, alias: 'a', path: 'a.txt' },
-            { type: TextAsset, alias: 'b', path: 'b.txt' },
-          ],
-        },
-      }),
-    );
-    mockFetch();
-
-    await expect(loader.loadBundle('boot', { background: true })).resolves.toBeUndefined();
-    expect(loader.has(TextAsset, 'a')).toBe(true);
-    expect(loader.has(TextAsset, 'b')).toBe(true);
-  });
-
-  test('foreground load after background bundle queue uses normal priority boost behavior', async () => {
-    const factory = new MockTextFactory();
-    const loader = new Loader({ basePath: '/', concurrency: 1 });
-    const firstFetch = createDeferred<Response>();
-    const boostedFetch = createDeferred<Response>();
-
-    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
-    loader.registerManifest(
-      defineAssetManifest({
-        bundles: {
-          boot: [
-            { type: TextAsset, alias: 'first', path: 'first.txt' },
-            { type: TextAsset, alias: 'boosted', path: 'boosted.txt' },
-          ],
-        },
-      }),
-    );
-
-    global.fetch = vi.fn((input: RequestInfo | URL): Promise<Response> => {
-      const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
-
-      if (url.endsWith('/first.txt')) {
-        return firstFetch.promise;
-      }
-
-      if (url.endsWith('/boosted.txt')) {
-        return boostedFetch.promise;
-      }
-
-      throw new Error(`Unexpected fetch url: ${url}`);
-    });
-
-    const bundlePromise = loader.loadBundle('boot', { background: true });
-    let bundleResolved = false;
-
-    bundlePromise.then(() => {
-      bundleResolved = true;
-    });
-
-    const boostedPromise = loader.load(TextAsset, 'boosted');
-
-    boostedFetch.resolve({
-      ok: true,
-      status: 200,
-      statusText: 'OK',
-    } as Response);
-
-    await expect(boostedPromise).resolves.toBe('resource:fresh-source');
-    await Promise.resolve();
-    expect(bundleResolved).toBe(false);
-
-    firstFetch.resolve({
-      ok: true,
-      status: 200,
-      statusText: 'OK',
-    } as Response);
-
-    await expect(bundlePromise).resolves.toBeUndefined();
-  });
-
-  test('hasBundle() is false for unknown bundle and true after full successful load', async () => {
-    const factory = new MockTextFactory();
-    const loader = new Loader({ basePath: '/' });
-
-    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
-    loader.registerManifest(
-      defineAssetManifest({
-        bundles: {
-          boot: [{ type: TextAsset, alias: 'hero', path: 'hero.txt' }],
-        },
-      }),
-    );
-    mockFetch();
-
-    expect(loader.hasBundle('missing')).toBe(false);
-    expect(loader.hasBundle('boot')).toBe(false);
-
-    await loader.loadBundle('boot');
-
-    expect(loader.hasBundle('boot')).toBe(true);
-  });
-
-  test('hasBundle() stays false after partial bundle failure', async () => {
-    const factory = new MockTextFactory();
-    const loader = new Loader({ basePath: '/' });
-
-    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
-    loader.registerManifest(
-      defineAssetManifest({
-        bundles: {
-          boot: [
-            { type: TextAsset, alias: 'ok', path: 'ok.txt' },
-            { type: TextAsset, alias: 'bad', path: 'bad.txt' },
-          ],
-        },
-      }),
-    );
-
-    global.fetch = vi.fn(async (input: RequestInfo | URL): Promise<Response> => {
-      const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
-
-      if (url.endsWith('/bad.txt')) {
-        return {
-          ok: false,
-          status: 404,
-          statusText: 'Not Found',
-        } as Response;
-      }
-
-      return {
-        ok: true,
-        status: 200,
-        statusText: 'OK',
-      } as Response;
-    });
-
-    await expect(loader.loadBundle('boot')).rejects.toBeInstanceOf(BundleLoadError);
-    expect(loader.hasBundle('boot')).toBe(false);
   });
 });
 
@@ -980,19 +433,26 @@ describe('LoadingQueue progress tracking', () => {
   });
 
   test('progress counts both successful and failed items in a map load', async () => {
-    const factory = new MockAssetFactory();
     const loader = new Loader({ basePath: '/' });
 
-    loader.registerAssetType('mockAsset', MockAssetType as never, factory as AssetFactory<MockAssetType>);
+    // A handler that fails for the 'bad.dat' source (replaces the removed
+    // registerAssetType form; failure is driven by source rather than a factory
+    // mock).
+    loader.bindAsset<string>(
+      { type: MockAssetType, typeNames: ['mockAsset'] },
+      {
+        load: async request => {
+          if (request.source === 'bad.dat') {
+            throw new Error('bad');
+          }
+
+          return 'ok';
+        },
+      },
+    );
     mockFetch();
 
     const goodAsset = new Asset({ type: 'mockAsset', source: 'good.dat' });
-    // force the factory to fail on the second call
-    factory.create.mockImplementationOnce(async () => 'ok');
-    factory.create.mockImplementationOnce(async () => {
-      throw new Error('bad');
-    });
-
     const badAsset = new Asset({ type: 'mockAsset', source: 'bad.dat' });
 
     const queue = loader.load({ good: goodAsset, bad: badAsset });
@@ -1049,11 +509,25 @@ describe('Asset / Assets identity and alias semantics', () => {
     );
   }
 
+  // Binds MockAssetType as a handler type (replacing the removed
+  // registerAssetType(name, ctor, factory) form). The handler fetches through
+  // the context so cross-alias network dedup stays observable.
+  function bindMockAsset(loader: Loader): void {
+    loader.bindAsset<string>(
+      { type: MockAssetType, typeNames: ['mockAsset'] },
+      {
+        load: async (request, ctx) => {
+          await ctx.fetchText(request.source);
+          return `loaded:${request.source}`;
+        },
+      },
+    );
+  }
+
   test('same Asset under two aliases shares a single network fetch', async () => {
-    const factory = new MockAssetFactory();
     const loader = new Loader({ basePath: '/' });
 
-    loader.registerAssetType('mockAsset', MockAssetType as never, factory as AssetFactory<MockAssetType>);
+    bindMockAsset(loader);
     mockFetch();
 
     const hero = new Asset({ type: 'mockAsset', source: 'images/hero.dat' });
@@ -1061,15 +535,14 @@ describe('Asset / Assets identity and alias semantics', () => {
     await loader.load({ heroA: hero, heroB: hero });
 
     expect(global.fetch).toHaveBeenCalledTimes(1);
-    expect(loader.has(MockAssetType, 'heroA')).toBe(true);
-    expect(loader.has(MockAssetType, 'heroB')).toBe(true);
+    expect(loader._peekResource(MockAssetType, 'heroA')).not.toBeNull();
+    expect(loader._peekResource(MockAssetType, 'heroB')).not.toBeNull();
   });
 
   test('get() resolves both aliases after multi-alias load', async () => {
-    const factory = new MockAssetFactory();
     const loader = new Loader({ basePath: '/' });
 
-    loader.registerAssetType('mockAsset', MockAssetType as never, factory as AssetFactory<MockAssetType>);
+    bindMockAsset(loader);
     mockFetch();
 
     const hero = new Asset({ type: 'mockAsset', source: 'images/hero.dat' });
@@ -1080,41 +553,39 @@ describe('Asset / Assets identity and alias semantics', () => {
   });
 
   test('unload(asset) removes asset loaded by source-as-alias (single Asset load)', async () => {
-    const factory = new MockAssetFactory();
     const loader = new Loader({ basePath: '/' });
 
-    loader.registerAssetType('mockAsset', MockAssetType as never, factory as AssetFactory<MockAssetType>);
+    bindMockAsset(loader);
     mockFetch();
 
     const hero = new Asset({ type: 'mockAsset', source: 'images/hero.dat' });
 
     await loader.load(hero);
 
-    expect(loader.has(MockAssetType, 'images/hero.dat')).toBe(true);
+    expect(loader._peekResource(MockAssetType, 'images/hero.dat')).not.toBeNull();
 
     loader.unload(hero);
 
-    expect(loader.has(MockAssetType, 'images/hero.dat')).toBe(false);
+    expect(loader._peekResource(MockAssetType, 'images/hero.dat')).toBeNull();
   });
 
   test('unload(asset) removes all aliases after keyed-map load', async () => {
-    const factory = new MockAssetFactory();
     const loader = new Loader({ basePath: '/' });
 
-    loader.registerAssetType('mockAsset', MockAssetType as never, factory as AssetFactory<MockAssetType>);
+    bindMockAsset(loader);
     mockFetch();
 
     const hero = new Asset({ type: 'mockAsset', source: 'images/hero.dat' });
 
     await loader.load({ heroA: hero, heroB: hero });
 
-    expect(loader.has(MockAssetType, 'heroA')).toBe(true);
-    expect(loader.has(MockAssetType, 'heroB')).toBe(true);
+    expect(loader._peekResource(MockAssetType, 'heroA')).not.toBeNull();
+    expect(loader._peekResource(MockAssetType, 'heroB')).not.toBeNull();
 
     loader.unload(hero);
 
-    expect(loader.has(MockAssetType, 'heroA')).toBe(false);
-    expect(loader.has(MockAssetType, 'heroB')).toBe(false);
+    expect(loader._peekResource(MockAssetType, 'heroA')).toBeNull();
+    expect(loader._peekResource(MockAssetType, 'heroB')).toBeNull();
   });
 
   test('unload(assets) releases every leaf claim, evicting the adopted resources', async () => {
@@ -1136,25 +607,24 @@ describe('Asset / Assets identity and alias semantics', () => {
 
     await loader.load(container);
 
-    expect(loader.has(Texture, 'hero.png')).toBe(true);
-    expect(loader.has(Texture, 'logo.png')).toBe(true);
+    expect(loader._peekResource(Texture, 'hero.png')).not.toBeNull();
+    expect(loader._peekResource(Texture, 'logo.png')).not.toBeNull();
     expect((container.hero as Texture).loadState).toBe('ready');
 
     loader.unload(container);
 
     // Last claim released → payload evicted; the leaves heal back to 'loading'.
-    expect(loader.has(Texture, 'hero.png')).toBe(false);
-    expect(loader.has(Texture, 'logo.png')).toBe(false);
+    expect(loader._peekResource(Texture, 'hero.png')).toBeNull();
+    expect(loader._peekResource(Texture, 'logo.png')).toBeNull();
     expect((container.hero as Texture).loadState).toBe('loading');
 
     vi.unstubAllGlobals();
   });
 
   test('aliases are cleared from tracking when underlying asset unloads', async () => {
-    const factory = new MockAssetFactory();
     const loader = new Loader({ basePath: '/' });
 
-    loader.registerAssetType('mockAsset', MockAssetType as never, factory as AssetFactory<MockAssetType>);
+    bindMockAsset(loader);
     mockFetch();
 
     const hero = new Asset({ type: 'mockAsset', source: 'hero.dat' });
@@ -1166,8 +636,8 @@ describe('Asset / Assets identity and alias semantics', () => {
     // Re-load under a single alias — should work cleanly after unload
     await loader.load({ a: hero });
 
-    expect(loader.has(MockAssetType, 'a')).toBe(true);
-    expect(loader.has(MockAssetType, 'b')).toBe(false);
+    expect(loader._peekResource(MockAssetType, 'a')).not.toBeNull();
+    expect(loader._peekResource(MockAssetType, 'b')).toBeNull();
   });
 });
 
@@ -1189,48 +659,9 @@ describe('Assets reserved "entries" key', () => {
   });
 });
 
-describe('registerAssetType() handler form — full config forwarding', () => {
-  const originalFetch = global.fetch;
+describe('bindAsset() handler — cache-aware AssetLoaderContext', () => {
+  class RichAsset {}
 
-  afterEach(() => {
-    global.fetch = originalFetch;
-  });
-
-  test('handler receives config.source and extra config fields', async () => {
-    const loader = new Loader({ basePath: '/' });
-    const receivedConfigs: unknown[] = [];
-
-    loader.registerAssetType('richAsset', {
-      load: async config => {
-        receivedConfigs.push(config);
-        return `${config.source}:${config.format}`;
-      },
-    });
-
-    const asset = new Asset({ type: 'richAsset', source: 'level.json', format: 'tiled' });
-    const result = await loader.load(asset);
-
-    expect(receivedConfigs).toHaveLength(1);
-    expect(receivedConfigs[0]).toMatchObject({ source: 'level.json', format: 'tiled' });
-    expect(result).toBe('level.json:tiled');
-  });
-
-  test('handler result is stored and retrievable via the alias', async () => {
-    const loader = new Loader({ basePath: '/' });
-
-    loader.registerAssetType('richAsset', {
-      load: async config => `parsed:${config.source}`,
-    });
-
-    await loader.load({ map: new Asset({ type: 'richAsset', source: 'level.json', format: 'tiled' }) });
-
-    // The asset is stored under the alias 'map', not under 'level.json'
-    const stored = loader.get(loader['_assetTypeMap'].get('richAsset')!, 'map');
-    expect(stored).toBe('parsed:level.json');
-  });
-});
-
-describe('registerAssetType() handler form — cache-aware context', () => {
   const originalFetch = global.fetch;
 
   afterEach(() => {
@@ -1256,12 +687,15 @@ describe('registerAssetType() handler form — cache-aware context', () => {
     const loader = new Loader({ basePath: '/' });
     let capturedKey = '';
 
-    loader.registerAssetType('richAsset', {
-      load: async (_config, ctx) => {
-        capturedKey = ctx.identityKey;
-        return 'ok';
+    loader.bindAsset<string>(
+      { type: RichAsset, typeNames: ['richAsset'] },
+      {
+        load: async (_request, ctx) => {
+          capturedKey = ctx.identityKey;
+          return 'ok';
+        },
       },
-    });
+    );
 
     await loader.load(new Asset({ type: 'richAsset', source: 'a.json', format: 'x' }));
     expect(capturedKey).toMatch(/^id:\d+:/);
@@ -1271,9 +705,7 @@ describe('registerAssetType() handler form — cache-aware context', () => {
     mockFetchText('hello world');
     const loader = new Loader({ basePath: '/assets/' });
 
-    loader.registerAssetType('richAsset', {
-      load: async (config, ctx) => ctx.fetchText(config.source),
-    });
+    loader.bindAsset<string>({ type: RichAsset, typeNames: ['richAsset'] }, { load: async (request, ctx) => ctx.fetchText(request.source) });
 
     const result = await loader.load(new Asset({ type: 'richAsset', source: 'file.txt', format: 'txt' }));
     expect(result).toBe('hello world');
@@ -1284,9 +716,7 @@ describe('registerAssetType() handler form — cache-aware context', () => {
     mockFetchText('cached content');
     const loader = new Loader({ basePath: '/' });
 
-    loader.registerAssetType('richAsset', {
-      load: async (config, ctx) => ctx.fetchText(config.source),
-    });
+    loader.bindAsset<string>({ type: RichAsset, typeNames: ['richAsset'] }, { load: async (request, ctx) => ctx.fetchText(request.source) });
 
     // First load — populates in-memory result
     await loader.load(new Asset({ type: 'richAsset', source: 'file.txt', format: 'txt' }));
@@ -1301,12 +731,15 @@ describe('registerAssetType() handler form — cache-aware context', () => {
     mockFetchText('{"value":42}');
     const loader = new Loader({ basePath: '/' });
 
-    loader.registerAssetType('richAsset', {
-      load: async (config, ctx) => {
-        const data = await ctx.fetchJson<{ value: number }>(config.source);
-        return String(data.value);
+    loader.bindAsset<string>(
+      { type: RichAsset, typeNames: ['richAsset'] },
+      {
+        load: async (request, ctx) => {
+          const data = await ctx.fetchJson<{ value: number }>(request.source);
+          return String(data.value);
+        },
       },
-    });
+    );
 
     const result = await loader.load(new Asset({ type: 'richAsset', source: 'data.json', format: 'json' }));
     expect(result).toBe('42');
@@ -1316,12 +749,15 @@ describe('registerAssetType() handler form — cache-aware context', () => {
     mockFetchText('binary');
     const loader = new Loader({ basePath: '/' });
 
-    loader.registerAssetType('richAsset', {
-      load: async (config, ctx) => {
-        const buf = await ctx.fetchArrayBuffer(config.source);
-        return String(buf.byteLength);
+    loader.bindAsset<string>(
+      { type: RichAsset, typeNames: ['richAsset'] },
+      {
+        load: async (request, ctx) => {
+          const buf = await ctx.fetchArrayBuffer(request.source);
+          return String(buf.byteLength);
+        },
       },
-    });
+    );
 
     const result = await loader.load(new Asset({ type: 'richAsset', source: 'data.bin', format: 'bin' }));
     expect(Number(result)).toBeGreaterThan(0);
@@ -1331,13 +767,16 @@ describe('registerAssetType() handler form — cache-aware context', () => {
     const loader = new Loader({ basePath: '/' });
     const loadOrder: string[] = [];
 
-    loader.registerAssetType('richAsset', {
-      getIdentityKey: config => `${config.source}:${config.format}`,
-      load: async config => {
-        loadOrder.push(config.format);
-        return `result:${config.format}`;
+    loader.bindAsset<string, { format: string }>(
+      { type: RichAsset, typeNames: ['richAsset'] },
+      {
+        getIdentityKey: request => `${request.source}:${request.options?.format}`,
+        load: async request => {
+          loadOrder.push(request.options!.format);
+          return `result:${request.options!.format}`;
+        },
       },
-    });
+    );
 
     const tmx = new Asset({ type: 'richAsset', source: 'map.tmx', format: 'tmx' });
     const json = new Asset({ type: 'richAsset', source: 'map.tmx', format: 'tiled-json' });
@@ -1355,12 +794,15 @@ describe('registerAssetType() handler form — cache-aware context', () => {
     let callCount = 0;
     const loader = new Loader({ basePath: '/' });
 
-    loader.registerAssetType('richAsset', {
-      load: async config => {
-        callCount++;
-        return `ok:${config.source}`;
+    loader.bindAsset<string>(
+      { type: RichAsset, typeNames: ['richAsset'] },
+      {
+        load: async request => {
+          callCount++;
+          return `ok:${request.source}`;
+        },
       },
-    });
+    );
 
     const a1 = new Asset({ type: 'richAsset', source: 'shared.dat', format: 'x' });
     const a2 = new Asset({ type: 'richAsset', source: 'shared.dat', format: 'x' });
@@ -1434,6 +876,8 @@ describe('load(Type, { alias: BatchValue }) — extended legacy batch API', () =
 });
 
 describe('handler context.fetch* — IDB store names (Fix 1 regression)', () => {
+  class RichAsset {}
+
   const originalFetch = global.fetch;
 
   afterEach(() => {
@@ -1474,9 +918,7 @@ describe('handler context.fetch* — IDB store names (Fix 1 regression)', () => 
     const { store, saves } = makeMockStore();
     const loader = new Loader({ basePath: '/', cache: store });
 
-    loader.registerAssetType('richAsset', {
-      load: async (config, ctx) => ctx.fetchText(config.source),
-    });
+    loader.bindAsset<string>({ type: RichAsset, typeNames: ['richAsset'] }, { load: async (request, ctx) => ctx.fetchText(request.source) });
 
     await loader.load(new Asset({ type: 'richAsset', source: 'file.txt', format: 'txt' }));
 
@@ -1488,12 +930,15 @@ describe('handler context.fetch* — IDB store names (Fix 1 regression)', () => 
     const { store, saves } = makeMockStore();
     const loader = new Loader({ basePath: '/', cache: store });
 
-    loader.registerAssetType('richAsset', {
-      load: async (config, ctx) => {
-        const data = await ctx.fetchJson<{ n: number }>(config.source);
-        return String(data.n);
+    loader.bindAsset<string>(
+      { type: RichAsset, typeNames: ['richAsset'] },
+      {
+        load: async (request, ctx) => {
+          const data = await ctx.fetchJson<{ n: number }>(request.source);
+          return String(data.n);
+        },
       },
-    });
+    );
 
     await loader.load(new Asset({ type: 'richAsset', source: 'data.json', format: 'json' }));
 
@@ -1505,12 +950,15 @@ describe('handler context.fetch* — IDB store names (Fix 1 regression)', () => 
     const { store, saves } = makeMockStore();
     const loader = new Loader({ basePath: '/', cache: store });
 
-    loader.registerAssetType('richAsset', {
-      load: async (config, ctx) => {
-        const buf = await ctx.fetchArrayBuffer(config.source);
-        return String(buf.byteLength);
+    loader.bindAsset<string>(
+      { type: RichAsset, typeNames: ['richAsset'] },
+      {
+        load: async (request, ctx) => {
+          const buf = await ctx.fetchArrayBuffer(request.source);
+          return String(buf.byteLength);
+        },
       },
-    });
+    );
 
     await loader.load(new Asset({ type: 'richAsset', source: 'data.bin', format: 'bin' }));
 
@@ -1536,9 +984,7 @@ describe('handler context.fetch* — IDB store names (Fix 1 regression)', () => 
     };
     const loader = new Loader({ basePath: '/', cache: store });
 
-    loader.registerAssetType('richAsset', {
-      load: async (config, ctx) => ctx.fetchText(config.source),
-    });
+    loader.bindAsset<string>({ type: RichAsset, typeNames: ['richAsset'] }, { load: async (request, ctx) => ctx.fetchText(request.source) });
 
     // First load — populates _resources; context.fetchText goes to network, store has no entry yet
     await loader.load(new Asset({ type: 'richAsset', source: 'file.txt', format: 'txt' }));
@@ -1550,13 +996,18 @@ describe('handler context.fetch* — IDB store names (Fix 1 regression)', () => 
 });
 
 describe('unload(asset) + getIdentityKey — identity discrimination (Fix 2 regression)', () => {
+  class RichAsset {}
+
   test('unload(asset) removes only aliases for the matching getIdentityKey identity', async () => {
     const loader = new Loader({ basePath: '/' });
 
-    loader.registerAssetType('richAsset', {
-      getIdentityKey: config => `${config.source}:${config.format}`,
-      load: async config => `result:${config.format}`,
-    });
+    loader.bindAsset<string, { format: string }>(
+      { type: RichAsset, typeNames: ['richAsset'] },
+      {
+        getIdentityKey: request => `${request.source}:${request.options?.format}`,
+        load: async request => `result:${request.options!.format}`,
+      },
+    );
 
     const tmxMap = new Asset({ type: 'richAsset', source: 'map.dat', format: 'tmx' });
     const rpgMap = new Asset({ type: 'richAsset', source: 'map.dat', format: 'rpg-maker' });
@@ -1565,23 +1016,21 @@ describe('unload(asset) + getIdentityKey — identity discrimination (Fix 2 regr
 
     const ctor = loader['_assetTypeMap'].get('richAsset')!;
 
-    expect(loader.has(ctor, 'tmxA')).toBe(true);
-    expect(loader.has(ctor, 'tmxB')).toBe(true);
-    expect(loader.has(ctor, 'rpgA')).toBe(true);
+    expect(loader._peekResource(ctor, 'tmxA')).not.toBeNull();
+    expect(loader._peekResource(ctor, 'tmxB')).not.toBeNull();
+    expect(loader._peekResource(ctor, 'rpgA')).not.toBeNull();
 
     loader.unload(tmxMap);
 
-    expect(loader.has(ctor, 'tmxA')).toBe(false);
-    expect(loader.has(ctor, 'tmxB')).toBe(false);
-    expect(loader.has(ctor, 'rpgA')).toBe(true); // unaffected — different identity
+    expect(loader._peekResource(ctor, 'tmxA')).toBeNull();
+    expect(loader._peekResource(ctor, 'tmxB')).toBeNull();
+    expect(loader._peekResource(ctor, 'rpgA')).not.toBeNull(); // unaffected — different identity
   });
 
   test('unload(asset) without getIdentityKey still removes all source-based aliases', async () => {
     const loader = new Loader({ basePath: '/' });
 
-    loader.registerAssetType('richAsset', {
-      load: async config => `result:${config.source}`,
-    });
+    loader.bindAsset<string>({ type: RichAsset, typeNames: ['richAsset'] }, { load: async request => `result:${request.source}` });
 
     const asset = new Asset({ type: 'richAsset', source: 'shared.dat', format: 'x' });
 
@@ -1589,22 +1038,25 @@ describe('unload(asset) + getIdentityKey — identity discrimination (Fix 2 regr
 
     const ctor = loader['_assetTypeMap'].get('richAsset')!;
 
-    expect(loader.has(ctor, 'a')).toBe(true);
-    expect(loader.has(ctor, 'b')).toBe(true);
+    expect(loader._peekResource(ctor, 'a')).not.toBeNull();
+    expect(loader._peekResource(ctor, 'b')).not.toBeNull();
 
     loader.unload(asset);
 
-    expect(loader.has(ctor, 'a')).toBe(false);
-    expect(loader.has(ctor, 'b')).toBe(false);
+    expect(loader._peekResource(ctor, 'a')).toBeNull();
+    expect(loader._peekResource(ctor, 'b')).toBeNull();
   });
 
   test('unload(asset) with getIdentityKey does not affect a different format identity', async () => {
     const loader = new Loader({ basePath: '/' });
 
-    loader.registerAssetType('richAsset', {
-      getIdentityKey: config => `${config.source}:${config.format}`,
-      load: async config => `result:${config.format}`,
-    });
+    loader.bindAsset<string, { format: string }>(
+      { type: RichAsset, typeNames: ['richAsset'] },
+      {
+        getIdentityKey: request => `${request.source}:${request.options?.format}`,
+        load: async request => `result:${request.options!.format}`,
+      },
+    );
 
     const tmxMap = new Asset({ type: 'richAsset', source: 'map.dat', format: 'tmx' });
     const rpgMap = new Asset({ type: 'richAsset', source: 'map.dat', format: 'rpg-maker' });
@@ -1615,106 +1067,8 @@ describe('unload(asset) + getIdentityKey — identity discrimination (Fix 2 regr
 
     loader.unload(rpgMap);
 
-    expect(loader.has(ctor, 'tmxA')).toBe(true); // untouched
-    expect(loader.has(ctor, 'rpgA')).toBe(false);
-  });
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Coverage sweep — registerExtension() + extension-based load('path.ext')
-// ─────────────────────────────────────────────────────────────────────────────
-
-describe('registerExtension() + extension-based load(path)', () => {
-  const originalFetch = global.fetch;
-
-  afterEach(() => {
-    global.fetch = originalFetch;
-  });
-
-  function mockFetch(): void {
-    global.fetch = vi.fn(
-      async (): Promise<Response> =>
-        ({
-          ok: true,
-          status: 200,
-          statusText: 'OK',
-          text: async () => 'raw',
-          json: async () => ({}),
-          arrayBuffer: async () => new ArrayBuffer(0),
-        }) as unknown as Response,
-    );
-  }
-
-  test('load(path) infers the type from a registered extension', async () => {
-    const factory = new MockTextFactory();
-    const loader = new Loader({ basePath: '/' });
-
-    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
-    loader.registerExtension('txt', TextAsset);
-    mockFetch();
-
-    const result = await loader.load<string>('notes.txt');
-
-    expect(result).toBe('resource:fresh-source');
-  });
-
-  test('registerExtension() normalizes a leading dot and casing', async () => {
-    const factory = new MockTextFactory();
-    const loader = new Loader({ basePath: '/' });
-
-    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
-    loader.registerExtension('.TXT', TextAsset);
-    mockFetch();
-
-    await expect(loader.load<string>('notes.txt')).resolves.toBe('resource:fresh-source');
-  });
-
-  test('FontAsset infers the "family" option from the filename when loaded by path', async () => {
-    const receivedOptions: unknown[] = [];
-    const factory: AssetFactory<FontFace> = {
-      storageName: 'font',
-      process: vi.fn(async () => 'raw'),
-      create: vi.fn(async (_source: unknown, options?: unknown) => {
-        receivedOptions.push(options);
-        return {} as FontFace;
-      }),
-      destroy: vi.fn(),
-    };
-    const loader = new Loader({ basePath: '/' });
-
-    loader.register(FontAsset, factory);
-    loader.registerExtension('woff2', FontAsset);
-    mockFetch();
-
-    await loader.load('fonts/Roboto.woff2');
-
-    expect(receivedOptions[0]).toMatchObject({ family: 'Roboto' });
-  });
-
-  test('throws a clear error for an unregistered extension', () => {
-    const loader = new Loader({ basePath: '/' });
-
-    expect(() => loader.load('mystery.foo')).toThrow(/no type registered for any extension of "mystery.foo"/);
-  });
-
-  test('throws a clear error for a path with no extension at all', () => {
-    const loader = new Loader({ basePath: '/' });
-
-    expect(() => loader.load('no-extension-here')).toThrow(/no type registered for any extension of "no-extension-here"/);
-  });
-
-  test('rejects when the extension-inferred load fails', async () => {
-    const factory = new MockTextFactory();
-    const loader = new Loader({ basePath: '/' });
-
-    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
-    loader.registerExtension('txt', TextAsset);
-    mockFetch();
-    factory.create.mockImplementationOnce(async () => {
-      throw new Error('extension-load-broken');
-    });
-
-    await expect(loader.load('broken.txt')).rejects.toThrow('extension-load-broken');
+    expect(loader._peekResource(ctor, 'tmxA')).not.toBeNull(); // untouched
+    expect(loader._peekResource(ctor, 'rpgA')).toBeNull();
   });
 });
 
@@ -1772,66 +1126,6 @@ describe('load(Type, ...) legacy batch forms — per-item failure branches', () 
   });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Coverage sweep — backgroundLoad() re-scan skip branches, loadAll() early exit,
-// setConcurrency()
-// ─────────────────────────────────────────────────────────────────────────────
-
-describe('backgroundLoad() re-scan skip branches', () => {
-  const originalFetch = global.fetch;
-
-  afterEach(() => {
-    global.fetch = originalFetch;
-  });
-
-  function mockFetch(): void {
-    global.fetch = vi.fn(
-      async (): Promise<Response> =>
-        ({
-          ok: true,
-          status: 200,
-          statusText: 'OK',
-          text: async () => 'raw',
-          json: async () => ({}),
-          arrayBuffer: async () => new ArrayBuffer(0),
-        }) as unknown as Response,
-    );
-  }
-
-  test('skips manifest entries that are already resolved', async () => {
-    const factory = new MockTextFactory();
-    const loader = new Loader({ basePath: '/' });
-
-    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
-    loader.registerManifest(defineAssetManifest({ bundles: { seed: [{ type: TextAsset, alias: 'a', path: 'a.txt' }] } }));
-    mockFetch();
-
-    await loader.load(TextAsset, 'a');
-    (global.fetch as MockInstance).mockClear();
-
-    loader.backgroundLoad();
-
-    expect(global.fetch).not.toHaveBeenCalled();
-  });
-
-  test('skips manifest entries that are already in flight', () => {
-    const factory = new MockTextFactory();
-    const loader = new Loader({ basePath: '/' });
-    const deferred = createDeferred<Response>();
-
-    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
-    loader.registerManifest(defineAssetManifest({ bundles: { seed: [{ type: TextAsset, alias: 'a', path: 'a.txt' }] } }));
-    global.fetch = vi.fn((): Promise<Response> => deferred.promise);
-
-    void loader.load(TextAsset, 'a');
-    loader.backgroundLoad();
-
-    expect(global.fetch).toHaveBeenCalledTimes(1);
-
-    deferred.resolve({ ok: true, status: 200, statusText: 'OK' } as Response);
-  });
-});
-
 describe('loadAll() early exit', () => {
   test('resolves immediately when nothing is queued', async () => {
     const loader = new Loader({ basePath: '/' });
@@ -1846,28 +1140,15 @@ describe('loadAll() early exit', () => {
 
 describe('setConcurrency()', () => {
   test('is chainable and limits how many background fetches start immediately', () => {
-    const factory = new MockTextFactory();
-    const loader = new Loader({ basePath: '/', concurrency: 6 });
-
-    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
-    loader.registerManifest(
-      defineAssetManifest({
-        bundles: {
-          seed: [
-            { type: TextAsset, alias: 'a', path: 'a.txt' },
-            { type: TextAsset, alias: 'b', path: 'b.txt' },
-            { type: TextAsset, alias: 'c', path: 'c.txt' },
-          ],
-        },
-      }),
-    );
-
-    expect(loader.setConcurrency(1)).toBe(loader);
+    const loader = createCoreLoader({ basePath: '/', concurrency: 6 });
 
     const deferred = createDeferred<Response>();
     global.fetch = vi.fn((): Promise<Response> => deferred.promise);
 
-    loader.backgroundLoad();
+    expect(loader.setConcurrency(1)).toBe(loader);
+
+    // Three background-adopted sources, but concurrency 1 → only one fetch starts.
+    loader.load(Assets.from({ a: 'a.png', b: 'b.png', c: 'c.png' }), { background: true });
 
     expect(global.fetch).toHaveBeenCalledTimes(1);
   });
@@ -1920,15 +1201,14 @@ describe('unload() edge cases', () => {
   });
 
   test('unload(asset) falls back to source-as-alias when the asset was never loaded', () => {
-    const factory = new MockAssetFactory();
     const loader = new Loader({ basePath: '/' });
 
-    loader.registerAssetType('mockAsset', MockAssetType as never, factory as AssetFactory<MockAssetType>);
+    loader.bindAsset<string>({ type: MockAssetType, typeNames: ['mockAsset'] }, { load: async request => `loaded:${request.source}` });
 
     const neverLoaded = new Asset({ type: 'mockAsset', source: 'never.dat' });
 
     expect(() => loader.unload(neverLoaded)).not.toThrow();
-    expect(loader.has(MockAssetType, 'never.dat')).toBe(false);
+    expect(loader._peekResource(MockAssetType, 'never.dat')).toBeNull();
   });
 
   test('unload(assets) is a silent no-op for a leaf whose kind this loader never bound', () => {
@@ -1947,7 +1227,7 @@ describe('unload() edge cases', () => {
     const container = new Assets({ orphan: { type: 'texture', source: 'never.png' } });
 
     expect(() => loader.unload(container)).not.toThrow();
-    expect(loader.has(Texture, 'never.png')).toBe(false);
+    expect(loader._peekResource(Texture, 'never.png')).toBeNull();
   });
 });
 
@@ -2023,23 +1303,19 @@ describe('hasLoadable() / hasAssetType() / hasExtension()', () => {
     expect(loader.hasLoadable(ProbeAsset)).toBe(true);
 
     expect(loader.hasAssetType('probeType')).toBe(false);
-    loader.registerAssetType('probeType', ProbeAsset);
-    expect(loader.hasAssetType('probeType')).toBe(true);
-
     expect(loader.hasExtension('probe')).toBe(false);
-    loader.registerExtension('.PROBE', ProbeAsset);
+    loader.bindAsset<ProbeAsset>({ type: ProbeAsset, typeNames: ['probeType'], extensions: ['PROBE'] }, { load: async () => new ProbeAsset() });
+    expect(loader.hasAssetType('probeType')).toBe(true);
     expect(loader.hasExtension('probe')).toBe(true);
     expect(loader.hasExtension('.probe')).toBe(true);
   });
 
-  test('hasLoadable() is true for a handler-based registerAssetType() registration', () => {
+  test('hasLoadable() is true for a bindAsset() handler registration', () => {
     const loader = new Loader({ basePath: '/' });
     class HandlerAsset {}
 
     expect(loader.hasLoadable(HandlerAsset)).toBe(false);
-    loader.registerAssetType('handlerType', {
-      load: async () => 'ok',
-    });
+    loader.bindAsset<string>({ type: HandlerAsset, typeNames: ['handlerType'] }, { load: async () => 'ok' });
     const ctor = loader['_assetTypeMap'].get('handlerType')!;
 
     expect(loader.hasLoadable(ctor)).toBe(true);
@@ -2245,11 +1521,14 @@ describe('loadContainer()', () => {
     await expect(loader.loadContainer('x.exoa')).rejects.toThrow(/unknown asset type "nonsense"/);
   });
 
-  test('uses a register()/registerAssetType-based factory when no createFromBytes handler is bound', async () => {
+  test('uses a register()-based factory when the bound handler has no createFromBytes', async () => {
     const factory = new DummyFactory();
     const loader = new Loader({ basePath: '/' });
 
-    loader.registerAssetType('dummy', DummyAsset, factory);
+    loader.register(DummyAsset, factory);
+    // A handler binds the 'dummy' type name but supplies no createFromBytes, so
+    // container injection falls back to the registered factory.
+    loader.bindAsset<DummyAsset>({ type: DummyAsset, typeNames: ['dummy'] }, { load: async request => new DummyAsset(request.source) });
 
     const container = encodeContainer([{ alias: 'x', type: 'dummy', bytes: new TextEncoder().encode('raw-bytes') }]);
     mockContainerFetch(container);
@@ -2263,7 +1542,7 @@ describe('loadContainer()', () => {
     class BareAsset {}
     const loader = new Loader({ basePath: '/' });
 
-    loader.registerAssetType('bare', BareAsset);
+    loader.bindAsset<BareAsset>({ type: BareAsset, typeNames: ['bare'] }, { load: async () => new BareAsset() });
 
     const container = encodeContainer([{ alias: 'x', type: 'bare', bytes: new Uint8Array([1]) }]);
     mockContainerFetch(container);
@@ -2323,14 +1602,19 @@ describe('destroy()', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('handler load() rejection is wrapped with url + cause', () => {
-  test('wraps a thrown Error from a registerAssetType() handler', async () => {
+  class RichAsset {}
+
+  test('wraps a thrown Error from a bindAsset() handler', async () => {
     const loader = new Loader({ basePath: '/assets/' });
 
-    loader.registerAssetType('richAsset', {
-      load: async () => {
-        throw new Error('handler exploded');
+    loader.bindAsset<string>(
+      { type: RichAsset, typeNames: ['richAsset'] },
+      {
+        load: async () => {
+          throw new Error('handler exploded');
+        },
       },
-    });
+    );
 
     const asset = new Asset({ type: 'richAsset', source: 'x.json', format: 'x' });
     const error: Error = await loader.load(asset).catch((e: unknown) => e as Error);
@@ -2352,11 +1636,11 @@ describe('Asset-based load() without a handler — extra config fields as option
     global.fetch = originalFetch;
   });
 
-  test('extra config fields are forwarded to factory.create() as options', async () => {
+  test('extra options are forwarded to factory.create()', async () => {
     const factory = new MockAssetFactory();
     const loader = new Loader({ basePath: '/' });
 
-    loader.registerAssetType('richAsset', MockAssetType as never, factory as AssetFactory<MockAssetType>);
+    loader.register(MockAssetType, factory as AssetFactory<MockAssetType>);
     global.fetch = vi.fn(async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', text: async () => 'raw' }) as unknown as Response);
 
     const receivedOptions: unknown[] = [];
@@ -2365,364 +1649,9 @@ describe('Asset-based load() without a handler — extra config fields as option
       return `loaded:${source}`;
     });
 
-    const asset = new Asset({ type: 'richAsset', source: 'extra.dat', format: 'tiled' });
-    await loader.load(asset);
+    await loader.load(MockAssetType, 'extra.dat', { format: 'tiled' });
 
     expect(receivedOptions[0]).toMatchObject({ format: 'tiled' });
-  });
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Coverage sweep — _describeType() anonymous-constructor fallback
-// ─────────────────────────────────────────────────────────────────────────────
-
-describe('registerManifest() conflict message — anonymous constructor', () => {
-  test('falls back to "(anonymous type)" for an unnamed constructor', () => {
-    const loader = new Loader({ basePath: '/' });
-    const Anon = class {};
-
-    Object.defineProperty(Anon, 'name', { value: '' });
-
-    loader.registerManifest(
-      defineAssetManifest({
-        bundles: { boot: [{ type: Anon, alias: 'x', path: 'a.txt' }] },
-      }),
-    );
-
-    expect(() =>
-      loader.registerManifest(
-        defineAssetManifest({
-          bundles: { other: [{ type: Anon, alias: 'x', path: 'b.txt' }] },
-        }),
-      ),
-    ).toThrow('(anonymous type)');
-  });
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Coverage sweep — _areOptionsEquivalent() full branch matrix
-// ─────────────────────────────────────────────────────────────────────────────
-
-describe('registerManifest() option-equivalence branch matrix', () => {
-  function registerTwice(firstOptions: unknown, secondOptions: unknown): () => void {
-    const loader = new Loader({ basePath: '/' });
-
-    loader.registerManifest(
-      defineAssetManifest({
-        bundles: { boot: [{ type: TextAsset, alias: 'x', path: 'a.txt', options: firstOptions }] },
-      }),
-    );
-
-    return () =>
-      loader.registerManifest(
-        defineAssetManifest({
-          bundles: { other: [{ type: TextAsset, alias: 'x', path: 'a.txt', options: secondOptions }] },
-        }),
-      );
-  }
-
-  test('rejects when one side has options and the other has none (typeof mismatch)', () => {
-    expect(registerTwice(undefined, {})).toThrow('Conflicting asset definition');
-  });
-
-  test('rejects when one options value is null and the other a non-null object', () => {
-    expect(registerTwice(null, {})).toThrow('Conflicting asset definition');
-  });
-
-  test('rejects when both options are non-object primitives with different values', () => {
-    expect(registerTwice(1, 2)).toThrow('Conflicting asset definition');
-  });
-
-  test('allows deeply-equal nested plain-object and array options', () => {
-    expect(registerTwice({ nested: { a: [1, 2, { b: 3 }] } }, { nested: { a: [1, 2, { b: 3 }] } })).not.toThrow();
-  });
-
-  test('rejects arrays of different lengths', () => {
-    expect(registerTwice({ list: [1, 2] }, { list: [1] })).toThrow('Conflicting asset definition');
-  });
-
-  test('rejects options objects with a different number of keys', () => {
-    expect(registerTwice({ a: 1 }, { a: 1, b: 2 })).toThrow('Conflicting asset definition');
-  });
-
-  test('rejects options objects with the same key count but different key names', () => {
-    expect(registerTwice({ a: 1 }, { b: 1 })).toThrow('Conflicting asset definition');
-  });
-
-  test('rejects options with matching keys but a differing nested value', () => {
-    expect(registerTwice({ a: { b: 1 } }, { a: { b: 2 } })).toThrow('Conflicting asset definition');
-  });
-
-  test('rejects when options prototypes differ (plain object vs. class instance)', () => {
-    class OptionsBox {
-      public constructor(public readonly value: number) {}
-    }
-
-    expect(registerTwice(new OptionsBox(1), { value: 1 })).toThrow('Conflicting asset definition');
-  });
-
-  test('accepts two structurally-identical same-class option instances as equivalent', () => {
-    class OptionsBox {
-      public constructor(public readonly value: number) {}
-    }
-
-    expect(registerTwice(new OptionsBox(1), new OptionsBox(1))).not.toThrow();
-  });
-
-  test('rejects two same-class option instances with differing fields', () => {
-    class OptionsBox {
-      public constructor(public readonly value: number) {}
-    }
-
-    expect(registerTwice(new OptionsBox(1), new OptionsBox(2))).toThrow('Conflicting asset definition');
-  });
-
-  test('compares Date options by timestamp', () => {
-    expect(registerTwice({ since: new Date(1000) }, { since: new Date(1000) })).not.toThrow();
-    expect(registerTwice({ since: new Date(1000) }, { since: new Date(2000) })).toThrow('Conflicting asset definition');
-  });
-
-  test('exotic containers stay reference-only (two similar Maps still conflict)', () => {
-    expect(
-      registerTwice(
-        { lookup: new Map([['a', 1]]) },
-        {
-          lookup: new Map([['a', 1]]),
-        },
-      ),
-    ).toThrow('Conflicting asset definition');
-  });
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Coverage sweep — background bundle loading: cache-hit / in-flight shortcuts in
-// _loadSingleBackground, _isQueuedInBackground dedup, and _waitForBackgroundEntry's
-// onLoaded/onError mismatch-ignore branches
-// ─────────────────────────────────────────────────────────────────────────────
-
-describe('background bundle loading — _loadSingleBackground shortcuts', () => {
-  const originalFetch = global.fetch;
-
-  afterEach(() => {
-    global.fetch = originalFetch;
-  });
-
-  function mockFetch(): void {
-    global.fetch = vi.fn(async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', text: async () => 'raw' }) as unknown as Response);
-  }
-
-  test('background bundle load resolves instantly for an alias already in memory', async () => {
-    const factory = new MockTextFactory();
-    const loader = new Loader({ basePath: '/' });
-
-    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
-    loader.registerManifest(
-      defineAssetManifest({
-        bundles: { boot: [{ type: TextAsset, alias: 'preloaded', path: 'preloaded.txt' }] },
-      }),
-    );
-    mockFetch();
-
-    await loader.load(TextAsset, 'preloaded');
-    (global.fetch as MockInstance).mockClear();
-
-    await loader.loadBundle('boot', { background: true });
-
-    expect(global.fetch).not.toHaveBeenCalled();
-  });
-
-  test('background bundle load attaches to an already-in-flight foreground fetch', async () => {
-    const factory = new MockTextFactory();
-    const loader = new Loader({ basePath: '/' });
-    const deferred = createDeferred<Response>();
-
-    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
-    loader.registerManifest(
-      defineAssetManifest({
-        bundles: { boot: [{ type: TextAsset, alias: 'shared', path: 'shared.txt' }] },
-      }),
-    );
-
-    global.fetch = vi.fn((): Promise<Response> => deferred.promise);
-
-    const foreground = loader.load(TextAsset, 'shared');
-    const bundlePromise = loader.loadBundle('boot', { background: true });
-
-    expect(global.fetch).toHaveBeenCalledTimes(1);
-
-    deferred.resolve({ ok: true, status: 200, statusText: 'OK' } as Response);
-
-    await foreground;
-    await bundlePromise;
-
-    expect(loader.has(TextAsset, 'shared')).toBe(true);
-  });
-
-  test('two overlapping background bundle loads for the same not-yet-started alias dedupe via _isQueuedInBackground', async () => {
-    const factory = new MockTextFactory();
-    const loader = new Loader({ basePath: '/', concurrency: 1 });
-    const blocker = createDeferred<Response>();
-    const shared = createDeferred<Response>();
-
-    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
-    loader.registerManifest(
-      defineAssetManifest({
-        bundles: {
-          first: [
-            { type: TextAsset, alias: 'blocker', path: 'blocker.txt' },
-            { type: TextAsset, alias: 'shared', path: 'shared2.txt' },
-          ],
-          second: [{ type: TextAsset, alias: 'shared', path: 'shared2.txt' }],
-        },
-      }),
-    );
-
-    global.fetch = vi.fn((input: RequestInfo | URL): Promise<Response> => {
-      const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
-
-      if (url.endsWith('/blocker.txt')) return blocker.promise;
-      if (url.endsWith('/shared2.txt')) return shared.promise;
-      throw new Error(`Unexpected fetch url: ${url}`);
-    });
-
-    const firstBundle = loader.loadBundle('first', { background: true });
-    const secondBundle = loader.loadBundle('second', { background: true });
-
-    blocker.resolve({ ok: true, status: 200, statusText: 'OK' } as Response);
-    shared.resolve({ ok: true, status: 200, statusText: 'OK' } as Response);
-
-    await Promise.all([firstBundle, secondBundle]);
-
-    expect(global.fetch).toHaveBeenCalledTimes(2); // blocker.txt + shared2.txt only — no duplicate fetch for "shared"
-  });
-
-  test('_waitForBackgroundEntry ignores onLoaded/onError events for other aliases while waiting for its own', async () => {
-    const factory = new MockTextFactory();
-    const loader = new Loader({ basePath: '/', concurrency: 2 });
-
-    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
-    loader.registerManifest(
-      defineAssetManifest({
-        bundles: {
-          boot: [
-            { type: TextAsset, alias: 'first', path: 'first.txt' },
-            { type: TextAsset, alias: 'second', path: 'second.txt' },
-            { type: TextAsset, alias: 'third', path: 'third.txt' },
-          ],
-        },
-      }),
-    );
-
-    global.fetch = vi.fn(async (input: RequestInfo | URL): Promise<Response> => {
-      const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
-
-      if (url.endsWith('/second.txt')) {
-        return { ok: false, status: 404, statusText: 'Not Found' } as Response;
-      }
-
-      return { ok: true, status: 200, statusText: 'OK' } as Response;
-    });
-
-    await expect(loader.loadBundle('boot', { background: true })).rejects.toBeInstanceOf(BundleLoadError);
-
-    expect(loader.has(TextAsset, 'first')).toBe(true);
-    expect(loader.has(TextAsset, 'third')).toBe(true);
-    expect(loader.has(TextAsset, 'second')).toBe(false);
-  });
-
-  test('_waitForBackgroundEntry rejects when the entry it is waiting for itself fails', async () => {
-    const factory = new MockTextFactory();
-    const loader = new Loader({ basePath: '/', concurrency: 1 });
-
-    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
-    loader.registerManifest(
-      defineAssetManifest({
-        bundles: {
-          boot: [
-            { type: TextAsset, alias: 'first', path: 'first.txt' },
-            { type: TextAsset, alias: 'waiting', path: 'waiting.txt' },
-          ],
-        },
-      }),
-    );
-
-    global.fetch = vi.fn(async (input: RequestInfo | URL): Promise<Response> => {
-      const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
-
-      if (url.endsWith('/waiting.txt')) {
-        return { ok: false, status: 404, statusText: 'Not Found' } as Response;
-      }
-
-      return { ok: true, status: 200, statusText: 'OK' } as Response;
-    });
-
-    // concurrency: 1 -> 'first' starts immediately, 'waiting' sits in the queue and
-    // is only observed via `_waitForBackgroundEntry`'s onLoaded/onError listeners.
-    await expect(loader.loadBundle('boot', { background: true })).rejects.toBeInstanceOf(BundleLoadError);
-
-    expect(loader.has(TextAsset, 'first')).toBe(true);
-    expect(loader.has(TextAsset, 'waiting')).toBe(false);
-  });
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// backgroundLoad() re-entrancy — queued entries must not be duplicated
-// ─────────────────────────────────────────────────────────────────────────────
-
-describe('backgroundLoad() re-entrancy', () => {
-  const originalFetch = global.fetch;
-
-  afterEach(() => {
-    global.fetch = originalFetch;
-  });
-
-  test('calling backgroundLoad() again before the queue drains does not double-queue entries or corrupt onProgress', async () => {
-    const factory = new MockTextFactory();
-    const loader = new Loader({ basePath: '/', concurrency: 1 });
-    const deferredA = createDeferred<Response>();
-    const deferredB = createDeferred<Response>();
-    const progress: Array<[number, number]> = [];
-
-    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
-    loader.registerManifest(
-      defineAssetManifest({
-        bundles: {
-          seed: [
-            { type: TextAsset, alias: 'a', path: 'a.txt' },
-            { type: TextAsset, alias: 'b', path: 'b.txt' },
-          ],
-        },
-      }),
-    );
-
-    const done = new Promise<void>(resolve => {
-      loader.onProgress.add((loaded, total) => {
-        progress.push([loaded, total]);
-        if (loaded === total) resolve();
-      });
-    });
-
-    global.fetch = vi.fn((input: RequestInfo | URL): Promise<Response> => {
-      const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
-
-      if (url.endsWith('/a.txt')) return deferredA.promise;
-      if (url.endsWith('/b.txt')) return deferredB.promise;
-      throw new Error(`Unexpected fetch url: ${url}`);
-    });
-
-    loader.backgroundLoad(); // queue=[a,b] -> starts 'a' (active=1), 'b' stays queued
-    loader.backgroundLoad(); // 'a' in-flight -> skipped; 'b' already queued -> skipped too
-
-    deferredA.resolve({ ok: true, status: 200, statusText: 'OK' } as Response);
-    deferredB.resolve({ ok: true, status: 200, statusText: 'OK' } as Response);
-
-    await done;
-
-    expect(global.fetch).toHaveBeenCalledTimes(2); // a.txt + b.txt fetched once each
-    expect(progress).toEqual([
-      [1, 2],
-      [2, 2],
-    ]); // loaded never exceeds total
   });
 });
 
@@ -2748,13 +1677,13 @@ describe('Loader constructor — cache option as an array of stores', () => {
 });
 
 describe('unload()-during-in-flight identity cleanup on rejection', () => {
+  class RichAsset {}
+
   test('does not throw when the identity tracking was already cleared before the fetch rejects', async () => {
     const loader = new Loader({ basePath: '/' });
     const deferred = createDeferred<unknown>();
 
-    loader.registerAssetType('richAsset', {
-      load: async () => deferred.promise,
-    });
+    loader.bindAsset<unknown>({ type: RichAsset, typeNames: ['richAsset'] }, { load: async () => deferred.promise });
 
     const asset = new Asset({ type: 'richAsset', source: 'x.dat', format: 'x' });
     const pending = loader.load(asset);
@@ -2766,31 +1695,6 @@ describe('unload()-during-in-flight identity cleanup on rejection', () => {
     deferred.reject(new Error('boom'));
 
     await expect(pending).rejects.toThrow('boom');
-  });
-});
-
-describe('loadBundle() with an empty bundle', () => {
-  test('resolves immediately and reports zero/zero progress', async () => {
-    const loader = new Loader({ basePath: '/' });
-    const signalProgress: Array<[string, number, number]> = [];
-
-    loader.registerManifest(defineAssetManifest({ bundles: { empty: [] } }));
-    loader.onBundleProgress.add((name, loaded, total) => {
-      signalProgress.push([name, loaded, total]);
-    });
-
-    const callbackProgress: Array<[number, number]> = [];
-
-    await expect(
-      loader.loadBundle('empty', {
-        onProgress: (loaded, total) => {
-          callbackProgress.push([loaded, total]);
-        },
-      }),
-    ).resolves.toBeUndefined();
-
-    expect(signalProgress).toContainEqual(['empty', 0, 0]);
-    expect(callbackProgress).toContainEqual([0, 0]);
   });
 });
 
@@ -2807,13 +1711,13 @@ describe('unloadAll() with no type argument', () => {
     await loader.load(TextAsset, 'a.txt');
     await loader.load(DummyAsset, 'b.dat');
 
-    expect(loader.has(TextAsset, 'a.txt')).toBe(true);
-    expect(loader.has(DummyAsset, 'b.dat')).toBe(true);
+    expect(loader._peekResource(TextAsset, 'a.txt')).not.toBeNull();
+    expect(loader._peekResource(DummyAsset, 'b.dat')).not.toBeNull();
 
     loader.unloadAll();
 
-    expect(loader.has(TextAsset, 'a.txt')).toBe(false);
-    expect(loader.has(DummyAsset, 'b.dat')).toBe(false);
+    expect(loader._peekResource(TextAsset, 'a.txt')).toBeNull();
+    expect(loader._peekResource(DummyAsset, 'b.dat')).toBeNull();
   });
 });
 
@@ -2839,19 +1743,19 @@ describe('legacy Record<string, BatchValue> — third-argument options merge', (
 
 describe('load({ alias: config }) — plain object values are auto-wrapped in an Asset', () => {
   test('a plain (non-Asset) config object value loads correctly', async () => {
-    const factory = new MockAssetFactory();
     const loader = new Loader({ basePath: '/' });
 
-    loader.registerAssetType('mockAsset', MockAssetType as never, factory as AssetFactory<MockAssetType>);
-    global.fetch = vi.fn(async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', text: async () => 'raw' }) as unknown as Response);
+    loader.bindAsset<string>({ type: MockAssetType, typeNames: ['mockAsset'] }, { load: async request => `loaded:${request.source}` });
 
     await loader.load({ hero: { type: 'mockAsset', source: 'hero.dat' } });
 
-    expect(loader.has(MockAssetType, 'hero')).toBe(true);
+    expect(loader._peekResource(MockAssetType, 'hero')).not.toBeNull();
   });
 });
 
 describe('non-Error throws are stringified when wrapping fetch/handler failures', () => {
+  class RichAsset {}
+
   const originalFetch = global.fetch;
 
   afterEach(() => {
@@ -2861,12 +1765,15 @@ describe('non-Error throws are stringified when wrapping fetch/handler failures'
   test('_fetchWithHandler wraps a thrown non-Error value from a handler', async () => {
     const loader = new Loader({ basePath: '/assets/' });
 
-    loader.registerAssetType('richAsset', {
-      load: async () => {
-        // eslint-disable-next-line @typescript-eslint/only-throw-error
-        throw 'plain string failure';
+    loader.bindAsset<string>(
+      { type: RichAsset, typeNames: ['richAsset'] },
+      {
+        load: async () => {
+          // eslint-disable-next-line @typescript-eslint/only-throw-error
+          throw 'plain string failure';
+        },
       },
-    });
+    );
 
     const asset = new Asset({ type: 'richAsset', source: 'y.json', format: 'y' });
 
@@ -2885,25 +1792,5 @@ describe('non-Error throws are stringified when wrapping fetch/handler failures'
     });
 
     await expect(loader.load(TextAsset, 'boom.txt')).rejects.toThrow(/raw string boom/);
-  });
-});
-
-describe('registerManifest() option-equivalence — array element mismatch (same length)', () => {
-  test('rejects same-length arrays with a differing element', () => {
-    const loader = new Loader({ basePath: '/' });
-
-    loader.registerManifest(
-      defineAssetManifest({
-        bundles: { boot: [{ type: TextAsset, alias: 'x', path: 'a.txt', options: { list: [1, 2, 3] } }] },
-      }),
-    );
-
-    expect(() =>
-      loader.registerManifest(
-        defineAssetManifest({
-          bundles: { other: [{ type: TextAsset, alias: 'x', path: 'a.txt', options: { list: [1, 2, 4] } }] },
-        }),
-      ),
-    ).toThrow('Conflicting asset definition');
   });
 });

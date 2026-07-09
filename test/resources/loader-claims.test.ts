@@ -3,6 +3,7 @@ import { expectTypeOf } from 'vitest';
 import { Sound } from '#audio/Sound';
 import { materializeAssetBindings } from '#extensions/materialize';
 import { Texture } from '#rendering/texture/Texture';
+import { Assets } from '#resources/Assets';
 import { coreAssetBindings } from '#resources/coreAssetBindings';
 import { Loader, type LoaderOptions } from '#resources/Loader';
 
@@ -111,12 +112,15 @@ describe('refcount / claims', () => {
   });
 
   test('a not-yet-started background entry is dropped from the queue at refcount 0', () => {
-    mockFetchAudio();
+    // Hanging fetch: 'a.ogg' stays in flight (never settles), so 'b'/'c' remain
+    // queued behind the cap — no background fetch settles past the synchronous
+    // assertions (avoids an unhandled rejection after the test tears the mock down).
+    global.fetch = vi.fn((): Promise<Response> => new Promise<Response>(() => {})) as unknown as typeof fetch;
     // Concurrency 1: only 'a.ogg' goes in flight; 'b'/'c' stay queued so the
     // eviction queue-drop splice is actually exercised (at the default cap of 6
     // all three drain synchronously and the queue is already empty).
     const loader = createCoreLoader({ concurrency: 1 });
-    loader.backgroundLoad(Sound, ['a.ogg', 'b.ogg', 'c.ogg']);
+    loader.load(Assets.from({ a: 'a.ogg', b: 'b.ogg', c: 'c.ogg' }), { background: true });
 
     expect(loader['_isQueuedInBackground'](Sound, 'c.ogg')).toBe(true); // still queued behind the cap
     loader.release(Sound, 'c.ogg');

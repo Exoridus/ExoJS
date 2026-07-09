@@ -4,6 +4,7 @@ import { logger, LogSeverity } from '#core/logging';
 import { materializeAssetBindings } from '#extensions/materialize';
 import { Texture } from '#rendering/texture/Texture';
 import { ScaleModes } from '#rendering/types';
+import { Assets } from '#resources/Assets';
 import { coreAssetBindings } from '#resources/coreAssetBindings';
 import { Loader } from '#resources/Loader';
 import { textureSeamlessAdapter } from '#resources/seamless';
@@ -90,7 +91,7 @@ describe('Loader seamless get (Texture)', () => {
     await first.loaded;
 
     expect(loader.get(Texture, 'ship.png')).toBe(first);
-    expect(loader.has(Texture, 'ship.png')).toBe(true);
+    expect(loader._peekResource(Texture, 'ship.png')).not.toBeNull();
   });
 
   test('load() after get() resolves to the SAME handle instance', async () => {
@@ -221,23 +222,23 @@ describe('Loader seamless get (Texture)', () => {
     }
   });
 
-  test('backgroundLoad-registered samplerOptions are baked into a later bare get() placeholder', async () => {
+  test('samplerOptions on a background-adopted catalog leaf survive a later bare get()', async () => {
     mockFetchImage();
     const loader = createCoreLoader();
 
-    loader.backgroundLoad(Texture, 'ship.png', { samplerOptions: { scaleMode: ScaleModes.Nearest } });
+    const catalog = new Assets({ ship: { type: 'texture', source: 'ship.png', samplerOptions: { scaleMode: ScaleModes.Nearest } } });
+    loader.load(catalog, { background: true });
 
+    // A bare get() for the same source returns the adopted leaf, whose sampler
+    // options were baked at createPlaceholder — not just applied at fetch time.
     const handle = loader.get(Texture, 'ship.png');
-
-    // Same options the fetch path would resolve via `options ?? entry?.options`
-    // (§ manifest fold) must be baked at createPlaceholder, not just the fetch.
     expect(handle.scaleMode).toBe(ScaleModes.Nearest);
 
     await handle.loaded;
     expect(handle.scaleMode).toBe(ScaleModes.Nearest);
   });
 
-  test('inline get() options still win over any registered manifest entry (no manifest here)', () => {
+  test('inline get() options are baked into the placeholder', () => {
     mockFetchImage();
     const loader = createCoreLoader();
 
@@ -294,7 +295,7 @@ describe('Loader seamless get (Texture)', () => {
     await expect(handle.loaded).rejects.toThrow('Failed to load');
     expect(handle.loadState).toBe('failed');
     expect(handle.source).toBe(Texture.missing.source);
-    expect(loader.has(Texture, 'gone.png')).toBe(false);
+    expect(loader._peekResource(Texture, 'gone.png')).toBeNull();
   });
 
   test('get() on a failed source retries and heals the SAME handle in place', async () => {
@@ -320,7 +321,7 @@ describe('Loader seamless get (Texture)', () => {
     expect(handle.loadState).toBe('ready');
     expect(handle.width).toBe(16);
     expect(handle.source).not.toBe(Texture.missing.source);
-    expect(loader.has(Texture, 'flaky.png')).toBe(true);
+    expect(loader._peekResource(Texture, 'flaky.png')).not.toBeNull();
 
     await expect(rejectedPromise).rejects.toThrow(); // the old promise stays rejected
   });
@@ -380,8 +381,11 @@ describe('Loader seamless get (Texture)', () => {
     const loader = createCoreLoader();
     const errors: string[] = [];
 
+    loader.setConcurrency(0); // park the queue so the boosting get() owns (and awaits) the single fetch
     loader.onError.add((_type, alias) => errors.push(alias));
-    loader.backgroundLoad(Texture, ['gone.png']);
+    // The background catalog queue rejects when its leaf 404s; the failure is
+    // asserted below via `handle.loaded`, so swallow the queue's own rejection.
+    loader.load(Assets.from({ gone: 'gone.png' }), { background: true }).catch(() => {});
 
     const handle = loader.get(Texture, 'gone.png');
 
