@@ -22,9 +22,10 @@ function loadFixture(name: string): unknown {
 
 // ── Mock context factory ─────────────────────────────────────────────────────
 //
-// The runtime binding's handler calls ctx.loader.load(TiledMap, source) as a
-// sub-load to share the Loader cache with the source binding. The mock below
-// handles both Texture and TiledMap sub-loads.
+// The runtime binding's handler calls ctx.loader.load(TiledMap.of(source, opts))
+// as a sub-load to share the Loader cache with the source binding. The mock
+// below handles both Texture and TiledMap sub-loads, both arriving as `.of(...)`
+// asset descriptors (single-argument form).
 
 function makeContext(fixtures: Record<string, unknown>) {
   const loaderLoad = vi.fn();
@@ -41,17 +42,18 @@ function makeContext(fixtures: Record<string, unknown>) {
   };
 
   // Configure loaderLoad after context is defined so the closure captures it.
-  loaderLoad.mockImplementation(async (token: unknown, url: string, _opts?: unknown): Promise<unknown> => {
-    // Texture sub-loads now arrive as `Texture.of(src)` descriptors (asset form);
-    // the parsed-source TiledMap sub-load is still dispatched by token.
-    if ((token as { type?: unknown } | null)?.type === 'texture') {
+  loaderLoad.mockImplementation(async (token: unknown): Promise<unknown> => {
+    // Both Texture and TiledMap sub-loads now arrive as `X.of(src)` descriptors
+    // (asset form) rather than a `(constructor, url, opts)` token call.
+    const asset = token as { type?: unknown; source?: unknown } | null;
+    if (asset?.type === 'texture') {
       const tex = new Texture();
       tex.width = 32;
       tex.height = 32;
       return tex;
     }
-    if (token === TiledMap) {
-      return loadTiledMap(url, context);
+    if (asset?.type === 'tiledMap') {
+      return loadTiledMap(asset.source as string, context);
     }
     throw new Error(`tiledRuntimeMapBinding.test: unexpected loader.load token: ${String(token)}`);
   });
@@ -127,10 +129,10 @@ describe('tiledRuntimeMapBinding.load — minimal map', () => {
     expect(result.tileHeight).toBe(16);
   });
 
-  it('delegates to ctx.loader.load(TiledMap, source) internally', async () => {
+  it('delegates to ctx.loader.load(TiledMap.of(source)) internally', async () => {
     const handler = tiledRuntimeMapBinding.create();
     await handler.load({ source: 'minimal.tmj' }, context);
-    expect(context.loader.load).toHaveBeenCalledWith(TiledMap, 'minimal.tmj', undefined);
+    expect(context.loader.load).toHaveBeenCalledWith(TiledMap.of('minimal.tmj'));
   });
 });
 
@@ -191,6 +193,6 @@ describe('tiledRuntimeMapBinding.load — options passthrough', () => {
     const handler = tiledRuntimeMapBinding.create();
     const opts = { format: 'tiled' as const };
     await handler.load({ source: 'world.tmj', options: opts }, context);
-    expect(loaderLoad).toHaveBeenCalledWith(TiledMap, 'world.tmj', opts);
+    expect(loaderLoad).toHaveBeenCalledWith(TiledMap.of('world.tmj', opts));
   });
 });

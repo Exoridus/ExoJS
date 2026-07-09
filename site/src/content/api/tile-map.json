@@ -1356,7 +1356,7 @@
         },
         {
           "name": "of",
-          "signature": "of(source: string): Asset<TileMap>",
+          "signature": "of(source: string, options?: Record<string, unknown>): Asset<TileMap>",
           "signatureTokens": [
             {
               "text": "of",
@@ -1377,6 +1377,46 @@
             {
               "text": "string",
               "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             },
             {
               "text": ")",
@@ -1408,10 +1448,15 @@
               "name": "source",
               "type": "string",
               "optional": false
+            },
+            {
+              "name": "options",
+              "type": "Record<string, unknown>",
+              "optional": true
             }
           ],
           "returnType": "Asset<TileMap>",
-          "description": "Annotation descriptor for a runtime tile map asset, for Assets.from({...}) / loader.get(...) / loader.load(...) (asset-system v2 §5). The concrete loader binding (and the tileMap asset kind) is provided by a format package such as @codexo/exojs-tiled; use for dynamic paths, or prefer a bare 'world.tmj' string when the suffix is a literal."
+          "description": "Annotation descriptor for a runtime tile map asset, for Assets.from({...}) / loader.get(...) / loader.load(...) (asset-system v2 §5). The concrete loader binding (and the tileMap asset kind) is provided by a format package such as @codexo/exojs-tiled; use for dynamic paths, per-asset options (e.g. a format hint, format-package-specific), or prefer a bare 'world.tmj' string when the suffix is a literal."
         }
       ],
       "paragraphs": [],

@@ -34,7 +34,7 @@ export const tiledRuntimeMapBinding = defineAsset<TileMap, TiledLoadOptions>({
         return `${req.source}|${o.format}`;
       },
       async load(req, ctx) {
-        const tiledMap = await ctx.loader.load(TiledMap, req.source, req.options);
+        const tiledMap = await ctx.loader.load(TiledMap.of(req.source, req.options));
         return tiledMap.toTileMap();
       },
     } satisfies AssetHandler<TileMap, TiledLoadOptions>;

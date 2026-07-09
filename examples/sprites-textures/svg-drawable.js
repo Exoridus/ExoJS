@@ -20,12 +20,7 @@ class SvgDrawableScene extends Scene {
         // The exo.js wordmark SVG carries only a viewBox (no width/height), so
         // it would rasterise to a 0x0 image. Request an explicit pixel size —
         // the SVG is vector, so it stays crisp at any rasterised resolution.
-        // NOTE: SvgAsset.of() does not accept a `{ width, height }` presize option
-        // (unlike FontAsset.of()'s `family`), so the old token record-form load()
-        // is retained here for the sizing option; the alias-lookup get() call is
-        // dropped in favour of holding the handle directly from load()'s return.
-        const { mark } = await loader.load(SvgAsset, { mark: 'svg/exo-wordmark.svg' }, { width: 850, height: 324 });
-        this.image = mark;
+        this.image = await loader.load(SvgAsset.of('svg/exo-wordmark.svg', { width: 850, height: 324 }));
     }
     init() {
         const { width, height } = this.app.canvas;

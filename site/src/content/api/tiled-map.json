@@ -351,7 +351,7 @@
         },
         {
           "name": "of",
-          "signature": "of(source: string): Asset<TiledMap>",
+          "signature": "of(source: string, options?: TiledLoadOptions): Asset<TiledMap>",
           "signatureTokens": [
             {
               "text": "of",
@@ -372,6 +372,26 @@
             {
               "text": "string",
               "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TiledLoadOptions",
+              "kind": "type"
             },
             {
               "text": ")",
@@ -403,10 +423,15 @@
               "name": "source",
               "type": "string",
               "optional": false
+            },
+            {
+              "name": "options",
+              "type": "TiledLoadOptions",
+              "optional": true
             }
           ],
           "returnType": "Asset<TiledMap>",
-          "description": "Annotation descriptor for the parsed Tiled source map, for Assets.from({...}) / loader.get(...) / loader.load(...) (asset-system v2 §5). This is the advanced parsed-source token; prefer the runtime TileMap (TileMap.of('world.tmj') or a bare 'world.tmj') for rendering. Use for dynamic paths or per-asset options."
+          "description": "Annotation descriptor for the parsed Tiled source map, for Assets.from({...}) / loader.get(...) / loader.load(...) (asset-system v2 §5). This is the advanced parsed-source token; prefer the runtime TileMap (TileMap.of('world.tmj') or a bare 'world.tmj') for rendering. Use for dynamic paths or per-asset options — e.g. an explicit TiledLoadOptions.format hint for a .json path."
         }
       ],
       "paragraphs": [],

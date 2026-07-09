@@ -11,6 +11,7 @@ import {
 } from './gid';
 import { createTiledLayer, TiledGroupLayer, TiledImageLayer, type TiledLayer,TiledObjectLayer, TiledTileLayer } from './TiledLayer';
 import type { TiledObject } from './TiledObject';
+import type { TiledLoadOptions } from './tiledOptions';
 import type { TiledTileset } from './TiledTileset';
 import { resolveTiledUrl } from './url';
 import { TiledFormatError } from './validate';
@@ -34,10 +35,11 @@ export class TiledMap {
    * `Assets.from({...})` / `loader.get(...)` / `loader.load(...)`
    * (asset-system v2 §5). This is the advanced parsed-source token; prefer the
    * runtime {@link TileMap} (`TileMap.of('world.tmj')` or a bare `'world.tmj'`)
-   * for rendering. Use for dynamic paths or per-asset options.
+   * for rendering. Use for dynamic paths or per-asset options — e.g. an
+   * explicit {@link TiledLoadOptions.format} hint for a `.json` path.
    */
-  public static of(source: string): Asset<TiledMap> {
-    return new Asset({ type: 'tiledMap', source }) as unknown as Asset<TiledMap>;
+  public static of(source: string, options?: TiledLoadOptions): Asset<TiledMap> {
+    return new Asset({ type: 'tiledMap', source, ...options });
   }
 
   /** Resolved URL this map was loaded from. */

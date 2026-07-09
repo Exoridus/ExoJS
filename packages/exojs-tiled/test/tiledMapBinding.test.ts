@@ -37,17 +37,18 @@ function makeContext(fixtures: Record<string, unknown>) {
   };
 
   // Handles both Texture and TiledMap sub-loads (for the runtime binding below).
-  loaderLoad.mockImplementation(async (token: unknown, url: string, _opts?: unknown): Promise<unknown> => {
-    // Texture sub-loads now arrive as `Texture.of(src)` descriptors (asset form);
-    // the parsed-source TiledMap sub-load is still dispatched by token.
-    if ((token as { type?: unknown } | null)?.type === 'texture') {
+  // Both now arrive as `X.of(src)` descriptors (asset form) rather than a
+  // `(constructor, url, opts)` token call.
+  loaderLoad.mockImplementation(async (token: unknown): Promise<unknown> => {
+    const asset = token as { type?: unknown; source?: unknown } | null;
+    if (asset?.type === 'texture') {
       const tex = new Texture();
       tex.width = 32;
       tex.height = 32;
       return tex;
     }
-    if (token === TiledMap) {
-      return loadTiledMap(url, context);
+    if (asset?.type === 'tiledMap') {
+      return loadTiledMap(asset.source as string, context);
     }
     throw new Error(`tiledMapBinding.test: unexpected loader.load token: ${String(token)}`);
   });
