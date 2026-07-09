@@ -1,4 +1,4 @@
-import { Application, AudioGenerator, Color, GamepadAxis, GamepadButton, Graphics, Scene, Sprite, Text, Texture, Vector, type Voice } from '@codexo/exojs';
+import { Application, AudioGenerator, Color, GamepadAxis, GamepadButton, Graphics, Scene, Sprite, Text, Vector, type Voice } from '@codexo/exojs';
 import {
     AlphaFadeOverLifetime,
     BurstSpawn,
@@ -54,18 +54,19 @@ class GamepadSpaceshipScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
 
     override async load(loader): Promise<void> {
-        await loader.load(Texture, { ship: assets.demo.textures.shipA, particle: assets.demo.textures.particleSpark });
+        await loader.load(assets.demo.textures.shipA);
+        await loader.load(assets.demo.textures.particleSpark);
     }
 
     override init(loader): void {
         const { width, height } = this.app.canvas;
 
-        this.ship = new Sprite(loader.get(Texture, 'ship')).setAnchor(0.5).setScale(0.5).setPosition(width / 2, height / 2);
+        this.ship = new Sprite(loader.get(assets.demo.textures.shipA)).setAnchor(0.5).setScale(0.5).setPosition(width / 2, height / 2);
         this.engine = this.app.audio.play(new AudioGenerator({ type: 'sawtooth', frequency: 90 }), { volume: 0 });
 
         this.fx = new Graphics();
 
-        this.particles = new ParticleSystem(loader.get(Texture, 'particle'), { capacity: 4000 });
+        this.particles = new ParticleSystem(loader.get(assets.demo.textures.particleSpark), { capacity: 4000 });
         this.burst = new BurstSpawn({
             schedule: [{ time: 0, count: 60 }],
             lifetime: new Constant(0.5),

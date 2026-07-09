@@ -19,13 +19,13 @@ class RenderToTextureScene extends Scene {
     private renderSprite!: Sprite;
 
     override async load(loader): Promise<void> {
-        await loader.load(Texture, { bunny: 'image/ship-a.png' });
+        await loader.load('image/ship-a.png');
     }
 
     override init(loader): void {
         const { width, height } = this.app.canvas;
 
-        this.container = this.createBunnyContainer(loader.get(Texture, 'bunny'));
+        this.container = this.createBunnyContainer(loader.get('image/ship-a.png'));
 
         this.renderTexture = this.createRenderTexture(this.container);
 

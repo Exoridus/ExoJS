@@ -1,4 +1,4 @@
-import { Application, Color, RenderBackendType, Scene, Sprite, Texture, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
+import { Application, Color, RenderBackendType, Scene, Sprite, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -28,7 +28,7 @@ class CrtScanlinesScene extends Scene {
     private panel!: ReturnType<typeof mountControlPanel>;
 
     override async load(loader): Promise<void> {
-        await loader.load(Texture, { grid: PIXEL_GRID });
+        await loader.load(PIXEL_GRID);
     }
 
     override init(loader): void {
@@ -38,7 +38,7 @@ class CrtScanlinesScene extends Scene {
             app.backend.backendType === RenderBackendType.WebGpu
                 ? new WebGpuShaderFilter({ fragmentSource: wgsl })
                 : new WebGl2ShaderFilter({ fragmentSource: glsl });
-        this.sprite = new Sprite(loader.get(Texture, 'grid')).setAnchor(0.5).setScale(5).setPosition(width / 2, height / 2);
+        this.sprite = new Sprite(loader.get(PIXEL_GRID)).setAnchor(0.5).setScale(5).setPosition(width / 2, height / 2);
         this.sprite.filters = [this.filter];
 
         this.hud = mountControls({

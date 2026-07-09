@@ -1,4 +1,4 @@
-import { Application, Color, Scene, Texture, Vector, View } from '@codexo/exojs';
+import { Application, Color, Scene, Vector, View } from '@codexo/exojs';
 import {
     AlphaFadeOverLifetime,
     BurstSpawn,
@@ -29,14 +29,14 @@ class ScreenShakeOnExplosionScene extends Scene {
     private burst!: BurstSpawn;
 
     override async load(loader): Promise<void> {
-        await loader.load(Texture, { particle: 'image/particle-light.png' });
+        await loader.load('image/particle-light.png');
     }
 
     override init(loader): void {
         const { width, height } = this.app.canvas;
 
         this.view = new View(width / 2, height / 2, width, height);
-        this.ps = new ParticleSystem(loader.get(Texture, 'particle'), { capacity: 5000 });
+        this.ps = new ParticleSystem(loader.get('image/particle-light.png'), { capacity: 5000 });
         this.ps.setPosition(width / 2, height / 2);
         this.burstPos = new Vector(0, 0);
         this.burst = new BurstSpawn({

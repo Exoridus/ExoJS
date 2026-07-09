@@ -27,13 +27,11 @@ class AudioVisualisationScene extends Scene {
     private tapPrompt!: Text;
 
     override async load(loader): Promise<void> {
-        await loader.load(AudioStream, { example: assets.demo.audio.musicLoop });
+        this.music = await loader.load(AudioStream.of(assets.demo.audio.musicLoop));
     }
 
-    override init(loader): void {
+    override init(): void {
         const { width, height } = this.app.canvas;
-
-        this.music = loader.get(AudioStream, 'example');
 
         // One analyser tap for spectrum/waveform, one beat detector for the
         // beat-pulse ring. Both read the music bus the stream plays through,

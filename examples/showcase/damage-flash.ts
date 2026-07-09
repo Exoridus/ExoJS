@@ -1,4 +1,4 @@
-import { Application, Color, ColorFilter, Scene, Signal, Sprite, Texture } from '@codexo/exojs';
+import { Application, Color, ColorFilter, Scene, Signal, Sprite } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -23,14 +23,14 @@ class DamageFlashScene extends Scene {
     private hits = 0;
 
     override async load(loader): Promise<void> {
-        await loader.load(Texture, { ship: 'image/ship-a.png' });
+        await loader.load('image/ship-a.png');
     }
 
     override init(loader): void {
         const { width, height } = this.app.canvas;
 
         this.hit = new Signal();
-        this.ship = new Sprite(loader.get(Texture, 'ship')).setAnchor(0.5).setScale(2.2).setPosition(width / 2, height / 2);
+        this.ship = new Sprite(loader.get('image/ship-a.png')).setAnchor(0.5).setScale(2.2).setPosition(width / 2, height / 2);
         this.filterColor = new Color(255, 255, 255, 1);
         this.filter = new ColorFilter(this.filterColor);
         this.ship.filters = [this.filter];

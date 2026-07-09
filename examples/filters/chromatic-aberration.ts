@@ -1,4 +1,4 @@
-import { Application, Color, RenderBackendType, Scene, Sprite, Texture, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
+import { Application, Color, RenderBackendType, Scene, Sprite, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -43,7 +43,7 @@ class ChromaticAberrationScene extends Scene {
     private panel!: ReturnType<typeof mountControlPanel>;
 
     override async load(loader): Promise<void> {
-        await loader.load(Texture, { checker: CHECKER });
+        await loader.load(CHECKER);
     }
 
     override init(loader): void {
@@ -53,7 +53,7 @@ class ChromaticAberrationScene extends Scene {
             app.backend.backendType === RenderBackendType.WebGpu
                 ? new WebGpuShaderFilter({ fragmentSource: wgsl, uniforms: { uOffset: 0 } })
                 : new WebGl2ShaderFilter({ fragmentSource: glsl, uniforms: { uOffset: 0 } });
-        this.sprite = new Sprite(loader.get(Texture, 'checker')).setAnchor(0.5).setScale(2.6).setPosition(width / 2, height / 2);
+        this.sprite = new Sprite(loader.get(CHECKER)).setAnchor(0.5).setScale(2.6).setPosition(width / 2, height / 2);
         this.sprite.filters = [this.filter];
 
         // The HUD must exist before applyIntensity() runs — it calls hud.setStatus().

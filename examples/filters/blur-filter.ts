@@ -1,4 +1,4 @@
-import { Application, BlurFilter, Color, Scene, Sprite, Texture } from '@codexo/exojs';
+import { Application, BlurFilter, Color, Scene, Sprite } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -25,14 +25,14 @@ class BlurFilterScene extends Scene {
     private slider!: ReturnType<ReturnType<typeof mountControlPanel>['addSlider']>;
 
     override async load(loader): Promise<void> {
-        await loader.load(Texture, { grid: PIXEL_GRID });
+        await loader.load(PIXEL_GRID);
     }
 
     override init(loader): void {
         const { width, height } = this.app.canvas;
 
         this.blur = new BlurFilter({ radius: 4, quality: 2 });
-        this.sprite = new Sprite(loader.get(Texture, 'grid')).setAnchor(0.5).setScale(4.5).setPosition(width / 2, height / 2);
+        this.sprite = new Sprite(loader.get(PIXEL_GRID)).setAnchor(0.5).setScale(4.5).setPosition(width / 2, height / 2);
         this.sprite.filters = [this.blur];
 
         this.hud = mountControls({

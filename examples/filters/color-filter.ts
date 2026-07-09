@@ -1,4 +1,4 @@
-import { Application, Color, ColorFilter, RenderBackendType, Scene, Sprite, Texture, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
+import { Application, Color, ColorFilter, RenderBackendType, Scene, Sprite, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -59,13 +59,13 @@ class ColorFilterScene extends Scene {
     private cycle!: ReturnType<ReturnType<typeof mountControlPanel>['addCycle']>;
 
     override async load(loader): Promise<void> {
-        await loader.load(Texture, { hueRamp: HUE_RAMP });
+        await loader.load(HUE_RAMP);
     }
 
     override init(loader): void {
         const { width, height } = this.app.canvas;
 
-        this.sprite = new Sprite(loader.get(Texture, 'hueRamp')).setAnchor(0.5).setScale(4).setPosition(width / 2, height / 2);
+        this.sprite = new Sprite(loader.get(HUE_RAMP)).setAnchor(0.5).setScale(4).setPosition(width / 2, height / 2);
 
         // The built-in ColorFilter multiplies by a solid colour (warm tint here).
         this.tint = new ColorFilter(new Color(255, 160, 120));

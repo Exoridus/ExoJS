@@ -1,4 +1,4 @@
-import { Application, CallbackRenderPass, Color, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite, Texture } from '@codexo/exojs';
+import { Application, CallbackRenderPass, Color, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -27,7 +27,7 @@ class TrailFeedbackScene extends Scene {
     private time = 0;
 
     override async load(loader): Promise<void> {
-        await loader.load(Texture, { bunny: 'image/ship-a.png' });
+        await loader.load('image/ship-a.png');
     }
 
     override init(loader): void {
@@ -35,7 +35,7 @@ class TrailFeedbackScene extends Scene {
 
         this.rtA = new RenderTexture(width, height);
         this.rtB = new RenderTexture(width, height);
-        this.bunny = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5);
+        this.bunny = new Sprite(loader.get('image/ship-a.png')).setAnchor(0.5);
 
         // A 93%-alpha copy of the source target = the decaying trail.
         const decayA = new Sprite(this.rtA).setTint(new Color(255, 255, 255, 0.93));

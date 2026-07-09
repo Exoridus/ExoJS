@@ -23,13 +23,13 @@ class TypewriterTextScene extends Scene {
     private tapPrompt!: Text;
 
     override async load(loader): Promise<void> {
-        await loader.load(Sound, { tick: 'audio/ui-click.ogg' });
+        await loader.load('audio/ui-click.ogg');
     }
 
     override init(loader): void {
         const { width, height } = this.app.canvas;
 
-        this.sound = loader.get(Sound, 'tick');
+        this.sound = loader.get('audio/ui-click.ogg');
         this.text = new Text('', { fillColor: Color.white, fontSize: 40, lineHeight: 56, maxWidth: 900 });
         this.text.setAnchor(0, 0.5).setPosition(width * 0.12, height / 2);
         this.state = { count: 0 };
