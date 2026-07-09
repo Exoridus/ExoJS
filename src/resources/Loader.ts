@@ -1778,15 +1778,24 @@ export class Loader {
 
       const representative = this._representative(entry.handles);
 
-      if (representative !== undefined && adapter.stateOf(representative) === 'failed') {
-        adapter.begin(representative);
-        this._startSeamlessFetch(type, source, entry.options);
-      }
+      if (representative !== undefined) {
+        if (adapter.stateOf(representative) === 'failed') {
+          adapter.begin(representative);
+          this._startSeamlessFetch(type, source, entry.options);
+        }
 
-      return representative;
+        return representative;
+      }
+      // else: the handle set is (unexpectedly) empty — fall through and treat
+      // this as no live handle, creating a fresh placeholder below.
     }
 
-    const handle = adapter.createPlaceholder(options);
+    // Bake the SAME options `_loadSingle` would fetch with (raw `get()` options,
+    // else the manifest/backgroundLoad-registered options for this source) into
+    // the placeholder, so a bare `get()` after a `backgroundLoad(..., options)`
+    // renders with the registered sampler options instead of the default.
+    const resolvedOptions = options ?? this._getManifestEntry(type, source)?.options;
+    const handle = adapter.createPlaceholder(resolvedOptions);
 
     this._deferred.set(key, { handles: new Set([handle as object]), options });
     this._handleKeys.set(handle as object, key);

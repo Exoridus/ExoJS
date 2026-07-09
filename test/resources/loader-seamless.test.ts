@@ -221,6 +221,31 @@ describe('Loader seamless get (Texture)', () => {
     }
   });
 
+  test('backgroundLoad-registered samplerOptions are baked into a later bare get() placeholder', async () => {
+    mockFetchImage();
+    const loader = createCoreLoader();
+
+    loader.backgroundLoad(Texture, 'ship.png', { samplerOptions: { scaleMode: ScaleModes.Nearest } });
+
+    const handle = loader.get(Texture, 'ship.png');
+
+    // Same options the fetch path would resolve via `options ?? entry?.options`
+    // (§ manifest fold) must be baked at createPlaceholder, not just the fetch.
+    expect(handle.scaleMode).toBe(ScaleModes.Nearest);
+
+    await handle.loaded;
+    expect(handle.scaleMode).toBe(ScaleModes.Nearest);
+  });
+
+  test('inline get() options still win over any registered manifest entry (no manifest here)', () => {
+    mockFetchImage();
+    const loader = createCoreLoader();
+
+    const handle = loader.get(Texture, 'ship.png', { samplerOptions: { scaleMode: ScaleModes.Nearest } });
+
+    expect(handle.scaleMode).toBe(ScaleModes.Nearest);
+  });
+
   test('same options (deep-equal) do not warn', () => {
     mockFetchImage();
     const loader = createCoreLoader();
