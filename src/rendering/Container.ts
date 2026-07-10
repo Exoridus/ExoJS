@@ -27,7 +27,7 @@ import { RenderNode } from './RenderNode';
  */
 export class Container extends RenderNode {
   private readonly _children: RenderNode[] = [];
-  private readonly _retainedPlan: RetainedPlanCache = new RetainedPlanCache();
+  private _retainedPlan: RetainedPlanCache | null = null;
 
   public get children(): RenderNode[] {
     return this._children;
@@ -255,7 +255,7 @@ export class Container extends RenderNode {
 
     const viewUpdateId = builder.view.updateId;
 
-    if (this._retainedPlan.isClean(this._contentRevision, this._structureRevision, viewUpdateId, builder.backend)) {
+    if (this._retainedPlan !== null && this._retainedPlan.isClean(this._contentRevision, this._structureRevision, viewUpdateId, builder.backend)) {
       this._replayRetainedChildren(builder);
 
       return;
@@ -274,7 +274,8 @@ export class Container extends RenderNode {
    * its own independent skip decision.
    */
   private _replayRetainedChildren(builder: RenderPlanBuilder): void {
-    const slots = this._retainedPlan.slots;
+    // Non-null: only called from the isClean-guarded fast path above.
+    const slots = this._retainedPlan!.slots;
     let slotIndex = 0;
 
     for (let index = 0; index < this._children.length; index++) {
@@ -297,23 +298,39 @@ export class Container extends RenderNode {
    * set of retained slots for next frame's fast path.
    */
   private _collectAndCaptureChildren(builder: RenderPlanBuilder, viewUpdateId: number): void {
-    const capturedSlots: RetainedDrawSlot[] = [];
+    let sawSlotCandidate = false;
+    let capturedSlots: RetainedDrawSlot[] | null = null;
 
     for (let index = 0; index < this._children.length; index++) {
+      // In-bounds: index < length.
+      const child = this._children[index]!;
+
+      // Only a plain, non-barrier drawable can ever produce a retained slot
+      // (exactly one Draw entry for itself). Every other child skips the
+      // peek/capture bookkeeping entirely -- the S2-D4 zero-slot fix: 99.7% of
+      // containers in the Slice-1 measurement had no direct drawable children
+      // and paid pure overhead here.
+      if (!child._isDrawableForRenderPlan() || child._renderPlanHasBarrierEffects()) {
+        child._collect(builder, index);
+
+        continue;
+      }
+
+      sawSlotCandidate = true;
+
       const beforeCount = builder._peekCurrentScopeEntries().length;
 
-      // In-bounds: index < length.
-      this._children[index]!._collect(builder, index);
+      child._collect(builder, index);
 
       const entries = builder._peekCurrentScopeEntries();
 
       if (entries.length === beforeCount + 1) {
         const entry = entries[entries.length - 1]!;
 
-        if (entry.kind === RenderEntryKind.Draw && entry.command.drawable === this._children[index]) {
+        if (entry.kind === RenderEntryKind.Draw && entry.command.drawable === child) {
           const command = entry.command;
 
-          capturedSlots.push({
+          (capturedSlots ??= []).push({
             childIndex: index,
             drawable: command.drawable,
             seq: command.seq,
@@ -328,7 +345,18 @@ export class Container extends RenderNode {
       }
     }
 
-    this._retainedPlan.capture(this._contentRevision, this._structureRevision, viewUpdateId, builder.backend, capturedSlots);
+    // Allocate/refresh the cache only when there is (or once was) anything to
+    // retain: a slot candidate this frame, or an already-live cache that must
+    // be re-keyed so it cannot go stale-clean.
+    if (sawSlotCandidate || this._retainedPlan !== null) {
+      (this._retainedPlan ??= new RetainedPlanCache()).capture(
+        this._contentRevision,
+        this._structureRevision,
+        viewUpdateId,
+        builder.backend,
+        capturedSlots ?? [],
+      );
+    }
   }
 
   public override contains(x: number, y: number): boolean {
@@ -358,7 +386,7 @@ export class Container extends RenderNode {
 
   public override destroy(): void {
     this.removeChildren();
-    this._retainedPlan.invalidate();
+    this._retainedPlan?.invalidate();
 
     super.destroy();
   }
