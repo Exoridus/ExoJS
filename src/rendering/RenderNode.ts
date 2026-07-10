@@ -413,6 +413,21 @@ export abstract class RenderNode extends SceneNode {
 
   public invalidateCache(): this {
     this._cacheDirty = true;
+    this._markContentDirty();
+
+    return this;
+  }
+
+  /**
+   * Mark this node's visual content dirty without going through a standard
+   * setter — e.g. a custom {@link Drawable} subclass backed by externally
+   * mutable data (the pattern `TileChunkNode` in `@codexo/exojs-tilemap`
+   * already uses via its own `_chunk.revision` compare). Call this after
+   * mutating such state so the Track-B retained-plan skip does not serve a
+   * stale frame for this node.
+   */
+  public invalidateContent(): this {
+    this._markContentDirty();
 
     return this;
   }

@@ -106,6 +106,7 @@ export class Container extends RenderNode {
     child.parent = this;
     this._children.splice(index, 0, child);
     this.invalidateCache();
+    this._markStructureDirty();
 
     child._invalidateSubtreeTransform();
     this._invalidateBoundsCascade();
@@ -124,6 +125,7 @@ export class Container extends RenderNode {
       this._children[firstIndex] = secondChild;
       this._children[secondIndex] = firstChild;
       this.invalidateCache();
+      this._markStructureDirty();
     }
 
     return this;
@@ -148,6 +150,7 @@ export class Container extends RenderNode {
 
     this._children.splice(index, 0, child);
     this.invalidateCache();
+    this._markStructureDirty();
 
     return this;
   }
@@ -188,6 +191,7 @@ export class Container extends RenderNode {
     }
 
     this.invalidateCache();
+    this._markStructureDirty();
 
     return this;
   }
@@ -222,6 +226,7 @@ export class Container extends RenderNode {
 
     removeArrayItems(this._children, begin, range);
     this.invalidateCache();
+    this._markStructureDirty();
 
     return this;
   }
