@@ -143,14 +143,14 @@ export type LeafForPath<S extends string> = [KindByPath<S>] extends [never]
     ? AssetRef<ResourceForKind<KindByPath<S>>>
     : ResourceForKind<KindByPath<S>>;
 
-/** A single catalog field input: a bare path string, an `X.of()` descriptor, or an explicit config. */
+/** A single catalog field input: a bare path string, an `Asset.kind(...)` descriptor, or an explicit config. */
 export type CatalogEntry = string | Asset<unknown> | AnyAssetConfig;
 
 /**
  * The leaf type a {@link CatalogEntry} materializes as. A {@link ValueAsset}
  * brand (from `Asset.kind<T>('json', …)`) classifies as `AssetRef<T>` FIRST,
  * before the `T extends object` heuristic that (only) the unbranded legacy
- * `X.of()` descriptors still rely on.
+ * `Asset.kind(...)` descriptors still rely on.
  */
 export type InferCatalogLeaf<E extends CatalogEntry> = E extends string
   ? LeafForPath<E>

@@ -5,7 +5,7 @@ import type { AssetHandler, AssetLoadRequest } from '#extensions/Extension';
 import { type BmFont } from '#rendering/text/BmFont';
 import type { Texture } from '#rendering/texture/Texture';
 
-import { Asset, AssetImpl } from './Asset';
+import { Asset, AssetImpl, type ValueAsset } from './Asset';
 import { parseContainer } from './AssetContainer';
 import type { AssetDefinitions, AssetInput, InferAssetResource, KindByPath, LeafForPath, ResourceForKind, ValueAssetKind } from './AssetDefinitions';
 import type { AssetFactory } from './AssetFactory';
@@ -132,7 +132,7 @@ export type PathExtension<S extends string> = MatchExtension<Basename<StripQuery
  * Resolves the return type for {@link Loader.load} when called with a plain
  * path string. Returns `unknown` when the extension is not in
  * {@link ExtensionTypeMap} — the string-path overload rejects such paths at
- * compile time; use the descriptor form (`load(MyType.of(path))`) instead.
+ * compile time; use the descriptor form (`load(Asset.kind(kind, path))`) instead.
  *
  * The `[PathExtension<S>] extends [never]` guard is load-bearing: indexing
  * {@link ExtensionTypeMap} with `never` would silently produce `never` rather
@@ -445,9 +445,9 @@ export class Loader {
    * Fetches and processes one or more assets.
    *
    * - **Path string** — inferred from the file extension; resolves the asset.
-   * - **Asset<T>** — a single typed asset reference (from `X.of(...)` or a config).
+   * - **Asset<T>** — a single typed asset reference (from `Asset.kind(...)` or a config).
    * - **Assets<M>** — typed asset container; keys become aliases.
-   * - **Config map** — inline `{ alias: { type, source, … } }` definition.
+   * - **Config map** — inline `{ alias: { kind, source, … } }` definition.
    *
    * In-flight and already-loaded assets are de-duplicated: calling `load`
    * for the same (type, alias) pair while a fetch is in progress attaches
@@ -479,7 +479,7 @@ export class Loader {
    * Extend the return type by augmenting {@link ExtensionTypeMap}.
    *
    * Paths whose extension is **not** in {@link ExtensionTypeMap} are rejected at
-   * compile time — use the descriptor form (`load(MyType.of(path))`) for
+   * compile time — use the descriptor form (`load(Asset.kind(kind, path))`) for
    * unregistered extensions.
    *
    * ```ts
@@ -500,7 +500,7 @@ export class Loader {
   // resource value (asset-system v2 §4.4); `ResourceForKind<'json'>` = `unknown`.
   // Single-arg only: the runtime bare-path branch fires solely for
   // `arg1 === undefined`, so an `options?` param here would advertise a
-  // parameter the runtime ignores (per-asset options go through `X.of(src, opts)`).
+  // parameter the runtime ignores (per-asset options go through `Asset.kind(kind, src, opts)`).
   public load<S extends string>(path: [KindByPath<S>] extends [never] ? never : S): LoadingQueue<ResourceForKind<KindByPath<S>>>;
 
   // -----------------------------------------------------------------------
@@ -601,7 +601,10 @@ export class Loader {
       return queue;
     }
 
-    // 3. Plain config map: Record<string, AssetInput>
+    // Internal/legacy record fallback: `Record<string, AssetInput>`. The TYPED
+    // inline record-catalog overload was removed (asset-system v2 delta §5/§14) —
+    // typed callers go through `Assets.from({...})` — but the runtime path is kept
+    // for internal multi-alias/identity plumbing and its coverage.
     const configMap = arg0 as Record<string, AssetInput>;
     const items = Object.entries(configMap).map(([alias, value]) => ({
       alias,
@@ -711,12 +714,12 @@ export class Loader {
   public get<M extends Record<string, AssetInput>>(catalog: Assets<M>): InferAssetsProperties<M>;
 
   /**
-   * Seamless/value access from an `X.of()` descriptor (asset-system v2 §4.2) —
+   * Seamless/value access from an `Asset.kind(...)` descriptor (asset-system v2 §4.2) —
    * the replacement for the removed `get(Type, dynamicSource)` form. Builds and
    * adopts the descriptor's handle-hybrid leaf: a resource kind (`Texture.of`,
    * …) yields its heal-in-place handle, a value kind (`Json.of`, `TextAsset.of`,
    * …) a stable {@link AssetRef}. A kind with neither a seamless adapter nor a
-   * value channel throws with guidance to use `load(X.of(...))`.
+   * value channel throws with guidance to use `load(Asset.kind(...))`.
    *
    * @remarks The `T extends object ? T : AssetRef<T>` return mirrors the catalog
    * leaf inference ({@link InferCatalogLeaf}): a value descriptor with a
@@ -727,11 +730,15 @@ export class Loader {
    * distinguish an object payload from a resource handle.
    *
    * Unlike bare-path `get('x.png')`, this form is **not instance-deduped by
-   * source**: each call builds a fresh leaf, so repeated `get(X.of(sameSrc))`
+   * source**: each call builds a fresh leaf, so repeated `get(Asset.kind(kind, sameSrc))`
    * accumulates distinct handles (all healing to the same deduped backend
    * payload). It is the dynamic-source escape hatch — capture the handle once.
+   *
+   * A value-kind descriptor (`Asset.kind<T>('json', …)`) returns an `AssetRef<T>`;
+   * a resource-kind descriptor returns the resource itself.
    */
-  public get<T>(asset: Asset<T>): T extends object ? T : AssetRef<T>;
+  public get<T>(asset: ValueAsset<T>): AssetRef<T>;
+  public get<T>(asset: Asset<T>): T;
 
   /**
    * Adopts a single handle-hybrid leaf (an `Assets.from()` property) and returns
@@ -766,7 +773,7 @@ export class Loader {
       return out;
     }
 
-    // Single `X.of()` descriptor (e.g. `get(Asset.kind('json', 'x.json'))` /
+    // Single `Asset.kind(...)` descriptor (e.g. `get(Asset.kind('json', 'x.json'))` /
     // `get(Asset.kind('texture', dynamicPath))`) — build its handle-hybrid leaf from the
     // config, adopt it, and return it. A value kind yields an AssetRef, a
     // resource kind the seamless placeholder handle. Mirrors `load`'s AssetImpl
@@ -834,7 +841,7 @@ export class Loader {
     // Not a container, meta-leaf, or path string: a Loadable type token.
     // In-memory lookup for a non-seamless / non-value type (e.g. a bindAsset-
     // bound custom type populated by loadContainer): read the stored resource by
-    // source key. Seamless/value fetch-by-token has been removed — use `X.of(...)`
+    // source key. Seamless/value fetch-by-token has been removed — use `Asset.kind(...)`
     // or a bare path for those.
     const ctor = typeOrPath as Loadable;
     const src = source as string;

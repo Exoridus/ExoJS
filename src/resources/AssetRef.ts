@@ -18,12 +18,12 @@ export class AssetRef<T> {
     this._loadState.begin();
   }
 
-  /** Load lifecycle of this ref: `'loading' | 'ready' | 'failed'`. */
+  /** Load lifecycle of this ref: `'idle' | 'loading' | 'ready' | 'failed'`. */
   public get loadState(): LoadStateValue {
     return this._loadState.value;
   }
 
-  /** Load lifecycle: `'loading' | 'ready' | 'failed'` (asset-system v2 §6). */
+  /** Load lifecycle: `'idle' | 'loading' | 'ready' | 'failed'` (asset-system v2 §6). */
   public get state(): LoadStateValue {
     return this._loadState.value;
   }
@@ -62,9 +62,19 @@ export class AssetRef<T> {
     this._parse = parse;
   }
 
-  /** @internal — fill with the raw loaded value, applying `parse` if one was set. */
+  /**
+   * @internal — fill with the raw loaded value, applying `parse` if one was set.
+   * A throwing `parse` fails ONLY this ref (it does not propagate), so a sibling
+   * ref sharing the same raw source but a different `parse` is unaffected.
+   */
   public _fill(raw: unknown): void {
-    const value = (this._parse ? this._parse(raw) : raw) as T;
+    let value: T;
+    try {
+      value = (this._parse ? this._parse(raw) : raw) as T;
+    } catch (error) {
+      this._fail(error instanceof Error ? error : new Error(String(error)));
+      return;
+    }
     this._value = value;
     this._hasValue = true;
     this._loadState.settle(value);

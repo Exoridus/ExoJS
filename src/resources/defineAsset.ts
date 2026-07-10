@@ -42,7 +42,7 @@ export interface DefineAssetDescriptor<Result, Options> {
  *
  * A **non-leaf** resource kind (`isValue: false` and no adapter — e.g. `bmFont`,
  * `font`) has no placeholder strategy, so it is deliberately NOT registered
- * globally: its bare path cannot be inferred and must be declared via `X.of()`
+ * globally: its bare path cannot be inferred and must be declared via `Asset.kind(...)`
  * or an explicit config. Its `extensions` still travel on the returned binding
  * for the per-Loader map.
  *

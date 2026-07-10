@@ -97,7 +97,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Current load lifecycle: 'loading' | 'ready' | 'failed'."
+          "description": "Current load lifecycle: 'idle' | 'loading' | 'ready' | 'failed'."
         }
       ],
       "paragraphs": [],

@@ -3,7 +3,7 @@
 // structurally interchangeable, so `LoadReturn<T>`'s `T extends typeof Json` /
 // `… typeof WasmAsset` probes collapse — e.g. `Asset<WebAssembly.Module>` is
 // `Asset<{}>` (Module is an empty interface), which every resource class's
-// `X.of()` return is assignable to, making `LoadReturn<typeof Texture>` wrongly
+// `Asset.kind(...)` return is assignable to, making `LoadReturn<typeof Texture>` wrongly
 // resolve to `WebAssembly.Module`. The brand makes each token match only its own
 // `LoadReturn` branch and keeps resource classes out of all of them. (§5 typing bug.)
 

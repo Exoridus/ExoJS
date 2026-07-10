@@ -5,7 +5,7 @@ import { Container } from '#rendering/Container';
 import type { RenderingContext } from '#rendering/RenderingContext';
 import type { RenderNode } from '#rendering/RenderNode';
 import type { Texture } from '#rendering/texture/Texture';
-import type { Asset } from '#resources/Asset';
+import type { Asset, ValueAsset } from '#resources/Asset';
 import type { AssetInput } from '#resources/AssetDefinitions';
 import type { AssetRef } from '#resources/AssetRef';
 import type { Assets, InferAssetsProperties } from '#resources/Assets';
@@ -112,8 +112,10 @@ class SceneLoader implements Destroyable {
 
   public get<S extends string>(path: LoadByPath<S> extends Texture | Sound ? S : never, options?: unknown): LoadByPath<S>;
   public get<T extends Loadable>(type: T, alias: string): LoadReturn<T>;
-  // Seamless/value access from an `Asset.kind()` descriptor (mirrors Loader.get(asset)).
-  public get<T>(asset: Asset<T>): T extends object ? T : AssetRef<T>;
+  // Seamless/value access from an `Asset.kind()` descriptor (mirrors Loader.get(asset)):
+  // a value-kind descriptor returns AssetRef<T>, a resource-kind descriptor the resource.
+  public get<T>(asset: ValueAsset<T>): AssetRef<T>;
+  public get<T>(asset: Asset<T>): T;
   // Adopts an Assets catalog under the scene scope (mirrors Loader.get(catalog)).
   public get<M extends Record<string, AssetInput>>(catalog: Assets<M>): InferAssetsProperties<M>;
   // Adopts a single handle-hybrid leaf under the scene scope (mirrors Loader.get(leaf)).

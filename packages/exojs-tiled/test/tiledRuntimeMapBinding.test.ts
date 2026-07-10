@@ -43,7 +43,7 @@ function makeContext(fixtures: Record<string, unknown>) {
 
   // Configure loaderLoad after context is defined so the closure captures it.
   loaderLoad.mockImplementation(async (token: unknown): Promise<unknown> => {
-    // Both Texture and TiledMap sub-loads now arrive as `X.of(src)` descriptors
+    // Both Texture and TiledMap sub-loads now arrive as `Asset.kind(kind, src)` descriptors
     // (asset form) rather than a `(constructor, url, opts)` token call.
     const asset = token as { kind?: unknown; source?: unknown } | null;
     if (asset?.kind === 'texture') {

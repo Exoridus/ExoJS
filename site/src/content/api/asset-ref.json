@@ -159,7 +159,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Load lifecycle of this ref: 'loading' | 'ready' | 'failed'."
+          "description": "Load lifecycle of this ref: 'idle' | 'loading' | 'ready' | 'failed'."
         },
         {
           "name": "ready",
@@ -201,7 +201,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Load lifecycle: 'loading' | 'ready' | 'failed' (asset-system v2 §6)."
+          "description": "Load lifecycle: 'idle' | 'loading' | 'ready' | 'failed' (asset-system v2 §6)."
         },
         {
           "name": "value",

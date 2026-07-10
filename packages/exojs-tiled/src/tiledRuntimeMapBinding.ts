@@ -10,7 +10,7 @@ import { resolveTiledOptions,type TiledLoadOptions } from './tiledOptions';
  * Declarative asset binding for the runtime {@link TileMap} produced from a
  * `.tmj` Tiled map file.
  *
- * This is the common-case binding: `loader.load(TileMap, 'world.tmj')` fetches
+ * This is the common-case binding: `loader.load(Asset.kind('tileMap', 'world.tmj'))` fetches
  * and validates the TMJ, resolves external `.tsj` tilesets, loads tileset
  * textures via the sub-load `loader.load(Asset.kind('tiledMap', source))`, and synchronously
  * converts the parsed {@link TiledMap} source model into a format-independent

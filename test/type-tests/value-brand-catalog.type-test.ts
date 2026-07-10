@@ -35,4 +35,16 @@ type LoadedMap = Awaited<ReturnType<typeof loadIt>>;
 type _ConfigResolved = Expect<Equal<LoadedMap['config'], Config>>;
 type _ShipResolved = Expect<Equal<LoadedMap['ship'], Texture>>;
 
-export type { _ConfigIsRef, _ConfigResolved, _ConfigValue, _ShipIsTexture, _ShipResolved };
+// direct get(asset) honors the same brand — value → AssetRef<T>, resource → T
+// (regression guard: the brand-blind `T extends object` overload typed object
+// value kinds as the resource while runtime returned an AssetRef).
+function getConfig() {
+  return loader.get(Asset.kind<Config>('json', 'config.json'));
+}
+function getShip() {
+  return loader.get(Asset.kind('texture', 'ship.png'));
+}
+type _GetConfigIsRef = Expect<Equal<ReturnType<typeof getConfig>, AssetRef<Config>>>;
+type _GetShipIsTexture = Expect<Equal<ReturnType<typeof getShip>, Texture>>;
+
+export type { _ConfigIsRef, _ConfigResolved, _ConfigValue, _GetConfigIsRef, _GetShipIsTexture, _ShipIsTexture, _ShipResolved };

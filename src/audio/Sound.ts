@@ -179,7 +179,7 @@ export class Sound implements Playable {
     return this._loadState.value;
   }
 
-  /** Load lifecycle: `'loading' | 'ready' | 'failed'` (asset-system v2 §6). */
+  /** Load lifecycle: `'idle' | 'loading' | 'ready' | 'failed'` (asset-system v2 §6). */
   public get state(): LoadStateValue {
     return this._loadState.value;
   }

@@ -56,4 +56,27 @@ describe('parse post-load transform', () => {
     expect(loaded.config).toEqual({ hp: 3, label: 'hp:3' });
     expect(assets.config.value).toEqual({ hp: 3, label: 'hp:3' });
   });
+
+  it('a throwing parse fails only its own ref — a sibling sharing the source stays ready', async () => {
+    mockJson({ hp: 3 });
+    const loader = createCoreLoader();
+
+    const assets = Assets.from({
+      good: { kind: 'json', source: 'c.json', parse: (raw): Config => ({ hp: (raw as { hp: number }).hp, label: 'ok' }) },
+      bad: {
+        kind: 'json',
+        source: 'c.json',
+        parse: (): Config => {
+          throw new Error('bad parse');
+        },
+      },
+    });
+
+    await loader.load(assets).catch(() => undefined); // `bad` rejects; `good` resolves
+
+    expect(assets.good.state).toBe('ready');
+    expect(assets.good.value).toEqual({ hp: 3, label: 'ok' });
+    expect(assets.bad.state).toBe('failed');
+    expect(assets.bad.error?.message).toBe('bad parse');
+  });
 });

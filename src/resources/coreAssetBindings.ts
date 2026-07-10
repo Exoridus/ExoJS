@@ -116,7 +116,7 @@ const soundBinding = defineAsset({
 
 // music/video/svg/font/image/bmFont are non-leaf resource kinds: no placeholder
 // strategy, so `isValue: false` keeps them OUT of the global kind/inference
-// registries (bare paths need `X.of()`); their extensions still ride the binding.
+// registries (bare paths need `Asset.kind(...)`); their extensions still ride the binding.
 const musicBinding = defineAsset({
   type: AudioStream,
   kind: 'music',

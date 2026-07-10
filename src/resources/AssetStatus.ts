@@ -8,7 +8,7 @@ import type { LoadStateValue } from '#core/LoadState';
  * structurally satisfy this interface. No separate status object is created.
  */
 export interface AssetStatus {
-  /** Current load lifecycle: `'loading' | 'ready' | 'failed'`. */
+  /** Current load lifecycle: `'idle' | 'loading' | 'ready' | 'failed'`. */
   readonly state: LoadStateValue;
   /** `true` exactly when {@link state} is `'ready'`. */
   readonly ready: boolean;

@@ -31,7 +31,7 @@ export type InferAssetsProperties<M extends Record<string, CatalogEntry>> = {
  * Normalize a single catalog entry to a plain `{ kind, source, ...opts }`
  * config. A bare path string is resolved to its asset kind by file suffix
  * (asset-system v2 §5); an unregistered/ambiguous suffix throws a guiding
- * error pointing at `X.of()`, compound suffixes, or extension registration. An
+ * error pointing at `Asset.kind(...)`, compound suffixes, or extension registration. An
  * already-constructed `Asset` contributes its `_config`; a plain config passes
  * through unchanged.
  */
@@ -117,9 +117,9 @@ type AssetsConstructorFn = new <const M extends Record<string, CatalogEntry>>(de
 type AssetsFacade = AssetsConstructorFn & {
   /**
    * Build a typed catalog. Each field may be a bare path string (kind inferred
-   * from its suffix), an `X.of()` descriptor, or an explicit config. Bare
+   * from its suffix), an `Asset.kind(...)` descriptor, or an explicit config. Bare
    * strings only resolve for leaf-capable kinds; ambiguous/unregistered
-   * suffixes need `X.of()`. (asset-system v2 §4.1, §5)
+   * suffixes need `Asset.kind(...)`. (asset-system v2 §4.1, §5)
    *
    * @remarks The `const` type parameter preserves each field's string LITERAL
    * (e.g. `'ship.png'`) so the file suffix can be classified. Without it, under
@@ -134,7 +134,7 @@ type AssetsFacade = AssetsConstructorFn & {
    * Build a single meta-stamped leaf (a usable placeholder resource or an
    * `AssetRef`) from ONE descriptor — the explicit single-asset alternative to
    * wrapping it in a one-field {@link from} catalog (asset-system v2 §5). Accepts
-   * the same descriptor set as a catalog field: a bare path, an `X.of()`
+   * the same descriptor set as a catalog field: a bare path, an `Asset.kind(...)`
    * descriptor, or an explicit `{ kind, source, ...opts }` config. The leaf
    * starts `'idle'` until a loader adopts it.
    *

@@ -1165,7 +1165,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Load lifecycle: 'loading' | 'ready' | 'failed' (asset-system v2 §6)."
+          "description": "Load lifecycle: 'idle' | 'loading' | 'ready' | 'failed' (asset-system v2 §6)."
         },
         {
           "name": "version",
