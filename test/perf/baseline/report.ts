@@ -85,34 +85,35 @@ const toCsvRow = (result: CellResult): string => {
 const toCsv = (data: ReportData): string => [CSV_HEADER.join(','), ...data.results.map(toCsvRow)].join('\n');
 
 /**
- * Human-readable Markdown: the provenance block first (so a reader knows which
- * GPU produced the numbers), then one table with the structural counters sitting
- * BESIDE the timings — a timing win that came from doing less work must be
- * visible in the same row.
+ * Human-readable Markdown: one provenance block PER BACKEND first (so a reader
+ * knows which GPU produced which backend's numbers — presenting a WebGPU row
+ * under WebGL2's adapter string would misattribute it), then one table with the
+ * structural counters sitting BESIDE the timings — a timing win that came from
+ * doing less work must be visible in the same row — and a `note` column so the
+ * reason behind an `unavailable`/`exceeded` cell, or a timing sourced from an
+ * rAF delta rather than a real GPU timer, is visible in the row it belongs to.
  */
 const toMarkdown = (data: ReportData): string => {
   const software = isSoftware(data);
-  const first = data.provenance[0];
-  const backends = data.provenance.map(entry => entry.backend).join(', ');
   const lines: string[] = [];
 
   lines.push('# Baseline Benchmark Results', '');
   lines.push('## Provenance', '');
 
-  if (first !== undefined) {
-    lines.push(`- Adapter (GPU): ${first.adapter}`);
-    lines.push(`- Backend(s): ${backends}`);
-    lines.push(`- Flags: ${first.flags.map(flag => `\`${flag}\``).join(' ')}`);
-    lines.push(`- Headless: ${String(first.headless)}`);
-    lines.push(`- Engine version: ${first.engineVersion}`);
-    lines.push(`- Timestamp: ${first.timestamp}`);
-    lines.push(`- Software rasterizer: ${String(software)}`);
-  }
+  for (const entry of data.provenance) {
+    lines.push(`### ${entry.backend}`, '');
+    lines.push(`- Adapter (GPU): ${entry.adapter}`);
+    lines.push(`- Flags: ${entry.flags.map(flag => `\`${flag}\``).join(' ')}`);
+    lines.push(`- Headless: ${String(entry.headless)}`);
+    lines.push(`- Engine version: ${entry.engineVersion}`);
+    lines.push(`- Timestamp: ${entry.timestamp}`);
+    lines.push(`- Software rasterizer: ${String(entry.software)}`);
 
-  lines.push('');
+    if (entry.software) {
+      lines.push('', `**SOFTWARE RASTERIZER — TIMINGS UNTRUSTED FOR ${entry.backend}**`);
+    }
 
-  if (software) {
-    lines.push('**SOFTWARE RASTERIZER — TIMINGS UNTRUSTED**', '');
+    lines.push('');
   }
 
   lines.push('## Results', '');
@@ -134,6 +135,7 @@ const toMarkdown = (data: ReportData): string => {
     'bufferUploads',
     'timedFrames',
     'status',
+    'note',
   ];
 
   lines.push(`| ${header.join(' | ')} |`);
@@ -155,6 +157,7 @@ const toMarkdown = (data: ReportData): string => {
       count(structural.bufferUploads),
       String(spec.timedFrames),
       result.status,
+      (result.note ?? '').replaceAll('|', '\\|'),
     ];
 
     lines.push(`| ${row.join(' | ')} |`);

@@ -168,9 +168,11 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[]): EngineAd
         sprite.setPosition(x, y);
         spine[i % spine.length]!.addChild(sprite);
 
-        // Draw one RNG value per leaf, in index order, so any adapter seeded
-        // the same way selects the exact same mutation set.
-        if (spec.mutationFraction > 0 && rng() < spec.mutationFraction) {
+        // Draw one RNG value per leaf, in index order, unconditionally — even
+        // when `mutationFraction` is 0 — so any adapter seeded the same way
+        // draws from the identical stream position and selects the exact same
+        // mutation set (see the adapters README's cross-arm fairness contract).
+        if (rng() < spec.mutationFraction) {
           leaves.push({ sprite, baseX: x, baseY: y });
         }
       }
