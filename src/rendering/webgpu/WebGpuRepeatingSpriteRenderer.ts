@@ -11,6 +11,7 @@ import { type BlendModes } from '#rendering/types';
 import { AbstractWebGpuRenderer } from './AbstractWebGpuRenderer';
 import type { WebGpuBackend } from './WebGpuBackend';
 import { getWebGpuBlendState } from './WebGpuBlendState';
+import { WebGpuInstanceArena } from './WebGpuInstanceArena';
 import { stencilContentDepthStencilState } from './WebGpuStencilState';
 
 // ---------------------------------------------------------------------------
@@ -159,16 +160,21 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
   private readonly _pipelines = new Map<string, GPURenderPipeline>();
   private readonly _samplers = new Map<string, GPUSampler>();
 
-  // Shader-path instance buffer
-  private _shaderInstBuf: GPUBuffer | null = null;
+  // Frame-scoped append arena shared by both paths: a single flush only ever
+  // draws one path (render() flushes on a path change), so consecutive batch
+  // flushes accumulate into one open pass at distinct byte offsets — the frame
+  // submits once instead of once per flush. CPU staging stays per-path (the two
+  // layouts differ in stride).
+  private readonly _instanceArena = new WebGpuInstanceArena('repeating-sprite:instance-buffer', initialBatchCapacity * shaderStrideBytes);
+
+  // Shader-path CPU staging
   private _shaderInstCapacity = 0;
   private _shaderInstData: ArrayBuffer = new ArrayBuffer(0);
   private _shaderInstF32 = new Float32Array(this._shaderInstData);
   private _shaderInstU32 = new Uint32Array(this._shaderInstData);
   private _shaderQuadCount = 0;
 
-  // Geometry-path instance buffer
-  private _geoInstBuf: GPUBuffer | null = null;
+  // Geometry-path CPU staging
   private _geoInstCapacity = 0;
   private _geoInstData: ArrayBuffer = new ArrayBuffer(0);
   private _geoInstF32 = new Float32Array(this._geoInstData);
@@ -227,15 +233,12 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
   }
 
   protected onDisconnect(): void {
-    this._shaderInstBuf?.destroy();
-    this._geoInstBuf?.destroy();
+    this._instanceArena.destroy();
     this._indexBuffer?.destroy();
     this._uniformBuffer?.destroy();
     this._pipelines.clear();
     this._samplers.clear();
 
-    this._shaderInstBuf = null;
-    this._geoInstBuf = null;
     this._indexBuffer = null;
     this._uniformBuffer = null;
     this._transformBindGroup = null;
@@ -416,6 +419,22 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
       return;
     }
 
+    // Rewriting the shared projection uniform for a still-open pass whose batches
+    // were projected with a now-changed view transform (same View object mutated
+    // between merged flushes) would retroactively re-project them; end that pass
+    // first. Guarded on the arena tracking the current active pass.
+    const activePass = backend._passCoordinator.activePass;
+
+    if (
+      activePass !== null &&
+      this._instanceArena.cursor > 0 &&
+      this._instanceArena.tracksPass(activePass) &&
+      activePass.viewUpdateId !== backend.view.updateId
+    ) {
+      backend._passCoordinator.endPass();
+      this._instanceArena.resetPass();
+    }
+
     const vm = backend.view.getTransform();
     this._projData.set([vm.a, vm.c, 0, 0, vm.b, vm.d, 0, 0, 0, 0, 1, 0, vm.x, vm.y, 0, vm.z]);
     device.queue.writeBuffer(uniform, 0, this._projData.buffer, this._projData.byteOffset, this._projData.byteLength);
@@ -423,19 +442,64 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     const scissor = backend.getScissorRect();
     const maskClipsAll = scissor !== null && (scissor.width <= 0 || scissor.height <= 0);
 
-    const pass = backend._passCoordinator.acquirePass().pass;
-    const stencil = backend._passCoordinator.stencilActive;
+    // A single flush only ever draws one path (render() flushes on a path
+    // change), so exactly one of the two counts is non-zero here.
+    const drawShader = this._shaderQuadCount > 0 && !maskClipsAll;
+    const drawGeo = this._geoQuadCount > 0 && !maskClipsAll;
 
-    if (this._shaderQuadCount > 0 && !maskClipsAll) {
-      this._drawShaderBatch(device, backend, pass, stencil);
+    if (drawShader || drawGeo) {
+      const batchBytes = drawShader ? this._shaderQuadCount * shaderStrideBytes : this._geoQuadCount * geoStrideBytes;
+      const needCount = this._maxNodeIndex + 1;
+
+      let active = backend._passCoordinator.acquirePass();
+
+      this._instanceArena.syncPass(active);
+
+      // A texture re-upload / resize lands on the queue timeline before the
+      // deferred submit, retroactively changing draws already recorded into this
+      // open pass. End (submit) the pass first so they capture the pre-mutation
+      // content, then reopen and re-upload into the fresh slice.
+      if (this._instanceArena.cursor > 0 && this._currentTexture !== null && backend._textureUploadWouldMutate(this._currentTexture)) {
+        backend._passCoordinator.endPass();
+        active = backend._passCoordinator.acquirePass();
+        this._instanceArena.resetPass();
+        this._instanceArena.syncPass(active);
+      }
+
+      // Resolving the transform storage may reallocate (and free) its GPU buffer;
+      // end the pass first when earlier batches in it still reference the old one.
+      if (this._instanceArena.cursor > 0 && backend._transformStorageWouldGrow(needCount)) {
+        backend._passCoordinator.endPass();
+        active = backend._passCoordinator.acquirePass();
+        this._instanceArena.resetPass();
+        this._instanceArena.syncPass(active);
+      }
+
+      if (!this._instanceArena.fits(batchBytes)) {
+        if (this._instanceArena.cursor > 0) {
+          backend._passCoordinator.endPass();
+          active = backend._passCoordinator.acquirePass();
+          this._instanceArena.resetPass();
+          this._instanceArena.syncPass(active);
+        }
+
+        this._instanceArena.grow(device, batchBytes);
+      }
+
+      const offset = this._instanceArena.take(batchBytes);
+      const instanceBuffer = this._instanceArena.buffer!;
+      const stencil = backend._passCoordinator.stencilActive;
+
+      if (drawShader) {
+        this._drawShaderBatch(device, backend, active.pass, stencil, instanceBuffer, offset);
+      } else {
+        this._drawGeoBatch(device, backend, active.pass, stencil, instanceBuffer, offset);
+      }
+    } else if (backend.clearRequested) {
+      backend._passCoordinator.acquirePass();
     }
 
-    if (this._geoQuadCount > 0 && !maskClipsAll) {
-      this._drawGeoBatch(device, backend, pass, stencil);
-    }
-
-    backend._passCoordinator.endPass();
-
+    // Batch flushes no longer submit; the backend ends the pass at boundaries.
     this._shaderQuadCount = 0;
     this._geoQuadCount = 0;
     this._maxNodeIndex = 0;
@@ -446,10 +510,17 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     this._currentPath = null;
   }
 
-  private _drawShaderBatch(device: GPUDevice, backend: WebGpuBackend, pass: GPURenderPassEncoder, stencil: boolean): void {
-    if (!this._shaderInstBuf || !this._indexBuffer || this._currentBlendMode === null || this._currentTexture === null) return;
+  private _drawShaderBatch(
+    device: GPUDevice,
+    backend: WebGpuBackend,
+    pass: GPURenderPassEncoder,
+    stencil: boolean,
+    instanceBuffer: GPUBuffer,
+    instanceByteOffset: number,
+  ): void {
+    if (!this._indexBuffer || this._currentBlendMode === null || this._currentTexture === null) return;
 
-    device.queue.writeBuffer(this._shaderInstBuf, 0, this._shaderInstData, 0, this._shaderQuadCount * shaderStrideBytes);
+    device.queue.writeBuffer(instanceBuffer, instanceByteOffset, this._shaderInstData, 0, this._shaderQuadCount * shaderStrideBytes);
 
     const storage = backend.getTransformStorageBuffer(this._maxNodeIndex + 1);
     const uniformBindGroup = this._getOrCreateTransformBindGroup(device, this._uniformBuffer!, storage.buffer);
@@ -472,7 +543,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, uniformBindGroup);
     pass.setBindGroup(1, textureBindGroup);
-    pass.setVertexBuffer(0, this._shaderInstBuf);
+    pass.setVertexBuffer(0, instanceBuffer, instanceByteOffset);
     pass.setIndexBuffer(this._indexBuffer, 'uint16');
     pass.drawIndexed(indicesPerInstance, this._shaderQuadCount, 0, 0, 0);
 
@@ -480,10 +551,17 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     backend.stats.drawCalls++;
   }
 
-  private _drawGeoBatch(device: GPUDevice, backend: WebGpuBackend, pass: GPURenderPassEncoder, stencil: boolean): void {
-    if (!this._geoInstBuf || !this._indexBuffer || this._currentBlendMode === null || this._currentTexture === null) return;
+  private _drawGeoBatch(
+    device: GPUDevice,
+    backend: WebGpuBackend,
+    pass: GPURenderPassEncoder,
+    stencil: boolean,
+    instanceBuffer: GPUBuffer,
+    instanceByteOffset: number,
+  ): void {
+    if (!this._indexBuffer || this._currentBlendMode === null || this._currentTexture === null) return;
 
-    device.queue.writeBuffer(this._geoInstBuf, 0, this._geoInstData, 0, this._geoQuadCount * geoStrideBytes);
+    device.queue.writeBuffer(instanceBuffer, instanceByteOffset, this._geoInstData, 0, this._geoQuadCount * geoStrideBytes);
 
     const storage = backend.getTransformStorageBuffer(this._maxNodeIndex + 1);
     const uniformBindGroup = this._getOrCreateTransformBindGroup(device, this._uniformBuffer!, storage.buffer);
@@ -504,7 +582,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, uniformBindGroup);
     pass.setBindGroup(1, textureBindGroup);
-    pass.setVertexBuffer(0, this._geoInstBuf);
+    pass.setVertexBuffer(0, instanceBuffer, instanceByteOffset);
     pass.setIndexBuffer(this._indexBuffer, 'uint16');
     pass.drawIndexed(indicesPerInstance, this._geoQuadCount, 0, 0, 0);
 
@@ -620,8 +698,10 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     return pipeline;
   }
 
+  // Grow the CPU staging arrays for the batch being packed. The GPU instance
+  // buffer is a separate frame-scoped arena managed in flush().
   private _ensureShaderCapacity(needed: number): void {
-    if (!this._device || needed <= this._shaderInstCapacity) return;
+    if (needed <= this._shaderInstCapacity) return;
     this._shaderInstCapacity = this._growCapacity(this._shaderInstCapacity, needed);
     const oldData = this._shaderInstData;
     const carry = this._shaderQuadCount * shaderStrideBytes;
@@ -629,16 +709,10 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     if (carry > 0) new Uint8Array(this._shaderInstData).set(new Uint8Array(oldData, 0, carry));
     this._shaderInstF32 = new Float32Array(this._shaderInstData);
     this._shaderInstU32 = new Uint32Array(this._shaderInstData);
-    this._shaderInstBuf?.destroy();
-    this._shaderInstBuf = this._device.createBuffer({
-      label: 'repeating-sprite:shader-instance-buffer',
-      size: this._shaderInstData.byteLength,
-      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-    });
   }
 
   private _ensureGeoCapacity(needed: number): void {
-    if (!this._device || needed <= this._geoInstCapacity) return;
+    if (needed <= this._geoInstCapacity) return;
     this._geoInstCapacity = this._growCapacity(this._geoInstCapacity, needed);
     const oldData = this._geoInstData;
     const carry = this._geoQuadCount * geoStrideBytes;
@@ -646,12 +720,6 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     if (carry > 0) new Uint8Array(this._geoInstData).set(new Uint8Array(oldData, 0, carry));
     this._geoInstF32 = new Float32Array(this._geoInstData);
     this._geoInstU32 = new Uint32Array(this._geoInstData);
-    this._geoInstBuf?.destroy();
-    this._geoInstBuf = this._device.createBuffer({
-      label: 'repeating-sprite:geo-instance-buffer',
-      size: this._geoInstData.byteLength,
-      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-    });
   }
 
   private _growCapacity(current: number, needed: number): number {

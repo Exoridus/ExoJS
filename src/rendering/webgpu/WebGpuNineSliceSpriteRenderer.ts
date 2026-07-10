@@ -9,6 +9,7 @@ import { type BlendModes } from '#rendering/types';
 import { AbstractWebGpuRenderer } from './AbstractWebGpuRenderer';
 import type { WebGpuBackend } from './WebGpuBackend';
 import { getWebGpuBlendState } from './WebGpuBlendState';
+import { WebGpuInstanceArena } from './WebGpuInstanceArena';
 import { stencilContentDepthStencilState } from './WebGpuStencilState';
 
 /** WGSL source for the nine-slice sprite pipeline. @internal */
@@ -99,7 +100,9 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
   private _transformBindGroup: GPUBindGroup | null = null;
   private _transformStorageBuffer: GPUBuffer | null = null;
   private _indexBuffer: GPUBuffer | null = null;
-  private _instanceBuffer: GPUBuffer | null = null;
+  // Frame-scoped append arena: consecutive batch flushes accumulate into one
+  // open pass at distinct byte offsets so the frame submits once.
+  private readonly _instanceArena = new WebGpuInstanceArena('nine-slice:instance-buffer', initialBatchCapacity * instanceStrideBytes);
   private _instanceCapacity = 0;
   private _instanceData: ArrayBuffer = new ArrayBuffer(0);
   private _instanceFloat32 = new Float32Array(this._instanceData);
@@ -155,11 +158,10 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
   }
 
   protected onDisconnect(): void {
-    this._instanceBuffer?.destroy();
+    this._instanceArena.destroy();
     this._indexBuffer?.destroy();
     this._uniformBuffer?.destroy();
     this._pipelines.clear();
-    this._instanceBuffer = null;
     this._indexBuffer = null;
     this._transformBindGroup = null;
     this._transformStorageBuffer = null;
@@ -273,6 +275,22 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
       return;
     }
 
+    // Rewriting the shared projection uniform for a still-open pass whose batches
+    // were projected with a now-changed view transform (same View object mutated
+    // between merged flushes) would retroactively re-project them; end that pass
+    // first. Guarded on the arena tracking the current active pass.
+    const activePass = backend._passCoordinator.activePass;
+
+    if (
+      activePass !== null &&
+      this._instanceArena.cursor > 0 &&
+      this._instanceArena.tracksPass(activePass) &&
+      activePass.viewUpdateId !== backend.view.updateId
+    ) {
+      backend._passCoordinator.endPass();
+      this._instanceArena.resetPass();
+    }
+
     const viewMatrix = backend.view.getTransform();
 
     this._projectionData.set([viewMatrix.a, viewMatrix.c, 0, 0, viewMatrix.b, viewMatrix.d, 0, 0, 0, 0, 1, 0, viewMatrix.x, viewMatrix.y, 0, viewMatrix.z]);
@@ -281,38 +299,75 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
     const scissor = backend.getScissorRect();
     const maskClipsAll = scissor !== null && (scissor.width <= 0 || scissor.height <= 0);
 
-    const pass = backend._passCoordinator.acquirePass().pass;
+    const willDraw = this._quadIndex > 0 && !maskClipsAll && this._indexBuffer !== null && this._currentBlendMode !== null && this._currentTexture !== null;
 
-    if (
-      this._quadIndex > 0 &&
-      !maskClipsAll &&
-      this._instanceBuffer !== null &&
-      this._indexBuffer !== null &&
-      this._currentBlendMode !== null &&
-      this._currentTexture !== null
-    ) {
-      device.queue.writeBuffer(this._instanceBuffer, 0, this._instanceData, 0, this._quadIndex * instanceStrideBytes);
+    if (willDraw) {
+      const batchBytes = this._quadIndex * instanceStrideBytes;
+      const needCount = this._maxNodeIndex + 1;
 
-      const storage = backend.getTransformStorageBuffer(this._maxNodeIndex + 1);
+      let active = backend._passCoordinator.acquirePass();
+
+      this._instanceArena.syncPass(active);
+
+      // A texture re-upload / resize lands on the queue timeline before the
+      // deferred submit, retroactively changing draws already recorded into this
+      // open pass. End (submit) the pass first so they capture the pre-mutation
+      // content, then reopen and re-upload into the fresh slice.
+      if (this._instanceArena.cursor > 0 && this._currentTexture !== null && backend._textureUploadWouldMutate(this._currentTexture)) {
+        backend._passCoordinator.endPass();
+        active = backend._passCoordinator.acquirePass();
+        this._instanceArena.resetPass();
+        this._instanceArena.syncPass(active);
+      }
+
+      // Resolving the transform storage may reallocate (and free) its GPU buffer;
+      // end the pass first when earlier batches in it still reference the old one.
+      if (this._instanceArena.cursor > 0 && backend._transformStorageWouldGrow(needCount)) {
+        backend._passCoordinator.endPass();
+        active = backend._passCoordinator.acquirePass();
+        this._instanceArena.resetPass();
+        this._instanceArena.syncPass(active);
+      }
+
+      if (!this._instanceArena.fits(batchBytes)) {
+        if (this._instanceArena.cursor > 0) {
+          backend._passCoordinator.endPass();
+          active = backend._passCoordinator.acquirePass();
+          this._instanceArena.resetPass();
+          this._instanceArena.syncPass(active);
+        }
+
+        this._instanceArena.grow(device, batchBytes);
+      }
+
+      const offset = this._instanceArena.take(batchBytes);
+      const instanceBuffer = this._instanceArena.buffer!;
+      const pass = active.pass;
+
+      device.queue.writeBuffer(instanceBuffer, offset, this._instanceData, 0, batchBytes);
+
+      const storage = backend.getTransformStorageBuffer(needCount);
       const transformBindGroup = this._getOrCreateTransformBindGroup(device, uniformBuffer, storage.buffer);
-      const textureBindGroup = this._createTextureBindGroup(device, backend, this._currentTexture);
+      const textureBindGroup = this._createTextureBindGroup(device, backend, this._currentTexture!);
 
       const stencil = backend._passCoordinator.stencilActive;
-      const pipeline = this._getPipeline(this._currentBlendMode, backend.renderTargetFormat, stencil);
+      const pipeline = this._getPipeline(this._currentBlendMode!, backend.renderTargetFormat, stencil);
 
       pass.setPipeline(pipeline);
       pass.setBindGroup(0, transformBindGroup);
       pass.setBindGroup(1, textureBindGroup);
-      pass.setVertexBuffer(0, this._instanceBuffer);
-      pass.setIndexBuffer(this._indexBuffer, 'uint16');
+      pass.setVertexBuffer(0, instanceBuffer, offset);
+      pass.setIndexBuffer(this._indexBuffer!, 'uint16');
       pass.drawIndexed(indicesPerInstance, this._quadIndex, 0, 0, 0);
 
       backend.stats.batches++;
       backend.stats.drawCalls++;
+    } else if (backend.clearRequested) {
+      // Honor a pending clear with an open pass (submitted at the next boundary).
+      backend._passCoordinator.acquirePass();
     }
 
-    backend._passCoordinator.endPass();
-
+    // Batch flushes no longer submit; the backend ends the pass at boundaries.
     this._quadIndex = 0;
     this._maxNodeIndex = 0;
     this._currentBlendMode = null;
@@ -412,8 +467,10 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
     return pipeline;
   }
 
+  // Grow the CPU staging array for the batch currently being packed. The GPU
+  // instance buffer is a separate frame-scoped arena managed in flush().
   private _ensureInstanceCapacity(instanceCount: number): void {
-    if (!this._device || instanceCount <= this._instanceCapacity) {
+    if (instanceCount <= this._instanceCapacity) {
       return;
     }
 
@@ -431,18 +488,9 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
       new Uint8Array(instanceData).set(new Uint8Array(oldData, 0, carryBytes));
     }
 
-    const instanceBuffer = this._device.createBuffer({
-      label: 'nine-slice:instance-buffer',
-      size: instanceData.byteLength,
-      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-    });
-
-    this._instanceBuffer?.destroy();
-
     this._instanceCapacity = nextCapacity;
     this._instanceData = instanceData;
     this._instanceFloat32 = new Float32Array(instanceData);
     this._instanceUint32 = new Uint32Array(instanceData);
-    this._instanceBuffer = instanceBuffer;
   }
 }

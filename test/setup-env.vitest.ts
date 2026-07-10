@@ -2,7 +2,10 @@ import { type MockInstance, vi } from 'vitest';
 
 // jsdom does not implement PointerEvent. Provide a minimal polyfill that
 // extends MouseEvent so pointer-event listeners receive the right properties.
-if (typeof globalThis.PointerEvent === 'undefined') {
+// Guarded on `MouseEvent` so this setup file stays inert (rather than throwing)
+// under the `node` test environment used by the perf/baseline smoke test, which
+// drives a real out-of-process browser and needs none of these jsdom shims.
+if (typeof MouseEvent !== 'undefined' && typeof globalThis.PointerEvent === 'undefined') {
   class PointerEventPolyfill extends MouseEvent {
     public readonly pointerId: number;
     public readonly pointerType: string;
@@ -41,15 +44,19 @@ const mockContext2d = {
   drawImage: () => undefined,
 };
 
-Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
-  configurable: true,
-  value: () => mockContext2d,
-});
+// Guarded on `HTMLCanvasElement` so the file is inert under the `node`
+// environment (see the MouseEvent note above).
+if (typeof HTMLCanvasElement !== 'undefined') {
+  Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
+    configurable: true,
+    value: () => mockContext2d,
+  });
 
-Object.defineProperty(HTMLCanvasElement.prototype, 'toDataURL', {
-  configurable: true,
-  value: () => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
-});
+  Object.defineProperty(HTMLCanvasElement.prototype, 'toDataURL', {
+    configurable: true,
+    value: () => 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+  });
+}
 
 const makeMockAudioParam = (): AudioParam =>
   ({

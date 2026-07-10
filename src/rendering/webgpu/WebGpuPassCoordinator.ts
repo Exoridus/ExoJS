@@ -30,6 +30,15 @@ export interface WebGpuActiveRenderPass {
   readonly pass: GPURenderPassEncoder;
   readonly targetFormat: GPUTextureFormat;
   readonly view: View;
+  /**
+   * The view's {@link View.updateId} captured when this pass was opened.
+   * Renderers compare it against the live `view.updateId` before rewriting the
+   * shared projection uniform into a still-open pass: a bump means the same View
+   * object was mutated (e.g. a camera pan with no identity change) between two
+   * merged flushes, which would retroactively re-project batches already
+   * recorded here — so the renderer ends the pass first.
+   */
+  readonly viewUpdateId: number;
   readonly stencilEnabled: boolean;
   readonly stencilRef: number;
 }
@@ -168,6 +177,7 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
       pass,
       targetFormat: backend.renderTargetFormat,
       view: backend.view,
+      viewUpdateId: backend.view.updateId,
       stencilEnabled,
       stencilRef: this._stencilRef,
     };

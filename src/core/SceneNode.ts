@@ -24,6 +24,7 @@ import type { RenderNode } from '#rendering/RenderNode';
 import type { View } from '#rendering/View';
 
 import { Bounds } from './Bounds';
+import { nextNodeRevision, NodeRevision } from './NodeRevision';
 import type { Stage } from './Stage';
 
 // Internal: dirty-flag bits used by SceneNode's transform cache.
@@ -92,6 +93,8 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
     SceneNodeTransformFlags.Transform | SceneNodeTransformFlags.GlobalTransform | SceneNodeTransformFlags.BoundsRect,
   );
 
+  private readonly _nodeRevision: NodeRevision = new NodeRevision();
+
   protected _bounds = new Bounds();
   protected _transform: Matrix = new Matrix();
   protected _position: ObservableVector = new ObservableVector(this, SceneNodeVectorChannel.Position, 0, 0);
@@ -108,6 +111,18 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
 
   private _visible = true;
   private _globalTransform = new Matrix();
+  /**
+   * Monotonic counter bumped every time {@link getGlobalTransform} actually
+   * recomputes this node's world matrix. Children compare the parent's version
+   * against their cached {@link _combinedParentVersion} to detect — lazily, on
+   * read — that an ancestor moved without an eager subtree walk. `protected` so
+   * derived caches that also depend on the world transform (e.g. Sprite's quad
+   * vertices/normals) can invalidate against it the same way {@link getBounds}
+   * does via {@link _boundsBuiltAtVersion}.
+   */
+  protected _globalTransformVersion = 0;
+  private _combinedParentVersion = -1;
+  private _boundsBuiltAtVersion = -1;
   private _localBounds = new Rectangle();
   private _anchor = new ObservableVector(this, SceneNodeVectorChannel.Anchor, 0, 0);
   private _parentNode: Container | null = null;
@@ -202,7 +217,10 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
   }
 
   public set visible(visible: boolean) {
-    this._visible = visible;
+    if (this._visible !== visible) {
+      this._visible = visible;
+      this._markStructureDirty();
+    }
   }
 
   public get zIndex(): number {
@@ -212,6 +230,7 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
   public set zIndex(zIndex: number) {
     if (this._zIndex !== zIndex) {
       this._zIndex = zIndex;
+      this._markContentDirty();
     }
   }
 
@@ -380,9 +399,12 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
   }
 
   public getBounds(): Rectangle {
-    if (this.flags.has(SceneNodeTransformFlags.BoundsRect)) {
+    this.getGlobalTransform(); // ensures this node's own _globalTransformVersion is current
+
+    if (this.flags.has(SceneNodeTransformFlags.BoundsRect) || this._boundsBuiltAtVersion !== this._globalTransformVersion) {
       this.updateBounds();
       this.flags.remove(SceneNodeTransformFlags.BoundsRect);
+      this._boundsBuiltAtVersion = this._globalTransformVersion;
     }
 
     return this._bounds.getRect();
@@ -405,14 +427,21 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
   }
 
   public getGlobalTransform(): Matrix {
-    if (this.flags.has(SceneNodeTransformFlags.GlobalTransform)) {
+    const parent = this._parentNode;
+    const parentTransform = parent !== null ? parent.getGlobalTransform() : null;
+    const parentVersion = parent !== null ? parent._globalTransformVersion : 0;
+    const stale = this.flags.has(SceneNodeTransformFlags.GlobalTransform) || this._combinedParentVersion !== parentVersion;
+
+    if (stale) {
       this._globalTransform.copy(this.getTransform());
 
-      if (this._parentNode) {
-        this._globalTransform.combine(this._parentNode.getGlobalTransform());
+      if (parentTransform !== null) {
+        this._globalTransform.combine(parentTransform);
       }
 
+      this._combinedParentVersion = parentVersion;
       this.flags.remove(SceneNodeTransformFlags.GlobalTransform);
+      this._globalTransformVersion++;
     }
 
     return this._globalTransform;
@@ -602,19 +631,22 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
     }
   }
 
-  /** Mark own + all descendants' GlobalTransform + Bounds dirty. */
+  /** Mark own GlobalTransform + Bounds dirty. Descendants detect staleness lazily via the parent-version compare in getGlobalTransform()/getBounds() — no eager subtree walk. */
   public _invalidateSubtreeTransform(): void {
     this.flags.push(SceneNodeTransformFlags.GlobalTransform | SceneNodeTransformFlags.BoundsRect);
-    this._invalidateChildrenTransform();
-  }
-
-  /** Hook for Container to override. Default: no-op (leaf node has no children). */
-  protected _invalidateChildrenTransform(): void {
-    // overridden by Container
   }
 
   /** Mark own Bounds dirty AND propagate up to Container ancestors' Bounds. */
   public _invalidateBoundsCascade(): void {
+    // A bounds change means this node's rendered extent changed, which makes any
+    // retained draw slot captured for it (screen-space AABB + material key) stale.
+    // Route it through the content-dirty contract so the Track-B static-subtree
+    // skip cannot replay a stale extent/material for a drawable (Text/BitmapText/
+    // Mesh, or any future one) that resizes via _invalidateBoundsCascade without
+    // separately bumping the node revision. Over-invalidation is correctness-safe
+    // (just less skipping); under-invalidation is the bug this closes.
+    this._markContentDirty();
+
     // Mark own bounds + notify interaction for THIS node unconditionally —
     // the manager filters to tracked interactive nodes so this call is O(1)
     // for the common case (non-interactive node — fast Set.has miss).
@@ -633,34 +665,77 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
     }
   }
 
+  /** @internal — aggregate content-dirty stamp for this node's subtree (transform/tint/visual-source changes at or below). Read by {@link RetainedPlanCache}. */
+  public get _contentRevision(): number {
+    return this._nodeRevision.content;
+  }
+
+  /** @internal — aggregate structure-dirty stamp (child add/remove/reorder, visibility) for this node's subtree. */
+  public get _structureRevision(): number {
+    return this._nodeRevision.structure;
+  }
+
+  /** @internal — mark this node's content dirty and propagate the stamp up to the root. */
+  protected _markContentDirty(): void {
+    const revision = nextNodeRevision();
+
+    this._nodeRevision.touchContent(revision);
+
+    let ancestor = this._parentNode;
+
+    while (ancestor !== null) {
+      ancestor._nodeRevision.touchContent(revision);
+      ancestor = ancestor.parent;
+    }
+  }
+
+  /** @internal — mark this node's structure dirty (implies content-dirty) and propagate up to the root. */
+  protected _markStructureDirty(): void {
+    const revision = nextNodeRevision();
+
+    this._nodeRevision.touchStructure(revision);
+
+    let ancestor = this._parentNode;
+
+    while (ancestor !== null) {
+      ancestor._nodeRevision.touchStructure(revision);
+      ancestor = ancestor.parent;
+    }
+  }
+
   private _setPositionDirty(): void {
     this.flags.push(SceneNodeTransformFlags.Translation);
     this._invalidateSubtreeTransform();
     this._invalidateBoundsCascade();
+    this._markContentDirty();
   }
 
   private _setRotationDirty(): void {
     this.flags.push(SceneNodeTransformFlags.Rotation);
     this._invalidateSubtreeTransform();
     this._invalidateBoundsCascade();
+    this._markContentDirty();
   }
 
   private _setScalingDirty(): void {
     this.flags.push(SceneNodeTransformFlags.Scaling);
     this._invalidateSubtreeTransform();
     this._invalidateBoundsCascade();
+    this._markContentDirty();
   }
 
   private _setOriginDirty(): void {
     this.flags.push(SceneNodeTransformFlags.Origin);
     this._invalidateSubtreeTransform();
     this._invalidateBoundsCascade();
+    this._markContentDirty();
   }
 
   private _setSkewDirty(): void {
     this.flags.push(SceneNodeTransformFlags.Skew);
     this._invalidateSubtreeTransform();
     this._invalidateBoundsCascade();
+    this._markContentDirty();
   }
 
   /**

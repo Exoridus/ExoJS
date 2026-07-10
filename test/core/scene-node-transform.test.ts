@@ -193,8 +193,10 @@ describe('SceneNode parent-chain composition', () => {
     const beforeX = beforeMove.x;
     const beforeY = beforeMove.y;
 
-    // Mutate parent — child has no flag-push of its own, but the next
-    // getGlobalTransform() on child must re-read parent's world transform.
+    // Mutate parent — after the Slice 1 cascade fix, the child's own
+    // GlobalTransform flag is never touched eagerly; the next
+    // getGlobalTransform() on child must detect staleness lazily via the
+    // parent-version compare and recombine.
     parent.setPosition(100, 200);
 
     const afterMove = child.getGlobalTransform();
@@ -204,6 +206,49 @@ describe('SceneNode parent-chain composition', () => {
 
     child.destroy();
     parent.destroy();
+  });
+
+  test('moving a container does not eagerly call _invalidateSubtreeTransform on a direct child', () => {
+    const parent = new Container();
+    const child = new TestDrawable();
+
+    parent.addChild(child);
+
+    const spy = vi.spyOn(child, '_invalidateSubtreeTransform');
+
+    parent.setPosition(100, 200);
+
+    expect(spy).not.toHaveBeenCalled();
+
+    child.destroy();
+    parent.destroy();
+  });
+
+  test('moving a distant ancestor does not eagerly touch a nested descendant, but the descendant still resolves correctly on next read', () => {
+    const root = new Container();
+    const mid = new Container();
+    const leaf = new TestDrawable();
+
+    root.addChild(mid);
+    mid.addChild(leaf);
+    leaf.setPosition(5, 5);
+    leaf.getGlobalTransform(); // settle caches once
+
+    const leafSpy = vi.spyOn(leaf, '_invalidateSubtreeTransform');
+    const midSpy = vi.spyOn(mid, '_invalidateSubtreeTransform');
+
+    root.setPosition(50, 50);
+
+    expect(midSpy).not.toHaveBeenCalled();
+    expect(leafSpy).not.toHaveBeenCalled();
+
+    // Correctness: the lazy path must still resolve the new position exactly.
+    expect(leaf.getGlobalTransform().x).toBe(55);
+    expect(leaf.getGlobalTransform().y).toBe(55);
+
+    leaf.destroy();
+    mid.destroy();
+    root.destroy();
   });
 
   test('updateParentTransform walks the entire ancestor chain', () => {

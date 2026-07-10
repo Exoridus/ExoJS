@@ -103,35 +103,6 @@
       "title": "Methods",
       "members": [
         {
-          "name": "_invalidateChildrenTransform",
-          "signature": "_invalidateChildrenTransform(): void",
-          "signatureTokens": [
-            {
-              "text": "_invalidateChildrenTransform",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "void",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": "void",
-          "description": "Hook for Container to override. Default: no-op (leaf node has no children)."
-        },
-        {
           "name": "_updateOrigin",
           "signature": "_updateOrigin(): void",
           "signatureTokens": [
@@ -670,6 +641,35 @@
           "params": [],
           "returnType": "this",
           "description": ""
+        },
+        {
+          "name": "invalidateContent",
+          "signature": "invalidateContent(): this",
+          "signatureTokens": [
+            {
+              "text": "invalidateContent",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "this",
+          "description": "Mark this node's visual content dirty without going through a standard setter — e.g. a custom Drawable subclass backed by externally mutable data (the pattern TileChunkNode in @codexo/exojs-tilemap already uses via its own _chunk.revision compare). Call this after mutating such state so the Track-B retained-plan skip does not serve a stale frame for this node."
         },
         {
           "name": "inView",

@@ -12,6 +12,7 @@ import { BlendModes } from '#rendering/types';
 import { AbstractWebGpuRenderer } from './AbstractWebGpuRenderer';
 import type { WebGpuBackend } from './WebGpuBackend';
 import { getWebGpuBlendState } from './WebGpuBlendState';
+import { WebGpuInstanceArena } from './WebGpuInstanceArena';
 import { stencilContentDepthStencilState } from './WebGpuStencilState';
 
 /** WGSL source for the default sprite pipeline. @internal */
@@ -205,7 +206,11 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
   private _transformBindGroup: GPUBindGroup | null = null;
   private _transformStorageBuffer: GPUBuffer | null = null;
   private _indexBuffer: GPUBuffer | null = null;
-  private _instanceBuffer: GPUBuffer | null = null;
+  // Frame-scoped append arena for the per-batch instance stream: consecutive
+  // batch flushes accumulate into one open pass at distinct byte offsets, so the
+  // whole frame submits once instead of once per flush.
+  private readonly _instanceArena = new WebGpuInstanceArena('sprite:instance-buffer', initialBatchCapacity * instanceStrideBytes);
+  // CPU staging for the batch currently being packed (one batch at a time).
   private _instanceCapacity = 0;
   private _instanceData: ArrayBuffer = new ArrayBuffer(0);
   private _instanceFloat32 = new Float32Array(this._instanceData);
@@ -310,7 +315,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
   }
 
   protected onDisconnect(): void {
-    this._instanceBuffer?.destroy();
+    this._instanceArena.destroy();
     this._indexBuffer?.destroy();
     this._uniformBuffer?.destroy();
 
@@ -323,7 +328,6 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
 
     this._customMaterials.clear();
     this._pipelines.clear();
-    this._instanceBuffer = null;
     this._indexBuffer = null;
     this._transformBindGroup = null;
     this._transformStorageBuffer = null;
@@ -476,6 +480,14 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
       return;
     }
 
+    // The projection uniform is a single shared buffer rewritten at offset 0
+    // every flush. If a pass is still open holding earlier batches whose view
+    // transform differs from the one about to be written (same View object
+    // mutated between two merged flushes — e.g. a camera pan with no identity
+    // change), overwriting the uniform would retroactively re-project them. End
+    // (submit) that pass first so its draws keep their original projection.
+    this._endPassOnProjectionChange(backend);
+
     const viewMatrix = backend.view.getTransform();
 
     this._projectionData.set([viewMatrix.a, viewMatrix.c, 0, 0, viewMatrix.b, viewMatrix.d, 0, 0, 0, 0, 1, 0, viewMatrix.x, viewMatrix.y, 0, viewMatrix.z]);
@@ -485,45 +497,104 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     const scissor = backend.getScissorRect();
     const maskClipsAll = scissor !== null && (scissor.width <= 0 || scissor.height <= 0);
 
-    // The coordinator owns the GPU pass: it opens the encoder + render pass
-    // (load/clear resolution, pass count and scissor are applied there) and
-    // ends + submits it below.
-    const pass = backend._passCoordinator.acquirePass().pass;
+    // A custom-material batch re-uploads its per-material user-uniform buffer at
+    // offset 0 every flush, so two custom flushes must not share one submit; end
+    // the pass after a custom batch (default batches accumulate and are submitted
+    // together at the next genuine boundary).
+    const isCustom = this._currentMaterial !== null;
+    const willDraw = this._instanceCount > 0 && !maskClipsAll && this._indexBuffer !== null && this._currentBlendMode !== null;
 
-    if (this._instanceCount > 0 && !maskClipsAll && this._instanceBuffer !== null && this._indexBuffer !== null && this._currentBlendMode !== null) {
-      device.queue.writeBuffer(this._instanceBuffer, 0, this._instanceData, 0, this._instanceCount * instanceStrideBytes);
+    if (willDraw) {
+      const batchBytes = this._instanceCount * instanceStrideBytes;
+      const needCount = this._maxNodeIndex + 1;
+
+      // Open the coordinator's pass (idempotent — consecutive flushes reuse it)
+      // and reserve a fresh slice of the instance arena for this batch.
+      let active = backend._passCoordinator.acquirePass();
+
+      this._instanceArena.syncPass(active);
+
+      // A texture this batch samples whose content/size changed since it was last
+      // uploaded will have its re-upload land on the queue timeline before the
+      // deferred submit, retroactively changing draws already recorded into this
+      // open pass. End (submit) the pass first so those draws capture the
+      // pre-mutation content, then reopen and re-upload into the fresh slice.
+      if (this._instanceArena.cursor > 0 && this._batchWouldMutateTexture(backend)) {
+        backend._passCoordinator.endPass();
+        active = backend._passCoordinator.acquirePass();
+        this._instanceArena.resetPass();
+        this._instanceArena.syncPass(active);
+      }
+
+      // Resolving the transform storage may reallocate (and free) its GPU buffer;
+      // earlier batches in this open pass still reference the old one, so end the
+      // pass first when it already holds batches, then reopen with a fresh slice.
+      if (this._instanceArena.cursor > 0 && backend._transformStorageWouldGrow(needCount)) {
+        backend._passCoordinator.endPass();
+        active = backend._passCoordinator.acquirePass();
+        this._instanceArena.resetPass();
+        this._instanceArena.syncPass(active);
+      }
+
+      if (!this._instanceArena.fits(batchBytes)) {
+        // Growing reallocates the arena buffer; end (submit) the pass first so no
+        // in-flight draw references the buffer we are about to destroy.
+        if (this._instanceArena.cursor > 0) {
+          backend._passCoordinator.endPass();
+          active = backend._passCoordinator.acquirePass();
+          this._instanceArena.resetPass();
+          this._instanceArena.syncPass(active);
+        }
+
+        this._instanceArena.grow(device, batchBytes);
+      }
+
+      const offset = this._instanceArena.take(batchBytes);
+      const instanceBuffer = this._instanceArena.buffer!;
+      const pass = active.pass;
+
+      device.queue.writeBuffer(instanceBuffer, offset, this._instanceData, 0, batchBytes);
 
       // Resolve the shared transform storage buffer (rows uploaded up to the
       // max nodeIndex referenced by this batch) and bind it alongside the
       // projection UBO on group(0). Both the default and custom programs fetch
       // the world transform from it via nodeIndex.
-      const storage = backend.getTransformStorageBuffer(this._maxNodeIndex + 1);
+      const storage = backend.getTransformStorageBuffer(needCount);
       const transformBindGroup = this._getOrCreateTransformBindGroup(device, uniformBuffer, storage.buffer);
 
       const material = this._currentMaterial;
       const stencil = backend._passCoordinator.stencilActive;
 
       if (material === null) {
-        const pipeline = this._getPipeline(this._currentBlendMode, backend.renderTargetFormat, stencil);
+        const pipeline = this._getPipeline(this._currentBlendMode!, backend.renderTargetFormat, stencil);
         const textureBindGroup = this._createTextureBindGroup(device, backend);
 
         pass.setPipeline(pipeline);
         pass.setBindGroup(0, transformBindGroup);
         pass.setBindGroup(1, textureBindGroup);
-        pass.setVertexBuffer(0, this._instanceBuffer);
-        pass.setIndexBuffer(this._indexBuffer, 'uint16');
+        pass.setVertexBuffer(0, instanceBuffer, offset);
+        pass.setIndexBuffer(this._indexBuffer!, 'uint16');
         pass.drawIndexed(indicesPerSprite, this._instanceCount, 0, 0, 0);
       } else {
         pass.pushDebugGroup('SpriteMaterial (custom)');
-        this._drawCustomBatch(pass, device, backend, material, transformBindGroup, stencil);
+        this._drawCustomBatch(pass, device, backend, material, transformBindGroup, stencil, instanceBuffer, offset);
         pass.popDebugGroup();
       }
 
       backend.stats.batches++;
       backend.stats.drawCalls++;
+    } else if (backend.clearRequested) {
+      // No drawable content but a clear is pending: open the coordinator pass so
+      // createColorAttachment consumes the clear state once (submitted at the
+      // next boundary).
+      backend._passCoordinator.acquirePass();
     }
 
-    backend._passCoordinator.endPass();
+    // Batch flushes no longer submit; the backend ends the pass at genuine
+    // boundaries. The exception is a custom-material batch, isolated above.
+    if (isCustom) {
+      backend._passCoordinator.endPass();
+    }
 
     this._instanceCount = 0;
     this._maxNodeIndex = 0;
@@ -531,6 +602,47 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     this._currentBlendMode = null;
     this._currentMaterial = null;
     this._currentBaseTexture = null;
+  }
+
+  /**
+   * End the open pass if its recorded batches were projected with a different
+   * view transform than the one this flush is about to write into the shared
+   * projection uniform. Guarded on the arena tracking the *current* active pass
+   * so a stale post-boundary cursor never triggers a spurious split.
+   */
+  private _endPassOnProjectionChange(backend: WebGpuBackend): void {
+    const activePass = backend._passCoordinator.activePass;
+
+    if (
+      activePass !== null &&
+      this._instanceArena.cursor > 0 &&
+      this._instanceArena.tracksPass(activePass) &&
+      activePass.viewUpdateId !== backend.view.updateId
+    ) {
+      backend._passCoordinator.endPass();
+      this._instanceArena.resetPass();
+    }
+  }
+
+  /**
+   * Whether any texture the pending batch binds would be re-uploaded or resized
+   * when synced (see {@link WebGpuBackend._textureUploadWouldMutate}). Checks the
+   * custom base texture on the custom path, else every active multi-texture slot.
+   */
+  private _batchWouldMutateTexture(backend: WebGpuBackend): boolean {
+    if (this._currentMaterial !== null) {
+      return this._currentBaseTexture !== null && backend._textureUploadWouldMutate(this._currentBaseTexture);
+    }
+
+    for (let i = 0; i < this._slotCount; i++) {
+      const texture = this._activeTextures[i];
+
+      if (texture !== null && texture !== undefined && backend._textureUploadWouldMutate(texture)) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   /**
@@ -659,8 +771,10 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     }
   }
 
+  // Grow the CPU staging array for the batch currently being packed. The GPU
+  // instance buffer is a separate frame-scoped arena managed in flush().
   private _ensureInstanceCapacity(instanceCount: number): void {
-    if (!this._device || instanceCount <= this._instanceCapacity) {
+    if (instanceCount <= this._instanceCapacity) {
       return;
     }
 
@@ -683,19 +797,10 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
       new Uint8Array(instanceData).set(new Uint8Array(oldData, 0, carryBytes));
     }
 
-    const instanceBuffer = this._device.createBuffer({
-      label: 'sprite:instance-buffer',
-      size: instanceData.byteLength,
-      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-    });
-
-    this._instanceBuffer?.destroy();
-
     this._instanceCapacity = nextCapacity;
     this._instanceData = instanceData;
     this._instanceFloat32 = new Float32Array(instanceData);
     this._instanceUint32 = new Uint32Array(instanceData);
-    this._instanceBuffer = instanceBuffer;
   }
 
   private _resetSlots(): void {
@@ -846,6 +951,8 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     material: SpriteMaterial,
     transformBindGroup: GPUBindGroup,
     stencil: boolean,
+    instanceBuffer: GPUBuffer,
+    instanceByteOffset: number,
   ): void {
     const resources = this._getOrCreateCustomResources(material, device);
     const baseTexture = this._currentBaseTexture ?? Texture.empty;
@@ -859,7 +966,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     pass.setBindGroup(0, transformBindGroup);
     pass.setBindGroup(1, this._getCustomBaseTextureBindGroup(resources, backend, baseTexture, device));
     pass.setBindGroup(2, this._buildUserBindGroup(material, resources, backend, device));
-    pass.setVertexBuffer(0, this._instanceBuffer);
+    pass.setVertexBuffer(0, instanceBuffer, instanceByteOffset);
     pass.setIndexBuffer(this._indexBuffer!, 'uint16');
     pass.drawIndexed(indicesPerSprite, this._instanceCount, 0, 0, 0);
   }

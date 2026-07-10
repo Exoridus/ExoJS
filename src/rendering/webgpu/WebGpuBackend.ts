@@ -329,6 +329,17 @@ export class WebGpuBackend implements RenderBackend {
     const reserveCount = storage.buffer.count + nodeCount;
 
     if (reserveCount > 0 && this._device !== null && !this._deviceLost) {
+      // Growing the shared transform storage destroys the current GPU buffer.
+      // With the frame now submitted once, an earlier render() call this frame
+      // can have left a pass open whose recorded draws still bind that buffer;
+      // freeing it under them invalidates the whole merged command buffer at the
+      // next submit. End (submit) the open pass first when a growth is imminent,
+      // mirroring the renderers' flush-time `wouldGrow` guard (which runs too
+      // late here — `reserve` frees the buffer before any renderer flushes).
+      if (this._passCoordinatorInstance?.hasActivePass === true && storage.wouldGrow(reserveCount)) {
+        this._flushActiveRenderer();
+      }
+
       storage.reserve(this._device, reserveCount, this._accountant);
     }
 
@@ -701,6 +712,19 @@ export class WebGpuBackend implements RenderBackend {
       this.setClearColor(color);
     }
 
+    // With a pass kept open across batch flushes, a mid-frame clear must end
+    // (submit) that open pass NOW. Otherwise the next `acquirePass` early-returns
+    // the still-open pass without consuming the clear, so the clear silently
+    // defers to a later pass open — surviving this frame, then detonating at the
+    // next open (wiping content drawn after this point, or leaking into the next
+    // frame). Ending here means the next fresh pass resolves loadOp='clear' at
+    // exactly this request point: the clear wipes prior content and nothing else.
+    // The open pass is always the currently bound target, so this is precisely
+    // the target the clear applies to.
+    if (this._passCoordinatorInstance?.hasActivePass === true) {
+      this._flushActiveRenderer();
+    }
+
     this._clearRequested = true;
 
     return this;
@@ -949,6 +973,54 @@ export class WebGpuBackend implements RenderBackend {
 
   private _flushActiveRenderer(): void {
     this._renderer?.flush();
+    // Ending the active GPU pass — and thus `queue.submit` — is centralized here
+    // so it happens only at genuine boundaries (renderer switch, render-target /
+    // view / scissor / stencil change, compositor, execute, plan / frame end),
+    // NOT once per batch flush. Instanced renderers record consecutive batch
+    // flushes into the same open pass (via WebGpuInstanceArena) and no longer end
+    // it themselves, collapsing thousands of per-draw submits into one per frame.
+    this._passCoordinatorInstance?.endPass();
+  }
+
+  /**
+   * Whether resolving `minCount` transform-storage slots would reallocate (and
+   * free) the shared GPU storage buffer. Instanced renderers consult this before
+   * appending a batch into an open pass: growing the storage destroys the buffer
+   * earlier batches in that pass still reference, so the renderer ends (submits)
+   * the pass first when this is true and the pass already holds batches.
+   * @internal
+   */
+  public _transformStorageWouldGrow(minCount: number): boolean {
+    return this._getTransformStorage().wouldGrow(minCount);
+  }
+
+  /**
+   * Whether syncing `texture` would issue a *mutating* GPU op on a resource
+   * earlier draws in an open pass may already reference — i.e. a re-upload (its
+   * content version bumped) or a resize (destroy + recreate of the backing
+   * `GPUTexture`). A first-time upload (no managed state yet, or state still at
+   * the sentinel version) is NOT a mutation: no recorded draw can reference a
+   * texture that did not exist when it was recorded.
+   *
+   * Instanced renderers consult this before binding a batch's textures into an
+   * open pass: `queue.writeTexture` / `copyExternalImageToTexture` land on the
+   * queue timeline BEFORE the deferred submit, so re-uploading between two
+   * merged flushes would retroactively change draws already recorded into the
+   * pass. When true (and the pass already holds batches) the renderer ends
+   * (submits) the pass first, capturing those draws against the pre-mutation
+   * content, then reopens with a fresh slice — mirroring the `wouldGrow` guard.
+   * @internal
+   */
+  public _textureUploadWouldMutate(texture: Texture | RenderTexture): boolean {
+    const state = this._textureStates.get(texture);
+
+    if (state === undefined || state.version === -1) {
+      return false;
+    }
+
+    const version = texture instanceof RenderTexture ? texture.textureVersion : texture.version;
+
+    return state.version !== version;
   }
 
   private _getTransformStorage(): WebGpuTransformStorage {
@@ -1403,6 +1475,16 @@ export class WebGpuBackend implements RenderBackend {
     }
 
     if (state) {
+      // Destroying a GPUTexture an open pass still references would invalidate
+      // the pending merged command buffer at submit (the whole frame's draws
+      // would be dropped). End (submit) the open pass first so its recorded
+      // draws are captured before the resource goes away. Reachable when user
+      // code destroys a texture mid-frame between two same-frame render() calls;
+      // never called from within a renderer flush, so this is not reentrant.
+      if (this._passCoordinatorInstance?.hasActivePass === true) {
+        this._flushActiveRenderer();
+      }
+
       state.texture.destroy();
       this._accountant.free(state.accountedBytes);
       state.accountedBytes = 0;

@@ -89,6 +89,18 @@ export class WebGpuTransformStorage {
     this._growBuffer(device, requiredBytes);
   }
 
+  /**
+   * Whether {@link getBuffer}/{@link reserve} for `minCount` slots would grow —
+   * i.e. destroy the current GPU buffer and allocate a larger one. Lets callers
+   * that keep live references to the current buffer (open render passes) split
+   * before the reallocation frees it. @internal
+   */
+  public wouldGrow(minCount: number): boolean {
+    const requiredBytes = Math.max(1, minCount) * slotFloatCount * Float32Array.BYTES_PER_ELEMENT;
+
+    return this._storageBuffer === null || requiredBytes > this._storageCapacity;
+  }
+
   public getBuffer(device: GPUDevice, minCount: number, accountant?: GpuResourceAccountant): { readonly buffer: GPUBuffer; readonly count: number } {
     this._accountant = accountant ?? this._accountant;
 
