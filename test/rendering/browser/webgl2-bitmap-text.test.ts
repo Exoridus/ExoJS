@@ -18,36 +18,19 @@
  * quad paints a deterministic, exactly-known colour — the same technique
  * `webgpu-stencil-clip.test.ts`'s `createSolidBitmapText` helper uses.
  *
- * ## Discovered issue: first-flush uniforms are stale (WebGl2TextRenderer)
+ * ## Regression guard: first-flush uniforms (WebGl2TextRenderer)
  *
- * `WebGl2TextRenderer._drawBatches()` calls `shader.sync()` *before* setting
- * that draw's `u_projection` / `u_texture` / `u_nodeData` / `u_pageSize`
- * uniform values (WebGl2TextRenderer.ts, roughly lines 479-497). `ShaderUniform
- * .setValue()` only marks a uniform dirty for upload on the *next* `sync()`
- * call — so the values set for a given flush are not actually uploaded to the
- * GPU until the *following* flush of that shader object. Every other WebGL2
- * renderer sets its uniforms first and calls `shader.sync()` last (see e.g.
- * `WebGl2SpriteRenderer.ts`, which sets `u_projection`/`u_texture`/
- * `u_transforms` and only then calls `shader.sync()`); the text renderer's
- * order is inverted.
- *
- * Effect: the very first flush of a given text shaderType ('sdf' | 'msdf' |
- * 'color') after the renderer connects draws with whatever was uploaded at
- * `onConnect()` time (the shader's compile-time zero-initialised uniform
- * state) — a zero `u_projection` degenerates every glyph quad to a point,
- * so nothing rasterizes. This self-heals from the second flush onward in
- * continuous rendering (the projection and texture-unit indices are constant
- * across frames, so the one-flush-stale value is normally still correct by
- * then) — which is why no existing test caught it — but it means any true
- * single-shot render of Text/BitmapText (a screenshot, a render-to-texture
- * pre-bake, or literally this test's first `render()` call) is invisible.
- *
- * Each test below issues one throwaway "warm-up" render before the render it
- * asserts on, to route around this bug and still verify the actual pixel
- * path. This is a workaround for a real, reported engine bug — not a
- * quirk of this test's shader mocks — and should be removed once
- * `WebGl2TextRenderer._drawBatches()`'s uniform/sync ordering is fixed to
- * match the other renderers.
+ * This test originally uncovered a real engine bug: `WebGl2TextRenderer
+ * ._drawBatches()` called `shader.sync()` *before* setting that flush's
+ * `u_projection` / `u_texture` / `u_nodeData` / `u_pageSize` uniforms. Because
+ * `ShaderUniform.setValue()` only marks a uniform dirty for the *next* `sync()`,
+ * the first flush of each text shaderType drew with a stale zero `u_projection`
+ * — degenerate, so nothing rasterized. It self-healed from the second frame on
+ * (the values are frame-constant), so no continuous-rendering test caught it,
+ * but any genuine single-shot render (screenshot / render-to-texture pre-bake /
+ * first frame) drew nothing. Fixed by moving `sync()` after the uniform writes,
+ * matching every other WebGL2 renderer (uniforms first, `sync()` last). These
+ * tests render exactly once (no warm-up) so they fail if that ordering regresses.
  *
  * Run via:  pnpm test:browser:webgl2
  */
@@ -251,17 +234,6 @@ const render = (backend: WebGl2Backend, node: RenderNode): void => {
   backend.flush();
 };
 
-// Renders `node` twice and asserts against the *second* pass. See the
-// "Discovered issue" note at the top of this file: WebGl2TextRenderer
-// uploads a flush's u_projection/u_texture/u_nodeData one flush late, so the
-// very first flush of a text shaderType after connect is a degenerate no-op.
-// A throwaway warm-up render routes around that bug so these tests still
-// verify the real BitmapText pixel path rather than the connect-time state.
-const renderWarmed = (backend: WebGl2Backend, node: RenderNode): void => {
-  render(backend, node);
-  render(backend, node);
-};
-
 const readPixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
   const buf = new Uint8Array(4);
   const gl = backend.context;
@@ -322,7 +294,7 @@ describe('BitmapText WebGL2 browser', () => {
     try {
       text.setPosition(8, 8); // covers (8,8)-(40,40)
 
-      renderWarmed(backend, text);
+      render(backend, text);
 
       expect(backend.stats.drawCalls).toBeGreaterThan(0);
 
@@ -350,7 +322,7 @@ describe('BitmapText WebGL2 browser', () => {
       greenText.setPosition(36, 4); // covers (36,4)-(60,28)
       root.addChild(redText, greenText);
 
-      renderWarmed(backend, root);
+      render(backend, root);
 
       expectPixelNear(readPixel(backend, 16, 16), [255, 0, 0, 255]); // inside red glyph
       expectPixelNear(readPixel(backend, 48, 16), [0, 255, 0, 255]); // inside green glyph
@@ -370,7 +342,7 @@ describe('BitmapText WebGL2 browser', () => {
     try {
       text.setPosition(40, 40); // covers (40,40)-(56,56)
 
-      renderWarmed(backend, text);
+      render(backend, text);
 
       expectPixelNear(readPixel(backend, 48, 48), [255, 0, 0, 255]);
       // The origin — where the glyph would sit without the transform — stays clear.
