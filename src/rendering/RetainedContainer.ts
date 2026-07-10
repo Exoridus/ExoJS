@@ -164,7 +164,7 @@ export class RetainedContainer extends Container {
 
   /**
    * S2-D1 dev diagnostic: count fragment builds vs invalidations over a
-   * sliding window and warn ONCE when this container invalidates on
+   * tumbling window and warn ONCE when this container invalidates on
    * effectively every frame — the retention is pure overhead there (the
    * reference's retained arm measured 1.5x slower than immediate mode on
    * fully-dynamic content). Dev builds only; stripped from production via

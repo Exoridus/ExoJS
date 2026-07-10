@@ -434,6 +434,10 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> {
     }
 
     if (shader.uniforms.has('u_translation')) {
+      // Invariant: a custom mesh vertex shader must not declare BOTH `u_group`
+      // and consume `u_translation` — that would apply the group transform
+      // twice (once staged as `u_group`, once folded in here). This CPU-side
+      // compose is the fallback for shaders WITHOUT `u_group`.
       const groupTransform = backend.renderGroupTransform;
       const translation =
         groupTransform !== null ? this._groupComposeScratch.copy(mesh.getGlobalTransform()).combine(groupTransform) : mesh.getGlobalTransform();
