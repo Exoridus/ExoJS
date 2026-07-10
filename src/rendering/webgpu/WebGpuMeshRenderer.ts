@@ -84,6 +84,7 @@ struct TransformSlot {
 
 struct TransformUniforms {
     projection: mat3x3<f32>,
+    group: mat3x3<f32>,
     flags: vec4<f32>,
 };
 
@@ -103,7 +104,7 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     );
 
     var output: VertexOutput;
-    output.position = vec4<f32>((uniforms.projection * world).xy, 0.0, 1.0);
+    output.position = vec4<f32>((uniforms.projection * uniforms.group * world).xy, 0.0, 1.0);
     output.texcoord = input.texcoord;
     output.color = input.color;
     output.tint = slot.m2;
@@ -128,7 +129,7 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
 const vertexStrideBytes = 20;
 const wordsPerVertex = vertexStrideBytes / 4;
 const tintByteLength = 32; // vec4 tint + vec4 flags (only flags.x used)
-const transformUniformByteLength = 64; // mat3x3<f32> (48B) + vec4<f32> flags (16B)
+const transformUniformByteLength = 112; // mat3x3<f32> projection (48B) + mat3x3<f32> group (48B) + vec4<f32> flags (16B)
 
 // Custom-shader uniform layout:
 //   mat3x3<f32> projection   — 48 bytes (3 vec3 columns padded to vec4 in WGSL)
@@ -890,9 +891,16 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     const vertexCount = mesh.vertexCount;
 
     if (bake) {
-      // Bake (view * globalTransform) into vertex positions on the CPU,
+      // Bake (view * group * globalTransform) into vertex positions on the CPU,
       // matching the primitive renderer's no-uniforms approach.
-      const matrix = this._combinedTransform.copy(mesh.getGlobalTransform()).combine(backend.view.getTransform());
+      const groupTransform = backend.renderGroupTransform;
+      const matrix = this._combinedTransform.copy(mesh.getGlobalTransform());
+
+      if (groupTransform !== null) {
+        matrix.combine(groupTransform);
+      }
+
+      matrix.combine(backend.view.getTransform());
 
       const a = matrix.a;
       const b = matrix.b;
@@ -1145,6 +1153,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
   private _writeInstancedUniformSlot(slot: number, backend: WebGpuBackend, premultiplySample: boolean): void {
     const data = this._instancedUniformScratch;
     const projection = backend.view.getTransform();
+    const groupTransform = backend.renderGroupTransform;
 
     data.fill(0);
     data[0] = projection.a;
@@ -1154,7 +1163,22 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     data[8] = projection.x;
     data[9] = projection.y;
     data[10] = 1;
-    data[12] = premultiplySample ? 1 : 0;
+
+    if (groupTransform !== null) {
+      data[12] = groupTransform.a;
+      data[13] = groupTransform.b;
+      data[16] = groupTransform.c;
+      data[17] = groupTransform.d;
+      data[20] = groupTransform.x;
+      data[21] = groupTransform.y;
+      data[22] = 1;
+    } else {
+      data[12] = 1;
+      data[17] = 1;
+      data[22] = 1;
+    }
+
+    data[24] = premultiplySample ? 1 : 0;
 
     this._device!.queue.writeBuffer(this._instancedUniformBuffer!, slot * this._uniformAlignment, data.buffer, data.byteOffset, transformUniformByteLength);
   }
@@ -1598,7 +1622,8 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     const data = new Float32Array(slotFloats);
 
     const proj = backend.view.getTransform();
-    const trans = mesh.getGlobalTransform();
+    const groupTransform = backend.renderGroupTransform;
+    const trans = groupTransform !== null ? this._combinedTransform.copy(mesh.getGlobalTransform()).combine(groupTransform) : mesh.getGlobalTransform();
 
     // mat3 (column-major): [a, c, tx | b, d, ty | 0, 0, 1] in 2D.
     // WGSL mat3x3 has each column padded to vec4. Store as:

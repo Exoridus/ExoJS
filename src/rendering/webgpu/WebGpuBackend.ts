@@ -161,6 +161,8 @@ export class WebGpuBackend implements RenderBackend {
   private _renderTarget: RenderTarget;
   private readonly _snapTransform: Matrix = new Matrix();
   private _renderer: Renderer | null = null;
+  private _renderGroupTransform: Matrix | null = null;
+  private _renderGroupTransformId = 0;
   private _texture: Texture | RenderTexture | null = null;
   private _clearRequested = false;
   private _hasPresentedFrame = false;
@@ -980,6 +982,38 @@ export class WebGpuBackend implements RenderBackend {
     // flushes into the same open pass (via WebGpuInstanceArena) and no longer end
     // it themselves, collapsing thousands of per-draw submits into one per frame.
     this._passCoordinatorInstance?.endPass();
+  }
+
+  /**
+   * Active per-group transform for the draws submitted until the next call
+   * (Track B Slice 2, S2-D2). `null` means identity (no retained group).
+   * Renderers fold it into their vertex stage as the projection UBO's `group`.
+   * @internal
+   */
+  public get renderGroupTransform(): Matrix | null {
+    return this._renderGroupTransform;
+  }
+
+  /**
+   * Monotonic stamp bumped on every {@link _setRenderGroupTransform} call.
+   * Renderers compare it to skip redundant group re-staging within an
+   * unchanged group scope.
+   * @internal
+   */
+  public get renderGroupTransformId(): number {
+    return this._renderGroupTransformId;
+  }
+
+  /**
+   * Playback hook (RenderPlanPlayer): enter/leave a retained transform group.
+   * A group is a flush boundary by design (S2-D2) — the pending batch must
+   * drain under the OLD group matrix before the new one takes effect.
+   * @internal
+   */
+  public _setRenderGroupTransform(transform: Matrix | null): void {
+    this._flushActiveRenderer();
+    this._renderGroupTransform = transform;
+    this._renderGroupTransformId++;
   }
 
   /**

@@ -91,6 +91,7 @@ void main(void) {
 export const spriteVertexWgsl = `
 struct ProjectionUniforms {
     matrix: mat4x4<f32>,
+    group: mat4x4<f32>,
 };
 
 struct TransformSlot {
@@ -136,7 +137,7 @@ fn vertexMain(input: VertexInput, @builtin(vertex_index) vid: u32) -> VertexOutp
     let worldX = slot.m0.x * localX + slot.m0.y * localY + slot.m1.x;
     let worldY = slot.m0.z * localX + slot.m0.w * localY + slot.m1.y;
 
-    output.position = projection.matrix * vec4<f32>(worldX, worldY, 0.0, 1.0);
+    output.position = projection.matrix * projection.group * vec4<f32>(worldX, worldY, 0.0, 1.0);
 
     let u = select(input.uvBounds.x, input.uvBounds.z, cornerX == 1u);
     let v = select(input.uvBounds.y, input.uvBounds.w, cornerY == 1u);

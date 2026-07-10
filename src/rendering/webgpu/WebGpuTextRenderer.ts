@@ -37,8 +37,9 @@ const initialVertexCapacity = 256;
 const initialIndexCapacity = 384;
 const initialNodeCapacity = 32;
 
-// FrameUniforms: 3 × vec4<f32> = 48 bytes (projection mat3x3 column-major)
-const projectionBytes = 48;
+// FrameUniforms: 6 × vec4<f32> = 96 bytes (projection + group mat3x3, column-major)
+const projectionBytes = 96;
+const identityGroupMat3 = new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]);
 
 type ShaderType = 'sdf' | 'msdf' | 'color';
 
@@ -63,6 +64,9 @@ struct FrameUniforms {
     projCol0 : vec4<f32>,
     projCol1 : vec4<f32>,
     projCol2 : vec4<f32>,
+    groupCol0 : vec4<f32>,
+    groupCol1 : vec4<f32>,
+    groupCol2 : vec4<f32>,
 };
 
 @group(0) @binding(0) var<uniform>       frame : FrameUniforms;
@@ -104,7 +108,12 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
         vec3<f32>(t0.w, t1.w, 1.0),
     );
 
-    let worldPos = proj * xf * vec3<f32>(input.position, 1.0);
+    let grp = mat3x3<f32>(
+        frame.groupCol0.xyz,
+        frame.groupCol1.xyz,
+        frame.groupCol2.xyz,
+    );
+    let worldPos = proj * grp * xf * vec3<f32>(input.position, 1.0);
 
     let bSize  = t9.zw;
     var gradUV = vec2<f32>(0.0);
@@ -340,6 +349,23 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     this._projData[9] = m[7]!;
     this._projData[10] = m[8]!;
     this._projData[11] = 0;
+
+    const groupTransform = backend.renderGroupTransform;
+    const g = groupTransform !== null ? groupTransform.toArray(false) : identityGroupMat3;
+
+    this._projData[12] = g[0]!;
+    this._projData[13] = g[1]!;
+    this._projData[14] = g[2]!;
+    this._projData[15] = 0;
+    this._projData[16] = g[3]!;
+    this._projData[17] = g[4]!;
+    this._projData[18] = g[5]!;
+    this._projData[19] = 0;
+    this._projData[20] = g[6]!;
+    this._projData[21] = g[7]!;
+    this._projData[22] = g[8]!;
+    this._projData[23] = 0;
+
     device.queue.writeBuffer(this._projBuffer!, 0, this._projData.buffer, 0, projectionBytes);
 
     // Upload per-node style data (may reallocate the storage buffer)

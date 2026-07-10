@@ -19,6 +19,7 @@ import { stencilContentDepthStencilState } from './WebGpuStencilState';
 export const spriteShaderSource = `
 struct ProjectionUniforms {
     matrix: mat4x4<f32>,
+    group: mat4x4<f32>,
 };
 
 struct TransformSlot {
@@ -106,7 +107,7 @@ fn vertexMain(input: VertexInput, @builtin(vertex_index) vid: u32) -> VertexOutp
     let worldX = slot.m0.x * localX + slot.m0.y * localY + slot.m1.x;
     let worldY = slot.m0.z * localX + slot.m0.w * localY + slot.m1.y;
 
-    output.position = projection.matrix * vec4<f32>(worldX, worldY, 0.0, 1.0);
+    output.position = projection.matrix * projection.group * vec4<f32>(worldX, worldY, 0.0, 1.0);
 
     let u = select(input.uvBounds.x, input.uvBounds.z, cornerX == 1u);
     let v = select(input.uvBounds.y, input.uvBounds.w, cornerY == 1u);
@@ -167,7 +168,8 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
 
 const instanceStrideBytes = 36;
 const wordsPerInstance = instanceStrideBytes / Uint32Array.BYTES_PER_ELEMENT;
-const projectionByteLength = 64;
+const projectionByteLength = 128;
+const identityGroupMat4 = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
 const initialBatchCapacity = 32;
 const maxBatchTextures = 8;
 const maxCustomTextureSlots = 7; // user texture uniforms; group(2) binding 1..N
@@ -194,6 +196,7 @@ interface CustomSpriteResources {
 
 export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
   private readonly _projectionData = new Float32Array(projectionByteLength / Float32Array.BYTES_PER_ELEMENT);
+  private _writtenGroupTransformId = -1;
 
   private _device: GPUDevice | null = null;
   private _shaderModule: GPUShaderModule | null = null;
@@ -492,6 +495,36 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
 
     this._projectionData.set([viewMatrix.a, viewMatrix.c, 0, 0, viewMatrix.b, viewMatrix.d, 0, 0, 0, 0, 1, 0, viewMatrix.x, viewMatrix.y, 0, viewMatrix.z]);
 
+    const groupTransform = backend.renderGroupTransform;
+
+    if (groupTransform !== null) {
+      this._projectionData.set(
+        [
+          groupTransform.a,
+          groupTransform.c,
+          0,
+          0,
+          groupTransform.b,
+          groupTransform.d,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          groupTransform.x,
+          groupTransform.y,
+          0,
+          groupTransform.z,
+        ],
+        16,
+      );
+    } else {
+      this._projectionData.set(identityGroupMat4, 16);
+    }
+
+    this._writtenGroupTransformId = backend.renderGroupTransformId;
+
     device.queue.writeBuffer(uniformBuffer, 0, this._projectionData.buffer, this._projectionData.byteOffset, this._projectionData.byteLength);
 
     const scissor = backend.getScissorRect();
@@ -617,7 +650,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
       activePass !== null &&
       this._instanceArena.cursor > 0 &&
       this._instanceArena.tracksPass(activePass) &&
-      activePass.viewUpdateId !== backend.view.updateId
+      (activePass.viewUpdateId !== backend.view.updateId || this._writtenGroupTransformId !== backend.renderGroupTransformId)
     ) {
       backend._passCoordinator.endPass();
       this._instanceArena.resetPass();
