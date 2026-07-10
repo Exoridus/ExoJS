@@ -899,3 +899,66 @@ describe('RetainedContainer: alpha/tint staleness guard (spec 8, plan D-P2)', ()
     backend.destroy();
   });
 });
+
+describe('RetainedContainer: dev diagnostic for pathological invalidation (S2-D1)', () => {
+  test('warns once when the fragment invalidates on effectively every frame of the observation window', () => {
+    const backend = createTestBackend();
+    const warnSpy = vi.spyOn(logger, 'warn');
+    const root = new Container();
+    const group = new RetainedContainer();
+    const leaf = new LeafDrawable('a');
+
+    group.name = 'hud';
+    group.addChild(leaf);
+    root.addChild(group);
+
+    // 121 collects, each preceded by a child mutation -> every build after
+    // the first is an invalidation of an existing capture.
+    for (let frame = 0; frame <= 120; frame++) {
+      leaf.setPosition(frame, 0);
+      collectDraws(root, backend);
+    }
+
+    const retainedWarnings = warnSpy.mock.calls.filter(call => String(call[0]).includes('RetainedContainer'));
+
+    expect(retainedWarnings).toHaveLength(1);
+    expect(String(retainedWarnings[0]![0])).toContain('hud');
+
+    // Keep mutating far past the window: still exactly one warning.
+    for (let frame = 0; frame < 130; frame++) {
+      leaf.setPosition(frame, 1);
+      collectDraws(root, backend);
+    }
+
+    expect(warnSpy.mock.calls.filter(call => String(call[0]).includes('RetainedContainer'))).toHaveLength(1);
+
+    warnSpy.mockRestore();
+    root.destroy();
+    backend.destroy();
+  });
+
+  test('a mostly-static group (occasional invalidation) never warns', () => {
+    const backend = createTestBackend();
+    const warnSpy = vi.spyOn(logger, 'warn');
+    const root = new Container();
+    const group = new RetainedContainer();
+    const leaf = new LeafDrawable('a');
+
+    group.addChild(leaf);
+    root.addChild(group);
+
+    for (let frame = 0; frame < 300; frame++) {
+      if (frame % 10 === 0) {
+        leaf.setPosition(frame, 0); // 10% invalidation rate
+      }
+
+      collectDraws(root, backend);
+    }
+
+    expect(warnSpy.mock.calls.filter(call => String(call[0]).includes('RetainedContainer'))).toHaveLength(0);
+
+    warnSpy.mockRestore();
+    root.destroy();
+    backend.destroy();
+  });
+});

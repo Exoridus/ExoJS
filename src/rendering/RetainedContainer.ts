@@ -5,6 +5,11 @@ import { RetainedGroupFragment } from '#rendering/plan/RetainedGroupFragment';
 
 import { Container } from './Container';
 
+/** Observation window for the S2-D1 retention diagnostic, in fragment builds (~frames). */
+const retainedDiagnosticWindow = 120;
+/** Invalidated builds within one window that trigger the warning (90% — "effectively every frame"). */
+const retainedDiagnosticThreshold = 108;
+
 /**
  * A {@link Container} that declares its subtree "mostly static and/or moves
  * as a whole" (Track B Wave 4). While the subtree is unchanged, its whole
@@ -43,6 +48,9 @@ export class RetainedContainer extends Container {
   private readonly _fragment = new RetainedGroupFragment();
   private _groupVersion = 0;
   private _boundaryDisengaged = false;
+  private _devFragmentBuilds = 0;
+  private _devFragmentInvalidations = 0;
+  private _devRetentionWarned = false;
 
   /**
    * The group convention is LIVE state (plan D-P4, Option A): `true` while
@@ -129,7 +137,10 @@ export class RetainedContainer extends Container {
       // container's own transform (a move only changes the group matrix).
       builder._replayRetainedFragment(this._fragment.entries);
 
-      // Task 10 hooks the dev diagnostic here: this._trackRetention(false);
+      if (__DEV__) {
+        this._trackRetention(false);
+      }
+
       return;
     }
 
@@ -138,8 +149,10 @@ export class RetainedContainer extends Container {
       this._children[index]!._collect(builder, index);
     }
 
-    // Task 10 hooks the dev diagnostic here, BEFORE capture:
-    // this._trackRetention(this._fragment.hasCapture);
+    if (__DEV__) {
+      this._trackRetention(this._fragment.hasCapture);
+    }
+
     this._fragment.capture(this._contentRevision, this._structureRevision, builder.backend, builder._snapshotScopeEntries(builder._peekCurrentScopeEntries()));
   }
 
@@ -147,6 +160,43 @@ export class RetainedContainer extends Container {
     this._fragment.invalidate();
 
     super.destroy();
+  }
+
+  /**
+   * S2-D1 dev diagnostic: count fragment builds vs invalidations over a
+   * sliding window and warn ONCE when this container invalidates on
+   * effectively every frame — the retention is pure overhead there (the
+   * reference's retained arm measured 1.5x slower than immediate mode on
+   * fully-dynamic content). Dev builds only; stripped from production via
+   * the __DEV__ guard at the call sites.
+   */
+  private _trackRetention(invalidated: boolean): void {
+    if (this._devRetentionWarned) {
+      return;
+    }
+
+    this._devFragmentBuilds++;
+
+    if (invalidated) {
+      this._devFragmentInvalidations++;
+    }
+
+    if (this._devFragmentBuilds < retainedDiagnosticWindow) {
+      return;
+    }
+
+    if (this._devFragmentInvalidations >= retainedDiagnosticThreshold) {
+      this._devRetentionWarned = true;
+      logger.warn(
+        `RetainedContainer${this.name ? ` '${this.name}'` : ''} invalidated its retained fragment on ` +
+          `${this._devFragmentInvalidations} of the last ${this._devFragmentBuilds} frames — the retention is pure ` +
+          `overhead here. Remove the RetainedContainer boundary or split the dynamic children out of the group.`,
+        { source: 'rendering' },
+      );
+    }
+
+    this._devFragmentBuilds = 0;
+    this._devFragmentInvalidations = 0;
   }
 
   private _deepBarrierCheckContent = -1;
