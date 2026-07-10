@@ -243,7 +243,10 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
   }
 
   public set cullable(cullable: boolean) {
-    this._cullable = cullable;
+    if (this._cullable !== cullable) {
+      this._cullable = cullable;
+      this._markStructureDirty();
+    }
   }
 
   /**
@@ -256,7 +259,10 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
   }
 
   public set cullArea(rect: Rectangle | null) {
-    this._cullArea = rect;
+    if (this._cullArea !== rect) {
+      this._cullArea = rect;
+      this._markStructureDirty();
+    }
   }
 
   /**
