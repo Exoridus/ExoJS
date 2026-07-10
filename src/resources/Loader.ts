@@ -445,9 +445,12 @@ export class Loader {
    * Fetches and processes one or more assets.
    *
    * - **Path string** — inferred from the file extension; resolves the asset.
-   * - **Asset<T>** — a single typed asset reference (from `Asset.kind(...)` or a config).
-   * - **Assets<M>** — typed asset container; keys become aliases.
-   * - **Config map** — inline `{ alias: { kind, source, … } }` definition.
+   * - **Asset<T>** — a single typed asset reference from `Asset.kind(...)`.
+   * - **Assets<M>** — a typed catalog from `Assets.from(...)`; keys become aliases.
+   *
+   * (The inline record-catalog form `{ alias: { kind, source } }` is no longer a
+   * public overload — build catalogs with `Assets.from(...)`; a runtime record
+   * fallback is retained only for internal multi-alias plumbing.)
    *
    * In-flight and already-loaded assets are de-duplicated: calling `load`
    * for the same (type, alias) pair while a fetch is in progress attaches
@@ -698,10 +701,11 @@ export class Loader {
   public get<S extends string>(path: [KindByPath<S>] extends [never] ? never : S, options?: unknown): LeafForPath<S>;
 
   /**
-   * Retrieves a previously loaded asset by type and alias (legacy lookup form
-   * for types without a seamless adapter; replaced by the asset graph in a
-   * later slice). Throws if the type is neither a seamless resource nor a value
-   * asset.
+   * Legacy in-memory lookup: retrieves a previously loaded asset by type + alias
+   * (for non-seamless types and `loadContainer`-loaded assets). This is a cache
+   * lookup, NOT a fetch — the token *fetch* forms `get(Type, src)` were removed.
+   * Prefer bare-path `get('x.png')` or `get(Asset.kind(...))`.
+   * @advanced
    */
   public get<T extends Loadable>(type: T, alias: string): LoadReturn<T>;
 
@@ -716,26 +720,20 @@ export class Loader {
   /**
    * Seamless/value access from an `Asset.kind(...)` descriptor (asset-system v2 §4.2) —
    * the replacement for the removed `get(Type, dynamicSource)` form. Builds and
-   * adopts the descriptor's handle-hybrid leaf: a resource kind (`Texture.of`,
-   * …) yields its heal-in-place handle, a value kind (`Json.of`, `TextAsset.of`,
-   * …) a stable {@link AssetRef}. A kind with neither a seamless adapter nor a
-   * value channel throws with guidance to use `load(Asset.kind(...))`.
+   * adopts the descriptor's handle-hybrid leaf: a resource kind yields its
+   * heal-in-place handle, a value kind a stable {@link AssetRef}. A kind with
+   * neither a seamless adapter nor a value channel throws with guidance to use
+   * `load(Asset.kind(...))`.
    *
-   * @remarks The `T extends object ? T : AssetRef<T>` return mirrors the catalog
-   * leaf inference ({@link InferCatalogLeaf}): a value descriptor with a
-   * primitive payload (`Asset.kind<number>('json', …)`) surfaces as `AssetRef<number>`, while
-   * an object payload (`Asset.kind<{ … }>('json', …)`) surfaces as the object type even though
-   * the runtime value is an `AssetRef` — the descriptor carries only its payload
-   * type `T`, not its value/resource kind, so the structural heuristic cannot
-   * distinguish an object payload from a resource handle.
+   * The return type follows the {@link ValueAsset} brand (as {@link InferCatalogLeaf}
+   * does): a value-kind descriptor (`Asset.kind<T>('json', …)`) returns
+   * `AssetRef<T>` — even for an object payload — while a resource-kind descriptor
+   * returns the resource itself, so the type always matches the runtime value.
    *
    * Unlike bare-path `get('x.png')`, this form is **not instance-deduped by
    * source**: each call builds a fresh leaf, so repeated `get(Asset.kind(kind, sameSrc))`
    * accumulates distinct handles (all healing to the same deduped backend
    * payload). It is the dynamic-source escape hatch — capture the handle once.
-   *
-   * A value-kind descriptor (`Asset.kind<T>('json', …)`) returns an `AssetRef<T>`;
-   * a resource-kind descriptor returns the resource itself.
    */
   public get<T>(asset: ValueAsset<T>): AssetRef<T>;
   public get<T>(asset: Asset<T>): T;
@@ -787,7 +785,7 @@ export class Loader {
       try {
         leaf = createLeaf(kind, src, opts);
       } catch {
-        throw new Error(`Loader: get() is for seamless/value assets; the "${kind}" kind has neither — use load(...of(...)) instead.`);
+        throw new Error(`Loader: get() is for seamless/value assets; the "${kind}" kind has neither — use load(Asset.kind('${kind}', ...)) instead.`);
       }
 
       this._adopt(leaf, claimer);

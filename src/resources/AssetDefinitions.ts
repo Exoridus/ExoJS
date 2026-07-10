@@ -48,7 +48,9 @@ export interface AssetDefinitions {
 
 export type AnyAssetConfig = {
   [K in keyof AssetDefinitions]: { kind: K } & AssetDefinitions[K]['config'] &
-    // `parse` is a value-kind-only post-load transform (delta §4/§5).
+    // `parse` is a value-kind-only, SYNCHRONOUS post-load transform (delta §4/§5):
+    // it maps the decoded raw value and may not return a Promise (async parse is a
+    // follow-up — it would need the fill/store flow to await).
     (K extends ValueAssetKind ? { parse?: (raw: AssetDefinitions[K]['resource']) => unknown } : object);
 }[keyof AssetDefinitions];
 

@@ -515,7 +515,7 @@
             }
           ],
           "returnType": "LoadReturn<T>",
-          "description": "Retrieves a previously loaded asset by type and alias (legacy lookup form for types without a seamless adapter; replaced by the asset graph in a later slice). Throws if the type is neither a seamless resource nor a value asset."
+          "description": "Legacy in-memory lookup: retrieves a previously loaded asset by type + alias (for non-seamless types and loadContainer-loaded assets). This is a cache lookup, NOT a fetch — the token *fetch* forms get(Type, src) were removed. Prefer bare-path get('x.png') or get(Asset.kind(...))."
         },
         {
           "name": "get",
@@ -657,7 +657,7 @@
             }
           ],
           "returnType": "AssetRef<T>",
-          "description": "Seamless/value access from an Asset.kind(...) descriptor (asset-system v2 §4.2) — the replacement for the removed get(Type, dynamicSource) form. Builds and adopts the descriptor's handle-hybrid leaf: a resource kind (Texture.of, …) yields its heal-in-place handle, a value kind (Json.of, TextAsset.of, …) a stable AssetRef. A kind with neither a seamless adapter nor a value channel throws with guidance to use load(Asset.kind(...))."
+          "description": "Seamless/value access from an Asset.kind(...) descriptor (asset-system v2 §4.2) — the replacement for the removed get(Type, dynamicSource) form. Builds and adopts the descriptor's handle-hybrid leaf: a resource kind yields its heal-in-place handle, a value kind a stable AssetRef. A kind with neither a seamless adapter nor a value channel throws with guidance to use load(Asset.kind(...)). The return type follows the ValueAsset brand (as InferCatalogLeaf does): a value-kind descriptor (Asset.kind<T>('json', …)) returns AssetRef<T> — even for an object payload — while a resource-kind descriptor returns the resource itself, so the type always matches the runtime value. Unlike bare-path get('x.png'), this form is **not instance-deduped by source**: each call builds a fresh leaf, so repeated get(Asset.kind(kind, sameSrc)) accumulates distinct handles (all healing to the same deduped backend payload). It is the dynamic-source escape hatch — capture the handle once."
         },
         {
           "name": "get",
@@ -1062,7 +1062,7 @@
             }
           ],
           "returnType": "LoadingQueue<T>",
-          "description": "Fetches and processes one or more assets. - **Path string** — inferred from the file extension; resolves the asset. - **Asset<T>** — a single typed asset reference (from Asset.kind(...) or a config). - **Assets<M>** — typed asset container; keys become aliases. - **Config map** — inline { alias: { kind, source, … } } definition. In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Per-asset options ride on the Asset.kind(kind, source, options) descriptor (or the extra fields of a config object)."
+          "description": "Fetches and processes one or more assets. - **Path string** — inferred from the file extension; resolves the asset. - **Asset<T>** — a single typed asset reference from Asset.kind(...). - **Assets<M>** — a typed catalog from Assets.from(...); keys become aliases. (The inline record-catalog form { alias: { kind, source } } is no longer a public overload — build catalogs with Assets.from(...); a runtime record fallback is retained only for internal multi-alias plumbing.) In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Per-asset options ride on the Asset.kind(kind, source, options) descriptor (or the extra fields of a config object)."
         },
         {
           "name": "load",
@@ -1170,7 +1170,7 @@
             }
           ],
           "returnType": "LoadingQueue<InferLoadedMap<M>>",
-          "description": "Fetches and processes one or more assets. - **Path string** — inferred from the file extension; resolves the asset. - **Asset<T>** — a single typed asset reference (from Asset.kind(...) or a config). - **Assets<M>** — typed asset container; keys become aliases. - **Config map** — inline { alias: { kind, source, … } } definition. In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Per-asset options ride on the Asset.kind(kind, source, options) descriptor (or the extra fields of a config object)."
+          "description": "Fetches and processes one or more assets. - **Path string** — inferred from the file extension; resolves the asset. - **Asset<T>** — a single typed asset reference from Asset.kind(...). - **Assets<M>** — a typed catalog from Assets.from(...); keys become aliases. (The inline record-catalog form { alias: { kind, source } } is no longer a public overload — build catalogs with Assets.from(...); a runtime record fallback is retained only for internal multi-alias plumbing.) In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Per-asset options ride on the Asset.kind(kind, source, options) descriptor (or the extra fields of a config object)."
         },
         {
           "name": "load",
@@ -1266,7 +1266,7 @@
             }
           ],
           "returnType": "LoadingQueue<T>",
-          "description": "Fetches and processes one or more assets. - **Path string** — inferred from the file extension; resolves the asset. - **Asset<T>** — a single typed asset reference (from Asset.kind(...) or a config). - **Assets<M>** — typed asset container; keys become aliases. - **Config map** — inline { alias: { kind, source, … } } definition. In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Per-asset options ride on the Asset.kind(kind, source, options) descriptor (or the extra fields of a config object)."
+          "description": "Fetches and processes one or more assets. - **Path string** — inferred from the file extension; resolves the asset. - **Asset<T>** — a single typed asset reference from Asset.kind(...). - **Assets<M>** — a typed catalog from Assets.from(...); keys become aliases. (The inline record-catalog form { alias: { kind, source } } is no longer a public overload — build catalogs with Assets.from(...); a runtime record fallback is retained only for internal multi-alias plumbing.) In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Per-asset options ride on the Asset.kind(kind, source, options) descriptor (or the extra fields of a config object)."
         },
         {
           "name": "load",
@@ -1350,7 +1350,7 @@
             }
           ],
           "returnType": "LoadingQueue<T>",
-          "description": "Fetches and processes one or more assets. - **Path string** — inferred from the file extension; resolves the asset. - **Asset<T>** — a single typed asset reference (from Asset.kind(...) or a config). - **Assets<M>** — typed asset container; keys become aliases. - **Config map** — inline { alias: { kind, source, … } } definition. In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Per-asset options ride on the Asset.kind(kind, source, options) descriptor (or the extra fields of a config object)."
+          "description": "Fetches and processes one or more assets. - **Path string** — inferred from the file extension; resolves the asset. - **Asset<T>** — a single typed asset reference from Asset.kind(...). - **Assets<M>** — a typed catalog from Assets.from(...); keys become aliases. (The inline record-catalog form { alias: { kind, source } } is no longer a public overload — build catalogs with Assets.from(...); a runtime record fallback is retained only for internal multi-alias plumbing.) In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Per-asset options ride on the Asset.kind(kind, source, options) descriptor (or the extra fields of a config object)."
         },
         {
           "name": "load",
@@ -1648,7 +1648,7 @@
             }
           ],
           "returnType": "LoadingQueue<LoadByPath<S>>",
-          "description": "Fetches and processes one or more assets. - **Path string** — inferred from the file extension; resolves the asset. - **Asset<T>** — a single typed asset reference (from Asset.kind(...) or a config). - **Assets<M>** — typed asset container; keys become aliases. - **Config map** — inline { alias: { kind, source, … } } definition. In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Per-asset options ride on the Asset.kind(kind, source, options) descriptor (or the extra fields of a config object)."
+          "description": "Fetches and processes one or more assets. - **Path string** — inferred from the file extension; resolves the asset. - **Asset<T>** — a single typed asset reference from Asset.kind(...). - **Assets<M>** — a typed catalog from Assets.from(...); keys become aliases. (The inline record-catalog form { alias: { kind, source } } is no longer a public overload — build catalogs with Assets.from(...); a runtime record fallback is retained only for internal multi-alias plumbing.) In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Per-asset options ride on the Asset.kind(kind, source, options) descriptor (or the extra fields of a config object)."
         },
         {
           "name": "load",
@@ -1791,7 +1791,7 @@
             }
           ],
           "returnType": "LoadingQueue<ResourceForKind<KindByPath<S>>>",
-          "description": "Fetches and processes one or more assets. - **Path string** — inferred from the file extension; resolves the asset. - **Asset<T>** — a single typed asset reference (from Asset.kind(...) or a config). - **Assets<M>** — typed asset container; keys become aliases. - **Config map** — inline { alias: { kind, source, … } } definition. In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Per-asset options ride on the Asset.kind(kind, source, options) descriptor (or the extra fields of a config object)."
+          "description": "Fetches and processes one or more assets. - **Path string** — inferred from the file extension; resolves the asset. - **Asset<T>** — a single typed asset reference from Asset.kind(...). - **Assets<M>** — a typed catalog from Assets.from(...); keys become aliases. (The inline record-catalog form { alias: { kind, source } } is no longer a public overload — build catalogs with Assets.from(...); a runtime record fallback is retained only for internal multi-alias plumbing.) In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Per-asset options ride on the Asset.kind(kind, source, options) descriptor (or the extra fields of a config object)."
         },
         {
           "name": "loadContainer",

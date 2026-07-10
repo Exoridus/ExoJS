@@ -57,7 +57,7 @@ export class AssetRef<T> {
     return this._value as T;
   }
 
-  /** @internal — set the post-load transform (a config's `parse`) applied to the raw value in {@link _fill}. */
+  /** @internal — set the SYNCHRONOUS post-load transform (a config's `parse`) applied to the raw value in {@link _fill}. */
   public _setParse(parse: (raw: unknown) => T): void {
     this._parse = parse;
   }

@@ -111,6 +111,8 @@ class SceneLoader implements Destroyable {
   }
 
   public get<S extends string>(path: LoadByPath<S> extends Texture | Sound ? S : never, options?: unknown): LoadByPath<S>;
+  // Legacy in-memory lookup by type + alias (advanced — mirrors Loader.get; a cache
+  // lookup, not a token fetch, which was removed).
   public get<T extends Loadable>(type: T, alias: string): LoadReturn<T>;
   // Seamless/value access from an `Asset.kind()` descriptor (mirrors Loader.get(asset)):
   // a value-kind descriptor returns AssetRef<T>, a resource-kind descriptor the resource.
