@@ -1,8 +1,8 @@
+import { Asset } from '@codexo/exojs';
 // Relative-path resolution for Aseprite image references (JSON → PNG).
 // Mirrors the approach used in @codexo/exojs-tiled: Aseprite stores the image
 // path relative to the JSON file; asset sources are often themselves relative,
 // so plain `new URL(ref, base)` cannot be used when `base` has no scheme.
-
 import { defineAsset, Texture } from '@codexo/exojs';
 import type { AssetHandler } from '@codexo/exojs/extensions';
 
@@ -103,7 +103,7 @@ function validateAsepriteData(raw: unknown, source: string): AsepriteData {
 /**
  * Declarative asset binding for {@link AsepriteSheet}.
  *
- * `loader.load(AsepriteSheet, 'hero.aseprite.json')` fetches and validates the
+ * `loader.load(Asset.kind('asepriteSheet', 'hero.aseprite.json'))` fetches and validates the
  * Aseprite JSON export, resolves the packed image URL from `meta.image`
  * (relative to the JSON source), loads the {@link Texture} via the Loader's
  * sub-load deduplication, and constructs a fully-parsed {@link AsepriteSheet}.
@@ -120,7 +120,7 @@ export const asepriteBinding = defineAsset({
         const raw = await ctx.fetchJson(req.source);
         const data = validateAsepriteData(raw, req.source);
         const imageUrl = resolveAsepriteUrl(data.meta.image, req.source);
-        const texture = await ctx.loader.load(Texture.of(imageUrl));
+        const texture = await ctx.loader.load(Asset.kind('texture', imageUrl));
 
         return AsepriteSheet.parse(data, texture);
       },

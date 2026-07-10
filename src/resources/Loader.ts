@@ -684,7 +684,7 @@ export class Loader {
    * not-yet-preloaded alias) therefore fetches that string and can 404 quietly
    * instead of throwing; preloaded aliases still return the stored payload. This
    * is intended seamless-by-default behaviour — the note is for debuggability.
-   * For a dynamic source, use `get(Texture.of(dynamicPath))`.
+   * For a dynamic source, use `get(Asset.kind('texture', dynamicPath))`.
    */
   public get<S extends string>(path: LoadByPath<S> extends Texture | Sound ? S : never, options?: unknown): LoadByPath<S>;
 
@@ -721,8 +721,8 @@ export class Loader {
    *
    * @remarks The `T extends object ? T : AssetRef<T>` return mirrors the catalog
    * leaf inference ({@link InferCatalogLeaf}): a value descriptor with a
-   * primitive payload (`Json.of<number>`) surfaces as `AssetRef<number>`, while
-   * an object payload (`Json.of<{ … }>`) surfaces as the object type even though
+   * primitive payload (`Asset.kind<number>('json', …)`) surfaces as `AssetRef<number>`, while
+   * an object payload (`Asset.kind<{ … }>('json', …)`) surfaces as the object type even though
    * the runtime value is an `AssetRef` — the descriptor carries only its payload
    * type `T`, not its value/resource kind, so the structural heuristic cannot
    * distinguish an object payload from a resource handle.
@@ -767,8 +767,8 @@ export class Loader {
       return out;
     }
 
-    // Single `X.of()` descriptor (e.g. `get(Json.of('x.json'))` /
-    // `get(Texture.of(dynamicPath))`) — build its handle-hybrid leaf from the
+    // Single `X.of()` descriptor (e.g. `get(Asset.kind('json', 'x.json'))` /
+    // `get(Asset.kind('texture', dynamicPath))`) — build its handle-hybrid leaf from the
     // config, adopt it, and return it. A value kind yields an AssetRef, a
     // resource kind the seamless placeholder handle. Mirrors `load`'s AssetImpl
     // branch and the single-meta-leaf path below. Must precede the string branch

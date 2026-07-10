@@ -1,4 +1,4 @@
-import { Asset, type Texture, TextureRegion } from '@codexo/exojs';
+import { type Texture, TextureRegion } from '@codexo/exojs';
 import type { ObjectPoint, ResolvedTile, TextStyle, TileAnimationFrame, TileDefinition, TileMapObject, TileProperties, TilePropertyValue, TileTransform } from '@codexo/exojs-tilemap';
 import { ImageLayer, ObjectLayer, TileLayer, TileMap, TilePropertyKind, TileSet } from '@codexo/exojs-tilemap';
 
@@ -11,7 +11,6 @@ import {
 } from './gid';
 import { createTiledLayer, TiledGroupLayer, TiledImageLayer, type TiledLayer,TiledObjectLayer, TiledTileLayer } from './TiledLayer';
 import type { TiledObject } from './TiledObject';
-import type { TiledLoadOptions } from './tiledOptions';
 import type { TiledTileset } from './TiledTileset';
 import { resolveTiledUrl } from './url';
 import { TiledFormatError } from './validate';
@@ -30,17 +29,6 @@ import { TiledFormatError } from './validate';
  * {@link TiledFormatError} on failure.
  */
 export class TiledMap {
-  /**
-   * Annotation descriptor for the parsed Tiled source map, for
-   * `Assets.from({...})` / `loader.get(...)` / `loader.load(...)`
-   * (asset-system v2 §5). This is the advanced parsed-source token; prefer the
-   * runtime {@link TileMap} (`TileMap.of('world.tmj')` or a bare `'world.tmj'`)
-   * for rendering. Use for dynamic paths or per-asset options — e.g. an
-   * explicit {@link TiledLoadOptions.format} hint for a `.json` path.
-   */
-  public static of(source: string, options?: TiledLoadOptions): Asset<TiledMap> {
-    return new Asset({ kind: 'tiledMap', source, ...options });
-  }
 
   /** Resolved URL this map was loaded from. */
   public readonly source: string;

@@ -1,10 +1,7 @@
 import { LoadState, type LoadStateValue } from '#core/LoadState';
 import { logger } from '#core/logging';
-import type { PlaybackOptions } from '#core/types';
 import { clamp } from '#math/utils';
 import { Vector } from '#math/Vector';
-import type { Asset } from '#resources/Asset';
-import { _makeAsset } from '#resources/Asset';
 
 import { getAudioContext, isAudioContextReady } from './audio-context';
 import type { AudioBus } from './AudioBus';
@@ -125,18 +122,6 @@ interface PooledVoice {
  * lazily) — `Sound` is best for short, frequently-triggered clips.
  */
 export class Sound implements Playable {
-  /**
-   * Annotation descriptor for a sound asset, for `Assets.from({...})` /
-   * `loader.get(...)` / `loader.load(...)` (asset-system v2 §5). Prefer a bare
-   * `'x.ogg'` string when the suffix is unambiguous; use `Sound.of(...)` for
-   * dynamic paths, ambiguous suffixes, or per-asset options.
-   */
-  public static of(
-    source: string,
-    options?: { playbackOptions?: Partial<PlaybackOptions>; poolSize?: number; sprites?: Readonly<Record<string, AudioSpriteClip>> },
-  ): Asset<Sound> {
-    return _makeAsset('sound', source, options);
-  }
 
   private _audioBuffer: AudioBuffer | null;
   /** @internal — load lifecycle, driven by the Loader's seamless pipeline. */
@@ -187,7 +172,7 @@ export class Sound implements Playable {
 
   /**
    * Load lifecycle of this sound. Directly constructed sounds are `'ready'`;
-   * deferred handles returned by `loader.get('theme.ogg')` / `loader.get(Sound.of(src))`
+   * deferred handles returned by `loader.get('theme.ogg')` / `loader.get(Asset.kind('sound', src))`
    * start `'loading'` and become `'ready'` once the payload fills in, or
    * `'failed'` when the load errors.
    */

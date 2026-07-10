@@ -73,17 +73,8 @@ type AssetFacade = AssetConstructorFn & {
 
 export const Asset = AssetImpl as unknown as AssetFacade;
 
-// Attach the runtime `kind` static onto the facade the constructor cast produced.
-(Asset as unknown as { kind: (kind: keyof AssetDefinitions, source: string, options?: object) => Asset<unknown> }).kind = (kind, source, options) => _makeAsset(kind, source, options);
-
-/**
- * Build an {@link Asset} descriptor for an `X.of(source, opts?)` annotation
- * static (asset-system v2 §5). Lives here (not in each resource class) so
- * `Texture`/`Sound`/… import only this light POJO factory from `#resources/Asset`,
- * with no runtime edge back into the `#resources` barrel.
- * @internal
- */
-export function _makeAsset<K extends keyof AssetDefinitions>(kind: K, source: string, opts?: object): Asset<AssetDefinitions[K]['resource']> {
-  // eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- generic `K` widens to `keyof AssetDefinitions` in a typed local, losing the type/config correlation `AnyAssetConfig` needs; the cast is required here, not just stylistic.
-  return new AssetImpl({ kind, source, ...(opts ?? {}) } as AnyAssetConfig);
-}
+// Attach the runtime `kind` static — the single POJO descriptor factory that
+// backs `Asset.kind(...)`.
+(Asset as unknown as { kind: (kind: keyof AssetDefinitions, source: string, options?: object) => Asset<unknown> }).kind = (kind, source, options) =>
+  // eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- generic `kind` widens to `keyof AssetDefinitions`, losing the type/config correlation `AnyAssetConfig` needs; the cast is required here, not just stylistic.
+  new AssetImpl({ kind, source, ...(options ?? {}) } as AnyAssetConfig);

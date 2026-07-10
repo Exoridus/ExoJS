@@ -30,11 +30,11 @@ const mockFetch = (jsonPayload: unknown): void => {
   );
 };
 
-// G1 (S3 Phase 4.5): `get(X.of())` is the replacement for the removed
+// G1 (S3 Phase 4.5): `get(Asset.kind())` is the replacement for the removed
 // `get(Type, dynamicSource)` form — a raw `X.of()` descriptor passed to `get()`
 // must build and adopt its handle-hybrid leaf, not fall through to the legacy
 // alias-lookup branch.
-describe('get(X.of()) descriptor access', () => {
+describe('get(Asset.kind()) descriptor access', () => {
   beforeEach(() => {
     vi.stubGlobal(
       'createImageBitmap',
@@ -86,14 +86,14 @@ describe('get(X.of()) descriptor access', () => {
     expect(loader.get(Asset.kind('texture', dynamicPath))).toBeInstanceOf(Texture);
   });
 
-  test('get(X.of()) on a non-leaf resource kind throws with guidance to use load()', () => {
+  test('get(Asset.kind()) on a non-leaf resource kind throws with guidance to use load()', () => {
     const loader = createCoreLoader();
 
     // bmFont is a non-leaf resource kind (no seamless adapter, not a value kind).
     expect(() => loader.get(Asset.kind('bmFont', 'font.fnt'))).toThrow(/get\(\) is for seamless\/value assets/);
   });
 
-  test('type: get(Json.of<primitive>) is AssetRef, get(Texture.of) is Texture', () => {
+  test('type: get(Asset.kind<primitive>(json)) is AssetRef, get(Asset.kind(texture)) is Texture', () => {
     const loader = createCoreLoader();
 
     // Value descriptor with a primitive payload → AssetRef<primitive>.

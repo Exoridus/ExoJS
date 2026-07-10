@@ -1,15 +1,15 @@
 {
   "title": "SvgAsset",
-  "description": "Dispatch token for SVG loading. `loader.load(SvgAsset.of('icon.svg'))` returns `Promise<HTMLImageElement>`.",
+  "description": "Dispatch token for SVG loading. `loader.load(Asset.kind('svg', 'icon.svg'))` returns `Promise<HTMLImageElement>`.",
   "symbol": "SvgAsset",
   "kind": "class",
   "subsystem": "resources",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 2,
+  "memberCount": 1,
   "counts": {
     "constructors": 1,
-    "methods": 1,
+    "methods": 0,
     "properties": 0,
     "events": 0
   },
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Dispatch token for SVG loading.",
-        "`loader.load(SvgAsset.of('icon.svg'))` returns `Promise<HTMLImageElement>`."
+        "`loader.load(Asset.kind('svg', 'icon.svg'))` returns `Promise<HTMLImageElement>`."
       ],
       "importLine": "import { SvgAsset } from '@codexo/exojs'",
       "sourceLink": null
@@ -57,139 +57,6 @@
           "params": [],
           "returnType": "SvgAsset",
           "description": ""
-        }
-      ],
-      "paragraphs": [],
-      "importLine": null,
-      "sourceLink": null
-    },
-    {
-      "id": "methods",
-      "title": "Methods",
-      "members": [
-        {
-          "name": "of",
-          "signature": "of(source: string, options?: { height?: number; width?: number }): Asset<HTMLImageElement>",
-          "signatureTokens": [
-            {
-              "text": "of",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "source",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "string",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "options",
-              "kind": "param"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "{ ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "height",
-              "kind": "name"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": "; ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "width",
-              "kind": "name"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": " }",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Asset",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "HTMLImageElement",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            }
-          ],
-          "params": [
-            {
-              "name": "source",
-              "type": "string",
-              "optional": false
-            },
-            {
-              "name": "options",
-              "type": "{ height?: number; width?: number }",
-              "optional": true
-            }
-          ],
-          "returnType": "Asset<HTMLImageElement>",
-          "description": "Annotation descriptor for an SVG asset (asset-system v2 §5). Pass { width, height } to rasterize the SVG at an explicit size (an unsized SVG decodes at its intrinsic dimensions). Use in Assets.from({...}) or loader.get(...)/loader.load(...)."
         }
       ],
       "paragraphs": [],

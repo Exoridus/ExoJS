@@ -6,10 +6,10 @@
   "subsystem": "audio",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 31,
+  "memberCount": 30,
   "counts": {
     "constructors": 1,
-    "methods": 10,
+    "methods": 9,
     "properties": 20,
     "events": 0
   },
@@ -597,194 +597,6 @@
           ],
           "returnType": "this",
           "description": ""
-        },
-        {
-          "name": "of",
-          "signature": "of(source: string, options?: { playbackOptions?: Partial<PlaybackOptions>; poolSize?: number; sprites?: Readonly<Record<string, AudioSpriteClip>> }): Asset<Sound>",
-          "signatureTokens": [
-            {
-              "text": "of",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "source",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "string",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "options",
-              "kind": "param"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "{ ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "playbackOptions",
-              "kind": "name"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Partial",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "PlaybackOptions",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": "; ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "poolSize",
-              "kind": "name"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": "; ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "sprites",
-              "kind": "name"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Readonly",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Record",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "string",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "AudioSpriteClip",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": " }",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Asset",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Sound",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            }
-          ],
-          "params": [
-            {
-              "name": "source",
-              "type": "string",
-              "optional": false
-            },
-            {
-              "name": "options",
-              "type": "{ playbackOptions?: Partial<PlaybackOptions>; poolSize?: number; sprites?: Readonly<Record<string, AudioSpriteClip>> }",
-              "optional": true
-            }
-          ],
-          "returnType": "Asset<Sound>",
-          "description": "Annotation descriptor for a sound asset, for Assets.from({...}) / loader.get(...) / loader.load(...) (asset-system v2 §5). Prefer a bare 'x.ogg' string when the suffix is unambiguous; use Sound.of(...) for dynamic paths, ambiguous suffixes, or per-asset options."
         }
       ],
       "paragraphs": [],
@@ -1031,7 +843,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Load lifecycle of this sound. Directly constructed sounds are 'ready'; deferred handles returned by loader.get('theme.ogg') / loader.get(Sound.of(src)) start 'loading' and become 'ready' once the payload fills in, or 'failed' when the load errors."
+          "description": "Load lifecycle of this sound. Directly constructed sounds are 'ready'; deferred handles returned by loader.get('theme.ogg') / loader.get(Asset.kind('sound', src)) start 'loading' and become 'ready' once the payload fills in, or 'failed' when the load errors."
         },
         {
           "name": "maxDistance",

@@ -159,7 +159,7 @@
         },
         {
           "name": "get",
-          "signature": "get(path: LoadByPath<S> extends Texture | Sound ? S : never, options?: unknown): LoadByPath<S>",
+          "signature": "get(path: LoadByPath<S> extends Sound | Texture ? S : never, options?: unknown): LoadByPath<S>",
           "signatureTokens": [
             {
               "text": "get",
@@ -206,7 +206,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Texture",
+              "text": "Sound",
               "kind": "type"
             },
             {
@@ -214,7 +214,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Sound",
+              "text": "Texture",
               "kind": "type"
             },
             {
@@ -281,7 +281,7 @@
           "params": [
             {
               "name": "path",
-              "type": "LoadByPath<S> extends Texture | Sound ? S : never",
+              "type": "LoadByPath<S> extends Sound | Texture ? S : never",
               "optional": false
             },
             {

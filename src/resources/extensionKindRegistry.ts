@@ -24,7 +24,7 @@ export function registerExtensionKind(ext: string, kind: keyof AssetDefinitions)
     throw new Error(
       `extensionKindRegistry: suffix ".${key}" is already registered as kind "${existing}", ` +
         `cannot also register it as "${kind}". Use a compound suffix (e.g. "${kind}.${key}") ` +
-        `or annotate individual assets with X.of() instead of a bare path.`,
+        `or annotate individual assets with Asset.kind(...) instead of a bare path.`,
     );
   }
   extToKind.set(key, kind);

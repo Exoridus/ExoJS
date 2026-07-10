@@ -41,7 +41,7 @@ function _normalizeEntry(value: CatalogEntry): AnyAssetConfig {
     if (kind === undefined) {
       throw new Error(
         `Assets: no asset kind is registered for the extension of "${value}". ` +
-          `Annotate it with X.of(), use a compound suffix, or register the type's extension (registerExtensionKind / an AssetBinding).`,
+          `Annotate it with Asset.kind(...), use a compound suffix, or register the type's extension (registerExtensionKind / an AssetBinding).`,
       );
     }
     const config = { kind, source: value };

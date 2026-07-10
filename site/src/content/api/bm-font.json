@@ -1,15 +1,15 @@
 {
   "title": "BmFont",
-  "description": "A loaded BMFont asset: the parsed descriptor plus all page textures. Loaded by the built-in BMFont factory — no extra setup required. Pass directly to BitmapText. ```ts const font = await loader.load('fonts/ui.fnt'); // BmFont via extension const font = await loader.load(BmFont.of('fonts/ui.fnt')); // explicit descriptor const label = new BitmapText('Score: 0', font); ```",
+  "description": "A loaded BMFont asset: the parsed descriptor plus all page textures. Loaded by the built-in BMFont factory — no extra setup required. Pass directly to BitmapText. ```ts const font = await loader.load('fonts/ui.fnt'); // BmFont via extension const font = await loader.load(Asset.kind('bmFont', 'fonts/ui.fnt')); // explicit descriptor const label = new BitmapText('Score: 0', font); ```",
   "symbol": "BmFont",
   "kind": "class",
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 4,
+  "memberCount": 3,
   "counts": {
     "constructors": 1,
-    "methods": 1,
+    "methods": 0,
     "properties": 2,
     "events": 0
   },
@@ -21,7 +21,7 @@
       "paragraphs": [
         "A loaded BMFont asset: the parsed descriptor plus all page textures.",
         "Loaded by the built-in BMFont factory — no extra setup required. Pass directly to BitmapText.",
-        "```ts const font = await loader.load('fonts/ui.fnt'); // BmFont via extension const font = await loader.load(BmFont.of('fonts/ui.fnt')); // explicit descriptor const label = new BitmapText('Score: 0', font); ```"
+        "```ts const font = await loader.load('fonts/ui.fnt'); // BmFont via extension const font = await loader.load(Asset.kind('bmFont', 'fonts/ui.fnt')); // explicit descriptor const label = new BitmapText('Score: 0', font); ```"
       ],
       "importLine": "import { BmFont } from '@codexo/exojs'",
       "sourceLink": null
@@ -109,74 +109,6 @@
           ],
           "returnType": "BmFont",
           "description": ""
-        }
-      ],
-      "paragraphs": [],
-      "importLine": null,
-      "sourceLink": null
-    },
-    {
-      "id": "methods",
-      "title": "Methods",
-      "members": [
-        {
-          "name": "of",
-          "signature": "of(source: string): Asset<BmFont>",
-          "signatureTokens": [
-            {
-              "text": "of",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "source",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "string",
-              "kind": "keyword"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Asset",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "BmFont",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            }
-          ],
-          "params": [
-            {
-              "name": "source",
-              "type": "string",
-              "optional": false
-            }
-          ],
-          "returnType": "Asset<BmFont>",
-          "description": "Annotation descriptor for a BMFont asset, for Assets.from({...}) / loader.get(...) / loader.load(...) (asset-system v2 §5). Prefer a bare 'font.fnt' string when the suffix is unambiguous; use BmFont.of(...) for dynamic paths or ambiguous suffixes."
         }
       ],
       "paragraphs": [],

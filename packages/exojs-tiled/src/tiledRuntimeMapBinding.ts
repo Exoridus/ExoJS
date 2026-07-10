@@ -1,3 +1,4 @@
+import { Asset } from '@codexo/exojs';
 import { defineAsset } from '@codexo/exojs';
 import type { AssetHandler } from '@codexo/exojs/extensions';
 import { TileMap } from '@codexo/exojs-tilemap';
@@ -11,7 +12,7 @@ import { resolveTiledOptions,type TiledLoadOptions } from './tiledOptions';
  *
  * This is the common-case binding: `loader.load(TileMap, 'world.tmj')` fetches
  * and validates the TMJ, resolves external `.tsj` tilesets, loads tileset
- * textures via the sub-load `loader.load(TiledMap.of(source))`, and synchronously
+ * textures via the sub-load `loader.load(Asset.kind('tiledMap', source))`, and synchronously
  * converts the parsed {@link TiledMap} source model into a format-independent
  * runtime {@link TileMap} via {@link TiledMap.toTileMap}.
  *
@@ -34,7 +35,7 @@ export const tiledRuntimeMapBinding = defineAsset<TileMap, TiledLoadOptions>({
         return `${req.source}|${o.format}`;
       },
       async load(req, ctx) {
-        const tiledMap = await ctx.loader.load(TiledMap.of(req.source, req.options));
+        const tiledMap = await ctx.loader.load(Asset.kind('tiledMap', req.source, req.options));
         return tiledMap.toTileMap();
       },
     } satisfies AssetHandler<TileMap, TiledLoadOptions>;

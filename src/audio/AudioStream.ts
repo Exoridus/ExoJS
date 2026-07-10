@@ -1,7 +1,5 @@
 import type { PlaybackOptions } from '#core/types';
 import { clamp } from '#math/utils';
-import type { Asset } from '#resources/Asset';
-import { _makeAsset } from '#resources/Asset';
 
 import { getAudioContext } from './audio-context';
 import type { AudioManager } from './AudioManager';
@@ -27,16 +25,6 @@ import type { Playable, PlayOptions, Voice } from './Playable';
  * pre-decoded `AudioBuffer` storage and pooled overlapping playback.
  */
 export class AudioStream implements Playable {
-  /**
-   * Annotation descriptor for a streaming-audio asset, for `Assets.from({...})`
-   * / `loader.get(...)` / `loader.load(...)` (asset-system v2 §5). Prefer a
-   * bare `'x.mp3'` string when the suffix is unambiguous; use
-   * `AudioStream.of(...)` for dynamic paths, ambiguous suffixes, or per-asset
-   * options.
-   */
-  public static of(source: string, options?: object): Asset<AudioStream> {
-    return _makeAsset('music', source, options);
-  }
 
   private readonly _audioElement: HTMLMediaElement;
 

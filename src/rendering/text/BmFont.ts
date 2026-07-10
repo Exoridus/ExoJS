@@ -1,7 +1,5 @@
 import { assert } from '#core/dev';
 import type { Texture } from '#rendering/texture/Texture';
-import type { Asset } from '#resources/Asset';
-import { _makeAsset } from '#resources/Asset';
 
 /** Per-character metrics from a BMFont descriptor. */
 export interface BmFontChar {
@@ -44,21 +42,12 @@ export interface BmFontData {
  *
  * ```ts
  * const font = await loader.load('fonts/ui.fnt');        // BmFont via extension
- * const font = await loader.load(BmFont.of('fonts/ui.fnt')); // explicit descriptor
+ * const font = await loader.load(Asset.kind('bmFont', 'fonts/ui.fnt')); // explicit descriptor
  * const label = new BitmapText('Score: 0', font);
  * ```
  * @stable
  */
 export class BmFont {
-  /**
-   * Annotation descriptor for a BMFont asset, for `Assets.from({...})` /
-   * `loader.get(...)` / `loader.load(...)` (asset-system v2 §5). Prefer a bare
-   * `'font.fnt'` string when the suffix is unambiguous; use `BmFont.of(...)`
-   * for dynamic paths or ambiguous suffixes.
-   */
-  public static of(source: string): Asset<BmFont> {
-    return _makeAsset('bmFont', source);
-  }
 
   public readonly fontData: BmFontData;
   public readonly textures: readonly Texture[];

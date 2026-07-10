@@ -1,6 +1,6 @@
 {
   "title": "HTMLText",
-  "description": "Text node that renders arbitrary HTML+CSS into a canvas texture via an SVG `<foreignObject>` pass and displays the result as a textured quad. Full CSS typography and rich markup are supported. External resources (`<img src>`, `background-image: url(...)`) are **blocked** by browsers when loading SVG blob-URIs — inline those as base-64 data URIs. Custom web fonts must be registered with addFont before use; pass the raw font bytes (from BinaryAsset or a plain `fetch`): ```ts const bytes = await loader.load(BinaryAsset.of('roboto.woff2')); htmlText.addFont('Roboto', bytes, 'woff2'); ``` The HTML must be valid XHTML (tags closed, `&amp;` for `&`, etc.) because it is embedded inside an XML document.",
+  "description": "Text node that renders arbitrary HTML+CSS into a canvas texture via an SVG `<foreignObject>` pass and displays the result as a textured quad. Full CSS typography and rich markup are supported. External resources (`<img src>`, `background-image: url(...)`) are **blocked** by browsers when loading SVG blob-URIs — inline those as base-64 data URIs. Custom web fonts must be registered with addFont before use; pass the raw font bytes (from BinaryAsset or a plain `fetch`): ```ts const bytes = await loader.load(Asset.kind('binary', 'roboto.woff2')); htmlText.addFont('Roboto', bytes, 'woff2'); ``` The HTML must be valid XHTML (tags closed, `&amp;` for `&`, etc.) because it is embedded inside an XML document.",
   "symbol": "HTMLText",
   "kind": "class",
   "subsystem": "rendering",
@@ -22,7 +22,7 @@
         "Text node that renders arbitrary HTML+CSS into a canvas texture via an SVG `<foreignObject>` pass and displays the result as a textured quad.",
         "Full CSS typography and rich markup are supported. External resources (`<img src>`, `background-image: url(...)`) are **blocked** by browsers when loading SVG blob-URIs — inline those as base-64 data URIs.",
         "Custom web fonts must be registered with addFont before use; pass the raw font bytes (from BinaryAsset or a plain `fetch`):",
-        "```ts const bytes = await loader.load(BinaryAsset.of('roboto.woff2')); htmlText.addFont('Roboto', bytes, 'woff2'); ```",
+        "```ts const bytes = await loader.load(Asset.kind('binary', 'roboto.woff2')); htmlText.addFont('Roboto', bytes, 'woff2'); ```",
         "The HTML must be valid XHTML (tags closed, `&amp;` for `&`, etc.) because it is embedded inside an XML document."
       ],
       "importLine": "import { HTMLText } from '@codexo/exojs'",
@@ -478,7 +478,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Register a font by its raw bytes for use inside this node's SVG render. The family name must match the font-family value used in your CSS. Registering the same family twice replaces the previous entry. ts const bytes = await loader.load(BinaryAsset.of('roboto.woff2')); label.addFont('Roboto', bytes, 'woff2'); "
+          "description": "Register a font by its raw bytes for use inside this node's SVG render. The family name must match the font-family value used in your CSS. Registering the same family twice replaces the previous entry. ts const bytes = await loader.load(Asset.kind('binary', 'roboto.woff2')); label.addFont('Roboto', bytes, 'woff2'); "
         },
         {
           "name": "blur",

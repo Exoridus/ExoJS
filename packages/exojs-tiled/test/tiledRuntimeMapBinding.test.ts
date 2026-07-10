@@ -1,12 +1,12 @@
 import { readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 
+import { Asset } from '@codexo/exojs';
 import { type AssetLoaderContext,Texture } from '@codexo/exojs';
 import { TileMap } from '@codexo/exojs-tilemap';
 import { beforeEach, describe, expect, it,vi } from 'vitest';
 
 import { loadTiledMap } from '../src/loadTiledMap';
-import { TiledMap } from '../src/TiledMap';
 import { tiledRuntimeMapBinding } from '../src/tiledRuntimeMapBinding';
 
 // ── Fixture loading ──────────────────────────────────────────────────────────
@@ -22,7 +22,7 @@ function loadFixture(name: string): unknown {
 
 // ── Mock context factory ─────────────────────────────────────────────────────
 //
-// The runtime binding's handler calls ctx.loader.load(TiledMap.of(source, opts))
+// The runtime binding's handler calls ctx.loader.load(Asset.kind('tiledMap', source, opts))
 // as a sub-load to share the Loader cache with the source binding. The mock
 // below handles both Texture and TiledMap sub-loads, both arriving as `.of(...)`
 // asset descriptors (single-argument form).
@@ -129,10 +129,10 @@ describe('tiledRuntimeMapBinding.load — minimal map', () => {
     expect(result.tileHeight).toBe(16);
   });
 
-  it('delegates to ctx.loader.load(TiledMap.of(source)) internally', async () => {
+  it('delegates to ctx.loader.load(Asset.kind(tiledMap, source)) internally', async () => {
     const handler = tiledRuntimeMapBinding.create();
     await handler.load({ source: 'minimal.tmj' }, context);
-    expect(context.loader.load).toHaveBeenCalledWith(TiledMap.of('minimal.tmj'));
+    expect(context.loader.load).toHaveBeenCalledWith(Asset.kind('tiledMap', 'minimal.tmj'));
   });
 });
 
@@ -154,7 +154,7 @@ describe('tiledRuntimeMapBinding.load — with atlas tileset image', () => {
     const result = await handler.load({ source: 'with-tileset-image.tmj' }, context);
     expect(result.tilesets).toHaveLength(1);
     // Texture is loaded transitively via the TiledMap sub-load
-    expect(loaderLoad).toHaveBeenCalledWith(Texture.of('tiles.png'));
+    expect(loaderLoad).toHaveBeenCalledWith(Asset.kind('texture', 'tiles.png'));
   });
 });
 
@@ -178,7 +178,7 @@ describe('tiledRuntimeMapBinding.load — external tileset (.tsj)', () => {
   it('loads the external tileset texture', async () => {
     const handler = tiledRuntimeMapBinding.create();
     await handler.load({ source: 'external-tileset.tmj' }, context);
-    expect(loaderLoad).toHaveBeenCalledWith(Texture.of('external-tileset.png'));
+    expect(loaderLoad).toHaveBeenCalledWith(Asset.kind('texture', 'external-tileset.png'));
   });
 });
 
@@ -193,6 +193,6 @@ describe('tiledRuntimeMapBinding.load — options passthrough', () => {
     const handler = tiledRuntimeMapBinding.create();
     const opts = { format: 'tiled' as const };
     await handler.load({ source: 'world.tmj', options: opts }, context);
-    expect(loaderLoad).toHaveBeenCalledWith(TiledMap.of('world.tmj', opts));
+    expect(loaderLoad).toHaveBeenCalledWith(Asset.kind('tiledMap', 'world.tmj', opts));
   });
 });

@@ -1,5 +1,3 @@
-import type { Asset } from './Asset';
-import { _makeAsset } from './Asset';
 
 // Each dispatch token carries a distinct nominal brand (`_token`, `declare`-only,
 // never emitted). Without it these otherwise-empty marker classes are
@@ -13,170 +11,105 @@ import { _makeAsset } from './Asset';
 /**
  * Dispatch token for generic JSON loading.
  *
- * `loader.load(Json.of('config.json'))` returns `Promise<unknown>`.
- * Narrow via generic: `loader.load(Json.of<Config>('config.json'))`.
+ * `loader.load(Asset.kind('json', 'config.json'))` returns `Promise<unknown>`.
+ * Narrow via generic: `loader.load(Asset.kind<Config>('json', 'config.json'))`.
  * Handles all JSON shapes — objects, arrays, scalars.
  */
 export abstract class Json {
   declare protected readonly _token: 'json';
-  /**
-   * Annotation descriptor for a JSON asset (asset-system v2 §5). Supply `T` to
-   * type the parsed value: `Json.of<LevelData>('levels/1.json')`. Use in
-   * `Assets.from({...})` or `loader.get(...)`/`loader.load(...)`.
-   */
-  public static of<T = unknown>(source: string): Asset<T> {
-    return _makeAsset('json', source) as unknown as Asset<T>;
-  }
+
 }
 
 /**
  * Dispatch token for plain text loading.
  *
- * `loader.load(TextAsset.of('greeting.txt'))` returns `Promise<string>`.
+ * `loader.load(Asset.kind('text', 'greeting.txt'))` returns `Promise<string>`.
  */
 export abstract class TextAsset {
   declare protected readonly _token: 'text';
-  /**
-   * Annotation descriptor for a plain-text asset (asset-system v2 §5). Use in
-   * `Assets.from({...})` or `loader.get(...)`/`loader.load(...)`.
-   */
-  public static of(source: string): Asset<string> {
-    return _makeAsset('text', source);
-  }
+
 }
 
 /**
  * Dispatch token for SVG loading.
  *
- * `loader.load(SvgAsset.of('icon.svg'))` returns `Promise<HTMLImageElement>`.
+ * `loader.load(Asset.kind('svg', 'icon.svg'))` returns `Promise<HTMLImageElement>`.
  */
 export abstract class SvgAsset {
   declare protected readonly _token: 'svg';
-  /**
-   * Annotation descriptor for an SVG asset (asset-system v2 §5). Pass
-   * `{ width, height }` to rasterize the SVG at an explicit size (an unsized SVG
-   * decodes at its intrinsic dimensions). Use in `Assets.from({...})` or
-   * `loader.get(...)`/`loader.load(...)`.
-   */
-  public static of(source: string, options?: { width?: number; height?: number }): Asset<HTMLImageElement> {
-    return _makeAsset('svg', source, options);
-  }
+
 }
 
 /**
  * Dispatch token for subtitle loading (WebVTT and SRT).
  *
- * `loader.load(SubtitleAsset.of('subs.vtt'))` returns `Promise<VTTCue[]>`.
- * `loader.load(SubtitleAsset.of('subs.srt'))` returns `Promise<VTTCue[]>`.
+ * `loader.load(Asset.kind('vtt', 'subs.vtt'))` returns `Promise<VTTCue[]>`.
+ * `loader.load(Asset.kind('vtt', 'subs.srt'))` returns `Promise<VTTCue[]>`.
  * Format is detected from the file extension; unknown extensions default to VTT.
  */
 export abstract class SubtitleAsset {
   declare protected readonly _token: 'subtitle';
-  /**
-   * Annotation descriptor for a subtitle asset (asset-system v2 §5). Use in
-   * `Assets.from({...})` or `loader.get(...)`/`loader.load(...)`.
-   */
-  public static of(source: string): Asset<VTTCue[]> {
-    return _makeAsset('vtt', source);
-  }
+
 }
 
 /**
  * Dispatch token for XML document loading.
  *
- * `loader.load(XmlAsset.of('data.xml'))` returns `Promise<Document>`.
+ * `loader.load(Asset.kind('xml', 'data.xml'))` returns `Promise<Document>`.
  * Throws if the file cannot be parsed as well-formed XML.
  */
 export abstract class XmlAsset {
   declare protected readonly _token: 'xml';
-  /**
-   * Annotation descriptor for an XML asset (asset-system v2 §5). Use in
-   * `Assets.from({...})` or `loader.get(...)`/`loader.load(...)`.
-   */
-  public static of(source: string): Asset<Document> {
-    return _makeAsset('xml', source);
-  }
+
 }
 
 /**
  * Dispatch token for CSV loading.
  *
- * `loader.load(CsvAsset.of('table.csv'))` returns `Promise<string[][]>`.
+ * `loader.load(Asset.kind('csv', 'table.csv'))` returns `Promise<string[][]>`.
  * Each inner array is one row; values are raw strings (no type coercion).
  */
 export abstract class CsvAsset {
   declare protected readonly _token: 'csv';
-  /**
-   * Annotation descriptor for a CSV asset (asset-system v2 §5). Use in
-   * `Assets.from({...})` or `loader.get(...)`/`loader.load(...)`.
-   */
-  public static of(source: string): Asset<string[][]> {
-    return _makeAsset('csv', source);
-  }
+
 }
 
 /**
  * Dispatch token for image loading.
  *
- * `loader.load(ImageAsset.of('img.png'))` returns `Promise<HTMLImageElement>`.
+ * `loader.load(Asset.kind('image', 'img.png'))` returns `Promise<HTMLImageElement>`.
  */
 export abstract class ImageAsset {
   declare protected readonly _token: 'image';
-  /**
-   * Annotation descriptor for a plain `<img>`-loaded image asset (asset-system
-   * v2 §5) — no GPU upload, unlike {@link Texture.of}. Use in
-   * `Assets.from({...})` or `loader.get(...)`/`loader.load(...)`.
-   */
-  public static of(source: string): Asset<HTMLImageElement> {
-    return _makeAsset('image', source);
-  }
+
 }
 
 /**
  * Dispatch token for font loading.
  *
- * `loader.load(FontAsset.of('font.woff2', { family: 'MyFont' }))` returns `Promise<FontFace>`.
+ * `loader.load(Asset.kind('font', 'font.woff2', { family: 'MyFont' }))` returns `Promise<FontFace>`.
  */
 export abstract class FontAsset {
   declare protected readonly _token: 'font';
-  /**
-   * Annotation descriptor for a font-face asset (asset-system v2 §5). `family`
-   * is required — it names the `FontFace` registered with the document. Use in
-   * `Assets.from({...})` or `loader.get(...)`/`loader.load(...)`.
-   */
-  public static of(source: string, options: { family: string; descriptors?: FontFaceDescriptors; addToDocument?: boolean }): Asset<FontFace> {
-    return _makeAsset('font', source, options);
-  }
+
 }
 
 /**
  * Dispatch token for binary data loading.
  *
- * `loader.load(BinaryAsset.of('data.bin'))` returns `Promise<ArrayBuffer>`.
+ * `loader.load(Asset.kind('binary', 'data.bin'))` returns `Promise<ArrayBuffer>`.
  */
 export abstract class BinaryAsset {
   declare protected readonly _token: 'binary';
-  /**
-   * Annotation descriptor for a raw binary asset (asset-system v2 §5). Use in
-   * `Assets.from({...})` or `loader.get(...)`/`loader.load(...)`.
-   */
-  public static of(source: string): Asset<ArrayBuffer> {
-    return _makeAsset('binary', source);
-  }
+
 }
 
 /**
  * Dispatch token for WebAssembly module loading.
  *
- * `loader.load(WasmAsset.of('module.wasm'))` returns `Promise<WebAssembly.Module>`.
+ * `loader.load(Asset.kind('wasm', 'module.wasm'))` returns `Promise<WebAssembly.Module>`.
  */
 export abstract class WasmAsset {
   declare protected readonly _token: 'wasm';
-  /**
-   * Annotation descriptor for a WebAssembly module asset (asset-system v2 §5).
-   * Use in `Assets.from({...})` or `loader.get(...)`/`loader.load(...)`.
-   */
-  public static of(source: string): Asset<WebAssembly.Module> {
-    return _makeAsset('wasm', source);
-  }
+
 }

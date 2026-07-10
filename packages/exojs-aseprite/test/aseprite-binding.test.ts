@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 
-import { type AssetLoaderContext, Texture } from '@codexo/exojs';
+import { Asset, type AssetLoaderContext, Texture } from '@codexo/exojs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { asepriteBinding,AsepriteFormatError } from '../src/asepriteBinding';
@@ -91,7 +91,7 @@ describe('asepriteBinding.load — array fixture', () => {
     const { context, loaderLoad } = makeContext(fixtures);
     const handler = asepriteBinding.create();
     await handler.load({ source: 'sprites/hero.json' }, context);
-    expect(loaderLoad).toHaveBeenCalledWith(Texture.of('sprites/hero.png'));
+    expect(loaderLoad).toHaveBeenCalledWith(Asset.kind('texture', 'sprites/hero.png'));
   });
 
   it('passes absolute image references through unchanged', async () => {
@@ -100,7 +100,7 @@ describe('asepriteBinding.load — array fixture', () => {
     const { context, loaderLoad } = makeContext({ 'sprites/hero.json': doc });
     const handler = asepriteBinding.create();
     await handler.load({ source: 'sprites/hero.json' }, context);
-    expect(loaderLoad).toHaveBeenCalledWith(Texture.of('https://cdn.example.com/hero.png'));
+    expect(loaderLoad).toHaveBeenCalledWith(Asset.kind('texture', 'https://cdn.example.com/hero.png'));
   });
 
   it('loads the hash-form fixture identically', async () => {
@@ -114,14 +114,14 @@ describe('asepriteBinding.load — array fixture', () => {
     const { context, loaderLoad } = makeContext({ 'https://cdn.example.com/sprites/hero.json': loadFixture('hero.array.json') });
     const handler = asepriteBinding.create();
     await handler.load({ source: 'https://cdn.example.com/sprites/hero.json' }, context);
-    expect(loaderLoad).toHaveBeenCalledWith(Texture.of('https://cdn.example.com/sprites/hero.png'));
+    expect(loaderLoad).toHaveBeenCalledWith(Asset.kind('texture', 'https://cdn.example.com/sprites/hero.png'));
   });
 
   it('resolves a relative image ref against a root-relative source, preserving the leading slash', async () => {
     const { context, loaderLoad } = makeContext({ '/assets/sprites/hero.json': loadFixture('hero.array.json') });
     const handler = asepriteBinding.create();
     await handler.load({ source: '/assets/sprites/hero.json' }, context);
-    expect(loaderLoad).toHaveBeenCalledWith(Texture.of('/assets/sprites/hero.png'));
+    expect(loaderLoad).toHaveBeenCalledWith(Asset.kind('texture', '/assets/sprites/hero.png'));
   });
 });
 
