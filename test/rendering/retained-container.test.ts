@@ -1,3 +1,4 @@
+import { Color } from '#core/Color';
 import { logger } from '#core/logging';
 import type { Matrix } from '#math/Matrix';
 import { Rectangle } from '#math/Rectangle';
@@ -832,6 +833,67 @@ describe('RetainedContainer: invalidation gates and view independence', () => {
     RenderPlanPlayer.play(plan, playbackBackend);
 
     expect(drawsSeenUnderTransform).toEqual([{ id: 'a', x: 50 }]);
+
+    root.destroy();
+    backend.destroy();
+  });
+});
+
+describe('RetainedContainer: alpha/tint staleness guard (spec 8, plan D-P2)', () => {
+  test('the engine has no container-level alpha/tint surface that could bypass invalidation', () => {
+    const group = new RetainedContainer();
+
+    // Pin the D-P2 ground truth: if someone later ADDS Container.alpha or
+    // Container.tint, this test fails and forces them to decide the guard
+    // shape (fold into per-group uniform data vs invalidate) explicitly.
+    expect('alpha' in group).toBe(false);
+    expect('tint' in group).toBe(false);
+
+    group.destroy();
+  });
+
+  test('a tint (incl. alpha channel) change on a drawable inside the group drops the fragment', () => {
+    const backend = createTestBackend();
+    const root = new Container();
+    const group = new RetainedContainer();
+    const leaf = new LeafDrawable('a');
+
+    group.addChild(leaf);
+    root.addChild(group);
+
+    collectDraws(root, backend); // capture
+
+    leaf.setTint(new Color(255, 0, 0, 0.5));
+
+    const materialSpy = vi.spyOn(leaf, '_getOrComputeMaterialKey');
+
+    collectDraws(root, backend);
+
+    // A real re-collect happened (Pixi #10757 class: tint/alpha must never
+    // be served from a stale retained frame).
+    expect(materialSpy).toHaveBeenCalled();
+
+    root.destroy();
+    backend.destroy();
+  });
+
+  test("toggling the group's own visibility is honored immediately (structure-dirty + collect gate)", () => {
+    const backend = createTestBackend();
+    const root = new Container();
+    const group = new RetainedContainer();
+
+    group.addChild(new LeafDrawable('a'));
+    root.addChild(group);
+
+    expect(collectDraws(root, backend)).toHaveLength(1);
+
+    group.visible = false;
+
+    expect(collectDraws(root, backend)).toHaveLength(0);
+
+    group.visible = true;
+
+    expect(collectDraws(root, backend)).toHaveLength(1);
 
     root.destroy();
     backend.destroy();
