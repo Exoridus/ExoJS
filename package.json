@@ -138,6 +138,7 @@
     "perf:bench:interaction": "tsx test/perf/interaction-benchmark.ts",
     "perf:bench:collect-phase": "tsx test/perf/collect-phase-benchmark.ts",
     "perf:bench:all": "pnpm perf:bench:rendering && pnpm perf:bench:audio && pnpm perf:bench:collision && pnpm perf:bench:scene-graph && pnpm perf:bench:interaction && pnpm perf:bench:collect-phase",
+    "perf:baseline": "tsx test/perf/baseline/run.ts",
     "perf:profile": "tsx test/perf/profile-benchmark.ts",
     "perf:profile:gc": "node --expose-gc --import tsx/esm test/perf/profile-benchmark.ts",
     "size": "size-limit",
