@@ -26,7 +26,7 @@ import { RenderNode } from './RenderNode';
  * @stable
  */
 export class Container extends RenderNode {
-  private readonly _children: RenderNode[] = [];
+  protected readonly _children: RenderNode[] = [];
   private _retainedPlan: RetainedPlanCache | null = null;
 
   public get children(): RenderNode[] {
