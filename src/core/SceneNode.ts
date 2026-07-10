@@ -112,6 +112,34 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
   private _visible = true;
   private _globalTransform = new Matrix();
   /**
+   * World-transform cache for nodes below a transform-group boundary — see
+   * {@link getWorldTransform}. Lazily allocated: nodes that never sit inside a
+   * {@link RetainedContainer} pay only the null field.
+   */
+  private _worldTransform: Matrix | null = null;
+  /**
+   * Stamp identifying the current content AND identity of the matrix returned
+   * by {@link getWorldTransform}. Consumers caching a composition against this
+   * node's world matrix compare the stamp instead of the matrix contents.
+   *
+   * T3 guard (review): stamps are drawn from {@link nextNodeRevision} (a
+   * process-wide monotonic counter starting at 1), never from the small
+   * per-node `_globalTransformVersion` sequence, so a source flip between the
+   * delegated path (world === global) and the composed path can never produce
+   * a false-clean version collision. `0` uniquely means "never computed".
+   */
+  private _worldStamp = 0;
+  /** Whether the last {@link getWorldTransform} call took the delegated (world === global) path. */
+  private _worldDelegatesToGlobal = false;
+  /** `_globalTransformVersion` last observed by the delegated path (stamp bookkeeping only). */
+  private _worldSyncedGlobalVersion = -1;
+  /** `_globalTransformVersion` the composed `_worldTransform` was built from. */
+  private _worldOwnVersion = -1;
+  /** Boundary ancestor the composed `_worldTransform` was built against. */
+  private _worldAnchor: SceneNode | null = null;
+  /** That anchor's `_worldStamp` at build time. */
+  private _worldAnchorStamp = -1;
+  /**
    * Monotonic counter bumped every time {@link getGlobalTransform} actually
    * recomputes this node's world matrix. Children compare the parent's version
    * against their cached {@link _combinedParentVersion} to detect — lazily, on
@@ -479,6 +507,96 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
     return this._globalTransform;
   }
 
+  /**
+   * The node's TRUE world-space transform, composed through every
+   * transform-group boundary ({@link RetainedContainer}) in the ancestor
+   * chain.
+   *
+   * {@link getGlobalTransform} deliberately stops at the nearest engaged
+   * boundary (descendants resolve group-RELATIVE transforms; the renderer
+   * multiplies the group matrix back in on the GPU), so it is the right space
+   * for rendering but the wrong one for spatial queries. Use THIS accessor
+   * whenever a real world position/orientation is needed — picking, spatial
+   * audio, physics, world-space math against nodes outside the group.
+   *
+   * Without any engaged boundary ancestor it returns the exact
+   * {@link getGlobalTransform} matrix (same instance, no extra work). With
+   * one, it lazily caches `groupLocal × groupWorld` and revalidates on read
+   * via version/stamp compares — including boundary engage/disengage flips,
+   * which RetainedContainer performs at runtime (deep-barrier fallback).
+   */
+  public getWorldTransform(): Matrix {
+    const anchor = this._resolveTransformGroupAnchor();
+
+    if (anchor === null) {
+      // No engaged boundary above: world space IS global space. Delegate, but
+      // keep the world stamp in sync so consumers keyed on `_worldStamp`
+      // (descendants anchored to this node, or external caches) observe the
+      // change when the underlying global matrix recomputes or when a former
+      // composed cache is replaced by this delegated source.
+      const matrix = this.getGlobalTransform();
+
+      if (!this._worldDelegatesToGlobal || this._worldSyncedGlobalVersion !== this._globalTransformVersion) {
+        this._worldDelegatesToGlobal = true;
+        this._worldSyncedGlobalVersion = this._globalTransformVersion;
+        this._worldStamp = nextNodeRevision();
+      }
+
+      return matrix;
+    }
+
+    // Freshen both inputs FIRST: the group-local matrix (bumps our
+    // `_globalTransformVersion` when stale — this also covers boundary
+    // re-engagement, which flips the parent-version seam and forces a
+    // recompute) and the anchor's world matrix (bumps `anchor._worldStamp`
+    // when stale; recursion composes nested groups).
+    const groupLocal = this.getGlobalTransform();
+    const anchorWorld = anchor.getWorldTransform();
+
+    if (
+      this._worldTransform === null ||
+      this._worldDelegatesToGlobal ||
+      this._worldOwnVersion !== this._globalTransformVersion ||
+      this._worldAnchor !== anchor ||
+      this._worldAnchorStamp !== anchor._worldStamp
+    ) {
+      (this._worldTransform ??= new Matrix()).copy(groupLocal).combine(anchorWorld);
+      this._worldDelegatesToGlobal = false;
+      this._worldOwnVersion = this._globalTransformVersion;
+      this._worldAnchor = anchor;
+      this._worldAnchorStamp = anchor._worldStamp;
+      this._worldStamp = nextNodeRevision();
+    }
+
+    return this._worldTransform;
+  }
+
+  /**
+   * The nearest ancestor whose ENGAGED transform-group boundary this node's
+   * global transform is relative to, or `null` when {@link getGlobalTransform}
+   * is already world-space. Mirrors the exact seam getGlobalTransform uses:
+   * the boundary getter is LIVE (engage/disengage flips are picked up on every
+   * call) and a barrier-bearing direct child escapes via
+   * {@link _escapesTransformGroup}, taking its whole subtree back to world
+   * space with it.
+   * @internal
+   */
+  public _resolveTransformGroupAnchor(): SceneNode | null {
+    let node: SceneNode = this;
+    let parent: SceneNode | null = this._parentNode;
+
+    while (parent !== null) {
+      if (parent._isTransformGroupBoundary && !node._escapesTransformGroup()) {
+        return parent;
+      }
+
+      node = parent;
+      parent = node._parentNode;
+    }
+
+    return null;
+  }
+
   public getNormals(): Vector[] {
     return this._isWorldAligned() ? this.getBounds().getNormals() : this._orientedBoundsPolygon().getNormals();
   }
@@ -618,6 +736,8 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
     this.flags.destroy();
 
     this._globalTransform.destroy();
+    this._worldTransform?.destroy();
+    this._worldAnchor = null;
     this._localBounds.destroy();
     this._bounds.destroy();
     this._anchor.destroy();
