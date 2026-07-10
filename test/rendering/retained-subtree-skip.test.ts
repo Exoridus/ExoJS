@@ -300,6 +300,32 @@ describe('static-subtree skip: invalidation gates', () => {
     backendB.destroy();
   });
 
+  test('changing zIndex at runtime forces a real recollect instead of replaying a stale paint order', () => {
+    const backend = createTestBackend();
+    const root = new Container();
+    const front = new LeafDrawable('front');
+    const back = new LeafDrawable('back');
+
+    front.zIndex = 1;
+    back.zIndex = 2;
+
+    root.addChild(front);
+    root.addChild(back);
+
+    const frame1 = collectDraws(root, backend); // full collect, captures both slots
+
+    expect(frame1.map(d => (d.drawable as LeafDrawable).id)).toEqual(['front', 'back']);
+
+    front.zIndex = 5; // bring 'front' to the very back, no other mutation
+
+    const frame2 = collectDraws(root, backend); // skip-eligible unless zIndex dirties content
+
+    expect(frame2.map(d => (d.drawable as LeafDrawable).id)).toEqual(['back', 'front']);
+
+    root.destroy();
+    backend.destroy();
+  });
+
   test('a Drawable with an active filter is never cached as a fast-path slot', async () => {
     const backend = createTestBackend();
     const root = new Container();

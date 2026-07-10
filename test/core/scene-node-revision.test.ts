@@ -118,6 +118,37 @@ describe('visible toggles are structure-dirty', () => {
   });
 });
 
+describe('zIndex changes are content-dirty', () => {
+  test('setting zIndex to a new value bumps content revision up to root', () => {
+    const root = new Container();
+    const leaf = new Drawable();
+
+    root.addChild(leaf);
+
+    const rootContentBefore = root._contentRevision;
+
+    leaf.zIndex = 5;
+
+    expect(leaf._contentRevision).toBeGreaterThan(0);
+    expect(root._contentRevision).toBeGreaterThan(rootContentBefore);
+
+    root.destroy();
+  });
+
+  test('setting zIndex to its current value is a no-op (no spurious revision bump)', () => {
+    const leaf = new Drawable();
+
+    leaf.zIndex = 0; // already the default
+    const before = leaf._contentRevision;
+
+    leaf.zIndex = 0;
+
+    expect(leaf._contentRevision).toBe(before);
+
+    leaf.destroy();
+  });
+});
+
 describe('RenderNode/Drawable content mutations route through invalidateCache -> _markContentDirty', () => {
   test('Drawable.setTint bumps content revision', () => {
     const drawable = new Drawable();

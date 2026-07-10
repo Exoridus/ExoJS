@@ -230,6 +230,7 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
   public set zIndex(zIndex: number) {
     if (this._zIndex !== zIndex) {
       this._zIndex = zIndex;
+      this._markContentDirty();
     }
   }
 
