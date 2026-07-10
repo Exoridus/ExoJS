@@ -35,7 +35,7 @@ export type InferAssetsProperties<M extends Record<string, CatalogEntry>> = {
  * already-constructed `Asset` contributes its `_config`; a plain config passes
  * through unchanged.
  */
-function _normalizeEntry(value: CatalogEntry): AnyAssetConfig {
+export function _normalizeEntry(value: CatalogEntry): AnyAssetConfig {
   if (typeof value === 'string') {
     const kind = resolveKindByPath(value);
     if (kind === undefined) {

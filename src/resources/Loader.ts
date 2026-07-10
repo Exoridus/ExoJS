@@ -5,14 +5,14 @@ import type { AssetHandler, AssetLoadRequest } from '#extensions/Extension';
 import { type BmFont } from '#rendering/text/BmFont';
 import type { Texture } from '#rendering/texture/Texture';
 
-import { Asset, AssetImpl, type ValueAsset } from './Asset';
+import { type Asset, AssetImpl, type ValueAsset } from './Asset';
 import { parseContainer } from './AssetContainer';
-import type { AssetDefinitions, AssetInput, InferAssetResource, KindByPath, LeafForPath, ResourceForKind, ValueAssetKind } from './AssetDefinitions';
+import type { AssetDefinitions, AssetInput, CatalogEntry, InferAssetResource, KindByPath, LeafForPath, ResourceForKind, ValueAssetKind } from './AssetDefinitions';
 import type { AssetFactory } from './AssetFactory';
 import { createLeaf } from './assetKindRegistry';
 import { _readMeta } from './assetMeta';
 import { AssetRef } from './AssetRef';
-import { type Assets, AssetsImpl, type InferAssetsProperties } from './Assets';
+import { _normalizeEntry,type Assets, AssetsImpl, type InferAssetsProperties } from './Assets';
 import { CacheFirstStrategy } from './CacheFirstStrategy';
 import type { CacheStore } from './CacheStore';
 import type { CacheStrategy } from './CacheStrategy';
@@ -608,10 +608,17 @@ export class Loader {
     // inline record-catalog overload was removed (asset-system v2 delta §5/§14) —
     // typed callers go through `Assets.from({...})` — but the runtime path is kept
     // for internal multi-alias/identity plumbing and its coverage.
+    //
+    // Every value is routed through the SAME `_normalizeEntry` used by
+    // `Assets.from(...)`: a bare path string (`{ a: 'a.png' }`) is resolved to a
+    // `{ kind, source }` config by its suffix instead of being wrapped raw as
+    // `new Asset('a.png')` (which left `kind === undefined` and threw the cryptic
+    // "No constructor registered for asset type undefined"). An already-built
+    // `Asset` and a full config pass through unchanged (A1).
     const configMap = arg0 as Record<string, AssetInput>;
     const items = Object.entries(configMap).map(([alias, value]) => ({
       alias,
-      asset: value instanceof AssetImpl ? value : new (Asset as new (c: AssetInput) => Asset<unknown>)(value),
+      asset: value instanceof AssetImpl ? (value as Asset<unknown>) : new AssetImpl(_normalizeEntry(value as CatalogEntry)),
     }));
 
     return this._createLoadingQueue(claimer, items, results => {
