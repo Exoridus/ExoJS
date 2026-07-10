@@ -689,7 +689,10 @@ export class Loader {
    * not-yet-preloaded alias) therefore fetches that string and can 404 quietly
    * instead of throwing; preloaded aliases still return the stored payload. This
    * is intended seamless-by-default behaviour — the note is for debuggability.
-   * For a dynamic source, use `get(Asset.kind('texture', dynamicPath))`.
+   * When such a fetch DOES fail, a **development build** logs a one-time
+   * (per-source) warning naming the literal path and how to fix it, so the 404
+   * is no longer completely silent; production builds stay quiet. For a dynamic
+   * source, use `get(Asset.kind('texture', dynamicPath))`.
    */
   public get<S extends string>(path: LoadByPath<S> extends Texture | Sound ? S : never, options?: unknown): LoadByPath<S>;
 
@@ -2065,6 +2068,7 @@ export class Loader {
         adapter?.fail(handle, err);
       }
 
+      this._warnMissingSource(alias, key, err);
       this.onError.dispatch(type, alias, err);
 
       return;
@@ -2077,8 +2081,34 @@ export class Loader {
         ref._fail(err);
       }
 
+      this._warnMissingSource(alias, key, err);
       this.onError.dispatch(type, alias, err);
     }
+  }
+
+  /**
+   * Dev-only diagnostic for the seamless silent-404 trap (F7 / DX-1): a
+   * `get('x.png')` / adopted-catalog / `Assets.from(...)` leaf whose fetch ends
+   * in a 404 or network error only ever surfaces a `'failed'` placeholder — the
+   * caller holds a handle, not the rejection, so a typo'd or un-preloaded source
+   * would otherwise 404 completely silently (checkerboard, no message). This
+   * warns ONCE per source (keyed on `key`, the type+source pair) naming the
+   * literal path and how to fix it. Stripped in production (`logger.warn` below
+   * `Error` severity is dropped when `__DEV__` is `false`); the once-dedup means
+   * a later retry of the same source never re-warns. Placeholder / heal-in-place
+   * behaviour is unchanged — this is purely additive diagnostics.
+   *
+   * A plain `load('x.png')` failure does NOT reach here (no deferred handle /
+   * value-ref is registered for it), so the caller's own rejection stays the
+   * single signal. @internal
+   */
+  private _warnMissingSource(source: string, key: string, error: Error): void {
+    logger.warn(
+      `Asset "${source}" failed to load: ${error.message}. ` +
+        `Seamless get()/Assets.from() fetch the literal path and heal a placeholder in place, so a typo or an ` +
+        `un-preloaded alias 404s without throwing. Check the path and the loader basePath, and preload it via Assets.from() / load().`,
+      { source: 'Loader', once: `loader:missing-source:${key}` },
+    );
   }
 
   /** The representative (first-inserted) member of a handle/ref set, or `undefined` if empty. @internal */
