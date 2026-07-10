@@ -110,20 +110,37 @@ export class RetainedContainer extends Container {
 
   /** @internal */
   protected override _collectContent(builder: RenderPlanBuilder): void {
+    if (this._children.length === 0) {
+      return;
+    }
+
     if (this._boundaryDisengaged) {
       // Deep-barrier fallback (plan D-P4): exact plain-Container behavior,
-      // including the Slice-1 per-child cache.
+      // including the Slice-1 per-child cache. Never captures a fragment.
       super._collectContent(builder);
 
       return;
     }
 
-    // Task 8 replaces the engaged path with the fragment splice; until then
-    // the group collects fully every frame (correct, just not yet retained).
+    if (this._fragment.isClean(this._contentRevision, this._structureRevision, builder.backend)) {
+      // The whole-range splice (spec §4.2): no walk, no cull, no material
+      // keys. The key deliberately omits View.updateId (group-level culling
+      // makes the fragment view-independent — the camera-pan win) and the
+      // container's own transform (a move only changes the group matrix).
+      builder._replayRetainedFragment(this._fragment.entries);
+
+      // Task 10 hooks the dev diagnostic here: this._trackRetention(false);
+      return;
+    }
+
     for (let index = 0; index < this._children.length; index++) {
       // In-bounds: index < length.
       this._children[index]!._collect(builder, index);
     }
+
+    // Task 10 hooks the dev diagnostic here, BEFORE capture:
+    // this._trackRetention(this._fragment.hasCapture);
+    this._fragment.capture(this._contentRevision, this._structureRevision, builder.backend, builder._snapshotScopeEntries(builder._peekCurrentScopeEntries()));
   }
 
   public override destroy(): void {

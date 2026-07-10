@@ -1,11 +1,13 @@
 import { logger } from '#core/logging';
+import type { Matrix } from '#math/Matrix';
 import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
 import { type DrawCommand, RenderEntryKind } from '#rendering/plan/RenderCommand';
 import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RenderPlanOptimizer } from '#rendering/plan/RenderPlanOptimizer';
-import type { GroupScope } from '#rendering/plan/RenderScope';
+import { RenderPlanPlayer } from '#rendering/plan/RenderPlanPlayer';
+import type { GroupScope, GroupScopeEntry } from '#rendering/plan/RenderScope';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import { createRenderStats } from '#rendering/RenderStats';
@@ -95,6 +97,38 @@ const gatherScopeDraws = (scope: GroupScope, out: DrawCommand[]): void => {
       gatherScopeDraws(entry.scope.childPlan, out);
     }
   }
+};
+
+// `build()` always wraps its `root` argument in one Group entry of its own
+// (see `RenderPlanBuilder.build`: `root._collect(this)` runs through the same
+// `emitNode` path as any other node), so a node's OWN Group entry is never a
+// direct child of `plan.passes[0].root.entries` unless that node was itself
+// passed as `build()`'s root — it is nested one or more Group/Barrier scopes
+// deep. Search the whole scope tree for the entry whose `transformNode` is
+// the exact node under test (stronger than an unqualified "first Group entry"
+// find, and correct regardless of nesting depth).
+const findGroupEntryFor = (scope: GroupScope, node: Container): GroupScopeEntry | undefined => {
+  for (const entry of scope.entries) {
+    if (entry.kind === RenderEntryKind.Group) {
+      if (entry.scope.transformNode === node) {
+        return entry;
+      }
+
+      const nested = findGroupEntryFor(entry.scope, node);
+
+      if (nested !== undefined) {
+        return nested;
+      }
+    } else if (entry.kind === RenderEntryKind.Barrier && entry.scope.childPlan !== null) {
+      const nested = findGroupEntryFor(entry.scope.childPlan, node);
+
+      if (nested !== undefined) {
+        return nested;
+      }
+    }
+  }
+
+  return undefined;
 };
 
 const collectDraws = (root: Container, backend: RenderBackend): DrawCommand[] => {
@@ -460,6 +494,345 @@ describe('RetainedContainer: deep-barrier fallback (plan D-P4, spec 8)', () => {
     expect(String(disengageWarnings[0]![0])).toContain('decor');
 
     warnSpy.mockRestore();
+    root.destroy();
+    backend.destroy();
+  });
+});
+
+describe('RetainedContainer: whole-range fragment splice (spec 4.2)', () => {
+  test('a clean second frame replays without getBounds()/material-key work for any descendant', () => {
+    const backend = createTestBackend();
+    const root = new Container();
+    const group = new RetainedContainer();
+    const mid = new Container();
+    const leafA = new LeafDrawable('a');
+    const leafB = new LeafDrawable('b');
+
+    mid.addChild(leafA);
+    group.addChild(mid);
+    group.addChild(leafB);
+    root.addChild(group);
+
+    collectDraws(root, backend); // frame 1: full collect + capture
+
+    const boundsSpyA = vi.spyOn(leafA, 'getBounds');
+    const boundsSpyB = vi.spyOn(leafB, 'getBounds');
+    const materialSpyA = vi.spyOn(leafA, '_getOrComputeMaterialKey');
+    const materialSpyB = vi.spyOn(leafB, '_getOrComputeMaterialKey');
+    const collectSpy = vi.spyOn(mid, '_collect');
+
+    const frame2 = snapshot(collectDraws(root, backend)); // frame 2: splice
+
+    expect(boundsSpyA).not.toHaveBeenCalled();
+    expect(boundsSpyB).not.toHaveBeenCalled();
+    expect(materialSpyA).not.toHaveBeenCalled();
+    expect(materialSpyB).not.toHaveBeenCalled();
+    expect(collectSpy).not.toHaveBeenCalled(); // no scene-graph walk at all
+
+    expect(frame2.map(d => d.id)).toEqual(['a', 'b']);
+
+    root.destroy();
+    backend.destroy();
+  });
+
+  test('output equivalence: spliced frame equals the full-collect frame byte for byte', () => {
+    const backend = createTestBackend();
+    const root = new Container();
+    const group = new RetainedContainer();
+    const mid = new Container();
+
+    mid.addChild(new LeafDrawable('a'));
+    mid.addChild(new LeafDrawable('b'));
+    group.addChild(mid);
+    group.addChild(new LeafDrawable('c'));
+    root.addChild(group);
+
+    const frame1 = snapshot(collectDraws(root, backend));
+    const frame2 = snapshot(collectDraws(root, backend));
+
+    expect(frame2).toEqual(frame1);
+
+    root.destroy();
+    backend.destroy();
+  });
+});
+
+describe('RetainedContainer: invalidation gates and view independence', () => {
+  test('camera pan does NOT drop the fragment (no viewUpdateId in the key)', () => {
+    const backend = createTestBackend();
+    const root = new Container();
+    const group = new RetainedContainer();
+    const leaf = new LeafDrawable('a');
+
+    group.addChild(leaf);
+    root.addChild(group);
+
+    collectDraws(root, backend);
+
+    // A real pan (bumps View.updateId) small enough that the group's 0..16
+    // world AABB still overlaps the 800x600 view centered here — a large pan
+    // would legitimately whole-group-cull it (spec 6), which is a different
+    // code path than the one this test pins.
+    backend.view.setCenter(50, 50);
+
+    const materialSpy = vi.spyOn(leaf, '_getOrComputeMaterialKey');
+    const draws = collectDraws(root, backend);
+
+    expect(materialSpy).not.toHaveBeenCalled(); // spliced despite the pan
+    expect(draws).toHaveLength(1);
+
+    root.destroy();
+    backend.destroy();
+  });
+
+  test('moving the GROUP does not drop the fragment; the plan still carries the group node live', () => {
+    const backend = createTestBackend();
+    const root = new Container();
+    const group = new RetainedContainer();
+    const leaf = new LeafDrawable('a');
+
+    group.addChild(leaf);
+    root.addChild(group);
+
+    collectDraws(root, backend);
+    group.setPosition(50, 50);
+
+    const materialSpy = vi.spyOn(leaf, '_getOrComputeMaterialKey');
+    const builder = RenderPlanBuilder.acquire();
+    const plan = builder.build(root, backend);
+
+    expect(materialSpy).not.toHaveBeenCalled(); // fragment survived the move
+
+    const groupEntry = findGroupEntryFor(plan.passes[0]!.root, group);
+
+    expect(groupEntry).toBeDefined();
+
+    if (groupEntry !== undefined) {
+      expect(groupEntry.scope.transformNode).toBe(group);
+      // Live read at play time resolves the NEW matrix.
+      expect(groupEntry.scope.transformNode!.getGlobalTransform().x).toBe(50);
+    }
+
+    RenderPlanBuilder.release(builder);
+    root.destroy();
+    backend.destroy();
+  });
+
+  test('a child mutation inside the group forces one full re-collect, then retains again', () => {
+    const backend = createTestBackend();
+    const root = new Container();
+    const group = new RetainedContainer();
+    const leaf = new LeafDrawable('a');
+
+    group.addChild(leaf);
+    root.addChild(group);
+
+    collectDraws(root, backend);
+    leaf.setPosition(7, 7);
+
+    const draws = collectDraws(root, backend);
+
+    expect(draws[0]!.minX).toBe(7); // fresh bounds, not the stale capture
+
+    const materialSpy = vi.spyOn(leaf, '_getOrComputeMaterialKey');
+
+    collectDraws(root, backend);
+
+    expect(materialSpy).not.toHaveBeenCalled(); // re-retained
+
+    root.destroy();
+    backend.destroy();
+  });
+
+  test('adding/removing a child (structure) forces a re-collect', () => {
+    const backend = createTestBackend();
+    const root = new Container();
+    const group = new RetainedContainer();
+
+    group.addChild(new LeafDrawable('a'));
+    root.addChild(group);
+    collectDraws(root, backend);
+
+    group.addChild(new LeafDrawable('b'));
+
+    expect(collectDraws(root, backend).map(d => (d.drawable as LeafDrawable).id)).toEqual(['a', 'b']);
+
+    root.destroy();
+    backend.destroy();
+  });
+
+  test('a barrier-bearing direct child re-dispatches through _collect on every spliced frame', () => {
+    const backend = createTestBackend();
+    const root = new Container();
+    const group = new RetainedContainer();
+    const clipped = new LeafDrawable('clipped');
+
+    clipped.clip = true;
+    clipped.clipShape = new Rectangle(0, 0, 8, 8);
+    group.addChild(clipped);
+    group.addChild(new LeafDrawable('plain'));
+    root.addChild(group);
+
+    collectDraws(root, backend); // capture (fragment holds a barrier record + one draw)
+
+    const collectSpy = vi.spyOn(clipped, '_collect');
+
+    collectDraws(root, backend); // spliced frame
+
+    expect(collectSpy).toHaveBeenCalledTimes(1); // re-dispatched, not captured
+
+    root.destroy();
+    backend.destroy();
+  });
+
+  test('a nested RetainedContainer is captured inside the outer fragment with its own transformNode', () => {
+    const backend = createTestBackend();
+    const root = new Container();
+    const outer = new RetainedContainer();
+    const inner = new RetainedContainer();
+
+    inner.addChild(new LeafDrawable('a'));
+    outer.addChild(inner);
+    root.addChild(outer);
+
+    collectDraws(root, backend); // capture
+
+    const builder = RenderPlanBuilder.acquire();
+    const plan = builder.build(root, backend); // spliced
+    const outerEntry = findGroupEntryFor(plan.passes[0]!.root, outer);
+
+    expect(outerEntry).toBeDefined();
+
+    if (outerEntry !== undefined) {
+      expect(outerEntry.scope.transformNode).toBe(outer);
+
+      const innerEntry = findGroupEntryFor(outerEntry.scope, inner);
+
+      expect(innerEntry).toBeDefined();
+
+      if (innerEntry !== undefined) {
+        expect(innerEntry.scope.transformNode).toBe(inner); // survives snapshot -> replay
+      }
+    }
+
+    RenderPlanBuilder.release(builder);
+    root.destroy();
+    backend.destroy();
+  });
+
+  test('a deep barrier disables retention entirely; removing it re-engages and splices again', () => {
+    const backend = createTestBackend();
+    const root = new Container();
+    const group = new RetainedContainer();
+    const mid = new Container();
+    const deep = new LeafDrawable('deep');
+
+    deep.cacheAsBitmap = true; // barrier at depth 2 -> boundary disengages
+    mid.addChild(deep);
+    group.addChild(mid);
+    root.addChild(group);
+
+    collectDraws(root, backend);
+    expect(group._isTransformGroupBoundary).toBe(false);
+
+    // Disengaged: plain-Container collect every frame, no fragment splice.
+    const collectSpy = vi.spyOn(mid, '_collect');
+
+    collectDraws(root, backend);
+    expect(collectSpy).toHaveBeenCalledTimes(1);
+
+    // Remove the deep barrier: re-engage, capture, then splice.
+    deep.cacheAsBitmap = false;
+    collectDraws(root, backend); // full collect + capture
+    expect(group._isTransformGroupBoundary).toBe(true);
+
+    collectSpy.mockClear();
+    collectDraws(root, backend); // spliced
+
+    expect(collectSpy).not.toHaveBeenCalled();
+
+    root.destroy();
+    backend.destroy();
+  });
+
+  test('optimizer audit: the group scope is its own segment — no reorder across the boundary despite mixed spaces', () => {
+    const backend = createTestBackend();
+    const root = new Container();
+    const group = new RetainedContainer();
+    const before = new LeafDrawable('world-before');
+    const inside = new LeafDrawable('group-local');
+    const after = new LeafDrawable('world-after');
+
+    // World draws overlap the group draw NUMERICALLY (group-local 0..16 vs
+    // world 0..16) but live in different spaces; the segment boundary must
+    // prevent any cross-space comparison/merge (spec §6, recon §12 audit).
+    group.addChild(inside);
+    root.addChild(before);
+    root.addChild(group);
+    root.addChild(after);
+
+    const order = collectDraws(root, backend).map(d => (d.drawable as LeafDrawable).id);
+
+    expect(order).toEqual(['world-before', 'group-local', 'world-after']);
+
+    // Second (spliced) frame preserves the same segmented order.
+    const order2 = collectDraws(root, backend).map(d => (d.drawable as LeafDrawable).id);
+
+    expect(order2).toEqual(order);
+
+    root.destroy();
+    backend.destroy();
+  });
+
+  test('deferred verification point: a moved, spliced RetainedContainer plays back through RenderPlanPlayer with the group matrix composed onto its children', () => {
+    // Pins the player compose order end-to-end (RenderPlanPlayer._playGroup,
+    // not just the builder's plan shape): a moved RetainedContainer whose
+    // fragment is SPLICED (not re-collected) must still drive
+    // `_setRenderGroupTransform` with the live group world matrix at play
+    // time, and the drawable underneath must be issued while that transform
+    // is active -- exactly the group x relative-world composition spec 4.3/5
+    // promises. Uses a mock/spy backend rather than a real GPU backend.
+    const backend = createTestBackend();
+    const root = new Container();
+    const group = new RetainedContainer();
+    const leaf = new LeafDrawable('a');
+
+    group.addChild(leaf);
+    root.addChild(group);
+
+    // Frame 1: full collect + capture.
+    const builder1 = RenderPlanBuilder.acquire();
+
+    builder1.build(root, backend);
+    RenderPlanBuilder.release(builder1);
+
+    group.setPosition(50, 50);
+
+    // Frame 2: the fragment survives the group move (pinned above) -- splice.
+    const builder2 = RenderPlanBuilder.acquire();
+    const plan = builder2.build(root, backend);
+
+    RenderPlanBuilder.release(builder2);
+
+    let activeTransform: Matrix | null = null;
+    const drawsSeenUnderTransform: Array<{ id: string; x: number | null }> = [];
+
+    const playbackBackend: RenderBackend = {
+      ...backend,
+      _setRenderGroupTransform(transform: Matrix | null) {
+        activeTransform = transform;
+      },
+      draw(drawable: Drawable) {
+        drawsSeenUnderTransform.push({ id: (drawable as LeafDrawable).id, x: activeTransform?.x ?? null });
+
+        return this;
+      },
+    } as unknown as RenderBackend;
+
+    RenderPlanPlayer.play(plan, playbackBackend);
+
+    expect(drawsSeenUnderTransform).toEqual([{ id: 'a', x: 50 }]);
+
     root.destroy();
     backend.destroy();
   });
