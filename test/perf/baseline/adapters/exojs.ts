@@ -3,6 +3,7 @@ import { Color } from '#core/Color';
 import { Scene } from '#core/Scene';
 import { Container } from '#rendering/Container';
 import { RenderBackendType } from '#rendering/RenderBackendType';
+import { RetainedContainer } from '#rendering/RetainedContainer';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { Texture } from '#rendering/texture/Texture';
 import type { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
@@ -69,7 +70,10 @@ const createDistinctTexture = (index: number, total: number): Texture => {
  * sequence (`resetStats(); clear(); rendering.render(root); flush()`) is
  * identical on both, so only {@link init} branches on the backend type.
  */
-export const createExoJsAdapter = (backendFilter?: readonly Backend[]): EngineAdapter => {
+/** Which ExoJS arm this adapter represents: today's default path, or the Slice-2 RetainedContainer spine. */
+export type ExoJsAdapterConfig = 'current' | 'retained';
+
+export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: ExoJsAdapterConfig = 'current'): EngineAdapter => {
   const supported: readonly Backend[] = backendFilter ?? ['webgl2', 'webgpu'];
 
   let app: Application | null = null;
@@ -79,7 +83,7 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[]): EngineAd
 
   return {
     engine: 'exojs',
-    config: 'current',
+    config,
 
     supports(backend: Backend): boolean {
       return supported.includes(backend);
@@ -121,15 +125,21 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[]): EngineAd
 
       // Nested-container spine whose depth equals `nestingDepth`; leaves are
       // distributed evenly across it (round-robin), so a deeper archetype pays
-      // for deeper transform propagation.
-      const sceneRoot = new Container();
+      // for deeper transform propagation. When `config === 'retained'` every
+      // spine container is a `RetainedContainer` (Track B Slice 2): on
+      // static-heavy the whole spine retains (spec §10(a)); on dynamic-heavy
+      // the wobbling leaves invalidate their spine groups every frame (the
+      // honest §10(c) measurement of the opt-in's cost when content churns).
+      const createSpineContainer = (): Container => (config === 'retained' ? new RetainedContainer() : new Container());
+
+      const sceneRoot = createSpineContainer();
 
       sceneRoot.cullable = spec.cullingEnabled;
 
       const spine: Container[] = [sceneRoot];
 
       for (let depth = 1; depth < spec.nestingDepth; depth++) {
-        const container = new Container();
+        const container = createSpineContainer();
 
         container.cullable = spec.cullingEnabled;
         spine[depth - 1]!.addChild(container);

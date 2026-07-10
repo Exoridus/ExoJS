@@ -1,3 +1,4 @@
+import { createExoJsAdapter } from './adapters/exojs';
 import { ARCHETYPES, buildMatrix, createRng, timedFramesFor } from './archetypes';
 import type { Backend, EngineAdapter } from './EngineAdapter';
 
@@ -80,5 +81,18 @@ describe('buildMatrix', () => {
     const big = cells.find(c => c.nodeCount === 100_000)!;
 
     expect(big.timedFrames).toBe(timedFramesFor(100_000));
+  });
+});
+
+describe('exojs adapter config axis', () => {
+  test('the retained config produces an adapter labeled engine=exojs config=retained', () => {
+    const adapter = createExoJsAdapter(undefined, 'retained');
+
+    expect(adapter.engine).toBe('exojs');
+    expect(adapter.config).toBe('retained');
+  });
+
+  test('the default stays current', () => {
+    expect(createExoJsAdapter().config).toBe('current');
   });
 });
