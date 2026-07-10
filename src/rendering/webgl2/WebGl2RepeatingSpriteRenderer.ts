@@ -18,7 +18,7 @@ import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './
 // ---------------------------------------------------------------------------
 
 const shaderPathVertSource = `#version 300 es
-precision mediump float;
+precision highp float;
 precision highp int;
 
 layout(location = 0) in vec4 a_quadBounds;   // x0,y0,x1,y1 (local space)
@@ -68,7 +68,7 @@ void main(void) {
 // ---------------------------------------------------------------------------
 
 const geoPathVertSource = `#version 300 es
-precision lowp float;
+precision highp float;
 precision highp int;
 
 layout(location = 0) in vec4 a_quadBounds;   // x0,y0,x1,y1 (local space)

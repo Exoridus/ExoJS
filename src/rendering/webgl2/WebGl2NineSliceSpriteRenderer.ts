@@ -13,7 +13,7 @@ import { createWebGl2ShaderProgram } from './WebGl2ShaderProgram';
 import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './WebGl2VertexArrayObject';
 
 const nineSliceVertexSource = `#version 300 es
-precision lowp float;
+precision highp float;
 precision highp int;
 
 // Per-instance attributes (divisor = 1). One entry per nine-slice quad.
