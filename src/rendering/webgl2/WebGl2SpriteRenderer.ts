@@ -56,10 +56,13 @@ import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './
  */
 
 const identityGroupMat3 = new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]);
-const maxBatchTextures = 8;
-// Sprite base textures occupy units 0..7; the shared transform buffer texture
-// binds on unit 8, matching the mesh renderer's convention.
-const transformTextureUnit = 8;
+// WebGL2 guarantees MAX_TEXTURE_IMAGE_UNITS >= 16, so a batch can bind up to 16
+// distinct base textures and merge otherwise-unrelated sprites into one draw.
+const maxBatchTextures = 16;
+// Sprite base textures occupy units 0..15; the shared transform buffer texture
+// binds on the next unit (16). That needs 17 combined units, well within the
+// WebGL2 >= 32 MAX_COMBINED_TEXTURE_IMAGE_UNITS guarantee.
+const transformTextureUnit = 16;
 const instanceStrideBytes = 36;
 const wordsPerInstance = instanceStrideBytes / Uint32Array.BYTES_PER_ELEMENT;
 
@@ -79,6 +82,11 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> {
   private readonly _activeTextures: Array<Texture | RenderTexture | null> = new Array(maxBatchTextures).fill(null);
   private readonly _textureSlots = new Map<Texture | RenderTexture, number>();
   private _slotCount = 0;
+  // Effective base-texture slot cap for this context. Defaults to the compile-
+  // time capacity and is clamped down at connect to the driver's reported
+  // MAX_TEXTURE_IMAGE_UNITS — a defensive floor that WebGL2's >= 16 guarantee
+  // means should never actually reduce the batch below maxBatchTextures.
+  private _maxTextureSlots = maxBatchTextures;
 
   // Custom-material state. Compiled fragment programs are cached per material
   // instance; the current batch's material/base-texture decide when to flush.
@@ -243,6 +251,13 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> {
   protected onConnect(backend: WebGl2Backend): void {
     const gl = backend.context;
 
+    // Clamp the batch's base-texture capacity to what the driver actually
+    // exposes to the fragment stage. WebGL2 mandates >= 16, so this is a
+    // belt-and-braces floor that should never trim below maxBatchTextures.
+    const maxImageUnits = gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS) as number;
+
+    this._maxTextureSlots = Math.min(maxBatchTextures, maxImageUnits);
+
     this._shader.connect(createWebGl2ShaderProgram(gl));
     this._connection = this._createConnection(gl);
     this._instanceBuffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this._instanceData, BufferUsage.DynamicDraw).connect(
@@ -259,12 +274,21 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> {
       .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_nodeIndex'), gl.UNSIGNED_INT, false, instanceStrideBytes, 32, true, 1)
       .connect(this._createVaoRuntime(this._connection));
 
-    // Pin the per-slot sampler uniforms to texture units 0..N-1.
+    // Pin the per-slot sampler uniforms to texture units 0..N-1. All 16 are
+    // declared by sprite.frag; only the units the batcher can actually reach
+    // (_maxTextureSlots) are pinned. The `uniforms.has` guard keeps mocked test
+    // shaders that declare fewer samplers from tripping getUniform.
     const samplerUnit = new Int32Array(1);
 
-    for (let i = 0; i < maxBatchTextures; i++) {
+    for (let i = 0; i < this._maxTextureSlots; i++) {
+      const name = `u_texture${i}`;
+
+      if (!this._shader.uniforms.has(name)) {
+        continue;
+      }
+
       samplerUnit[0] = i;
-      this._shader.getUniform(`u_texture${i}`).setValue(samplerUnit);
+      this._shader.getUniform(name).setValue(samplerUnit);
     }
   }
 
@@ -301,7 +325,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> {
     const blendMode = sprite.blendMode;
     const batchFull = this._instanceCount >= this._batchSize;
     const blendModeChanged = blendMode !== this._currentBlendMode;
-    const slotExhausted = !this._textureSlots.has(texture) && this._slotCount >= maxBatchTextures;
+    const slotExhausted = !this._textureSlots.has(texture) && this._slotCount >= this._maxTextureSlots;
     // A custom batch in flight must drain before default sprites resume.
     const materialSwitch = this._currentMaterial !== null && this._instanceCount > 0;
 

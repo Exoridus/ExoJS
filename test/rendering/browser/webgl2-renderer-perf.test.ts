@@ -495,9 +495,9 @@ describe('WebGL2 renderer perf — Sprite', () => {
     }
   });
 
-  it('200 sprites / 8 cycled textures → 1 draw (multi-texture slot merge)', async () => {
+  it('200 sprites / 16 cycled textures → 1 draw (multi-texture slot merge)', async () => {
     const backend = await createCoreBackend();
-    const textures = makeTextures(8);
+    const textures = makeTextures(16);
     const { root } = buildSprites(200, textures, 'cycle');
 
     try {
@@ -509,10 +509,10 @@ describe('WebGL2 renderer perf — Sprite', () => {
     }
   });
 
-  it('9 distinct textures → 2 draws (slot exhaustion at 9th texture)', async () => {
+  it('17 distinct textures → 2 draws (slot exhaustion at 17th texture)', async () => {
     const backend = await createCoreBackend();
-    const textures = makeTextures(9);
-    const { root } = buildSprites(9, textures, 'distinct');
+    const textures = makeTextures(17);
+    const { root } = buildSprites(17, textures, 'distinct');
 
     try {
       expect(render(backend, root)).toBe(2);
@@ -523,10 +523,10 @@ describe('WebGL2 renderer perf — Sprite', () => {
     }
   });
 
-  it('17 distinct textures → 3 draws (two slot-exhaustion flushes)', async () => {
+  it('33 distinct textures → 3 draws (two slot-exhaustion flushes)', async () => {
     const backend = await createCoreBackend();
-    const textures = makeTextures(17);
-    const { root } = buildSprites(17, textures, 'distinct');
+    const textures = makeTextures(33);
+    const { root } = buildSprites(33, textures, 'distinct');
 
     try {
       expect(render(backend, root)).toBe(3);

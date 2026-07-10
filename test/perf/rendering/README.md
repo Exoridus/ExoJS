@@ -14,8 +14,8 @@ hardware (only shader execution and real-driver upload cost are absent).
 ## Why a fake context, not the plan layer?
 
 Plan-level grouping (`pipelineKey:bindKey`) is **not** the same as GPU draw
-calls: the sprite renderer merges up to 8 textures into one draw via per-instance
-slots, and the "9th texture → flush" boundary lives inside the renderer. Only
+calls: the sprite renderer merges up to 16 textures into one draw via per-instance
+slots, and the "17th texture → flush" boundary lives inside the renderer. Only
 running the real renderer reproduces that. The fake context measures the truth.
 
 ## Layout

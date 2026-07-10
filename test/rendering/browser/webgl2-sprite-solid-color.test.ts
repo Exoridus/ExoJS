@@ -77,6 +77,14 @@ uniform sampler2D u_texture4;
 uniform sampler2D u_texture5;
 uniform sampler2D u_texture6;
 uniform sampler2D u_texture7;
+uniform sampler2D u_texture8;
+uniform sampler2D u_texture9;
+uniform sampler2D u_texture10;
+uniform sampler2D u_texture11;
+uniform sampler2D u_texture12;
+uniform sampler2D u_texture13;
+uniform sampler2D u_texture14;
+uniform sampler2D u_texture15;
 out vec4 outColor;
 vec4 sampleTexture(uint slot, vec2 uv) {
   if (slot == uint(0)) return texture(u_texture0, uv);
@@ -86,7 +94,15 @@ vec4 sampleTexture(uint slot, vec2 uv) {
   if (slot == uint(4)) return texture(u_texture4, uv);
   if (slot == uint(5)) return texture(u_texture5, uv);
   if (slot == uint(6)) return texture(u_texture6, uv);
-  return texture(u_texture7, uv);
+  if (slot == uint(7)) return texture(u_texture7, uv);
+  if (slot == uint(8)) return texture(u_texture8, uv);
+  if (slot == uint(9)) return texture(u_texture9, uv);
+  if (slot == uint(10)) return texture(u_texture10, uv);
+  if (slot == uint(11)) return texture(u_texture11, uv);
+  if (slot == uint(12)) return texture(u_texture12, uv);
+  if (slot == uint(13)) return texture(u_texture13, uv);
+  if (slot == uint(14)) return texture(u_texture14, uv);
+  return texture(u_texture15, uv);
 }
 void main() { outColor = sampleTexture(v_textureSlot, v_uv) * v_color; }`,
 
@@ -249,6 +265,68 @@ describe('WebGL2 Sprite — solid color', () => {
     } finally {
       root.destroy();
       texture.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('16 distinct textures render correctly in a single batch (>8 slots)', async () => {
+    // Finding F9: WebGL2 batches up to 16 base textures per draw. Sixteen
+    // distinct-texture sprites must land in ONE draw call and each must sample
+    // its own texture — proving slots 8..15 (beyond the old 8-slot cap) resolve.
+    const backend = await createBackend();
+
+    // Sixteen clearly-distinct, non-black solid colours (index → [r,g,b]).
+    const palette: ReadonlyArray<readonly [number, number, number]> = [
+      [255, 0, 0],
+      [0, 255, 0],
+      [0, 0, 255],
+      [255, 255, 0],
+      [255, 0, 255],
+      [0, 255, 255],
+      [255, 128, 0],
+      [128, 0, 255],
+      [0, 128, 255],
+      [128, 255, 0],
+      [255, 0, 128],
+      [0, 255, 128],
+      [128, 128, 255],
+      [255, 128, 128],
+      [128, 255, 128],
+      [200, 200, 200],
+    ];
+
+    const toHex = (c: number): string => c.toString(16).padStart(2, '0');
+    const textures = palette.map(([r, g, b]) => createSolidTexture(`#${toHex(r)}${toHex(g)}${toHex(b)}`, 8, 8));
+    const root = new Container();
+
+    try {
+      // 4x4 grid of 16px cells; each 8x8 sprite sits at the cell's +4 inset so
+      // its interior centre is at (col*16+8, row*16+8) with no neighbour overlap.
+      textures.forEach((texture, i) => {
+        const sprite = new Sprite(texture);
+        const col = i % 4;
+        const row = Math.floor(i / 4);
+
+        sprite.setPosition(col * 16 + 4, row * 16 + 4);
+        root.addChild(sprite);
+      });
+
+      render(backend, root);
+
+      // All sixteen distinct textures merge into a single draw call.
+      expect(backend.stats.drawCalls).toBe(1);
+
+      // Every sprite samples its own texture — covers slots 0..15, i.e. the
+      // 8..15 range the previous 8-slot renderer could not reach in one batch.
+      palette.forEach(([r, g, b], i) => {
+        const col = i % 4;
+        const row = Math.floor(i / 4);
+
+        expectPixelNear(readPixel(backend, col * 16 + 8, row * 16 + 8), [r, g, b, 255]);
+      });
+    } finally {
+      root.destroy();
+      textures.forEach(texture => texture.destroy());
       backend.destroy();
     }
   });

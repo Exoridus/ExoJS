@@ -478,7 +478,7 @@ describe('custom SpriteMaterial WebGL2 browser', () => {
 
       render(backend, root);
 
-      // 8-slot multi-texture batching keeps three distinct textures in one draw.
+      // 16-slot multi-texture batching keeps three distinct textures in one draw.
       expect(backend.stats.drawCalls).toBe(1);
     } finally {
       root.destroy();

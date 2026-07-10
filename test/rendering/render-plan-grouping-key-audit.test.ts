@@ -19,7 +19,7 @@
  *
  * 3. Default-path sprite texture grouping is deliberately conservative:
  *    every distinct texture → distinct textureId → distinct bindKey →
- *    distinct groupIndex. The sprite renderer can merge up to 8 textures
+ *    distinct groupIndex. The sprite renderer can merge up to 16 textures
  *    via slot rotation at runtime, but the optimizer cannot cheaply replicate
  *    that capacity-aware state. Texture-slot coalescing is renderer-owned.
  *
@@ -303,7 +303,7 @@ describe('render plan grouping key audit', () => {
       // For the default path, bindKey = rendererId * 31 + textureId.
       // Different textures → different textureIds → different bindKeys →
       // different groupIndices. This is deliberately conservative: the sprite
-      // renderer can merge up to 8 textures via slot rotation at runtime, but
+      // renderer can merge up to 16 textures via slot rotation at runtime, but
       // the optimizer cannot cheaply know the renderer's slot capacity.
       // Texture-slot coalescing is intentionally renderer-owned.
       const { backend, destroy } = createBuildBackend();
