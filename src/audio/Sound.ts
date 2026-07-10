@@ -122,7 +122,6 @@ interface PooledVoice {
  * lazily) — `Sound` is best for short, frequently-triggered clips.
  */
 export class Sound implements Playable {
-
   private _audioBuffer: AudioBuffer | null;
   /** @internal — load lifecycle, driven by the Loader's seamless pipeline. */
   public readonly _loadState = new LoadState<Sound>();

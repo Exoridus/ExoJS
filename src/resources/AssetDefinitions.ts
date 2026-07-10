@@ -65,13 +65,14 @@ export type ValueAssetKind = 'json' | 'text' | 'csv' | 'xml' | 'srt' | 'vtt' | '
 
 export type AssetInput = AnyAssetConfig | Asset<unknown>;
 
-export type InferAssetResource<I extends AssetInput> = I extends Asset<infer T>
-  ? T
-  : I extends { parse: (raw: never) => infer R }
-    ? R
-    : I extends { kind: infer K extends keyof AssetDefinitions }
-      ? AssetDefinitions[K]['resource']
-      : never;
+export type InferAssetResource<I extends AssetInput> =
+  I extends Asset<infer T>
+    ? T
+    : I extends { parse: (raw: never) => infer R }
+      ? R
+      : I extends { kind: infer K extends keyof AssetDefinitions }
+        ? AssetDefinitions[K]['resource']
+        : never;
 
 // ---------------------------------------------------------------------------
 // Type-level bare-path inference (mirror of the runtime extensionKindRegistry)

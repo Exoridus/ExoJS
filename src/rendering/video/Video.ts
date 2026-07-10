@@ -32,7 +32,6 @@ type FrameCallbackVideoElement = HTMLVideoElement &
  * node and can be directed to any {@link AudioBus}.
  */
 export class Video extends Sprite {
-
   public readonly onStart = new Signal();
   public readonly onStop = new Signal();
 

@@ -1,4 +1,3 @@
-
 // Each dispatch token carries a distinct nominal brand (`_token`, `declare`-only,
 // never emitted). Without it these otherwise-empty marker classes are
 // structurally interchangeable, so `LoadReturn<T>`'s `T extends typeof Json` /
@@ -17,7 +16,6 @@
  */
 export abstract class Json {
   declare protected readonly _token: 'json';
-
 }
 
 /**
@@ -27,7 +25,6 @@ export abstract class Json {
  */
 export abstract class TextAsset {
   declare protected readonly _token: 'text';
-
 }
 
 /**
@@ -37,7 +34,6 @@ export abstract class TextAsset {
  */
 export abstract class SvgAsset {
   declare protected readonly _token: 'svg';
-
 }
 
 /**
@@ -49,7 +45,6 @@ export abstract class SvgAsset {
  */
 export abstract class SubtitleAsset {
   declare protected readonly _token: 'subtitle';
-
 }
 
 /**
@@ -60,7 +55,6 @@ export abstract class SubtitleAsset {
  */
 export abstract class XmlAsset {
   declare protected readonly _token: 'xml';
-
 }
 
 /**
@@ -71,7 +65,6 @@ export abstract class XmlAsset {
  */
 export abstract class CsvAsset {
   declare protected readonly _token: 'csv';
-
 }
 
 /**
@@ -81,7 +74,6 @@ export abstract class CsvAsset {
  */
 export abstract class ImageAsset {
   declare protected readonly _token: 'image';
-
 }
 
 /**
@@ -91,7 +83,6 @@ export abstract class ImageAsset {
  */
 export abstract class FontAsset {
   declare protected readonly _token: 'font';
-
 }
 
 /**
@@ -101,7 +92,6 @@ export abstract class FontAsset {
  */
 export abstract class BinaryAsset {
   declare protected readonly _token: 'binary';
-
 }
 
 /**
@@ -111,5 +101,4 @@ export abstract class BinaryAsset {
  */
 export abstract class WasmAsset {
   declare protected readonly _token: 'wasm';
-
 }

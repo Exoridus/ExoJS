@@ -3,7 +3,7 @@
 // resolved map from `load(catalog)` unwraps it back to `Config`. Compiled by
 // `tsconfig.type-tests.json` via `pnpm typecheck:type-tests`.
 
-import { Asset, AssetRef, Assets, Loader, type Texture } from '@codexo/exojs';
+import { Asset, type AssetRef, Assets, type Loader, type Texture } from '@codexo/exojs';
 
 type Equal<A, B> = (<G>() => G extends A ? 1 : 2) extends <G>() => G extends B ? 1 : 2 ? true : false;
 type Expect<T extends true> = T;

@@ -48,7 +48,6 @@ export interface BmFontData {
  * @stable
  */
 export class BmFont {
-
   public readonly fontData: BmFontData;
   public readonly textures: readonly Texture[];
 

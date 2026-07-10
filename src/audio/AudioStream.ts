@@ -25,7 +25,6 @@ import type { Playable, PlayOptions, Voice } from './Playable';
  * pre-decoded `AudioBuffer` storage and pooled overlapping playback.
  */
 export class AudioStream implements Playable {
-
   private readonly _audioElement: HTMLMediaElement;
 
   /** Default volume applied to new voices. Range [0, 1]. */

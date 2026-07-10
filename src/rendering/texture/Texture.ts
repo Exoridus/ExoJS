@@ -85,7 +85,6 @@ export class Texture {
     return Texture._missing;
   }
 
-
   private _version = 0;
   private _source: TextureSource = null;
   private _size: Size = new Size(0, 0);
