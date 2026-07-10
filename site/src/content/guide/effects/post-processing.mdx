@@ -60,7 +60,7 @@ That pipeline is already three passes — scene render, blur, composite. Post-pr
 Bloom requires two renderings of the same scene: one at normal brightness (the base), one with only the bright parts tinted and blurred (the glow). The glow is composited additively over the base. Because the same sprite is drawn twice with different tints, each off-screen step is a `CallbackRenderPass` that sets the tint before rendering:
 
 ```ts
-import { BlendModes, BlurFilter, CallbackRenderPass, Color, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite, Texture } from '@codexo/exojs';
+import { BlendModes, BlurFilter, CallbackRenderPass, Color, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite } from '@codexo/exojs';
 
 class BloomScene extends Scene {
     private baseRt!: RenderTexture;
@@ -77,7 +77,7 @@ class BloomScene extends Scene {
         this.glowRt = new RenderTexture(800, 600);
         this.blurredRt = new RenderTexture(800, 600);
 
-        this.bunny = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5);
+        this.bunny = new Sprite(loader.get('image/bunny.png')).setAnchor(0.5);
         this.baseSprite = new Sprite(this.baseRt);
         this.glowSprite = new Sprite(this.blurredRt)
             .setTint(new Color(255, 255, 255, 0.8))
@@ -171,7 +171,7 @@ Each `filter.apply()` call is one additional render pass. For a chain of N filte
 Reuse a render target as its own input to create motion trails. The feedback pass deliberately omits `clear`, so the decayed previous frame accumulates instead of being wiped:
 
 ```ts
-import { CallbackRenderPass, Color, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite, Texture } from '@codexo/exojs';
+import { CallbackRenderPass, Color, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite } from '@codexo/exojs';
 
 class TrailScene extends Scene {
     private feedbackRt!: RenderTexture;
@@ -184,7 +184,7 @@ class TrailScene extends Scene {
         this.feedbackRt = new RenderTexture(800, 600);
         this.decay = new Sprite(this.feedbackRt)
             .setTint(new Color(255, 255, 255, 0.93)); // 93% opaque = 7% fade per frame
-        this.hero = new Sprite(loader.get(Texture, 'hero')).setAnchor(0.5);
+        this.hero = new Sprite(loader.get('image/hero.png')).setAnchor(0.5);
         this.final = new Sprite(this.feedbackRt);
 
         this.pipeline = new RenderPipeline()

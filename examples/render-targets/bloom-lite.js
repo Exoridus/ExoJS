@@ -1,5 +1,5 @@
 // Auto-generated from bloom-lite.ts — edit the .ts source, not this file.
-import { Application, BlendModes, BlurFilter, CallbackRenderPass, Color, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite, Texture } from '@codexo/exojs';
+import { Application, BlendModes, BlurFilter, CallbackRenderPass, Color, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite } from '@codexo/exojs';
 const app = new Application({
     canvas: {
         width: 1280,
@@ -22,15 +22,12 @@ class BloomLiteScene extends Scene {
     blur;
     pipeline;
     time = 0;
-    async load(loader) {
-        await loader.load(Texture, { bunny: 'image/ship-a.png' });
-    }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
         this.baseRt = new RenderTexture(width, height);
         this.glowRt = new RenderTexture(width, height);
         this.blurredRt = new RenderTexture(width, height);
-        this.bunny = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setScale(1.9);
+        this.bunny = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setScale(1.9);
         this.baseSprite = new Sprite(this.baseRt);
         this.glowSprite = new Sprite(this.blurredRt).setTint(new Color(255, 255, 255, 0.8)).setBlendMode(BlendModes.Additive);
         this.blur = new BlurFilter({ radius: 10, quality: 2 });

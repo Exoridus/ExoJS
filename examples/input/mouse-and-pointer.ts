@@ -1,4 +1,4 @@
-import { Application, Color, Graphics, Scene, Sprite, Texture } from '@codexo/exojs';
+import { Application, Color, Graphics, Scene, Sprite } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -31,17 +31,13 @@ class MouseAndPointerScene extends Scene {
     private clicks = 0;
     private hud!: ReturnType<typeof mountControls>;
 
-    override async load(loader): Promise<void> {
-        await loader.load(Texture, { ship: 'image/ship-a.png' });
-    }
-
-    override init(loader): void {
+    override init(): void {
         const { width, height } = this.app.canvas;
 
         this.pointer = { x: width / 2, y: height / 2 };
         this.previous = { x: width / 2, y: height / 2 };
 
-        this.ship = new Sprite(loader.get(Texture, 'ship')).setAnchor(0.5).setPosition(width / 2, height / 2);
+        this.ship = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(width / 2, height / 2);
         this.ship.interactive = true;
         this.ship.draggable = true;
         this.crosshair = new Graphics();

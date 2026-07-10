@@ -1,5 +1,5 @@
 // Auto-generated from texture-loader.ts — edit the .ts source, not this file.
-import { Application, Color, Graphics, Scene, Sprite, Text, Texture } from '@codexo/exojs';
+import { Application, Color, Graphics, Scene, Sprite, Text } from '@codexo/exojs';
 const app = new Application({
     canvas: {
         width: 1280,
@@ -14,31 +14,23 @@ const app = new Application({
 });
 class TextureLoaderScene extends Scene {
     sprites;
+    textures;
     bar;
     label;
     barX = 0;
     barY = 0;
     barWidth = 0;
     progress = { loaded: 0, total: 3 };
-    async load(loader) {
-        const loading = loader.load(Texture, {
-            bunny: 'image/ship-a.png',
-            gradient: 'image/hue-ramp.png',
-            uvGrid: 'image/uv-grid-256.png',
-        });
-        loading.onProgress.add((progress) => {
-            this.progress = progress;
-        });
-        await loading;
-    }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
-        const textures = [loader.get(Texture, 'bunny'), loader.get(Texture, 'gradient'), loader.get(Texture, 'uvGrid')];
+        // Seamless get() returns placeholder handles immediately; each pops in
+        // (loadState → 'ready') as its fetch completes, polled in update().
+        this.textures = [this.loader.get('image/ship-a.png'), this.loader.get('image/hue-ramp.png'), this.loader.get('image/uv-grid-256.png')];
         // Spread the three textures evenly across the width, one per third.
-        this.sprites = textures.map((texture, index) => {
+        this.sprites = this.textures.map((texture, index) => {
             const sprite = new Sprite(texture);
             sprite.setAnchor(0.5);
-            sprite.setPosition((width / textures.length) * (index + 0.5), height * 0.6);
+            sprite.setPosition((width / this.textures.length) * (index + 0.5), height * 0.6);
             return sprite;
         });
         // Centered progress bar in the upper third.
@@ -49,6 +41,9 @@ class TextureLoaderScene extends Scene {
         this.label = new Text('', { fillColor: Color.white, fontSize: 20, align: 'center' });
         this.label.setAnchor(0.5, 0);
         this.label.setPosition(width / 2, this.barY + 40);
+    }
+    update() {
+        this.progress.loaded = this.textures.filter(texture => texture.loadState === 'ready').length;
     }
     draw(context) {
         context.backend.clear();

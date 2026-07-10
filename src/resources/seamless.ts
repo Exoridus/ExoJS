@@ -1,6 +1,7 @@
 import { Sound } from '#audio/Sound';
 import type { LoadStateValue } from '#core/LoadState';
 import { logger } from '#core/logging';
+import type { SamplerOptions } from '#rendering/texture/Sampler';
 import { Texture } from '#rendering/texture/Texture';
 
 /** Pre-sizing options for deferred texture handles (spec §4.1 — the layout-jump fix). */
@@ -9,6 +10,18 @@ export interface PreSizeOptions {
   width?: number;
   /** Height to reserve on the placeholder until the payload arrives. */
   height?: number;
+}
+
+/**
+ * Options honoured by {@link textureSeamlessAdapter.createPlaceholder}: pre-size
+ * reservation plus the handle's OWN sampler state. Sampler options are per-handle
+ * — applied to the placeholder here and NOT overwritten by {@link fill} — so two
+ * handles for one source can carry independent samplers off a single shared decode.
+ * @internal
+ */
+export interface DeferredTextureOptions extends PreSizeOptions {
+  /** Per-handle sampler/upload state for the placeholder; independent of the shared decode. */
+  samplerOptions?: Partial<SamplerOptions>;
 }
 
 /**
@@ -37,9 +50,11 @@ export interface SeamlessAdapter<T> {
 }
 
 /**
- * Seamless adapter for {@link Texture}: placeholder is an empty (0×0) texture;
- * fill transplants the decoded source plus sampler state (the donor carries
- * any factory options from the original call); fail shows the shared
+ * Seamless adapter for {@link Texture}: placeholder is an empty (0×0) texture
+ * carrying its OWN per-handle sampler state (applied at
+ * {@link textureSeamlessAdapter.createPlaceholder} from `samplerOptions`); fill
+ * transplants ONLY the decoded source, so two handles for one source share a
+ * single decode yet keep independent samplers; fail shows the shared
  * {@link Texture.missing} checker — visible in production too.
  * @internal
  */
@@ -49,8 +64,10 @@ const presizes = new WeakMap<Texture, { width: number; height: number }>();
 
 export const textureSeamlessAdapter: SeamlessAdapter<Texture> = {
   createPlaceholder(options?: unknown): Texture {
-    const handle = new Texture(null);
-    const { width, height } = (options ?? {}) as PreSizeOptions;
+    const { width, height, samplerOptions } = (options ?? {}) as DeferredTextureOptions;
+    // Bake the handle's own sampler state in now; fill() transplants only the
+    // decoded source, so a shared decode never overwrites it.
+    const handle = new Texture(null, samplerOptions);
 
     if (typeof width === 'number' && typeof height === 'number') {
       handle.setSize(width, height);
@@ -70,9 +87,8 @@ export const textureSeamlessAdapter: SeamlessAdapter<Texture> = {
     const expected = presizes.get(handle);
 
     presizes.delete(handle);
-    handle.setScaleMode(donor.scaleMode).setWrapMode(donor.wrapMode).setPremultiplyAlpha(donor.premultiplyAlpha);
-    handle.generateMipMap = donor.generateMipMap;
-    handle.flipY = donor.flipY;
+    // Transplant ONLY the decoded source — the handle keeps the per-handle
+    // sampler state applied at createPlaceholder (do NOT copy the donor's).
     handle.setSource(donor.source);
 
     if (expected !== undefined && (handle.width !== expected.width || handle.height !== expected.height)) {

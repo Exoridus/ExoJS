@@ -10,8 +10,6 @@ describe('root index resources exports', () => {
     expect(exo.WebStorageStore).toBeDefined();
     expect(exo.IndexedDbKeyValueStore).toBeDefined();
     expect(exo.Loader).toBeDefined();
-    expect(exo.defineAssetManifest).toBeDefined();
-    expect(exo.BundleLoadError).toBeDefined();
     expect(exo.JsonFactory).toBeDefined();
     expect(exo.TextFactory).toBeDefined();
     expect(exo.SvgFactory).toBeDefined();

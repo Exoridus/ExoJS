@@ -1,5 +1,5 @@
 // Auto-generated from picture-in-picture.ts — edit the .ts source, not this file.
-import { Application, Color, Graphics, Scene, Sprite, Texture, View } from '@codexo/exojs';
+import { Application, Color, Graphics, Scene, Sprite, View } from '@codexo/exojs';
 const app = new Application({
     canvas: {
         width: 1280,
@@ -18,11 +18,9 @@ class PictureInPictureScene extends Scene {
     sprite;
     velocity = 220;
     frame;
-    async load(loader) {
-        this.sprite = new Sprite(await loader.load(Texture, 'image/ship-a.png'));
-    }
     init() {
         const { width, height } = this.app.canvas;
+        this.sprite = new Sprite(this.loader.get('image/ship-a.png'));
         this.mainView = new View(0, 0, width, height);
         this.pipView = new View(0, 0, width * 0.3, height * 0.3).setViewport(0.68, 0.04, 0.28, 0.28);
         // Zoom < 1 zooms OUT (a larger visible world area maps into the same

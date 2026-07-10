@@ -1,5 +1,5 @@
 // Auto-generated from screen-shake-on-explosion.ts — edit the .ts source, not this file.
-import { Application, Color, Scene, Texture, Vector, View } from '@codexo/exojs';
+import { Application, Color, Scene, Vector, View } from '@codexo/exojs';
 import { AlphaFadeOverLifetime, BurstSpawn, ConeDirection, Constant, particlesExtension, ParticleSystem, } from '@codexo/exojs-particles';
 const app = new Application({
     canvas: {
@@ -19,13 +19,10 @@ class ScreenShakeOnExplosionScene extends Scene {
     ps;
     burstPos;
     burst;
-    async load(loader) {
-        await loader.load(Texture, { particle: 'image/particle-light.png' });
-    }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
         this.view = new View(width / 2, height / 2, width, height);
-        this.ps = new ParticleSystem(loader.get(Texture, 'particle'), { capacity: 5000 });
+        this.ps = new ParticleSystem(this.loader.get('image/particle-light.png'), { capacity: 5000 });
         this.ps.setPosition(width / 2, height / 2);
         this.burstPos = new Vector(0, 0);
         this.burst = new BurstSpawn({

@@ -1,0 +1,76 @@
+{
+  "title": "LoadOptions",
+  "description": "Options for the catalog/asset/leaf Loader.load forms. With `background: true` every adopted leaf is still claimed and registered (so it heals in place and a later Loader.get returns the same instance), but its fetch is routed through the low-priority background queue instead of started immediately: it streams concurrency-capped, drops from the queue if released at refcount 0, and is boosted to fetch now on a direct `get()`. Foreground loading (no options) is unaffected.",
+  "symbol": "LoadOptions",
+  "kind": "interface",
+  "subsystem": "resources",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 1,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Options for the catalog/asset/leaf Loader.load forms.",
+        "With `background: true` every adopted leaf is still claimed and registered (so it heals in place and a later Loader.get returns the same instance), but its fetch is routed through the low-priority background queue instead of started immediately: it streams concurrency-capped, drops from the queue if released at refcount 0, and is boosted to fetch now on a direct `get()`. Foreground loading (no options) is unaffected."
+      ],
+      "importLine": "import { LoadOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "background",
+          "signature": "background?: boolean",
+          "signatureTokens": [
+            {
+              "text": "background",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/resources/Loader.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Loader.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/resources/Loader.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Loader.ts"
+}

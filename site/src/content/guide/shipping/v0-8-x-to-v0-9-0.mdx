@@ -107,14 +107,14 @@ color.alpha                // -> color.a
 import { Asset, Assets } from '@codexo/exojs';
 
 const heroTexture = new Asset({
-  type: 'texture',
+  kind: 'texture',
   source: 'images/hero.png',
 });
 
 const titleAssets = new Assets({
-  logo: { type: 'texture', source: 'images/logo.png' },
-  music: { type: 'music', source: 'audio/title.ogg' },
-  levels: { type: 'json', source: 'data/levels.json' },
+  logo: { kind: 'texture', source: 'images/logo.png' },
+  music: { kind: 'music', source: 'audio/title.ogg' },
+  levels: { kind: 'json', source: 'data/levels.json' },
 });
 ```
 

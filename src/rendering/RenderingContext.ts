@@ -9,6 +9,7 @@ import type { RenderPassCoordinatorHost } from '#rendering/pass/RenderPassCoordi
 import { StencilAttachmentMode } from '#rendering/pass/RenderPassDescriptor';
 import { playRenderTree } from '#rendering/plan/playRenderTree';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
+import type { ColorTextureFormat } from '#rendering/types';
 
 import type { DrawContext, RenderToOptions } from './DrawContext';
 import { type RenderBackend } from './RenderBackend';
@@ -22,6 +23,12 @@ export interface CaptureOptions {
   width: number;
   height: number;
   clearColor?: Color;
+  /**
+   * Color attachment format for the allocated target. Defaults to `'rgba8'`.
+   * Float formats require `EXT_color_buffer_float` — check
+   * {@link RenderingContext.supportsColorFormat} first.
+   */
+  format?: ColorTextureFormat;
 }
 
 export interface RenderOptions {
@@ -221,8 +228,20 @@ export class RenderingContext implements System, DrawContext {
    * Saves and restores the active render target and view so the caller's
    * rendering state is undisturbed.
    */
+  /**
+   * Whether a {@link RenderTexture} of the given color format can be rendered
+   * into on the active backend. `'rgba8'` is always supported; the float formats
+   * (`'rgba16f'` / `'rgba32f'`) require hardware/extension support (WebGL2
+   * `EXT_color_buffer_float`). Check this before allocating a float target and
+   * fall back to `'rgba8'` yourself if unsupported — the engine throws rather
+   * than silently producing a broken target.
+   */
+  public supportsColorFormat(format: ColorTextureFormat): boolean {
+    return this._backend.supportsColorFormat(format);
+  }
+
   public capture(node: RenderNode, options: CaptureOptions): RenderTexture {
-    const target = new RenderTexture(options.width, options.height);
+    const target = new RenderTexture(options.width, options.height, options.format !== undefined ? { format: options.format } : undefined);
     const view = new View(options.width / 2, options.height / 2, options.width, options.height);
     const coordinator = (this._backend as RenderBackend & Partial<RenderPassCoordinatorHost>)._passCoordinator;
 

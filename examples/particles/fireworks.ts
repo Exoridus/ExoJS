@@ -1,16 +1,4 @@
-import {
-    Application,
-    BlendModes,
-    Color,
-    Random,
-    Scene,
-    Size,
-    Sprite,
-    Texture,
-    Time,
-    Timer,
-    Vector,
-} from '@codexo/exojs';
+import { Application, BlendModes, Color, Random, Scene, Size, Sprite, Texture, Time, Timer, Vector } from '@codexo/exojs';
 import {
     AlphaFadeOverLifetime,
     ApplyForce,
@@ -76,15 +64,11 @@ class FireworksScene extends Scene {
     private launchCount = 0;
     private hud!: ReturnType<typeof mountControls>;
 
-    override async load(loader): Promise<void> {
-        await loader.load(Texture, { star: assets.demo.textures.particleStar });
-    }
-
-    override init(loader): void {
+    override init(): void {
         const { width, height } = this.app.canvas;
 
         this.canvasSize = new Size(width, height);
-        this.rocketTexture = loader.get(Texture, 'star');
+        this.rocketTexture = this.loader.get(assets.demo.textures.particleStar);
 
         // Single explosion system shared by every detonation. We reposition and
         // re-tint a single BurstSpawn, then reset() it to fire one burst.

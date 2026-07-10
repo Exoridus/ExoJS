@@ -1,8 +1,8 @@
 import { materializeAssetBindings } from '#extensions/materialize';
+import { Asset } from '#resources/Asset';
 import { CONTAINER_HEADER_SIZE, CONTAINER_MAGIC, type ContainerInput, encodeContainer, parseContainer } from '#resources/AssetContainer';
 import { coreAssetBindings } from '#resources/coreAssetBindings';
 import { Loader } from '#resources/Loader';
-import { BinaryAsset, Json, TextAsset } from '#resources/tokens';
 
 const utf8 = (text: string): Uint8Array => new TextEncoder().encode(text);
 
@@ -200,9 +200,9 @@ describe('Loader.loadContainer', () => {
     await loader.loadContainer('assets/pack.exoa');
 
     expect(fetchSpy).toHaveBeenCalledTimes(1);
-    expect(loader.get(Json, 'level').value).toEqual({ score: 42 });
-    expect(loader.get(TextAsset, 'readme').value).toBe('hello world');
-    expect(new Uint8Array(loader.get(BinaryAsset, 'blob').value)).toEqual(new Uint8Array([1, 2, 3, 4]));
+    expect(loader.get(Asset.kind('json', 'level')).value).toEqual({ score: 42 });
+    expect(loader.get(Asset.kind('text', 'readme')).value).toBe('hello world');
+    expect(new Uint8Array(loader.get(Asset.kind('binary', 'blob')).value)).toEqual(new Uint8Array([1, 2, 3, 4]));
   });
 
   test('throws on an unknown asset type and stores nothing', async () => {

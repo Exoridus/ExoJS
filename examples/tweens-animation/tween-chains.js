@@ -1,5 +1,5 @@
 // Auto-generated from tween-chains.ts — edit the .ts source, not this file.
-import { Application, Color, Scene, Sprite, Texture } from '@codexo/exojs';
+import { Application, Color, Scene, Sprite } from '@codexo/exojs';
 const app = new Application({
     canvas: {
         width: 1280,
@@ -14,17 +14,14 @@ const app = new Application({
 });
 class TweenChainsScene extends Scene {
     sprite;
-    async load(loader) {
-        await loader.load(Texture, { bunny: 'image/ship-a.png' });
-    }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
         // A rectangle centred in the frame, spread across the wider 16:9 space.
         const left = width / 2 - width * 0.28;
         const right = width / 2 + width * 0.28;
         const top = height / 2 - height * 0.28;
         const bottom = height / 2 + height * 0.28;
-        this.sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setPosition(left, top);
+        this.sprite = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(left, top);
         const a = this.app.tweens
             .create(this.sprite.position)
             .to({ x: right, y: top }, 0.6)

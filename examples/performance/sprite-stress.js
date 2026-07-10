@@ -68,9 +68,6 @@ class SpriteStressScene extends Scene {
         context.backend.clear();
         context.render(this.spriteLayer);
     }
-    unload() {
-        this.spriteLayer?.destroy();
-    }
     destroy() {
         this.spriteLayer?.destroy();
     }

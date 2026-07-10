@@ -1,6 +1,6 @@
 {
   "title": "AssetLoaderContext",
-  "description": "Context object passed to custom asset-type load handlers registered via Loader.registerAssetType. The `fetch*` helpers route through the loader's configured cache strategy and IDB stores, giving custom handlers the same caching behaviour as built-in asset types.",
+  "description": "Context object passed to custom asset-type load handlers bound via `bindAsset` / `defineAsset`. The `fetch*` helpers route through the loader's configured cache strategy and IDB stores, giving custom handlers the same caching behaviour as built-in asset types.",
   "symbol": "AssetLoaderContext",
   "kind": "interface",
   "subsystem": "resources",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Context object passed to custom asset-type load handlers registered via Loader.registerAssetType.",
+        "Context object passed to custom asset-type load handlers bound via `bindAsset` / `defineAsset`.",
         "The `fetch*` helpers route through the loader's configured cache strategy and IDB stores, giving custom handlers the same caching behaviour as built-in asset types."
       ],
       "importLine": "import { AssetLoaderContext } from '@codexo/exojs'",

@@ -16,6 +16,7 @@ import { getLdtkLevelEntries } from './ldtkLevelEntries';
  * **not** own tileset textures; those remain in the Loader cache.
  */
 export class LdtkMap {
+
   /** Resolved URL this map was loaded from. */
   public readonly source: string;
   /** The raw parsed LDtk document. */

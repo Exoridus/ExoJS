@@ -328,11 +328,11 @@
           "description": "Decode raw audio bytes into an AudioBuffer using the shared OfflineAudioContext. The context's sample rate is derived from the live AudioContext, ensuring decoded buffers are compatible with playback nodes. Note: on some older mobile WebKit versions decodeAudioData requires a running (live) context — decoding may fail with a browser-level error rather than an ExoJS-shaped error in those environments."
         },
         {
-          "name": "defineAssetManifest",
-          "signature": "defineAssetManifest(manifest: M): M",
+          "name": "defineAsset",
+          "signature": "defineAsset(descriptor: DefineAssetDescriptor<Result, Options>): AssetBinding<Result, Options>",
           "signatureTokens": [
             {
-              "text": "defineAssetManifest",
+              "text": "defineAsset",
               "kind": "name"
             },
             {
@@ -340,7 +340,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "manifest",
+              "text": "descriptor",
               "kind": "param"
             },
             {
@@ -348,8 +348,28 @@
               "kind": "punctuation"
             },
             {
-              "text": "M",
+              "text": "DefineAssetDescriptor",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Result",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Options",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             },
             {
               "text": ")",
@@ -360,19 +380,39 @@
               "kind": "punctuation"
             },
             {
-              "text": "M",
+              "text": "AssetBinding",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Result",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Options",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             }
           ],
           "params": [
             {
-              "name": "manifest",
-              "type": "M",
+              "name": "descriptor",
+              "type": "DefineAssetDescriptor<Result, Options>",
               "optional": false
             }
           ],
-          "returnType": "M",
-          "description": "Validates and returns a strongly-typed AssetManifest. Validates the manifest shape at runtime (non-empty bundle names, valid entry fields, no duplicate aliases per type/bundle) and preserves the literal types of the input for downstream type inference. Throws a descriptive Error on any validation failure."
+          "returnType": "AssetBinding<Result, Options>",
+          "description": "Declare a built-in asset type in one place. For a **leaf-capable** kind — one with a SeamlessAdapter (resource) or isValue: true (value) — this registers its placeholder strategy and suffix→kind inference GLOBALLY at import time, so a loader-free Assets.from resolves it before any Application exists. A **non-leaf** resource kind (isValue: false and no adapter — e.g. bmFont, font) has no placeholder strategy, so it is deliberately NOT registered globally: its bare path cannot be inferred and must be declared via Asset.kind(...) or an explicit config. Its extensions still travel on the returned binding for the per-Loader map. The returned AssetBinding flows through the unchanged materializeAssetBindings path exactly like any extension package's binding — defineAsset adds no second per-loader registration channel."
         },
         {
           "name": "getAudioContext",

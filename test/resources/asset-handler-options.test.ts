@@ -14,6 +14,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import type { AssetBinding, AssetHandler, AssetLoadRequest } from '#extensions/Extension';
 import { materializeAssetBindings } from '#extensions/materialize';
 import { Asset } from '#resources/Asset';
+import { defineAsset } from '#resources/defineAsset';
 import type { AssetLoaderContext } from '#resources/Loader';
 import { Loader } from '#resources/Loader';
 
@@ -247,8 +248,8 @@ describe('declarative bindAsset identity propagation', () => {
     materializeAssetBindings(loader, [buildExampleBinding(() => loadCount++)]);
 
     // Both assets have identical source + options — same identity → single load
-    const a1 = new Asset({ type: 'example', source: 'file.dat', format: 'example', strict: true });
-    const a2 = new Asset({ type: 'example', source: 'file.dat', format: 'example', strict: true });
+    const a1 = new Asset({ kind: 'example', source: 'file.dat', format: 'example', strict: true });
+    const a2 = new Asset({ kind: 'example', source: 'file.dat', format: 'example', strict: true });
 
     await Promise.all([loader.load(a1), loader.load(a2)]);
 
@@ -260,8 +261,8 @@ describe('declarative bindAsset identity propagation', () => {
     const calls: ResolvedExampleOptions[] = [];
     materializeAssetBindings(loader, [buildExampleBinding(o => calls.push(o))]);
 
-    const a1 = new Asset({ type: 'example', source: 'world.dat', format: 'example', strict: true });
-    const a2 = new Asset({ type: 'example', source: 'world.dat', format: 'example', strict: true });
+    const a1 = new Asset({ kind: 'example', source: 'world.dat', format: 'example', strict: true });
+    const a2 = new Asset({ kind: 'example', source: 'world.dat', format: 'example', strict: true });
 
     const [r1, r2] = await Promise.all([loader.load(a1), loader.load(a2)]);
 
@@ -275,8 +276,8 @@ describe('declarative bindAsset identity propagation', () => {
     materializeAssetBindings(loader, [buildExampleBinding(o => calls.push(o.strict))]);
 
     // strict: true and strict: false produce different resources
-    const strict = new Asset({ type: 'example', source: 'data.dat', strict: true });
-    const lenient = new Asset({ type: 'example', source: 'data.dat', strict: false });
+    const strict = new Asset({ kind: 'example', source: 'data.dat', strict: true });
+    const lenient = new Asset({ kind: 'example', source: 'data.dat', strict: false });
 
     const [r1, r2] = await Promise.all([loader.load(strict), loader.load(lenient)]);
 
@@ -291,9 +292,9 @@ describe('declarative bindAsset identity propagation', () => {
     materializeAssetBindings(loader, [buildExampleBinding(() => loadCount++)]);
 
     // load with no options — handler normalizes to { format: 'example', strict: true }
-    const noOpts = new Asset({ type: 'example', source: 'map.dat' });
+    const noOpts = new Asset({ kind: 'example', source: 'map.dat' });
     // load with explicit defaults — same normalized result
-    const explicitDefaults = new Asset({ type: 'example', source: 'map.dat', format: 'example', strict: true });
+    const explicitDefaults = new Asset({ kind: 'example', source: 'map.dat', format: 'example', strict: true });
 
     await Promise.all([loader.load(noOpts), loader.load(explicitDefaults)]);
 
@@ -328,8 +329,8 @@ describe('declarative bindAsset identity propagation', () => {
 
     materializeAssetBindings(loader, [bindingWithTrace]);
 
-    const withTrace = new Asset({ type: 'traceExample', source: 'asset.dat', trace: true });
-    const withoutTrace = new Asset({ type: 'traceExample', source: 'asset.dat', trace: false });
+    const withTrace = new Asset({ kind: 'traceExample', source: 'asset.dat', trace: true });
+    const withoutTrace = new Asset({ kind: 'traceExample', source: 'asset.dat', trace: false });
 
     await Promise.all([loader.load(withTrace), loader.load(withoutTrace)]);
 
@@ -357,8 +358,8 @@ describe('declarative bindAsset identity propagation', () => {
 
     materializeAssetBindings(loader, [noIdentityBinding]);
 
-    const a1 = new Asset({ type: 'simpleExample', source: 'shared.dat' });
-    const a2 = new Asset({ type: 'simpleExample', source: 'shared.dat' });
+    const a1 = new Asset({ kind: 'simpleExample', source: 'shared.dat' });
+    const a2 = new Asset({ kind: 'simpleExample', source: 'shared.dat' });
 
     await Promise.all([loader.load(a1), loader.load(a2)]);
 
@@ -395,23 +396,22 @@ describe('declarative bindAsset identity propagation', () => {
   it('handler receives options nested under request.options via declarative path', async () => {
     let seenRequest: AssetLoadRequest<ExampleLoadOptions> | undefined;
 
-    const capturingBinding: AssetBinding<ExampleAsset, ExampleLoadOptions> = {
+    const capturingBinding = defineAsset<ExampleAsset, ExampleLoadOptions>({
       type: ExampleAsset,
-      typeNames: ['captureExample'],
+      kind: 'captureExample',
+      isValue: false,
 
-      create() {
-        return {
-          async load(request) {
-            seenRequest = request;
-            return new ExampleAsset();
-          },
-        };
-      },
-    };
+      create: () => ({
+        async load(request) {
+          seenRequest = request;
+          return new ExampleAsset();
+        },
+      }),
+    });
 
     materializeAssetBindings(loader, [capturingBinding]);
 
-    await expect(loader.load(ExampleAsset, 'thing.dat', { format: 'alt', strict: false } as ExampleLoadOptions)).resolves.toBeInstanceOf(ExampleAsset);
+    await expect(loader.load(new Asset({ kind: 'captureExample', source: 'thing.dat', format: 'alt', strict: false }))).resolves.toBeInstanceOf(ExampleAsset);
 
     expect(seenRequest?.source).toBe('thing.dat');
     expect(seenRequest?.options).toEqual({ format: 'alt', strict: false });
@@ -421,23 +421,22 @@ describe('declarative bindAsset identity propagation', () => {
   it('handler receives no options key when none are passed (declarative path)', async () => {
     let seenRequest: AssetLoadRequest<ExampleLoadOptions> | undefined;
 
-    const capturingBinding: AssetBinding<ExampleAsset, ExampleLoadOptions> = {
+    const capturingBinding = defineAsset<ExampleAsset, ExampleLoadOptions>({
       type: ExampleAsset,
-      typeNames: ['captureNoOpts'],
+      kind: 'captureNoOpts',
+      isValue: false,
 
-      create() {
-        return {
-          async load(request) {
-            seenRequest = request;
-            return new ExampleAsset();
-          },
-        };
-      },
-    };
+      create: () => ({
+        async load(request) {
+          seenRequest = request;
+          return new ExampleAsset();
+        },
+      }),
+    });
 
     materializeAssetBindings(loader, [capturingBinding]);
 
-    await expect(loader.load(ExampleAsset, 'thing.dat')).resolves.toBeInstanceOf(ExampleAsset);
+    await expect(loader.load(new Asset({ kind: 'captureNoOpts', source: 'thing.dat' }))).resolves.toBeInstanceOf(ExampleAsset);
 
     expect(seenRequest?.source).toBe('thing.dat');
     expect(seenRequest?.options).toBeUndefined();
@@ -457,6 +456,14 @@ declare module '#resources/AssetDefinitions' {
     example: {
       resource: ExampleAsset;
       config: { source: string; format?: 'example' | 'alt'; strict?: boolean };
+    };
+    captureExample: {
+      resource: ExampleAsset;
+      config: { source: string; format?: 'example' | 'alt'; strict?: boolean; trace?: boolean };
+    };
+    captureNoOpts: {
+      resource: ExampleAsset;
+      config: { source: string };
     };
   }
 }

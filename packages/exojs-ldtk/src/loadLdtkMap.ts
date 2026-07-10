@@ -1,4 +1,5 @@
-import { type AssetLoaderContext, Texture, TextureRegion } from '@codexo/exojs';
+import { Asset } from '@codexo/exojs';
+import { type AssetLoaderContext, TextureRegion } from '@codexo/exojs';
 import { TileSet } from '@codexo/exojs-tilemap';
 
 import type { LdtkData, LdtkLevel, LdtkTilesetDef } from './LdtkData';
@@ -31,7 +32,7 @@ async function loadLdtkTileset(
   if (!def.relPath) return null;
 
   const imageUrl = resolveLdtkUrl(def.relPath, ldtkSource);
-  const texture = (await context.loader.load(Texture, imageUrl)) as Texture;
+  const texture = await context.loader.load(Asset.kind('texture', imageUrl));
 
   const tileSize = def.tileGridSize;
   const spacing = def.spacing ?? 0;
@@ -87,9 +88,10 @@ async function loadExternalLevel(
   if (level.layerInstances !== null || !level.externalRelPath) return level;
 
   const externalUrl = resolveLdtkUrl(level.externalRelPath, ldtkSource);
-  // Cast without deep validation, matching the root document's fetch below —
-  // structural errors surface as runtime exceptions during conversion.
-  const external = (await context.fetchJson(externalUrl)) as LdtkLevel;
+  // Typed without deep validation (fetchJson<T> is an unvalidated assertion,
+  // matching the root document's fetch below) — structural errors surface as
+  // runtime exceptions during conversion.
+  const external = await context.fetchJson<LdtkLevel>(externalUrl);
   const fieldInstances = external.fieldInstances ?? level.fieldInstances;
 
   return {

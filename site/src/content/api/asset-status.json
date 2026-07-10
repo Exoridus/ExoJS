@@ -1,0 +1,121 @@
+{
+  "title": "AssetStatus",
+  "description": "Uniform, read-only load-status contract surfaced by every asset handle and ref (asset-system v2 §6). A public projection of the handle's internal `LoadState`: `Texture`, `Sound`, and AssetRef each expose `state`, `ready`, and `error` directly (plus their own `loaded` promise), so they structurally satisfy this interface. No separate status object is created.",
+  "symbol": "AssetStatus",
+  "kind": "interface",
+  "subsystem": "resources",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Uniform, read-only load-status contract surfaced by every asset handle and ref (asset-system v2 §6). A public projection of the handle's internal `LoadState`: `Texture`, `Sound`, and AssetRef each expose `state`, `ready`, and `error` directly (plus their own `loaded` promise), so they structurally satisfy this interface. No separate status object is created."
+      ],
+      "importLine": "import { AssetStatus } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "error",
+          "signature": "error: Error | null",
+          "signatureTokens": [
+            {
+              "text": "error",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Error",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The error the last load failed with, or null outside 'failed'."
+        },
+        {
+          "name": "ready",
+          "signature": "ready: boolean",
+          "signatureTokens": [
+            {
+              "text": "ready",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "true exactly when state is 'ready'."
+        },
+        {
+          "name": "state",
+          "signature": "state: LoadStateValue",
+          "signatureTokens": [
+            {
+              "text": "state",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LoadStateValue",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Current load lifecycle: 'idle' | 'loading' | 'ready' | 'failed'."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/resources/AssetStatus.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/AssetStatus.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/resources/AssetStatus.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/AssetStatus.ts"
+}

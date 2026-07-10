@@ -1,4 +1,4 @@
-import { Application, AudioStream, Color, Graphics, type Loopable, type Pausable, type RatePitched, Scene, type Seekable, Text, type Voice } from '@codexo/exojs';
+import { Application, Asset, Assets, AudioStream, Color, Graphics, type Loopable, type Pausable, type RatePitched, Scene, type Seekable, Text, type Voice } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -22,11 +22,7 @@ class MusicLoopScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
     private panel!: ReturnType<typeof mountControlPanel>;
 
-    override async load(loader): Promise<void> {
-        await loader.load(AudioStream, { track: assets.demo.audio.musicLoop });
-    }
-
-    override init(loader): void {
+    override async init(): Promise<void> {
         const { width, height } = this.app.canvas;
 
         // Wide progress bar centred horizontally on the 16:9 canvas.
@@ -34,7 +30,9 @@ class MusicLoopScene extends Scene {
 
         // A single streaming track — the browser's media pipeline loops it
         // seamlessly when `loop` is on, so no duplicate/silent track is needed.
-        this.music = loader.get(AudioStream, 'track');
+        // AudioStream has no seamless adapter — await it explicitly.
+        const { track } = await this.loader.load(Assets.from({ track: Asset.kind('music', assets.demo.audio.musicLoop) }));
+        this.music = track;
 
         // Core defers playback until the AudioContext unlocks on the first
         // gesture, then starts automatically — play() returns the Voice now,

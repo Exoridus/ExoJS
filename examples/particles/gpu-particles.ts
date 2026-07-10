@@ -1,4 +1,4 @@
-import { Application, Color, RenderBackendType, Scene, Texture, Vector } from '@codexo/exojs';
+import { Application, Color, RenderBackendType, Scene, Vector } from '@codexo/exojs';
 import {
     AlphaFadeOverLifetime,
     ApplyForce,
@@ -37,14 +37,10 @@ class GpuParticlesScene extends Scene {
     private system!: ParticleSystem;
     private hud!: ReturnType<typeof mountControls>;
 
-    override async load(loader): Promise<void> {
-        await loader.load(Texture, { particle: 'image/particle-light.png' });
-    }
-
-    override init(loader): void {
+    override init(): void {
         const { width, height } = this.app.canvas;
 
-        this.system = new ParticleSystem(loader.get(Texture, 'particle'), { capacity: CAPACITY });
+        this.system = new ParticleSystem(this.loader.get('image/particle-light.png'), { capacity: CAPACITY });
         this.system.setPosition(width / 2, height - 80);
         this.system.addSpawnModule(
             new RateSpawn({

@@ -1,17 +1,4 @@
-import {
-    Application,
-    CallbackRenderPass,
-    Color,
-    RenderBackendType,
-    RenderNodePass,
-    RenderPipeline,
-    RenderTexture,
-    Scene,
-    Sprite,
-    Texture,
-    WebGl2ShaderFilter,
-    WebGpuShaderFilter,
-} from '@codexo/exojs';
+import { Application, CallbackRenderPass, Color, RenderBackendType, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -47,16 +34,12 @@ class WaterMirrorScene extends Scene {
     private pipeline!: RenderPipeline;
     private time = 0;
 
-    override async load(loader): Promise<void> {
-        await loader.load(Texture, { bunny: 'image/ship-a.png' });
-    }
-
-    override init(loader): void {
+    override init(): void {
         const { width, height } = this.app.canvas;
         const half = height / 2;
 
         this.rt = new RenderTexture(width, half);
-        this.source = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setPosition(width / 2, half / 2).setScale(2.6);
+        this.source = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(width / 2, half / 2).setScale(2.6);
         // Flip the captured top half down into the bottom half for the mirrored reflection.
         this.mirror = new Sprite(this.rt).setPosition(0, height).setScale(1, -1);
         this.filter =

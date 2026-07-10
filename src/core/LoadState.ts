@@ -1,5 +1,8 @@
-/** Load lifecycle of a seamless asset handle. Directly constructed assets are `'ready'`. */
-export type LoadStateValue = 'loading' | 'ready' | 'failed';
+/**
+ * Load lifecycle of a seamless asset handle. Directly constructed assets are
+ * `'ready'`; a catalog leaf awaiting adoption is `'idle'` (asset-system v2 §7).
+ */
+export type LoadStateValue = 'idle' | 'loading' | 'ready' | 'failed';
 
 /**
  * Load-lifecycle tracker composed into seamless asset handles (Texture; later
@@ -48,13 +51,30 @@ export class LoadState<Owner> {
   }
 
   /**
-   * Enter `'loading'` and drop the cached promise (re-materialization).
-   * Only called from settled states — `'ready'` for a fresh placeholder,
-   * `'failed'` for a retry; beginning while a pending promise is materialized
-   * would strand its awaiters.
+   * Enter `'loading'`. From a settled state (`'ready'` fresh placeholder,
+   * `'failed'` retry) the cached promise is dropped so a fresh cycle
+   * re-materializes. From `'idle'` (a catalog leaf entering the loader on
+   * adoption) any pending promise is PRESERVED, so an awaiter taken before
+   * adoption still resolves on the eventual settle.
    */
   public begin(): void {
+    if (this._value === 'ready' || this._value === 'failed') {
+      this._promise = null;
+      this._resolve = null;
+      this._reject = null;
+    }
     this._value = 'loading';
+    this._error = null;
+  }
+
+  /**
+   * Enter `'idle'` — a catalog leaf/ref that exists but has not been adopted by
+   * a loader (asset-system v2 §7), as opposed to `'ready'` (a manually
+   * constructed, immediately usable resource). {@link loaded} on an idle handle
+   * stays pending; {@link begin} on adoption preserves that pending promise.
+   */
+  public markIdle(): void {
+    this._value = 'idle';
     this._error = null;
     this._promise = null;
     this._resolve = null;

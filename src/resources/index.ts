@@ -1,16 +1,18 @@
 export { AbstractAssetFactory } from './AbstractAssetFactory';
+export type { ValueAsset } from './Asset';
 export { Asset } from './Asset';
 export type { AnyAssetConfig, AssetDefinitions, AssetInput, InferAssetResource } from './AssetDefinitions';
 export type { AssetFactory } from './AssetFactory';
-export type { AssetEntry, AssetManifest, LoadBundleOptions } from './AssetManifest';
-export { BundleLoadError, defineAssetManifest } from './AssetManifest';
 export { AssetRef } from './AssetRef';
 export type { InferAssetsEntries } from './Assets';
 export { Assets } from './Assets';
+export type { AssetStatus } from './AssetStatus';
 export { CacheFirstStrategy } from './CacheFirstStrategy';
 export type { CacheStore } from './CacheStore';
 export type { CacheRequest, CacheStrategy } from './CacheStrategy';
 export type { Database } from './Database';
+export type { DefineAssetDescriptor } from './defineAsset';
+export { defineAsset } from './defineAsset';
 export type { AssetConstructor } from './FactoryRegistry';
 export { IndexedDbDatabase } from './IndexedDbDatabase';
 export type { IndexedDbKeyValueStoreOptions } from './IndexedDbKeyValueStore';
@@ -20,14 +22,12 @@ export { IndexedDbStore } from './IndexedDbStore';
 export type { KeyValueStore } from './KeyValueStore';
 export type {
   AssetLoaderContext,
-  BatchValue,
-  ConstrainedLoadable,
-  ExtensionTokenTypeMap,
   ExtensionTypeMap,
   InferLoadedMap,
   Loadable,
   LoadByPath,
   LoaderOptions,
+  LoadOptions,
   LoadReturn,
   PathExtension,
 } from './Loader';

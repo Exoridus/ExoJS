@@ -1,4 +1,4 @@
-import { Application, Color, Graphics, Scene, Sound, Text } from '@codexo/exojs';
+import { Application, Asset, Color, Graphics, Scene, Sound, Text } from '@codexo/exojs';
 import type { Spatializable, Voice } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
@@ -40,16 +40,15 @@ class ListenerAndSourceScene extends Scene {
     private tapPrompt!: Text;
     private hud!: ReturnType<typeof mountControls>;
 
-    override async load(loader): Promise<void> {
-        // A continuous music loop, not a one-shot: spatialization is only
-        // audible while there is sustained signal to pan/attenuate.
-        await loader.load(Sound, { source: 'audio/demo-loop-main.ogg' });
-    }
-
-    override init(loader): void {
+    override async init(): Promise<void> {
         const { width, height } = this.app.canvas;
 
-        this.sound = new Sound(loader.get(Sound, 'source').audioBuffer, {
+        // A continuous music loop, not a one-shot: spatialization is only
+        // audible while there is sustained signal to pan/attenuate. The derived
+        // Sound below reads .audioBuffer synchronously, so await load() instead
+        // of the deferred get() (whose placeholder audioBuffer is null until fill).
+        const source = await this.loader.load(Asset.kind('sound', 'audio/demo-loop-main.ogg'));
+        this.sound = new Sound(source.audioBuffer, {
             distanceModel: 'linear',
             refDistance: REF_DISTANCE,
             maxDistance: MAX_DISTANCE,

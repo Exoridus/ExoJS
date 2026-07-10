@@ -1,3 +1,4 @@
+
 import { type ImageLayer } from './ImageLayer';
 import type { ObjectLayer, ObjectSchema } from './ObjectLayer';
 import { type TileLayer } from './TileLayer';
@@ -64,6 +65,7 @@ export interface TileMapOptions {
  * @advanced
  */
 export class TileMap {
+
   /** Map name (debug). */
   public readonly name: string;
 

@@ -1,4 +1,4 @@
-import { Application, Color, Container, Keyboard, Scene, Sprite, Texture } from '@codexo/exojs';
+import { Application, Color, Container, Keyboard, Scene, Sprite } from '@codexo/exojs';
 import { DebugOverlay } from '@codexo/exojs/debug';
 
 const app = new Application({
@@ -21,11 +21,7 @@ class PerformanceOverlayScene extends Scene {
     private sprites!: { sprite: Sprite; vx: number; vy: number }[];
     private layer!: Container;
 
-    override async load(loader): Promise<void> {
-        await loader.load(Texture, { bunny: 'image/ship-a.png' });
-    }
-
-    override init(loader): void {
+    override init(): void {
         const { width, height } = this.app.canvas;
 
         // All sprites share one texture, so adding them to a single container and
@@ -34,7 +30,7 @@ class PerformanceOverlayScene extends Scene {
         // instead emit one draw call per sprite and tank the frame rate.
         this.layer = new Container();
         this.sprites = Array.from({ length: 1600 }, () => {
-            const sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setScale(0.25);
+            const sprite = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setScale(0.25);
             sprite.setPosition(Math.random() * width, Math.random() * height);
             this.layer.addChild(sprite);
             return {

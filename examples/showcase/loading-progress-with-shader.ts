@@ -1,4 +1,4 @@
-import { Application, Color, RenderBackendType, Scene, Sprite, Text, Texture, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
+import { Application, Color, RenderBackendType, Scene, Sprite, Text, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -34,17 +34,13 @@ class LoadingProgressWithShaderScene extends Scene {
     private ring!: Sprite;
     private filter!: WebGl2ShaderFilter | WebGpuShaderFilter;
 
-    override async load(loader): Promise<void> {
-        await loader.load(Texture, { uvGrid: 'image/uv-grid-256.png' });
-    }
-
-    override init(loader): void {
+    override init(): void {
         const { width, height } = this.app.canvas;
 
         this.progress = { v: 0 };
         this.label = new Text('0%', { fillColor: Color.white, fontSize: 42, align: 'center' });
         this.label.setAnchor(0.5, 0.5).setPosition(width / 2, height / 2);
-        this.ring = new Sprite(loader.get(Texture, 'uvGrid')).setAnchor(0.5).setScale(2.4).setPosition(width / 2, height / 2);
+        this.ring = new Sprite(this.loader.get('image/uv-grid-256.png')).setAnchor(0.5).setScale(2.4).setPosition(width / 2, height / 2);
         this.filter =
             app.backend.backendType === RenderBackendType.WebGpu
                 ? new WebGpuShaderFilter({ fragmentSource: wgsl, uniforms: { uProgress: 0 } })

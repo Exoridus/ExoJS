@@ -1,6 +1,6 @@
 import type { AssetBinding, AssetHandler } from '#extensions/Extension';
 import { BmFont } from '#rendering/text/BmFont';
-import { Texture } from '#rendering/texture/Texture';
+import { type Texture } from '#rendering/texture/Texture';
 import { BinaryFactory } from '#resources/factories/BinaryFactory';
 import { SubtitleFactory } from '#resources/factories/SubtitleFactory';
 import { XmlFactory } from '#resources/factories/XmlFactory';
@@ -200,7 +200,7 @@ chars count=0
 
     expect(font).toBeInstanceOf(BmFont);
     expect(font.textures).toEqual([fakeTexture]);
-    expect(loaderMock.load).toHaveBeenCalledWith(Texture, 'fonts/page0.png');
+    expect(loaderMock.load).toHaveBeenCalledWith(expect.objectContaining({ _config: expect.objectContaining({ kind: 'texture', source: 'fonts/page0.png' }) }));
   });
 });
 

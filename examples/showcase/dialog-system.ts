@@ -1,4 +1,4 @@
-import { Application, Color, Scene, Sound, Sprite, Text, Texture } from '@codexo/exojs';
+import { Application, Color, Scene, Sound, Sprite, Text } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -38,17 +38,12 @@ class DialogSystemScene extends Scene {
     private done = false;
     private awaitingChoice = false;
 
-    override async load(loader): Promise<void> {
-        await loader.load(Texture, { portrait: assets.demo.textures.shipA });
-        await loader.load(Sound, { beep: assets.demo.sound.uiConfirm });
-    }
-
-    override init(loader): void {
+    override init(): void {
         const { width, height } = this.app.canvas;
 
         // Portrait sits on the left; the dialog column runs to its right and
         // fills the wider 16:9 frame as a classic VN bottom-third box.
-        this.portrait = new Sprite(loader.get(Texture, 'portrait')).setAnchor(0.5).setScale(2.4).setPosition(width * 0.16, height * 0.62);
+        this.portrait = new Sprite(this.loader.get(assets.demo.textures.shipA)).setAnchor(0.5).setScale(2.4).setPosition(width * 0.16, height * 0.62);
 
         const textX = width * 0.3;
 
@@ -62,7 +57,7 @@ class DialogSystemScene extends Scene {
         this.choicePrompt = new Text('', { fillColor: new Color(150, 220, 255), fontSize: 20 });
         this.choicePrompt.setPosition(textX, height * 0.78);
 
-        this.beep = loader.get(Sound, 'beep');
+        this.beep = this.loader.get(assets.demo.sound.uiConfirm);
 
         this.hud = mountControls({
             title: 'Dialog System',

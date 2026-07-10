@@ -1,5 +1,5 @@
 // Auto-generated from mesh-deformed-grid.ts — edit the .ts source, not this file.
-import { Application, Color, Mesh, Scene, Texture } from '@codexo/exojs';
+import { Application, Color, Mesh, Scene } from '@codexo/exojs';
 const app = new Application({
     canvas: {
         width: 1280,
@@ -51,10 +51,7 @@ class MeshDeformedGridScene extends Scene {
     restVertices;
     mesh;
     time = 0;
-    async load(loader) {
-        await loader.load(Texture, { uvGrid: UV_GRID });
-    }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
         const grid = buildGrid();
         this.restVertices = grid.vertices.slice();
@@ -62,7 +59,7 @@ class MeshDeformedGridScene extends Scene {
             vertices: grid.vertices,
             uvs: grid.uvs,
             indices: grid.indices,
-            texture: loader.get(Texture, 'uvGrid'),
+            texture: this.loader.get(UV_GRID),
         });
         this.mesh.setPosition((width / 2) | 0, (height / 2) | 0);
     }

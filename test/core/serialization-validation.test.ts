@@ -35,10 +35,10 @@ beforeEach(() => resetDefaultGlyphAtlasPool(mockPool as unknown as GlyphAtlasPoo
 afterEach(() => resetDefaultGlyphAtlasPool());
 afterEach(_resetDefaultSerializers);
 
-/** Minimal Loader stand-in exposing only `peek`/`keyFor` for asset resolution. */
+/** Minimal Loader stand-in exposing only `_peekResource`/`keyFor` for asset resolution. */
 function fakeLoader(entries: ReadonlyArray<{ type: Loadable; source: string; resource: object }>): Loader {
   return {
-    peek: (type: Loadable, source: string) => entries.find(e => e.type === type && e.source === source)?.resource ?? null,
+    _peekResource: (type: Loadable, source: string) => entries.find(e => e.type === type && e.source === source)?.resource ?? null,
     keyFor: (resource: object) => {
       const entry = entries.find(e => e.resource === resource);
 

@@ -1,4 +1,5 @@
-import type { AssetBinding, AssetHandler } from '@codexo/exojs/extensions';
+import { defineAsset } from '@codexo/exojs';
+import type { AssetHandler } from '@codexo/exojs/extensions';
 
 import { LdtkMap } from './LdtkMap';
 import { loadLdtkMap } from './loadLdtkMap';
@@ -16,9 +17,9 @@ import { loadLdtkMap } from './loadLdtkMap';
  * Each loaded level's TileMap is accessible via {@link LdtkMap.levels} or
  * {@link LdtkMap.getLevelByName}.
  */
-export const ldtkMapBinding = {
+export const ldtkMapBinding = defineAsset({
   type: LdtkMap,
-  typeNames: ['ldtkMap'],
+  kind: 'ldtkMap',
   extensions: ['ldtk'],
   create() {
     return {
@@ -27,4 +28,4 @@ export const ldtkMapBinding = {
       },
     } satisfies AssetHandler<LdtkMap>;
   },
-} satisfies AssetBinding<LdtkMap>;
+});

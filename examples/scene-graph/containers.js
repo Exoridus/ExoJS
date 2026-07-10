@@ -1,5 +1,5 @@
 // Auto-generated from containers.ts — edit the .ts source, not this file.
-import { Application, Color, Container, Scene, Sprite, Texture } from '@codexo/exojs';
+import { Application, Asset, Assets, Color, Container, Scene, Sprite } from '@codexo/exojs';
 const app = new Application({
     canvas: {
         width: 1280,
@@ -15,21 +15,16 @@ const app = new Application({
 class ContainersScene extends Scene {
     rainbow;
     bunnies;
-    async load(loader) {
-        await loader.load(Texture, {
-            bunny: 'image/ship-a.png',
-            rainbow: 'image/hue-ramp.png',
-        });
-    }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
-        this.rainbow = new Sprite(loader.get(Texture, 'rainbow'));
+        const { bunny, rainbow } = this.loader.get(Assets.from({ bunny: Asset.kind('texture', 'image/ship-a.png'), rainbow: Asset.kind('texture', 'image/hue-ramp.png') }));
+        this.rainbow = new Sprite(rainbow);
         this.bunnies = new Container();
         this.bunnies.setPosition((width / 2) | 0, (height / 2) | 0);
         for (let i = 0; i < 25; i++) {
-            const bunny = new Sprite(loader.get(Texture, 'bunny'));
-            bunny.setPosition((i % 5) * (bunny.width + 15), ((i / 5) | 0) * (bunny.height + 10));
-            this.bunnies.addChild(bunny);
+            const sprite = new Sprite(bunny);
+            sprite.setPosition((i % 5) * (sprite.width + 15), ((i / 5) | 0) * (sprite.height + 10));
+            this.bunnies.addChild(sprite);
         }
         this.bunnies.setAnchor(0.5);
     }

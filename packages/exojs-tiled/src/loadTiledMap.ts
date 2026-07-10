@@ -1,4 +1,5 @@
-import { type AssetLoaderContext,Texture } from '@codexo/exojs';
+import { Asset } from '@codexo/exojs';
+import { type AssetLoaderContext,type Texture } from '@codexo/exojs';
 
 import type { TiledLayerData, TiledTilesetData, TiledTilesetRefData } from './data';
 import { decodeTiledLayerData } from './decodeLayerData';
@@ -23,7 +24,7 @@ async function loadTiledTilesetResources(data: TiledTilesetData, baseUrl: string
 
   if (data.image !== undefined) {
     imageUrl = resolveTiledUrl(data.image, baseUrl);
-    texture = await context.loader.load(Texture, imageUrl);
+    texture = await context.loader.load(Asset.kind('texture', imageUrl));
   }
 
   let tileTextures: Map<number, Texture> | undefined;
@@ -35,7 +36,7 @@ async function loadTiledTilesetResources(data: TiledTilesetData, baseUrl: string
       }
 
       const tileImageUrl = resolveTiledUrl(tile.image, baseUrl);
-      const tileTexture: Texture = await context.loader.load(Texture, tileImageUrl);
+      const tileTexture: Texture = await context.loader.load(Asset.kind('texture', tileImageUrl));
 
       tileTextures ??= new Map();
       tileTextures.set(tile.id, tileTexture);
@@ -81,7 +82,7 @@ async function loadImageLayerTextures(
   for (const layer of layers) {
     if (layer.type === 'imagelayer' && layer.image) {
       const imageUrl = resolveTiledUrl(layer.image, mapSource);
-      const texture: Texture = await context.loader.load(Texture, imageUrl);
+      const texture: Texture = await context.loader.load(Asset.kind('texture', imageUrl));
       result.set(layer.id, texture);
     } else if (layer.type === 'group') {
       const nested = await loadImageLayerTextures(layer.layers, mapSource, context);

@@ -110,7 +110,7 @@ export interface ParticleSystemOptions {
  *
  * @example
  * // Backend-agnostic — runs CPU on WebGL2, GPU on WebGPU automatically.
- * const system = new ParticleSystem(loader.get(Texture, 'spark'), {
+ * const system = new ParticleSystem(loader.get('spark.png'), {
  *     capacity: 8192,
  * });
  *

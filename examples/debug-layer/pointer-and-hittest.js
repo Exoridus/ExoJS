@@ -1,5 +1,5 @@
 // Auto-generated from pointer-and-hittest.ts — edit the .ts source, not this file.
-import { Application, Color, Scene, Sprite, Texture } from '@codexo/exojs';
+import { Application, Color, Scene, Sprite } from '@codexo/exojs';
 import { DebugOverlay } from '@codexo/exojs/debug';
 const app = new Application({
     canvas: {
@@ -18,14 +18,11 @@ debug.layers.hitTest.visible = true;
 debug.layers.pointerStack.visible = true;
 class PointerAndHittestScene extends Scene {
     sprites;
-    async load(loader) {
-        await loader.load(Texture, { bunny: 'image/ship-a.png' });
-    }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
         this.sprites = [];
         for (let i = 0; i < 5; i++) {
-            const sprite = new Sprite(loader.get(Texture, 'bunny'))
+            const sprite = new Sprite(this.loader.get('image/ship-a.png'))
                 .setAnchor(0.5)
                 .setScale(1.2)
                 .setPosition(width / 2 - 120 + i * 60, height / 2 - 20 + (i % 2) * 40);

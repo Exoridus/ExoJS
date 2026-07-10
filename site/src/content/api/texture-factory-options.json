@@ -55,7 +55,7 @@
         },
         {
           "name": "samplerOptions",
-          "signature": "samplerOptions?: SamplerOptions",
+          "signature": "samplerOptions?: Partial<SamplerOptions>",
           "signatureTokens": [
             {
               "text": "samplerOptions",
@@ -70,13 +70,25 @@
               "kind": "punctuation"
             },
             {
+              "text": "Partial",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
               "text": "SamplerOptions",
               "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Sampler parameters (wrap mode, filter, etc.) forwarded to the Texture constructor."
+          "description": "Sampler parameters (wrap mode, filter, etc.) forwarded to the Texture constructor; any subset."
         }
       ],
       "paragraphs": [],

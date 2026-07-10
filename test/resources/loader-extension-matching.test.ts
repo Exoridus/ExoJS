@@ -3,8 +3,8 @@ import { expectTypeOf } from 'vitest';
 import { materializeAssetBindings } from '#extensions/materialize';
 import type { BmFont } from '#rendering/text/BmFont';
 import { coreAssetBindings } from '#resources/coreAssetBindings';
+import { registerExtensionKind } from '#resources/extensionKindRegistry';
 import { type LoadByPath, Loader, type PathExtension } from '#resources/Loader';
-import { Json } from '#resources/tokens';
 
 // Test-only compound registration (type level).
 declare module '#resources/Loader' {
@@ -39,7 +39,7 @@ describe('compound extension matching (#14)', () => {
     const loader = createCoreLoader();
     const seen: string[] = [];
 
-    loader.registerExtension('mock.json', Json); // Json's factory is bound via coreAssetBindings
+    registerExtensionKind('mock.json', 'json'); // compound suffix → the json value kind (bound via coreAssetBindings)
     global.fetch = vi.fn(async (url: string | URL | Request): Promise<Response> => {
       seen.push(String(url));
       return {

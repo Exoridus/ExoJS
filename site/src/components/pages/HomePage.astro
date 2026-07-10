@@ -28,13 +28,13 @@ const heroExample = getExamplesForChapter('particles').find(entry => entry.slug 
 const heroExampleTitle = heroExample?.title ?? 'Bonfire';
 const heroExampleSource = getExampleExecutionSource('particles', 'bonfire');
 
-const heroSnippet = `import { Application, Color, Scene, Sprite, Texture } from '@codexo/exojs';
+const heroSnippet = `import { Application, Color, Scene, Sprite } from '@codexo/exojs';
 
 class HeroScene extends Scene {
   private ship!: Sprite;
 
   async load(loader) {
-    this.ship = new Sprite(await loader.load(Texture, 'ship.png'));
+    this.ship = new Sprite(await loader.load('ship.png'));
   }
 
   init() {

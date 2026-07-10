@@ -1,5 +1,5 @@
 // Auto-generated from pause-and-resume.ts — edit the .ts source, not this file.
-import { Application, Color, Keyboard, Scene, Sprite, Text, Texture } from '@codexo/exojs';
+import { Application, Color, Keyboard, Scene, Sprite, Text } from '@codexo/exojs';
 const app = new Application({
     canvas: {
         width: 1280,
@@ -15,11 +15,9 @@ const app = new Application({
 class PauseResumeScene extends Scene {
     sprite;
     label;
-    async load(loader) {
-        this.sprite = new Sprite(await loader.load(Texture, 'image/ship-a.png'));
-    }
     init() {
         const { width, height } = this.app.canvas;
+        this.sprite = new Sprite(this.loader.get('image/ship-a.png'));
         this.sprite.setAnchor(0.5);
         this.sprite.setPosition(width / 2, height / 2);
         this.label = new Text('Space or click: pause update', { fillColor: Color.white, fontSize: 16 });

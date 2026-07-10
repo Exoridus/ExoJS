@@ -11,7 +11,7 @@ import { tileMapNodeSerializer } from '../src/tilemapSerializers';
 function fakeLoader(map: TileMap, source: string): Loader {
   return {
     keyFor: (resource: object) => (resource === map ? { type: TileMap, source } : null),
-    peek: (type: Loadable, alias: string) => (type === TileMap && alias === source ? map : null),
+    _peekResource: (type: Loadable, source_: string) => (type === TileMap && source_ === source ? map : null),
   } as unknown as Loader;
 }
 
@@ -50,13 +50,13 @@ describe('tilemap serialization', () => {
   });
 
   it('throws when the referenced map is not pre-loaded', () => {
-    const emptyLoader = { keyFor: () => null, peek: () => null } as unknown as Loader;
+    const emptyLoader = { keyFor: () => null, _peekResource: () => null } as unknown as Loader;
 
     expect(() => Prefab.fromJSON({ type: 'TileMapNode', map: 'missing.tmj' }).instantiate(emptyLoader)).toThrow(/pre-loaded/);
   });
 
   it('throws when no map field is present at all (procedural map, never given a source key)', () => {
-    const emptyLoader = { keyFor: () => null, peek: () => null } as unknown as Loader;
+    const emptyLoader = { keyFor: () => null, _peekResource: () => null } as unknown as Loader;
 
     expect(() => Prefab.fromJSON({ type: 'TileMapNode' }).instantiate(emptyLoader)).toThrow(/pre-loaded/);
   });
@@ -64,7 +64,7 @@ describe('tilemap serialization', () => {
   it('omits the map/pixelSnapMode keys entirely for a procedural map with default pixelSnapMode', () => {
     const map = new TileMap({ name: 'procedural', width: 4, height: 4, tileWidth: 32, tileHeight: 32 });
     const node = new TileMapNode(map); // pixelSnapMode stays 'none'
-    const loaderWithoutSourceKey = { keyFor: () => null, peek: () => null } as unknown as Loader;
+    const loaderWithoutSourceKey = { keyFor: () => null, _peekResource: () => null } as unknown as Loader;
 
     const data = Prefab.from(node, loaderWithoutSourceKey).toJSON();
 

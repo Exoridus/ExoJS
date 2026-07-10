@@ -1,4 +1,4 @@
-import { Application, AudioStream, Color, type Pausable, Scene, type Seekable, Sprite, Text, Texture, type Voice } from '@codexo/exojs';
+import { Application, Asset, AudioStream, Color, type Pausable, Scene, type Seekable, Sprite, Text, Texture, type Voice } from '@codexo/exojs';
 import { AudioAnalyser, BeatDetector } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 
@@ -26,14 +26,10 @@ class AudioVisualisationScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
     private tapPrompt!: Text;
 
-    override async load(loader): Promise<void> {
-        await loader.load(AudioStream, { example: assets.demo.audio.musicLoop });
-    }
-
-    override init(loader): void {
+    override init(): void {
         const { width, height } = this.app.canvas;
 
-        this.music = loader.get(AudioStream, 'example');
+        this.music = this.loader.get(Asset.kind('music', assets.demo.audio.musicLoop));
 
         // One analyser tap for spectrum/waveform, one beat detector for the
         // beat-pulse ring. Both read the music bus the stream plays through,

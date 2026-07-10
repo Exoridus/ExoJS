@@ -119,7 +119,7 @@ Files placed in `public/` are copied verbatim to `dist/` during the build. A fil
 Reference assets without the `public/` prefix:
 
 ```js no-check
-await loader.load(Texture, { bunny: 'assets/bunny.png' }); // correct
+await loader.load('assets/bunny.png'); // correct
 ```
 
 **Case-sensitivity.** Development on Windows or macOS is case-insensitive, but most Linux hosting is not. A mismatch between `Bunny.png` on disk and `bunny.png` in code works locally and fails in production. Use consistent lowercase names.

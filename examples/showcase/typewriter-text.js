@@ -1,5 +1,5 @@
 // Auto-generated from typewriter-text.ts — edit the .ts source, not this file.
-import { Application, Color, Scene, Sound, Text } from '@codexo/exojs';
+import { Application, Color, Scene, Text } from '@codexo/exojs';
 const app = new Application({
     canvas: {
         width: 1280,
@@ -19,12 +19,9 @@ class TypewriterTextScene extends Scene {
     state;
     last = 0;
     tapPrompt;
-    async load(loader) {
-        await loader.load(Sound, { tick: 'audio/ui-click.ogg' });
-    }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
-        this.sound = loader.get(Sound, 'tick');
+        this.sound = this.loader.get('audio/ui-click.ogg');
         this.text = new Text('', { fillColor: Color.white, fontSize: 40, lineHeight: 56, maxWidth: 900 });
         this.text.setAnchor(0, 0.5).setPosition(width * 0.12, height / 2);
         this.state = { count: 0 };

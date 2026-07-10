@@ -201,7 +201,7 @@ Putting it together — a static floor, a dynamic ball bound to a sprite, steppe
 `fixedUpdate`:
 
 ```ts
-import { Loader, type RenderingContext, Scene, Sprite, Texture, type Time } from '@codexo/exojs';
+import { Loader, type RenderingContext, Scene, Sprite, type Time } from '@codexo/exojs';
 import { BoxShape, CircleShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
 
 class DropScene extends Scene {
@@ -209,7 +209,7 @@ class DropScene extends Scene {
   private ball!: Sprite;
 
   public override async load(loader: Loader): Promise<void> {
-    await loader.load(Texture, { ball: 'image/ball.png' });
+    await loader.load('image/ball.png');
   }
 
   public override init(loader: Loader): void {
@@ -223,7 +223,7 @@ class DropScene extends Scene {
     );
 
     // Dynamic ball: a sprite plus a body + circle collider, linked by `attach`.
-    this.ball = new Sprite(loader.get(Texture, 'ball'));
+    this.ball = new Sprite(loader.get('image/ball.png'));
     this.addChild(this.ball);
 
     this.world.attach(this.ball, {

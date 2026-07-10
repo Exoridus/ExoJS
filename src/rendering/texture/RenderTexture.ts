@@ -1,9 +1,21 @@
 import { assert } from '#core/dev';
 import { isPowerOfTwo } from '#math/utils';
 import { RenderTarget } from '#rendering/RenderTarget';
-import { ScaleModes, WrapModes } from '#rendering/types';
+import { type ColorTextureFormat, ScaleModes, WrapModes } from '#rendering/types';
 
 import type { SamplerOptions } from './Sampler';
+
+/** Construction options for {@link RenderTexture}. */
+export interface RenderTextureOptions extends Partial<SamplerOptions> {
+  /**
+   * Color attachment format. Defaults to `'rgba8'` (unchanged 8-bit behaviour).
+   * The float formats (`'rgba16f'` / `'rgba32f'`) allocate a floating-point
+   * offscreen target for rendering values outside `[0, 1]` — they require
+   * `EXT_color_buffer_float` at render time (throws otherwise) and default to
+   * `nearest` sampling. The format is immutable for the texture's lifetime.
+   */
+  format?: ColorTextureFormat;
+}
 
 /**
  * An off-screen render target that can also be sampled as a texture.
@@ -27,21 +39,31 @@ export class RenderTexture extends RenderTarget {
 
   private _source: DataView | null = null;
   private _textureVersion = 0;
+  private readonly _format: ColorTextureFormat;
   private _scaleMode: ScaleModes;
   private _wrapMode: WrapModes;
   private _premultiplyAlpha: boolean;
   private _generateMipMap: boolean;
   private _flipY: boolean;
 
-  public constructor(width: number, height: number, options?: Partial<SamplerOptions>) {
+  public constructor(width: number, height: number, options?: RenderTextureOptions) {
     assert(width > 0 && height > 0, `RenderTexture dimensions must be positive (got ${width}×${height})`);
     super(width, height, false);
 
+    const format = options?.format ?? 'rgba8';
+
+    // Float targets are point-sampled by default: linear filtering of a float
+    // texture requires OES_texture_float_linear, which is not guaranteed. An
+    // explicit `scaleMode` in `options` still overrides this.
+    const defaults: SamplerOptions =
+      format === 'rgba8' ? RenderTexture.defaultSamplerOptions : { ...RenderTexture.defaultSamplerOptions, scaleMode: ScaleModes.Nearest };
+
     const { scaleMode, wrapMode, premultiplyAlpha, generateMipMap, flipY } = {
-      ...RenderTexture.defaultSamplerOptions,
+      ...defaults,
       ...options,
     };
 
+    this._format = format;
     this._scaleMode = scaleMode;
     this._wrapMode = wrapMode;
     this._premultiplyAlpha = premultiplyAlpha;
@@ -56,6 +78,11 @@ export class RenderTexture extends RenderTarget {
 
   public set source(source: DataView | null) {
     this.setSource(source);
+  }
+
+  /** Color attachment format, fixed at construction. Defaults to `'rgba8'`. */
+  public get format(): ColorTextureFormat {
+    return this._format;
   }
 
   public get scaleMode(): ScaleModes {

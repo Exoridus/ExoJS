@@ -3,7 +3,7 @@ import type { SceneNode } from '#core/SceneNode';
 import type { Container } from '#rendering/Container';
 import type { RenderNode } from '#rendering/RenderNode';
 import type { AssetConstructor } from '#resources/FactoryRegistry';
-import type { Loadable, Loader } from '#resources/Loader';
+import type { Loader } from '#resources/Loader';
 
 import { applyCommonFields, writeCommonFields } from './commonFields';
 import { registerCoreSerializers } from './coreSerializers';
@@ -85,7 +85,7 @@ function createDeserializeContext(loader: Loader | null, version: number, regist
         return null;
       }
 
-      const resource = loader.peek(type as unknown as Loadable, source) as T | null;
+      const resource = loader._peekResource(type, source) as T | null;
 
       if (resource === null) {
         logger.warn(`An asset referenced by a node was not pre-loaded into the Loader before deserialize (e.g. "${source}"); it resolves to null.`, {

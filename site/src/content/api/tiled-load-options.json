@@ -51,7 +51,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Explicit format hint for ambiguous file extensions. .tmj/.tsj paths are recognised by extension and need no hint. Provide format: 'tiled' when loading Tiled map data from a generic .json path: loader.load(TileMap, 'world.json', { format: 'tiled' }). 'tiled' is the only accepted value, so a foreign format (e.g. 'ldtk') is a compile error rather than a silent runtime fall-through. The hint participates in the asset identity key, so the same source loaded under different (future) formats resolves to distinct cache entries."
+          "description": "Explicit format hint for ambiguous file extensions. .tmj/.tsj paths are recognised by extension and need no hint. Provide format: 'tiled' when loading Tiled map data from a generic .json path: loader.load(Asset.kind('tileMap', 'world.json', { format: 'tiled' })). 'tiled' is the only accepted value, so a foreign format (e.g. 'ldtk') is a compile error rather than a silent runtime fall-through. The hint participates in the asset identity key, so the same source loaded under different (future) formats resolves to distinct cache entries."
         }
       ],
       "paragraphs": [],

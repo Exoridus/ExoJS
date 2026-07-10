@@ -29,6 +29,7 @@ import { TiledFormatError } from './validate';
  * {@link TiledFormatError} on failure.
  */
 export class TiledMap {
+
   /** Resolved URL this map was loaded from. */
   public readonly source: string;
   /** The validated raw map data this instance was built from. */

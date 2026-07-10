@@ -21,7 +21,7 @@ One scene, one UI layer. The pause overlay (a `Panel` + `Label`) lives on `scene
 ```js
 class GameScene extends Scene {
     init(loader) {
-        this.player = new Sprite(loader.get(Texture, 'hero'));
+        this.player = new Sprite(loader.get('image/hero.png'));
         this.addChild(this.player);
         // ... game setup ...
 

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AssetBinding, AssetHandler, AssetLoadRequest } from '#extensions/Extension';
 import { materializeAssetBindings } from '#extensions/materialize';
 import { resetExtensionRegistryForTesting } from '#extensions/testing';
+import { Asset } from '#resources/Asset';
 import type { AssetLoaderContext } from '#resources/Loader';
 import { Loader } from '#resources/Loader';
 
@@ -10,6 +11,14 @@ import { Loader } from '#resources/Loader';
 class TypeA {}
 class TypeB {}
 class TypeC {}
+
+declare module '#resources/AssetDefinitions' {
+  interface AssetDefinitions {
+    withOpts: { resource: unknown; config: { source: string; family?: string; size?: number } };
+    noOpts: { resource: unknown; config: { source: string } };
+    testType: { resource: unknown; config: { source: string } };
+  }
+}
 
 function createTestHandler(): AssetHandler {
   return {
@@ -100,7 +109,7 @@ describe('materializeAssetBindings', () => {
     const loader = new Loader();
     materializeAssetBindings(loader, [binding]);
 
-    await loader.load(TypeA as never, 'thing.dat', { family: 'Kenney Future', size: 32 }).catch(() => undefined);
+    await loader.load(new Asset({ kind: 'withOpts', source: 'thing.dat', family: 'Kenney Future', size: 32 })).catch(() => undefined);
 
     expect(seen?.source).toBe('thing.dat');
     expect(seen?.options).toEqual({ family: 'Kenney Future', size: 32 });
@@ -119,7 +128,7 @@ describe('materializeAssetBindings', () => {
     const loader = new Loader();
     materializeAssetBindings(loader, [binding]);
 
-    await loader.load(TypeA as never, 'thing.dat').catch(() => undefined);
+    await loader.load(new Asset({ kind: 'noOpts', source: 'thing.dat' })).catch(() => undefined);
 
     expect(seen?.source).toBe('thing.dat');
     expect(seen?.options).toBeUndefined();
@@ -219,8 +228,8 @@ describe('materializeAssetBindings', () => {
     const getSpy = vi.spyOn(ExtensionRegistry, 'get');
     const hasSpy = vi.spyOn(ExtensionRegistry, 'has');
 
-    // Load via extension path
-    await loader.load(TypeA as never, 'test.tstx').catch(() => {
+    // Load via the config (typeName) path
+    await loader.load(new Asset({ kind: 'testType', source: 'test.tstx' })).catch(() => {
       // ignore load error (no actual fetch)
     });
 

@@ -1,4 +1,4 @@
-import { Application, Color, Mesh, Scene, Texture } from '@codexo/exojs';
+import { Application, Color, Mesh, Scene } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -59,11 +59,7 @@ class MeshDeformedGridScene extends Scene {
     private mesh!: Mesh;
     private time = 0;
 
-    override async load(loader): Promise<void> {
-        await loader.load(Texture, { uvGrid: UV_GRID });
-    }
-
-    override init(loader): void {
+    override init(): void {
         const { width, height } = this.app.canvas;
         const grid = buildGrid();
 
@@ -72,7 +68,7 @@ class MeshDeformedGridScene extends Scene {
             vertices: grid.vertices,
             uvs: grid.uvs,
             indices: grid.indices,
-            texture: loader.get(Texture, 'uvGrid'),
+            texture: this.loader.get(UV_GRID),
         });
         this.mesh.setPosition((width / 2) | 0, (height / 2) | 0);
     }

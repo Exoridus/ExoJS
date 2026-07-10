@@ -1,0 +1,99 @@
+{
+  "title": "ValueAsset",
+  "description": "A value/ref-kind asset descriptor (asset-system v2 delta §4). Structurally an Asset, but branded so a catalog classifies its leaf as a deferred `AssetRef<T>` — even when `T` is an object type (e.g. typed JSON), where the plain `T extends object` heuristic would otherwise misread it as a resource. The brand is a phantom (never present at runtime).",
+  "symbol": "ValueAsset",
+  "kind": "type",
+  "subsystem": "resources",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A value/ref-kind asset descriptor (asset-system v2 delta §4). Structurally an Asset, but branded so a catalog classifies its leaf as a deferred `AssetRef<T>` — even when `T` is an object type (e.g. typed JSON), where the plain `T extends object` heuristic would otherwise misread it as a resource. The brand is a phantom (never present at runtime)."
+      ],
+      "importLine": "import { ValueAsset } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "ValueAsset",
+          "signature": "Asset<T> & { [VALUE_ASSET]: true }",
+          "signatureTokens": [
+            {
+              "text": "Asset",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " & ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[VALUE_ASSET]",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "true",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/resources/Asset.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Asset.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/resources/Asset.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Asset.ts"
+}

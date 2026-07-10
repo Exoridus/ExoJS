@@ -78,7 +78,7 @@ import { ParticleSystem, particlesExtension } from '@codexo/exojs-particles/regi
 ## Minimal working example
 
 ```ts
-import { Application, Scene, Texture } from '@codexo/exojs';
+import { Application, Scene } from '@codexo/exojs';
 import {
     ParticleSystem,
     particlesExtension,
@@ -93,11 +93,11 @@ class DemoScene extends Scene {
     system!: ParticleSystem;
 
     override async load(loader) {
-        await loader.load(Texture, { particle: '/particle.png' });
+        await loader.load('/particle.png');
     }
 
     override create(loader) {
-        this.system = new ParticleSystem(loader.get(Texture, 'particle'), {
+        this.system = new ParticleSystem(loader.get('/particle.png'), {
             capacity: 1024,
         });
         this.system.addSpawnModule(

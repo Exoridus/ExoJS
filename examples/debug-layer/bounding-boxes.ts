@@ -1,4 +1,4 @@
-import { Application, Color, Scene, Sprite, Texture } from '@codexo/exojs';
+import { Application, Color, Scene, Sprite } from '@codexo/exojs';
 import { DebugOverlay } from '@codexo/exojs/debug';
 
 const app = new Application({
@@ -21,18 +21,14 @@ class BoundingBoxesScene extends Scene {
     private sprites!: { sprite: Sprite; speed: number }[];
     private time = 0;
 
-    override async load(loader): Promise<void> {
-        await loader.load(Texture, { bunny: 'image/ship-a.png' });
-    }
-
-    override init(loader): void {
+    override init(): void {
         const { width, height } = this.app.canvas;
         const count = 7;
         const margin = width * 0.12;
         const step = (width - 2 * margin) / (count - 1);
 
         this.sprites = Array.from({ length: count }, (_, i) => {
-            const sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setScale(0.8);
+            const sprite = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setScale(0.8);
             sprite.setPosition(margin + i * step, height / 2 + Math.sin(i) * 80);
             // The boundingBoxes layer walks the SCENE GRAPH (scene.root), so
             // the sprites must be attached to it — nodes that are only passed

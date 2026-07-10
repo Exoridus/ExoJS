@@ -1,5 +1,5 @@
 // Auto-generated from action-mapping.ts — edit the .ts source, not this file.
-import { Application, Color, GamepadAxis, GamepadButton, Keyboard, Scene, Sprite, Texture } from '@codexo/exojs';
+import { Application, Color, GamepadAxis, GamepadButton, Keyboard, Scene, Sprite } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {
@@ -26,12 +26,9 @@ class ActionMappingScene extends Scene {
     lastDevice = 'keyboard';
     actions = { moveX: 0, moveY: 0, jump: false };
     hud;
-    async load(loader) {
-        await loader.load(Texture, { ship: 'image/ship-a.png' });
-    }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
-        this.sprite = new Sprite(loader.get(Texture, 'ship')).setAnchor(0.5).setPosition(width / 2, height / 2);
+        this.sprite = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(width / 2, height / 2);
         const pad0 = this.app.input.getGamepad(0);
         // --- Move action: keyboard WASD/arrows feed key axes ---
         this.inputs.onActive([Keyboard.A, Keyboard.Left], () => (this.keys.left = 1));
