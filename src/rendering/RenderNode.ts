@@ -378,7 +378,7 @@ export abstract class RenderNode extends SceneNode {
       return;
     }
 
-    if (!this.inView(builder.view)) {
+    if (!builder._isViewCullSuppressed && !this.inView(builder.view)) {
       builder.backend.stats.culledNodes++;
 
       return;
@@ -389,6 +389,18 @@ export abstract class RenderNode extends SceneNode {
 
   /** @internal */
   public _collectForRenderPlan(builder: RenderPlanBuilder): void {
+    if (this._isTransformGroupBoundary) {
+      builder._pushViewCullSuppression();
+
+      try {
+        this._collectContent(builder);
+      } finally {
+        builder._popViewCullSuppression();
+      }
+
+      return;
+    }
+
     this._collectContent(builder);
   }
 

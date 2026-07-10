@@ -4,15 +4,14 @@ import type { RenderBackend } from '#rendering/RenderBackend';
 import type { MaterialKey } from './RenderCommand';
 
 /**
+ * The replayable payload of one previously-collected draw: everything
+ * `RenderPlanBuilder.emitDraw` computed for it (material key, bounds in the
+ * capture's space convention, seq/zIndex placement). Base shape shared by the
+ * Slice-1 per-child {@link RetainedDrawSlot} and the Slice-2 whole-fragment
+ * {@link RetainedFragmentDraw}.
  * @internal
- *
- * A previously-collected, still-valid draw command snapshot for one direct
- * `Drawable` child of a `Container` — everything `RenderPlanBuilder.emitDraw`
- * would have computed for it (material key, screen-space bounds), captured so
- * it can be replayed without redoing cull/bounds/material-key work.
  */
-export interface RetainedDrawSlot {
-  readonly childIndex: number;
+export interface RetainedDrawData {
   readonly drawable: Drawable;
   readonly seq: number;
   readonly zIndex: number;
@@ -21,6 +20,18 @@ export interface RetainedDrawSlot {
   readonly minY: number;
   readonly maxX: number;
   readonly maxY: number;
+}
+
+/**
+ * @internal
+ *
+ * A previously-collected, still-valid draw command snapshot for one direct
+ * `Drawable` child of a `Container` — everything `RenderPlanBuilder.emitDraw`
+ * would have computed for it, captured so it can be replayed without redoing
+ * cull/bounds/material-key work.
+ */
+export interface RetainedDrawSlot extends RetainedDrawData {
+  readonly childIndex: number;
 }
 
 /**
