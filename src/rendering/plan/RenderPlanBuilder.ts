@@ -16,7 +16,9 @@ import {
   type EffectDescriptor,
   type GroupScope,
   type GroupScopeEntry,
+  type ScopeEntry,
 } from './RenderScope';
+import type { RetainedDrawSlot } from './RetainedPlanCache';
 
 interface MutableGroupScope extends GroupScope {
   _nextSeq: number;
@@ -255,6 +257,41 @@ export class RenderPlanBuilder {
     command.maxY = bounds.bottom;
 
     this._pushDrawEntry(placementSeq, placementZ, command);
+  }
+
+  /**
+   * @internal — the entries pushed into the currently-active scope so far this
+   * collect. Read-only peek used by {@link RetainedPlanCache} to snapshot a
+   * container's direct-drawable fragment right after a full (non-skipped)
+   * collect of it.
+   */
+  public _peekCurrentScopeEntries(): readonly ScopeEntry[] {
+    return this._currentScope().entries;
+  }
+
+  /**
+   * @internal — replay a single previously-captured {@link RetainedDrawSlot}
+   * into the current scope: reuses its cached material key and screen-space
+   * bounds verbatim, only assigning a fresh frame-local `nodeIndex`. Used by
+   * {@link RetainedPlanCache} for the Wave 3 static-subtree skip; callers must
+   * have already verified the owning container's subtree is unchanged
+   * (content + structure revision, view, and backend all match the capture).
+   */
+  public _replayRetainedDraw(slot: RetainedDrawSlot): void {
+    const command = this._acquireDrawCommand();
+
+    command.drawable = slot.drawable;
+    command.nodeIndex = this._nodeIndex++;
+    command.seq = slot.seq;
+    command.zIndex = slot.zIndex;
+    command.groupIndex = undefined;
+    command.material = slot.material;
+    command.minX = slot.minX;
+    command.minY = slot.minY;
+    command.maxX = slot.maxX;
+    command.maxY = slot.maxY;
+
+    this._pushDrawEntry(slot.seq, slot.zIndex, command);
   }
 
   private _resetRuntimeState(): void {
