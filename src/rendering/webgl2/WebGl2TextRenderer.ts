@@ -476,7 +476,6 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
       c.vertexBuffer.upload(this._float32View.subarray(0, totalVerts * vertexStrideWords));
       c.indexBuffer.upload(this._indexData.subarray(0, totalIndices));
 
-      shader.sync();
       backend.bindVertexArrayObject(c.vao);
       backend.bindTexture(first.atlasTexture, 0);
 
@@ -493,6 +492,14 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
         this._floatScratch[0] = first.atlasTexture.width;
         shader.getUniform('u_pageSize').setValue(this._floatScratch);
       }
+
+      // Stage uniforms before sync(): setValue() only marks a uniform dirty for the
+      // NEXT sync() upload. Syncing first left the initial flush of each text shaderType
+      // drawing with a stale zero u_projection — invisible on a genuine single-shot
+      // render (screenshot / RenderTexture pre-bake / first frame), self-healing only
+      // from the second frame on. Matches WebGl2SpriteRenderer, which sets its uniforms
+      // first and calls sync() last.
+      shader.sync();
 
       c.vao.draw(totalIndices, 0, RenderingPrimitives.Triangles);
       backend.stats.batches++;
