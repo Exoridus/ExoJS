@@ -42,18 +42,14 @@ class ChromaticAberrationScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
     private panel!: ReturnType<typeof mountControlPanel>;
 
-    override async load(loader): Promise<void> {
-        await loader.load(CHECKER);
-    }
-
-    override init(loader): void {
+    override init(): void {
         const { width, height } = this.app.canvas;
 
         this.filter =
             app.backend.backendType === RenderBackendType.WebGpu
                 ? new WebGpuShaderFilter({ fragmentSource: wgsl, uniforms: { uOffset: 0 } })
                 : new WebGl2ShaderFilter({ fragmentSource: glsl, uniforms: { uOffset: 0 } });
-        this.sprite = new Sprite(loader.get(CHECKER)).setAnchor(0.5).setScale(2.6).setPosition(width / 2, height / 2);
+        this.sprite = new Sprite(this.loader.get(CHECKER)).setAnchor(0.5).setScale(2.6).setPosition(width / 2, height / 2);
         this.sprite.filters = [this.filter];
 
         // The HUD must exist before applyIntensity() runs — it calls hud.setStatus().

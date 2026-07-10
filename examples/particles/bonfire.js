@@ -14,12 +14,9 @@ const app = new Application({
 class BonfireScene extends Scene {
     fireSystem;
     smokeSystem;
-    async load(loader) {
-        await Promise.all([loader.load(assets.demo.textures.particleFlame), loader.load(assets.demo.textures.particleSmoke)]);
-    }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
-        this.fireSystem = new ParticleSystem(loader.get(assets.demo.textures.particleFlame));
+        this.fireSystem = new ParticleSystem(this.loader.get(assets.demo.textures.particleFlame));
         this.fireSystem.setPosition(width * 0.5, height * 0.75);
         this.fireSystem.setBlendMode(BlendModes.Additive);
         this.fireSystem.addSpawnModule(new RateSpawn({
@@ -32,7 +29,7 @@ class BonfireScene extends Scene {
             { t: 0, color: new Color(194, 64, 30, 1) },
             { t: 1, color: new Color(0, 0, 0, 0) },
         ])));
-        this.smokeSystem = new ParticleSystem(loader.get(assets.demo.textures.particleSmoke));
+        this.smokeSystem = new ParticleSystem(this.loader.get(assets.demo.textures.particleSmoke));
         this.smokeSystem.setPosition(width * 0.5, height * 0.75 - 40);
         this.smokeSystem.setBlendMode(BlendModes.Normal);
         this.smokeSystem.addSpawnModule(new RateSpawn({

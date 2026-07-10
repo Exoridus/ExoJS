@@ -1,5 +1,4 @@
-import { Asset } from '@codexo/exojs';
-import { Application, AudioStream, Color, Scene, Sprite, Text, Vector } from '@codexo/exojs';
+import { Application, Asset, Assets, AudioStream, Color, Scene, Sprite, Text, Vector } from '@codexo/exojs';
 import { BeatDetector } from '@codexo/exojs-audio-fx';
 import {
     AlphaFadeOverLifetime,
@@ -37,22 +36,20 @@ class BeatSyncPulseScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
     private tapPrompt!: Text;
 
-    override async load(loader): Promise<void> {
-        await Promise.all([loader.load('image/ship-a.png'), loader.load('image/particle-light.png')]);
-        this.music = await loader.load(Asset.kind('music', 'audio/demo-loop-main.ogg'));
-    }
-
-    override init(loader): void {
+    override async init(): Promise<void> {
         const { width, height } = this.app.canvas;
 
-        this.sprite = new Sprite(loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(width / 2, height / 2);
+        // AudioStream has no seamless adapter — await it explicitly.
+        const { track } = await this.loader.load(Assets.from({ track: Asset.kind('music', 'audio/demo-loop-main.ogg') }));
+        this.music = track;
+        this.sprite = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(width / 2, height / 2);
 
         this.hud = mountControls({
             title: 'Beat Sync Pulse',
             hint: 'The ring and particle burst fire on each detected beat.',
         });
 
-        this.particles = new ParticleSystem(loader.get('image/particle-light.png'), { capacity: 3500 });
+        this.particles = new ParticleSystem(this.loader.get('image/particle-light.png'), { capacity: 3500 });
         this.particles.setPosition(width / 2, height / 2);
         this.burst = new BurstSpawn({
             schedule: [{ time: 0, count: 90 }],

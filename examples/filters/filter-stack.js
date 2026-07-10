@@ -24,12 +24,9 @@ class FilterStackScene extends Scene {
     active = { blur: true, tint: true, custom: true };
     hud;
     panel;
-    async load(loader) {
-        await loader.load(PRIMARY_RAMP);
-    }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
-        this.sprite = new Sprite(loader.get(PRIMARY_RAMP)).setAnchor(0.5).setScale(4).setPosition(width / 2, height / 2);
+        this.sprite = new Sprite(this.loader.get(PRIMARY_RAMP)).setAnchor(0.5).setScale(4).setPosition(width / 2, height / 2);
         this.blur = new BlurFilter({ radius: 4, quality: 2 });
         this.tint = new ColorFilter(new Color(140, 210, 255));
         this.custom =

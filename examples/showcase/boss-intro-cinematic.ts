@@ -1,5 +1,4 @@
-import { Asset } from '@codexo/exojs';
-import { Application, AudioStream, Color, Graphics, Keyboard, type Pausable, Scene, type Seekable, Sprite, Text, View, type Voice } from '@codexo/exojs';
+import { Application, Asset, AudioStream, Color, Graphics, Keyboard, type Pausable, Scene, type Seekable, Sprite, Text, View, type Voice } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -29,12 +28,7 @@ class BossIntroCinematicScene extends Scene {
     private width = 0;
     private height = 0;
 
-    override async load(loader): Promise<void> {
-        await loader.load(assets.demo.textures.shipA);
-        this.music = await loader.load(Asset.kind('music', assets.demo.music.loopMain));
-    }
-
-    override init(loader): void {
+    override init(): void {
         const { width, height } = this.app.canvas;
         this.width = width;
         this.height = height;
@@ -47,11 +41,12 @@ class BossIntroCinematicScene extends Scene {
         this.title = new Text('', { fillColor: Color.white, fontSize: 56, fontWeight: 'bold' });
         this.title.setPosition(width * 0.12, height * 0.2);
         this.titleState = { count: 0 };
-        this.boss = new Sprite(loader.get(assets.demo.textures.shipA))
+        this.boss = new Sprite(this.loader.get(assets.demo.textures.shipA))
             .setAnchor(0.5)
             .setScale(0.4)
             .setPosition(width * 0.62, height / 2)
             .setTint(new Color(255, 130, 130));
+        this.music = this.loader.get(Asset.kind('music', assets.demo.music.loopMain));
 
         this.hud = mountControls({
             title: 'Boss Intro Cinematic',

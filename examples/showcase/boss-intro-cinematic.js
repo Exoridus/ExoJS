@@ -1,6 +1,5 @@
 // Auto-generated from boss-intro-cinematic.ts — edit the .ts source, not this file.
-import { Asset } from '@codexo/exojs';
-import { Application, Color, Graphics, Keyboard, Scene, Sprite, Text, View } from '@codexo/exojs';
+import { Application, Asset, Color, Graphics, Keyboard, Scene, Sprite, Text, View } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {
@@ -26,11 +25,7 @@ class BossIntroCinematicScene extends Scene {
     tapPrompt;
     width = 0;
     height = 0;
-    async load(loader) {
-        await loader.load(assets.demo.textures.shipA);
-        this.music = await loader.load(Asset.kind('music', assets.demo.music.loopMain));
-    }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
         this.width = width;
         this.height = height;
@@ -42,11 +37,12 @@ class BossIntroCinematicScene extends Scene {
         this.title = new Text('', { fillColor: Color.white, fontSize: 56, fontWeight: 'bold' });
         this.title.setPosition(width * 0.12, height * 0.2);
         this.titleState = { count: 0 };
-        this.boss = new Sprite(loader.get(assets.demo.textures.shipA))
+        this.boss = new Sprite(this.loader.get(assets.demo.textures.shipA))
             .setAnchor(0.5)
             .setScale(0.4)
             .setPosition(width * 0.62, height / 2)
             .setTint(new Color(255, 130, 130));
+        this.music = this.loader.get(Asset.kind('music', assets.demo.music.loopMain));
         this.hud = mountControls({
             title: 'Boss Intro Cinematic',
             controls: [

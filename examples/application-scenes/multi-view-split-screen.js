@@ -29,11 +29,9 @@ class SplitScreenScene extends Scene {
         up: 0,
         down: 0,
     };
-    async load(loader) {
-        this.texture = await loader.load('image/ship-a.png');
-    }
     init() {
         const { width, height } = this.app.canvas;
+        this.texture = this.loader.get('image/ship-a.png');
         this.leftView = new View(0, 0, width / 2, height).setViewport(0, 0, 0.5, 1);
         this.rightView = new View(0, 0, width / 2, height).setViewport(0.5, 0, 0.5, 1);
         this.divider = new Graphics();

@@ -19,13 +19,10 @@ class ScreenShakeOnExplosionScene extends Scene {
     ps;
     burstPos;
     burst;
-    async load(loader) {
-        await loader.load('image/particle-light.png');
-    }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
         this.view = new View(width / 2, height / 2, width, height);
-        this.ps = new ParticleSystem(loader.get('image/particle-light.png'), { capacity: 5000 });
+        this.ps = new ParticleSystem(this.loader.get('image/particle-light.png'), { capacity: 5000 });
         this.ps.setPosition(width / 2, height / 2);
         this.burstPos = new Vector(0, 0);
         this.burst = new BurstSpawn({

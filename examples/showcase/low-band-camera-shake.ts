@@ -1,5 +1,4 @@
-import { Asset } from '@codexo/exojs';
-import { Application, AudioStream, Color, Scene, Sprite, Text, View, type Voice } from '@codexo/exojs';
+import { Application, Asset, AudioStream, Color, Scene, Sprite, Text, View, type Voice } from '@codexo/exojs';
 import { AudioAnalyser } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 
@@ -22,17 +21,13 @@ class LowBandCameraShakeScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
     private tapPrompt!: Text;
 
-    override async load(loader): Promise<void> {
-        this.music = await loader.load(Asset.kind('music', assets.demo.audio.musicLoop));
-        await loader.load(assets.demo.textures.shipA);
-    }
-
-    override init(loader): void {
+    override init(): void {
         const { width, height } = this.app.canvas;
 
+        this.music = this.loader.get(Asset.kind('music', assets.demo.audio.musicLoop));
         this.analyser = new AudioAnalyser({ fftSize: 1024, source: this.app.audio.music });
         this.view = new View(width / 2, height / 2, width, height);
-        this.sprite = new Sprite(loader.get(assets.demo.textures.shipA)).setAnchor(0.5).setScale(3).setPosition(width / 2, height / 2);
+        this.sprite = new Sprite(this.loader.get(assets.demo.textures.shipA)).setAnchor(0.5).setScale(3).setPosition(width / 2, height / 2);
 
         this.hud = mountControls({
             title: 'Low Band Camera Shake',

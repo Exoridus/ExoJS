@@ -54,10 +54,6 @@ class GraphicsPrimitivesScene extends Scene {
         context.render(this.sceneRoot);
     }
 
-    override unload(): void {
-        this.sceneRoot?.destroy();
-    }
-
     override destroy(): void {
         this.sceneRoot?.destroy();
     }

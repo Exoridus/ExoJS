@@ -172,13 +172,9 @@ class AssetBrowserScene extends Scene {
     loadedCats  = new Set<string>();
     loadingCats = new Set<string>();
 
-    override async load(loader): Promise<void> {
-        this.assetLoader = loader;
+    override async init(): Promise<void> {
+        this.assetLoader = this.loader;
         await this.ensureCategory(this.cat);
-    }
-
-    override init(loader): void {
-        this.assetLoader = loader;
 
         this.app.input.onPointerTap.add(p => this.onTap(p.x, p.y));
         this.app.input.onPointerMove.add(p => this.onMove(p.x, p.y));

@@ -1,6 +1,5 @@
 // Auto-generated from audio-buses.ts — edit the .ts source, not this file.
-import { Asset } from '@codexo/exojs';
-import { Application, Color, Graphics, Scene, Text } from '@codexo/exojs';
+import { Application, Asset, Assets, Color, Graphics, Scene, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {
@@ -33,11 +32,7 @@ class AudioBusesScene extends Scene {
     rowY = [];
     sfxButton = { x: 0, y: 0, w: 0, h: 0 };
     hud;
-    async load(loader) {
-        this.music = await loader.load(Asset.kind('music', assets.demo.audio.musicLoop));
-        await loader.load(assets.demo.audio.uiClick);
-    }
-    init(loader) {
+    async init() {
         const { width, height } = this.app.canvas;
         // Centre the bus mixer horizontally and spread the bars across the wide
         // 16:9 canvas.
@@ -45,7 +40,14 @@ class AudioBusesScene extends Scene {
         this.trackX = (width - this.trackW) / 2;
         this.rowY = rows.map((_, i) => height * 0.34 + i * 90);
         this.sfxButton = { x: width / 2 - 150, y: height * 0.74, w: 300, h: 36 };
-        this.sfx = loader.get(assets.demo.audio.uiClick);
+        // AudioStream has no seamless adapter — await it explicitly.
+        const { music } = await this.loader.load(Assets.from({ music: Asset.kind('music', assets.demo.audio.musicLoop) }));
+        this.music = music;
+        // Path-only get() infers Sound from the .ogg extension — sidesteps a
+        // compile-time overload ambiguity between Sound and the Json token form
+        // (both have zero-arg-constructible instance types) when passing the
+        // Sound token explicitly.
+        this.sfx = this.loader.get(assets.demo.audio.uiClick);
         this.graphics = new Graphics();
         this.labels = rows.map((_, i) => new Text('', { fillColor: Color.white, fontSize: 18 }).setPosition(this.trackX - 50, this.rowY[i] - 34));
         this.sfxLabel = new Text('Play SFX  ▶', { fillColor: new Color(20, 20, 20), fontSize: 20 }).setPosition(this.sfxButton.x + 92, this.sfxButton.y + 7);

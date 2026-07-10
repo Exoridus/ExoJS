@@ -14,12 +14,9 @@ const app = new Application({
 });
 class TweenWithYoyoScene extends Scene {
     sprite;
-    async load(loader) {
-        await loader.load('image/ship-a.png');
-    }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
-        this.sprite = new Sprite(loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(width / 2, height / 2);
+        this.sprite = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(width / 2, height / 2);
         this.app.tweens.create(this.sprite.scale).to({ x: 1.5, y: 1.5 }, 0.8).yoyo(true).repeat(-1).start();
         this.app.tweens.create(this.sprite).to({ rotation: 20 }, 0.8).yoyo(true).repeat(-1).start();
     }

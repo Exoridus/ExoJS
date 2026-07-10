@@ -21,12 +21,9 @@ class CursorAttractorParticlesScene extends Scene {
     repeller;
     mode = 'attract';
     hud;
-    async load(loader) {
-        await loader.load(assets.demo.textures.particleLight);
-    }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
-        this.system = new ParticleSystem(loader.get(assets.demo.textures.particleLight), { capacity: 32000 });
+        this.system = new ParticleSystem(this.loader.get(assets.demo.textures.particleLight), { capacity: 32000 });
         this.system.setPosition(width / 2, height / 2);
         this.system.addSpawnModule(new RateSpawn({
             rate: new Constant(2200),

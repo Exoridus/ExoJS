@@ -112,6 +112,8 @@ class SceneLoader implements Destroyable {
 
   public get<S extends string>(path: LoadByPath<S> extends Texture | Sound ? S : never, options?: unknown): LoadByPath<S>;
   public get<T extends Loadable>(type: T, alias: string): LoadReturn<T>;
+  // Seamless/value access from an `Asset.kind()` descriptor (mirrors Loader.get(asset)).
+  public get<T>(asset: Asset<T>): T extends object ? T : AssetRef<T>;
   // Adopts an Assets catalog under the scene scope (mirrors Loader.get(catalog)).
   public get<M extends Record<string, AssetInput>>(catalog: Assets<M>): InferAssetsProperties<M>;
   // Adopts a single handle-hybrid leaf under the scene scope (mirrors Loader.get(leaf)).
@@ -125,7 +127,7 @@ class SceneLoader implements Destroyable {
   // eslint-disable-next-line @typescript-eslint/unified-signatures -- mirrors Loader.load verbatim (rule disabled there too)
   public load<M extends Record<string, AssetInput>>(config: M, options?: LoadOptions): LoadingQueue<InferLoadedMap<M>>;
   // Single value-leaf (an `Assets.from()` AssetRef property): mirrors Loader.load(leaf).
-  // eslint-disable-next-line @typescript-eslint/unified-signatures -- mirrors Loader.load verbatim (rule disabled there too)
+   
   public load<T>(leaf: AssetRef<T>, options?: LoadOptions): LoadingQueue<T>;
   // Single handle-hybrid leaf (an `Assets.from()` property): mirrors Loader.load(leaf).
   public load<T extends object>(leaf: T, options?: LoadOptions): LoadingQueue<T>;

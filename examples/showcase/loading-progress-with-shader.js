@@ -31,15 +31,12 @@ class LoadingProgressWithShaderScene extends Scene {
     label;
     ring;
     filter;
-    async load(loader) {
-        await loader.load('image/uv-grid-256.png');
-    }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
         this.progress = { v: 0 };
         this.label = new Text('0%', { fillColor: Color.white, fontSize: 42, align: 'center' });
         this.label.setAnchor(0.5, 0.5).setPosition(width / 2, height / 2);
-        this.ring = new Sprite(loader.get('image/uv-grid-256.png')).setAnchor(0.5).setScale(2.4).setPosition(width / 2, height / 2);
+        this.ring = new Sprite(this.loader.get('image/uv-grid-256.png')).setAnchor(0.5).setScale(2.4).setPosition(width / 2, height / 2);
         this.filter =
             app.backend.backendType === RenderBackendType.WebGpu
                 ? new WebGpuShaderFilter({ fragmentSource: wgsl, uniforms: { uProgress: 0 } })

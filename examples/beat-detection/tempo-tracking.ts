@@ -1,5 +1,4 @@
-import { Asset } from '@codexo/exojs';
-import { Application, AudioStream, Color, Graphics, Scene, Text } from '@codexo/exojs';
+import { Application, Asset, Assets, AudioStream, Color, Graphics, Scene, Text } from '@codexo/exojs';
 import { BeatDetector } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 
@@ -30,13 +29,13 @@ class TempoTrackingScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
     private tapPrompt!: Text;
 
-    override async load(loader): Promise<void> {
-        this.music = await loader.load(Asset.kind('music', 'audio/demo-loop-main.ogg'));
-    }
-
-    override init(): void {
+    override async init(): Promise<void> {
         const { width, height } = this.app.canvas;
         const marginX = width * 0.08;
+
+        // AudioStream has no seamless adapter — await it explicitly.
+        const { track } = await this.loader.load(Assets.from({ track: Asset.kind('music', 'audio/demo-loop-main.ogg') }));
+        this.music = track;
 
         this.detector = new BeatDetector();
         this.detector.source = this.app.audio.music;

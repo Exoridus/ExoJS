@@ -1,4 +1,4 @@
-import { Application, Color, Scene, Spritesheet, type SpritesheetData } from '@codexo/exojs';
+import { Application, Asset, Color, Scene, Spritesheet, type SpritesheetData } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -25,15 +25,10 @@ class SpritesheetFramesScene extends Scene {
     private playing = true;
     private hud!: ReturnType<typeof mountControls>;
 
-    override async load(loader): Promise<void> {
-        await loader.load('image/platformer-characters.png');
-        await loader.load('json/platformer-characters.json');
-    }
-
-    override init(loader): void {
+    override async init(): Promise<void> {
         const { width, height } = this.app.canvas;
-        const texture = loader.get('image/platformer-characters.png');
-        const data = loader.get('json/platformer-characters.json').value as SpritesheetData;
+        const texture = this.loader.get('image/platformer-characters.png');
+        const data = (await this.loader.load(Asset.kind('json', 'json/platformer-characters.json'))) as SpritesheetData;
 
         this.spritesheet = new Spritesheet(texture, data);
 

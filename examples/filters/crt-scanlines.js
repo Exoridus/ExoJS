@@ -23,16 +23,13 @@ class CrtScanlinesScene extends Scene {
     enabled = true;
     hud;
     panel;
-    async load(loader) {
-        await loader.load(PIXEL_GRID);
-    }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
         this.filter =
             app.backend.backendType === RenderBackendType.WebGpu
                 ? new WebGpuShaderFilter({ fragmentSource: wgsl })
                 : new WebGl2ShaderFilter({ fragmentSource: glsl });
-        this.sprite = new Sprite(loader.get(PIXEL_GRID)).setAnchor(0.5).setScale(5).setPosition(width / 2, height / 2);
+        this.sprite = new Sprite(this.loader.get(PIXEL_GRID)).setAnchor(0.5).setScale(5).setPosition(width / 2, height / 2);
         this.sprite.filters = [this.filter];
         this.hud = mountControls({
             title: 'CRT Scanlines',

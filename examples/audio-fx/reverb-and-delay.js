@@ -27,14 +27,14 @@ class ReverbAndDelayScene extends Scene {
     pad = { x: 0, y: 0, w: 0, h: 0 };
     hud;
     panel;
-    async load(loader) {
-        await loader.load('audio/impact-light.ogg');
-    }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
         // A large click pad centred on the canvas.
         this.pad = { x: width / 2 - 240, y: height * 0.36, w: 480, h: 160 };
-        this.sound = loader.get('audio/impact-light.ogg');
+        // Path-only get() infers Sound from the .ogg extension — sidesteps a
+        // compile-time overload ambiguity between Sound and the Json token form
+        // when passing the Sound token explicitly.
+        this.sound = this.loader.get('audio/impact-light.ogg');
         // Reverb (room tail) → Delay (echoes) chained on the sound bus.
         this.reverb = new ReverbEffect({ wet: 0.4, decay: 2 });
         this.delay = new DelayEffect({ wet: 0.35, delaySeconds: 0.25, feedback: 0.45 });

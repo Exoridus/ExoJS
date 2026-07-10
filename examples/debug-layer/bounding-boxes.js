@@ -18,16 +18,13 @@ debug.layers.boundingBoxes.visible = true;
 class BoundingBoxesScene extends Scene {
     sprites;
     time = 0;
-    async load(loader) {
-        await loader.load('image/ship-a.png');
-    }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
         const count = 7;
         const margin = width * 0.12;
         const step = (width - 2 * margin) / (count - 1);
         this.sprites = Array.from({ length: count }, (_, i) => {
-            const sprite = new Sprite(loader.get('image/ship-a.png')).setAnchor(0.5).setScale(0.8);
+            const sprite = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setScale(0.8);
             sprite.setPosition(margin + i * step, height / 2 + Math.sin(i) * 80);
             // The boundingBoxes layer walks the SCENE GRAPH (scene.root), so
             // the sprites must be attached to it — nodes that are only passed

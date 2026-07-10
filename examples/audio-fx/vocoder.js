@@ -1,6 +1,5 @@
 // Auto-generated from vocoder.ts — edit the .ts source, not this file.
-import { Asset } from '@codexo/exojs';
-import { Application, AudioBus, AudioGenerator, Color, Scene, Text } from '@codexo/exojs';
+import { Application, Asset, AudioBus, AudioGenerator, Color, Scene, Text } from '@codexo/exojs';
 import { VocoderEffect } from '@codexo/exojs-audio-fx';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 const app = new Application({
@@ -27,21 +26,18 @@ class VocoderScene extends Scene {
     phraseLabel;
     tapPrompt;
     hud;
-    async load(loader) {
-        // Each phrase's asset path is widened to `string` by the PHRASES array's
-        // type annotation, so it is a dynamic (non-literal) path from the type
-        // system's point of view — Asset.kind('sound', ) disambiguates and load() (not
-        // get()) resolves the handle here, up front.
-        await Promise.all(PHRASES.map(async (phrase) => {
-            this.phrases.set(phrase.key, await loader.load(Asset.kind('sound', phrase.asset)));
-        }));
-    }
     init() {
         const { width, height } = this.app.canvas;
         // The spoken voice is the modulator: route every phrase onto its own bus
         // so the vocoder can read its spectral envelope.
         this.modulatorBus = new AudioBus('modulator', { parent: app.audio.master });
         app.audio.registerBus(this.modulatorBus);
+        for (const phrase of PHRASES) {
+            // phrase.asset is a widened `string` (not a path literal), so the
+            // path-only get() overload can't infer Sound from the extension —
+            // use the explicit Sound token form.
+            this.phrases.set(phrase.key, this.loader.get(Asset.kind('sound', phrase.asset)));
+        }
         this.vocoder = new VocoderEffect({ modulator: this.modulatorBus, numBands: 16, wet: 1 });
         app.audio.sound.addEffect(this.vocoder);
         this.phraseLabel = new Text('', { fillColor: Color.white, fontSize: 28, align: 'center' })

@@ -174,9 +174,6 @@ class ImmediateModeScene extends Scene {
         const path = this.batched ? 'RenderBatch (instanced)' : 'drawGeometry per spark';
         this.hud.setStatus(`${path} · ${FIELD_COUNT} sparks · ${GEAR_COUNT} gears · drawCalls: ${drawCalls}`);
     }
-    unload() {
-        this.dispose();
-    }
     destroy() {
         this.dispose();
     }

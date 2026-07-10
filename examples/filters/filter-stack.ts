@@ -28,14 +28,10 @@ class FilterStackScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
     private panel!: ReturnType<typeof mountControlPanel>;
 
-    override async load(loader): Promise<void> {
-        await loader.load(PRIMARY_RAMP);
-    }
-
-    override init(loader): void {
+    override init(): void {
         const { width, height } = this.app.canvas;
 
-        this.sprite = new Sprite(loader.get(PRIMARY_RAMP)).setAnchor(0.5).setScale(4).setPosition(width / 2, height / 2);
+        this.sprite = new Sprite(this.loader.get(PRIMARY_RAMP)).setAnchor(0.5).setScale(4).setPosition(width / 2, height / 2);
         this.blur = new BlurFilter({ radius: 4, quality: 2 });
         this.tint = new ColorFilter(new Color(140, 210, 255));
         this.custom =

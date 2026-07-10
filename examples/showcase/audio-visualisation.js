@@ -1,6 +1,5 @@
 // Auto-generated from audio-visualisation.ts — edit the .ts source, not this file.
-import { Asset } from '@codexo/exojs';
-import { Application, Color, Scene, Sprite, Text, Texture } from '@codexo/exojs';
+import { Application, Asset, Color, Scene, Sprite, Text, Texture } from '@codexo/exojs';
 import { AudioAnalyser, BeatDetector } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 const app = new Application({
@@ -25,11 +24,9 @@ class AudioVisualisationScene extends Scene {
     screen;
     hud;
     tapPrompt;
-    async load(loader) {
-        this.music = await loader.load(Asset.kind('music', assets.demo.audio.musicLoop));
-    }
     init() {
         const { width, height } = this.app.canvas;
+        this.music = this.loader.get(Asset.kind('music', assets.demo.audio.musicLoop));
         // One analyser tap for spectrum/waveform, one beat detector for the
         // beat-pulse ring. Both read the music bus the stream plays through,
         // without altering playback.

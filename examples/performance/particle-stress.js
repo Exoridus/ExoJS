@@ -1,5 +1,5 @@
 // Auto-generated from particle-stress.ts — edit the .ts source, not this file.
-import { Application, Color, Scene, Texture, } from '@codexo/exojs';
+import { Application, Color, Scene, Texture } from '@codexo/exojs';
 import { AlphaFadeOverLifetime, ApplyForce, Constant, Curve, particlesExtension, ParticleSystem, Range, RateSpawn, ScaleOverLifetime, UpdateModule, VectorRange, } from '@codexo/exojs-particles';
 const app = new Application({
     canvas: {
@@ -125,9 +125,6 @@ class ParticleStressScene extends Scene {
         for (const entry of this.particleSystems) {
             context.render(entry.instance);
         }
-    }
-    unload() {
-        this.destroySystems();
     }
     destroy() {
         this.destroySystems();

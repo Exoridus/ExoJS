@@ -31,17 +31,13 @@ class MouseAndPointerScene extends Scene {
     private clicks = 0;
     private hud!: ReturnType<typeof mountControls>;
 
-    override async load(loader): Promise<void> {
-        await loader.load('image/ship-a.png');
-    }
-
-    override init(loader): void {
+    override init(): void {
         const { width, height } = this.app.canvas;
 
         this.pointer = { x: width / 2, y: height / 2 };
         this.previous = { x: width / 2, y: height / 2 };
 
-        this.ship = new Sprite(loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(width / 2, height / 2);
+        this.ship = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(width / 2, height / 2);
         this.ship.interactive = true;
         this.ship.draggable = true;
         this.crosshair = new Graphics();

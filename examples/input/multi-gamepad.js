@@ -23,13 +23,10 @@ class MultiGamepadScene extends Scene {
     hasPad = false;
     connectPrompt;
     hud;
-    async load(loader) {
-        await loader.load('image/ship-a.png');
-    }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
         this.players = this.app.input.gamepads.map((pad, index) => {
-            const sprite = new Sprite(loader.get('image/ship-a.png'))
+            const sprite = new Sprite(this.loader.get('image/ship-a.png'))
                 .setAnchor(0.5)
                 .setScale(0.6)
                 .setPosition(width * (0.2 + index * 0.2), height / 2)

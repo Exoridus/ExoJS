@@ -1,4 +1,4 @@
-import { Application, Color, Scene, Sprite, Spritesheet, type SpritesheetData, Vector } from '@codexo/exojs';
+import { Application, Asset, Color, Scene, Sprite, Spritesheet, type SpritesheetData, Vector } from '@codexo/exojs';
 import { BoxShape, type PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
 import { mountControls } from '@examples/runtime';
 
@@ -26,21 +26,15 @@ class SpriteFollowsBodyScene extends Scene {
     private settled = 0;
     private hud!: ReturnType<typeof mountControls>;
 
-    override async load(loader): Promise<void> {
-        await loader.load(assets.demo.spritesheets.platformerCharacters.image);
-        await loader.load(assets.demo.textures.pixelWhite);
-        await loader.load(assets.demo.spritesheets.platformerCharacters.data);
-    }
-
-    override init(loader): void {
+    override async init(): Promise<void> {
         const { width, height } = this.app.canvas;
 
         // Gravity in px/s², +Y down — matches the engine's screen space.
         this.world = new PhysicsWorld({ gravity: { x: 0, y: 1400 } });
 
         const characters = new Spritesheet(
-            loader.get(assets.demo.spritesheets.platformerCharacters.image),
-            loader.get(assets.demo.spritesheets.platformerCharacters.data).value as SpritesheetData,
+            this.loader.get(assets.demo.spritesheets.platformerCharacters.image),
+            (await this.loader.load(Asset.kind('json', assets.demo.spritesheets.platformerCharacters.data))) as SpritesheetData,
         );
 
         this.floorY = height - 80;
@@ -51,7 +45,7 @@ class SpriteFollowsBodyScene extends Scene {
         const floorWidth = width - 120;
         const floorHeight = 48;
 
-        this.floor = new Sprite(loader.get(assets.demo.textures.pixelWhite)).setAnchor(0.5);
+        this.floor = new Sprite(this.loader.get(assets.demo.textures.pixelWhite)).setAnchor(0.5);
         this.floor.width = floorWidth;
         this.floor.height = floorHeight;
         this.floor.tint = new Color(70, 92, 120);

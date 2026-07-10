@@ -17,14 +17,11 @@ class TweenBasicsScene extends Scene {
     text;
     forward;
     backward;
-    async load(loader) {
-        await loader.load('image/ship-a.png');
-    }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
         const left = width * 0.1;
         const right = width * 0.9;
-        this.sprite = new Sprite(loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(left, height / 2);
+        this.sprite = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(left, height / 2);
         this.text = new Text('Tween running', { fillColor: Color.white, fontSize: 18 });
         this.text.setPosition(20, 20);
         this.forward = this.app.tweens.create(this.sprite.position).to({ x: right }, 1.2);

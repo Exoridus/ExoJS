@@ -1,6 +1,5 @@
 // Auto-generated from vinyl-record.ts — edit the .ts source, not this file.
-import { Asset } from '@codexo/exojs';
-import { Application, Color, Graphics, Scene, Text } from '@codexo/exojs';
+import { Application, Asset, Color, Graphics, Scene, Text } from '@codexo/exojs';
 import { AudioAnalyser } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 const app = new Application({
@@ -22,11 +21,9 @@ class VinylRecordScene extends Scene {
     rpm = 0;
     hud;
     tapPrompt;
-    async load(loader) {
-        this.music = await loader.load(Asset.kind('music', assets.demo.audio.musicLoop));
-    }
     init() {
         const { width, height } = this.app.canvas;
+        this.music = this.loader.get(Asset.kind('music', assets.demo.audio.musicLoop));
         this.analyser = new AudioAnalyser({ fftSize: 1024, source: this.app.audio.music });
         this.disc = new Graphics();
         this.bars = new Graphics();

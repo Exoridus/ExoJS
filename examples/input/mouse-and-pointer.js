@@ -29,14 +29,11 @@ class MouseAndPointerScene extends Scene {
     buttons = 0;
     clicks = 0;
     hud;
-    async load(loader) {
-        await loader.load('image/ship-a.png');
-    }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
         this.pointer = { x: width / 2, y: height / 2 };
         this.previous = { x: width / 2, y: height / 2 };
-        this.ship = new Sprite(loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(width / 2, height / 2);
+        this.ship = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(width / 2, height / 2);
         this.ship.interactive = true;
         this.ship.draggable = true;
         this.crosshair = new Graphics();

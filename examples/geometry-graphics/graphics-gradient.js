@@ -57,11 +57,8 @@ class GraphicsGradientScene extends Scene {
         context.backend.clear();
         context.render(this.sceneRoot);
     }
-    unload() {
-        this.sceneRoot?.destroy();
-    }
     destroy() {
-        this.unload();
+        this.sceneRoot?.destroy();
     }
 }
 app.start(new GraphicsGradientScene()).catch(() => {

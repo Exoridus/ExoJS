@@ -1,5 +1,4 @@
-import { Asset } from '@codexo/exojs';
-import { Application, Color, FontAsset, Scene, Text, Time } from '@codexo/exojs';
+import { Application, Asset, Color, Scene, Text, Time } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -18,11 +17,9 @@ class BasicTextScene extends Scene {
     private time!: Time;
     private text!: Text;
 
-    override async load(loader): Promise<void> {
-        await loader.load(Asset.kind('font', 'font/Kenney Future.ttf', { family: 'Kenney Future' }));
-    }
+    override async init(): Promise<void> {
+        await this.loader.load(Asset.kind('font', 'font/Kenney Future.ttf', { family: 'Kenney Future' }));
 
-    override init(): void {
         const { width, height } = this.app.canvas;
 
         this.time = new Time();

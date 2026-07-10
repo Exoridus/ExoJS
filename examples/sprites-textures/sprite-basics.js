@@ -19,12 +19,9 @@ class SpriteBasicsScene extends Scene {
     tint = new Color(120, 200, 255, 1);
     elapsed = 0;
     hud;
-    async load(loader) {
-        await loader.load('image/ship-a.png');
-    }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
-        this.ship = new Sprite(loader.get('image/ship-a.png'));
+        this.ship = new Sprite(this.loader.get('image/ship-a.png'));
         this.ship.setPosition((width / 2) | 0, (height / 2) | 0);
         this.ship.setAnchor(0.5);
         this.ship.setScale(3);

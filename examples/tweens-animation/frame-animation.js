@@ -1,5 +1,5 @@
 // Auto-generated from frame-animation.ts — edit the .ts source, not this file.
-import { AnimatedSprite, Application, Color, Scene, Spritesheet } from '@codexo/exojs';
+import { AnimatedSprite, Application, Asset, Color, Scene, Spritesheet } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {
@@ -18,14 +18,10 @@ class FrameAnimationScene extends Scene {
     sprite;
     frameCount = 0;
     hud;
-    async load(loader) {
-        await loader.load('image/platformer-characters.png');
-        await loader.load('json/platformer-characters.json');
-    }
-    init(loader) {
+    async init() {
         const { width, height } = this.app.canvas;
-        const texture = loader.get('image/platformer-characters.png');
-        const data = loader.get('json/platformer-characters.json').value;
+        const texture = this.loader.get('image/platformer-characters.png');
+        const data = (await this.loader.load(Asset.kind('json', 'json/platformer-characters.json')));
         const sheet = new Spritesheet(texture, data);
         const walkFrames = ['character_beige_walk_a', 'character_beige_walk_b'].map(name => sheet.getFrame(name));
         this.frameCount = walkFrames.length;

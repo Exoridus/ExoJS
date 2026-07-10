@@ -25,12 +25,9 @@ const RATE = isWebGpu ? 75_000 : 3_000;
 class GpuParticlesScene extends Scene {
     system;
     hud;
-    async load(loader) {
-        await loader.load('image/particle-light.png');
-    }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
-        this.system = new ParticleSystem(loader.get('image/particle-light.png'), { capacity: CAPACITY });
+        this.system = new ParticleSystem(this.loader.get('image/particle-light.png'), { capacity: CAPACITY });
         this.system.setPosition(width / 2, height - 80);
         this.system.addSpawnModule(new RateSpawn({
             rate: new Constant(RATE),

@@ -20,13 +20,10 @@ class DamageFlashScene extends Scene {
     filter;
     hud;
     hits = 0;
-    async load(loader) {
-        await loader.load('image/ship-a.png');
-    }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
         this.hit = new Signal();
-        this.ship = new Sprite(loader.get('image/ship-a.png')).setAnchor(0.5).setScale(2.2).setPosition(width / 2, height / 2);
+        this.ship = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setScale(2.2).setPosition(width / 2, height / 2);
         this.filterColor = new Color(255, 255, 255, 1);
         this.filter = new ColorFilter(this.filterColor);
         this.ship.filters = [this.filter];

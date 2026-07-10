@@ -23,12 +23,9 @@ class PivotAndAnchorScene extends Scene {
     label;
     mode = 0;
     timer = 0;
-    async load(loader) {
-        await loader.load('image/ship-a.png');
-    }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
-        this.sprite = new Sprite(loader.get('image/ship-a.png')).setPosition(width / 2, height / 2);
+        this.sprite = new Sprite(this.loader.get('image/ship-a.png')).setPosition(width / 2, height / 2);
         this.pivotMarker = new Graphics();
         this.label = new Text('', { fillColor: Color.white, fontSize: 18 });
         this.label.setPosition(20, 20);

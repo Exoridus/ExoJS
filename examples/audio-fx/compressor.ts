@@ -1,5 +1,4 @@
-import { Asset } from '@codexo/exojs';
-import { Application, AudioStream, Color, Graphics, Scene, Text } from '@codexo/exojs';
+import { Application, Asset, Assets, AudioStream, Color, Graphics, Scene, Text } from '@codexo/exojs';
 import { CompressorEffect } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 
@@ -47,11 +46,7 @@ class CompressorScene extends Scene {
     private meterY = 0;
     private hud!: ReturnType<typeof mountControls>;
 
-    override async load(loader): Promise<void> {
-        this.music = await loader.load(Asset.kind('music', 'audio/demo-loop-main.ogg'));
-    }
-
-    override init(): void {
+    override async init(): Promise<void> {
         const { width, height } = this.app.canvas;
 
         // Wide horizontal bars centred on the 16:9 canvas; labels sit to the left.
@@ -61,6 +56,9 @@ class CompressorScene extends Scene {
         this.rowY = sliders.map((_, i) => height * 0.26 + i * 90);
         this.meterY = this.rowY[this.rowY.length - 1] + 100;
 
+        // AudioStream has no seamless adapter — await it explicitly.
+        const { music } = await this.loader.load(Assets.from({ music: Asset.kind('music', 'audio/demo-loop-main.ogg') }));
+        this.music = music;
         this.filter = new CompressorEffect();
         app.audio.music.addEffect(this.filter);
 

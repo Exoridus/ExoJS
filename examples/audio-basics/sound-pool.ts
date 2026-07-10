@@ -30,16 +30,15 @@ class SoundPoolScene extends Scene {
     private evictions = 0;
     private hud!: ReturnType<typeof mountControls>;
 
-    override async load(loader): Promise<void> {
-        // impactHeavy is long enough (~0.5 s) that rapid fire actually overlaps -
-        // a short click ends before the next shot and the pool never fills.
-        await loader.load(assets.demo.audio.impactHeavy);
-    }
-
-    override init(loader): void {
+    override init(): void {
         const { width, height } = this.app.canvas;
 
-        this.sound = loader.get(assets.demo.audio.impactHeavy);
+        // impactHeavy is long enough (~0.5 s) that rapid fire actually overlaps -
+        // a short click ends before the next shot and the pool never fills.
+        // Path-only get() infers Sound from the .ogg extension — sidesteps a
+        // compile-time overload ambiguity between Sound and the Json token form
+        // when passing the Sound token explicitly.
+        this.sound = this.loader.get(assets.demo.audio.impactHeavy);
         this.sound.poolSize = POOL_SIZE;
 
         this.graphics = new Graphics();

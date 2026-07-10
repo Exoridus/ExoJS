@@ -24,14 +24,11 @@ class TrailFeedbackScene extends Scene {
     pipeBtoA;
     forward = true;
     time = 0;
-    async load(loader) {
-        await loader.load('image/ship-a.png');
-    }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
         this.rtA = new RenderTexture(width, height);
         this.rtB = new RenderTexture(width, height);
-        this.bunny = new Sprite(loader.get('image/ship-a.png')).setAnchor(0.5);
+        this.bunny = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5);
         // A 93%-alpha copy of the source target = the decaying trail.
         const decayA = new Sprite(this.rtA).setTint(new Color(255, 255, 255, 0.93));
         const decayB = new Sprite(this.rtB).setTint(new Color(255, 255, 255, 0.93));

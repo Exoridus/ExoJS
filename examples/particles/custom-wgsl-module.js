@@ -52,12 +52,9 @@ class CustomWgslModuleScene extends Scene {
     system;
     hud;
     reportedMode = false;
-    async load(loader) {
-        await loader.load(assets.demo.textures.particleLight);
-    }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
-        this.system = new ParticleSystem(loader.get(assets.demo.textures.particleLight), { capacity: 26000 });
+        this.system = new ParticleSystem(this.loader.get(assets.demo.textures.particleLight), { capacity: 26000 });
         this.system.setPosition(width / 2, height - 60);
         this.system.addSpawnModule(new RateSpawn({
             rate: new Constant(1800),

@@ -142,12 +142,9 @@ class AssetBrowserScene extends Scene {
     assetLoader = null;
     loadedCats = new Set();
     loadingCats = new Set();
-    async load(loader) {
-        this.assetLoader = loader;
+    async init() {
+        this.assetLoader = this.loader;
         await this.ensureCategory(this.cat);
-    }
-    init(loader) {
-        this.assetLoader = loader;
         this.app.input.onPointerTap.add(p => this.onTap(p.x, p.y));
         this.app.input.onPointerMove.add(p => this.onMove(p.x, p.y));
         this.app.input.onMouseWheel.add(v => this.onWheel(v.y));

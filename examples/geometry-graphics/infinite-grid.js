@@ -58,13 +58,10 @@ class InfiniteGridScene extends Scene {
     move = { x: 0, y: 0, zoom: 0 };
     sprite;
     filter;
-    async load(loader) {
-        await loader.load('image/uv-grid-256.png');
-    }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
         this.view = new View(0, 0, width, height);
-        this.sprite = new Sprite(loader.get('image/uv-grid-256.png'));
+        this.sprite = new Sprite(this.loader.get('image/uv-grid-256.png'));
         this.sprite.width = width;
         this.sprite.height = height;
         this.filter =

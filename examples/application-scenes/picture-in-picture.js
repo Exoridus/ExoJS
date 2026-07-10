@@ -18,11 +18,9 @@ class PictureInPictureScene extends Scene {
     sprite;
     velocity = 220;
     frame;
-    async load(loader) {
-        this.sprite = new Sprite(await loader.load('image/ship-a.png'));
-    }
     init() {
         const { width, height } = this.app.canvas;
+        this.sprite = new Sprite(this.loader.get('image/ship-a.png'));
         this.mainView = new View(0, 0, width, height);
         this.pipView = new View(0, 0, width * 0.3, height * 0.3).setViewport(0.68, 0.04, 0.28, 0.28);
         // Zoom < 1 zooms OUT (a larger visible world area maps into the same

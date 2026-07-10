@@ -28,10 +28,8 @@ app.resize(window.innerWidth, window.innerHeight);
 class ResizeScene extends Scene {
     sprite;
     info;
-    async load(loader) {
-        this.sprite = new Sprite(await loader.load('image/ship-a.png'));
-    }
     init() {
+        this.sprite = new Sprite(this.loader.get('image/ship-a.png'));
         this.sprite.setAnchor(0.5);
         this.info = new Text('', { fillColor: Color.white, fontSize: 16 });
         this.info.setAnchor(0.5, 0);

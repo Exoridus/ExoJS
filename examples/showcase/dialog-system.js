@@ -29,15 +29,11 @@ class DialogSystemScene extends Scene {
     timer = 0;
     done = false;
     awaitingChoice = false;
-    async load(loader) {
-        await loader.load(assets.demo.textures.shipA);
-        await loader.load(assets.demo.sound.uiConfirm);
-    }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
         // Portrait sits on the left; the dialog column runs to its right and
         // fills the wider 16:9 frame as a classic VN bottom-third box.
-        this.portrait = new Sprite(loader.get(assets.demo.textures.shipA)).setAnchor(0.5).setScale(2.4).setPosition(width * 0.16, height * 0.62);
+        this.portrait = new Sprite(this.loader.get(assets.demo.textures.shipA)).setAnchor(0.5).setScale(2.4).setPosition(width * 0.16, height * 0.62);
         const textX = width * 0.3;
         // Name plate sits just above the dialog body, like a classic VN UI.
         this.namePlate = new Text(lines[0].speaker, { fillColor: new Color(255, 214, 120), fontSize: 26, fontWeight: 'bold' });
@@ -46,7 +42,7 @@ class DialogSystemScene extends Scene {
         this.box.setPosition(textX, height * 0.56);
         this.choicePrompt = new Text('', { fillColor: new Color(150, 220, 255), fontSize: 20 });
         this.choicePrompt.setPosition(textX, height * 0.78);
-        this.beep = loader.get(assets.demo.sound.uiConfirm);
+        this.beep = this.loader.get(assets.demo.sound.uiConfirm);
         this.hud = mountControls({
             title: 'Dialog System',
             controls: [{ keys: 'Click', action: 'advance / reveal' }],

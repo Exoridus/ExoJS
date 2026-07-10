@@ -51,10 +51,7 @@ class MeshDeformedGridScene extends Scene {
     restVertices;
     mesh;
     time = 0;
-    async load(loader) {
-        await loader.load(UV_GRID);
-    }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
         const grid = buildGrid();
         this.restVertices = grid.vertices.slice();
@@ -62,7 +59,7 @@ class MeshDeformedGridScene extends Scene {
             vertices: grid.vertices,
             uvs: grid.uvs,
             indices: grid.indices,
-            texture: loader.get(UV_GRID),
+            texture: this.loader.get(UV_GRID),
         });
         this.mesh.setPosition((width / 2) | 0, (height / 2) | 0);
     }

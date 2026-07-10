@@ -18,14 +18,11 @@ debug.layers.hitTest.visible = true;
 debug.layers.pointerStack.visible = true;
 class PointerAndHittestScene extends Scene {
     sprites;
-    async load(loader) {
-        await loader.load('image/ship-a.png');
-    }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
         this.sprites = [];
         for (let i = 0; i < 5; i++) {
-            const sprite = new Sprite(loader.get('image/ship-a.png'))
+            const sprite = new Sprite(this.loader.get('image/ship-a.png'))
                 .setAnchor(0.5)
                 .setScale(1.2)
                 .setPosition(width / 2 - 120 + i * 60, height / 2 - 20 + (i % 2) * 40);

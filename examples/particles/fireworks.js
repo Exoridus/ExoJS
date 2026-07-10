@@ -1,5 +1,5 @@
 // Auto-generated from fireworks.ts — edit the .ts source, not this file.
-import { Application, BlendModes, Color, Random, Scene, Size, Sprite, Time, Timer, Vector, } from '@codexo/exojs';
+import { Application, BlendModes, Color, Random, Scene, Size, Sprite, Time, Timer, Vector } from '@codexo/exojs';
 import { AlphaFadeOverLifetime, ApplyForce, BurstSpawn, ConeDirection, Constant, Curve, particlesExtension, ParticleSystem, Range, } from '@codexo/exojs-particles';
 import { mountControls } from '@examples/runtime';
 const app = new Application({
@@ -43,13 +43,10 @@ class FireworksScene extends Scene {
     rockets = [];
     launchCount = 0;
     hud;
-    async load(loader) {
-        await loader.load(assets.demo.textures.particleStar);
-    }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
         this.canvasSize = new Size(width, height);
-        this.rocketTexture = loader.get(assets.demo.textures.particleStar);
+        this.rocketTexture = this.loader.get(assets.demo.textures.particleStar);
         // Single explosion system shared by every detonation. We reposition and
         // re-tint a single BurstSpawn, then reset() it to fire one burst.
         this.explosions = new ParticleSystem(this.rocketTexture, { capacity: 16384 });

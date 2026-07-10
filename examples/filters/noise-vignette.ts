@@ -40,11 +40,7 @@ class NoiseVignetteScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
     private panel!: ReturnType<typeof mountControlPanel>;
 
-    override async load(loader): Promise<void> {
-        await loader.load(UV_GRID);
-    }
-
-    override init(loader): void {
+    override init(): void {
         const { width, height } = this.app.canvas;
 
         this.filter =
@@ -53,7 +49,7 @@ class NoiseVignetteScene extends Scene {
                 : new WebGl2ShaderFilter({ fragmentSource: glsl, uniforms: { uTime: 0, uIntensity: this.intensity } });
 
         // Fill the whole 16:9 frame so the post effect covers the viewport.
-        const texture = loader.get(UV_GRID);
+        const texture = this.loader.get(UV_GRID);
 
         this.sprite = new Sprite(texture).setAnchor(0.5).setPosition(width / 2, height / 2);
         this.sprite.width = width;

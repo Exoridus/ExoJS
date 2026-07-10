@@ -62,15 +62,11 @@ class InfiniteGridScene extends Scene {
     private sprite!: Sprite;
     private filter!: WebGl2ShaderFilter | WebGpuShaderFilter;
 
-    override async load(loader): Promise<void> {
-        await loader.load('image/uv-grid-256.png');
-    }
-
-    override init(loader): void {
+    override init(): void {
         const { width, height } = this.app.canvas;
 
         this.view = new View(0, 0, width, height);
-        this.sprite = new Sprite(loader.get('image/uv-grid-256.png'));
+        this.sprite = new Sprite(this.loader.get('image/uv-grid-256.png'));
         this.sprite.width = width;
         this.sprite.height = height;
         this.filter =

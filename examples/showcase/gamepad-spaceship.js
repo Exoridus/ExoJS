@@ -28,16 +28,12 @@ class GamepadSpaceshipScene extends Scene {
     hasPad = false;
     connectPrompt;
     hud;
-    async load(loader) {
-        await loader.load(assets.demo.textures.shipA);
-        await loader.load(assets.demo.textures.particleSpark);
-    }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
-        this.ship = new Sprite(loader.get(assets.demo.textures.shipA)).setAnchor(0.5).setScale(0.5).setPosition(width / 2, height / 2);
+        this.ship = new Sprite(this.loader.get(assets.demo.textures.shipA)).setAnchor(0.5).setScale(0.5).setPosition(width / 2, height / 2);
         this.engine = this.app.audio.play(new AudioGenerator({ type: 'sawtooth', frequency: 90 }), { volume: 0 });
         this.fx = new Graphics();
-        this.particles = new ParticleSystem(loader.get(assets.demo.textures.particleSpark), { capacity: 4000 });
+        this.particles = new ParticleSystem(this.loader.get(assets.demo.textures.particleSpark), { capacity: 4000 });
         this.burst = new BurstSpawn({
             schedule: [{ time: 0, count: 60 }],
             lifetime: new Constant(0.5),

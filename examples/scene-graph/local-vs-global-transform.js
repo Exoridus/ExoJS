@@ -18,12 +18,9 @@ class LocalVsGlobalTransformScene extends Scene {
     globalSprite;
     localLabel;
     globalLabel;
-    async load(loader) {
-        await loader.load('image/ship-a.png');
-    }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
-        const texture = loader.get('image/ship-a.png');
+        const texture = this.loader.get('image/ship-a.png');
         this.parent = new Container().setPosition(width / 4, height / 2);
         this.localSprite = new Sprite(texture)
             .setAnchor(0.5)

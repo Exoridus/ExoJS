@@ -1,6 +1,5 @@
 // Auto-generated from video-drawable.ts — edit the .ts source, not this file.
-import { Asset } from '@codexo/exojs';
-import { Application, Color, Keyboard, Scene, Sprite } from '@codexo/exojs';
+import { Application, Asset, Assets, Color, Keyboard, Scene, Sprite } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 // Every video in the asset catalog, switchable at runtime with the number
 // keys. Only the first entry is fetched up front — the others lazy-load on
@@ -25,23 +24,21 @@ class VideoDrawableScene extends Scene {
     overlay;
     elapsed = 0;
     hud;
-    assetLoader = null;
     videoIdx = 0;
-    loadedVideos = new Map();
+    loadedVideos = new Set();
     switching = false;
-    async load(loader) {
-        this.assetLoader = loader;
-        const first = await loader.load(Asset.kind('video', VIDEOS[0].url));
-        this.loadedVideos.set(VIDEOS[0].name, first);
-        await loader.load(assets.demo.textures.shipA);
-    }
-    init(loader) {
+    async init() {
         const { width, height } = this.app.canvas;
-        this.video = this.loadedVideos.get(VIDEOS[0].name);
+        // Video has no seamless adapter (unlike Texture/Sound), so it is
+        // awaited via `load()` rather than fetched synchronously via `get()`.
+        const loaded = await this.loader.load(Assets.from({ [VIDEOS[0].name]: Asset.kind('video', VIDEOS[0].url) }));
+        this.loadedVideos.add(VIDEOS[0].name);
+        this.video = loaded[VIDEOS[0].name];
         this.configureVideo();
         // A sprite composited on top of the live video texture — the same scene
-        // graph draws video frames and regular sprites side by side.
-        this.overlay = new Sprite(loader.get(assets.demo.textures.shipA));
+        // graph draws video frames and regular sprites side by side. Texture IS
+        // seamless, so it is fetched directly by source with no preload step.
+        this.overlay = new Sprite(this.loader.get(assets.demo.textures.shipA));
         this.overlay.setAnchor(0.5);
         this.overlay.setScale(3);
         this.overlay.setPosition(width / 2, height / 2);
@@ -81,14 +78,11 @@ class VideoDrawableScene extends Scene {
         this.switching = true;
         this.hud.setStatus(`Loading — ${entry.label}…`);
         try {
-            let video = this.loadedVideos.get(entry.name);
-            if (!video) {
-                video = await this.assetLoader.load(Asset.kind('video', entry.url));
-                this.loadedVideos.set(entry.name, video);
-            }
+            const loaded = await this.loader.load(Assets.from({ [entry.name]: Asset.kind('video', entry.url) }));
+            this.loadedVideos.add(entry.name);
             this.video.pause();
             this.videoIdx = idx;
-            this.video = video;
+            this.video = loaded[entry.name];
             this.configureVideo();
             this.video.play();
             this.hud.setStatus(`Playing — ${entry.label}`);

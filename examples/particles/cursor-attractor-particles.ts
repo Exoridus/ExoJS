@@ -33,14 +33,10 @@ class CursorAttractorParticlesScene extends Scene {
     private mode: 'attract' | 'repel' = 'attract';
     private hud!: ReturnType<typeof mountControls>;
 
-    override async load(loader): Promise<void> {
-        await loader.load(assets.demo.textures.particleLight);
-    }
-
-    override init(loader): void {
+    override init(): void {
         const { width, height } = this.app.canvas;
 
-        this.system = new ParticleSystem(loader.get(assets.demo.textures.particleLight), { capacity: 32000 });
+        this.system = new ParticleSystem(this.loader.get(assets.demo.textures.particleLight), { capacity: 32000 });
         this.system.setPosition(width / 2, height / 2);
 
         this.system.addSpawnModule(

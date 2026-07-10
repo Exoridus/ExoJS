@@ -20,12 +20,9 @@ class RectanglesCollisionScene extends Scene {
     boxB;
     overlap;
     hud;
-    async load(loader) {
-        await loader.load('image/hue-ramp.png');
-    }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
-        const texture = loader.get('image/hue-ramp.png');
+        const texture = this.loader.get('image/hue-ramp.png');
         // Two axis-aligned rectangles (no rotation) so collision is a true AABB
         // test. Explicit width/height drive the sprite scale; anchor 0.5 keeps the
         // drag offset and the bounds centred on the pointer-grabbed point.

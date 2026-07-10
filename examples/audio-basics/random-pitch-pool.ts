@@ -30,18 +30,17 @@ class RandomPitchPoolScene extends Scene {
     private trackHalf = 0;
     private hud!: ReturnType<typeof mountControls>;
 
-    override async load(loader): Promise<void> {
-        await loader.load(assets.demo.audio.impactLight);
-    }
-
-    override init(loader): void {
+    override init(): void {
         const { width, height } = this.app.canvas;
 
         this.centerX = width / 2;
         this.trackY = height * 0.55;
         this.trackHalf = width * 0.38;
 
-        this.sound = loader.get(assets.demo.audio.impactLight);
+        // Path-only get() infers Sound from the .ogg extension — sidesteps a
+        // compile-time overload ambiguity between Sound and the Json token form
+        // when passing the Sound token explicitly.
+        this.sound = this.loader.get(assets.demo.audio.impactLight);
         this.sound.poolSize = 20;
 
         this.graphics = new Graphics();

@@ -1,4 +1,4 @@
-import { Application, Color, Container, Scene, Sprite } from '@codexo/exojs';
+import { Application, Asset, Assets, Color, Container, Scene, Sprite } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -17,25 +17,21 @@ class ContainersScene extends Scene {
     private rainbow!: Sprite;
     private bunnies!: Container;
 
-    override async load(loader): Promise<void> {
-        await loader.load('image/ship-a.png');
-        await loader.load('image/hue-ramp.png');
-    }
-
-    override init(loader): void {
+    override init(): void {
         const { width, height } = this.app.canvas;
+        const { bunny, rainbow } = this.loader.get(Assets.from({ bunny: Asset.kind('texture', 'image/ship-a.png'), rainbow: Asset.kind('texture', 'image/hue-ramp.png') }));
 
-        this.rainbow = new Sprite(loader.get('image/hue-ramp.png'));
+        this.rainbow = new Sprite(rainbow);
 
         this.bunnies = new Container();
         this.bunnies.setPosition((width / 2) | 0, (height / 2) | 0);
 
         for (let i = 0; i < 25; i++) {
-            const bunny = new Sprite(loader.get('image/ship-a.png'));
+            const sprite = new Sprite(bunny);
 
-            bunny.setPosition((i % 5) * (bunny.width + 15), ((i / 5) | 0) * (bunny.height + 10));
+            sprite.setPosition((i % 5) * (sprite.width + 15), ((i / 5) | 0) * (sprite.height + 10));
 
-            this.bunnies.addChild(bunny);
+            this.bunnies.addChild(sprite);
         }
 
         this.bunnies.setAnchor(0.5);

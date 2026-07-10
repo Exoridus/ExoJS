@@ -1,5 +1,4 @@
-import { Asset } from '@codexo/exojs';
-import { Application, Color, Scene, Sprite, SvgAsset, Texture } from '@codexo/exojs';
+import { Application, Asset, Color, Scene, Sprite, SvgAsset, Texture } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -15,22 +14,27 @@ const app = new Application({
 });
 
 class SvgDrawableScene extends Scene {
-    private image!: HTMLImageElement;
     private texture!: Texture;
     private sprite!: Sprite;
 
-    override async load(loader): Promise<void> {
+    override async init(): Promise<void> {
+        const { width, height } = this.app.canvas;
+
+        // SvgAsset has no seamless adapter (unlike Texture/Sound), so it is
+        // awaited via `load()` rather than fetched synchronously via `get()`.
         // The exo.js wordmark SVG carries only a viewBox (no width/height), so
         // it would rasterise to a 0x0 image. Request an explicit pixel size —
         // the SVG is vector, so it stays crisp at any rasterised resolution.
-        this.image = await loader.load(Asset.kind('svg', 'svg/exo-wordmark.svg', { width: 850, height: 324 }));
-    }
+        //
+        // The cast below works around a pre-existing overload-resolution gap:
+        // every value-asset dispatch token (Json/TextAsset/SvgAsset/…) is an
+        // empty marker class, so they're structurally identical to `load()`'s
+        // `typeof Json` overload — which is declared first and wins, typing
+        // the result as `unknown` instead of `HTMLImageElement`. See the
+        // flagged deviation in the migration report.
+        const mark = (await this.loader.load(Asset.kind('svg', 'svg/exo-wordmark.svg', { width: 850, height: 324 }))) as HTMLImageElement;
 
-    override init(): void {
-        const { width, height } = this.app.canvas;
-
-        this.texture = new Texture(this.image);
-
+        this.texture = new Texture(mark);
         this.sprite = new Sprite(this.texture);
         this.sprite.setAnchor(0.5);
         this.sprite.setPosition((width / 2) | 0, (height / 2) | 0);

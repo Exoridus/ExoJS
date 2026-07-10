@@ -15,12 +15,9 @@ class MasksScene extends Scene {
     rectMask;
     gfxSprite;
     time = 0;
-    async load(loader) {
-        await loader.load(ALPHA_RINGS);
-    }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
-        const tex = loader.get(ALPHA_RINGS);
+        const tex = this.loader.get(ALPHA_RINGS);
         this.rectSprite = new Sprite(tex);
         this.rectSprite.setScale(1);
         this.rectSprite.setPosition((width / 4) | 0, (height / 2) | 0);

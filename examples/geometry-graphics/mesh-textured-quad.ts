@@ -16,11 +16,7 @@ const HALF = 300;
 class MeshTexturedQuadScene extends Scene {
     private quad!: Mesh;
 
-    override async load(loader): Promise<void> {
-        await loader.load(UV_GRID);
-    }
-
-    override init(loader): void {
+    override init(): void {
         const { width, height } = this.app.canvas;
 
         this.quad = new Mesh({
@@ -36,7 +32,7 @@ class MeshTexturedQuadScene extends Scene {
             ]),
             uvs: new Float32Array([0, 0, 1, 0, 1, 1, 0, 1]),
             indices: new Uint16Array([0, 1, 2, 0, 2, 3]),
-            texture: loader.get(UV_GRID),
+            texture: this.loader.get(UV_GRID),
         });
 
         this.quad.setPosition((width / 2) | 0, (height / 2) | 0);

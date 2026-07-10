@@ -1,4 +1,4 @@
-import { Application, Color, Graphics, Scene, Sound, Text } from '@codexo/exojs';
+import { Application, Asset, Color, Graphics, Scene, Sound, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -60,11 +60,7 @@ class FalloffCurvesScene extends Scene {
     private plot = { x: 0, y: 0, w: 0, h: 0 };
     private hud!: ReturnType<typeof mountControls>;
 
-    override async load(loader): Promise<void> {
-        await loader.load('audio/impact-light.ogg');
-    }
-
-    override init(loader): void {
+    override async init(): Promise<void> {
         const { width, height } = this.app.canvas;
 
         // Sources spread across the lower half; the listener starts centred.
@@ -75,8 +71,12 @@ class FalloffCurvesScene extends Scene {
         this.listener = { x: width / 2, y: height / 2 };
         app.audio.listener.target = this.listener;
 
+        // Each derived Sound below reads .audioBuffer synchronously, so the
+        // shared source must be fully decoded first — await load() instead of
+        // the deferred get() (whose placeholder audioBuffer is null until fill).
+        const source = await this.loader.load(Asset.kind('sound', 'audio/impact-light.ogg'));
         this.sounds = this.sources.map(({ model, x, y }) => {
-            const sound = new Sound(loader.get('audio/impact-light.ogg').audioBuffer, {
+            const sound = new Sound(source.audioBuffer, {
                 distanceModel: model,
                 refDistance: REF_DISTANCE,
                 maxDistance: MAX_DISTANCE,

@@ -26,14 +26,10 @@ class BonfireScene extends Scene {
     private fireSystem!: ParticleSystem;
     private smokeSystem!: ParticleSystem;
 
-    override async load(loader): Promise<void> {
-        await Promise.all([loader.load(assets.demo.textures.particleFlame), loader.load(assets.demo.textures.particleSmoke)]);
-    }
-
-    override init(loader): void {
+    override init(): void {
         const { width, height } = this.app.canvas;
 
-        this.fireSystem = new ParticleSystem(loader.get(assets.demo.textures.particleFlame));
+        this.fireSystem = new ParticleSystem(this.loader.get(assets.demo.textures.particleFlame));
         this.fireSystem.setPosition(width * 0.5, height * 0.75);
         this.fireSystem.setBlendMode(BlendModes.Additive);
 
@@ -55,7 +51,7 @@ class BonfireScene extends Scene {
             ),
         );
 
-        this.smokeSystem = new ParticleSystem(loader.get(assets.demo.textures.particleSmoke));
+        this.smokeSystem = new ParticleSystem(this.loader.get(assets.demo.textures.particleSmoke));
         this.smokeSystem.setPosition(width * 0.5, height * 0.75 - 40);
         this.smokeSystem.setBlendMode(BlendModes.Normal);
 

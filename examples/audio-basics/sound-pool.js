@@ -27,14 +27,14 @@ class SoundPoolScene extends Scene {
     clock = 0;
     evictions = 0;
     hud;
-    async load(loader) {
+    init() {
+        const { width, height } = this.app.canvas;
         // impactHeavy is long enough (~0.5 s) that rapid fire actually overlaps -
         // a short click ends before the next shot and the pool never fills.
-        await loader.load(assets.demo.audio.impactHeavy);
-    }
-    init(loader) {
-        const { width, height } = this.app.canvas;
-        this.sound = loader.get(assets.demo.audio.impactHeavy);
+        // Path-only get() infers Sound from the .ogg extension — sidesteps a
+        // compile-time overload ambiguity between Sound and the Json token form
+        // when passing the Sound token explicitly.
+        this.sound = this.loader.get(assets.demo.audio.impactHeavy);
         this.sound.poolSize = POOL_SIZE;
         this.graphics = new Graphics();
         this.label = new Text('Hold Space to fire faster than voices finish', { fillColor: Color.white, fontSize: 22, align: 'center' })

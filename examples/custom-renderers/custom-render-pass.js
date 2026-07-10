@@ -18,17 +18,14 @@ class CustomRenderPassScene extends Scene {
     between;
     pipeline;
     angle = 0;
-    async load(loader) {
-        await loader.load('image/ship-a.png');
-    }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
-        this.back = new Sprite(loader.get('image/ship-a.png'))
+        this.back = new Sprite(this.loader.get('image/ship-a.png'))
             .setAnchor(0.5)
             .setPosition(width / 2 - 200, height / 2)
             .setScale(2.2)
             .setTint(new Color(120, 170, 255));
-        this.front = new Sprite(loader.get('image/ship-a.png'))
+        this.front = new Sprite(this.loader.get('image/ship-a.png'))
             .setAnchor(0.5)
             .setPosition(width / 2 + 200, height / 2)
             .setScale(2.2)

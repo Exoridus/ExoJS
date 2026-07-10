@@ -28,12 +28,9 @@ class GameScene extends Scene {
     pausePanel;
     pauseLabel;
     hud;
-    async load(loader) {
-        await loader.load('image/ship-a.png');
-    }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
-        this.sprite = new Sprite(loader.get('image/ship-a.png')).setAnchor(0.5).setScale(2).setPosition(width / 2, height / 2);
+        this.sprite = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setScale(2).setPosition(width / 2, height / 2);
         this.addChild(this.sprite);
         // Pause overlay on the UI layer, hidden until paused.
         this.pausePanel = new Panel({ width: 420, height: 140, cornerRadius: 18, color: new Color(0, 0, 0, 0.6) });

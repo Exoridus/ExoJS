@@ -43,17 +43,13 @@ class PaletteCyclingScene extends Scene {
     private offset = 0;
     private hud!: ReturnType<typeof mountControls>;
 
-    override async load(loader): Promise<void> {
-        await loader.load(PRIMARY_RAMP);
-    }
-
-    override init(loader): void {
+    override init(): void {
         const { width, height } = this.app.canvas;
 
         this.palette = LutFilter.fromImage(buildPaletteCanvas(0));
         this.filter = new LutFilter({ mode: '1d' }).setLut(this.palette);
 
-        this.sprite = new Sprite(loader.get(PRIMARY_RAMP)).setAnchor(0.5).setScale(4);
+        this.sprite = new Sprite(this.loader.get(PRIMARY_RAMP)).setAnchor(0.5).setScale(4);
         this.sprite.setPosition(width / 2, height / 2);
         this.sprite.filters = [this.filter];
 

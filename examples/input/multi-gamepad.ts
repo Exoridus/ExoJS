@@ -32,15 +32,11 @@ class MultiGamepadScene extends Scene {
     private connectPrompt!: Text;
     private hud!: ReturnType<typeof mountControls>;
 
-    override async load(loader): Promise<void> {
-        await loader.load('image/ship-a.png');
-    }
-
-    override init(loader): void {
+    override init(): void {
         const { width, height } = this.app.canvas;
 
         this.players = this.app.input.gamepads.map((pad, index) => {
-            const sprite = new Sprite(loader.get('image/ship-a.png'))
+            const sprite = new Sprite(this.loader.get('image/ship-a.png'))
                 .setAnchor(0.5)
                 .setScale(0.6)
                 .setPosition(width * (0.2 + index * 0.2), height / 2)

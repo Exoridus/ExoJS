@@ -1,5 +1,4 @@
-import { Asset } from '@codexo/exojs';
-import { Application, AudioStream, Color, Graphics, Scene, Text, type Voice } from '@codexo/exojs';
+import { Application, Asset, AudioStream, Color, Graphics, Scene, Text, type Voice } from '@codexo/exojs';
 import { AudioAnalyser } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 
@@ -24,13 +23,10 @@ class VinylRecordScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
     private tapPrompt!: Text;
 
-    override async load(loader): Promise<void> {
-        this.music = await loader.load(Asset.kind('music', assets.demo.audio.musicLoop));
-    }
-
     override init(): void {
         const { width, height } = this.app.canvas;
 
+        this.music = this.loader.get(Asset.kind('music', assets.demo.audio.musicLoop));
         this.analyser = new AudioAnalyser({ fftSize: 1024, source: this.app.audio.music });
         this.disc = new Graphics();
         this.bars = new Graphics();

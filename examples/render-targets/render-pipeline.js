@@ -1,5 +1,5 @@
 // Auto-generated from render-pipeline.ts — edit the .ts source, not this file.
-import { Application, BlurFilter, CallbackRenderPass, Color, Container, Graphics, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite, } from '@codexo/exojs';
+import { Application, BlurFilter, CallbackRenderPass, Color, Container, Graphics, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite } from '@codexo/exojs';
 const app = new Application({
     canvas: {
         width: 1280,

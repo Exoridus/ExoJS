@@ -1,6 +1,5 @@
 // Auto-generated from audio-reactive-particles.ts — edit the .ts source, not this file.
-import { Asset } from '@codexo/exojs';
-import { Application, Color, Scene, Text, Vector } from '@codexo/exojs';
+import { Application, Asset, Color, Scene, Text, Vector } from '@codexo/exojs';
 import { AudioAnalyser, BeatDetector } from '@codexo/exojs-audio-fx';
 import { AlphaFadeOverLifetime, ConeDirection, Constant, particlesExtension, ParticleSystem, RateSpawn, } from '@codexo/exojs-particles';
 import { mountControls } from '@examples/runtime';
@@ -26,18 +25,15 @@ class AudioReactiveParticlesScene extends Scene {
     cone;
     hud;
     tapPrompt;
-    async load(loader) {
-        this.music = await loader.load(Asset.kind('music', assets.demo.audio.musicLoop));
-        await loader.load(assets.demo.textures.particleLight);
-    }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
+        this.music = this.loader.get(Asset.kind('music', assets.demo.audio.musicLoop));
         // Two parallel taps of the same track: the analyser gives per-band
         // energy (drives emission), the detector gives beats (recolours).
         this.analyser = new AudioAnalyser({ fftSize: 1024, source: this.app.audio.music });
         this.detector = new BeatDetector();
         this.detector.source = this.app.audio.music;
-        this.ps = new ParticleSystem(loader.get(assets.demo.textures.particleLight), { capacity: 6000 });
+        this.ps = new ParticleSystem(this.loader.get(assets.demo.textures.particleLight), { capacity: 6000 });
         this.ps.setPosition(width / 2, height / 2);
         // The rate (density) and the cone speed range (spread) are mutated every
         // frame from live audio energy. Starting both near zero means a silent

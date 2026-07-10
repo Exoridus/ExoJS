@@ -28,14 +28,10 @@ class ActionMappingScene extends Scene {
     private actions = { moveX: 0, moveY: 0, jump: false };
     private hud!: ReturnType<typeof mountControls>;
 
-    override async load(loader): Promise<void> {
-        await loader.load('image/ship-a.png');
-    }
-
-    override init(loader): void {
+    override init(): void {
         const { width, height } = this.app.canvas;
 
-        this.sprite = new Sprite(loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(width / 2, height / 2);
+        this.sprite = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(width / 2, height / 2);
 
         const pad0 = this.app.input.getGamepad(0);
 
