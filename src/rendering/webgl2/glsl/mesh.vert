@@ -7,6 +7,7 @@ layout(location = 2) in vec4 a_color;
 layout(location = 6) in uint a_nodeIndex;
 
 uniform mat3 u_projection;
+uniform mat3 u_group;
 uniform sampler2D u_transforms;
 
 out vec2 v_texcoord;
@@ -23,7 +24,7 @@ void main(void) {
         m1.x, m1.y, 1.0
     );
 
-    gl_Position = vec4((u_projection * transform * vec3(a_position, 1.0)).xy, 0.0, 1.0);
+    gl_Position = vec4((u_projection * u_group * transform * vec3(a_position, 1.0)).xy, 0.0, 1.0);
     v_texcoord = a_texcoord;
     v_color = a_color;
     v_tint = texelFetch(u_transforms, ivec2(2, row), 0);

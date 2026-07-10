@@ -24,6 +24,7 @@ layout(location = 2) in vec4 a_color;        // RGBA tint
 layout(location = 3) in uint a_nodeIndex;    // row into the shared transform buffer
 
 uniform mat3 u_projection;
+uniform mat3 u_group;
 uniform sampler2D u_transforms;              // shared per-frame transform buffer (3 texels/row)
 
 out vec2 v_texcoord;
@@ -45,7 +46,7 @@ void main(void) {
     float worldX = (m0.x * localX) + (m0.y * localY) + m1.x;
     float worldY = (m0.z * localX) + (m0.w * localY) + m1.y;
 
-    gl_Position = vec4((u_projection * vec3(worldX, worldY, 1.0)).xy, 0.0, 1.0);
+    gl_Position = vec4((u_projection * u_group * vec3(worldX, worldY, 1.0)).xy, 0.0, 1.0);
 
     float u = (cornerX == 0) ? a_uvBounds.x : a_uvBounds.z;
     float v = (cornerY == 0) ? a_uvBounds.y : a_uvBounds.w;
@@ -72,6 +73,7 @@ void main(void) {
 const instanceStrideBytes = 32;
 const wordsPerInstance = instanceStrideBytes / Uint32Array.BYTES_PER_ELEMENT;
 const transformTextureUnit = 1;
+const identityGroupMat3 = new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]);
 
 interface NineSliceRendererConnection {
   readonly gl: WebGL2RenderingContext;
@@ -95,6 +97,7 @@ export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSl
   private _currentTexture: Texture | RenderTexture | null = null;
   private _currentView: View | null = null;
   private _currentViewId = -1;
+  private _currentGroupTransformId = -1;
 
   private _instanceBuffer: WebGl2RenderBuffer | null = null;
   private _vao: WebGl2VertexArrayObject | null = null;
@@ -236,6 +239,14 @@ export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSl
       this._shader.getUniform('u_projection').setValue(view.getTransform().toArray(false));
     }
 
+    if (this._shader.uniforms.has('u_group') && this._currentGroupTransformId !== backend.renderGroupTransformId) {
+      this._currentGroupTransformId = backend.renderGroupTransformId;
+
+      const groupTransform = backend.renderGroupTransform;
+
+      this._shader.getUniform('u_group').setValue(groupTransform !== null ? groupTransform.toArray(false) : identityGroupMat3);
+    }
+
     if (this._currentTexture !== null) {
       this._shader.getUniform('u_texture').setValue(new Int32Array([0]));
     }
@@ -284,6 +295,7 @@ export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSl
     this._currentTexture = null;
     this._currentView = null;
     this._currentViewId = -1;
+    this._currentGroupTransformId = -1;
     this._quadIndex = 0;
     this._maxNodeIndex = 0;
   }

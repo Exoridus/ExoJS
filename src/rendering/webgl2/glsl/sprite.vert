@@ -12,6 +12,7 @@ layout(location = 5) in uint a_textureSlot;
 layout(location = 6) in uint a_nodeIndex;       // row into the shared transform buffer
 
 uniform mat3 u_projection;
+uniform mat3 u_group;
 uniform sampler2D u_transforms;                 // shared per-frame transform buffer (3 texels/row)
 
 out vec2 v_texcoord;
@@ -40,7 +41,7 @@ void main(void) {
     float worldX = (m0.x * localX) + (m0.y * localY) + m1.x;
     float worldY = (m0.z * localX) + (m0.w * localY) + m1.y;
 
-    gl_Position = vec4((u_projection * vec3(worldX, worldY, 1.0)).xy, 0.0, 1.0);
+    gl_Position = vec4((u_projection * u_group * vec3(worldX, worldY, 1.0)).xy, 0.0, 1.0);
 
     // UV: pick from the bounds rectangle. The CPU pre-swaps Y bounds when
     // the texture is flipY, so the shader doesn't have to know.

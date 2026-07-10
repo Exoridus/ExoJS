@@ -170,6 +170,8 @@ export class WebGl2Backend implements RenderBackend {
   private _renderTarget: RenderTarget;
   private readonly _snapTransform: Matrix = new Matrix();
   private _renderer: Renderer | null = null;
+  private _renderGroupTransform: Matrix | null = null;
+  private _renderGroupTransformId = 0;
   private _shader: Shader | null = null;
   private _blendMode: BlendModes | null = null;
   private _texture: Texture | RenderTexture | null = null;
@@ -971,6 +973,38 @@ export class WebGl2Backend implements RenderBackend {
     this._flushActiveRenderer();
 
     return this;
+  }
+
+  /**
+   * Active per-group transform for the draws submitted until the next call
+   * (Track B Slice 2, S2-D2). `null` means identity (no retained group).
+   * Renderers fold it into their vertex stage as `u_group`.
+   * @internal
+   */
+  public get renderGroupTransform(): Matrix | null {
+    return this._renderGroupTransform;
+  }
+
+  /**
+   * Monotonic stamp bumped on every {@link _setRenderGroupTransform} call.
+   * Renderers compare it to skip redundant `u_group` re-staging within an
+   * unchanged group scope.
+   * @internal
+   */
+  public get renderGroupTransformId(): number {
+    return this._renderGroupTransformId;
+  }
+
+  /**
+   * Playback hook (RenderPlanPlayer): enter/leave a retained transform group.
+   * A group is a flush boundary by design (S2-D2) — the pending batch must
+   * drain under the OLD group matrix before the new one takes effect.
+   * @internal
+   */
+  public _setRenderGroupTransform(transform: Matrix | null): void {
+    this._flushActiveRenderer();
+    this._renderGroupTransform = transform;
+    this._renderGroupTransformId++;
   }
 
   public destroy(): void {

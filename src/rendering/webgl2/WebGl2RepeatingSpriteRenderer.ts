@@ -27,6 +27,7 @@ layout(location = 2) in vec4 a_color;        // RGBA tint (normalised)
 layout(location = 3) in uint a_nodeIndex;    // transform row
 
 uniform mat3 u_projection;
+uniform mat3 u_group;
 uniform sampler2D u_transforms;
 
 out vec2 v_texcoord;
@@ -49,7 +50,7 @@ void main(void) {
 
     float wx = m0.x * lx + m0.y * ly + m1.x;
     float wy = m0.z * lx + m0.w * ly + m1.y;
-    gl_Position = vec4((u_projection * vec3(wx, wy, 1.0)).xy, 0.0, 1.0);
+    gl_Position = vec4((u_projection * u_group * vec3(wx, wy, 1.0)).xy, 0.0, 1.0);
 
     float u = (destW > 0.0)
         ? ((lx - a_quadBounds.x) / destW) * a_uvParams.x + a_uvParams.z
@@ -76,6 +77,7 @@ layout(location = 2) in vec4 a_color;        // RGBA tint
 layout(location = 3) in uint a_nodeIndex;    // transform row
 
 uniform mat3 u_projection;
+uniform mat3 u_group;
 uniform sampler2D u_transforms;
 
 out vec2 v_texcoord;
@@ -95,7 +97,7 @@ void main(void) {
 
     float wx = m0.x * lx + m0.y * ly + m1.x;
     float wy = m0.z * lx + m0.w * ly + m1.y;
-    gl_Position = vec4((u_projection * vec3(wx, wy, 1.0)).xy, 0.0, 1.0);
+    gl_Position = vec4((u_projection * u_group * vec3(wx, wy, 1.0)).xy, 0.0, 1.0);
 
     float u = (cx == 0) ? a_uvBounds.x : a_uvBounds.z;
     float v = (cy == 0) ? a_uvBounds.y : a_uvBounds.w;
@@ -129,6 +131,7 @@ const geoStrideBytes = 32; // 8 × uint32 (matches NineSlice layout)
 const geoWordsPerInstance = geoStrideBytes / Uint32Array.BYTES_PER_ELEMENT;
 
 const transformTextureUnit = 1;
+const identityGroupMat3 = new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]);
 
 // ---------------------------------------------------------------------------
 // Sampler cache helper
@@ -190,6 +193,7 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
   private readonly _snapBounds = new Rectangle();
   private _currentView: unknown = null;
   private _currentViewId = -1;
+  private _currentGroupTransformId = -1;
 
   public constructor(batchSize: number) {
     super();
@@ -393,6 +397,21 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
       this._geoPathShader.getUniform('u_projection').setValue(proj);
     }
 
+    if (this._currentGroupTransformId !== backend.renderGroupTransformId) {
+      this._currentGroupTransformId = backend.renderGroupTransformId;
+
+      const groupTransform = backend.renderGroupTransform;
+      const groupArray = groupTransform !== null ? groupTransform.toArray(false) : identityGroupMat3;
+
+      if (this._shaderPathShader.uniforms.has('u_group')) {
+        this._shaderPathShader.getUniform('u_group').setValue(groupArray);
+      }
+
+      if (this._geoPathShader.uniforms.has('u_group')) {
+        this._geoPathShader.getUniform('u_group').setValue(groupArray);
+      }
+    }
+
     if (this._shaderQuadCount > 0) {
       this._flushShaderBatch(backend);
     }
@@ -553,6 +572,7 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
     this._connection = null;
     this._currentView = null;
     this._currentViewId = -1;
+    this._currentGroupTransformId = -1;
     this._resetBatchState();
   }
 

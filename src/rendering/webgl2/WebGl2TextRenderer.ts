@@ -39,6 +39,8 @@ import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './
 const nodeTexels = 10;
 const nodeFloats = nodeTexels * 4; // 40 floats per node
 
+const identityGroupMat3 = new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]);
+
 // Per-vertex layout (28 bytes):
 //   a_position : vec2  f32  (offset  0,  8 bytes)  ← WORLD space (CPU-transformed)
 //   a_texcoord : vec2  f32  (offset  8,  8 bytes)
@@ -481,6 +483,11 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
 
       if (shader.uniforms.has('u_projection')) {
         shader.getUniform('u_projection').setValue(view.getTransform().toArray(false));
+      }
+      if (shader.uniforms.has('u_group')) {
+        const groupTransform = backend.renderGroupTransform;
+
+        shader.getUniform('u_group').setValue(groupTransform !== null ? groupTransform.toArray(false) : identityGroupMat3);
       }
       if (shader.uniforms.has('u_texture')) {
         shader.getUniform('u_texture').setValue(this._textureUnitScratch);
