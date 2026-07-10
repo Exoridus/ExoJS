@@ -715,7 +715,11 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
 
     for (const blendMode of blendModes) {
       for (const format of formats) {
-        const pipelineKey = `${blendMode}:${format}`;
+        // Store under the exact key _getPipeline queries. Only the no-clip
+        // (`:n`) variants are prewarmed; the stencil pipelines are created
+        // lazily on the first clipped draw (a rare path not worth the upfront
+        // compile cost), matching the mesh and text renderers.
+        const pipelineKey = `${blendMode}:${format}:n`;
 
         if (this._pipelines.has(pipelineKey)) {
           continue;
