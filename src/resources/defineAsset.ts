@@ -20,7 +20,11 @@ export interface DefineAssetDescriptor<Result, Options> {
   readonly kind: keyof AssetDefinitions;
   /** File suffixes that map to this type. Feeds the per-loader map and — for a leaf-capable kind — global bare-path inference. */
   readonly extensions?: readonly string[];
-  /** Config-map type names resolving to this handler. Defaults to `[kind]`. */
+  /**
+   * Config-map type names resolving to this handler. Defaults to `[kind]`.
+   * @internal — internal alias-compat only; not part of the public extension
+   * surface (extensions should rely on `kind`).
+   */
   readonly typeNames?: readonly string[];
   /** Seamless placeholder adapter for a resource kind that heals in place. */
   readonly seamless?: SeamlessAdapter<Result>;

@@ -453,12 +453,11 @@ export class Loader {
    * for the same (type, alias) pair while a fetch is in progress attaches
    * to the existing promise rather than issuing a second request.
    *
-   * Per-asset options ride on the `X.of(source, options)` descriptor (or the
-   * extra fields of a config object).
+   * Per-asset options ride on the `Asset.kind(kind, source, options)` descriptor
+   * (or the extra fields of a config object).
    */
   public load<T>(asset: Asset<T>): LoadingQueue<T>;
   public load<M extends Record<string, AssetInput>>(assets: Assets<M>, options?: LoadOptions): LoadingQueue<InferLoadedMap<M>>;
-  public load<M extends Record<string, AssetInput>>(config: M, options?: LoadOptions): LoadingQueue<InferLoadedMap<M>>;
   // Single value-leaf (an `Assets.from()` AssetRef property): `AssetRef.loaded` resolves
   // to the raw value, not the ref — this overload must win over the generic leaf one below.
   public load<T>(leaf: AssetRef<T>, options?: LoadOptions): LoadingQueue<T>;

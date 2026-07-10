@@ -6,10 +6,10 @@
   "subsystem": "resources",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 40,
+  "memberCount": 39,
   "counts": {
     "constructors": 1,
-    "methods": 30,
+    "methods": 29,
     "properties": 2,
     "events": 7
   },
@@ -1035,7 +1035,7 @@
             }
           ],
           "returnType": "LoadingQueue<T>",
-          "description": "Fetches and processes one or more assets. - **Path string** — inferred from the file extension; resolves the asset. - **Asset<T>** — a single typed asset reference (from X.of(...) or a config). - **Assets<M>** — typed asset container; keys become aliases. - **Config map** — inline { alias: { type, source, … } } definition. In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Per-asset options ride on the X.of(source, options) descriptor (or the extra fields of a config object)."
+          "description": "Fetches and processes one or more assets. - **Path string** — inferred from the file extension; resolves the asset. - **Asset<T>** — a single typed asset reference (from X.of(...) or a config). - **Assets<M>** — typed asset container; keys become aliases. - **Config map** — inline { alias: { type, source, … } } definition. In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Per-asset options ride on the Asset.kind(kind, source, options) descriptor (or the extra fields of a config object)."
         },
         {
           "name": "load",
@@ -1143,103 +1143,7 @@
             }
           ],
           "returnType": "LoadingQueue<InferLoadedMap<M>>",
-          "description": "Fetches and processes one or more assets. - **Path string** — inferred from the file extension; resolves the asset. - **Asset<T>** — a single typed asset reference (from X.of(...) or a config). - **Assets<M>** — typed asset container; keys become aliases. - **Config map** — inline { alias: { type, source, … } } definition. In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Per-asset options ride on the X.of(source, options) descriptor (or the extra fields of a config object)."
-        },
-        {
-          "name": "load",
-          "signature": "load(config: M, options?: LoadOptions): LoadingQueue<InferLoadedMap<M>>",
-          "signatureTokens": [
-            {
-              "text": "load",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "config",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "M",
-              "kind": "type"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "options",
-              "kind": "param"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "LoadOptions",
-              "kind": "type"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "LoadingQueue",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "InferLoadedMap",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "M",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            }
-          ],
-          "params": [
-            {
-              "name": "config",
-              "type": "M",
-              "optional": false
-            },
-            {
-              "name": "options",
-              "type": "LoadOptions",
-              "optional": true
-            }
-          ],
-          "returnType": "LoadingQueue<InferLoadedMap<M>>",
-          "description": "Fetches and processes one or more assets. - **Path string** — inferred from the file extension; resolves the asset. - **Asset<T>** — a single typed asset reference (from X.of(...) or a config). - **Assets<M>** — typed asset container; keys become aliases. - **Config map** — inline { alias: { type, source, … } } definition. In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Per-asset options ride on the X.of(source, options) descriptor (or the extra fields of a config object)."
+          "description": "Fetches and processes one or more assets. - **Path string** — inferred from the file extension; resolves the asset. - **Asset<T>** — a single typed asset reference (from X.of(...) or a config). - **Assets<M>** — typed asset container; keys become aliases. - **Config map** — inline { alias: { type, source, … } } definition. In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Per-asset options ride on the Asset.kind(kind, source, options) descriptor (or the extra fields of a config object)."
         },
         {
           "name": "load",
@@ -1335,7 +1239,7 @@
             }
           ],
           "returnType": "LoadingQueue<T>",
-          "description": "Fetches and processes one or more assets. - **Path string** — inferred from the file extension; resolves the asset. - **Asset<T>** — a single typed asset reference (from X.of(...) or a config). - **Assets<M>** — typed asset container; keys become aliases. - **Config map** — inline { alias: { type, source, … } } definition. In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Per-asset options ride on the X.of(source, options) descriptor (or the extra fields of a config object)."
+          "description": "Fetches and processes one or more assets. - **Path string** — inferred from the file extension; resolves the asset. - **Asset<T>** — a single typed asset reference (from X.of(...) or a config). - **Assets<M>** — typed asset container; keys become aliases. - **Config map** — inline { alias: { type, source, … } } definition. In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Per-asset options ride on the Asset.kind(kind, source, options) descriptor (or the extra fields of a config object)."
         },
         {
           "name": "load",
@@ -1419,7 +1323,7 @@
             }
           ],
           "returnType": "LoadingQueue<T>",
-          "description": "Fetches and processes one or more assets. - **Path string** — inferred from the file extension; resolves the asset. - **Asset<T>** — a single typed asset reference (from X.of(...) or a config). - **Assets<M>** — typed asset container; keys become aliases. - **Config map** — inline { alias: { type, source, … } } definition. In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Per-asset options ride on the X.of(source, options) descriptor (or the extra fields of a config object)."
+          "description": "Fetches and processes one or more assets. - **Path string** — inferred from the file extension; resolves the asset. - **Asset<T>** — a single typed asset reference (from X.of(...) or a config). - **Assets<M>** — typed asset container; keys become aliases. - **Config map** — inline { alias: { type, source, … } } definition. In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Per-asset options ride on the Asset.kind(kind, source, options) descriptor (or the extra fields of a config object)."
         },
         {
           "name": "load",
@@ -1717,7 +1621,7 @@
             }
           ],
           "returnType": "LoadingQueue<LoadByPath<S>>",
-          "description": "Fetches and processes one or more assets. - **Path string** — inferred from the file extension; resolves the asset. - **Asset<T>** — a single typed asset reference (from X.of(...) or a config). - **Assets<M>** — typed asset container; keys become aliases. - **Config map** — inline { alias: { type, source, … } } definition. In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Per-asset options ride on the X.of(source, options) descriptor (or the extra fields of a config object)."
+          "description": "Fetches and processes one or more assets. - **Path string** — inferred from the file extension; resolves the asset. - **Asset<T>** — a single typed asset reference (from X.of(...) or a config). - **Assets<M>** — typed asset container; keys become aliases. - **Config map** — inline { alias: { type, source, … } } definition. In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Per-asset options ride on the Asset.kind(kind, source, options) descriptor (or the extra fields of a config object)."
         },
         {
           "name": "load",
@@ -1860,7 +1764,7 @@
             }
           ],
           "returnType": "LoadingQueue<ResourceForKind<KindByPath<S>>>",
-          "description": "Fetches and processes one or more assets. - **Path string** — inferred from the file extension; resolves the asset. - **Asset<T>** — a single typed asset reference (from X.of(...) or a config). - **Assets<M>** — typed asset container; keys become aliases. - **Config map** — inline { alias: { type, source, … } } definition. In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Per-asset options ride on the X.of(source, options) descriptor (or the extra fields of a config object)."
+          "description": "Fetches and processes one or more assets. - **Path string** — inferred from the file extension; resolves the asset. - **Asset<T>** — a single typed asset reference (from X.of(...) or a config). - **Assets<M>** — typed asset container; keys become aliases. - **Config map** — inline { alias: { type, source, … } } definition. In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Per-asset options ride on the Asset.kind(kind, source, options) descriptor (or the extra fields of a config object)."
         },
         {
           "name": "loadContainer",
