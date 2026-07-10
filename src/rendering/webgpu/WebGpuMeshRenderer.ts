@@ -1,6 +1,7 @@
 /// <reference types="@webgpu/types" />
 
 import { Matrix } from '#math/Matrix';
+import { packAffineMat3Std140 } from '#rendering/affinePacking';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import type { Material, UniformValue } from '#rendering/material/Material';
 import type { Mesh } from '#rendering/mesh/Mesh';
@@ -96,10 +97,13 @@ struct TransformUniforms {
 
 @vertex
 fn vertexMain(input: VertexInput) -> VertexOutput {
+    // Shared TransformSlot convention: m0 = (a, b, c, d), m1 = (tx, ty, 0, 0),
+    // so world = (a*x + b*y + tx, c*x + d*y + ty) — identical to the sprite
+    // WGSL and the WebGL2 vertex shaders (see src/rendering/affinePacking.ts).
     let slot = transforms[input.nodeIndex];
     let world = vec3<f32>(
-        slot.m0.x * input.position.x + slot.m0.z * input.position.y + slot.m1.x,
-        slot.m0.y * input.position.x + slot.m0.w * input.position.y + slot.m1.y,
+        slot.m0.x * input.position.x + slot.m0.y * input.position.y + slot.m1.x,
+        slot.m0.z * input.position.x + slot.m0.w * input.position.y + slot.m1.y,
         1.0
     );
 
@@ -1152,32 +1156,13 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
 
   private _writeInstancedUniformSlot(slot: number, backend: WebGpuBackend, premultiplySample: boolean): void {
     const data = this._instancedUniformScratch;
-    const projection = backend.view.getTransform();
     const groupTransform = backend.renderGroupTransform;
 
     data.fill(0);
-    data[0] = projection.a;
-    data[1] = projection.b;
-    data[4] = projection.c;
-    data[5] = projection.d;
-    data[8] = projection.x;
-    data[9] = projection.y;
-    data[10] = 1;
-
-    if (groupTransform !== null) {
-      data[12] = groupTransform.a;
-      data[13] = groupTransform.b;
-      data[16] = groupTransform.c;
-      data[17] = groupTransform.d;
-      data[20] = groupTransform.x;
-      data[21] = groupTransform.y;
-      data[22] = 1;
-    } else {
-      data[12] = 1;
-      data[17] = 1;
-      data[22] = 1;
-    }
-
+    // TransformUniforms layout: mat3x3 projection + mat3x3 group + vec4 flags,
+    // packed via the shared canonical (non-transposed) column order.
+    packAffineMat3Std140(backend.view.getTransform(), data, 0);
+    packAffineMat3Std140(groupTransform ?? Matrix.identity, data, 12);
     data[24] = premultiplySample ? 1 : 0;
 
     this._device!.queue.writeBuffer(this._instancedUniformBuffer!, slot * this._uniformAlignment, data.buffer, data.byteOffset, transformUniformByteLength);
@@ -1625,44 +1610,13 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     const groupTransform = backend.renderGroupTransform;
     const trans = groupTransform !== null ? this._combinedTransform.copy(mesh.getGlobalTransform()).combine(groupTransform) : mesh.getGlobalTransform();
 
-    // mat3 (column-major): [a, c, tx | b, d, ty | 0, 0, 1] in 2D.
-    // WGSL mat3x3 has each column padded to vec4. Store as:
-    //   col0 = [a, b, 0, 0] / [c, d, 0, 0] / ...
-    // ExoJS Matrix stores: a, b, c, d, x, y. Standard 2D affine is:
-    //   [a  c  tx]
-    //   [b  d  ty]
-    //   [0  0  1 ]
-    // Column-major mat3: col0 = (a, b, 0), col1 = (c, d, 0), col2 = (tx, ty, 1).
-    let off = 0;
-    // projection
-    data[off + 0] = proj.a;
-    data[off + 1] = proj.b;
-    data[off + 2] = 0;
-    data[off + 3] = 0; // pad
-    data[off + 4] = proj.c;
-    data[off + 5] = proj.d;
-    data[off + 6] = 0;
-    data[off + 7] = 0; // pad
-    data[off + 8] = proj.x;
-    data[off + 9] = proj.y;
-    data[off + 10] = 1;
-    data[off + 11] = 0; // pad
-    off += 12;
+    // WGSL mat3x3 columns packed in the shared canonical order (matching the
+    // GLSL u_projection/u_translation uploads via Matrix.toArray(false)), so
+    // the same custom vertex shader logic renders identically on both backends.
+    packAffineMat3Std140(proj, data, 0);
+    packAffineMat3Std140(trans, data, 12);
 
-    // translation
-    data[off + 0] = trans.a;
-    data[off + 1] = trans.b;
-    data[off + 2] = 0;
-    data[off + 3] = 0;
-    data[off + 4] = trans.c;
-    data[off + 5] = trans.d;
-    data[off + 6] = 0;
-    data[off + 7] = 0;
-    data[off + 8] = trans.x;
-    data[off + 9] = trans.y;
-    data[off + 10] = 1;
-    data[off + 11] = 0;
-    off += 12;
+    const off = 24;
 
     // tint (vec4). RGB are 0..255; normalize to 0..1 for the shader multiply
     // (u_mesh.tint is documented as 0..1, matching the default path above).
