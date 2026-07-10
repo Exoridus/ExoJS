@@ -6,10 +6,10 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 107,
+  "memberCount": 106,
   "counts": {
     "constructors": 1,
-    "methods": 48,
+    "methods": 47,
     "properties": 43,
     "events": 15
   },
@@ -159,35 +159,6 @@
       "id": "methods",
       "title": "Methods",
       "members": [
-        {
-          "name": "_invalidateChildrenTransform",
-          "signature": "_invalidateChildrenTransform(): void",
-          "signatureTokens": [
-            {
-              "text": "_invalidateChildrenTransform",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "void",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": "void",
-          "description": "Hook for Container to override. Default: no-op (leaf node has no children)."
-        },
         {
           "name": "_updateOrigin",
           "signature": "_updateOrigin(): void",

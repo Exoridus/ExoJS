@@ -54,6 +54,13 @@ export class Sprite extends Drawable {
   private _vertices: Float32Array = new Float32Array(8);
   private _texCoords: Uint32Array = new Uint32Array(4);
   private readonly _normals: [Vector, Vector, Vector, Vector] = [new Vector(), new Vector(), new Vector(), new Vector()];
+  // World-transform version the cached vertices/normals were last built at.
+  // The Vertices/Normals flags cover local changes (texture frame, own
+  // transform); this version compare additionally catches an ancestor moving,
+  // which — after the Slice 1 lazy-cascade fix — no longer eagerly flags this
+  // sprite. Mirrors SceneNode.getBounds()'s _boundsBuiltAtVersion.
+  private _verticesBuiltAtVersion = -1;
+  private _normalsBuiltAtVersion = -1;
 
   public constructor(texture: Texture | RenderTexture | null) {
     super();
@@ -125,9 +132,13 @@ export class Sprite extends Drawable {
    * (TL, TR, BR, BL). Cached until the transform is invalidated.
    */
   public get vertices(): Float32Array {
-    if (this.flags.has(SpriteFlags.Vertices)) {
+    // Settle the world transform first: its version reflects any ancestor move,
+    // which the lazy cascade no longer eagerly flags on this sprite.
+    const transform = this.getGlobalTransform();
+
+    if (this.flags.has(SpriteFlags.Vertices) || this._verticesBuiltAtVersion !== this._globalTransformVersion) {
       const { left, top, right, bottom } = this.getLocalBounds();
-      const { a, b, x, c, d, y } = this.getGlobalTransform();
+      const { a, b, x, c, d, y } = transform;
 
       this._vertices[0] = left * a + top * b + x;
       this._vertices[1] = left * c + top * d + y;
@@ -142,6 +153,7 @@ export class Sprite extends Drawable {
       this._vertices[7] = left * c + bottom * d + y;
 
       this.flags.remove(SpriteFlags.Vertices);
+      this._verticesBuiltAtVersion = this._globalTransformVersion;
     }
 
     return this._vertices;
@@ -301,9 +313,13 @@ export class Sprite extends Drawable {
    * computed from `vertices`. Used by the SAT collision system.
    */
   public override getNormals(): Vector[] {
-    if (this.flags.has(SpriteFlags.Normals)) {
-      // vertices is a fixed 8-element Float32Array (4 corners).
-      const v = this.vertices;
+    // Read vertices first: the getter settles the world-transform version and
+    // rebuilds the quad if an ancestor moved, so the version compare below
+    // sees the up-to-date value.
+    // vertices is a fixed 8-element Float32Array (4 corners).
+    const v = this.vertices;
+
+    if (this.flags.has(SpriteFlags.Normals) || this._normalsBuiltAtVersion !== this._globalTransformVersion) {
       const x1 = v[0]!;
       const y1 = v[1]!;
       const x2 = v[2]!;
@@ -331,6 +347,7 @@ export class Sprite extends Drawable {
         .normalize();
 
       this.flags.remove(SpriteFlags.Normals);
+      this._normalsBuiltAtVersion = this._globalTransformVersion;
     }
 
     return this._normals;

@@ -6,10 +6,10 @@
   "subsystem": "particles",
   "importPath": "@codexo/exojs-particles",
   "tier": "stable",
-  "memberCount": 125,
+  "memberCount": 124,
   "counts": {
     "constructors": 4,
-    "methods": 49,
+    "methods": 48,
     "properties": 59,
     "events": 13
   },
@@ -372,35 +372,6 @@
           "description": "Mark own Bounds dirty AND propagate up to Container ancestors' Bounds."
         },
         {
-          "name": "_invalidateChildrenTransform",
-          "signature": "_invalidateChildrenTransform(): void",
-          "signatureTokens": [
-            {
-              "text": "_invalidateChildrenTransform",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "void",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": "void",
-          "description": "Hook for Container to override. Default: no-op (leaf node has no children)."
-        },
-        {
           "name": "_invalidateSubtreeTransform",
           "signature": "_invalidateSubtreeTransform(): void",
           "signatureTokens": [
@@ -427,7 +398,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Mark own + all descendants' GlobalTransform + Bounds dirty."
+          "description": "Mark own GlobalTransform + Bounds dirty. Descendants detect staleness lazily via the parent-version compare in getGlobalTransform()/getBounds() — no eager subtree walk."
         },
         {
           "name": "_updateOrigin",

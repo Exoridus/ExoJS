@@ -111,6 +111,18 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
 
   private _visible = true;
   private _globalTransform = new Matrix();
+  /**
+   * Monotonic counter bumped every time {@link getGlobalTransform} actually
+   * recomputes this node's world matrix. Children compare the parent's version
+   * against their cached {@link _combinedParentVersion} to detect — lazily, on
+   * read — that an ancestor moved without an eager subtree walk. `protected` so
+   * derived caches that also depend on the world transform (e.g. Sprite's quad
+   * vertices/normals) can invalidate against it the same way {@link getBounds}
+   * does via {@link _boundsBuiltAtVersion}.
+   */
+  protected _globalTransformVersion = 0;
+  private _combinedParentVersion = -1;
+  private _boundsBuiltAtVersion = -1;
   private _localBounds = new Rectangle();
   private _anchor = new ObservableVector(this, SceneNodeVectorChannel.Anchor, 0, 0);
   private _parentNode: Container | null = null;
@@ -386,9 +398,12 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
   }
 
   public getBounds(): Rectangle {
-    if (this.flags.has(SceneNodeTransformFlags.BoundsRect)) {
+    this.getGlobalTransform(); // ensures this node's own _globalTransformVersion is current
+
+    if (this.flags.has(SceneNodeTransformFlags.BoundsRect) || this._boundsBuiltAtVersion !== this._globalTransformVersion) {
       this.updateBounds();
       this.flags.remove(SceneNodeTransformFlags.BoundsRect);
+      this._boundsBuiltAtVersion = this._globalTransformVersion;
     }
 
     return this._bounds.getRect();
@@ -411,14 +426,21 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
   }
 
   public getGlobalTransform(): Matrix {
-    if (this.flags.has(SceneNodeTransformFlags.GlobalTransform)) {
+    const parent = this._parentNode;
+    const parentTransform = parent !== null ? parent.getGlobalTransform() : null;
+    const parentVersion = parent !== null ? parent._globalTransformVersion : 0;
+    const stale = this.flags.has(SceneNodeTransformFlags.GlobalTransform) || this._combinedParentVersion !== parentVersion;
+
+    if (stale) {
       this._globalTransform.copy(this.getTransform());
 
-      if (this._parentNode) {
-        this._globalTransform.combine(this._parentNode.getGlobalTransform());
+      if (parentTransform !== null) {
+        this._globalTransform.combine(parentTransform);
       }
 
+      this._combinedParentVersion = parentVersion;
       this.flags.remove(SceneNodeTransformFlags.GlobalTransform);
+      this._globalTransformVersion++;
     }
 
     return this._globalTransform;
@@ -608,15 +630,9 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
     }
   }
 
-  /** Mark own + all descendants' GlobalTransform + Bounds dirty. */
+  /** Mark own GlobalTransform + Bounds dirty. Descendants detect staleness lazily via the parent-version compare in getGlobalTransform()/getBounds() — no eager subtree walk. */
   public _invalidateSubtreeTransform(): void {
     this.flags.push(SceneNodeTransformFlags.GlobalTransform | SceneNodeTransformFlags.BoundsRect);
-    this._invalidateChildrenTransform();
-  }
-
-  /** Hook for Container to override. Default: no-op (leaf node has no children). */
-  protected _invalidateChildrenTransform(): void {
-    // overridden by Container
   }
 
   /** Mark own Bounds dirty AND propagate up to Container ancestors' Bounds. */

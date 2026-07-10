@@ -269,12 +269,6 @@ export class Container extends RenderNode {
     return false;
   }
 
-  protected override _invalidateChildrenTransform(): void {
-    for (const child of this._children) {
-      child._invalidateSubtreeTransform();
-    }
-  }
-
   public override updateBounds(): this {
     this._bounds.reset().addRect(this.getLocalBounds(), this.getGlobalTransform());
 
