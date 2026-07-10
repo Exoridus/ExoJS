@@ -223,10 +223,6 @@ class ImmediateModeScene extends Scene {
         this.hud.setStatus(`${path} · ${FIELD_COUNT} sparks · ${GEAR_COUNT} gears · drawCalls: ${drawCalls}`);
     }
 
-    override unload(): void {
-        this.dispose();
-    }
-
     override destroy(): void {
         this.dispose();
     }

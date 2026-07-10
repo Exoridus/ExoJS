@@ -1,5 +1,5 @@
 // Auto-generated from chromatic-aberration.ts — edit the .ts source, not this file.
-import { Application, Color, RenderBackendType, Scene, Sprite, Texture, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
+import { Application, Color, RenderBackendType, Scene, Sprite, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {
@@ -37,16 +37,13 @@ class ChromaticAberrationScene extends Scene {
     intensity = 0.4;
     hud;
     panel;
-    async load(loader) {
-        await loader.load(Texture, { checker: CHECKER });
-    }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
         this.filter =
             app.backend.backendType === RenderBackendType.WebGpu
                 ? new WebGpuShaderFilter({ fragmentSource: wgsl, uniforms: { uOffset: 0 } })
                 : new WebGl2ShaderFilter({ fragmentSource: glsl, uniforms: { uOffset: 0 } });
-        this.sprite = new Sprite(loader.get(Texture, 'checker')).setAnchor(0.5).setScale(2.6).setPosition(width / 2, height / 2);
+        this.sprite = new Sprite(this.loader.get(CHECKER)).setAnchor(0.5).setScale(2.6).setPosition(width / 2, height / 2);
         this.sprite.filters = [this.filter];
         // The HUD must exist before applyIntensity() runs — it calls hud.setStatus().
         this.hud = mountControls({

@@ -1,5 +1,5 @@
 // Auto-generated from crossfade-tracks.ts — edit the .ts source, not this file.
-import { Application, AudioStream, Color, crossFade, Graphics, Scene, Text } from '@codexo/exojs';
+import { Application, Asset, Assets, Color, crossFade, Graphics, Scene, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {
@@ -34,19 +34,18 @@ class CrossfadeTracksScene extends Scene {
     meterBX = 0;
     meterBaseY = 0;
     hud;
-    async load(loader) {
-        await loader.load(AudioStream, { a: assets.demo.audio.musicA, b: assets.demo.audio.musicB });
-    }
-    init(loader) {
+    async init() {
         const { width, height } = this.app.canvas;
         // Spread the two meters across the wide canvas: each sits a third of the
         // way in from its side, centred on the meter width.
         this.meterAX = width * 0.33 - METER_W / 2;
         this.meterBX = width * 0.67 - METER_W / 2;
         this.meterBaseY = height * 0.82;
-        // Both tracks loop; the crossfade only swaps which one is audible.
-        this.trackA = loader.get(AudioStream, 'a');
-        this.trackB = loader.get(AudioStream, 'b');
+        // AudioStream has no seamless adapter — await it explicitly. Both tracks
+        // loop; the crossfade only swaps which one is audible.
+        const tracks = await this.loader.load(Assets.from({ a: Asset.kind('music', assets.demo.audio.musicA), b: Asset.kind('music', assets.demo.audio.musicB) }));
+        this.trackA = tracks.a;
+        this.trackB = tracks.b;
         this.graphics = new Graphics();
         this.labelA = new Text('Track A', { fillColor: Color.white, fontSize: 22, align: 'center' })
             .setAnchor(0.5, 0.5)

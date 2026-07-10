@@ -26,3 +26,18 @@ describe('Texture load state', () => {
     await expect(pending).resolves.toBe(texture);
   });
 });
+
+describe('Texture status channel', () => {
+  it('a directly constructed texture is ready', () => {
+    const tex = new Texture(null);
+    expect(tex.state).toBe('ready');
+    expect(tex.ready).toBe(true);
+    expect(tex.error).toBeNull();
+  });
+  it('a placeholder in loading state is not ready', () => {
+    const tex = new Texture(null);
+    tex._loadState.begin();
+    expect(tex.state).toBe('loading');
+    expect(tex.ready).toBe(false);
+  });
+});

@@ -1,5 +1,5 @@
 // Auto-generated from compressor.ts — edit the .ts source, not this file.
-import { Application, AudioStream, Color, Graphics, Scene, Text } from '@codexo/exojs';
+import { Application, Asset, Assets, Color, Graphics, Scene, Text } from '@codexo/exojs';
 import { CompressorEffect } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 const app = new Application({
@@ -35,10 +35,7 @@ class CompressorScene extends Scene {
     rowY = [];
     meterY = 0;
     hud;
-    async load(loader) {
-        await loader.load(AudioStream, { music: 'audio/demo-loop-main.ogg' });
-    }
-    init(loader) {
+    async init() {
         const { width, height } = this.app.canvas;
         // Wide horizontal bars centred on the 16:9 canvas; labels sit to the left.
         this.barW = width * 0.45;
@@ -46,7 +43,9 @@ class CompressorScene extends Scene {
         this.labelX = width * 0.1;
         this.rowY = sliders.map((_, i) => height * 0.26 + i * 90);
         this.meterY = this.rowY[this.rowY.length - 1] + 100;
-        this.music = loader.get(AudioStream, 'music');
+        // AudioStream has no seamless adapter — await it explicitly.
+        const { music } = await this.loader.load(Assets.from({ music: Asset.kind('music', 'audio/demo-loop-main.ogg') }));
+        this.music = music;
         this.filter = new CompressorEffect();
         app.audio.music.addEffect(this.filter);
         this.gfx = new Graphics();

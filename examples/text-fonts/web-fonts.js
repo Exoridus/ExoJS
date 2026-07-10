@@ -1,5 +1,5 @@
 // Auto-generated from web-fonts.ts — edit the .ts source, not this file.
-import { Application, Color, FontAsset, Scene, Text } from '@codexo/exojs';
+import { Application, Asset, Color, Scene, Text } from '@codexo/exojs';
 const app = new Application({
     canvas: {
         width: 1280,
@@ -15,10 +15,8 @@ const app = new Application({
 class WebFontsScene extends Scene {
     default;
     loaded;
-    async load(loader) {
-        await loader.load(FontAsset, { andy: 'font/Kenney Future.ttf' }, { family: 'Kenney Future' });
-    }
-    init() {
+    async init() {
+        await this.loader.load(Asset.kind('font', 'font/Kenney Future.ttf', { family: 'Kenney Future' }));
         const { width, height } = this.app.canvas;
         this.default = new Text('Default Font', { fillColor: Color.white, fontSize: 52, align: 'center' });
         this.default.setAnchor(0.5, 0.5);

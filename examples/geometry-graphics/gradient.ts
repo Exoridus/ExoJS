@@ -58,17 +58,13 @@ class GradientScene extends Scene {
         context.render(this.orb);
     }
 
-    override unload(): void {
+    override destroy(): void {
         this.background?.texture?.destroy();
         this.orb?.texture?.destroy();
         this.background?.destroy();
         this.orb?.destroy();
         this.backgroundGradient?.destroy();
         this.orbGradient?.destroy();
-    }
-
-    override destroy(): void {
-        this.unload();
     }
 }
 

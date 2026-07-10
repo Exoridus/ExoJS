@@ -1,5 +1,5 @@
 // Auto-generated from interrupt-and-replace.ts — edit the .ts source, not this file.
-import { Application, Color, Scene, Sprite, Texture } from '@codexo/exojs';
+import { Application, Color, Scene, Sprite } from '@codexo/exojs';
 const app = new Application({
     canvas: {
         width: 1280,
@@ -15,12 +15,9 @@ const app = new Application({
 class InterruptAndReplaceScene extends Scene {
     sprite;
     moveTween = null;
-    async load(loader) {
-        await loader.load(Texture, { bunny: 'image/ship-a.png' });
-    }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
-        this.sprite = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setPosition(width / 2, height / 2);
+        this.sprite = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(width / 2, height / 2);
         this.app.input.onPointerTap.add(pointer => {
             if (this.moveTween !== null) {
                 this.moveTween.stop();

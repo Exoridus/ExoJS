@@ -43,10 +43,10 @@ const app = new Application(); // picks up particlesExtension automatically
 A particle system needs a texture and a capacity:
 
 ```js
-import { BlendModes, Texture } from '@codexo/exojs';
+import { BlendModes } from '@codexo/exojs';
 import { ParticleSystem } from '@codexo/exojs-particles';
 
-const system = new ParticleSystem(loader.get(Texture, 'spark'), {
+const system = new ParticleSystem(loader.get('image/spark.png'), {
     capacity: 4000,
 });
 ```

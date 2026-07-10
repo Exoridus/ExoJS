@@ -1,5 +1,5 @@
 // Auto-generated from backend-comparison.ts — edit the .ts source, not this file.
-import { Application, Color, Keyboard, Scene, Sprite, Texture } from '@codexo/exojs';
+import { Application, Color, Keyboard, Scene, Sprite } from '@codexo/exojs';
 import { DebugOverlay } from '@codexo/exojs/debug';
 const options = {
     canvas: {
@@ -18,13 +18,10 @@ let overlay = null;
 let backendType = 'webgpu';
 class DemoScene extends Scene {
     sprites;
-    async load(loader) {
-        await loader.load(Texture, { bunny: 'image/ship-a.png' });
-    }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
         this.sprites = Array.from({ length: 2200 }, () => {
-            const sprite = new Sprite(loader.get(Texture, 'bunny'));
+            const sprite = new Sprite(this.loader.get('image/ship-a.png'));
             sprite.setAnchor(0.5);
             sprite.setScale(0.35);
             sprite.setPosition(Math.random() * width, Math.random() * height);

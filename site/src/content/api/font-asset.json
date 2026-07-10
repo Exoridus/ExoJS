@@ -1,6 +1,6 @@
 {
   "title": "FontAsset",
-  "description": "Dispatch token for font loading. `loader.load(FontAsset, 'font.woff2', { family: 'MyFont' })` returns `Promise<FontFace>`.",
+  "description": "Dispatch token for font loading. `loader.load(Asset.kind('font', 'font.woff2', { family: 'MyFont' }))` returns `Promise<FontFace>`.",
   "symbol": "FontAsset",
   "kind": "class",
   "subsystem": "resources",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Dispatch token for font loading.",
-        "`loader.load(FontAsset, 'font.woff2', { family: 'MyFont' })` returns `Promise<FontFace>`."
+        "`loader.load(Asset.kind('font', 'font.woff2', { family: 'MyFont' }))` returns `Promise<FontFace>`."
       ],
       "importLine": "import { FontAsset } from '@codexo/exojs'",
       "sourceLink": null

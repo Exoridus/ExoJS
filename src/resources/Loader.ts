@@ -5,22 +5,22 @@ import type { AssetHandler, AssetLoadRequest } from '#extensions/Extension';
 import { type BmFont } from '#rendering/text/BmFont';
 import type { Texture } from '#rendering/texture/Texture';
 
-import { Asset, AssetImpl } from './Asset';
+import { Asset, AssetImpl, type ValueAsset } from './Asset';
 import { parseContainer } from './AssetContainer';
-import type { AssetDefinitions, AssetInput, InferAssetResource } from './AssetDefinitions';
+import type { AssetDefinitions, AssetInput, InferAssetResource, KindByPath, LeafForPath, ResourceForKind, ValueAssetKind } from './AssetDefinitions';
 import type { AssetFactory } from './AssetFactory';
-import type { AssetManifest, LoadBundleOptions } from './AssetManifest';
-import { BundleLoadError, defineAssetManifest } from './AssetManifest';
+import { createLeaf } from './assetKindRegistry';
+import { _readMeta } from './assetMeta';
 import { AssetRef } from './AssetRef';
-import { type Assets, AssetsImpl } from './Assets';
+import { type Assets, AssetsImpl, type InferAssetsProperties } from './Assets';
 import { CacheFirstStrategy } from './CacheFirstStrategy';
 import type { CacheStore } from './CacheStore';
 import type { CacheStrategy } from './CacheStrategy';
-import type { TextureFactoryOptions } from './factories/TextureFactory';
+import { resolveKindByPath } from './extensionKindRegistry';
 import type { AssetConstructor } from './FactoryRegistry';
 import { FactoryRegistry } from './FactoryRegistry';
 import { LoadingQueue } from './LoadingQueue';
-import type { PreSizeOptions, SeamlessAdapter } from './seamless';
+import type { SeamlessAdapter } from './seamless';
 import { BinaryAsset, CsvAsset, FontAsset, type ImageAsset, Json, SubtitleAsset, type SvgAsset, TextAsset, WasmAsset, XmlAsset } from './tokens';
 
 // ---------------------------------------------------------------------------
@@ -132,7 +132,7 @@ export type PathExtension<S extends string> = MatchExtension<Basename<StripQuery
  * Resolves the return type for {@link Loader.load} when called with a plain
  * path string. Returns `unknown` when the extension is not in
  * {@link ExtensionTypeMap} — the string-path overload rejects such paths at
- * compile time; use the token form (`load(MyType, path)`) instead.
+ * compile time; use the descriptor form (`load(Asset.kind(kind, path))`) instead.
  *
  * The `[PathExtension<S>] extends [never]` guard is load-bearing: indexing
  * {@link ExtensionTypeMap} with `never` would silently produce `never` rather
@@ -141,59 +141,8 @@ export type PathExtension<S extends string> = MatchExtension<Basename<StripQuery
 export type LoadByPath<S extends string> = [PathExtension<S>] extends [never] ? unknown : ExtensionTypeMap[PathExtension<S>];
 
 /**
- * Additional asset types accepted by the **token form** of {@link Loader.load}
- * (`load(MyType, 'file.ext')`) for a given file extension, beyond the
- * path-only type registered in {@link ExtensionTypeMap}.
- *
- * Augment via declaration merging when a format package ships an advanced
- * source-model token that shares a file extension with its common-case
- * runtime type. The path-only form (`load('file.ext')`) is unaffected and
- * keeps resolving to the {@link ExtensionTypeMap} entry alone:
- * ```ts
- * declare module '@codexo/exojs' {
- *   interface ExtensionTypeMap { tmj: TileMap }       // load('world.tmj') → TileMap
- *   interface ExtensionTokenTypeMap { tmj: TiledMap } // load(TiledMap, 'world.tmj') also allowed
- * }
- * ```
- */
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface ExtensionTokenTypeMap {}
-
-/** Resolves the additional token types allowed for extension `E`, or `never` when none are registered. */
-type TokenTypesFor<E> = E extends keyof ExtensionTokenTypeMap ? ExtensionTokenTypeMap[E] : never;
-
-/**
- * Constrains a {@link Loadable} token against the types registered for a
- * given path's extension. When the extension is in {@link ExtensionTypeMap},
- * `T` must produce a value assignable to the registered union (including any
- * extra token types from {@link ExtensionTokenTypeMap}) — otherwise resolves
- * to `never`, triggering a compile-time error.
- *
- * For paths with an unregistered extension — including non-literal `string`
- * paths and extension-less paths, where no extension can be derived — the
- * constraint is skipped and any `T` is accepted (runtime behaviour is
- * unchanged).
- *
- * ```ts
- * // ExtensionTypeMap: { ogg: Sound | Video }
- * loader.load(Sound, 'effect.ogg')      // ✓ Sound ∈ Sound | Video
- * loader.load(BitmapText, 'effect.ogg') // ✗ BitmapText ∉ Sound | Video
- * loader.load(Sound, 'theme.custom')    // ✓ .custom not in map → unconstrained
- * loader.load(Sound, dynamicPath)       // ✓ string path → unconstrained
- * ```
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type ConstrainedLoadable<T extends abstract new (...args: any[]) => unknown, S extends string> = [PathExtension<S>] extends [never]
-  ? T
-  : PathExtension<S> extends keyof ExtensionTypeMap
-    ? LoadReturn<T> extends ExtensionTypeMap[PathExtension<S>] | TokenTypesFor<PathExtension<S>>
-      ? T
-      : never
-    : T;
-
-/**
- * Context object passed to custom asset-type load handlers registered via
- * {@link Loader.registerAssetType}.
+ * Context object passed to custom asset-type load handlers bound via
+ * `bindAsset` / `defineAsset`.
  *
  * The `fetch*` helpers route through the loader's configured cache strategy
  * and IDB stores, giving custom handlers the same caching behaviour as
@@ -219,14 +168,6 @@ export interface AssetLoaderContext {
 }
 
 /**
- * Accepted value types in the homogeneous batch load API.
- *
- * Either a raw source string or a flat config object containing at least
- * `source` plus any type-specific extra fields.
- */
-export type BatchValue = string | ({ source: string } & Record<string, unknown>);
-
-/**
  * Construction options for {@link Loader}.
  *
  * `basePath` is prepended to relative asset paths at fetch time.
@@ -244,14 +185,23 @@ export interface LoaderOptions {
   concurrency?: number;
 }
 
+/**
+ * Options for the catalog/asset/leaf {@link Loader.load} forms.
+ *
+ * With `background: true` every adopted leaf is still claimed and registered
+ * (so it heals in place and a later {@link Loader.get} returns the same
+ * instance), but its fetch is routed through the low-priority background queue
+ * instead of started immediately: it streams concurrency-capped, drops from the
+ * queue if released at refcount 0, and is boosted to fetch now on a direct
+ * `get()`. Foreground loading (no options) is unaffected.
+ */
+export interface LoadOptions {
+  background?: boolean;
+}
+
 // ---------------------------------------------------------------------------
 // Internal types
 // ---------------------------------------------------------------------------
-
-interface ManifestEntry {
-  readonly path: string;
-  readonly options?: unknown;
-}
 
 interface QueueEntry {
   readonly type: AssetConstructor;
@@ -260,7 +210,7 @@ interface QueueEntry {
   readonly options?: unknown;
 }
 
-/** Stored entry for handler-based {@link Loader.registerAssetType} registrations. */
+/** Stored entry for handler-based asset bindings (via `bindAsset`). */
 interface HandlerEntry {
   load: (config: unknown, ctx: AssetLoaderContext) => Promise<unknown>;
   /** Optional discriminator for in-flight identity keying; overrides source-only default. */
@@ -282,13 +232,11 @@ interface HandlerEntry {
  * SVG, VTT, binary, and WASM) and allows registering custom factories via
  * {@link register}.
  *
- * Assets can be loaded in three ways:
- * - **Direct** — `loader.load(Texture, 'hero.png')` fetches immediately and
- *   resolves to the finished asset.
- * - **Bundle** — declare assets in a manifest with {@link registerManifest},
- *   then call {@link loadBundle} to load groups on demand.
- * - **Background** — call {@link backgroundLoad} or {@link loadAll} to
- *   pre-warm everything registered in the manifest at low priority.
+ * Assets can be loaded in two ways:
+ * - **Direct** — `loader.load(Assets.from({ hero: 'hero.png' }))` fetches
+ *   immediately and resolves to the finished assets.
+ * - **Background** — pass `{ background: true }` to `load(...)` to pre-warm
+ *   assets at low priority; {@link awaitBackground} resolves once the queue drains.
  *
  * Once loaded, assets are stored in memory and returned from cache on
  * subsequent `load` or {@link get} calls without re-fetching.
@@ -296,7 +244,7 @@ interface HandlerEntry {
  * @example
  * ```ts
  * const loader = new Loader({ basePath: '/assets/', cache: new IndexedDbStore('game') });
- * const texture = await loader.load(Texture, 'hero.png');
+ * const { hero } = await loader.load(Assets.from({ hero: 'hero.png' }));
  * ```
  */
 export class Loader {
@@ -308,8 +256,6 @@ export class Loader {
   // WeakMap so it never retains resources; only object resources participate
   // (primitive results like parsed JSON/text are not keyable → null).
   private readonly _resourceKeys = new WeakMap<object, { type: AssetConstructor; source: string }>();
-  private readonly _manifest = new Map<AssetConstructor, Map<string, ManifestEntry>>();
-  private readonly _bundles = new Map<string, readonly QueueEntry[]>();
   private readonly _inFlight = new Map<string, Promise<unknown>>();
   private readonly _typeIds = new WeakMap<AssetConstructor, number>();
   private readonly _preventStoreKeys = new Set<string>();
@@ -323,7 +269,7 @@ export class Loader {
   private readonly _identityKeyToAliases = new Map<string, Set<string>>();
   // In-flight promises keyed by identity (source-based) for cross-alias dedup
   private readonly _inFlightByIdentity = new Map<string, Promise<unknown>>();
-  // Handler entries registered via the handler-based registerAssetType overload
+  // Handler entries bound via bindAsset (the AssetBinding handler form)
   private readonly _handlerFunctions = new Map<AssetConstructor, HandlerEntry>();
   // Maps lower-case file extensions (without dot) to the constructor to use
   private readonly _extensionMap = new Map<string, AssetConstructor>();
@@ -333,16 +279,41 @@ export class Loader {
 
   // ── Seamless deferred handles (asset-system v2) ───────────────────────────
   // Adapter per seamless type; handles pending or failed, keyed by _key(type, source).
-  // Successful fills remove the entry (the handle moves to _resources); failed
-  // entries stay so a later get() retries and heals the SAME handle in place.
+  // Each entry tracks the SET of distinct handles in flight for the key (§7
+  // multi-handle fill): two catalog leaves for one source share a single
+  // source-keyed decode yet are each filled in place. The first handle inserted
+  // is the representative — the object that becomes the canonical `_resources`
+  // entry on store, mirroring the old single-handle contract. Successful fills
+  // remove the entry (the representative moves to _resources); failed entries
+  // stay so a later get() retries and heals the SAME handles in place.
   private readonly _seamlessAdapters = new Map<AssetConstructor, SeamlessAdapter<unknown>>();
-  private readonly _deferred = new Map<string, { readonly handle: unknown; readonly options: unknown }>();
+  private readonly _deferred = new Map<string, { readonly handles: Set<object>; readonly options: unknown }>();
 
   // Value-asset refs (asset-system v2 §4.6): the ref is the stable identity —
   // entries persist for the loader's lifetime (fill keeps them, fail keeps
-  // them for retry), unlike _deferred whose handles move into _resources.
-  private readonly _refs = new Map<string, { readonly ref: AssetRef<unknown>; readonly options: unknown }>();
-  private readonly _valueTokens: ReadonlySet<Loadable> = new Set<Loadable>([Json, TextAsset, CsvAsset, XmlAsset, SubtitleAsset, BinaryAsset, WasmAsset]);
+  // them for retry), unlike _deferred whose handles move into _resources. Like
+  // _deferred, an entry tracks the SET of distinct refs adopted for one source
+  // so a single fetch fills every in-flight ref (§7 multi-handle fill).
+  private readonly _refs = new Map<string, { readonly refs: Set<AssetRef<unknown>>; readonly options: unknown }>();
+  // Single source for the value kind ↔ dispatch token mapping: both the
+  // membership set below and `_valueTokenForKind` derive from it, and a
+  // `Record<ValueAssetKind, …>` is compile-checked to cover exactly the value
+  // kinds (vtt + srt share the SubtitleAsset token). @internal
+  private readonly _valueTokenByKind: Readonly<Record<ValueAssetKind, AssetConstructor>> = {
+    json: Json,
+    text: TextAsset,
+    csv: CsvAsset,
+    xml: XmlAsset,
+    vtt: SubtitleAsset,
+    srt: SubtitleAsset,
+    binary: BinaryAsset,
+    wasm: WasmAsset,
+  };
+
+  /** The value-asset token for a value kind name, or `undefined` for non-value / extension kinds. @internal */
+  private _valueTokenForKind(kind: keyof AssetDefinitions): AssetConstructor | undefined {
+    return (this._valueTokenByKind as Partial<Record<string, AssetConstructor>>)[kind];
+  }
 
   // ── Refcount / claims (asset-system v2 §4.7) ──────────────────────────────
   /** App-lifetime claim scope for direct `app.loader.get/load(…)` calls. @internal */
@@ -371,8 +342,6 @@ export class Loader {
 
   /** Dispatched after each background-queue item completes, with the running loaded/total counts. */
   public readonly onProgress = new Signal<[loaded: number, total: number]>();
-  /** Dispatched after each asset within a named bundle completes loading. */
-  public readonly onBundleProgress = new Signal<[name: string, loaded: number, total: number]>();
   /** Dispatched when any asset finishes loading and is stored in memory. */
   public readonly onLoaded = new Signal<[type: AssetConstructor, alias: string, resource: unknown]>();
   /** Dispatched when an asset fails to load during background or bundle loading. */
@@ -414,109 +383,6 @@ export class Loader {
   }
 
   /**
-   * Associates a string type name with a simple load handler.
-   *
-   * The handler's `load` method receives the full config object (including
-   * `source` and every extra field declared via `AssetDefinitions` augmentation)
-   * plus a {@link AssetLoaderContext} containing the loader instance.
-   *
-   * This form is intended for custom asset types that manage their own
-   * network access; the persistent cache layer is bypassed.
-   *
-   * @example
-   * ```ts
-   * loader.registerAssetType('tileMap', {
-   *   load(config, { loader }) {
-   *     return loadTileMap({ source: config.source, format: config.format, loader });
-   *   },
-   * });
-   * ```
-   */
-  public registerAssetType<K extends keyof AssetDefinitions>(
-    typeName: K,
-    handler: {
-      /**
-       * Optional discriminator for in-flight dedup and identity tracking.
-       *
-       * Return a string that uniquely identifies the conceptual asset given its
-       * full config.  The default (when omitted) is `config.source`, which is
-       * correct for assets where the source URL alone determines the result.
-       * Supply this when extra config fields affect the loaded output — e.g.
-       * `\`${config.source}:${config.format}\`` — so that two assets with the
-       * same source but different format are kept separate in the in-flight map.
-       */
-      getIdentityKey?(config: AssetDefinitions[K]['config']): string;
-      load(config: AssetDefinitions[K]['config'], context: AssetLoaderContext): Promise<AssetDefinitions[K]['resource']>;
-    },
-  ): this;
-
-  /**
-   * Associates a string type name (e.g. `'tileMap'`) with the constructor
-   * used as the asset token and, optionally, registers a factory for it.
-   *
-   * Required for declaration-merge extensions of {@link AssetDefinitions}
-   * so that `loader.load({ map: { type: 'tileMap', source: '…' } })` works.
-   */
-  public registerAssetType(typeName: string, ctor: AssetConstructor, factory?: AssetFactory): this;
-
-  public registerAssetType(
-    typeName: string,
-    ctorOrHandler:
-      | AssetConstructor
-      | {
-          getIdentityKey?(config: unknown): string;
-          load(config: unknown, context: AssetLoaderContext): Promise<unknown>;
-        },
-    factory?: AssetFactory,
-  ): this {
-    if (typeof ctorOrHandler === 'function') {
-      this._assetTypeMap.set(typeName, ctorOrHandler);
-
-      if (factory) {
-        this._registry.register(ctorOrHandler, factory);
-      }
-    } else {
-      // Handler-based form: create a synthetic constructor for type identity
-      const syntheticCtor = class {} as unknown as AssetConstructor;
-
-      Object.defineProperty(syntheticCtor, 'name', { value: typeName });
-      this._assetTypeMap.set(typeName, syntheticCtor);
-
-      const boundIdentityKey = ctorOrHandler.getIdentityKey?.bind(ctorOrHandler);
-
-      this._handlerFunctions.set(syntheticCtor, {
-        load: (config, ctx) => ctorOrHandler.load(config, ctx),
-        ...(boundIdentityKey !== undefined && { getIdentityKey: boundIdentityKey }),
-      });
-    }
-
-    return this;
-  }
-
-  // -----------------------------------------------------------------------
-  // Extension registration
-  // -----------------------------------------------------------------------
-
-  /**
-   * Associates a file extension with an asset type so that
-   * `loader.load('path.ext')` (the single-string overload) can infer the
-   * type automatically.
-   *
-   * `ext` is matched case-insensitively and the leading dot is optional.
-   * The type must already have a registered factory (via {@link register} or
-   * {@link registerAssetType}).
-   *
-   * ```ts
-   * loader.registerExtension('tmj', TiledMap);
-   * const map = await loader.load('world.tmj'); // TiledMap
-   * ```
-   */
-  public registerExtension(ext: string, type: AssetConstructor): this {
-    this._extensionMap.set(ext.replace(/^\./, '').toLowerCase(), type);
-    return this;
-  }
-
-  /**
    * Registers the seamless-handle adapter for `type`, enabling the deferred
    * `get(type, source)` form for it. One adapter per type.
    * @advanced
@@ -532,120 +398,9 @@ export class Loader {
   }
 
   /**
-   * Validates and registers an {@link AssetManifest}, making its bundles
-   * available to {@link loadBundle}.
-   *
-   * Throws if any bundle name is already registered or if two entries for
-   * the same (type, alias) pair have conflicting paths or options.
-   * Equivalent definitions (same path, deeply-equal options) are allowed
-   * and de-duplicated silently.
-   */
-  public registerManifest(manifest: AssetManifest): this {
-    const normalizedManifest = defineAssetManifest(manifest);
-    const plannedDefinitions = new Map<string, ManifestEntry>();
-    const pendingBundles = new Array<[name: string, entries: QueueEntry[]]>();
-
-    for (const [bundleName, bundleEntries] of Object.entries(normalizedManifest.bundles)) {
-      if (this._bundles.has(bundleName)) {
-        throw new Error(`Bundle "${bundleName}" is already registered.`);
-      }
-
-      const normalizedEntries = new Array<QueueEntry>();
-
-      for (const bundleEntry of bundleEntries) {
-        const type = bundleEntry.type;
-        const key = this._key(type, bundleEntry.alias);
-        const existingDefinition = plannedDefinitions.get(key) ?? this._getManifestEntry(type, bundleEntry.alias);
-
-        if (existingDefinition && !this._isManifestDefinitionEquivalent(existingDefinition, bundleEntry.path, bundleEntry.options)) {
-          throw new Error(`Conflicting asset definition for (${this._describeType(type)}, "${bundleEntry.alias}") while registering bundle "${bundleName}".`);
-        }
-
-        plannedDefinitions.set(key, {
-          path: bundleEntry.path,
-          options: bundleEntry.options,
-        });
-
-        normalizedEntries.push({
-          type,
-          alias: bundleEntry.alias,
-          path: bundleEntry.path,
-          options: bundleEntry.options,
-        });
-      }
-
-      pendingBundles.push([bundleName, normalizedEntries]);
-    }
-
-    for (const [bundleName, bundleEntries] of pendingBundles) {
-      for (const entry of bundleEntries) {
-        this._addManifestEntry(entry.type, entry.alias, entry.path, entry.options);
-      }
-
-      this._bundles.set(bundleName, bundleEntries);
-    }
-
-    return this;
-  }
-
-  /**
-   * Loads all assets declared in the named bundle concurrently.
-   *
-   * Dispatches {@link onBundleProgress} (and the optional `onProgress`
-   * callback) after each asset completes. If any assets fail, a
-   * {@link BundleLoadError} is thrown after all assets have settled,
-   * containing every individual failure. Throws immediately if `name` has
-   * not been registered.
-   */
-  public async loadBundle(name: string, options: LoadBundleOptions = {}): Promise<void> {
-    const bundle = this._bundles.get(name);
-
-    if (!bundle) {
-      throw new Error(`Unknown bundle "${name}".`);
-    }
-
-    const total = bundle.length;
-    let loaded = 0;
-    const failures = new Array<{
-      type: Loadable;
-      alias: string;
-      error: Error;
-    }>();
-
-    if (total === 0) {
-      this._emitBundleProgress(name, 0, 0, options.onProgress);
-
-      return;
-    }
-
-    await Promise.all(
-      bundle.map(async entry => {
-        try {
-          await (options.background
-            ? this._loadSingleBackground(entry.type, entry.alias, entry.path, entry.options)
-            : this._loadSingle(entry.type, entry.alias, entry.options, entry.path));
-        } catch (error: unknown) {
-          failures.push({
-            type: entry.type,
-            alias: entry.alias,
-            error: this._normalizeError(error),
-          });
-        } finally {
-          loaded++;
-          this._emitBundleProgress(name, loaded, total, options.onProgress);
-        }
-      }),
-    );
-
-    if (failures.length > 0) {
-      throw new BundleLoadError(name, failures);
-    }
-  }
-
-  /**
    * Load every asset packed into a binary container (`.exoa`) in a **single
-   * request**. Unlike {@link loadBundle} (one fetch per entry), a container is
-   * one file with an embedded index: its bytes are fetched once (and cached
+   * request**. A container is one file with an embedded index: its bytes are
+   * fetched once (and cached
    * cross-session like any asset), then each slice is unpacked through its
    * type's handler and stored under the entry's alias — retrievable with
    * {@link get} exactly as if it had been loaded individually.
@@ -682,52 +437,35 @@ export class Loader {
     );
   }
 
-  /**
-   * Returns `true` if every asset in the named bundle has been loaded and is
-   * currently held in the in-memory resource store.
-   */
-  public hasBundle(name: string): boolean {
-    const bundle = this._bundles.get(name);
-
-    if (!bundle) {
-      return false;
-    }
-
-    return bundle.every(entry => this._hasResource(entry.type, entry.alias));
-  }
-
   // -----------------------------------------------------------------------
-  // Loading — Json overloads (generic widening)
+  // Loading — new Asset / Assets / config-map overloads
   // -----------------------------------------------------------------------
 
   /**
-   * Fetches and processes one or more assets of the given type.
+   * Fetches and processes one or more assets.
    *
-   * - **Single path** — resolves with the finished asset.
-   * - **Array of paths** — resolves with an ordered array of assets.
-   * - **Record** — resolves with a record whose keys match the input keys.
-   * - **Asset<T>** — single typed asset reference.
-   * - **Assets<M>** — typed asset container; keys become aliases.
-   * - **Config map** — inline `{ alias: { type, source, … } }` definition.
+   * - **Path string** — inferred from the file extension; resolves the asset.
+   * - **Asset<T>** — a single typed asset reference from `Asset.kind(...)`.
+   * - **Assets<M>** — a typed catalog from `Assets.from(...)`; keys become aliases.
+   *
+   * (The inline record-catalog form `{ alias: { kind, source } }` is no longer a
+   * public overload — build catalogs with `Assets.from(...)`; a runtime record
+   * fallback is retained only for internal multi-alias plumbing.)
    *
    * In-flight and already-loaded assets are de-duplicated: calling `load`
    * for the same (type, alias) pair while a fetch is in progress attaches
    * to the existing promise rather than issuing a second request.
    *
-   * Supply a custom `options` object to pass factory-specific configuration
-   * (e.g. audio decoding hints or image format overrides).
+   * Per-asset options ride on the `Asset.kind(kind, source, options)` descriptor
+   * (or the extra fields of a config object).
    */
-  public load<T = unknown>(type: typeof Json, path: string, options?: unknown): LoadingQueue<T>;
-  public load<T = unknown>(type: typeof Json, paths: readonly string[], options?: unknown): LoadingQueue<T[]>;
-  public load<T = unknown, K extends string = string>(type: typeof Json, items: Readonly<Record<K, string>>, options?: unknown): LoadingQueue<Record<K, T>>;
-
-  // -----------------------------------------------------------------------
-  // Loading — new Asset / Assets / config-map overloads
-  // -----------------------------------------------------------------------
-
   public load<T>(asset: Asset<T>): LoadingQueue<T>;
-  public load<M extends Record<string, AssetInput>>(assets: Assets<M>): LoadingQueue<InferLoadedMap<M>>;
-  public load<M extends Record<string, AssetInput>>(config: M): LoadingQueue<InferLoadedMap<M>>;
+  public load<M extends Record<string, AssetInput>>(assets: Assets<M>, options?: LoadOptions): LoadingQueue<InferLoadedMap<M>>;
+  // Single value-leaf (an `Assets.from()` AssetRef property): `AssetRef.loaded` resolves
+  // to the raw value, not the ref — this overload must win over the generic leaf one below.
+  public load<T>(leaf: AssetRef<T>, options?: LoadOptions): LoadingQueue<T>;
+  // Single handle-hybrid leaf (an `Assets.from()` property): adopt + resolve its value.
+  public load<T extends object>(leaf: T, options?: LoadOptions): LoadingQueue<T>;
 
   // -----------------------------------------------------------------------
   // Loading — extension-based (type inferred from file extension)
@@ -740,12 +478,12 @@ export class Loader {
    * - `.fnt` → {@link BmFont}
    * - `.woff`, `.woff2`, `.ttf`, `.otf` → `FontFace` (family inferred from filename)
    *
-   * Register additional mappings via {@link registerExtension}.
+   * Register additional mappings via `defineAsset` (its `extensions`).
    * Extend the return type by augmenting {@link ExtensionTypeMap}.
    *
    * Paths whose extension is **not** in {@link ExtensionTypeMap} are rejected at
-   * compile time — use the token form (`load(MyType, path)`) for unregistered
-   * extensions.
+   * compile time — use the descriptor form (`load(Asset.kind(kind, path))`) for
+   * unregistered extensions.
    *
    * ```ts
    * const font = await loader.load('fonts/ui.fnt');           // BmFont
@@ -761,21 +499,19 @@ export class Loader {
   public load<R, S extends string>(path: [PathExtension<S>] extends [never] ? never : S): LoadingQueue<R>;
   // Inferred form — R comes from ExtensionTypeMap.
   public load<S extends string>(path: [PathExtension<S>] extends [never] ? never : S): LoadingQueue<LoadByPath<S>>;
-
-  // -----------------------------------------------------------------------
-  // Loading — generic overloads (return type inferred from class)
-  // -----------------------------------------------------------------------
-
-  public load<T extends Loadable, S extends string>(type: ConstrainedLoadable<T, S>, path: S, options?: unknown): LoadingQueue<LoadReturn<T>>;
-  public load<T extends Loadable>(type: T, paths: readonly string[], options?: unknown): LoadingQueue<Array<LoadReturn<T>>>;
-  public load<T extends Loadable, K extends string>(type: T, items: Readonly<Record<K, BatchValue>>, options?: unknown): LoadingQueue<Record<K, LoadReturn<T>>>;
+  // Value-inclusive form — a bare value suffix (json/txt/csv/…) resolves the raw
+  // resource value (asset-system v2 §4.4); `ResourceForKind<'json'>` = `unknown`.
+  // Single-arg only: the runtime bare-path branch fires solely for
+  // `arg1 === undefined`, so an `options?` param here would advertise a
+  // parameter the runtime ignores (per-asset options go through `Asset.kind(kind, src, opts)`).
+  public load<S extends string>(path: [KindByPath<S>] extends [never] ? never : S): LoadingQueue<ResourceForKind<KindByPath<S>>>;
 
   // -----------------------------------------------------------------------
   // Loading — implementation
   // -----------------------------------------------------------------------
 
-  public load(arg0: unknown, arg1?: unknown, arg2?: unknown): LoadingQueue<unknown> {
-    return this._loadClaimed(this._rootClaimer, arg0, arg1, arg2);
+  public load(arg0: unknown, arg1?: unknown): LoadingQueue<unknown> {
+    return this._loadClaimed(this._rootClaimer, arg0, arg1);
   }
 
   /**
@@ -786,7 +522,7 @@ export class Loader {
    * frees) is observationally a no-op for existing callers.
    * @internal
    */
-  public _loadClaimed(claimer: symbol, arg0: unknown, arg1?: unknown, arg2?: unknown): LoadingQueue<unknown> {
+  public _loadClaimed(claimer: symbol, arg0: unknown, arg1?: unknown): LoadingQueue<unknown> {
     // 1. Single Asset<T>
     if (arg0 instanceof AssetImpl) {
       const asset = arg0 as Asset<unknown>;
@@ -795,18 +531,21 @@ export class Loader {
       return this._createLoadingQueue(claimer, [{ alias, asset }], results => results.get(alias));
     }
 
-    // 2. Assets<M> container
+    // 2. Assets<M> container — adopt every handle-hybrid leaf (fill in place,
+    // claim under `claimer`) and resolve the adopted queue to a map of the
+    // loaded values/handles. The container's own leaves heal in place.
     if (arg0 instanceof AssetsImpl) {
-      const container = arg0 as Assets<Record<string, AssetInput>>;
-      const items = Object.entries(container.entries).map(([alias, a]) => ({
-        alias,
-        asset: a,
-      }));
+      const entries = Object.entries((arg0 as AssetsImpl<Record<string, AssetInput>>).entries) as Array<[string, object]>;
+      const background = (arg1 as LoadOptions | undefined)?.background === true;
 
-      return this._createLoadingQueue(claimer, items, results => {
+      for (const [, leaf] of entries) {
+        this._adopt(leaf, claimer, background);
+      }
+
+      return this._createAdoptedQueue(entries, results => {
         const out: Record<string, unknown> = {};
 
-        for (const { alias } of items) {
+        for (const [alias] of entries) {
           out[alias] = results.get(alias);
         }
 
@@ -814,13 +553,32 @@ export class Loader {
       });
     }
 
+    // 2a. Single meta-stamped leaf (e.g. `load(assets.ship)`) — adopt it and
+    // resolve its loaded value/handle directly.
+    if (_readMeta(arg0) !== undefined) {
+      const leaf = arg0 as object;
+      const background = (arg1 as LoadOptions | undefined)?.background === true;
+      this._adopt(leaf, claimer, background);
+
+      return this._createAdoptedQueue([['value', leaf]], results => results.get('value'));
+    }
+
     // 2b. Extension-based: single path string with no type token
     if (typeof arg0 === 'string' && arg1 === undefined) {
       const path = arg0;
-      const ctor = this._resolveExtensionType(path);
+      let ctor = this._resolveExtensionType(path);
+
+      // Value-kind fallback: a bare path whose suffix maps to a value kind
+      // resolves the raw value via the value token (asset-system v2 §4.4).
+      if (ctor === undefined) {
+        const kind = resolveKindByPath(path);
+        const valueToken = kind !== undefined ? this._valueTokenForKind(kind) : undefined;
+
+        if (valueToken !== undefined) ctor = valueToken;
+      }
 
       if (ctor === undefined) {
-        throw new Error(`Loader: no type registered for any extension of "${path}". Register one via loader.registerExtension().`);
+        throw new Error(`Loader: no type registered for any extension of "${path}". Register one via defineAsset() (its extensions).`);
       }
 
       // FontAsset requires a family option — infer it from the filename when not provided
@@ -846,101 +604,10 @@ export class Loader {
       return queue;
     }
 
-    // 3. Old path: first arg is a Loadable constructor
-    if (typeof arg0 === 'function') {
-      const ctor = arg0 as Loadable;
-      const source = arg1 as string | readonly string[] | Readonly<Record<string, string>>;
-      const options = arg2;
-
-      if (typeof source === 'string') {
-        this._claim(this._key(ctor, source), ctor, source, claimer);
-        this._onFgBatchStart(source, source);
-        let notifyFn: ((success: boolean) => void) | null = null;
-        const promise = this._loadSingle(ctor, source, options).then(
-          v => {
-            notifyFn?.(true);
-            this._onFgBatchSettled(source, true);
-            return v;
-          },
-          e => {
-            notifyFn?.(false);
-            this._onFgBatchSettled(source, false, this._normalizeError(e));
-            throw e;
-          },
-        );
-
-        const queue = new LoadingQueue(promise, 1);
-        notifyFn = queue._notifyItem.bind(queue);
-
-        return queue;
-      }
-
-      if (Array.isArray(source)) {
-        const paths = source as readonly string[];
-        let notifyFn: ((success: boolean) => void) | null = null;
-        const results: unknown[] = new Array(paths.length);
-        const promises = paths.map((path, i) => {
-          this._claim(this._key(ctor, path), ctor, path, claimer);
-          this._onFgBatchStart(path, path);
-          return this._loadSingle(ctor, path, options).then(
-            v => {
-              results[i] = v;
-              notifyFn?.(true);
-              this._onFgBatchSettled(path, true);
-            },
-            e => {
-              notifyFn?.(false);
-              this._onFgBatchSettled(path, false, this._normalizeError(e));
-              throw e;
-            },
-          );
-        });
-
-        const promise = Promise.all(promises).then(() => results);
-
-        const queue = new LoadingQueue(promise, paths.length);
-        notifyFn = queue._notifyItem.bind(queue);
-
-        return queue;
-      }
-
-      // Record<string, BatchValue>
-      const entries = Object.entries(source as Record<string, BatchValue>);
-      const result: Record<string, unknown> = {};
-      let notifyFn: ((success: boolean) => void) | null = null;
-      const promises = entries.map(([alias, pathOrConfig]) => {
-        const path = typeof pathOrConfig === 'string' ? pathOrConfig : pathOrConfig.source;
-        const itemOptions =
-          typeof pathOrConfig === 'string'
-            ? options
-            : { ...pathOrConfig, ...(typeof options === 'object' && options !== null ? (options as Record<string, unknown>) : {}) };
-
-        this._claim(this._key(ctor, alias), ctor, alias, claimer);
-        this._onFgBatchStart(alias, path);
-
-        return this._loadSingle(ctor, alias, itemOptions, path).then(
-          v => {
-            result[alias] = v;
-            notifyFn?.(true);
-            this._onFgBatchSettled(alias, true);
-          },
-          e => {
-            notifyFn?.(false);
-            this._onFgBatchSettled(alias, false, this._normalizeError(e));
-            throw e;
-          },
-        );
-      });
-
-      const promise = Promise.all(promises).then(() => result);
-
-      const queue = new LoadingQueue(promise, entries.length);
-      notifyFn = queue._notifyItem.bind(queue);
-
-      return queue;
-    }
-
-    // 4. Plain config map: Record<string, AssetInput>
+    // Internal/legacy record fallback: `Record<string, AssetInput>`. The TYPED
+    // inline record-catalog overload was removed (asset-system v2 delta §5/§14) —
+    // typed callers go through `Assets.from({...})` — but the runtime path is kept
+    // for internal multi-alias/identity plumbing and its coverage.
     const configMap = arg0 as Record<string, AssetInput>;
     const items = Object.entries(configMap).map(([alias, value]) => ({
       alias,
@@ -963,104 +630,31 @@ export class Loader {
   // -----------------------------------------------------------------------
 
   /**
-   * Declares sources and enqueues them for low-priority background fetching in
-   * one step (replaces the removed `add()`; PixiJS model). Progress is
-   * reported via {@link onProgress}; already-loaded, in-flight, and
-   * already-queued sources are skipped. `get()`/`load()` on a queued source
-   * boosts it to the front. The zero-argument form enqueues everything
-   * registered in the manifest (bundles/manifest die with the asset graph).
-   */
-  public backgroundLoad(): void;
-  public backgroundLoad(type: Loadable, source: string, options?: unknown): void;
-  public backgroundLoad(type: Loadable, sources: readonly string[], options?: unknown): void;
-  public backgroundLoad(type?: Loadable, source?: string | readonly string[], options?: unknown): void {
-    this._backgroundClaimed(this._rootClaimer, type, source, options);
-  }
-
-  /**
-   * Claimed variant of {@link backgroundLoad}: identical queueing, but every
-   * declared source is claimed under `claimer` (refcount) so a scene-scoped
-   * pre-warm releases correctly and a not-yet-started entry is dropped from the
-   * queue at refcount 0. The public {@link backgroundLoad} delegates here under
-   * the app-lifetime {@link _rootClaimer}.
-   * @internal
-   */
-  public _backgroundClaimed(claimer: symbol, type?: Loadable, source?: string | readonly string[], options?: unknown): void {
-    // Start a fresh progress batch only when idle; a re-entrant call while the
-    // queue is draining extends the running batch instead (mirrors the
-    // accounting in _loadSingleBackground).
-    if (this._backgroundQueue.length === 0 && this._backgroundActive === 0) {
-      this._backgroundLoaded = 0;
-      this._backgroundTotal = 0;
-    }
-
-    if (type !== undefined && source !== undefined) {
-      const ctor: AssetConstructor = type;
-      const sources: readonly string[] = typeof source === 'string' ? [source] : source;
-
-      for (const src of sources) {
-        this._claim(this._key(ctor, src), ctor, src, claimer);
-        this._addManifestEntry(ctor, src, src, options);
-
-        if (this._hasResource(ctor, src)) continue;
-        if (this._inFlight.has(this._key(ctor, src))) continue;
-        if (this._isQueuedInBackground(ctor, src)) continue;
-
-        this._backgroundQueue.push({ type: ctor, alias: src, path: src, options });
-        this._backgroundTotal++;
-      }
-
-      this._drainBackground();
-
-      return;
-    }
-
-    for (const [manifestType, entries] of this._manifest) {
-      for (const [alias, entry] of entries) {
-        this._claim(this._key(manifestType, alias), manifestType, alias, claimer);
-
-        if (this._hasResource(manifestType, alias)) continue;
-
-        const key = this._key(manifestType, alias);
-
-        if (this._inFlight.has(key)) continue;
-        if (this._isQueuedInBackground(manifestType, alias)) continue;
-
-        this._backgroundQueue.push({
-          type: manifestType,
-          alias,
-          path: entry.path,
-          options: entry.options,
-        });
-        this._backgroundTotal++;
-      }
-    }
-
-    this._drainBackground();
-  }
-
-  /**
-   * Starts {@link backgroundLoad} and returns a promise that resolves when
-   * every queued background asset has finished loading (successfully or not).
+   * Resolves when the low-priority background queue has fully drained — every
+   * leaf enqueued via `load(target, { background: true })` has finished loading
+   * (successfully or not). Kicks the queue first, so a concurrency change that
+   * left pending entries unstarted still makes progress.
    *
    * Individual asset errors are reported via {@link onError} but do not
    * reject the returned promise.
    */
-  public loadAll(): Promise<void> {
+  public awaitBackground(): Promise<void> {
     return new Promise<void>(resolve => {
-      this._backgroundResolve = resolve;
-      this.backgroundLoad();
+      this._drainBackground();
 
       if (this._backgroundQueue.length === 0 && this._backgroundActive === 0) {
-        this._backgroundResolve = null;
         resolve();
+
+        return;
       }
+
+      this._backgroundResolve = resolve;
     });
   }
 
   /**
    * Sets the maximum number of simultaneous background-queue fetches.
-   * Takes effect on the next {@link backgroundLoad} or {@link loadAll} call.
+   * Takes effect on the next {@link awaitBackground} call or `load(…, { background })`.
    */
   public setConcurrency(n: number): this {
     this._concurrency = n;
@@ -1069,65 +663,88 @@ export class Loader {
   }
 
   // -----------------------------------------------------------------------
-  // Retrieval — Json overloads
+  // Retrieval
   // -----------------------------------------------------------------------
 
   /**
-   * Seamless deferred access (asset-system v2). Returns SYNCHRONOUSLY and
-   * never throws: an already-loaded source returns the stored texture; an
+   * Seamless deferred access by path (asset-system v2). Returns SYNCHRONOUSLY
+   * and never throws: an already-loaded source returns the stored resource; an
    * unknown source returns a placeholder handle immediately, starts the
    * fetch, and fills the handle in place when the payload arrives (track it
    * via {@link Texture.loadState} / {@link Texture.loaded}). Failed loads
    * show the {@link Texture.missing} checker; calling `get` again for a
    * `'failed'` source retries and heals the same handle in place.
    *
-   * The same source always yields the same instance — also across
-   * {@link load} — and options are first-wins: conflicting options on a
+   * The asset type is inferred from the file extension (basename-only,
+   * longest-suffix-first; see {@link ExtensionTypeMap}). Accepts only paths
+   * whose inferred type has a seamless adapter (compile-time gate); dynamic
+   * strings resolving to an unregistered extension or a non-seamless type throw
+   * with guidance. The same source always yields the same instance — also
+   * across {@link load} — and options are first-wins: conflicting options on a
    * later call are ignored with a one-time dev warning.
    *
-   * @remarks For a seamless type, `get(Type, source)` on an unloaded source
+   * @remarks For a seamless type, `get('sprite.png')` on an unloaded source
    * returns a `'loading'` placeholder and fetches URL `<source>` — it no longer
    * throws "missing resource". A bare alias that isn't a real path (a typo, or a
    * not-yet-preloaded alias) therefore fetches that string and can 404 quietly
    * instead of throwing; preloaded aliases still return the stored payload. This
    * is intended seamless-by-default behaviour — the note is for debuggability.
-   */
-  public get(type: typeof Texture, source: string, options?: TextureFactoryOptions & PreSizeOptions): Texture;
-  public get(type: typeof Texture, sources: readonly string[], options?: TextureFactoryOptions & PreSizeOptions): Texture[];
-  public get<K extends string>(type: typeof Texture, items: Readonly<Record<K, string>>, options?: TextureFactoryOptions & PreSizeOptions): Record<K, Texture>;
-
-  /**
-   * Seamless access by path alone — the asset type is inferred from the file
-   * extension (basename-only, longest-suffix-first; see {@link ExtensionTypeMap}).
-   * Accepts only paths whose inferred type has a seamless adapter (compile-time
-   * gate); dynamic strings resolving to an unregistered extension or a
-   * non-seamless type throw with guidance.
+   * For a dynamic source, use `get(Asset.kind('texture', dynamicPath))`.
    */
   public get<S extends string>(path: LoadByPath<S> extends Texture | Sound ? S : never, options?: unknown): LoadByPath<S>;
 
   /**
-   * Seamless access to a value asset: returns a stable {@link AssetRef}
-   * synchronously and never throws. The ref fills when the payload arrives
-   * (`loaded` resolves with the parsed value); failed refs retry in place on
-   * the next `get`. `load()` keeps resolving the raw value.
+   * Bare-path seamless/value access: a resource suffix yields its handle, a
+   * value suffix yields a stable {@link AssetRef}, inferred from the file
+   * extension. Broader fallback below the resource-only overload above.
    */
-  public get<T = unknown>(type: typeof Json, source: string, options?: unknown): AssetRef<T>;
-  public get(type: typeof TextAsset, source: string, options?: unknown): AssetRef<string>;
-  public get(type: typeof CsvAsset, source: string, options?: unknown): AssetRef<string[][]>;
-  public get(type: typeof XmlAsset, source: string, options?: unknown): AssetRef<Document>;
-  public get(type: typeof SubtitleAsset, source: string, options?: unknown): AssetRef<VTTCue[]>;
-  public get(type: typeof BinaryAsset, source: string, options?: unknown): AssetRef<ArrayBuffer>;
-  public get(type: typeof WasmAsset, source: string, options?: unknown): AssetRef<WebAssembly.Module>;
+  public get<S extends string>(path: [KindByPath<S>] extends [never] ? never : S, options?: unknown): LeafForPath<S>;
 
   /**
-   * Retrieves a previously loaded asset by type and alias (legacy lookup form
-   * for types without a seamless adapter; replaced by the asset graph in a
-   * later slice). Throws if the asset has not been loaded — use {@link peek}
-   * for a non-throwing alternative, or {@link has} to guard the call.
+   * Legacy in-memory lookup: retrieves a previously loaded asset by type + alias
+   * (for non-seamless types and `loadContainer`-loaded assets). This is a cache
+   * lookup, NOT a fetch — the token *fetch* forms `get(Type, src)` were removed.
+   * Prefer bare-path `get('x.png')` or `get(Asset.kind(...))`.
+   * @advanced
    */
   public get<T extends Loadable>(type: T, alias: string): LoadReturn<T>;
-  public get(typeOrPath: Loadable | string, source?: unknown, options?: unknown): unknown {
-    return this._getClaimed(this._rootClaimer, typeOrPath, source, options);
+
+  /**
+   * Adopts an {@link Assets} catalog: every handle-hybrid leaf is registered,
+   * claimed, and driven to load, and the same leaf objects are returned keyed by
+   * their record key. The catalog's own properties heal in place as payloads
+   * arrive — the returned map holds those very leaves.
+   */
+  public get<M extends Record<string, AssetInput>>(catalog: Assets<M>): InferAssetsProperties<M>;
+
+  /**
+   * Seamless/value access from an `Asset.kind(...)` descriptor (asset-system v2 §4.2) —
+   * the replacement for the removed `get(Type, dynamicSource)` form. Builds and
+   * adopts the descriptor's handle-hybrid leaf: a resource kind yields its
+   * heal-in-place handle, a value kind a stable {@link AssetRef}. A kind with
+   * neither a seamless adapter nor a value channel throws with guidance to use
+   * `load(Asset.kind(...))`.
+   *
+   * The return type follows the {@link ValueAsset} brand (as {@link InferCatalogLeaf}
+   * does): a value-kind descriptor (`Asset.kind<T>('json', …)`) returns
+   * `AssetRef<T>` — even for an object payload — while a resource-kind descriptor
+   * returns the resource itself, so the type always matches the runtime value.
+   *
+   * Unlike bare-path `get('x.png')`, this form is **not instance-deduped by
+   * source**: each call builds a fresh leaf, so repeated `get(Asset.kind(kind, sameSrc))`
+   * accumulates distinct handles (all healing to the same deduped backend
+   * payload). It is the dynamic-source escape hatch — capture the handle once.
+   */
+  public get<T>(asset: ValueAsset<T>): AssetRef<T>;
+  public get<T>(asset: Asset<T>): T;
+
+  /**
+   * Adopts a single handle-hybrid leaf (an `Assets.from()` property) and returns
+   * it — the same object, healing in place once its payload arrives.
+   */
+  public get<T extends object>(leaf: T): T;
+  public get(typeOrPath: Loadable | string | object, source?: unknown): unknown {
+    return this._getClaimed(this._rootClaimer, typeOrPath, source);
   }
 
   /**
@@ -1139,77 +756,102 @@ export class Loader {
    * `'loading'`, which `_getSeamless` alone would not re-fetch).
    * @internal
    */
-  public _getClaimed(claimer: symbol, typeOrPath: Loadable | string, source?: unknown, options?: unknown): unknown {
-    if (typeof typeOrPath === 'string') {
-      const path = typeOrPath;
-      const ctor = this._resolveExtensionType(path);
-
-      if (ctor === undefined) {
-        throw new Error(`Loader: no type registered for any extension of "${path}". Register one via loader.registerExtension().`);
-      }
-
-      const pathAdapter = this._seamlessAdapters.get(ctor);
-
-      if (pathAdapter === undefined) {
-        throw new Error(`Loader: type ${this._describeType(ctor)} inferred from "${path}" has no seamless adapter — use load() instead.`);
-      }
-
-      const handle = this._getSeamless(ctor, pathAdapter, path, source);
-      this._claim(this._key(ctor, path), ctor, path, claimer);
-
-      return handle;
-    }
-
-    const ctor = typeOrPath;
-    const adapter = this._seamlessAdapters.get(ctor);
-
-    if (adapter !== undefined) {
-      if (typeof source === 'string') {
-        const handle = this._getSeamless(ctor, adapter, source, options);
-        this._claim(this._key(ctor, source), ctor, source, claimer);
-
-        return handle;
-      }
-
-      if (Array.isArray(source)) {
-        const paths: readonly string[] = source;
-
-        return paths.map(path => {
-          const handle = this._getSeamless(ctor, adapter, path, options);
-          this._claim(this._key(ctor, path), ctor, path, claimer);
-
-          return handle;
-        });
-      }
-
+  public _getClaimed(claimer: symbol, typeOrPath: Loadable | string | object, source?: unknown): unknown {
+    // Assets<M> container — adopt every handle-hybrid leaf (fill in place, claim
+    // under `claimer`) and return the leaves keyed by their record key.
+    if (typeOrPath instanceof AssetsImpl) {
       const out: Record<string, unknown> = {};
-      const items = source as Readonly<Record<string, string>>;
 
-      for (const [key, path] of Object.entries(items)) {
-        out[key] = this._getSeamless(ctor, adapter, path, options);
-        this._claim(this._key(ctor, path), ctor, path, claimer);
+      const entries = Object.entries((typeOrPath as AssetsImpl<Record<string, AssetInput>>).entries) as Array<[string, object]>;
+      for (const [k, leaf] of entries) {
+        this._adopt(leaf, claimer);
+        out[k] = leaf;
       }
 
       return out;
     }
 
-    if (this._valueTokens.has(ctor) && typeof source === 'string') {
-      const ref = this._getRef(ctor, source, options);
-      this._claim(this._key(ctor, source), ctor, source, claimer);
+    // Single `Asset.kind(...)` descriptor (e.g. `get(Asset.kind('json', 'x.json'))` /
+    // `get(Asset.kind('texture', dynamicPath))`) — build its handle-hybrid leaf from the
+    // config, adopt it, and return it. A value kind yields an AssetRef, a
+    // resource kind the seamless placeholder handle. Mirrors `load`'s AssetImpl
+    // branch and the single-meta-leaf path below. Must precede the string branch
+    // (an AssetImpl carries no stamped meta, so the guard above misses it).
+    if (typeOrPath instanceof AssetImpl) {
+      const { kind, source: src, ...rest } = typeOrPath._config;
+      const opts = Object.keys(rest).length > 0 ? rest : undefined;
 
-      return ref;
+      let leaf: object;
+      try {
+        leaf = createLeaf(kind, src, opts);
+      } catch {
+        throw new Error(`Loader: get() is for seamless/value assets; the "${kind}" kind has neither — use load(Asset.kind('${kind}', ...)) instead.`);
+      }
+
+      this._adopt(leaf, claimer);
+
+      return leaf;
     }
 
-    const alias = source as string;
+    // Single meta-stamped leaf (e.g. `get(assets.ship)`) — adopt and return it.
+    if (_readMeta(typeOrPath) !== undefined) {
+      this._adopt(typeOrPath as object, claimer);
+
+      return typeOrPath;
+    }
+
+    if (typeof typeOrPath === 'string') {
+      const path = typeOrPath;
+      const ctor = this._resolveExtensionType(path);
+
+      if (ctor !== undefined) {
+        const pathAdapter = this._seamlessAdapters.get(ctor);
+
+        if (pathAdapter !== undefined) {
+          const handle = this._getSeamless(ctor, pathAdapter, path, source);
+          this._claim(this._key(ctor, path), ctor, path, claimer);
+
+          return handle;
+        }
+      }
+
+      // Value-kind fallback: a bare path whose suffix maps to a value kind →
+      // stable AssetRef (asset-system v2 §4.2/§4.4). get()'s string overload
+      // passes the second arg as options via `source`.
+      const kind = resolveKindByPath(path);
+      const valueToken = kind !== undefined ? this._valueTokenForKind(kind) : undefined;
+
+      if (valueToken !== undefined) {
+        const ref = this._getRef(valueToken, path, source);
+        this._claim(this._key(valueToken, path), valueToken, path, claimer);
+
+        return ref;
+      }
+
+      // Neither seamless nor value: keep the existing guidance errors.
+      if (ctor === undefined) {
+        throw new Error(`Loader: no type registered for any extension of "${path}". Register one via defineAsset() (its extensions).`);
+      }
+
+      throw new Error(`Loader: type ${this._describeType(ctor)} inferred from "${path}" has no seamless adapter — use load() instead.`);
+    }
+
+    // Not a container, meta-leaf, or path string: a Loadable type token.
+    // In-memory lookup for a non-seamless / non-value type (e.g. a bindAsset-
+    // bound custom type populated by loadContainer): read the stored resource by
+    // source key. Seamless/value fetch-by-token has been removed — use `Asset.kind(...)`
+    // or a bare path for those.
+    const ctor = typeOrPath as Loadable;
+    const src = source as string;
     const typeMap = this._resources.get(ctor);
 
-    if (!typeMap?.has(alias)) {
-      throw new Error(`Missing resource "${alias}" for type ${ctor.name}.`);
+    if (!typeMap?.has(src)) {
+      throw new Error(`Missing resource "${src}" for type ${ctor.name}.`);
     }
 
-    this._claim(this._key(ctor, alias), ctor, alias, claimer);
+    this._claim(this._key(ctor, src), ctor, src, claimer);
 
-    return typeMap.get(alias);
+    return typeMap.get(src);
   }
 
   /**
@@ -1240,25 +882,6 @@ export class Loader {
   }
 
   /**
-   * Returns the loaded asset for `alias`, or `null` if it has not been
-   * loaded yet. Non-throwing alternative to {@link get}.
-   */
-  public peek<T = unknown>(type: typeof Json, alias: string): T | null;
-  public peek<T extends Loadable>(type: T, alias: string): LoadReturn<T> | null;
-  public peek(type: Loadable, alias: string): unknown {
-    const ctor = type;
-
-    return this._resources.get(ctor)?.get(alias) ?? null;
-  }
-
-  /** Returns `true` if the asset is currently held in the in-memory store. */
-  public has(type: Loadable, alias: string): boolean {
-    const ctor = type;
-
-    return this._resources.get(ctor)?.has(alias) ?? false;
-  }
-
-  /**
    * Reverse lookup: given a loaded resource object, return the asset type and
    * source key it was first loaded under, or `null` for runtime-created,
    * unloaded, or non-object resources.
@@ -1274,6 +897,16 @@ export class Loader {
     // WeakMap.get returns undefined for any non-registered or non-weakly-holdable
     // key, so primitive/unkeyed inputs safely resolve to null without a guard.
     return this._resourceKeys.get(resource) ?? null;
+  }
+
+  /**
+   * Non-throwing in-memory lookup: the resource stored under `(type, source)`,
+   * or `null` if none is held. Reads the store directly (no fetch, no seamless
+   * placeholder). Backs scene deserialization, which resolves an asset
+   * reference to a pre-loaded resource. @internal
+   */
+  public _peekResource(type: AssetConstructor, source: string): unknown {
+    return this._resources.get(type)?.get(source) ?? null;
   }
 
   // -----------------------------------------------------------------------
@@ -1293,7 +926,7 @@ export class Loader {
   public unload(arg0: unknown, arg1?: unknown): this {
     if (arg0 instanceof AssetImpl) {
       const asset = arg0 as Asset<unknown>;
-      const ctor = this._assetTypeMap.get(asset.type);
+      const ctor = this._assetTypeMap.get(asset.kind);
 
       if (!ctor) return this;
 
@@ -1315,25 +948,16 @@ export class Loader {
     }
 
     if (arg0 instanceof AssetsImpl) {
-      const container = arg0 as Assets<Record<string, AssetInput>>;
+      // Under adoption a catalog no longer maps to legacy alias entries: its
+      // leaves are handle-hybrids claimed under the app-lifetime root scope by
+      // `get`/`load`. Unloading a catalog therefore RELEASES each leaf's root
+      // claim — the last release evicts the payload in place (resource handles
+      // heal to 'loading'). A never-adopted leaf has no registered key, so its
+      // release is a silent no-op.
+      const container = arg0 as AssetsImpl<Record<string, AssetInput>>;
 
-      for (const [alias, a] of Object.entries(container.entries)) {
-        const assetRef = a;
-        const ctor = this._assetTypeMap.get(assetRef.type);
-
-        if (!ctor) continue;
-
-        const identityKey = this._resolveAssetIdentityKey(ctor, assetRef);
-        const aliasSet = this._identityKeyToAliases.get(identityKey);
-
-        if (aliasSet?.has(alias)) {
-          // Also remove all other aliases that share this resource identity
-          for (const a2 of [...aliasSet]) {
-            this._unloadOne(ctor, a2);
-          }
-        } else {
-          this._unloadOne(ctor, alias);
-        }
+      for (const leaf of Object.values(container.entries)) {
+        this.release(leaf as object);
       }
 
       return this;
@@ -1553,9 +1177,9 @@ export class Loader {
    * Tears down the loader and all resources it owns.
    *
    * Destroys the factory registry (releasing object URLs), destroys every
-   * cache store, clears all in-memory assets, manifest entries, bundle
-   * definitions, and in-flight tracking, and disconnects all signals.
-   * Also calls `destroy?.()` on every handler registered via `bindAsset`.
+   * cache store, clears all in-memory assets and in-flight tracking, and
+   * disconnects all signals. Also calls `destroy?.()` on every handler
+   * registered via `bindAsset`.
    */
   public destroy(): void {
     this._registry.destroy();
@@ -1576,8 +1200,6 @@ export class Loader {
 
     this._boundHandlers.length = 0;
     this._resources.clear();
-    this._manifest.clear();
-    this._bundles.clear();
     this._inFlight.clear();
     this._preventStoreKeys.clear();
     this._inFlightByIdentity.clear();
@@ -1589,7 +1211,6 @@ export class Loader {
     this._seamlessAdapters.clear();
     this._backgroundQueue.length = 0;
     this.onProgress.destroy();
-    this.onBundleProgress.destroy();
     this.onLoaded.destroy();
     this.onError.destroy();
     this.onLoadStart.destroy();
@@ -1601,6 +1222,128 @@ export class Loader {
   // -----------------------------------------------------------------------
   // Internal — loading
   // -----------------------------------------------------------------------
+
+  /**
+   * Adopt an externally-created handle-hybrid leaf (from `Assets.from()`) into
+   * this loader: register it as the deferred/ref handle under its normalized
+   * key, claim it under `claimer`, and drive the fetch. The existing fill site
+   * ({@link _storeResource}) transplants the fetched payload into this exact
+   * object, so every consumer that already holds the leaf pops in. Idempotent
+   * for a handle already adopted under the same key (no duplicate fetch).
+   *
+   * With `background`, the leaf is still registered + claimed + healed in place,
+   * but its fetch is diverted into the low-priority background queue (see
+   * {@link _enqueueBackgroundFetch}) instead of started immediately —
+   * `load(target, { background: true })`.
+   * @internal
+   */
+  public _adopt(handle: object, claimer: symbol, background = false): void {
+    const meta = _readMeta(handle);
+
+    if (meta === undefined) {
+      throw new Error('Loader._adopt: value is not an Assets.from() leaf (no assetMeta).');
+    }
+
+    const ctor = this._assetTypeMap.get(meta.kind);
+
+    if (ctor === undefined) {
+      throw new Error(`Loader._adopt: no constructor registered for kind "${meta.kind}".`);
+    }
+
+    // A freshly-created catalog leaf is 'idle' until adopted; entering the loader
+    // here transitions it to 'loading' (asset-system v2 §7). A re-adopted handle
+    // already loading/ready/failed is left untouched.
+    const leafState = (handle as { _loadState?: { value: string; begin(): void } })._loadState;
+    if (leafState?.value === 'idle') leafState.begin();
+
+    const key = this._key(ctor, meta.src);
+
+    if (handle instanceof AssetRef) {
+      const existingRef = this._refs.get(key);
+      const stored = this._resources.get(ctor)?.get(meta.src);
+
+      if (existingRef === undefined) {
+        this._refs.set(key, { refs: new Set([handle]), options: meta.opts });
+        this._handleKeys.set(handle, key);
+
+        // Mirrors _getRef's stored-fast-path: a value already sitting in
+        // `_resources` (stored elsewhere before this leaf was adopted) fills
+        // this ref immediately instead of leaving it 'loading' forever.
+        if (stored !== undefined) {
+          handle._fill(stored);
+        } else if (background) {
+          this._enqueueBackgroundFetch(ctor, meta.src, meta.opts);
+        } else {
+          this._startRefFetch(ctor, meta.src, meta.opts);
+        }
+      } else if (!existingRef.refs.has(handle)) {
+        // A distinct ref for a key already in flight (or already stored): join
+        // the key's ref set so the single fetch fills it too (§7 multi-handle
+        // fill). If the value already converged, fill immediately; otherwise a
+        // conflicting FETCH option (source-keyed decode can't differ) warns.
+        existingRef.refs.add(handle);
+        this._handleKeys.set(handle, key);
+
+        if (stored !== undefined) {
+          handle._fill(stored);
+        } else {
+          this._warnOnFetchOptionConflict(ctor, meta.src, key, existingRef.options, meta.opts);
+        }
+      }
+      // else: the SAME ref re-adopted — Set membership makes this a no-op.
+
+      this._claim(key, ctor, meta.src, claimer);
+
+      return;
+    }
+
+    const deferredEntry = this._deferred.get(key);
+    const stored = this._resources.get(ctor)?.get(meta.src);
+
+    if (deferredEntry === undefined && stored === undefined) {
+      this._deferred.set(key, { handles: new Set([handle]), options: meta.opts });
+      this._handleKeys.set(handle, key);
+      this._claim(key, ctor, meta.src, claimer);
+
+      if (background) {
+        this._enqueueBackgroundFetch(ctor, meta.src, meta.opts);
+      } else {
+        this._startSeamlessFetch(ctor, meta.src, meta.opts);
+      }
+
+      return;
+    }
+
+    if (stored !== undefined && this._handleKeys.get(handle) !== key) {
+      // Already stored for this key (e.g. loaded elsewhere before this leaf was
+      // adopted — the core catalog scenario) and this exact handle has not been
+      // filled/registered yet: transplant the stored donor into THIS handle in
+      // place (per-catalog identity — do NOT swap to the stored object; the
+      // caller already holds this leaf) and register it so `release(handle)`
+      // can resolve its key.
+      //
+      // §7 remainder: this co-handle fills once from the stored payload but is
+      // NOT entered into the (already-cleared) deferred set, so a LATER
+      // evict+heal of this key will not touch it (it keeps the stale payload).
+      // Weak-retention over the full lifetime is the §7 follow-up; out of scope.
+      const adapter = this._seamlessAdapters.get(ctor);
+
+      adapter?.fill(handle, stored);
+      this._handleKeys.set(handle, key);
+    } else if (deferredEntry !== undefined && stored === undefined && !deferredEntry.handles.has(handle)) {
+      // A distinct handle is in flight for this key and nothing is stored yet:
+      // join the key's handle set so `_storeResource` fills THIS handle too
+      // (§7 multi-handle fill — this is the former silent hang). A conflicting
+      // FETCH option (source-keyed decode can't differ) warns; differing
+      // per-handle sampler options are fine (each handle carries its own).
+      deferredEntry.handles.add(handle);
+      this._handleKeys.set(handle, key);
+      this._warnOnFetchOptionConflict(ctor, meta.src, key, deferredEntry.options, meta.opts);
+    }
+    // else: the SAME handle re-adopted, or already filled — a no-op.
+
+    this._claim(key, ctor, meta.src, claimer);
+  }
 
   /**
    * Seamless single-source resolution: an already-stored asset, an existing
@@ -1618,24 +1361,34 @@ export class Loader {
     const entry = this._deferred.get(key);
 
     if (entry !== undefined) {
-      if (options !== undefined && !this._areOptionsEquivalent(entry.options, options)) {
-        logger.warn(`get(${this._describeType(type)}, "${source}"): conflicting options ignored — the first call's options win.`, {
-          source: 'Loader',
-          once: `loader:seamless-options:${key}`,
-        });
-      }
+      // get() reuses the representative handle (first-wins); only a conflicting
+      // FETCH option warns — per-handle sampler/pre-size differences are fine.
+      this._warnOnFetchOptionConflict(type, source, key, entry.options, options);
 
-      if (adapter.stateOf(entry.handle) === 'failed') {
-        adapter.begin(entry.handle);
-        this._startSeamlessFetch(type, source, entry.options);
-      }
+      const representative = this._representative(entry.handles);
 
-      return entry.handle;
+      if (representative !== undefined) {
+        if (adapter.stateOf(representative) === 'failed') {
+          adapter.begin(representative);
+          this._startSeamlessFetch(type, source, entry.options);
+        } else {
+          // A background-adopted source (`load(catalog, { background: true })`)
+          // is registered here yet still parked in the queue; a direct get()
+          // promotes it to fetch now. No-op when the source is not queued.
+          this._boostFromQueue(type, source);
+        }
+
+        return representative;
+      }
+      // else: the handle set is (unexpectedly) empty — fall through and treat
+      // this as no live handle, creating a fresh placeholder below.
     }
 
+    // Bake the raw `get()` options into the placeholder so a bare `get()`
+    // renders with the requested sampler options instead of the default.
     const handle = adapter.createPlaceholder(options);
 
-    this._deferred.set(key, { handle, options });
+    this._deferred.set(key, { handles: new Set([handle as object]), options });
     this._handleKeys.set(handle as object, key);
     this._startSeamlessFetch(type, source, options);
 
@@ -1659,24 +1412,29 @@ export class Loader {
     const entry = this._refs.get(key);
 
     if (entry !== undefined) {
-      if (options !== undefined && !this._areOptionsEquivalent(entry.options, options)) {
-        logger.warn(`get(${this._describeType(type)}, "${source}"): conflicting options ignored — the first call's options win.`, {
-          source: 'Loader',
-          once: `loader:seamless-options:${key}`,
-        });
-      }
+      // get() reuses the representative ref (first-wins); only a conflicting
+      // FETCH option warns.
+      this._warnOnFetchOptionConflict(type, source, key, entry.options, options);
 
-      if (entry.ref.loadState === 'failed') {
-        entry.ref._begin();
-        this._startRefFetch(type, source, entry.options);
-      }
+      const representative = this._representative(entry.refs);
 
-      return entry.ref;
+      if (representative !== undefined) {
+        if (representative.loadState === 'failed') {
+          representative._begin();
+          this._startRefFetch(type, source, entry.options);
+        } else {
+          // A background-adopted value ref parked in the queue is boosted to
+          // fetch now on a direct get(). No-op when the source is not queued.
+          this._boostFromQueue(type, source);
+        }
+
+        return representative;
+      }
     }
 
     const ref = new AssetRef<unknown>();
 
-    this._refs.set(key, { ref, options });
+    this._refs.set(key, { refs: new Set([ref]), options });
     this._handleKeys.set(ref, key);
 
     const stored = this._resources.get(type)?.get(source);
@@ -1698,6 +1456,29 @@ export class Loader {
     void this._loadSingle(type, source, options).catch(() => {
       /* Failure handled centrally in _onTrackedFailure. */
     });
+  }
+
+  /**
+   * Divert an adopted leaf's fetch into the low-priority background queue
+   * (the `background: true` path of {@link _adopt}). The leaf is already
+   * registered in `_deferred`/`_refs` and claimed, so the fetch — whenever the
+   * queue drains it, or a `get()` boosts it — fills that same handle in place
+   * via {@link _storeResource}. A fresh progress batch starts only while idle,
+   * and the drain kicks the concurrency-capped processor.
+   */
+  private _enqueueBackgroundFetch(type: AssetConstructor, source: string, options: unknown): void {
+    if (this._hasResource(type, source)) return;
+    if (this._inFlight.has(this._key(type, source))) return;
+    if (this._isQueuedInBackground(type, source)) return;
+
+    if (this._backgroundQueue.length === 0 && this._backgroundActive === 0) {
+      this._backgroundLoaded = 0;
+      this._backgroundTotal = 0;
+    }
+
+    this._backgroundQueue.push({ type, alias: source, path: source, options });
+    this._backgroundTotal++;
+    this._drainBackground();
   }
 
   /**
@@ -1782,15 +1563,17 @@ export class Loader {
     // unclaimed — handle; §4.7 minimal). Only a payload that already converged
     // into `_resources` is dropped in place here.
     const deferred = this._deferred.get(key);
-    const handle = deferred?.handle ?? this._resources.get(type)?.get(source);
+    const handle = this._representative(deferred?.handles) ?? this._resources.get(type)?.get(source);
 
     if (adapter !== undefined && deferred === undefined && handle !== undefined) {
       adapter.evict(handle);
       this._resources.get(type)?.delete(source);
       // The original options were consumed when the payload converged into
       // `_resources` (the pre-fill `_deferred` entry is gone); the re-fetch
-      // re-derives them from the manifest entry, if any.
-      this._deferred.set(key, { handle, options: undefined });
+      // re-derives them from the manifest entry, if any. Only the canonical
+      // representative is re-armed here — co-handles filled alongside it keep
+      // their payload (the §7 remainder gap).
+      this._deferred.set(key, { handles: new Set([handle as object]), options: undefined });
       this._handleKeys.set(handle as object, key);
       this._evicted.add(key);
       // A load that just settled may leave a resolved-but-not-yet-cleaned
@@ -1831,47 +1614,9 @@ export class Loader {
       return this._inFlight.get(key);
     }
 
-    const entry = this._getManifestEntry(type, alias);
-    const path = explicitPath ?? entry?.path ?? alias;
-    const resolvedOptions = options ?? entry?.options;
+    const path = explicitPath ?? alias;
 
-    return this._trackInFlight(type, alias, this._dispatchFetch(type, alias, path, resolvedOptions));
-  }
-
-  private _loadSingleBackground(type: AssetConstructor, alias: string, path: string, options?: unknown): Promise<unknown> {
-    if (this._hasResource(type, alias)) {
-      const typeMap = this._resources.get(type);
-      if (typeMap?.has(alias) === true) {
-        return Promise.resolve(typeMap.get(alias));
-      }
-    }
-
-    const key = this._key(type, alias);
-    const inFlight = this._inFlight.get(key);
-
-    if (inFlight) {
-      return inFlight;
-    }
-
-    if (!this._isQueuedInBackground(type, alias)) {
-      if (this._backgroundQueue.length === 0 && this._backgroundActive === 0) {
-        this._backgroundLoaded = 0;
-        this._backgroundTotal = 0;
-      }
-
-      this._backgroundQueue.push({ type, alias, path, options });
-      this._backgroundTotal++;
-    }
-
-    this._drainBackground();
-
-    const started = this._inFlight.get(key);
-
-    if (started) {
-      return started;
-    }
-
-    return this._waitForBackgroundEntry(type, alias);
+    return this._trackInFlight(type, alias, this._dispatchFetch(type, alias, path, options));
   }
 
   private _createLoadingQueue<T>(
@@ -1884,11 +1629,13 @@ export class Loader {
 
     const itemPromises = items.map(({ alias, asset }) => {
       this._onFgBatchStart(alias, asset.source);
-      const ctor = this._assetTypeMap.get(asset.type);
+      const ctor = this._assetTypeMap.get(asset.kind);
 
       if (!ctor) {
         // Must call _notifyItem(false) so LoadingProgress doesn't remain stuck.
-        return Promise.reject<unknown>(new Error(`No constructor registered for asset type "${asset.type}". Call registerAssetType() first.`)).then(
+        return Promise.reject<unknown>(
+          new Error(`No constructor registered for asset type "${asset.kind}". Bind it via defineAsset()/bindAsset() first.`),
+        ).then(
           () => {
             notifyFn?.(true);
           },
@@ -1925,6 +1672,47 @@ export class Loader {
   }
 
   /**
+   * Progress-aware queue over already-{@link _adopt}ed handle-hybrid leaves.
+   *
+   * Mirrors {@link _createLoadingQueue}'s progress/settle machinery, but the
+   * fetch is already driven by `_adopt`; each item's promise is simply the
+   * leaf's own readiness promise (`leaf.loaded` — `Promise<this>` for a resource
+   * handle, `Promise<T>` for an `AssetRef`). No `_claim` here: adoption already
+   * claimed each key. `buildResult` shapes the resolved values into the return.
+   * @internal
+   */
+  private _createAdoptedQueue<T>(entries: Array<[string, object]>, buildResult: (results: Map<string, unknown>) => T): LoadingQueue<T> {
+    const results = new Map<string, unknown>();
+    let notifyFn: ((success: boolean) => void) | null = null;
+
+    const itemPromises = entries.map(([alias, leaf]) => {
+      const src = _readMeta(leaf)?.src ?? alias;
+      this._onFgBatchStart(alias, src);
+      const loaded = (leaf as { loaded: Promise<unknown> }).loaded;
+
+      return loaded.then(
+        value => {
+          results.set(alias, value);
+          notifyFn?.(true);
+          this._onFgBatchSettled(alias, true);
+        },
+        error => {
+          notifyFn?.(false);
+          this._onFgBatchSettled(alias, false, this._normalizeError(error));
+          throw error;
+        },
+      );
+    });
+
+    const promise = Promise.all(itemPromises).then(() => buildResult(results));
+
+    const queue = new LoadingQueue<T>(promise, entries.length);
+    notifyFn = queue._notifyItem.bind(queue);
+
+    return queue;
+  }
+
+  /**
    * Loads a single asset from an `Asset<T>` reference using identity-based
    * in-flight deduplication.
    *
@@ -1939,7 +1727,7 @@ export class Loader {
 
     const source = asset.source;
     const rawConfig = asset._config as Record<string, unknown>;
-    const { type: _type, source: _src, ...extraOnly } = rawConfig;
+    const { kind: _kind, source: _src, ...extraOnly } = rawConfig;
 
     // Identity key: use handler's getIdentityKey if provided (config-sensitive dedup),
     // otherwise fall back to source-based identity (correct for URL-only assets).
@@ -2211,59 +1999,6 @@ export class Loader {
     return this._backgroundQueue.some(entry => entry.type === type && entry.alias === alias);
   }
 
-  private _waitForBackgroundEntry(type: AssetConstructor, alias: string): Promise<unknown> {
-    if (this._hasResource(type, alias)) {
-      const typeMap = this._resources.get(type);
-      if (typeMap?.has(alias) === true) {
-        return Promise.resolve(typeMap.get(alias));
-      }
-    }
-
-    const key = this._key(type, alias);
-    const inFlight = this._inFlight.get(key);
-
-    if (inFlight) {
-      return inFlight;
-    }
-
-    return new Promise<unknown>((resolve, reject) => {
-      const onLoaded = (loadedType: AssetConstructor, loadedAlias: string, resource: unknown): void => {
-        if (loadedType !== type || loadedAlias !== alias) return;
-
-        cleanup();
-        resolve(resource);
-      };
-      const onError = (errorType: AssetConstructor, errorAlias: string, error: Error): void => {
-        if (errorType !== type || errorAlias !== alias) return;
-
-        cleanup();
-        reject(error);
-      };
-      const cleanup = (): void => {
-        this.onLoaded.remove(onLoaded);
-        this.onError.remove(onError);
-      };
-
-      this.onLoaded.add(onLoaded);
-      this.onError.add(onError);
-
-      const pending = this._inFlight.get(key);
-
-      if (pending) {
-        cleanup();
-        pending.then(resolve, reject);
-
-        return;
-      }
-
-      if (this._hasResource(type, alias)) {
-        cleanup();
-        const typeMap = this._resources.get(type);
-        resolve(typeMap?.get(alias));
-      }
-    });
-  }
-
   private _onBackgroundItemDone(): void {
     this.onProgress.dispatch(this._backgroundLoaded, this._backgroundTotal);
 
@@ -2323,7 +2058,13 @@ export class Loader {
     const deferredEntry = this._deferred.get(key);
 
     if (deferredEntry !== undefined) {
-      this._seamlessAdapters.get(type)?.fail(deferredEntry.handle, err);
+      const adapter = this._seamlessAdapters.get(type);
+
+      // Fail EVERY in-flight handle for the key so all co-adopters settle.
+      for (const handle of deferredEntry.handles) {
+        adapter?.fail(handle, err);
+      }
+
       this.onError.dispatch(type, alias, err);
 
       return;
@@ -2332,41 +2073,61 @@ export class Loader {
     const refEntry = this._refs.get(key);
 
     if (refEntry !== undefined) {
-      refEntry.ref._fail(err);
+      for (const ref of refEntry.refs) {
+        ref._fail(err);
+      }
+
       this.onError.dispatch(type, alias, err);
     }
   }
 
-  private _emitBundleProgress(name: string, loaded: number, total: number, onProgress?: (loaded: number, total: number) => void): void {
-    this.onBundleProgress.dispatch(name, loaded, total);
-
-    if (onProgress) {
-      onProgress(loaded, total);
-    }
+  /** The representative (first-inserted) member of a handle/ref set, or `undefined` if empty. @internal */
+  private _representative<T>(members: ReadonlySet<T> | undefined): T | undefined {
+    return members === undefined ? undefined : members.values().next().value;
   }
 
-  // -----------------------------------------------------------------------
-  // Internal — manifest & storage
-  // -----------------------------------------------------------------------
-
-  private _addManifestEntry(type: AssetConstructor, alias: string, path: string, options?: unknown): void {
-    if (!this._manifest.has(type)) {
-      this._manifest.set(type, new Map());
-    }
-
-    const typeManifest = this._manifest.get(type);
-    if (!typeManifest) {
+  /**
+   * Warn once per key when a second handle/ref for the same source carries an
+   * incompatible FETCH option (e.g. a different `mimeType`): the decode is
+   * source-keyed, so only the first call's fetch options take effect and the
+   * later one is silently dropped. Per-handle sampler / pre-size options never
+   * conflict — each handle carries its own — so they are stripped before the
+   * comparison and never warn. A `undefined` second option is a plain reuse.
+   * @internal
+   */
+  private _warnOnFetchOptionConflict(type: AssetConstructor, source: string, key: string, existingOptions: unknown, newOptions: unknown): void {
+    if (newOptions === undefined || this._fetchOptionsEquivalent(existingOptions, newOptions)) {
       return;
     }
-    typeManifest.set(alias, { path, options });
+
+    logger.warn(`get(${this._describeType(type)}, "${source}"): conflicting options ignored — the first call's options win.`, {
+      source: 'Loader',
+      once: `loader:seamless-options:${key}`,
+    });
   }
 
-  private _getManifestEntry(type: AssetConstructor, alias: string): ManifestEntry | undefined {
-    return this._manifest.get(type)?.get(alias);
+  /** Structural equality of the FETCH-relevant option subset (per-handle sampler / pre-size keys stripped). @internal */
+  private _fetchOptionsEquivalent(left: unknown, right: unknown): boolean {
+    return this._areOptionsEquivalent(this._stripPerHandleOptions(left), this._stripPerHandleOptions(right));
   }
 
-  private _isManifestDefinitionEquivalent(entry: ManifestEntry, path: string, options?: unknown): boolean {
-    return entry.path === path && this._areOptionsEquivalent(entry.options, options);
+  /** Drop the per-handle option keys (`samplerOptions`, `width`, `height`) that never gate the shared decode. @internal */
+  private _stripPerHandleOptions(options: unknown): unknown {
+    if (options === null || typeof options !== 'object' || Array.isArray(options)) {
+      return options;
+    }
+
+    const result: Record<string, unknown> = {};
+
+    for (const [key, value] of Object.entries(options as Record<string, unknown>)) {
+      if (key === 'samplerOptions' || key === 'width' || key === 'height') {
+        continue;
+      }
+
+      result[key] = value;
+    }
+
+    return result;
   }
 
   private _areOptionsEquivalent(left: unknown, right: unknown): boolean {
@@ -2408,8 +2169,8 @@ export class Loader {
     }
 
     // Same-prototype instances compare structurally by their own enumerable
-    // keys — the registerManifest contract allows deeply-equal options of any
-    // shared class, not just plain objects. Built-ins whose state is NOT
+    // keys — deeply-equal options of any shared class, not just plain objects,
+    // count as equivalent. Built-ins whose state is NOT
     // carried in enumerable own keys need explicit handling: Dates compare by
     // timestamp; other exotic containers stay reference-only (Object.is above)
     // so two distinct-but-similar instances never count as equivalent.
@@ -2466,13 +2227,22 @@ export class Loader {
       const preventedEntry = this._deferred.get(key);
 
       if (preventedEntry !== undefined) {
-        this._seamlessAdapters.get(type)?.fail(preventedEntry.handle, new Error(`Asset "${alias}" was unloaded while its fetch was in flight.`));
+        const adapter = this._seamlessAdapters.get(type);
+        const unloadError = new Error(`Asset "${alias}" was unloaded while its fetch was in flight.`);
+
+        for (const handle of preventedEntry.handles) {
+          adapter?.fail(handle, unloadError);
+        }
       }
 
       const preventedRef = this._refs.get(key);
 
-      if (preventedRef?.ref.loadState === 'loading') {
-        preventedRef.ref._fail(new Error(`Asset "${alias}" was unloaded while its fetch was in flight.`));
+      if (preventedRef !== undefined) {
+        for (const ref of preventedRef.refs) {
+          if (ref.loadState === 'loading') {
+            ref._fail(new Error(`Asset "${alias}" was unloaded while its fetch was in flight.`));
+          }
+        }
       }
 
       return resource;
@@ -2485,30 +2255,60 @@ export class Loader {
     const deferredEntry = this._deferred.get(key);
     let filledDeferredHandle = false;
 
-    if (deferredEntry !== undefined && deferredEntry.handle !== resource) {
+    if (deferredEntry !== undefined) {
       const adapter = this._seamlessAdapters.get(type);
+      let representative: object | undefined;
 
-      if (adapter !== undefined) {
+      // Fill EVERY in-flight handle for the key from the single decoded donor
+      // (§7 multi-handle fill). The first handle is the representative — it
+      // becomes the canonical `_resources` entry, mirroring the old
+      // single-handle contract (which object is canonical for eviction).
+      for (const handle of deferredEntry.handles) {
+        representative ??= handle;
+
+        if (handle === resource || adapter === undefined) {
+          continue;
+        }
+
         // A non-get producer (load(), bundle, background) may store into a key
         // whose handle is 'failed' (e.g. an earlier get() 404'd). fill() → settle()
         // must run from a re-armed state so `.loaded` re-materializes a resolved
         // promise; without begin() the handle would read 'ready' while its cached
-        // `.loaded` stayed permanently rejected.
-        if (adapter.stateOf(deferredEntry.handle) === 'failed') {
-          adapter.begin(deferredEntry.handle);
+        // `.loaded` stayed permanently rejected. Skip a handle already 'ready'
+        // (filled by an earlier producer) — filling twice is a no-op at best.
+        const state = adapter.stateOf(handle);
+
+        if (state === 'ready') {
+          continue;
         }
 
-        adapter.fill(deferredEntry.handle, resource);
+        if (state === 'failed') {
+          adapter.begin(handle);
+        }
+
+        adapter.fill(handle, resource);
       }
 
       this._deferred.delete(key);
-      resource = deferredEntry.handle;
-      filledDeferredHandle = true;
+
+      if (representative !== undefined && representative !== resource) {
+        resource = representative;
+        filledDeferredHandle = true;
+      }
     }
 
     // Value-asset refs fill from whatever producer stores the value; the raw
-    // value stays the stored resource (load() keeps resolving it).
-    this._refs.get(key)?.ref._fill(resource);
+    // value stays the stored resource (load() keeps resolving it). Fill every
+    // in-flight ref for the key (§7 multi-handle fill).
+    const refEntry = this._refs.get(key);
+
+    if (refEntry !== undefined) {
+      for (const ref of refEntry.refs) {
+        if (ref.loadState !== 'ready') {
+          ref._fill(resource);
+        }
+      }
+    }
 
     let typeResources = this._resources.get(type);
     if (!typeResources) {

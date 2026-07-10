@@ -43,9 +43,6 @@ class GraphicsPrimitivesScene extends Scene {
         context.backend.clear();
         context.render(this.sceneRoot);
     }
-    unload() {
-        this.sceneRoot?.destroy();
-    }
     destroy() {
         this.sceneRoot?.destroy();
     }

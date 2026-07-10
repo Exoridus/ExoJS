@@ -1,5 +1,5 @@
 // Auto-generated from blur-filter.ts — edit the .ts source, not this file.
-import { Application, BlurFilter, Color, Scene, Sprite, Texture } from '@codexo/exojs';
+import { Application, BlurFilter, Color, Scene, Sprite } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {
@@ -20,13 +20,10 @@ class BlurFilterScene extends Scene {
     hud;
     panel;
     slider;
-    async load(loader) {
-        await loader.load(Texture, { grid: PIXEL_GRID });
-    }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
         this.blur = new BlurFilter({ radius: 4, quality: 2 });
-        this.sprite = new Sprite(loader.get(Texture, 'grid')).setAnchor(0.5).setScale(4.5).setPosition(width / 2, height / 2);
+        this.sprite = new Sprite(this.loader.get(PIXEL_GRID)).setAnchor(0.5).setScale(4.5).setPosition(width / 2, height / 2);
         this.sprite.filters = [this.blur];
         this.hud = mountControls({
             title: 'Blur Filter',

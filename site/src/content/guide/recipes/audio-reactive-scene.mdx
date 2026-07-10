@@ -22,10 +22,8 @@ Three systems run in parallel, each driven by a different facet of the audio ana
 One analyser for frequency data, one beat detector for rhythm, one particle system for visual feedback:
 
 ```js
-import {
-    Application, AudioStream,
-    Scene, View, Texture, Vector, Color, Ease,
-} from '@codexo/exojs';
+import { Asset, Application, AudioStream,
+    Scene, View, Vector, Color, Ease } from '@codexo/exojs';
 import { AudioAnalyser, BeatDetector } from '@codexo/exojs-audio-fx';
 import {
     AlphaFadeOverLifetime, BurstSpawn, ConeDirection, Constant,
@@ -36,12 +34,16 @@ const app = new Application({ extensions: [particlesExtension] });
 
 class AudioReactiveScene extends Scene {
     async load(loader) {
-        await loader.load(AudioStream, { track: 'audio/track.ogg' });
-        await loader.load(Texture, { particle: 'image/particle.png' });
+        const [music, particleTexture] = await Promise.all([
+            loader.load(Asset.kind('music', 'audio/track.ogg')),
+            loader.load('image/particle.png'),
+        ]);
+        this.music = music;
+        this.particleTexture = particleTexture;
     }
 
-    init(loader) {
-        this.app.audio.play(loader.get(AudioStream, 'track'), { loop: true, volume: 0.8 });
+    init() {
+        this.app.audio.play(this.music, { loop: true, volume: 0.8 });
 
         // Analysis — both taps read the music bus the track plays through.
         this.analyser = new AudioAnalyser({ source: this.app.audio.music, fftSize: 512 });
@@ -49,7 +51,7 @@ class AudioReactiveScene extends Scene {
         this._bg = new Color(20, 24, 40, 1);
 
         // Particles — burst on beat
-        this.particles = new ParticleSystem(loader.get(Texture, 'particle'), { capacity: 5000 });
+        this.particles = new ParticleSystem(this.particleTexture, { capacity: 5000 });
         this.burst = new BurstSpawn({
             schedule: [{ time: 0, count: 120 }],
             lifetime: new Constant(0.8),

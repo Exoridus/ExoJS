@@ -17,10 +17,10 @@ This chapter covers what the detector does and the events it fires. The next cha
 The detector taps a live audio source — an `AudioBus`, a `Voice`, an `AudioNode`, or a `MediaStream` — as a parallel branch that does not affect the source's main signal chain. It does not accept a `Sound`/`AudioStream` descriptor; tap the bus the audio plays through (e.g. `app.audio.music`) or the individual `Voice` you got back from `play()`:
 
 ```js
-import { AudioStream } from '@codexo/exojs';
+import { Asset, AudioStream } from '@codexo/exojs';
 import { BeatDetector } from '@codexo/exojs-audio-fx';
 
-const track = loader.get(AudioStream, 'track');
+const track = await loader.load(Asset.kind('music', 'audio/track.ogg'));
 this.app.audio.play(track, { loop: true });
 
 const detector = new BeatDetector();

@@ -6,11 +6,11 @@
   "subsystem": "ldtk",
   "importPath": "@codexo/exojs-ldtk",
   "tier": "stable",
-  "memberCount": 9,
+  "memberCount": 10,
   "counts": {
     "constructors": 0,
     "methods": 2,
-    "properties": 7,
+    "properties": 8,
     "events": 0
   },
   "sections": [
@@ -352,6 +352,47 @@
           "params": [],
           "returnType": null,
           "description": "Reserved TileLayer.properties key holding the JSON-encoded LdtkIntGridValueDef array for a TileLayer converted from an LDtk IntGrid layer instance — the raw-int → named/coloured mapping declared on the owning layer definition (data.defs.layers[].intGridValues). Prefer getLdtkIntGridValueAt over reading this directly."
+        },
+        {
+          "name": "ldtkMapBinding",
+          "signature": "ldtkMapBinding: AssetBinding<LdtkMap, undefined>",
+          "signatureTokens": [
+            {
+              "text": "ldtkMapBinding",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetBinding",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LdtkMap",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Declarative asset binding for LdtkMap. Claims the ldtk file extension so that: - loader.load(LdtkMap, 'world.ldtk') — returns the parsed LdtkMap with all levels pre-converted to runtime import('@codexo/exojs-tilemap').TileMaps. - loader.load('world.ldtk') — auto-routed to LdtkMap via the ExtensionTypeMap augmentation in public.ts. Each loaded level's TileMap is accessible via LdtkMap.levels or LdtkMap.getLevelByName."
         }
       ],
       "paragraphs": [],

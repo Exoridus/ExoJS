@@ -20,10 +20,10 @@ npm install @codexo/exojs @codexo/exojs-tilemap
 
 ## What this package provides
 
-- `TileMap` (re-exported from `@codexo/exojs-tilemap`) — generic runtime tilemap; the common-case result of `loader.load(TileMap, url)`
+- `TileMap` (re-exported from `@codexo/exojs-tilemap`) — generic runtime tilemap; the common-case result of `loader.load(Asset.kind('tileMap', url))`
 - `TileMapNode` / `TileLayerNode` (re-exported from `@codexo/exojs-tilemap`) — scene nodes that render a loaded `TileMap` on WebGL2/WebGPU
 - `TileMapView` / `TileMapBand` (re-exported from `@codexo/exojs-tilemap`) — group a map's layers into independently placeable bands for interleaving actors between tile layers; same class identity, so `instanceof` holds across both import paths (the canonical view/band docs live in the [`@codexo/exojs-tilemap` README](https://www.npmjs.com/package/@codexo/exojs-tilemap))
-- `TiledMap` — parsed Tiled source model; advanced/diagnostic use via `loader.load(TiledMap, url)`
+- `TiledMap` — parsed Tiled source model; advanced/diagnostic use via `loader.load(Asset.kind('tiledMap', url))`
 - `TiledTileset` — parsed tileset (atlas-image or collection-of-images); holds resolved textures
 - `TiledLayer` hierarchy — `TiledTileLayer`, `TiledObjectLayer`, `TiledImageLayer`, `TiledGroupLayer`
 - `TiledObject` — parsed object (point, ellipse, polygon, polyline, text, tile-ref, rectangle)
@@ -43,7 +43,7 @@ import { TileMap, TileMapNode, tiledExtension } from '@codexo/exojs-tiled';
 
 const app = new Application({ extensions: [tiledExtension] });
 
-const map = await app.loader.load(TileMap, 'maps/world.tmj');
+const map = await app.loader.load(Asset.kind('tileMap', 'maps/world.tmj'));
 // map is a @codexo/exojs-tilemap TileMap
 
 app.scene.root.addChild(new TileMapNode(map));
@@ -60,7 +60,7 @@ Load the fully resolved Tiled source model and convert it manually:
 ```ts
 import { TiledMap } from '@codexo/exojs-tiled';
 
-const source = await app.loader.load(TiledMap, 'maps/world.tmj');
+const source = await app.loader.load(Asset.kind('tiledMap', 'maps/world.tmj'));
 const map = source.toTileMap();
 ```
 
@@ -89,12 +89,12 @@ traverse the dependency graph automatically.
 
 ## Asset loading
 
-`loader.load(TileMap, url)` (common path) and `loader.load(TiledMap, url)` (advanced path) both:
+`loader.load(Asset.kind('tileMap', url))` (common path) and `loader.load(Asset.kind('tiledMap', url))` (advanced path) both:
 
 1. Fetch and validate the `.tmj` file.
 2. Resolve each tileset entry (fetches external `.tsj` files via the Loader cache).
 3. Load atlas images (`tileset.image`) and per-tile images (collection-of-images tilesets)
-   via `loader.load(Texture, …)` — the Loader deduplicates identical URLs.
+   via `loader.load(imageUrl)` — the Loader deduplicates identical URLs.
 4. Validate GID ranges (no duplicates, no overlaps, all layer GIDs covered) — throws
    `TiledFormatError` on any inconsistency.
 
@@ -105,7 +105,7 @@ The runtime binding additionally calls `TiledMap.toTileMap()` to produce the gen
 ```ts
 // `.tmj`/`.tsj` are recognised by extension; a format hint is only needed for
 // Tiled data served from a generic `.json` path:
-await loader.load(TileMap, 'maps/world.json', { format: 'tiled' });
+await loader.load(Asset.kind('tileMap', 'maps/world.json', { format: 'tiled' }));
 ```
 
 | Option | Type | Default | Description |

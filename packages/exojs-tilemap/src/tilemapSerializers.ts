@@ -11,7 +11,7 @@ import { TileMapNode } from './TileMapNode';
  * Captures the **map reference** (its Loader source key) plus the render-only
  * `pixelSnapMode`; the per-layer / per-chunk nodes are derived from the map and
  * rebuilt on construction, so they are never written. The referenced `TileMap`
- * must be pre-loaded into the target Loader (e.g. `loader.load(TileMap, 'world.tmj')`)
+ * must be pre-loaded into the target Loader (e.g. `loader.load(Asset.kind('tileMap', 'world.tmj'))`)
  * before deserialize — procedurally-built maps have no source key and cannot be
  * referenced.
  *

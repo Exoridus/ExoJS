@@ -19,8 +19,13 @@ The key technique: **tween chains and delays**. Each tween starts at a specific 
 ```js
 class CinematicScene extends Scene {
     async load(loader) {
-        await loader.load(Texture, { boss: 'image/boss.png' });
-        await loader.load(AudioStream, { track: 'audio/track.ogg' });
+        // AudioStream has no bare-path form, so use `.of(...)` — and since
+        // `get(Asset.kind('music', ...))` isn't supported, keep the loaded
+        // instances as direct references instead of looking them up later.
+        [this.bossTexture, this.trackStream] = await Promise.all([
+            loader.load('image/boss.png'),
+            loader.load(Asset.kind('music', 'audio/track.ogg')),
+        ]);
     }
 
     init(loader) {
@@ -28,14 +33,14 @@ class CinematicScene extends Scene {
         this.view = new View(220, 300, 800, 600);
 
         // Boss — starts small, scales up during the pan
-        this.boss = new Sprite(loader.get(Texture, 'boss'))
+        this.boss = new Sprite(this.bossTexture)
             .setAnchor(0.5)
             .setScale(0.4)
             .setPosition(560, 320)
             .setTint(new Color(255, 130, 130));
 
         // Music — start quiet, fade in over the sequence. Keep the Voice to tween.
-        this.musicVoice = this.app.audio.play(loader.get(AudioStream, 'track'), { loop: true, volume: 0.2 });
+        this.musicVoice = this.app.audio.play(this.trackStream, { loop: true, volume: 0.2 });
 
         // Shutter bars — open at the very start
         this.barSize = { v: 0 };

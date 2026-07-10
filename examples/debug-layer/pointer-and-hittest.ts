@@ -1,4 +1,4 @@
-import { Application, Color, Scene, Sprite, Texture } from '@codexo/exojs';
+import { Application, Color, Scene, Sprite } from '@codexo/exojs';
 import { DebugOverlay } from '@codexo/exojs/debug';
 
 const app = new Application({
@@ -21,16 +21,12 @@ debug.layers.pointerStack.visible = true;
 class PointerAndHittestScene extends Scene {
     private sprites!: Sprite[];
 
-    override async load(loader): Promise<void> {
-        await loader.load(Texture, { bunny: 'image/ship-a.png' });
-    }
-
-    override init(loader): void {
+    override init(): void {
         const { width, height } = this.app.canvas;
 
         this.sprites = [];
         for (let i = 0; i < 5; i++) {
-            const sprite = new Sprite(loader.get(Texture, 'bunny'))
+            const sprite = new Sprite(this.loader.get('image/ship-a.png'))
                 .setAnchor(0.5)
                 .setScale(1.2)
                 .setPosition(width / 2 - 120 + i * 60, height / 2 - 20 + (i % 2) * 40);

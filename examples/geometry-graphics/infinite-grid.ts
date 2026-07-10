@@ -1,4 +1,4 @@
-import { Application, Color, Keyboard, RenderBackendType, Scene, Sprite, Texture, View, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
+import { Application, Color, Keyboard, RenderBackendType, Scene, Sprite, View, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -62,15 +62,11 @@ class InfiniteGridScene extends Scene {
     private sprite!: Sprite;
     private filter!: WebGl2ShaderFilter | WebGpuShaderFilter;
 
-    override async load(loader): Promise<void> {
-        await loader.load(Texture, { uvGrid: 'image/uv-grid-256.png' });
-    }
-
-    override init(loader): void {
+    override init(): void {
         const { width, height } = this.app.canvas;
 
         this.view = new View(0, 0, width, height);
-        this.sprite = new Sprite(loader.get(Texture, 'uvGrid'));
+        this.sprite = new Sprite(this.loader.get('image/uv-grid-256.png'));
         this.sprite.width = width;
         this.sprite.height = height;
         this.filter =

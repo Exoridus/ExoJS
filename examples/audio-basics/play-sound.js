@@ -1,5 +1,5 @@
 // Auto-generated from play-sound.ts — edit the .ts source, not this file.
-import { Application, Color, Scene, Sound, Text } from '@codexo/exojs';
+import { Application, Color, Scene, Text } from '@codexo/exojs';
 const app = new Application({
     canvas: {
         width: 1280,
@@ -15,14 +15,14 @@ class PlaySoundScene extends Scene {
     sounds;
     text;
     index = 0;
-    async load(loader) {
-        await Promise.all(SOUND_KEYS.map(key => loader.load(Sound, { [key]: assets.demo.audio[key] })));
-    }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
         // Keep example SFX comfortable — full volume is jarring in the docs.
         this.app.audio.sound.volume = 0.5;
-        this.sounds = SOUND_KEYS.map(key => loader.get(Sound, key));
+        // Path-only get() infers Sound from the .ogg extension — sidesteps a
+        // compile-time overload ambiguity between Sound and the Json token form
+        // when passing the Sound token explicitly.
+        this.sounds = SOUND_KEYS.map(key => this.loader.get(assets.demo.audio[key]));
         this.text = new Text('Click anywhere to play SFX', { fillColor: Color.white, fontSize: 24, align: 'center' })
             .setAnchor(0.5, 0.5)
             .setPosition(width / 2, height / 2);

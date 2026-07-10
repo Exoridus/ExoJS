@@ -32,10 +32,10 @@ init(loader) {
     this._divider.drawRectangle(width / 2 - 1, 0, 2, height);
 
     // Shared world objects — both views see these
-    this._leftPlayer = new Sprite(loader.get(Texture, 'hero'))
+    this._leftPlayer = new Sprite(loader.get('image/hero.png'))
         .setAnchor(0.5)
         .setTint(new Color(120, 190, 255));
-    this._rightPlayer = new Sprite(loader.get(Texture, 'hero'))
+    this._rightPlayer = new Sprite(loader.get('image/hero.png'))
         .setAnchor(0.5)
         .setTint(new Color(255, 180, 120));
 }

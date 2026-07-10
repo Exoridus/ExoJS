@@ -91,8 +91,8 @@ function fakeLoader(entries: ReadonlyArray<{ type: Loadable; source: string; res
 
       return hit ? { type: hit.type, source: hit.source } : null;
     },
-    peek(type: Loadable, alias: string) {
-      const hit = entries.find(entry => entry.type === type && entry.source === alias);
+    _peekResource(type: Loadable, source: string) {
+      const hit = entries.find(entry => entry.type === type && entry.source === source);
 
       return hit ? hit.resource : null;
     },

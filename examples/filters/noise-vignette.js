@@ -1,5 +1,5 @@
 // Auto-generated from noise-vignette.ts — edit the .ts source, not this file.
-import { Application, Color, RenderBackendType, Scene, Sprite, Texture, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
+import { Application, Color, RenderBackendType, Scene, Sprite, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {
@@ -36,17 +36,14 @@ class NoiseVignetteScene extends Scene {
     sprite;
     hud;
     panel;
-    async load(loader) {
-        await loader.load(Texture, { grid: UV_GRID });
-    }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
         this.filter =
             app.backend.backendType === RenderBackendType.WebGpu
                 ? new WebGpuShaderFilter({ fragmentSource: wgsl, uniforms: { uTime: 0, uIntensity: this.intensity } })
                 : new WebGl2ShaderFilter({ fragmentSource: glsl, uniforms: { uTime: 0, uIntensity: this.intensity } });
         // Fill the whole 16:9 frame so the post effect covers the viewport.
-        const texture = loader.get(Texture, 'grid');
+        const texture = this.loader.get(UV_GRID);
         this.sprite = new Sprite(texture).setAnchor(0.5).setPosition(width / 2, height / 2);
         this.sprite.width = width;
         this.sprite.height = height;

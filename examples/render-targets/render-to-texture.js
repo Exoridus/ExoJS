@@ -1,5 +1,5 @@
 // Auto-generated from render-to-texture.ts — edit the .ts source, not this file.
-import { Application, Color, Container, RenderTexture, Scene, Sprite, Texture } from '@codexo/exojs';
+import { Application, Color, Container, RenderTexture, Scene, Sprite } from '@codexo/exojs';
 const app = new Application({
     canvas: {
         width: 1280,
@@ -16,12 +16,9 @@ class RenderToTextureScene extends Scene {
     container;
     renderTexture;
     renderSprite;
-    async load(loader) {
-        await loader.load(Texture, { bunny: 'image/ship-a.png' });
-    }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
-        this.container = this.createBunnyContainer(loader.get(Texture, 'bunny'));
+        this.container = this.createBunnyContainer(this.loader.get('image/ship-a.png'));
         this.renderTexture = this.createRenderTexture(this.container);
         this.renderSprite = new Sprite(this.renderTexture);
         this.renderSprite.setPosition(width, height);

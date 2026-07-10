@@ -1,9 +1,4 @@
-import {
-    Application,
-    Color,
-    Scene,
-    Texture,
-} from '@codexo/exojs';
+import { Application, Color, Scene, Texture } from '@codexo/exojs';
 import {
     AlphaFadeOverLifetime,
     ApplyForce,
@@ -176,10 +171,6 @@ class ParticleStressScene extends Scene {
         for (const entry of this.particleSystems) {
             context.render(entry.instance);
         }
-    }
-
-    override unload(): void {
-        this.destroySystems();
     }
 
     override destroy(): void {

@@ -1,5 +1,5 @@
 // Auto-generated from moving-source.ts — edit the .ts source, not this file.
-import { Application, Color, Graphics, Scene, Sound, Text } from '@codexo/exojs';
+import { Application, Asset, Color, Graphics, Scene, Sound, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {
@@ -34,14 +34,14 @@ class MovingSourceScene extends Scene {
     label;
     tapPrompt;
     hud;
-    async load(loader) {
-        // A continuous music loop, not a one-shot: spatialization is only
-        // audible while there is sustained signal to pan/attenuate.
-        await loader.load(Sound, { tone: 'audio/demo-loop-main.ogg' });
-    }
-    init(loader) {
+    async init() {
         const { width, height } = this.app.canvas;
-        this.sound = new Sound(loader.get(Sound, 'tone').audioBuffer, {
+        // A continuous music loop, not a one-shot: spatialization is only
+        // audible while there is sustained signal to pan/attenuate. The derived
+        // Sound below reads .audioBuffer synchronously, so await load() instead
+        // of the deferred get() (whose placeholder audioBuffer is null until fill).
+        const source = await this.loader.load(Asset.kind('sound', 'audio/demo-loop-main.ogg'));
+        this.sound = new Sound(source.audioBuffer, {
             distanceModel: 'linear',
             refDistance: REF_DISTANCE,
             maxDistance: MAX_DISTANCE,

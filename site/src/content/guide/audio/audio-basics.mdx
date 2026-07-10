@@ -28,18 +28,19 @@ Use `Sound` when you need many overlapping instances of the same short clip. Use
 Both types are loaded through the `Loader`, like textures, then played through `app.audio`:
 
 ```js
-import { AudioStream, Scene, Sound } from '@codexo/exojs';
+import { Asset, AudioStream, Scene } from '@codexo/exojs';
 
 class AudioScene extends Scene {
     async load(loader) {
-        await loader.load(Sound, { laser: 'audio/laser.ogg' });
-        await loader.load(AudioStream, { theme: 'audio/theme.ogg' });
+        const [laser, theme] = await Promise.all([
+            loader.load('audio/laser.ogg'),
+            loader.load(Asset.kind('music', 'audio/theme.ogg')),
+        ]);
+        this.laser = laser;
+        this.theme = theme;
     }
 
-    init(loader) {
-        this.laser = loader.get(Sound, 'laser');
-        this.theme = loader.get(AudioStream, 'theme');
-
+    init() {
         // Playing returns a live Voice — keep it to control this instance.
         this.themeVoice = this.app.audio.play(this.theme, { loop: true, volume: 0.6 });
     }
@@ -139,7 +140,7 @@ Pass `{ toVolume }` to fade the incoming voice to something other than full, and
 For rapid-fire SFX (gunshots, footsteps, UI clicks), set `poolSize` higher and use the default FIFO strategy:
 
 ```js
-const gunshot = loader.get(Sound, 'gunshot');
+const gunshot = loader.get('audio/gunshot.ogg');
 gunshot.poolSize = 24;
 
 // ... hold spacebar to fire rapidly ...

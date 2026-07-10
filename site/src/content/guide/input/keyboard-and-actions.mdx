@@ -191,15 +191,15 @@ Scene-scoped bindings from `this.inputs` are cleaned up when the scene unloads, 
 </Callout>
 
 ```js
-import { GamepadAxis, GamepadButton, Keyboard, Scene, Sprite, Texture } from '@codexo/exojs';
+import { GamepadAxis, GamepadButton, Keyboard, Scene, Sprite } from '@codexo/exojs';
 
 class PlayerScene extends Scene {
     async load(loader) {
-        await loader.load(Texture, { hero: 'image/hero.png' });
+        await loader.load('image/hero.png');
     }
 
     init(loader) {
-        this.sprite = new Sprite(loader.get(Texture, 'hero'))
+        this.sprite = new Sprite(loader.get('image/hero.png'))
             .setAnchor(0.5)
             .setPosition(400, 300);
 

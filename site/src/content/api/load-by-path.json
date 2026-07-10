@@ -1,6 +1,6 @@
 {
   "title": "LoadByPath",
-  "description": "Resolves the return type for Loader.load when called with a plain path string. Returns `unknown` when the extension is not in ExtensionTypeMap — the string-path overload rejects such paths at compile time; use the token form (`load(MyType, path)`) instead. The `[PathExtension<S>] extends [never]` guard is load-bearing: indexing ExtensionTypeMap with `never` would silently produce `never` rather than the intended `unknown` fallback.",
+  "description": "Resolves the return type for Loader.load when called with a plain path string. Returns `unknown` when the extension is not in ExtensionTypeMap — the string-path overload rejects such paths at compile time; use the descriptor form (`load(Asset.kind(kind, path))`) instead. The `[PathExtension<S>] extends [never]` guard is load-bearing: indexing ExtensionTypeMap with `never` would silently produce `never` rather than the intended `unknown` fallback.",
   "symbol": "LoadByPath",
   "kind": "type",
   "subsystem": "resources",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Resolves the return type for Loader.load when called with a plain path string. Returns `unknown` when the extension is not in ExtensionTypeMap — the string-path overload rejects such paths at compile time; use the token form (`load(MyType, path)`) instead.",
+        "Resolves the return type for Loader.load when called with a plain path string. Returns `unknown` when the extension is not in ExtensionTypeMap — the string-path overload rejects such paths at compile time; use the descriptor form (`load(Asset.kind(kind, path))`) instead.",
         "The `[PathExtension<S>] extends [never]` guard is load-bearing: indexing ExtensionTypeMap with `never` would silently produce `never` rather than the intended `unknown` fallback."
       ],
       "importLine": "import { LoadByPath } from '@codexo/exojs'",

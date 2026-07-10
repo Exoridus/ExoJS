@@ -1,5 +1,5 @@
 // Auto-generated from music-loop.ts — edit the .ts source, not this file.
-import { Application, AudioStream, Color, Graphics, Scene, Text } from '@codexo/exojs';
+import { Application, Asset, Assets, Color, Graphics, Scene, Text } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {
@@ -20,16 +20,15 @@ class MusicLoopScene extends Scene {
     bar = { x: 0, y: 0, w: 0, h: 28 };
     hud;
     panel;
-    async load(loader) {
-        await loader.load(AudioStream, { track: assets.demo.audio.musicLoop });
-    }
-    init(loader) {
+    async init() {
         const { width, height } = this.app.canvas;
         // Wide progress bar centred horizontally on the 16:9 canvas.
         this.bar = { x: width * 0.15, y: height * 0.5, w: width * 0.7, h: 28 };
         // A single streaming track — the browser's media pipeline loops it
         // seamlessly when `loop` is on, so no duplicate/silent track is needed.
-        this.music = loader.get(AudioStream, 'track');
+        // AudioStream has no seamless adapter — await it explicitly.
+        const { track } = await this.loader.load(Assets.from({ track: Asset.kind('music', assets.demo.audio.musicLoop) }));
+        this.music = track;
         // Core defers playback until the AudioContext unlocks on the first
         // gesture, then starts automatically — play() returns the Voice now,
         // and all live control (volume, rate, loop, seek) lives on it.

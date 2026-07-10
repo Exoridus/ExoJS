@@ -7,7 +7,6 @@ import { describe, expect, it,vi } from 'vitest';
 
 import { loadTiledMap } from '../src/loadTiledMap';
 import { TiledGroupLayer, TiledImageLayer, TiledObjectLayer, TiledTileLayer } from '../src/TiledLayer';
-import { TiledMap } from '../src/TiledMap';
 import { tiledRuntimeMapBinding } from '../src/tiledRuntimeMapBinding';
 import { TiledFormatError } from '../src/validate';
 
@@ -45,16 +44,20 @@ function makeContext(fixtures: Record<string, unknown>) {
     }),
   };
 
-  loaderLoad.mockImplementation(async (token: unknown, url: string): Promise<unknown> => {
-    if (token === Texture) {
+  loaderLoad.mockImplementation(async (token: unknown): Promise<unknown> => {
+    // Both Texture and TiledMap sub-loads now arrive as `Asset.kind(kind, src)` descriptors
+    // (asset form); read the source from the descriptor.
+    const asset = token as { kind?: unknown; source?: unknown } | null;
+    if (asset?.kind === 'texture') {
+      const src = asset.source as string;
       const tex = new Texture();
-      const size = TEXTURE_SIZES[url] ?? { w: 256, h: 256 };
+      const size = TEXTURE_SIZES[src] ?? { w: 256, h: 256 };
       tex.width = size.w;
       tex.height = size.h;
       return tex;
     }
-    if (token === TiledMap) {
-      return loadTiledMap(url, context);
+    if (asset?.kind === 'tiledMap') {
+      return loadTiledMap(asset.source as string, context);
     }
     throw new Error(`toTileMap.test: unexpected loader.load token: ${String(token)}`);
   });

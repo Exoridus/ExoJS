@@ -1,5 +1,5 @@
 // Auto-generated from z-ordering.ts — edit the .ts source, not this file.
-import { Application, Color, Container, Keyboard, Scene, Sprite, Text, Texture } from '@codexo/exojs';
+import { Application, Color, Container, Keyboard, Scene, Sprite, Text } from '@codexo/exojs';
 const app = new Application({
     canvas: {
         width: 1280,
@@ -16,18 +16,16 @@ class ZOrderingScene extends Scene {
     group;
     label;
     sprites;
-    async load(loader) {
-        await loader.load(Texture, { bunny: 'image/ship-a.png' });
-    }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
+        const texture = this.loader.get('image/ship-a.png');
         this.group = new Container();
         this.label = new Text('Press 1, 2, 3 — front: 3 (blue)', { fillColor: Color.white, fontSize: 18 });
         this.label.setPosition(18, 18);
         // Large, tightly spaced sprites so they clearly overlap — otherwise a
         // zIndex change has nothing visible to reorder.
         this.sprites = [0, 1, 2].map(index => {
-            const sprite = new Sprite(loader.get(Texture, 'bunny'))
+            const sprite = new Sprite(texture)
                 .setAnchor(0.5)
                 .setScale(2.4)
                 .setPosition(width / 2 - 90 + index * 90, height / 2);

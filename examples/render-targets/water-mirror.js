@@ -1,5 +1,5 @@
 // Auto-generated from water-mirror.ts — edit the .ts source, not this file.
-import { Application, CallbackRenderPass, Color, RenderBackendType, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite, Texture, WebGl2ShaderFilter, WebGpuShaderFilter, } from '@codexo/exojs';
+import { Application, CallbackRenderPass, Color, RenderBackendType, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
 const app = new Application({
     canvas: {
         width: 1280,
@@ -31,14 +31,11 @@ class WaterMirrorScene extends Scene {
     filter;
     pipeline;
     time = 0;
-    async load(loader) {
-        await loader.load(Texture, { bunny: 'image/ship-a.png' });
-    }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
         const half = height / 2;
         this.rt = new RenderTexture(width, half);
-        this.source = new Sprite(loader.get(Texture, 'bunny')).setAnchor(0.5).setPosition(width / 2, half / 2).setScale(2.6);
+        this.source = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(width / 2, half / 2).setScale(2.6);
         // Flip the captured top half down into the bottom half for the mirrored reflection.
         this.mirror = new Sprite(this.rt).setPosition(0, height).setScale(1, -1);
         this.filter =

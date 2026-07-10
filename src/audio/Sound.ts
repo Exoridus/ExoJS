@@ -171,12 +171,27 @@ export class Sound implements Playable {
 
   /**
    * Load lifecycle of this sound. Directly constructed sounds are `'ready'`;
-   * deferred handles returned by `loader.get(Sound, …)` start `'loading'` and
-   * become `'ready'` once the payload fills in, or `'failed'` when the load
-   * errors.
+   * deferred handles returned by `loader.get('theme.ogg')` / `loader.get(Asset.kind('sound', src))`
+   * start `'loading'` and become `'ready'` once the payload fills in, or
+   * `'failed'` when the load errors.
    */
   public get loadState(): LoadStateValue {
     return this._loadState.value;
+  }
+
+  /** Load lifecycle: `'idle' | 'loading' | 'ready' | 'failed'` (asset-system v2 §6). */
+  public get state(): LoadStateValue {
+    return this._loadState.value;
+  }
+
+  /** `true` exactly when {@link state} is `'ready'`. */
+  public get ready(): boolean {
+    return this._loadState.value === 'ready';
+  }
+
+  /** The error the last load failed with, or `null` outside `'failed'`. */
+  public get error(): Error | null {
+    return this._loadState.error;
   }
 
   /**

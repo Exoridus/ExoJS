@@ -138,9 +138,6 @@ class CustomTriangleRendererScene extends Scene {
     draw() {
         this.triangleRenderer.draw();
     }
-    unload() {
-        this.triangleRenderer?.destroy();
-    }
     destroy() {
         this.triangleRenderer?.destroy();
     }

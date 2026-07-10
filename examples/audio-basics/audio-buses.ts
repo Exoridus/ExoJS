@@ -1,4 +1,4 @@
-import { Application, AudioStream, Color, Graphics, Scene, Sound, Text } from '@codexo/exojs';
+import { Application, Asset, Assets, AudioStream, Color, Graphics, Scene, Sound, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -35,12 +35,7 @@ class AudioBusesScene extends Scene {
     private sfxButton = { x: 0, y: 0, w: 0, h: 0 };
     private hud!: ReturnType<typeof mountControls>;
 
-    override async load(loader): Promise<void> {
-        await loader.load(AudioStream, { music: assets.demo.audio.musicLoop });
-        await loader.load(Sound, { sfx: assets.demo.audio.uiClick });
-    }
-
-    override init(loader): void {
+    override async init(): Promise<void> {
         const { width, height } = this.app.canvas;
 
         // Centre the bus mixer horizontally and spread the bars across the wide
@@ -50,8 +45,14 @@ class AudioBusesScene extends Scene {
         this.rowY = rows.map((_, i) => height * 0.34 + i * 90);
         this.sfxButton = { x: width / 2 - 150, y: height * 0.74, w: 300, h: 36 };
 
-        this.music = loader.get(AudioStream, 'music');
-        this.sfx = loader.get(Sound, 'sfx');
+        // AudioStream has no seamless adapter — await it explicitly.
+        const { music } = await this.loader.load(Assets.from({ music: Asset.kind('music', assets.demo.audio.musicLoop) }));
+        this.music = music;
+        // Path-only get() infers Sound from the .ogg extension — sidesteps a
+        // compile-time overload ambiguity between Sound and the Json token form
+        // (both have zero-arg-constructible instance types) when passing the
+        // Sound token explicitly.
+        this.sfx = this.loader.get(assets.demo.audio.uiClick);
 
         this.graphics = new Graphics();
         this.labels = rows.map((_, i) => new Text('', { fillColor: Color.white, fontSize: 18 }).setPosition(this.trackX - 50, this.rowY[i] - 34));

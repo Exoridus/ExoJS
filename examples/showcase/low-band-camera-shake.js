@@ -1,5 +1,5 @@
 // Auto-generated from low-band-camera-shake.ts — edit the .ts source, not this file.
-import { Application, AudioStream, Color, Scene, Sprite, Text, Texture, View } from '@codexo/exojs';
+import { Application, Asset, Color, Scene, Sprite, Text, View } from '@codexo/exojs';
 import { AudioAnalyser } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 const app = new Application({
@@ -19,16 +19,12 @@ class LowBandCameraShakeScene extends Scene {
     sprite;
     hud;
     tapPrompt;
-    async load(loader) {
-        await loader.load(AudioStream, { track: assets.demo.audio.musicLoop });
-        await loader.load(Texture, { ship: assets.demo.textures.shipA });
-    }
-    init(loader) {
+    init() {
         const { width, height } = this.app.canvas;
-        this.music = loader.get(AudioStream, 'track');
+        this.music = this.loader.get(Asset.kind('music', assets.demo.audio.musicLoop));
         this.analyser = new AudioAnalyser({ fftSize: 1024, source: this.app.audio.music });
         this.view = new View(width / 2, height / 2, width, height);
-        this.sprite = new Sprite(loader.get(Texture, 'ship')).setAnchor(0.5).setScale(3).setPosition(width / 2, height / 2);
+        this.sprite = new Sprite(this.loader.get(assets.demo.textures.shipA)).setAnchor(0.5).setScale(3).setPosition(width / 2, height / 2);
         this.hud = mountControls({
             title: 'Low Band Camera Shake',
             controls: [{ keys: 'Audio', action: 'low-band energy → shake' }],

@@ -1,5 +1,5 @@
 // Auto-generated from spritesheet-frames.ts — edit the .ts source, not this file.
-import { Application, Color, Json, Scene, Spritesheet, Texture } from '@codexo/exojs';
+import { Application, Asset, Color, Scene, Spritesheet } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {
@@ -22,14 +22,10 @@ class SpritesheetFramesScene extends Scene {
     elapsed = 0;
     playing = true;
     hud;
-    async load(loader) {
-        await loader.load(Texture, { characters: 'image/platformer-characters.png' });
-        await loader.load(Json, { characters: 'json/platformer-characters.json' });
-    }
-    init(loader) {
+    async init() {
         const { width, height } = this.app.canvas;
-        const texture = loader.get(Texture, 'characters');
-        const data = loader.get(Json, 'characters').value;
+        const texture = this.loader.get('image/platformer-characters.png');
+        const data = (await this.loader.load(Asset.kind('json', 'json/platformer-characters.json')));
         this.spritesheet = new Spritesheet(texture, data);
         // The spritesheet caches one Sprite per named frame; configure them all
         // once so any frame we draw is centred and scaled up for visibility.

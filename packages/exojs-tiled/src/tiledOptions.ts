@@ -9,7 +9,7 @@ export interface TiledLoadOptions {
    *
    * `.tmj`/`.tsj` paths are recognised by extension and need no hint. Provide
    * `format: 'tiled'` when loading Tiled map data from a generic `.json` path:
-   * `loader.load(TileMap, 'world.json', { format: 'tiled' })`. `'tiled'` is the
+   * `loader.load(Asset.kind('tileMap', 'world.json', { format: 'tiled' }))`. `'tiled'` is the
    * only accepted value, so a foreign format (e.g. `'ldtk'`) is a compile error
    * rather than a silent runtime fall-through.
    *

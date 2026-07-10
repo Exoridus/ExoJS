@@ -32,13 +32,11 @@ label.style.fillColor = Color.tomato; // updates only the mesh tint — no atlas
 
 ## Font loading
 
-System fonts (Arial, Times New Roman, etc.) work immediately. For custom web fonts, load a `FontFace` in the scene's `load` hook:
+System fonts (Arial, Times New Roman, etc.) work immediately. For custom web fonts, load one via `Asset.kind('font', ...)` in the scene's `load` hook — fonts aren't a seamless type, so a bare path isn't enough; `.of()` is required even for a literal path, and `family` is a required option:
 
 ```js
 async load(loader) {
-    await loader.load(FontFace, {
-        myFont: 'font/MyFont.woff2',
-    }, { family: 'MyFont' });
+    await loader.load(Asset.kind('font', 'font/MyFont.woff2', { family: 'MyFont' }));
 }
 
 init(loader) {
@@ -50,7 +48,7 @@ init(loader) {
 }
 ```
 
-The `FontFace` asset is registered with the document's `document.fonts` set. Once loaded, it becomes available to all `Text` instances via the `fontFamily` style property.
+Loading resolves to a `FontFace`, registered with the document's `document.fonts` set. Once loaded, it becomes available to all `Text` instances via the `fontFamily` style property.
 
 ## Style properties
 
@@ -156,7 +154,7 @@ The text node's internal mesh is a `Container` child. Assigning to `text.text` r
 - The glyph atlas is shared across all `Text` instances and has a fixed default size. Large sets of unique glyph/style combinations can exhaust atlas space.
 - `Text` does not expose per-character styling. Use separate `Text` instances for mixed-style strings.
 - `Text` does not measure or report its pixel dimensions through the public API — the mesh bounds reflect the glyph quad size but measured width/height in pixels is not exposed as a public getter.
-- Loader-based `FontFace` loading is the built-in path for custom fonts; any font family available to the browser's canvas text engine can be used once loaded.
+- Loader-based `FontAsset` loading is the built-in path for custom fonts; any font family available to the browser's canvas text engine can be used once loaded.
 
 ## Examples
 

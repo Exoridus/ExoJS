@@ -43,16 +43,13 @@ class GradientScene extends Scene {
         context.render(this.background);
         context.render(this.orb);
     }
-    unload() {
+    destroy() {
         this.background?.texture?.destroy();
         this.orb?.texture?.destroy();
         this.background?.destroy();
         this.orb?.destroy();
         this.backgroundGradient?.destroy();
         this.orbGradient?.destroy();
-    }
-    destroy() {
-        this.unload();
     }
 }
 app.start(new GradientScene()).catch(() => {

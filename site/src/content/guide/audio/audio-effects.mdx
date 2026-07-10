@@ -236,10 +236,9 @@ Convolves the signal with a real impulse response instead of `ReverbEffect`'s pr
 
 ```js
 import { ConvolutionEffect } from '@codexo/exojs-audio-fx';
-import { Sound } from '@codexo/exojs';
 
-await loader.load(Sound, { hall: 'hall.wav' });
-const convReverb = new ConvolutionEffect({ impulse: loader.get(Sound, 'hall'), wet: 0.6 });
+const hall = await loader.load('hall.wav');
+const convReverb = new ConvolutionEffect({ impulse: hall, wet: 0.6 });
 app.audio.master.addEffect(convReverb);
 ```
 
@@ -280,7 +279,7 @@ app.audio.registerBus(ambientBus);
 ambientBus.addEffect(new ReverbEffect({ wet: 0.6, durationSeconds: 3 }));
 ambientBus.addEffect(new LowpassFilter({ frequency: 800 }));
 
-const wind = loader.get(Sound, 'wind');
+const wind = loader.get('audio/wind.ogg');
 // Route this play onto the ambient bus — reverb + lowpass applied.
 this.app.audio.play(wind, { bus: ambientBus, loop: true });
 ```

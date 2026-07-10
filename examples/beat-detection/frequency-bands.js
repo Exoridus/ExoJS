@@ -1,5 +1,5 @@
 // Auto-generated from frequency-bands.ts — edit the .ts source, not this file.
-import { Application, AudioStream, Color, Graphics, Scene, Text } from '@codexo/exojs';
+import { Application, Asset, Assets, Color, Graphics, Scene, Text } from '@codexo/exojs';
 import { AudioAnalyser } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 const app = new Application({
@@ -41,11 +41,10 @@ class FrequencyBandsScene extends Scene {
     levels = new Array(BAND_COUNT).fill(0);
     hud;
     tapPrompt;
-    async load(loader) {
-        await loader.load(AudioStream, { track: 'audio/demo-loop-main.ogg' });
-    }
-    init(loader) {
-        this.music = loader.get(AudioStream, 'track');
+    async init() {
+        // AudioStream has no seamless adapter — await it explicitly.
+        const { track } = await this.loader.load(Assets.from({ track: Asset.kind('music', 'audio/demo-loop-main.ogg') }));
+        this.music = track;
         this.analyser = new AudioAnalyser({ fftSize: 2048, smoothingTimeConstant: 0.75 });
         this.analyser.source = this.app.audio.music;
         // Log-spaced bin boundaries across the spectrum. Index 0 (DC) is skipped

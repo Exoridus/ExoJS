@@ -1,5 +1,5 @@
 // Auto-generated from falloff-curves.ts — edit the .ts source, not this file.
-import { Application, Color, Graphics, Scene, Sound, Text } from '@codexo/exojs';
+import { Application, Asset, Color, Graphics, Scene, Sound, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {
@@ -44,10 +44,7 @@ class FalloffCurvesScene extends Scene {
     // Canvas-relative plot geometry computed in init().
     plot = { x: 0, y: 0, w: 0, h: 0 };
     hud;
-    async load(loader) {
-        await loader.load(Sound, { source: 'audio/impact-light.ogg' });
-    }
-    init(loader) {
+    async init() {
         const { width, height } = this.app.canvas;
         // Sources spread across the lower half; the listener starts centred.
         const sourceY = height * 0.72;
@@ -55,8 +52,12 @@ class FalloffCurvesScene extends Scene {
         this.plot = { x: width * 0.06, y: height * 0.16, w: width * 0.88, h: height * 0.18 };
         this.listener = { x: width / 2, y: height / 2 };
         app.audio.listener.target = this.listener;
+        // Each derived Sound below reads .audioBuffer synchronously, so the
+        // shared source must be fully decoded first — await load() instead of
+        // the deferred get() (whose placeholder audioBuffer is null until fill).
+        const source = await this.loader.load(Asset.kind('sound', 'audio/impact-light.ogg'));
         this.sounds = this.sources.map(({ model, x, y }) => {
-            const sound = new Sound(loader.get(Sound, 'source').audioBuffer, {
+            const sound = new Sound(source.audioBuffer, {
                 distanceModel: model,
                 refDistance: REF_DISTANCE,
                 maxDistance: MAX_DISTANCE,

@@ -1,4 +1,4 @@
-import { Application, Color, Scene, Texture, Vector } from '@codexo/exojs';
+import { Application, Color, Scene, Vector } from '@codexo/exojs';
 import {
     Constant,
     particlesExtension,
@@ -66,14 +66,10 @@ class CustomWgslModuleScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
     private reportedMode = false;
 
-    override async load(loader): Promise<void> {
-        await loader.load(Texture, { particle: assets.demo.textures.particleLight });
-    }
-
-    override init(loader): void {
+    override init(): void {
         const { width, height } = this.app.canvas;
 
-        this.system = new ParticleSystem(loader.get(Texture, 'particle'), { capacity: 26000 });
+        this.system = new ParticleSystem(this.loader.get(assets.demo.textures.particleLight), { capacity: 26000 });
         this.system.setPosition(width / 2, height - 60);
         this.system.addSpawnModule(
             new RateSpawn({

@@ -43,9 +43,7 @@ Valid target types are:
 A `Sound` descriptor carries a `position`. When set, it seeds the spatial position of every voice played from that sound:
 
 ```js
-import { Sound } from '@codexo/exojs';
-
-const pickup = loader.get(Sound, 'pickup-sfx');
+const pickup = loader.get('audio/pickup.wav');
 pickup.position = { x: 320, y: 180 };  // seeds the voice's initial position
 this.app.audio.play(pickup);
 ```
@@ -108,7 +106,7 @@ The most common pattern is to set the listener's target to the camera or player 
 
 ```js
 init(loader) {
-    this.pickupSfx = loader.get(Sound, 'pickup-sfx');
+    this.pickupSfx = loader.get('audio/pickup.wav');
     this.pickupSfx.volume = 0.6;
 
     app.audio.listener.target = this.player;
@@ -131,7 +129,7 @@ A `Sound` you never give a `position` plays non-spatially — full volume in bot
 For ambient sounds that should follow the listener's general area but not overlap, set a large `refDistance`:
 
 ```js
-const waterfall = loader.get(Sound, 'waterfall');
+const waterfall = loader.get('audio/waterfall.ogg');
 waterfall.distanceModel = 'inverse';
 waterfall.refDistance = 300;
 waterfall.position = { x: 600, y: 200 };

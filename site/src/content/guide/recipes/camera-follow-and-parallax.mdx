@@ -21,7 +21,7 @@ Snapping `view.setCenter` onto the player every frame feels rigid. Ease it inste
 ```js
 init(loader) {
     this._view = new View(400, 300, 800, 600);
-    this.player = new Sprite(loader.get(Texture, 'hero'));
+    this.player = new Sprite(loader.get('image/hero.png'));
 }
 
 update(delta) {

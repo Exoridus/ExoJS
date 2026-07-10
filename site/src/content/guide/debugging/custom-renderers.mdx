@@ -21,7 +21,7 @@ Reach for `CallbackRenderPass` for almost all custom draw work — it slots into
 </Callout>
 
 ```ts
-import { CallbackRenderPass, Color, Graphics, RenderNodePass, RenderPipeline, Scene, Sprite, Texture } from '@codexo/exojs';
+import { CallbackRenderPass, Color, Graphics, RenderNodePass, RenderPipeline, Scene, Sprite } from '@codexo/exojs';
 
 class CustomPassScene extends Scene {
     private back!: Sprite;
@@ -31,8 +31,8 @@ class CustomPassScene extends Scene {
     private angle = 0;
 
     override init(loader): void {
-        this.back = new Sprite(loader.get(Texture, 'hero')).setAnchor(0.5).setPosition(280, 300);
-        this.front = new Sprite(loader.get(Texture, 'hero')).setAnchor(0.5).setPosition(520, 300);
+        this.back = new Sprite(loader.get('image/hero.png')).setAnchor(0.5).setPosition(280, 300);
+        this.front = new Sprite(loader.get('image/hero.png')).setAnchor(0.5).setPosition(520, 300);
         this.between = new Graphics();
 
         this.pipeline = new RenderPipeline()

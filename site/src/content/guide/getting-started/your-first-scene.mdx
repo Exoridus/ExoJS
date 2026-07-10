@@ -45,7 +45,7 @@ Scenes have four lifecycle hooks. You override the ones you need:
 - `update(delta)` — per-frame logic.
 - `draw(context)` — per-frame rendering.
 
-Adding a single sprite means using `load` to declare a texture, `init` to construct the sprite, and `draw` to render it:
+Adding a single sprite means using `load` to fetch the texture and build the sprite, `init` to position it, and `draw` to render it:
 
 <SourceSnippet
   source="examples/getting-started/hello-world.ts"
@@ -56,7 +56,7 @@ Adding a single sprite means using `load` to declare a texture, `init` to constr
 
 A few things worth pointing out:
 
-- `loader.load(Texture, { bunny: 'image/bunny.png' })` declares one asset under the name `bunny`. Inside `init`, `loader.get(Texture, 'bunny')` returns the loaded texture instance. Names are stable; paths can change later without touching the rest of the code.
+- `await loader.load('image/ship-a.png')` resolves straight to the loaded `Texture` — the path is a literal string, so its `.png` extension tells the loader what type to produce, and there's no need to import `Texture` just to load one. Building the `Sprite` right there in `load` means it's already textured by the time `init` runs.
 - The default sprite anchor is `(0, 0)` — the top-left. With `setAnchor(0.5)`, the sprite's center becomes its pivot point, so `setPosition(width / 2, height / 2)` places the sprite at the canvas center rather than offset to one corner.
 
 <Callout type="pitfall" title="A sprite that won't center">

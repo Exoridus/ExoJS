@@ -1,10 +1,10 @@
+import { Asset } from '@codexo/exojs';
 // Relative-path resolution for Aseprite image references (JSON → PNG).
 // Mirrors the approach used in @codexo/exojs-tiled: Aseprite stores the image
 // path relative to the JSON file; asset sources are often themselves relative,
 // so plain `new URL(ref, base)` cannot be used when `base` has no scheme.
-
-import { Texture } from '@codexo/exojs';
-import type { AssetBinding, AssetHandler } from '@codexo/exojs/extensions';
+import { defineAsset, Texture } from '@codexo/exojs';
+import type { AssetHandler } from '@codexo/exojs/extensions';
 
 import type { AsepriteData } from './AsepriteData';
 import { AsepriteSheet } from './AsepriteSheet';
@@ -103,27 +103,27 @@ function validateAsepriteData(raw: unknown, source: string): AsepriteData {
 /**
  * Declarative asset binding for {@link AsepriteSheet}.
  *
- * `loader.load(AsepriteSheet, 'hero.aseprite.json')` fetches and validates the
+ * `loader.load(Asset.kind('asepriteSheet', 'hero.aseprite.json'))` fetches and validates the
  * Aseprite JSON export, resolves the packed image URL from `meta.image`
  * (relative to the JSON source), loads the {@link Texture} via the Loader's
  * sub-load deduplication, and constructs a fully-parsed {@link AsepriteSheet}.
  *
  * The `aseprite` type name enables the asset-config shorthand:
- * `{ type: 'aseprite', source: 'hero.aseprite.json' }`.
+ * `{ kind: 'aseprite', source: 'hero.aseprite.json' }`.
  */
-export const asepriteBinding = {
+export const asepriteBinding = defineAsset({
   type: AsepriteSheet,
-  typeNames: ['asepriteSheet'],
+  kind: 'asepriteSheet',
   create() {
     return {
       async load(req, ctx): Promise<AsepriteSheet> {
         const raw = await ctx.fetchJson(req.source);
         const data = validateAsepriteData(raw, req.source);
         const imageUrl = resolveAsepriteUrl(data.meta.image, req.source);
-        const texture = (await ctx.loader.load(Texture, imageUrl)) as Texture;
+        const texture = await ctx.loader.load(Asset.kind('texture', imageUrl));
 
         return AsepriteSheet.parse(data, texture);
       },
     } satisfies AssetHandler<AsepriteSheet>;
   },
-} satisfies AssetBinding<AsepriteSheet>;
+});

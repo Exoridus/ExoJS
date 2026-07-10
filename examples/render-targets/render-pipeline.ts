@@ -1,16 +1,4 @@
-import {
-    Application,
-    BlurFilter,
-    CallbackRenderPass,
-    Color,
-    Container,
-    Graphics,
-    RenderNodePass,
-    RenderPipeline,
-    RenderTexture,
-    Scene,
-    Sprite,
-} from '@codexo/exojs';
+import { Application, BlurFilter, CallbackRenderPass, Color, Container, Graphics, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {

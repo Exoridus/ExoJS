@@ -1,4 +1,4 @@
-import { Application, Color, Graphics, Scene, Sprite, Texture } from '@codexo/exojs';
+import { Application, Color, Graphics, Scene, Sprite } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -19,13 +19,10 @@ class CameraBasicScene extends Scene {
     private uiBar!: Graphics;
     private zoom = 1;
 
-    override async load(loader): Promise<void> {
-        this.bunny = new Sprite(await loader.load(Texture, 'image/ship-a.png'));
-    }
-
     override init(): void {
         const { width, height } = this.app.canvas;
 
+        this.bunny = new Sprite(this.loader.get('image/ship-a.png'));
         this.bunny.setAnchor(0.5).setPosition(width / 2, height / 2);
 
         this.grid = new Graphics();

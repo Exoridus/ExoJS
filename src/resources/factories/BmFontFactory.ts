@@ -1,7 +1,7 @@
 import type { BmFontChar, BmFontData } from '#rendering/text/BmFont';
 import { BmFont } from '#rendering/text/BmFont';
-import { Texture } from '#rendering/texture/Texture';
 import { AbstractAssetFactory } from '#resources/AbstractAssetFactory';
+import { Asset } from '#resources/Asset';
 import type { Loader } from '#resources/Loader';
 
 // ── Parser helpers ────────────────────────────────────────────────────────────
@@ -101,7 +101,7 @@ export class BmFontLoaderFactory extends AbstractAssetFactory<BmFont> {
   public async create(source: unknown): Promise<BmFont> {
     const { text, url } = source as { text: string; url: string };
     const fontData = parseBmFontText(text);
-    const textures = (await Promise.all(fontData.pages.map(page => this._loader.load(Texture, new URL(page, url).href)))) as Texture[];
+    const textures = await Promise.all(fontData.pages.map(page => this._loader.load(Asset.kind('texture', new URL(page, url).href))));
     return new BmFont(fontData, textures);
   }
 }
