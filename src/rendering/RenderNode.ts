@@ -473,6 +473,10 @@ export abstract class RenderNode extends SceneNode {
     return this._filters.length > 0 || this._mask !== null || this._cacheAsBitmap || this.clip || isAdvancedBlendMode(this._renderPlanGetBlendMode());
   }
 
+  protected override _escapesTransformGroup(): boolean {
+    return this._renderPlanHasBarrierEffects();
+  }
+
   /** @internal */
   public _renderPlanGetMaskSource(): MaskSource {
     return this._mask;

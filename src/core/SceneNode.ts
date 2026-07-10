@@ -432,10 +432,36 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
     return this;
   }
 
+  /**
+   * `true` on transform-group boundary nodes ({@link RetainedContainer}):
+   * descendants combine against identity instead of this node's world matrix,
+   * so their global transforms are group-relative (Track B Slice 2, §5).
+   * A getter, not a field: the boundary is LIVE state — RetainedContainer
+   * disengages it when a deep barrier forces the plain-Container fallback
+   * (plan D-P4), and descendants pick the flip up lazily through the
+   * parent-version compare below.
+   * @internal
+   */
+  public get _isTransformGroupBoundary(): boolean {
+    return false;
+  }
+
+  /**
+   * Whether this node opts back OUT of a parent transform-group boundary and
+   * resolves world-space transforms. Overridden by RenderNode for
+   * barrier-effect nodes (filters/mask/clip/cacheAsBitmap), whose effect
+   * machinery composites in world space (plan decision D-P4).
+   * @internal
+   */
+  protected _escapesTransformGroup(): boolean {
+    return false;
+  }
+
   public getGlobalTransform(): Matrix {
     const parent = this._parentNode;
-    const parentTransform = parent !== null ? parent.getGlobalTransform() : null;
-    const parentVersion = parent !== null ? parent._globalTransformVersion : 0;
+    const boundary = parent !== null && parent._isTransformGroupBoundary && !this._escapesTransformGroup();
+    const parentTransform = parent !== null && !boundary ? parent.getGlobalTransform() : null;
+    const parentVersion = parent !== null && !boundary ? parent._globalTransformVersion : 0;
     const stale = this.flags.has(SceneNodeTransformFlags.GlobalTransform) || this._combinedParentVersion !== parentVersion;
 
     if (stale) {
@@ -652,7 +678,16 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
     // separately bumping the node revision. Over-invalidation is correctness-safe
     // (just less skipping); under-invalidation is the bug this closes.
     this._markContentDirty();
+    this._invalidateBoundsFlags();
+  }
 
+  /**
+   * Flag-only bounds invalidation: own BoundsRect + ancestor walk, WITHOUT a
+   * revision stamp. Used by transform-group boundaries whose own moves must
+   * refresh ancestor world bounds but must NOT invalidate retained fragments.
+   * @internal
+   */
+  protected _invalidateBoundsFlags(): void {
     // Mark own bounds + notify interaction for THIS node unconditionally —
     // the manager filters to tracked interactive nodes so this call is O(1)
     // for the common case (non-interactive node — fast Set.has miss).
@@ -709,39 +744,46 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
     }
   }
 
+  /**
+   * Tail of every own-transform mutation path (position/rotation/scale/origin/
+   * skew). Default: cascade bounds and stamp content-dirty — exactly the
+   * pre-Slice-2 behavior. {@link RetainedContainer} overrides this to bump its
+   * group-matrix version instead of invalidating its retained fragment (§4.3).
+   * @internal
+   */
+  protected _markOwnTransformDirty(): void {
+    this._invalidateBoundsCascade();
+    this._markContentDirty();
+  }
+
   private _setPositionDirty(): void {
     this.flags.push(SceneNodeTransformFlags.Translation);
     this._invalidateSubtreeTransform();
-    this._invalidateBoundsCascade();
-    this._markContentDirty();
+    this._markOwnTransformDirty();
   }
 
   private _setRotationDirty(): void {
     this.flags.push(SceneNodeTransformFlags.Rotation);
     this._invalidateSubtreeTransform();
-    this._invalidateBoundsCascade();
-    this._markContentDirty();
+    this._markOwnTransformDirty();
   }
 
   private _setScalingDirty(): void {
     this.flags.push(SceneNodeTransformFlags.Scaling);
     this._invalidateSubtreeTransform();
-    this._invalidateBoundsCascade();
-    this._markContentDirty();
+    this._markOwnTransformDirty();
   }
 
   private _setOriginDirty(): void {
     this.flags.push(SceneNodeTransformFlags.Origin);
     this._invalidateSubtreeTransform();
-    this._invalidateBoundsCascade();
-    this._markContentDirty();
+    this._markOwnTransformDirty();
   }
 
   private _setSkewDirty(): void {
     this.flags.push(SceneNodeTransformFlags.Skew);
     this._invalidateSubtreeTransform();
-    this._invalidateBoundsCascade();
-    this._markContentDirty();
+    this._markOwnTransformDirty();
   }
 
   /**
