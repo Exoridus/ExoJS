@@ -140,7 +140,17 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[]): EngineAd
       const leaves: MutableLeaf[] = [];
 
       for (let i = 0; i < nodeCount; i++) {
-        const sprite = new Sprite(textures[i % textures.length]!);
+        // Index the texture by the sprite's position WITHIN its spine bucket,
+        // not by the global index. Leaves are round-robined across the spine via
+        // `i % spine.length`, so a global `i % textureCount` would alias with
+        // that stride: every bucket would collect a single residue class of `i`
+        // and hence only a `textureCount / gcd(...)` subset of textures. With the
+        // batch-breaking archetype (16 textures, depth-2 spine) each traversal
+        // stream would see just 8 distinct textures — exactly the multi-texture
+        // batcher's slot count — so batches would never break on texture and the
+        // archetype would not break batches at all. Cycling per bucket position
+        // makes each stream sweep all textures, overflowing the slots as intended.
+        const sprite = new Sprite(textures[Math.floor(i / spine.length) % textures.length]!);
 
         sprite.cullable = spec.cullingEnabled;
 
