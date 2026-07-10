@@ -949,6 +949,25 @@ export class WebGpuBackend implements RenderBackend {
 
   private _flushActiveRenderer(): void {
     this._renderer?.flush();
+    // Ending the active GPU pass — and thus `queue.submit` — is centralized here
+    // so it happens only at genuine boundaries (renderer switch, render-target /
+    // view / scissor / stencil change, compositor, execute, plan / frame end),
+    // NOT once per batch flush. Instanced renderers record consecutive batch
+    // flushes into the same open pass (via WebGpuInstanceArena) and no longer end
+    // it themselves, collapsing thousands of per-draw submits into one per frame.
+    this._passCoordinatorInstance?.endPass();
+  }
+
+  /**
+   * Whether resolving `minCount` transform-storage slots would reallocate (and
+   * free) the shared GPU storage buffer. Instanced renderers consult this before
+   * appending a batch into an open pass: growing the storage destroys the buffer
+   * earlier batches in that pass still reference, so the renderer ends (submits)
+   * the pass first when this is true and the pass already holds batches.
+   * @internal
+   */
+  public _transformStorageWouldGrow(minCount: number): boolean {
+    return this._getTransformStorage().wouldGrow(minCount);
   }
 
   private _getTransformStorage(): WebGpuTransformStorage {
