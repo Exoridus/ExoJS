@@ -363,10 +363,18 @@ const runBackend = async (options: {
 export const runMatrix = async (options: {
   backends: readonly Backend[];
   filter?: Partial<CellSpec>;
+  /**
+   * Forces every selected cell's timed-frame count to this value. Reserved for
+   * the smoke test, which measures a single tiny cell and needs only a handful
+   * of frames — a real reportable run must never set it (it would flatten the
+   * per-node-count frame budgets recorded in the report).
+   */
+  timedFramesOverride?: number;
 }): Promise<{ provenance: Provenance[]; results: CellResult[] }> => {
   const engineVersion = readEngineVersion();
   const allCells = buildMatrix(ADAPTER_CAPABILITIES, options.backends);
-  const cells = options.filter ? applyFilter(allCells, options.filter) : allCells;
+  const filtered = options.filter ? applyFilter(allCells, options.filter) : allCells;
+  const cells = options.timedFramesOverride === undefined ? filtered : filtered.map(cell => ({ ...cell, timedFrames: options.timedFramesOverride! }));
 
   if (cells.length === 0) {
     throw new Error('The baseline matrix is empty: no adapter supports the requested backends/filter.');

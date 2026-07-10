@@ -319,10 +319,53 @@ export const runCell = async (adapter: EngineAdapter, spec: CellSpec, canvas: HT
   }
 };
 
+/** Registry key uniquely identifying an engine arm by its engine + config labels. */
+const adapterKey = (engine: string, config: string): string => `${engine} ${config}`;
+
 /**
- * Run a whole matrix of cells against a single ExoJS adapter on the page's
- * canvas, in order, returning one {@link CellResult} per cell. Installed on
- * `globalThis` so the out-of-page driver can invoke it via `page.evaluate`.
+ * Discover the optional, untracked reference adapter — the additive second arm.
+ *
+ * `import.meta.glob` with a literal pattern is expanded by Vite at transform
+ * time: when `adapters/reference.local.ts` is absent the map is empty and NOTHING
+ * is imported, so the committed benchmark builds and runs as ExoJS-only with no
+ * failed import and no other engine named anywhere. This is why discovery lives
+ * here in the page (where the adapter lifecycle actually runs and where Vite
+ * resolves the glob) rather than in the Node driver. When the file is present its
+ * `createReferenceAdapters()` contributes one or two arms (e.g. an `immediate`
+ * and a `retained` config); a load failure degrades to ExoJS-only rather than
+ * aborting the run.
+ */
+const loadReferenceAdapters = async (): Promise<EngineAdapter[]> => {
+  const modules = import.meta.glob('../adapters/reference.local.ts') as Record<string, () => Promise<{ createReferenceAdapters?: () => EngineAdapter[] }>>;
+  const load = Object.values(modules)[0];
+
+  if (load === undefined) {
+    console.warn('[baseline] No reference adapter present — running ExoJS arms only. See test/perf/baseline/adapters/README.md');
+
+    return [];
+  }
+
+  try {
+    const module = await load();
+
+    return module.createReferenceAdapters?.() ?? [];
+  } catch (error) {
+    console.warn(`[baseline] reference adapter present but failed to load; running ExoJS arms only: ${error instanceof Error ? error.message : String(error)}`);
+
+    return [];
+  }
+};
+
+/**
+ * Run a whole matrix of cells on the page's canvas, in order, returning one
+ * {@link CellResult} per cell run. Installed on `globalThis` so the out-of-page
+ * driver can invoke it via `page.evaluate`.
+ *
+ * The driver hands over the ExoJS cell list for a single backend. Each discovered
+ * reference arm re-runs those IDENTICAL cells (same archetype, node count,
+ * backend and timed-frame budget), appended after the ExoJS cells, so the arms
+ * are compared on exactly the same work in the same browser session. With no
+ * reference adapter installed this is a plain ExoJS-only pass.
  */
 const runBaselineMatrix = async (cells: CellSpec[]): Promise<CellResult[]> => {
   const canvas = document.getElementById('stage');
@@ -331,10 +374,36 @@ const runBaselineMatrix = async (cells: CellSpec[]): Promise<CellResult[]> => {
     throw new Error('The harness canvas #stage was not found.');
   }
 
-  const adapter = createExoJsAdapter();
+  const adapters = new Map<string, EngineAdapter>();
+  const exojs = createExoJsAdapter();
+
+  adapters.set(adapterKey(exojs.engine, exojs.config), exojs);
+
+  const referenceAdapters = await loadReferenceAdapters();
+
+  for (const adapter of referenceAdapters) {
+    adapters.set(adapterKey(adapter.engine, adapter.config), adapter);
+  }
+
+  const referenceCells: CellSpec[] = [];
+
+  for (const adapter of referenceAdapters) {
+    for (const cell of cells) {
+      if (adapter.supports(cell.backend)) {
+        referenceCells.push({ ...cell, engine: adapter.engine, config: adapter.config });
+      }
+    }
+  }
+
   const results: CellResult[] = [];
 
-  for (const cell of cells) {
+  for (const cell of [...cells, ...referenceCells]) {
+    const adapter = adapters.get(adapterKey(cell.engine, cell.config));
+
+    if (adapter === undefined) {
+      throw new Error(`No adapter registered for engine='${cell.engine}' config='${cell.config}'.`);
+    }
+
     results.push(await runCell(adapter, cell, canvas));
   }
 
