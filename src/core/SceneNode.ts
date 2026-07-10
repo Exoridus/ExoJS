@@ -582,8 +582,17 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
    * @internal
    */
   public _resolveTransformGroupAnchor(): SceneNode | null {
-    let node: SceneNode = this;
-    let parent: SceneNode | null = this._parentNode;
+    let node: SceneNode | null = this._parentNode;
+
+    if (node === null) {
+      return null;
+    }
+
+    if (node._isTransformGroupBoundary && !this._escapesTransformGroup()) {
+      return node;
+    }
+
+    let parent: SceneNode | null = node._parentNode;
 
     while (parent !== null) {
       if (parent._isTransformGroupBoundary && !node._escapesTransformGroup()) {
