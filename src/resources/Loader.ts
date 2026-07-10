@@ -980,12 +980,21 @@ export class Loader {
     const ctor = type;
     const aliasKey = this._key(ctor, alias);
 
+    // Snapshot BEFORE the delete: a key whose resource is already stored has a
+    // SETTLED fetch — any lingering `_inFlight` entry for it is stale (its
+    // `.finally` cleanup microtask has not yet run), not a live fetch. This is
+    // the signal that separates a genuine in-flight unload (fail-in-place, keep
+    // the handle) from a settled one (forget it, drop the stale entry).
+    const hadResource = this._resources.get(ctor)?.has(alias) ?? false;
+
     this._resources.get(ctor)?.delete(alias);
 
-    // If a fetch is in flight (via legacy or identity-based map), prevent the
-    // result from being written to _resources once it arrives.
+    // A genuine in-flight fetch (not yet stored) is prevented from writing its
+    // result once it arrives, so a deferred handle fails in place instead of
+    // silently resurrecting the asset.
     const identityKey = this._aliasKeyToIdentityKey.get(aliasKey);
-    if (this._inFlight.has(aliasKey) || (identityKey !== undefined && this._inFlightByIdentity.has(identityKey))) {
+    const liveFetch = !hadResource && (this._inFlight.has(aliasKey) || (identityKey !== undefined && this._inFlightByIdentity.has(identityKey)));
+    if (liveFetch) {
       this._preventStoreKeys.add(aliasKey);
     }
 
@@ -1001,25 +1010,122 @@ export class Loader {
       }
     }
 
+    this._forgetKey(aliasKey, liveFetch);
+
     return this;
   }
 
   /**
-   * Removes all loaded assets from the in-memory store.
+   * Removes loaded assets from the in-memory store.
    *
-   * If `type` is provided, only that type's assets are cleared; otherwise
-   * all types are flushed. Does not cancel in-flight fetches.
+   * If `type` is provided, only that type's assets are cleared; otherwise all
+   * types are flushed. Does not cancel in-flight fetches — but, like
+   * {@link unload}, it forgets each key's claim/handle bookkeeping so repeated
+   * load→unloadAll cycles cannot accumulate stale entries (A3).
    */
   public unloadAll(type?: Loadable): this {
     if (type) {
-      this._resources.get(type)?.clear();
-    } else {
-      for (const typeMap of this._resources.values()) {
-        typeMap.clear();
+      // Route every stored alias — and any claim-tracked key of this type that
+      // never reached _resources (in-flight / deferred-only) — through
+      // _unloadOne so the claim/handle maps are cleared, not just _resources.
+      const aliases = new Set<string>(this._resources.get(type)?.keys());
+
+      for (const [, entry] of this._claims) {
+        if (entry.type === type) aliases.add(entry.source);
       }
+
+      for (const alias of aliases) {
+        this._unloadOne(type, alias);
+      }
+
+      return this;
     }
 
+    // Global reset. Snapshot the keys with a stored resource first: their
+    // in-flight entries (if any) are stale (resolved-but-uncleaned), so they can
+    // be dropped, while a not-yet-stored key with a live `_inFlight` entry is a
+    // genuine fetch that must be preserved (its handle fills or fails in place) —
+    // honoring "does not cancel in-flight fetches".
+    const settledKeys = new Set<string>();
+    for (const [ctor, typeMap] of this._resources) {
+      for (const alias of typeMap.keys()) settledKeys.add(this._key(ctor, alias));
+    }
+
+    for (const typeMap of this._resources.values()) {
+      typeMap.clear();
+    }
+
+    for (const [key, entry] of this._deferred) {
+      if (this._inFlight.has(key) && !settledKeys.has(key)) {
+        this._preventStoreKeys.add(key); // genuine in-flight: fail/heal in place on arrival
+        continue;
+      }
+
+      for (const handle of entry.handles) this._handleKeys.delete(handle);
+      this._deferred.delete(key);
+      this._inFlight.delete(key);
+    }
+
+    for (const [key, entry] of this._refs) {
+      if (this._inFlight.has(key) && !settledKeys.has(key)) {
+        this._preventStoreKeys.add(key);
+        continue;
+      }
+
+      for (const ref of entry.refs) this._handleKeys.delete(ref);
+      this._refs.delete(key);
+      this._inFlight.delete(key);
+    }
+
+    // Drop stale in-flight entries for settled keys that had no deferred/ref
+    // (e.g. a completed seamless get), so a later same-source get re-fetches
+    // instead of deduping onto the resolved-but-uncleaned promise.
+    for (const key of settledKeys) {
+      this._inFlight.delete(key);
+    }
+
+    this._claims.clear();
+    this._evicted.clear();
+    this._aliasKeyToIdentityKey.clear();
+    this._identityKeyToAliases.clear();
+
     return this;
+  }
+
+  /**
+   * Drop a key's claim/handle bookkeeping for the legacy `unload`/`unloadAll`
+   * verbs — a HARD, global removal, unlike scope-aware {@link release}: it forgets
+   * the claim entirely (across every scope) so a stale claim can no longer hold
+   * refcount > 0 and keep a key from ever evicting (A3).
+   *
+   * A key with a genuine `liveFetch` keeps its deferred handle / value-ref so the
+   * prevented store can fail it (and a later `get()` heals the SAME handle) — only
+   * a SETTLED key's handles are forgotten here, and its stale `_inFlight` entry
+   * dropped so a same-source re-get re-fetches rather than deduping onto the
+   * resolved promise. @internal
+   */
+  private _forgetKey(key: string, liveFetch: boolean): void {
+    this._claims.delete(key);
+    this._evicted.delete(key);
+
+    if (liveFetch) {
+      return;
+    }
+
+    this._inFlight.delete(key);
+    this._preventStoreKeys.delete(key);
+
+    const deferred = this._deferred.get(key);
+    if (deferred !== undefined) {
+      for (const handle of deferred.handles) this._handleKeys.delete(handle);
+      this._deferred.delete(key);
+    }
+
+    const refEntry = this._refs.get(key);
+    if (refEntry !== undefined) {
+      for (const ref of refEntry.refs) this._handleKeys.delete(ref);
+      this._refs.delete(key);
+    }
   }
 
   // -----------------------------------------------------------------------
@@ -2111,7 +2217,7 @@ export class Loader {
    */
   private _warnMissingSource(source: string, key: string, error: Error): void {
     logger.warn(
-      `Asset "${source}" failed to load: ${error.message}. ` +
+      `Asset "${source}" failed to load: ${error.message} ` +
         `Seamless get()/Assets.from() fetch the literal path and heal a placeholder in place, so a typo or an ` +
         `un-preloaded alias 404s without throwing. Check the path and the loader basePath, and preload it via Assets.from() / load().`,
       { source: 'Loader', once: `loader:missing-source:${key}` },
