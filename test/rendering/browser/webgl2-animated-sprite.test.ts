@@ -13,9 +13,9 @@
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
+import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
 import type { RenderNode } from '#rendering/RenderNode';
-import { Rectangle } from '#math/Rectangle';
 import { AnimatedSprite } from '#rendering/sprite/AnimatedSprite';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
