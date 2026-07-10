@@ -1,7 +1,9 @@
 import { invariant } from '#core/dev';
 import type { Stage } from '#core/Stage';
 import { removeArrayItems } from '#core/utils';
+import { RenderEntryKind } from '#rendering/plan/RenderCommand';
 import type { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
+import { type RetainedDrawSlot, RetainedPlanCache } from '#rendering/plan/RetainedPlanCache';
 
 import { RenderNode } from './RenderNode';
 
@@ -25,6 +27,7 @@ import { RenderNode } from './RenderNode';
  */
 export class Container extends RenderNode {
   private readonly _children: RenderNode[] = [];
+  private readonly _retainedPlan: RetainedPlanCache = new RetainedPlanCache();
 
   public get children(): RenderNode[] {
     return this._children;
@@ -250,10 +253,82 @@ export class Container extends RenderNode {
       return;
     }
 
+    const viewUpdateId = builder.view.updateId;
+
+    if (this._retainedPlan.isClean(this._contentRevision, this._structureRevision, viewUpdateId, builder.backend)) {
+      this._replayRetainedChildren(builder);
+
+      return;
+    }
+
+    this._collectAndCaptureChildren(builder, viewUpdateId);
+  }
+
+  /**
+   * Fast path: this subtree's content/structure revision, the view, and the
+   * backend are all unchanged since the last full collect. Direct Drawable
+   * children with a captured slot are replayed without cull/bounds/
+   * material-key work; every other direct child (Container, or a
+   * barrier-having Drawable, or a child that was culled/invisible last
+   * capture) still goes through a normal `_collect` call, which recurses into
+   * its own independent skip decision.
+   */
+  private _replayRetainedChildren(builder: RenderPlanBuilder): void {
+    const slots = this._retainedPlan.slots;
+    let slotIndex = 0;
+
     for (let index = 0; index < this._children.length; index++) {
+      const slot = slots[slotIndex];
+
+      if (slot !== undefined && slot.childIndex === index) {
+        builder._replayRetainedDraw(slot);
+        slotIndex++;
+      } else {
+        // In-bounds: index < length.
+        this._children[index]!._collect(builder, index);
+      }
+    }
+  }
+
+  /**
+   * Slow path (today's unmodified behavior): collect every child normally,
+   * then snapshot exactly the direct-Drawable children that produced a single
+   * `Draw`-kind entry (a plain, non-barrier, visible Drawable) into a fresh
+   * set of retained slots for next frame's fast path.
+   */
+  private _collectAndCaptureChildren(builder: RenderPlanBuilder, viewUpdateId: number): void {
+    const capturedSlots: RetainedDrawSlot[] = [];
+
+    for (let index = 0; index < this._children.length; index++) {
+      const beforeCount = builder._peekCurrentScopeEntries().length;
+
       // In-bounds: index < length.
       this._children[index]!._collect(builder, index);
+
+      const entries = builder._peekCurrentScopeEntries();
+
+      if (entries.length === beforeCount + 1) {
+        const entry = entries[entries.length - 1]!;
+
+        if (entry.kind === RenderEntryKind.Draw && entry.command.drawable === this._children[index]) {
+          const command = entry.command;
+
+          capturedSlots.push({
+            childIndex: index,
+            drawable: command.drawable,
+            seq: command.seq,
+            zIndex: command.zIndex,
+            material: { ...command.material },
+            minX: command.minX,
+            minY: command.minY,
+            maxX: command.maxX,
+            maxY: command.maxY,
+          });
+        }
+      }
     }
+
+    this._retainedPlan.capture(this._contentRevision, this._structureRevision, viewUpdateId, builder.backend, capturedSlots);
   }
 
   public override contains(x: number, y: number): boolean {
@@ -283,6 +358,7 @@ export class Container extends RenderNode {
 
   public override destroy(): void {
     this.removeChildren();
+    this._retainedPlan.invalidate();
 
     super.destroy();
   }

@@ -278,6 +278,28 @@ export class RenderPlanBuilder {
    * (content + structure revision, view, and backend all match the capture).
    */
   public _replayRetainedDraw(slot: RetainedDrawSlot): void {
+    // Mirror the scope bookkeeping that `_reserveEntryPlacement` maintains on the
+    // normal emit path, but HONOR the slot's verbatim seq/zIndex instead of
+    // assigning a fresh seq. Skipping this leaves the active scope's placement
+    // state stale, which breaks two invariants the optimizer/placement rely on:
+    //   - `firstZ`/`hasMixedZ`: `RenderPlanOptimizer._optimizeGroup` gates the
+    //     z-sort SOLELY on `hasMixedZ`. Replaying drawables with differing zIndex
+    //     without folding them in would leave `hasMixedZ` false, skip the sort,
+    //     and paint the scope in the wrong order.
+    //   - `_nextSeq`: a later normally-emitted sibling (e.g. a nested Container)
+    //     in the same scope must not collide with a replayed slot's seq.
+    const scope = this._currentScope();
+
+    if (slot.seq >= scope._nextSeq) {
+      scope._nextSeq = slot.seq + 1;
+    }
+
+    if (scope.firstZ === null) {
+      scope.firstZ = slot.zIndex;
+    } else if (!scope.hasMixedZ && scope.firstZ !== slot.zIndex) {
+      scope.hasMixedZ = true;
+    }
+
     const command = this._acquireDrawCommand();
 
     command.drawable = slot.drawable;
