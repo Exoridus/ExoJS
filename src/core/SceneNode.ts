@@ -638,6 +638,15 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
 
   /** Mark own Bounds dirty AND propagate up to Container ancestors' Bounds. */
   public _invalidateBoundsCascade(): void {
+    // A bounds change means this node's rendered extent changed, which makes any
+    // retained draw slot captured for it (screen-space AABB + material key) stale.
+    // Route it through the content-dirty contract so the Track-B static-subtree
+    // skip cannot replay a stale extent/material for a drawable (Text/BitmapText/
+    // Mesh, or any future one) that resizes via _invalidateBoundsCascade without
+    // separately bumping the node revision. Over-invalidation is correctness-safe
+    // (just less skipping); under-invalidation is the bug this closes.
+    this._markContentDirty();
+
     // Mark own bounds + notify interaction for THIS node unconditionally —
     // the manager filters to tracked interactive nodes so this call is O(1)
     // for the common case (non-interactive node — fast Set.has miss).

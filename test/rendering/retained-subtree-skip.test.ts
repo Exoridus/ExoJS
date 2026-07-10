@@ -1,5 +1,6 @@
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
+import { Mesh } from '#rendering/mesh/Mesh';
 import { type DrawCommand, RenderEntryKind } from '#rendering/plan/RenderCommand';
 import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RenderPlanOptimizer } from '#rendering/plan/RenderPlanOptimizer';
@@ -321,6 +322,46 @@ describe('static-subtree skip: invalidation gates', () => {
     const frame2 = collectDraws(root, backend); // skip-eligible unless zIndex dirties content
 
     expect(frame2.map(d => (d.drawable as LeafDrawable).id)).toEqual(['back', 'front']);
+
+    root.destroy();
+    backend.destroy();
+  });
+
+  test('a local-bounds change (Mesh.recomputeLocalBounds) forces a real recollect instead of replaying a stale extent', () => {
+    const backend = createTestBackend();
+    const root = new Container();
+
+    // A per-frame-resized drawable (the "score counter" case) as a direct
+    // child of an otherwise-static container. Mesh drives the exact buggy path:
+    // recomputeLocalBounds() changes the rendered extent via
+    // _invalidateBoundsCascade() ONLY -- historically without bumping the node
+    // revision, so the static-subtree skip replayed a stale AABB.
+    const mesh = new Mesh({ vertices: new Float32Array([0, 0, 10, 0, 0, 10]) });
+
+    root.addChild(mesh);
+    root.addChild(new LeafDrawable('static-sibling'));
+
+    const frame1 = collectDraws(root, backend); // full collect, captures the mesh slot
+    const meshDraw1 = frame1.find(d => d.drawable === mesh);
+
+    expect(meshDraw1).toBeDefined();
+    expect(meshDraw1!.maxX).toBe(10);
+    expect(meshDraw1!.maxY).toBe(10);
+
+    // Grow the mesh in place -> local bounds (0,0,100,100). No other mutation.
+    mesh.vertices[2] = 100; // x of second vertex
+    mesh.vertices[5] = 100; // y of third vertex
+    mesh.recomputeLocalBounds();
+
+    const frame2 = collectDraws(root, backend); // skip-eligible unless the bounds change dirties content
+    const meshDraw2 = frame2.find(d => d.drawable === mesh);
+
+    // The replayed/collected slot must reflect the NEW extent. Without the
+    // content-dirty routing in _invalidateBoundsCascade, frame2 replays the
+    // stale slot and maxX/maxY stay at 10.
+    expect(meshDraw2).toBeDefined();
+    expect(meshDraw2!.maxX).toBe(100);
+    expect(meshDraw2!.maxY).toBe(100);
 
     root.destroy();
     backend.destroy();
