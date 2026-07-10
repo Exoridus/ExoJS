@@ -89,7 +89,10 @@ const capabilityDescriptor = (engine: string, config: string, backends: readonly
   teardown: driverSideOnly,
 });
 
-const ADAPTER_CAPABILITIES: readonly EngineAdapter[] = [capabilityDescriptor('exojs', 'current', ['webgl2', 'webgpu'])];
+const ADAPTER_CAPABILITIES: readonly EngineAdapter[] = [
+  capabilityDescriptor('exojs', 'current', ['webgl2', 'webgpu']),
+  capabilityDescriptor('exojs', 'retained', ['webgl2', 'webgpu']),
+];
 
 /**
  * Load Vite through the copy vitest already depends on. Vite is not a direct

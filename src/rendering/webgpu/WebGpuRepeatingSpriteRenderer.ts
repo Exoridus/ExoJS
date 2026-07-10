@@ -23,6 +23,7 @@ import { stencilContentDepthStencilState } from './WebGpuStencilState';
 export const commonWgsl = `
 struct ProjectionUniforms {
     matrix: mat4x4<f32>,
+    group: mat4x4<f32>,
 };
 struct TransformSlot {
     m0: vec4<f32>,
@@ -69,7 +70,7 @@ fn shaderVert(input: ShaderVIn, @builtin(vertex_index) vid: u32) -> VOut {
     let slot = transforms[input.nodeIndex];
     let wx = slot.m0.x * lx + slot.m0.y * ly + slot.m1.x;
     let wy = slot.m0.z * lx + slot.m0.w * ly + slot.m1.y;
-    out.pos = projection.matrix * vec4<f32>(wx, wy, 0.0, 1.0);
+    out.pos = projection.matrix * projection.group * vec4<f32>(wx, wy, 0.0, 1.0);
 
     let u = select(input.uvParams.z, ((lx - input.quadBounds.x) / destW) * input.uvParams.x + input.uvParams.z, destW > 0.0);
     let v = select(input.uvParams.w, ((ly - input.quadBounds.y) / destH) * input.uvParams.y + input.uvParams.w, destH > 0.0);
@@ -108,7 +109,7 @@ fn geoVert(input: GeoVIn, @builtin(vertex_index) vid: u32) -> VOut {
     let slot = transforms[input.nodeIndex];
     let wx = slot.m0.x * lx + slot.m0.y * ly + slot.m1.x;
     let wy = slot.m0.z * lx + slot.m0.w * ly + slot.m1.y;
-    out.pos = projection.matrix * vec4<f32>(wx, wy, 0.0, 1.0);
+    out.pos = projection.matrix * projection.group * vec4<f32>(wx, wy, 0.0, 1.0);
 
     let u = select(input.uvBounds.x, input.uvBounds.z, cx == 1u);
     let v = select(input.uvBounds.y, input.uvBounds.w, cy == 1u);
@@ -129,7 +130,8 @@ fn geoFrag(input: VOut) -> @location(0) vec4<f32> {
 
 const shaderStrideBytes = 40; // float32x4 bounds + float32x4 uvParams + unorm8x4 + uint32
 const geoStrideBytes = 32; // float32x4 bounds + unorm16x4 + unorm8x4 + uint32 (NineSlice layout)
-const projectionByteLength = 64;
+const projectionByteLength = 128;
+const identityGroupMat4 = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
 const initialBatchCapacity = 32;
 const indicesPerInstance = 6;
 const quadIndices = new Uint16Array([0, 1, 2, 0, 2, 3]);
@@ -147,6 +149,7 @@ function repeatModeToAddressMode(mode: RepeatMode): GPUAddressMode {
 /** Instanced renderer for {@link RepeatingSprite} using WebGPU. */
 export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<RepeatingSprite> {
   private readonly _projData = new Float32Array(projectionByteLength / Float32Array.BYTES_PER_ELEMENT);
+  private _writtenGroupTransformId = -1;
 
   // Shared GPU objects
   private _device: GPUDevice | null = null;
@@ -429,7 +432,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
       activePass !== null &&
       this._instanceArena.cursor > 0 &&
       this._instanceArena.tracksPass(activePass) &&
-      activePass.viewUpdateId !== backend.view.updateId
+      (activePass.viewUpdateId !== backend.view.updateId || this._writtenGroupTransformId !== backend.renderGroupTransformId)
     ) {
       backend._passCoordinator.endPass();
       this._instanceArena.resetPass();
@@ -437,6 +440,37 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
 
     const vm = backend.view.getTransform();
     this._projData.set([vm.a, vm.c, 0, 0, vm.b, vm.d, 0, 0, 0, 0, 1, 0, vm.x, vm.y, 0, vm.z]);
+
+    const groupTransform = backend.renderGroupTransform;
+
+    if (groupTransform !== null) {
+      this._projData.set(
+        [
+          groupTransform.a,
+          groupTransform.c,
+          0,
+          0,
+          groupTransform.b,
+          groupTransform.d,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+          groupTransform.x,
+          groupTransform.y,
+          0,
+          groupTransform.z,
+        ],
+        16,
+      );
+    } else {
+      this._projData.set(identityGroupMat4, 16);
+    }
+
+    this._writtenGroupTransformId = backend.renderGroupTransformId;
+
     device.queue.writeBuffer(uniform, 0, this._projData.buffer, this._projData.byteOffset, this._projData.byteLength);
 
     const scissor = backend.getScissorRect();

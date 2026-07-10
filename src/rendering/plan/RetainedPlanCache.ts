@@ -4,15 +4,14 @@ import type { RenderBackend } from '#rendering/RenderBackend';
 import type { MaterialKey } from './RenderCommand';
 
 /**
+ * The replayable payload of one previously-collected draw: everything
+ * `RenderPlanBuilder.emitDraw` computed for it (material key, bounds in the
+ * capture's space convention, seq/zIndex placement). Base shape shared by the
+ * Slice-1 per-child {@link RetainedDrawSlot} and the Slice-2 whole-fragment
+ * {@link RetainedFragmentDraw}.
  * @internal
- *
- * A previously-collected, still-valid draw command snapshot for one direct
- * `Drawable` child of a `Container` — everything `RenderPlanBuilder.emitDraw`
- * would have computed for it (material key, screen-space bounds), captured so
- * it can be replayed without redoing cull/bounds/material-key work.
  */
-export interface RetainedDrawSlot {
-  readonly childIndex: number;
+export interface RetainedDrawData {
   readonly drawable: Drawable;
   readonly seq: number;
   readonly zIndex: number;
@@ -24,9 +23,23 @@ export interface RetainedDrawSlot {
 }
 
 /**
+ * @internal
+ *
+ * A previously-collected, still-valid draw command snapshot for one direct
+ * `Drawable` child of a `Container` — everything `RenderPlanBuilder.emitDraw`
+ * would have computed for it, captured so it can be replayed without redoing
+ * cull/bounds/material-key work.
+ */
+export interface RetainedDrawSlot extends RetainedDrawData {
+  readonly childIndex: number;
+}
+
+/**
  * Per-`Container` fragment cache for the Wave 3 static-subtree-skip (Track B,
- * Slice 1 — design spec §5.2/§5.4). One instance is owned by each `Container`
- * (`Container._retainedPlan`). Caches the direct-`Drawable`-child draw slots
+ * Slice 1 — design spec §5.2/§5.4). Lazily allocated by `Container` the first
+ * time a direct drawable child produces a capturable slot; containers without
+ * such children never own one (`Container._retainedPlan`). Caches the
+ * direct-`Drawable`-child draw slots
  * produced by the last full (non-skipped) collect of that container's own
  * scope, keyed on the container's aggregate content/structure revision
  * (`SceneNode._contentRevision`/`_structureRevision`), the active view's

@@ -1,3 +1,4 @@
+import { Matrix } from '#math/Matrix';
 import type { RenderBackend } from '#rendering/RenderBackend';
 
 import { RenderEntryKind } from './RenderCommand';
@@ -21,6 +22,8 @@ interface RenderGroupPlaybackContext {
 interface RenderPlanPlaybackContext {
   passInstructionIndex: number;
   passGroupIndex: number;
+  activeGroupTransform: Matrix | null;
+  groupTransformDepth: number;
 }
 
 /**
@@ -39,6 +42,7 @@ interface RenderPlanPlaybackHooks {
   _prepareDrawCommand?(instruction: RenderInstruction): void;
   _endRenderGroup?(entries: readonly ScopeEntry[], startIndex: number, count: number): void;
   _endDrawPlan?(): void;
+  _setRenderGroupTransform?(transform: Matrix | null): void;
 }
 
 /**
@@ -75,6 +79,9 @@ const groupRunLength = (entries: readonly ScopeEntry[], startIndex: number): num
 
 /** @internal */
 export class RenderPlanPlayer {
+  /** Per-depth scratch matrices for composed group transforms (reused across frames). */
+  private static readonly _groupTransformScratch: Matrix[] = [];
+
   public static play(plan: RenderPlan, backend: RenderBackend): void {
     const hooks = backend as RenderBackend & RenderPlanPlaybackHooks;
 
@@ -205,11 +212,56 @@ export class RenderPlanPlayer {
           currentInstructionIndex = 0;
         }
       } else if (entry.kind === RenderEntryKind.Group) {
-        this._playGroup(entry.scope, backend, hooks, context);
+        const transformNode = entry.scope.transformNode;
+
+        if (transformNode !== null && hooks._setRenderGroupTransform !== undefined) {
+          const outer = context.activeGroupTransform;
+          const scratch = (RenderPlanPlayer._groupTransformScratch[context.groupTransformDepth] ??= new Matrix());
+
+          // The boundary node's global transform is relative to the nearest
+          // ENCLOSING group (identity-parent convention, spec §5), so nested
+          // retained groups compose onto the outer group's world matrix.
+          scratch.copy(transformNode.getGlobalTransform());
+
+          if (outer !== null) {
+            scratch.combine(outer);
+          }
+
+          context.groupTransformDepth++;
+          context.activeGroupTransform = scratch;
+          hooks._setRenderGroupTransform(scratch);
+
+          try {
+            this._playGroup(entry.scope, backend, hooks, context);
+          } finally {
+            context.groupTransformDepth--;
+            context.activeGroupTransform = outer;
+            hooks._setRenderGroupTransform(outer);
+          }
+        } else {
+          this._playGroup(entry.scope, backend, hooks, context);
+        }
       } else {
-        RenderEffectExecutor.play(entry.scope, backend, childScope => {
-          this._playScope(childScope, backend, hooks, context);
-        });
+        // Barrier subtrees collect in world space (a barrier-bearing child
+        // escapes the group-relative convention, plan D-P4), so their playback
+        // must not apply the group uniform.
+        const suspended = context.activeGroupTransform;
+
+        if (suspended !== null) {
+          context.activeGroupTransform = null;
+          hooks._setRenderGroupTransform?.(null);
+        }
+
+        try {
+          RenderEffectExecutor.play(entry.scope, backend, childScope => {
+            this._playScope(childScope, backend, hooks, context);
+          });
+        } finally {
+          if (suspended !== null) {
+            context.activeGroupTransform = suspended;
+            hooks._setRenderGroupTransform?.(suspended);
+          }
+        }
       }
     }
   }
@@ -218,6 +270,8 @@ export class RenderPlanPlayer {
     return {
       passInstructionIndex: 0,
       passGroupIndex: 0,
+      activeGroupTransform: null,
+      groupTransformDepth: 0,
     };
   }
 

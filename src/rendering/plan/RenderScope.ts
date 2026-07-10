@@ -75,6 +75,13 @@ export interface GroupScope {
   entries: ScopeEntry[];
   hasMixedZ: boolean;
   preserveDrawOrder: boolean;
+  /**
+   * The transform-group boundary node whose world matrix scopes this group's
+   * draws (Track B Slice 2), or `null` for a plain scope. Read live by the
+   * plan player at playback time — never captured — so a group move between
+   * collect and play (or across multi-render() bases) is always honored.
+   */
+  transformNode: RenderNode | null;
 }
 
 /** @internal */

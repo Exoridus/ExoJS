@@ -289,6 +289,7 @@ exports[`root index type-level export inventory > all exported symbols with kind
   "RepeatingSprite: class",
   "RepeatingSpriteOptions: interface",
   "ResolvedGamepadDefinition: interface",
+  "RetainedContainer: class",
   "SERIALIZATION_VERSION: variable",
   "Sampler: class",
   "SamplerOptions: interface",

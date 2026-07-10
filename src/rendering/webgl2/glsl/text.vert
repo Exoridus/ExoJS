@@ -14,13 +14,14 @@ layout(location = 2) in float a_nodeIndex;  // row into the per-node data textur
 layout(location = 3) in vec2  a_gradUV;     // normalised gradient UV (CPU-computed)
 
 uniform mat3 u_projection;
+uniform mat3 u_group;
 
 flat out int  v_nodeIndex;
      out vec2 v_texcoord;
      out vec2 v_gradUV;
 
 void main(void) {
-    gl_Position = vec4((u_projection * vec3(a_position, 1.0)).xy, 0.0, 1.0);
+    gl_Position = vec4((u_projection * u_group * vec3(a_position, 1.0)).xy, 0.0, 1.0);
     v_texcoord  = a_texcoord;
     v_nodeIndex = int(a_nodeIndex);
     v_gradUV    = a_gradUV;

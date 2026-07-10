@@ -10,6 +10,7 @@ layout(location = 2) in vec4 a_color;        // RGBA tint
 layout(location = 3) in uint a_nodeIndex;    // row into the shared transform buffer
 
 uniform mat3 u_projection;
+uniform mat3 u_group;
 uniform sampler2D u_transforms;              // shared per-frame transform buffer (3 texels/row)
 
 out vec2 v_texcoord;
@@ -31,7 +32,7 @@ void main(void) {
     float worldX = (m0.x * localX) + (m0.y * localY) + m1.x;
     float worldY = (m0.z * localX) + (m0.w * localY) + m1.y;
 
-    gl_Position = vec4((u_projection * vec3(worldX, worldY, 1.0)).xy, 0.0, 1.0);
+    gl_Position = vec4((u_projection * u_group * vec3(worldX, worldY, 1.0)).xy, 0.0, 1.0);
 
     float u = (cornerX == 0) ? a_uvBounds.x : a_uvBounds.z;
     float v = (cornerY == 0) ? a_uvBounds.y : a_uvBounds.w;

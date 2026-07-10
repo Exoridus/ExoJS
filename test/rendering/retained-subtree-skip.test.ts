@@ -5,6 +5,7 @@ import { type DrawCommand, RenderEntryKind } from '#rendering/plan/RenderCommand
 import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RenderPlanOptimizer } from '#rendering/plan/RenderPlanOptimizer';
 import type { GroupScope } from '#rendering/plan/RenderScope';
+import { RetainedPlanCache } from '#rendering/plan/RetainedPlanCache';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import { createRenderStats } from '#rendering/RenderStats';
@@ -389,6 +390,66 @@ describe('static-subtree skip: invalidation gates', () => {
 
     expect(materialSpy).toHaveBeenCalled();
 
+    root.destroy();
+    backend.destroy();
+  });
+});
+
+describe('zero-slot containers pay no retained-cache overhead (S2-D4)', () => {
+  test('a container tree without any direct drawable children never calls capture()', () => {
+    const backend = createTestBackend();
+    const captureSpy = vi.spyOn(RetainedPlanCache.prototype, 'capture');
+    const root = new Container();
+    const branchA = new Container();
+    const branchB = new Container();
+
+    root.addChild(branchA);
+    root.addChild(branchB);
+
+    collectDraws(root, backend);
+    collectDraws(root, backend);
+
+    expect(captureSpy).not.toHaveBeenCalled();
+
+    captureSpy.mockRestore();
+    root.destroy();
+    backend.destroy();
+  });
+
+  test('a container WITH a drawable child still captures and still takes the fast path', () => {
+    const backend = createTestBackend();
+    const root = new Container();
+    const leaf = new LeafDrawable('a');
+
+    root.addChild(leaf);
+    collectDraws(root, backend);
+
+    const materialSpy = vi.spyOn(leaf, '_getOrComputeMaterialKey');
+
+    collectDraws(root, backend);
+
+    expect(materialSpy).not.toHaveBeenCalled();
+
+    root.destroy();
+    backend.destroy();
+  });
+
+  test('mixed tree: only the drawable-bearing container captures', () => {
+    const backend = createTestBackend();
+    const captureSpy = vi.spyOn(RetainedPlanCache.prototype, 'capture');
+    const root = new Container();
+    const drawableless = new Container();
+    const drawableBearing = new Container();
+
+    drawableBearing.addChild(new LeafDrawable('a'));
+    drawableless.addChild(drawableBearing);
+    root.addChild(drawableless);
+
+    collectDraws(root, backend);
+
+    expect(captureSpy).toHaveBeenCalledTimes(1);
+
+    captureSpy.mockRestore();
     root.destroy();
     backend.destroy();
   });

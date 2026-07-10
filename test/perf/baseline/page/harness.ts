@@ -376,8 +376,10 @@ const runBaselineMatrix = async (cells: CellSpec[]): Promise<CellResult[]> => {
 
   const adapters = new Map<string, EngineAdapter>();
   const exojs = createExoJsAdapter();
+  const exojsRetained = createExoJsAdapter(undefined, 'retained');
 
   adapters.set(adapterKey(exojs.engine, exojs.config), exojs);
+  adapters.set(adapterKey(exojsRetained.engine, exojsRetained.config), exojsRetained);
 
   const referenceAdapters = await loadReferenceAdapters();
 

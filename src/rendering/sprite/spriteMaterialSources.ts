@@ -42,6 +42,7 @@ layout(location = 5) in uint a_textureSlot;
 layout(location = 6) in uint a_nodeIndex;       // row into the shared transform buffer
 
 uniform mat3 u_projection;
+uniform mat3 u_group;
 uniform sampler2D u_transforms;                 // shared per-frame transform buffer (3 texels/row)
 
 out vec2 v_texcoord;
@@ -66,7 +67,7 @@ void main(void) {
     float worldX = (m0.x * localX) + (m0.y * localY) + m1.x;
     float worldY = (m0.z * localX) + (m0.w * localY) + m1.y;
 
-    gl_Position = vec4((u_projection * vec3(worldX, worldY, 1.0)).xy, 0.0, 1.0);
+    gl_Position = vec4((u_projection * u_group * vec3(worldX, worldY, 1.0)).xy, 0.0, 1.0);
 
     float u = (cornerX == 0) ? a_uvBounds.x : a_uvBounds.z;
     float v = (cornerY == 0) ? a_uvBounds.y : a_uvBounds.w;
@@ -90,6 +91,7 @@ void main(void) {
 export const spriteVertexWgsl = `
 struct ProjectionUniforms {
     matrix: mat4x4<f32>,
+    group: mat4x4<f32>,
 };
 
 struct TransformSlot {
@@ -135,7 +137,7 @@ fn vertexMain(input: VertexInput, @builtin(vertex_index) vid: u32) -> VertexOutp
     let worldX = slot.m0.x * localX + slot.m0.y * localY + slot.m1.x;
     let worldY = slot.m0.z * localX + slot.m0.w * localY + slot.m1.y;
 
-    output.position = projection.matrix * vec4<f32>(worldX, worldY, 0.0, 1.0);
+    output.position = projection.matrix * projection.group * vec4<f32>(worldX, worldY, 0.0, 1.0);
 
     let u = select(input.uvBounds.x, input.uvBounds.z, cornerX == 1u);
     let v = select(input.uvBounds.y, input.uvBounds.w, cornerY == 1u);

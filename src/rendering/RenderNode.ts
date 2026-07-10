@@ -107,6 +107,8 @@ export abstract class RenderNode extends SceneNode {
    */
   public draggable = false;
 
+  private _preserveDrawOrder = false;
+
   /**
    * When `true`, material-aware overlap reordering is disabled for this
    * node's draw-order scope. Draw commands are submitted in exact document
@@ -118,7 +120,19 @@ export abstract class RenderNode extends SceneNode {
    *
    * @default false
    */
-  public preserveDrawOrder = false;
+  public get preserveDrawOrder(): boolean {
+    return this._preserveDrawOrder;
+  }
+
+  public set preserveDrawOrder(preserveDrawOrder: boolean) {
+    if (this._preserveDrawOrder !== preserveDrawOrder) {
+      this._preserveDrawOrder = preserveDrawOrder;
+      this.invalidateCache();
+      this._markStructureDirty();
+    }
+  }
+
+  private _clip = false;
 
   /**
    * When `true`, descendants are geometrically clipped to {@link clipShape}.
@@ -138,7 +152,19 @@ export abstract class RenderNode extends SceneNode {
    *
    * @default false
    */
-  public clip = false;
+  public get clip(): boolean {
+    return this._clip;
+  }
+
+  public set clip(clip: boolean) {
+    if (this._clip !== clip) {
+      this._clip = clip;
+      this.invalidateCache();
+      this._markStructureDirty();
+    }
+  }
+
+  private _clipShape: Rectangle | Geometry | null = null;
 
   /**
    * Clip region used when {@link clip} is `true`. A `Rectangle` (or `null` for
@@ -147,7 +173,17 @@ export abstract class RenderNode extends SceneNode {
    *
    * @default null
    */
-  public clipShape: Rectangle | Geometry | null = null;
+  public get clipShape(): Rectangle | Geometry | null {
+    return this._clipShape;
+  }
+
+  public set clipShape(clipShape: Rectangle | Geometry | null) {
+    if (this._clipShape !== clipShape) {
+      this._clipShape = clipShape;
+      this.invalidateCache();
+      this._markStructureDirty();
+    }
+  }
 
   // Interaction signals are lazily materialized: a non-interactive node (the
   // common case) allocates none. The dispatch path uses _peekInteractionSignal,
@@ -342,7 +378,7 @@ export abstract class RenderNode extends SceneNode {
       return;
     }
 
-    if (!this.inView(builder.view)) {
+    if (!builder._isViewCullSuppressed && !this.inView(builder.view)) {
       builder.backend.stats.culledNodes++;
 
       return;
@@ -353,6 +389,18 @@ export abstract class RenderNode extends SceneNode {
 
   /** @internal */
   public _collectForRenderPlan(builder: RenderPlanBuilder): void {
+    if (this._isTransformGroupBoundary) {
+      builder._pushViewCullSuppression();
+
+      try {
+        this._collectContent(builder);
+      } finally {
+        builder._popViewCullSuppression();
+      }
+
+      return;
+    }
+
     this._collectContent(builder);
   }
 
@@ -435,6 +483,10 @@ export abstract class RenderNode extends SceneNode {
   /** @internal */
   public _renderPlanHasBarrierEffects(): boolean {
     return this._filters.length > 0 || this._mask !== null || this._cacheAsBitmap || this.clip || isAdvancedBlendMode(this._renderPlanGetBlendMode());
+  }
+
+  protected override _escapesTransformGroup(): boolean {
+    return this._renderPlanHasBarrierEffects();
   }
 
   /** @internal */

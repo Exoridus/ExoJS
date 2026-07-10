@@ -1,3 +1,4 @@
+import { Matrix } from '#math/Matrix';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import type { Material, UniformValue } from '#rendering/material/Material';
 import type { Mesh } from '#rendering/mesh/Mesh';
@@ -27,6 +28,7 @@ const initialNodeIndexCapacity = 64;
 const defaultVertexColor = 0xffffffff; // white, full alpha
 const maxCustomTextureSlots = 8;
 const transformTextureUnit = 8;
+const identityGroupMat3 = new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]);
 
 interface MeshRendererConnection {
   readonly gl: WebGL2RenderingContext;
@@ -73,6 +75,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> {
     { length: Math.max(transformTextureUnit + 1, maxCustomTextureSlots + 1) },
     (_, i) => new Int32Array([i]),
   );
+  private readonly _groupComposeScratch = new Matrix();
 
   private _vertexCapacity = initialVertexCapacity;
   private _indexCapacity = initialIndexCapacity;
@@ -424,8 +427,22 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> {
       shader.getUniform('u_projection').setValue(backend.view.getTransform().toArray(false));
     }
 
+    if (shader.uniforms.has('u_group')) {
+      const groupTransform = backend.renderGroupTransform;
+
+      shader.getUniform('u_group').setValue(groupTransform !== null ? groupTransform.toArray(false) : identityGroupMat3);
+    }
+
     if (shader.uniforms.has('u_translation')) {
-      shader.getUniform('u_translation').setValue(mesh.getGlobalTransform().toArray(false));
+      // Invariant: a custom mesh vertex shader must not declare BOTH `u_group`
+      // and consume `u_translation` — that would apply the group transform
+      // twice (once staged as `u_group`, once folded in here). This CPU-side
+      // compose is the fallback for shaders WITHOUT `u_group`.
+      const groupTransform = backend.renderGroupTransform;
+      const translation =
+        groupTransform !== null ? this._groupComposeScratch.copy(mesh.getGlobalTransform()).combine(groupTransform) : mesh.getGlobalTransform();
+
+      shader.getUniform('u_translation').setValue(translation.toArray(false));
     }
 
     if (shader.uniforms.has('u_tint')) {
@@ -465,6 +482,12 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> {
   ): void {
     if (shader.uniforms.has('u_projection')) {
       shader.getUniform('u_projection').setValue(backend.view.getTransform().toArray(false));
+    }
+
+    if (shader.uniforms.has('u_group')) {
+      const groupTransform = backend.renderGroupTransform;
+
+      shader.getUniform('u_group').setValue(groupTransform !== null ? groupTransform.toArray(false) : identityGroupMat3);
     }
 
     if (shader.uniforms.has('u_transforms')) {

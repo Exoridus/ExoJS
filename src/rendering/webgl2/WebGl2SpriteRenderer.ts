@@ -55,6 +55,7 @@ import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './
  * breaks on material instance, base texture, blend mode, or buffer capacity.
  */
 
+const identityGroupMat3 = new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]);
 const maxBatchTextures = 8;
 // Sprite base textures occupy units 0..7; the shared transform buffer texture
 // binds on unit 8, matching the mesh renderer's convention.
@@ -101,6 +102,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> {
   private _currentBlendMode: BlendModes | null = null;
   private _currentView: View | null = null;
   private _currentViewId = -1;
+  private _currentGroupTransformId = -1;
 
   private _instanceBuffer: WebGl2RenderBuffer | null = null;
   private _vao: WebGl2VertexArrayObject | null = null;
@@ -184,11 +186,25 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> {
         this._currentViewId = view.updateId;
         this._shader.getUniform('u_projection').setValue(view.getTransform().toArray(false));
       }
+
+      if (this._shader.uniforms.has('u_group') && this._currentGroupTransformId !== backend.renderGroupTransformId) {
+        this._currentGroupTransformId = backend.renderGroupTransformId;
+
+        const groupTransform = backend.renderGroupTransform;
+
+        this._shader.getUniform('u_group').setValue(groupTransform !== null ? groupTransform.toArray(false) : identityGroupMat3);
+      }
     } else {
       // Custom path: projection is set per flush (cheap, and the cached
       // default-shader view state does not carry over to a custom program).
       if (shader.uniforms.has('u_projection')) {
         shader.getUniform('u_projection').setValue(backend.view.getTransform().toArray(false));
+      }
+
+      if (shader.uniforms.has('u_group')) {
+        const groupTransform = backend.renderGroupTransform;
+
+        shader.getUniform('u_group').setValue(groupTransform !== null ? groupTransform.toArray(false) : identityGroupMat3);
       }
 
       // The single base texture binds to unit 0 as `u_texture`.
@@ -270,6 +286,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> {
     this._currentBlendMode = null;
     this._currentView = null;
     this._currentViewId = -1;
+    this._currentGroupTransformId = -1;
     this._instanceCount = 0;
     this._maxNodeIndex = 0;
   }

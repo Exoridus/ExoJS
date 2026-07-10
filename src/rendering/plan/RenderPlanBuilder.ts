@@ -18,7 +18,8 @@ import {
   type GroupScopeEntry,
   type ScopeEntry,
 } from './RenderScope';
-import type { RetainedDrawSlot } from './RetainedPlanCache';
+import type { RetainedFragmentEntry, RetainedFragmentGroup } from './RetainedGroupFragment';
+import type { RetainedDrawData } from './RetainedPlanCache';
 
 interface MutableGroupScope extends GroupScope {
   _nextSeq: number;
@@ -84,6 +85,10 @@ export class RenderPlanBuilder {
 
   private _nodeIndex = 0;
 
+  // Track B Slice 2: count of transform-group boundaries currently being
+  // collected below. See `_isViewCullSuppressed`.
+  private _viewCullSuppression = 0;
+
   public build(root: RenderNode, backend: RenderBackend): RenderPlan {
     this.backend = backend;
     this._view = null;
@@ -94,6 +99,7 @@ export class RenderPlanBuilder {
     this._barrierEntryPoolCursor = 0;
     this._scopeStack.length = 0;
     this._hasPending = false;
+    this._viewCullSuppression = 0;
     // Base this plan's node indices after whatever earlier render() calls already
     // wrote into the frame-scoped transform buffer, so every draw across all
     // render() calls in the frame references a distinct slot and can batch.
@@ -213,6 +219,8 @@ export class RenderPlanBuilder {
 
     const groupScope = this._acquireGroupScope(this._resolvePreserveDrawOrder(node));
 
+    groupScope.transformNode = node._isTransformGroupBoundary ? node : null;
+
     this._pushGroupEntry(reservedSeq, reservedZ, groupScope);
 
     this._scopeStack.push(groupScope);
@@ -270,14 +278,36 @@ export class RenderPlanBuilder {
   }
 
   /**
-   * @internal — replay a single previously-captured {@link RetainedDrawSlot}
+   * @internal — true while collecting below a transform-group boundary.
+   * Inside a group, child bounds are group-local, so testing them against the
+   * world-space view rect would be meaningless; the group is culled as a
+   * whole by RetainedContainer._collect instead (spec §6).
+   */
+  public get _isViewCullSuppressed(): boolean {
+    return this._viewCullSuppression > 0;
+  }
+
+  /** @internal — enter a transform-group subtree (see {@link _isViewCullSuppressed}). */
+  public _pushViewCullSuppression(): void {
+    this._viewCullSuppression++;
+  }
+
+  /** @internal — leave a transform-group subtree. */
+  public _popViewCullSuppression(): void {
+    this._viewCullSuppression--;
+  }
+
+  /**
+   * @internal — replay a single previously-captured {@link RetainedDrawData}
    * into the current scope: reuses its cached material key and screen-space
    * bounds verbatim, only assigning a fresh frame-local `nodeIndex`. Used by
-   * {@link RetainedPlanCache} for the Wave 3 static-subtree skip; callers must
-   * have already verified the owning container's subtree is unchanged
-   * (content + structure revision, view, and backend all match the capture).
+   * {@link RetainedPlanCache} for the Wave 3 static-subtree skip and by
+   * {@link _replayRetainedFragment} for the Slice 2 whole-fragment splice;
+   * callers must have already verified the owning container's subtree is
+   * unchanged (content + structure revision, and backend all match the
+   * capture — plus view for the Slice-1 per-child cache).
    */
-  public _replayRetainedDraw(slot: RetainedDrawSlot): void {
+  public _replayRetainedDraw(slot: RetainedDrawData): void {
     // Mirror the scope bookkeeping that `_reserveEntryPlacement` maintains on the
     // normal emit path, but HONOR the slot's verbatim seq/zIndex instead of
     // assigning a fresh seq. Skipping this leaves the active scope's placement
@@ -316,6 +346,101 @@ export class RenderPlanBuilder {
     this._pushDrawEntry(slot.seq, slot.zIndex, command);
   }
 
+  /**
+   * @internal — deep-copy the given scope entries into an owned, pool-free
+   * fragment tree (Track B Slice 2, plan decision D-P3). Draws copy their
+   * placement/material/bounds verbatim; nested groups recurse; barrier nodes
+   * are recorded as re-dispatch references only (spec §8). Called by
+   * {@link RetainedContainer} right after a full collect of its scope.
+   */
+  public _snapshotScopeEntries(entries: readonly ScopeEntry[]): RetainedFragmentEntry[] {
+    const captured: RetainedFragmentEntry[] = [];
+
+    for (const entry of entries) {
+      if (entry.kind === RenderEntryKind.Draw) {
+        const command = entry.command;
+
+        captured.push({
+          kind: RenderEntryKind.Draw,
+          drawable: command.drawable,
+          seq: command.seq,
+          zIndex: command.zIndex,
+          material: { ...command.material },
+          minX: command.minX,
+          minY: command.minY,
+          maxX: command.maxX,
+          maxY: command.maxY,
+        });
+      } else if (entry.kind === RenderEntryKind.Group) {
+        captured.push({
+          kind: RenderEntryKind.Group,
+          seq: entry.seq,
+          zIndex: entry.zIndex,
+          preserveDrawOrder: entry.scope.preserveDrawOrder,
+          transformNode: entry.scope.transformNode,
+          entries: this._snapshotScopeEntries(entry.scope.entries),
+        });
+      } else {
+        captured.push({
+          kind: RenderEntryKind.Barrier,
+          seq: entry.seq,
+          node: entry.scope.node,
+        });
+      }
+    }
+
+    return captured;
+  }
+
+  /**
+   * @internal — replay a captured fragment into the current scope: the
+   * whole-range splice (spec §4.2). No scene-graph walk, no cull, no bounds,
+   * no material keys — draws re-acquire pooled commands with fresh
+   * frame-local nodeIndex values (multi-render() bases stay coherent), nested
+   * groups re-acquire pooled scopes, and barrier nodes re-dispatch through a
+   * normal `_collect` (spec §8).
+   */
+  public _replayRetainedFragment(entries: readonly RetainedFragmentEntry[]): void {
+    for (const entry of entries) {
+      if (entry.kind === RenderEntryKind.Draw) {
+        this._replayRetainedDraw(entry);
+      } else if (entry.kind === RenderEntryKind.Group) {
+        this._replayRetainedGroup(entry);
+      } else {
+        entry.node._collect(this, entry.seq);
+      }
+    }
+  }
+
+  private _replayRetainedGroup(fragment: RetainedFragmentGroup): void {
+    // Mirror _replayRetainedDraw's scope bookkeeping for the group entry's
+    // verbatim seq/zIndex (see the invariants documented there).
+    const scope = this._currentScope();
+
+    if (fragment.seq >= scope._nextSeq) {
+      scope._nextSeq = fragment.seq + 1;
+    }
+
+    if (scope.firstZ === null) {
+      scope.firstZ = fragment.zIndex;
+    } else if (!scope.hasMixedZ && scope.firstZ !== fragment.zIndex) {
+      scope.hasMixedZ = true;
+    }
+
+    const groupScope = this._acquireGroupScope(fragment.preserveDrawOrder);
+
+    groupScope.transformNode = fragment.transformNode;
+
+    this._pushGroupEntry(fragment.seq, fragment.zIndex, groupScope);
+    this._scopeStack.push(groupScope);
+
+    try {
+      this._replayRetainedFragment(fragment.entries);
+    } finally {
+      this._scopeStack.pop();
+    }
+  }
+
   private _resetRuntimeState(): void {
     this._scopeStack.length = 0;
     this._hasPending = false;
@@ -326,6 +451,7 @@ export class RenderPlanBuilder {
     this._barrierEntryPoolCursor = 0;
     this._view = null;
     this._nodeIndex = 0;
+    this._viewCullSuppression = 0;
   }
 
   private _acquireGroupScope(preserveDrawOrder: boolean): MutableGroupScope {
@@ -334,6 +460,7 @@ export class RenderPlanBuilder {
       entries: [],
       hasMixedZ: false,
       preserveDrawOrder: false,
+      transformNode: null,
       _nextSeq: 0,
       firstZ: null,
     };
@@ -344,6 +471,7 @@ export class RenderPlanBuilder {
     scope.entries.length = 0;
     scope.hasMixedZ = false;
     scope.preserveDrawOrder = preserveDrawOrder;
+    scope.transformNode = null;
     scope._nextSeq = 0;
     scope.firstZ = null;
 
