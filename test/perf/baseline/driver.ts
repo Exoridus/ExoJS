@@ -44,8 +44,19 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const PAGE_DIR = resolve(HERE, 'page');
 const REPO_ROOT = resolve(HERE, '..', '..', '..');
 
-/** Chromium flag set. Pinning the device scale factor keeps `devicePixelRatio` at 1 so canvas backing size is deterministic. NO `--use-angle=swiftshader`: that would force a software rasterizer and make every timing worthless. */
+/** Chromium flag set for the WebGL2 browser. Pinning the device scale factor keeps `devicePixelRatio` at 1 so canvas backing size is deterministic. NO `--use-angle=swiftshader`: that would force a software rasterizer and make every timing worthless. */
 const LAUNCH_FLAGS: readonly string[] = ['--force-device-scale-factor=1'];
+
+/**
+ * Chromium flag set for the WebGPU browser. Adds only `--enable-unsafe-webgpu`
+ * to the WebGL2 flags: on Windows this keeps WebGPU on the real platform adapter
+ * (D3D12). Deliberately NOT `--enable-features=Vulkan` — forcing Vulkan lands on
+ * SwiftShader, which would make every WebGPU timing a software number.
+ */
+const WEBGPU_LAUNCH_FLAGS: readonly string[] = [...LAUNCH_FLAGS, '--enable-unsafe-webgpu'];
+
+/** Adapter identity substrings that name a software WebGPU implementation rather than a real GPU. */
+const SOFTWARE_WEBGPU_PATTERN = /swiftshader|lavapipe|llvmpipe|warp|software|basic render/i;
 
 /** Shader extensions the engine imports as text. */
 const SHADER_EXTENSIONS = ['.vert', '.frag', '.glsl'] as const;
@@ -78,7 +89,7 @@ const capabilityDescriptor = (engine: string, config: string, backends: readonly
   teardown: driverSideOnly,
 });
 
-const ADAPTER_CAPABILITIES: readonly EngineAdapter[] = [capabilityDescriptor('exojs', 'current', ['webgl2'])];
+const ADAPTER_CAPABILITIES: readonly EngineAdapter[] = [capabilityDescriptor('exojs', 'current', ['webgl2', 'webgpu'])];
 
 /**
  * Load Vite through the copy vitest already depends on. Vite is not a direct
@@ -174,6 +185,90 @@ const readRendererInPage = async (page: import('playwright').Page): Promise<stri
 /** Whether a renderer string names a software rasterizer rather than a real GPU. */
 const isSoftwareRenderer = (renderer: string): boolean => /swiftshader|llvmpipe|software/i.test(renderer);
 
+/** Resolved WebGPU adapter identity for one backend run. */
+interface WebGpuIdentity {
+  /** Human-readable adapter string stamped into provenance. */
+  readonly adapter: string;
+  /** True when the adapter is real and should be measured; false emits `unavailable` cells. */
+  readonly usable: boolean;
+  /** Explanation attached to each cell when the adapter is unusable. */
+  readonly note: string;
+}
+
+/**
+ * Request the WebGPU adapter in-page and classify it. Returns `usable: false`
+ * (with a note naming exactly what was found) when `navigator.gpu` is absent,
+ * no adapter is offered, or the adapter names a software implementation — so the
+ * caller can emit `unavailable` cells instead of measuring a software rasterizer
+ * and passing it off as a GPU number.
+ */
+const readWebGpuAdapter = async (page: import('playwright').Page): Promise<WebGpuIdentity> => {
+  const probe = await page.evaluate(async () => {
+    const gpu = (navigator as Navigator & { gpu?: GPU }).gpu;
+
+    if (gpu === undefined) {
+      return { present: false as const };
+    }
+
+    let adapter: GPUAdapter | null;
+
+    try {
+      adapter = await gpu.requestAdapter({ powerPreference: 'high-performance' });
+    } catch (error) {
+      return { present: true as const, acquired: false as const, error: error instanceof Error ? error.message : String(error) };
+    }
+
+    if (adapter === null) {
+      return { present: true as const, acquired: false as const, error: '' };
+    }
+
+    const info = adapter.info ?? ({} as GPUAdapterInfo);
+
+    return {
+      present: true as const,
+      acquired: true as const,
+      vendor: info.vendor ?? '',
+      architecture: info.architecture ?? '',
+      device: info.device ?? '',
+      description: info.description ?? '',
+    };
+  });
+
+  if (!probe.present) {
+    return { adapter: 'navigator.gpu is undefined', usable: false, note: 'WebGPU unavailable: navigator.gpu is undefined' };
+  }
+
+  if (!probe.acquired) {
+    const reason = probe.error.length > 0 ? `requestAdapter failed: ${probe.error}` : 'requestAdapter returned null';
+
+    return { adapter: `no-webgpu-adapter (${reason})`, usable: false, note: `WebGPU unavailable: ${reason}` };
+  }
+
+  const identity = [probe.vendor, probe.architecture, probe.device, probe.description]
+    .map(part => part.trim())
+    .filter(part => part.length > 0)
+    .join(' ');
+  const adapter = identity.length > 0 ? identity : 'webgpu-adapter (info masked)';
+
+  if (SOFTWARE_WEBGPU_PATTERN.test(adapter)) {
+    return { adapter, usable: false, note: `WebGPU software adapter refused: ${adapter}` };
+  }
+
+  return { adapter, usable: true, note: '' };
+};
+
+/** A cell that could not be measured: zeroed timings/structure, `unavailable` status, and an explanatory note. */
+const unavailableCell = (spec: CellSpec, note: string): CellResult => ({
+  spec,
+  cpuMsMedian: 0,
+  cpuMsP95: 0,
+  frameMsMedian: null,
+  frameMsP95: null,
+  structural: { drawCalls: 0, textureBinds: 0, bufferUploads: 0 },
+  status: 'unavailable',
+  note,
+});
+
 /** Keeps only the cells whose defined `filter` fields all match. */
 const applyFilter = (cells: readonly CellSpec[], filter: Partial<CellSpec>): CellSpec[] => {
   const entries = Object.entries(filter).filter(([, value]) => value !== undefined);
@@ -182,12 +277,88 @@ const applyFilter = (cells: readonly CellSpec[], filter: Partial<CellSpec>): Cel
 };
 
 /**
+ * Runs one backend's full cell list in a single browser session, returning that
+ * backend's provenance stamp plus one result per cell.
+ *
+ * The whole per-backend matrix runs in ONE page/session: cross-session timing
+ * comparison is invalid (JIT warmth, GPU clock state and allocator state all
+ * differ between sessions), so `__runBaselineMatrix` is invoked exactly once
+ * with the backend's full cell list. For WebGPU the adapter identity is read
+ * first; a null or software adapter emits every cell as `unavailable` rather
+ * than measuring a software rasterizer.
+ */
+const runBackend = async (options: {
+  baseUrl: string;
+  backend: Backend;
+  cells: CellSpec[];
+  engineVersion: string;
+}): Promise<{ provenance: Provenance; results: CellResult[] }> => {
+  const { baseUrl, backend, cells, engineVersion } = options;
+  const flags = backend === 'webgpu' ? WEBGPU_LAUNCH_FLAGS : LAUNCH_FLAGS;
+  const browser = await chromium.launch({ channel: 'chromium', headless: true, args: [...flags] });
+
+  try {
+    const page = await browser.newPage();
+
+    await page.goto(baseUrl, { waitUntil: 'load' });
+    await page.waitForFunction(() => typeof globalThis.__runBaselineMatrix === 'function');
+
+    const timestamp = new Date().toISOString();
+
+    if (backend === 'webgpu') {
+      const identity = await readWebGpuAdapter(page);
+      const provenance: Provenance = {
+        adapter: identity.adapter,
+        backend,
+        flags,
+        headless: true,
+        engineVersion,
+        timestamp,
+        // Kept false even for a software adapter: those cells are emitted
+        // `unavailable` (no timings), so nothing here is an untrusted number, and
+        // flipping the shared honesty bit would wrongly taint the WebGL2 timings
+        // in the same report. The software identity is preserved in `adapter` and
+        // each cell's note instead.
+        software: false,
+      };
+
+      if (!identity.usable) {
+        return { provenance, results: cells.map(cell => unavailableCell(cell, identity.note)) };
+      }
+
+      const results = await page.evaluate(cellList => globalThis.__runBaselineMatrix!(cellList), cells);
+
+      return { provenance, results };
+    }
+
+    const renderer = await readRendererInPage(page);
+    const provenance: Provenance = {
+      adapter: renderer,
+      backend,
+      flags,
+      headless: true,
+      engineVersion,
+      timestamp,
+      software: isSoftwareRenderer(renderer),
+    };
+    const results = await page.evaluate(cellList => globalThis.__runBaselineMatrix!(cellList), cells);
+
+    return { provenance, results };
+  } finally {
+    await browser.close();
+  }
+};
+
+/**
  * Runs the whole baseline matrix end-to-end against the real GPU.
  *
- * The entire matrix runs in ONE page/session: cross-session timing comparison is
- * invalid (JIT warmth, GPU clock state and allocator state all differ between
- * sessions), so `__runBaselineMatrix` is invoked exactly once with the full cell
- * list, not once per cell.
+ * One browser per backend: WebGL2 and WebGPU need different launch flags, so
+ * each backend runs its full cell list in its own single session. The
+ * same-session rule holds per backend; a WebGL2-vs-WebGPU comparison is a
+ * cross-backend comparison, satisfied by running the two sessions back-to-back
+ * on the same machine in one invocation, with a provenance block recorded per
+ * backend. Requested backend order is preserved so the report lists WebGL2
+ * first.
  */
 export const runMatrix = async (options: {
   backends: readonly Backend[];
@@ -210,35 +381,23 @@ export const runMatrix = async (options: {
       throw new Error('The Vite dev server did not report a local URL.');
     }
 
-    const browser = await chromium.launch({ channel: 'chromium', headless: true, args: [...LAUNCH_FLAGS] });
+    const provenance: Provenance[] = [];
+    const results: CellResult[] = [];
 
-    try {
-      const page = await browser.newPage();
+    for (const backend of options.backends) {
+      const backendCells = cells.filter(cell => cell.backend === backend);
 
-      await page.goto(baseUrl, { waitUntil: 'load' });
-      await page.waitForFunction(() => typeof globalThis.__runBaselineMatrix === 'function');
+      if (backendCells.length === 0) {
+        continue;
+      }
 
-      const renderer = await readRendererInPage(page);
-      const software = isSoftwareRenderer(renderer);
-      const timestamp = new Date().toISOString();
+      const outcome = await runBackend({ baseUrl, backend, cells: backendCells, engineVersion });
 
-      // The whole matrix, one evaluate call, one session.
-      const results = await page.evaluate(cellList => globalThis.__runBaselineMatrix!(cellList), cells);
-
-      const provenance: Provenance[] = options.backends.map(backend => ({
-        adapter: renderer,
-        backend,
-        flags: LAUNCH_FLAGS,
-        headless: true,
-        engineVersion,
-        timestamp,
-        software,
-      }));
-
-      return { provenance, results };
-    } finally {
-      await browser.close();
+      provenance.push(outcome.provenance);
+      results.push(...outcome.results);
     }
+
+    return { provenance, results };
   } finally {
     await server.close();
   }

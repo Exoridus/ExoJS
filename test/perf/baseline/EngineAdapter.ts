@@ -84,4 +84,13 @@ export interface EngineAdapter {
   renderFrame(): void;
   /** Release resources held by the current scene and engine instance. */
   teardown(): void;
+  /**
+   * The live WebGPU device when this adapter was initialised on the `'webgpu'`
+   * backend, so the harness can attach a structural probe to it — unlike a
+   * WebGL2 context (recoverable from the canvas via `getContext('webgl2')`),
+   * the device is not otherwise reachable from outside the engine. Returns
+   * `null` on other backends or before {@link init}. Optional: engines that
+   * never run WebGPU may omit it.
+   */
+  gpuDevice?(): GPUDevice | null;
 }

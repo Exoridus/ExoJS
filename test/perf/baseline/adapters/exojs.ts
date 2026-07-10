@@ -2,8 +2,10 @@ import { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { Scene } from '#core/Scene';
 import { Container } from '#rendering/Container';
+import { RenderBackendType } from '#rendering/RenderBackendType';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { Texture } from '#rendering/texture/Texture';
+import type { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { createRng } from '../archetypes';
 import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
@@ -63,10 +65,12 @@ const createDistinctTexture = (index: number, total: number): Texture => {
  * then `backend.flush()`), driven explicitly so the harness owns frame cadence
  * instead of the engine's `requestAnimationFrame` loop.
  *
- * WebGL2 only for now; WebGPU support arrives in a later task.
+ * Supports both the `'webgl2'` and `'webgpu'` backends; the per-frame call
+ * sequence (`resetStats(); clear(); rendering.render(root); flush()`) is
+ * identical on both, so only {@link init} branches on the backend type.
  */
 export const createExoJsAdapter = (backendFilter?: readonly Backend[]): EngineAdapter => {
-  const supported: readonly Backend[] = backendFilter ?? ['webgl2'];
+  const supported: readonly Backend[] = backendFilter ?? ['webgl2', 'webgpu'];
 
   let app: Application | null = null;
   let root: Container | null = null;
@@ -78,17 +82,19 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[]): EngineAd
     config: 'current',
 
     supports(backend: Backend): boolean {
-      return backend === 'webgl2' && supported.includes(backend);
+      return supported.includes(backend);
     },
 
     async init(canvas: HTMLCanvasElement, backend: Backend): Promise<void> {
-      if (backend !== 'webgl2') {
-        throw new Error(`The exojs adapter supports the 'webgl2' backend only (got '${backend}').`);
+      if (!supported.includes(backend)) {
+        throw new Error(`The exojs adapter was not configured for the '${backend}' backend.`);
       }
 
       const instance = new Application({
         canvas: { element: canvas, width: VIEWPORT_WIDTH, height: VIEWPORT_HEIGHT, pixelRatio: 1 },
-        backend: { type: 'webgl2' },
+        // Pin the backend explicitly (never 'auto') so the harness measures the
+        // backend the cell asked for, not whatever the environment prefers.
+        backend: { type: backend },
         clearColor: Color.black,
         hello: false,
       });
@@ -181,6 +187,22 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[]): EngineAd
       for (const leaf of mutableLeaves) {
         leaf.sprite.setPosition(leaf.baseX + dx, leaf.baseY + dy);
       }
+    },
+
+    gpuDevice(): GPUDevice | null {
+      if (app === null) {
+        return null;
+      }
+
+      const backend = app.backend;
+
+      // The backend exposes a live GPUDevice only when it is the WebGPU backend;
+      // narrow via the backendType tag before reading `.device`.
+      if (backend.backendType !== RenderBackendType.WebGpu) {
+        return null;
+      }
+
+      return (backend as WebGpuBackend).device;
     },
 
     renderFrame(): void {
