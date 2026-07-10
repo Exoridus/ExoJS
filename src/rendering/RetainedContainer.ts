@@ -239,6 +239,13 @@ export class RetainedContainer extends Container {
     // bounds must drop immediately.
     this._fragment.invalidate();
     this._invalidateBoundsFlags();
+    // The flip changes the transform SPACE of every descendant without
+    // touching their bounds flags or revisions, so spatial-index consumers
+    // (InteractionManager buckets nodes by group anchor) must be told
+    // per-node. The manager filters to tracked interactive nodes (O(1)
+    // Set-miss for the rest); flips are rare and already pay an O(subtree)
+    // barrier scan, so the extra walk is in budget.
+    this._notifySubtreeBoundsInvalidated(this);
 
     if (__DEV__ && disengage && !this._deepBarrierWarned) {
       this._deepBarrierWarned = true;
@@ -249,6 +256,17 @@ export class RetainedContainer extends Container {
           'group or out of it.',
         { source: 'rendering' },
       );
+    }
+  }
+
+  /** Depth-first bounds-invalidation notification for every descendant (see the flip comment above). */
+  private _notifySubtreeBoundsInvalidated(container: Container): void {
+    for (const child of container.children) {
+      child._getStage()?.interaction._notifyBoundsInvalidated(child);
+
+      if (child instanceof Container) {
+        this._notifySubtreeBoundsInvalidated(child);
+      }
     }
   }
 

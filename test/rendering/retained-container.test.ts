@@ -1,5 +1,6 @@
 import { Color } from '#core/Color';
 import { logger } from '#core/logging';
+import type { Stage } from '#core/Stage';
 import type { Matrix } from '#math/Matrix';
 import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
@@ -894,6 +895,65 @@ describe('RetainedContainer: alpha/tint staleness guard (spec 8, plan D-P2)', ()
     group.visible = true;
 
     expect(collectDraws(root, backend)).toHaveLength(1);
+
+    root.destroy();
+    backend.destroy();
+  });
+});
+
+describe('RetainedContainer: engagement flips re-index spatial consumers (F2)', () => {
+  const createSpyStage = (): { stage: Stage; invalidated: unknown[] } => {
+    const invalidated: unknown[] = [];
+    const stage = {
+      interaction: {
+        _notifyNodeAdded: () => {},
+        _notifyNodeRemoved: () => {},
+        _notifyInteractiveChanged: () => {},
+        _notifyBoundsInvalidated: (node: unknown) => invalidated.push(node),
+      },
+      focus: { _notifyNodeRemoved: () => {} },
+      app: {},
+    } as unknown as Stage;
+
+    return { stage, invalidated };
+  };
+
+  test('a disengage flip notifies bounds invalidation for every descendant (space changed under them)', () => {
+    const backend = createTestBackend();
+    const root = new Container();
+    const group = new RetainedContainer();
+    const mid = new Container();
+    const deep = new LeafDrawable('deep');
+
+    mid.addChild(deep);
+    group.addChild(mid);
+    root.addChild(group);
+
+    const { stage, invalidated } = createSpyStage();
+
+    root._setStage(stage);
+
+    collectDraws(root, backend); // engaged, settled
+
+    deep.clip = true; // deep barrier -> next collect disengages
+    deep.clipShape = new Rectangle(0, 0, 8, 8);
+    invalidated.length = 0;
+
+    collectDraws(root, backend);
+
+    expect(group._isTransformGroupBoundary).toBe(false);
+    expect(invalidated).toContain(mid);
+    expect(invalidated).toContain(deep);
+
+    // Re-engage: the reverse flip must notify again.
+    deep.clip = false;
+    invalidated.length = 0;
+
+    collectDraws(root, backend);
+
+    expect(group._isTransformGroupBoundary).toBe(true);
+    expect(invalidated).toContain(mid);
+    expect(invalidated).toContain(deep);
 
     root.destroy();
     backend.destroy();

@@ -1,8 +1,10 @@
 import type { Application } from '#core/Application';
+import { logger } from '#core/logging';
 import type { Signal } from '#core/Signal';
 import type { InteractionHooks, Stage } from '#core/Stage';
 import type { System } from '#core/System';
 import type { Time } from '#core/Time';
+import { Matrix } from '#math/Matrix';
 import type { PointLike } from '#math/PointLike';
 import type { QuadtreeItem } from '#math/Quadtree';
 import { Quadtree } from '#math/Quadtree';
@@ -75,6 +77,22 @@ export class InteractionManager implements InteractionHooks, System {
 
   // Persistent quadtree — null when no interactive nodes are present.
   private _quadtree: Quadtree<IndexedNode> | null = null;
+
+  // Interactive nodes ANCHORED to an engaged transform-group boundary
+  // (RetainedContainer): their getBounds()/contains() operate in GROUP-LOCAL
+  // space, so their world extent moves with the group without any bounds
+  // invalidation reaching them. They are deliberately kept OUT of the
+  // world-space quadtree (whose bounds would go stale on every group move —
+  // the camera-pan flagship case) and hit-tested by a linear scan through
+  // `_containsWorldPoint`, which reads the live group matrix. Maps node ->
+  // insertion order (shared counter with the quadtree for z-tiebreaks).
+  private readonly _anchoredNodes = new Map<RenderNode, number>();
+
+  // Scratch for inverting a group's world matrix during hit-testing.
+  private readonly _anchorInverse = new Matrix();
+
+  // One-shot dev diagnostic: interactive nodes under an engaged boundary.
+  private _devAnchoredWarned = false;
 
   // All currently-tracked interactive RenderNodes.
   private _interactiveNodes = new Set<RenderNode>();
@@ -234,6 +252,7 @@ export class InteractionManager implements InteractionHooks, System {
     this._interactiveNodes.clear();
     this._staleNodes.clear();
     this._quadtreeItems.clear();
+    this._anchoredNodes.clear();
     this._dirty = false;
 
     if (this._quadtree !== null) {
@@ -635,13 +654,49 @@ export class InteractionManager implements InteractionHooks, System {
     for (const candidate of candidates) {
       const indexed = candidate.payload;
 
-      if (indexed.order > bestOrder && indexed.node.contains(x, y)) {
+      // World-aware contains, not the raw group-local one: a node indexed in
+      // world space could have gained a boundary ancestor since insertion.
+      if (indexed.order > bestOrder && this._containsWorldPoint(indexed.node, x, y)) {
         bestOrder = indexed.order;
         bestNode = indexed.node;
       }
     }
 
+    // Group-anchored nodes live outside the quadtree (see `_anchoredNodes`):
+    // exact hit-test through the live group matrix, same z-tiebreak.
+    for (const [node, order] of this._anchoredNodes) {
+      if (order > bestOrder && this._containsWorldPoint(node, x, y)) {
+        bestOrder = order;
+        bestNode = node;
+      }
+    }
+
     return bestNode;
+  }
+
+  /**
+   * World-correct point containment: `node.contains` expects coordinates in
+   * the node's OWN global space, which under an engaged transform-group
+   * boundary ({@link RetainedContainer}) is group-local, not world. Resolve
+   * the node's live anchor and map the world-space pointer into group space
+   * through the inverse of the anchor's world matrix first; without an
+   * anchor this is a plain `contains`. Resolving live (instead of trusting
+   * index-time state) keeps boundary engage/disengage flips correct.
+   */
+  private _containsWorldPoint(node: RenderNode, x: number, y: number): boolean {
+    const anchor = node._resolveTransformGroupAnchor();
+
+    if (anchor === null) {
+      return node.contains(x, y);
+    }
+
+    const inverse = anchor.getWorldTransform().getInverse(this._anchorInverse);
+    // Same forward-map convention as AbstractVector.transform / SceneNode.contains:
+    // p' = [[a, b], [c, d]] · p + (x, y).
+    const groupX = inverse.a * x + inverse.b * y + inverse.x;
+    const groupY = inverse.c * x + inverse.d * y + inverse.y;
+
+    return node.contains(groupX, groupY);
   }
 
   // Walk children in REVERSE order (top z-order first). Recurse into Container children even
@@ -669,7 +724,7 @@ export class InteractionManager implements InteractionHooks, System {
       }
     }
 
-    if (node.interactive && node.contains(x, y)) {
+    if (node.interactive && this._containsWorldPoint(node, x, y)) {
       return node;
     }
 
@@ -710,6 +765,7 @@ export class InteractionManager implements InteractionHooks, System {
 
     this._interactiveNodes.delete(node);
     this._staleNodes.delete(node);
+    this._anchoredNodes.delete(node);
 
     const item = this._quadtreeItems.get(node);
 
@@ -727,18 +783,29 @@ export class InteractionManager implements InteractionHooks, System {
   }
 
   /**
-   * Insert a single node into the quadtree (or mark it stale to be inserted
-   * at next flush if the quadtree is not yet ready).
+   * Index a single node: group-anchored nodes go to the linear side list
+   * (their group-local bounds are useless as world-space quadtree keys and
+   * would go stale on every group move), everything else into the quadtree.
    */
-  private _insertNode(node: RenderNode): void {
+  private _insertNode(node: RenderNode, order: number = this._quadtreeOrderCounter++): void {
     if (this._quadtree === null) {
+      return;
+    }
+
+    if (node._resolveTransformGroupAnchor() !== null) {
+      this._anchoredNodes.set(node, order);
+
+      if (__DEV__) {
+        this._warnAnchoredInteractive(node);
+      }
+
       return;
     }
 
     const bounds = node.getBounds();
     const item: QuadtreeItem<IndexedNode> = {
       bounds: new Rectangle(bounds.x, bounds.y, bounds.width, bounds.height),
-      payload: { node, order: this._quadtreeOrderCounter++ },
+      payload: { node, order },
     };
 
     this._quadtree.insert(item);
@@ -746,8 +813,10 @@ export class InteractionManager implements InteractionHooks, System {
   }
 
   /**
-   * Flush stale entries: remove each stale node's old quadtree entry and
-   * re-insert it with fresh bounds. Called at the start of update().
+   * Flush stale entries: drop each stale node's old index entry and re-index
+   * it with fresh bounds AND a freshly resolved group anchor (a boundary
+   * engage/disengage flip re-buckets the node between the quadtree and the
+   * anchored side list here). Called at the start of update().
    */
   private _flushStaleEntries(): void {
     if (this._quadtree === null || this._staleNodes.size === 0) {
@@ -756,6 +825,7 @@ export class InteractionManager implements InteractionHooks, System {
 
     for (const node of this._staleNodes) {
       const oldItem = this._quadtreeItems.get(node);
+      const order = oldItem?.payload.order ?? this._anchoredNodes.get(node) ?? this._quadtreeOrderCounter++;
 
       if (oldItem !== undefined) {
         this._quadtree.remove(oldItem);
@@ -763,19 +833,34 @@ export class InteractionManager implements InteractionHooks, System {
       }
 
       this._quadtreeItems.delete(node);
+      this._anchoredNodes.delete(node);
 
-      // Re-insert with current bounds.
-      const bounds = node.getBounds();
-      const newItem: QuadtreeItem<IndexedNode> = {
-        bounds: new Rectangle(bounds.x, bounds.y, bounds.width, bounds.height),
-        payload: { node, order: oldItem?.payload.order ?? this._quadtreeOrderCounter++ },
-      };
-
-      this._quadtree.insert(newItem);
-      this._quadtreeItems.set(node, newItem);
+      this._insertNode(node, order);
     }
 
     this._staleNodes.clear();
+  }
+
+  /**
+   * S2-D1-style one-shot dev diagnostic (belt-and-braces telemetry): an
+   * interactive node under an engaged transform-group boundary works — the
+   * manager maps pointers through the group's world matrix — but its public
+   * `getBounds()`/`position` remain GROUP-LOCAL, which regularly surprises
+   * gameplay code. Dev builds only; stripped in production via `__DEV__`.
+   */
+  private _warnAnchoredInteractive(node: RenderNode): void {
+    if (this._devAnchoredWarned) {
+      return;
+    }
+
+    this._devAnchoredWarned = true;
+    logger.warn(
+      `An interactive node${node.name ? ` '${node.name}'` : ''} was registered inside an engaged RetainedContainer. ` +
+        'Pointer hit-testing maps through the group world transform automatically, but the node itself stays in ' +
+        "GROUP-LOCAL space: getBounds()/position are relative to the group, and event coordinates are world-space. " +
+        'Use getWorldTransform() for world-space queries against such nodes.',
+      { source: 'input' },
+    );
   }
 
   /** Build a fresh Quadtree sized to encompass the canvas + current scene root. */
