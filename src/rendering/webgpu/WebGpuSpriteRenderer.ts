@@ -480,6 +480,14 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
       return;
     }
 
+    // The projection uniform is a single shared buffer rewritten at offset 0
+    // every flush. If a pass is still open holding earlier batches whose view
+    // transform differs from the one about to be written (same View object
+    // mutated between two merged flushes — e.g. a camera pan with no identity
+    // change), overwriting the uniform would retroactively re-project them. End
+    // (submit) that pass first so its draws keep their original projection.
+    this._endPassOnProjectionChange(backend);
+
     const viewMatrix = backend.view.getTransform();
 
     this._projectionData.set([viewMatrix.a, viewMatrix.c, 0, 0, viewMatrix.b, viewMatrix.d, 0, 0, 0, 0, 1, 0, viewMatrix.x, viewMatrix.y, 0, viewMatrix.z]);
@@ -505,6 +513,18 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
       let active = backend._passCoordinator.acquirePass();
 
       this._instanceArena.syncPass(active);
+
+      // A texture this batch samples whose content/size changed since it was last
+      // uploaded will have its re-upload land on the queue timeline before the
+      // deferred submit, retroactively changing draws already recorded into this
+      // open pass. End (submit) the pass first so those draws capture the
+      // pre-mutation content, then reopen and re-upload into the fresh slice.
+      if (this._instanceArena.cursor > 0 && this._batchWouldMutateTexture(backend)) {
+        backend._passCoordinator.endPass();
+        active = backend._passCoordinator.acquirePass();
+        this._instanceArena.resetPass();
+        this._instanceArena.syncPass(active);
+      }
 
       // Resolving the transform storage may reallocate (and free) its GPU buffer;
       // earlier batches in this open pass still reference the old one, so end the
@@ -582,6 +602,47 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     this._currentBlendMode = null;
     this._currentMaterial = null;
     this._currentBaseTexture = null;
+  }
+
+  /**
+   * End the open pass if its recorded batches were projected with a different
+   * view transform than the one this flush is about to write into the shared
+   * projection uniform. Guarded on the arena tracking the *current* active pass
+   * so a stale post-boundary cursor never triggers a spurious split.
+   */
+  private _endPassOnProjectionChange(backend: WebGpuBackend): void {
+    const activePass = backend._passCoordinator.activePass;
+
+    if (
+      activePass !== null &&
+      this._instanceArena.cursor > 0 &&
+      this._instanceArena.tracksPass(activePass) &&
+      activePass.viewUpdateId !== backend.view.updateId
+    ) {
+      backend._passCoordinator.endPass();
+      this._instanceArena.resetPass();
+    }
+  }
+
+  /**
+   * Whether any texture the pending batch binds would be re-uploaded or resized
+   * when synced (see {@link WebGpuBackend._textureUploadWouldMutate}). Checks the
+   * custom base texture on the custom path, else every active multi-texture slot.
+   */
+  private _batchWouldMutateTexture(backend: WebGpuBackend): boolean {
+    if (this._currentMaterial !== null) {
+      return this._currentBaseTexture !== null && backend._textureUploadWouldMutate(this._currentBaseTexture);
+    }
+
+    for (let i = 0; i < this._slotCount; i++) {
+      const texture = this._activeTextures[i];
+
+      if (texture !== null && texture !== undefined && backend._textureUploadWouldMutate(texture)) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   /**

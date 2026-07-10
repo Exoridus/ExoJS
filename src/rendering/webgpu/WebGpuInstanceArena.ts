@@ -48,6 +48,16 @@ export class WebGpuInstanceArena {
   }
 
   /**
+   * Whether this arena is currently appending into `pass` — i.e. its cursor
+   * reflects bytes handed out for that exact open pass. Lets a renderer safely
+   * consult {@link cursor} before it re-syncs (the cursor can otherwise be stale
+   * after a boundary ended the pass without the arena being reset yet).
+   */
+  public tracksPass(pass: WebGpuActiveRenderPass): boolean {
+    return this._pass === pass;
+  }
+
+  /**
    * Reset the write cursor when a different pass is open than the one the last
    * batch was appended into (the coordinator builds a fresh active-pass object
    * every time it opens a pass, so reference identity distinguishes passes).

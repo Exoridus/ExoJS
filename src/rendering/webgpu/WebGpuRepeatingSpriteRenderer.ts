@@ -419,6 +419,22 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
       return;
     }
 
+    // Rewriting the shared projection uniform for a still-open pass whose batches
+    // were projected with a now-changed view transform (same View object mutated
+    // between merged flushes) would retroactively re-project them; end that pass
+    // first. Guarded on the arena tracking the current active pass.
+    const activePass = backend._passCoordinator.activePass;
+
+    if (
+      activePass !== null &&
+      this._instanceArena.cursor > 0 &&
+      this._instanceArena.tracksPass(activePass) &&
+      activePass.viewUpdateId !== backend.view.updateId
+    ) {
+      backend._passCoordinator.endPass();
+      this._instanceArena.resetPass();
+    }
+
     const vm = backend.view.getTransform();
     this._projData.set([vm.a, vm.c, 0, 0, vm.b, vm.d, 0, 0, 0, 0, 1, 0, vm.x, vm.y, 0, vm.z]);
     device.queue.writeBuffer(uniform, 0, this._projData.buffer, this._projData.byteOffset, this._projData.byteLength);
@@ -438,6 +454,17 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
       let active = backend._passCoordinator.acquirePass();
 
       this._instanceArena.syncPass(active);
+
+      // A texture re-upload / resize lands on the queue timeline before the
+      // deferred submit, retroactively changing draws already recorded into this
+      // open pass. End (submit) the pass first so they capture the pre-mutation
+      // content, then reopen and re-upload into the fresh slice.
+      if (this._instanceArena.cursor > 0 && this._currentTexture !== null && backend._textureUploadWouldMutate(this._currentTexture)) {
+        backend._passCoordinator.endPass();
+        active = backend._passCoordinator.acquirePass();
+        this._instanceArena.resetPass();
+        this._instanceArena.syncPass(active);
+      }
 
       // Resolving the transform storage may reallocate (and free) its GPU buffer;
       // end the pass first when earlier batches in it still reference the old one.
