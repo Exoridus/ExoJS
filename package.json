@@ -137,6 +137,7 @@
     "perf:bench:scene-graph": "tsx test/perf/scene-graph-benchmark.ts",
     "perf:bench:interaction": "tsx test/perf/interaction-benchmark.ts",
     "perf:bench:all": "pnpm perf:bench:rendering && pnpm perf:bench:audio && pnpm perf:bench:collision && pnpm perf:bench:scene-graph && pnpm perf:bench:interaction",
+    "perf:baseline": "tsx test/perf/baseline/run.ts",
     "perf:profile": "tsx test/perf/profile-benchmark.ts",
     "perf:profile:gc": "node --expose-gc --import tsx/esm test/perf/profile-benchmark.ts",
     "size": "size-limit",
