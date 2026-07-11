@@ -21,6 +21,7 @@ export const CHAPTERS: ReadonlyArray<ChapterMeta> = [
     { order: 13, slug: 'render-targets', title: 'Render Targets', complexity: 'High' },
     { order: 14, slug: 'performance', title: 'Performance', complexity: 'Medium' },
     { order: 15, slug: 'physics', title: 'Physics', complexity: 'Medium' },
+    { order: 16, slug: 'tilemap', title: 'Tilemap', complexity: 'Medium' },
     { order: 17, slug: 'audio-fx', title: 'Audio FX', complexity: 'Medium' },
     { order: 18, slug: 'beat-detection', title: 'Beat Detection', complexity: 'High' },
     { order: 19, slug: 'debug-layer', title: 'Debug Layer', complexity: 'Low' },

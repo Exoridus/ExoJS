@@ -391,7 +391,7 @@ const syncVendor = (): void => {
     // `/register`, `/debug`). Without this the playground's TypeScript worker
     // can't resolve `@codexo/exojs-particles` & co. and every extension example
     // shows a ts2307 "Cannot find module" error.
-    const extensionPackages = ['exojs-particles', 'exojs-audio-fx', 'exojs-tilemap', 'exojs-tiled', 'exojs-physics'] as const;
+    const extensionPackages = ['exojs-particles', 'exojs-audio-fx', 'exojs-tilemap', 'exojs-tiled', 'exojs-ldtk', 'exojs-physics'] as const;
     for (const pkgName of extensionPackages) {
         let pkgRoot: string | null = null;
         try {

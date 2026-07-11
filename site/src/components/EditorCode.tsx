@@ -510,6 +510,7 @@ const EXTENSION_PACKAGES: ReadonlyArray<{ baseUrl: string; packageName: string }
     { baseUrl: 'vendor/exojs-audio-fx/', packageName: '@codexo/exojs-audio-fx' },
     { baseUrl: 'vendor/exojs-tilemap/', packageName: '@codexo/exojs-tilemap' },
     { baseUrl: 'vendor/exojs-tiled/', packageName: '@codexo/exojs-tiled' },
+    { baseUrl: 'vendor/exojs-ldtk/', packageName: '@codexo/exojs-ldtk' },
     { baseUrl: 'vendor/exojs-physics/', packageName: '@codexo/exojs-physics' },
 ];
 

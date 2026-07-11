@@ -1829,6 +1829,53 @@
             "level": "advanced"
         }
     ],
+    "tilemap": [
+        {
+            "slug": "tile-chunks-and-bands",
+            "path": "tilemap/tile-chunks-and-bands.js",
+            "language": "typescript",
+            "title": "Tilemap Chunks & Layer Bands",
+            "description": "Build a procedural TileMap in code and explore the core @codexo/exojs-tilemap runtime: chunked TileLayerNode rendering, a camera that follows an actor interleaved between TileMapView bands, and the PixelSnapMode cascade.",
+            "backend": "core",
+            "tags": [
+                "tilemap",
+                "camera",
+                "pixel-snap"
+            ],
+            "capabilities": [
+                "keyboard"
+            ],
+            "level": "intermediate"
+        },
+        {
+            "slug": "tiled-map-import",
+            "path": "tilemap/tiled-map-import.js",
+            "language": "typescript",
+            "title": "Tiled Map Import",
+            "description": "Load a Tiled .tmj map through the advanced parsed-source path (TiledMap.toTileMap()) and query its object layer by type, property, and geometry kind with ObjectLayer.query().",
+            "backend": "core",
+            "tags": [
+                "tilemap",
+                "tiled",
+                "objects"
+            ],
+            "level": "intermediate"
+        },
+        {
+            "slug": "ldtk-world-import",
+            "path": "tilemap/ldtk-world-import.js",
+            "language": "typescript",
+            "title": "LDtk World Import",
+            "description": "Load a multi-level LDtk world, switch between its runtime TileMap levels, resolve IntGrid cells to their named/coloured definitions with getLdtkIntGridValueAt(), and read entity fields from the converted ObjectLayer.",
+            "backend": "core",
+            "tags": [
+                "tilemap",
+                "ldtk",
+                "intgrid"
+            ],
+            "level": "advanced"
+        }
+    ],
     "tweens-animation": [
         {
             "slug": "tween-basics",

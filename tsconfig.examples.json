@@ -61,6 +61,8 @@
       "@codexo/exojs-tiled/register": ["./packages/exojs-tiled/src/register.ts"],
       "@codexo/exojs-tilemap": ["./packages/exojs-tilemap/src/index.ts"],
       "@codexo/exojs-tilemap/register": ["./packages/exojs-tilemap/src/register.ts"],
+      "@codexo/exojs-ldtk": ["./packages/exojs-ldtk/src/index.ts"],
+      "@codexo/exojs-ldtk/register": ["./packages/exojs-ldtk/src/register.ts"],
       "@codexo/exojs-physics": ["./packages/exojs-physics/src/index.ts"],
       "@codexo/exojs-physics/debug": ["./packages/exojs-physics/src/debug/index.ts"],
       "@codexo/exojs-audio-fx": ["./packages/exojs-audio-fx/src/index.ts"],
