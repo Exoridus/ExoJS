@@ -450,4 +450,55 @@ describe('WebGPU renderer matrix: RetainedContainer cells', () => {
       backend.destroy();
     }
   });
+
+  test('cell 8 — pixelSnapMode is group-aware: a snapped sprite inside a fractional group renders through the composed path (R2)', async ctx => {
+    const backend = await setupBackend();
+    const texture = createSolidTexture('#ff0000', 16);
+    const root = new Container();
+    const group = new RetainedContainer();
+    const sprite = new Sprite(texture);
+
+    try {
+      // Fractional group offset + fractional child: the composed device origin
+      // is off-pixel. `position` snapping composes the group matrix in before
+      // snapping and peels it back off the uploaded row, so the shader's
+      // re-applied u_group still lands the origin on a whole device pixel.
+      group.setPosition(8.4, 8.4);
+      sprite.setPosition(0.3, 0.3);
+      sprite.pixelSnapMode = 'position';
+      group.addChild(sprite);
+      root.addChild(group);
+
+      const worldBefore = sprite.getWorldTransform().clone();
+
+      if (!(await renderScene(ctx, backend, root))) {
+        return;
+      }
+
+      let readPixel = readCanvas(backend);
+
+      // Composed origin ≈ 8.7 → snapped to 9; the 16px sprite covers ~9..25.
+      expectPixelNear(readPixel(16, 16), [255, 0, 0, 255]);
+      expectPixelNear(readPixel(2, 2), [0, 0, 0, 255]);
+
+      const first = readPixel(16, 16);
+
+      if (!(await renderScene(ctx, backend, root))) {
+        // spliced frame — deterministic, no drift
+        return;
+      }
+
+      readPixel = readCanvas(backend);
+
+      expect(readPixel(16, 16)).toEqual(first);
+      // Render-only: the logical world transform is never mutated by snapping.
+      expect(sprite.getWorldTransform().equals(worldBefore)).toBe(true);
+
+      worldBefore.destroy();
+    } finally {
+      root.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
 });

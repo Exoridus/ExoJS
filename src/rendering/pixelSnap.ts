@@ -1,4 +1,4 @@
-import type { Matrix } from '#math/Matrix';
+import { Matrix } from '#math/Matrix';
 import type { Rectangle } from '#math/Rectangle';
 
 import type { Drawable } from './Drawable';
@@ -34,6 +34,19 @@ import type { View } from './View';
  * pass the **active render target's device-pixel dimensions** so the result is
  * device-correct for both the main canvas and offscreen render targets, and
  * correct under viewport rectangles (split-screen).
+ *
+ * ## Retained transform groups
+ *
+ * Inside a {@link RetainedContainer} the GPU applies the group matrix *after*
+ * the per-node transform row (`u_projection · u_group · (row · local)`), and a
+ * node's {@link SceneNode.getGlobalTransform} is group-RELATIVE (it stops at the
+ * boundary). Snapping that group-local origin would snap to the wrong grid, so
+ * {@link resolveUploadTransform} composes the group matrix in first, snaps the
+ * TRUE device origin (`group · local`), then peels the group matrix back off the
+ * row it uploads — the shader's re-applied group matrix therefore lands the
+ * origin on a whole device pixel. The geometry-boundary helpers build their snap
+ * context from {@link SceneNode.getWorldTransform} for the same reason (the
+ * group's scale/rotation must be in the device mapping).
  *
  * ## Render-only contract
  *
@@ -308,11 +321,23 @@ export function snapQuadsInto(source: readonly BoundaryQuad[], ctx: PixelSnapCon
   return out;
 }
 
+/** Scratch for the group inverse used to peel a group matrix off a snapped row. @internal */
+const groupInverseScratch = new Matrix();
+
 /**
- * Resolve the world transform to upload for `drawable` at the transform-buffer
- * write seam. Returns the drawable's live global transform unchanged when its
- * mode is `'none'` (zero overhead), otherwise a snapped copy written into the
- * caller-owned `scratch` matrix — the logical global transform is never mutated.
+ * Resolve the transform-buffer row to upload for `drawable` at the write seam.
+ * Returns the drawable's live group-local transform unchanged when its mode is
+ * `'none'` (zero overhead), otherwise a snapped copy written into the caller-
+ * owned `scratch` matrix — the logical global transform is never mutated.
+ *
+ * `groupTransform` is the active retained-group world matrix (`u_group`) the GPU
+ * applies AFTER this row, or `null` at the root / outside any group. When it is
+ * `null`, the group-local origin IS the world origin and is snapped directly.
+ * When a group is active the shader computes `group · row`, so we snap the
+ * composed device origin (`group · local`) and peel `group` back off the row we
+ * return — the shader's re-applied `u_group` then lands the origin on a whole
+ * device pixel. `groupTransform` is read-only (its inverse is taken into a
+ * private scratch); it is never mutated.
  *
  * Both backends call this at their single transform-write boundary, so position
  * snapping (and tilemap chunk/layer origin snapping) is applied once, backend-
@@ -320,16 +345,37 @@ export function snapQuadsInto(source: readonly BoundaryQuad[], ctx: PixelSnapCon
  * come from the active pass.
  * @internal
  */
-export function resolveUploadTransform(drawable: Drawable, view: View, targetPxWidth: number, targetPxHeight: number, scratch: Matrix): Matrix {
-  const world = drawable.getGlobalTransform();
+export function resolveUploadTransform(
+  drawable: Drawable,
+  view: View,
+  targetPxWidth: number,
+  targetPxHeight: number,
+  scratch: Matrix,
+  groupTransform: Matrix | null,
+): Matrix {
+  const local = drawable.getGlobalTransform();
 
   if (drawable.pixelSnapMode === 'none') {
-    return world;
+    return local;
   }
 
+  if (groupTransform === null) {
+    // No group: group-local space IS world space — snap the origin directly.
+    const ctx = buildPixelSnapContext(local, view, targetPxWidth, targetPxHeight);
+
+    return snapWorldTranslationInto(scratch, local, ctx);
+  }
+
+  // Inside a group: compose `group · local` (scratch = the true world matrix),
+  // snap that device origin, then peel the group matrix off so the row we upload
+  // round-trips to the snapped device pixel once the shader re-applies u_group.
+  const world = scratch.copy(local).combine(groupTransform);
   const ctx = buildPixelSnapContext(world, view, targetPxWidth, targetPxHeight);
 
-  return snapWorldTranslationInto(scratch, world, ctx);
+  scratch.x = ctx.worldX;
+  scratch.y = ctx.worldY;
+
+  return scratch.combine(groupTransform.getInverse(groupInverseScratch));
 }
 
 /**

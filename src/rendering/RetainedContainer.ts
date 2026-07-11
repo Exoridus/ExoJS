@@ -28,9 +28,10 @@ const retainedDiagnosticThreshold = 108;
  * Trade-offs of the group-local space convention (spec §5/§6): descendants
  * resolve group-relative transforms, so hit-testing/`getBounds()` inside the
  * group are group-local; per-child view culling is disabled inside the group
- * (the group is culled as a whole); `pixelSnapMode` snapping operates on
- * group-local coordinates; particle-extension drawables bake their own
- * transforms and are not group-transform-aware. Group-wide fades are done
+ * (the group is culled as a whole); particle-extension drawables bake their own
+ * transforms and are not group-transform-aware. `pixelSnapMode` IS group-aware —
+ * the renderer composes the group matrix in before snapping, so a snapped node
+ * inside a translated/scaled group still lands on the device-pixel grid. Group-wide fades are done
  * per-drawable tint (the engine has no inherited alpha) or via
  * {@link RenderNode.cacheAsBitmap}. Nodes with filters/mask/clip/
  * cacheAsBitmap are supported as DIRECT children (they stay world-space and
