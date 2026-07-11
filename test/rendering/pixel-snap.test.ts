@@ -9,11 +9,13 @@ import {
   type PixelSnapMode,
   type RenderQuad,
   resolveEffectivePixelSnapMode,
+  resolveUploadTransform,
   snapBoundsInto,
   snapLocalBoundary,
   snapQuadsInto,
   snapWorldTranslationInto,
 } from '#rendering/pixelSnap';
+import { RetainedContainer } from '#rendering/RetainedContainer';
 import { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
 import { Sprite } from '#rendering/sprite/Sprite';
 import type { Texture } from '#rendering/texture/Texture';
@@ -410,6 +412,192 @@ describe('effective alignment from a composed world transform', () => {
     expect(buildPixelSnapContext(child.getGlobalTransform(), view, 200, 200).axisAligned).toBe(true);
 
     parent.destroy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// resolveUploadTransform — group-aware DEVICE snapping (expert-review R2)
+// ---------------------------------------------------------------------------
+//
+// Inside a RetainedContainer the GPU applies the group matrix AFTER the buffer
+// row (`u_projection · u_group · (row · local)`), so snapping the group-LOCAL
+// origin (the old behaviour) snapped to the wrong grid and the final device
+// position drifted off-pixel. resolveUploadTransform now snaps the composed
+// `group · local` device origin and peels the group matrix back off the row it
+// uploads, so the shader's re-applied group matrix lands the origin on a whole
+// device pixel.
+
+describe('resolveUploadTransform — group-aware device snapping (R2)', () => {
+  test('without a group, snaps the global origin directly (unchanged behaviour)', () => {
+    const view = makeView(100, 100);
+    const sprite = new Sprite(makeTexture());
+
+    sprite.setPosition(12.37, 7.91);
+    sprite.pixelSnapMode = 'position';
+
+    const scratch = new Matrix();
+    const uploaded = resolveUploadTransform(sprite, view, 100, 100, scratch, null);
+    const device = view.worldToScreen(uploaded.x, uploaded.y, 100, 100);
+
+    expect(device.x).toBeCloseTo(Math.round(device.x), 6);
+    expect(device.y).toBeCloseTo(Math.round(device.y), 6);
+
+    sprite.destroy();
+  });
+
+  test("'none' returns the live group-local transform, group or not", () => {
+    const view = makeView(100, 100);
+    const group = new RetainedContainer();
+    const sprite = new Sprite(makeTexture());
+
+    group.setPosition(30.4, 10.6);
+    group.addChild(sprite);
+    sprite.setPosition(5.2, 7.8);
+    sprite.pixelSnapMode = 'none';
+
+    const uploaded = resolveUploadTransform(sprite, view, 100, 100, new Matrix(), group.getGlobalTransform());
+
+    expect(uploaded).toBe(sprite.getGlobalTransform());
+
+    group.destroy();
+  });
+
+  test('snaps the FINAL device origin (group × local), not the group-local origin', () => {
+    const view = makeView(100, 100);
+    const group = new RetainedContainer();
+    const sprite = new Sprite(makeTexture());
+
+    // Both offsets fractional → the composed origin is fractional in device space.
+    group.setPosition(30.4, 10.6);
+    group.addChild(sprite);
+    sprite.setPosition(5.2, 7.8);
+    sprite.pixelSnapMode = 'position';
+
+    const groupWorld = group.getGlobalTransform(); // group is the boundary → its own world matrix
+    const uploaded = resolveUploadTransform(sprite, view, 100, 100, new Matrix(), groupWorld);
+
+    // The shader computes `group · uploaded`; that composed origin must be a
+    // whole device pixel — the whole point of the fix.
+    const composed = uploaded.clone().combine(groupWorld);
+    const device = view.worldToScreen(composed.x, composed.y, 100, 100);
+
+    expect(device.x).toBeCloseTo(Math.round(device.x), 5);
+    expect(device.y).toBeCloseTo(Math.round(device.y), 5);
+
+    // The uploaded row's LINEAR part is still the sprite's group-local linear
+    // part (position snapping never touches scale/rotation).
+    const local = sprite.getGlobalTransform();
+
+    expect(uploaded.a).toBeCloseTo(local.a, 6);
+    expect(uploaded.d).toBeCloseTo(local.d, 6);
+
+    group.destroy();
+  });
+
+  test('snapping the group-local origin (the old behaviour) would MISS the device grid', () => {
+    const view = makeView(100, 100);
+    const group = new RetainedContainer();
+    const sprite = new Sprite(makeTexture());
+
+    group.setPosition(0.5, 0.5); // half-pixel group offset
+    group.addChild(sprite);
+    sprite.setPosition(4, 4); // already integer in group-local space
+    sprite.pixelSnapMode = 'position';
+
+    const groupWorld = group.getGlobalTransform();
+
+    // Group-local snap (ignores the group) leaves the row at (4, 4); composed
+    // with the 0.5 group offset the device origin is 4.5 — off the grid.
+    const groupLocalOnly = view.worldToScreen(4 + 0.5, 4 + 0.5, 100, 100);
+
+    expect(groupLocalOnly.x).not.toBeCloseTo(Math.round(groupLocalOnly.x), 3);
+
+    // The fix pulls it back onto a whole device pixel.
+    const uploaded = resolveUploadTransform(sprite, view, 100, 100, new Matrix(), groupWorld);
+    const composed = uploaded.clone().combine(groupWorld);
+    const device = view.worldToScreen(composed.x, composed.y, 100, 100);
+
+    expect(device.x).toBeCloseTo(Math.round(device.x), 5);
+
+    group.destroy();
+  });
+
+  test('never mutates the group matrix it is handed', () => {
+    const view = makeView(100, 100);
+    const group = new RetainedContainer();
+    const sprite = new Sprite(makeTexture());
+
+    group.setPosition(12.3, 4.7);
+    group.addChild(sprite);
+    sprite.setPosition(3.1, 9.4);
+    sprite.pixelSnapMode = 'position';
+
+    const groupWorld = group.getGlobalTransform();
+    const snapshot = groupWorld.clone();
+
+    resolveUploadTransform(sprite, view, 100, 100, new Matrix(), groupWorld);
+
+    expect(groupWorld.equals(snapshot)).toBe(true);
+
+    snapshot.destroy();
+    group.destroy();
+  });
+});
+
+describe('geometry snapping is group-aware (R2)', () => {
+  test('boundary scale uses the FULL device scale through a scaled group', () => {
+    const view = makeView(100, 100);
+    const group = new RetainedContainer();
+    const sprite = new Sprite(makeTexture());
+
+    group.addChild(sprite);
+    group.setScale(2); // group doubles the device scale
+
+    const ctxWorld = buildPixelSnapContext(sprite.getWorldTransform(), view, 100, 100);
+
+    expect(Math.abs(ctxWorld.scaleX)).toBeCloseTo(2, 3);
+
+    // The old group-local matrix saw the sprite's own scale only (1) — the bug.
+    const ctxLocal = buildPixelSnapContext(sprite.getGlobalTransform(), view, 100, 100);
+
+    expect(Math.abs(ctxLocal.scaleX)).toBeCloseTo(1, 3);
+
+    group.destroy();
+  });
+
+  test('a rotated GROUP downgrades geometry snapping for an axis-aligned child', () => {
+    const view = makeView(200, 200);
+    const group = new RetainedContainer();
+    const sprite = new Sprite(makeTexture());
+
+    group.addChild(sprite);
+    group.setRotation(20);
+
+    // Fixed: the group rotation is now visible → downgrade.
+    expect(buildPixelSnapContext(sprite.getWorldTransform(), view, 200, 200).axisAligned).toBe(false);
+    // Old group-local matrix looked axis-aligned → silently wrong snap.
+    expect(buildPixelSnapContext(sprite.getGlobalTransform(), view, 200, 200).axisAligned).toBe(true);
+
+    group.destroy();
+  });
+
+  test('Sprite.getRenderBounds downgrades to logical bounds inside a rotated group', () => {
+    const view = makeView(200, 200);
+    const group = new RetainedContainer();
+    const sprite = new Sprite(makeTexture(16, 16));
+
+    sprite.pixelSnapMode = 'geometry';
+    group.addChild(sprite);
+    group.setRotation(20);
+
+    const out = new Rectangle();
+
+    // The rotation lives in the group; geometry must downgrade and return the
+    // logical local bounds unchanged (same reference). Under the old
+    // group-local behaviour it would have returned snapped `out` instead.
+    expect(sprite.getRenderBounds(view, 200, 200, out)).toBe(sprite.getLocalBounds());
+
+    group.destroy();
   });
 });
 

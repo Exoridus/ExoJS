@@ -234,7 +234,9 @@ export class NineSliceSprite extends Drawable {
       return base;
     }
 
-    const ctx = buildPixelSnapContext(this.getGlobalTransform(), view, targetPxWidth, targetPxHeight);
+    // World transform (composed through any RetainedContainer boundary) so the
+    // device scale / axis-alignment reflect the group the GPU applies as u_group.
+    const ctx = buildPixelSnapContext(this.getWorldTransform(), view, targetPxWidth, targetPxHeight);
 
     if (!ctx.axisAligned) {
       logger.warn('pixelSnapMode "geometry" downgraded to "position" for a rotated/skewed transform; rendered geometry is not boundary-snapped this frame.', {

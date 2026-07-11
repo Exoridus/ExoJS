@@ -431,7 +431,7 @@ export class WebGl2Backend implements RenderBackend {
     const width = target.root ? this._canvas.width : target.width;
     const height = target.root ? this._canvas.height : target.height;
 
-    return resolveUploadTransform(drawable, target.view, width, height, this._snapTransform);
+    return resolveUploadTransform(drawable, target.view, width, height, this._snapTransform, this._renderGroupTransform);
   }
 
   /**
