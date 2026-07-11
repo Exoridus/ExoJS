@@ -6,9 +6,9 @@
  * `.workspace/specs/04-webgpu-overhead-investigation.md`). The WebGPU backend
  * used to open a fresh command encoder + render pass and call
  * `device.queue.submit()` on EVERY batch flush — i.e. once per draw call. In the
- * `batch-breaking` archetype (many interleaved textures overflowing the 8-slot
- * batcher) that is one GPU submit per ~8 sprites, and Dawn/D3D12's per-submit
- * cost degrades super-linearly, so the frame time explodes.
+ * `batch-breaking` archetype (many interleaved textures overflowing the
+ * batcher's texture slots) that is one GPU submit per batch, and Dawn/D3D12's
+ * per-submit cost degrades super-linearly, so the frame time explodes.
  *
  * These tests spy on `device.queue.submit` for a single rendered frame:
  *   1. A single-target sprite scene that forces MANY batch flushes must still
@@ -183,26 +183,20 @@ const countSubmits = (backend: WebGpuBackend, body: () => void): number => {
   return count;
 };
 
-// 16 distinct fully-saturated colours; consecutive entries never share a hue so
-// a batcher with 8 texture slots breaks into >= 2 draw calls.
-const palette16 = [
-  '#ff0000',
-  '#00ff00',
-  '#0000ff',
-  '#ffff00',
-  '#ff00ff',
-  '#00ffff',
-  '#ff8000',
-  '#8000ff',
-  '#00ff80',
-  '#80ff00',
-  '#0080ff',
-  '#ff0080',
-  '#808080',
-  '#c04040',
-  '#40c040',
-  '#4040c0',
-];
+// Distinct colours built from four channel levels (black skipped), so any two
+// distinct palette entries differ by at least 0x55 in some channel — far above
+// the probe tolerance. The palette is sized to exceed the sprite batcher's
+// MAXIMUM texture-slot tier (32, see resolveSpriteBatchTextureSlots), so a
+// scene using the full palette always breaks into >= 2 draw calls regardless
+// of the slot count the device was granted (16 base / 32 ceiling).
+const channelLevels = ['00', '55', 'aa', 'ff'] as const;
+const paletteColor = (index: number): string => {
+  // +1 skips black (the clear colour).
+  const combo = index + 1;
+
+  return `#${channelLevels[combo % 4]!}${channelLevels[Math.floor(combo / 4) % 4]!}${channelLevels[Math.floor(combo / 16) % 4]!}`;
+};
+const palette36 = Array.from({ length: 36 }, (_, i) => paletteColor(i));
 
 // Parse a `#rrggbb` string to an opaque RGBA tuple (canvas alphaMode 'opaque').
 const hexToRgba = (hex: string): RgbaTuple => [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16), 255];
@@ -225,11 +219,13 @@ const buildGridScene = (textures: readonly Texture[], columns: number, cell: num
   return root;
 };
 
-// A scene that forces a batch break: `textures[0]` at the top-left corner (0,0)
-// and the rest laid out in a row at y=24. With >= 9 distinct textures the 8-slot
-// batcher flushes the first 8 sprites (including textures[0]) into an open pass,
-// which is exactly the "earlier draws recorded into a still-open pass" precondition
-// the deferral defects hinge on. The (0,0) sprite centre (4,4) is the probe point.
+// A scene that forces a batch break: `corner` at the top-left (0,0) and the
+// rest laid out on an in-canvas grid from y=16 down (off-screen sprites would
+// be culled and never claim a texture slot). With more distinct textures than
+// the batcher's maximum slot tier (32), the batcher flushes a first batch —
+// including the corner sprite — into an open pass, which is exactly the
+// "earlier draws recorded into a still-open pass" precondition the deferral
+// defects hinge on. The (0,0) sprite centre (4,4) is the probe point.
 const buildBreakScene = (textures: readonly Texture[], corner: Texture): Container => {
   const root = new Container();
   const cornerSprite = new Sprite(corner);
@@ -242,9 +238,9 @@ const buildBreakScene = (textures: readonly Texture[], corner: Texture): Contain
   for (let i = 0; i < textures.length; i++) {
     const sprite = new Sprite(textures[i]!);
 
-    sprite.setPosition(i * 7, 24);
-    sprite.width = 8;
-    sprite.height = 8;
+    sprite.setPosition((i % 8) * 7, 16 + Math.floor(i / 8) * 7);
+    sprite.width = 6;
+    sprite.height = 6;
     root.addChild(sprite);
   }
 
@@ -261,10 +257,11 @@ const renderRoot = (backend: WebGpuBackend, root: RenderNode): void => {
 describe('WebGPU single-submit frame', () => {
   test('a multi-batch single-target sprite scene submits the frame exactly once, with correct per-batch pixels', async ctx => {
     const backend = await setupBackend();
-    // 16 distinct textures over a 4x4 grid of 16px cells: sprites 0-7 land in the
-    // first batch, 8-15 in the second (the 8-slot batcher breaks past texture 8).
-    const textures = palette16.map(color => createSolidTexture(color, 16));
-    const root = buildGridScene(textures, 4, 16);
+    // 36 distinct textures over a 6x6 grid of 10px cells: more unique textures
+    // than the batcher's maximum slot tier (32), so the scene splits into at
+    // least two batches whatever slot count the device was granted.
+    const textures = palette36.map(color => createSolidTexture(color, 16));
+    const root = buildGridScene(textures, 6, 10);
 
     try {
       // Warm up: compile pipelines, upload textures, and let the instance arena
@@ -289,19 +286,23 @@ describe('WebGPU single-submit frame', () => {
 
       expect(submits).toBe(1);
 
-      // Pixel probes at cell centres across BOTH batches. A broken arena where
+      // Pixel probes at cell centres across the batches. A broken arena where
       // every batch reads the last batch's bytes would still submit once, but
       // these cells would paint the wrong colour/position — so the probes are
-      // what actually guard the merge. Cell i centre = (col*16+8, row*16+8).
+      // what actually guard the merge. Cell i centre = (col*10+5, row*10+5).
       const readPixel = readCanvas(backend);
+      const probeCell = (index: number): void => {
+        expectPixelNear(readPixel((index % 6) * 10 + 5, Math.floor(index / 6) * 10 + 5), hexToRgba(palette36[index]!));
+      };
 
-      // Batch 1 (sprites 0-7):
-      expectPixelNear(readPixel(8, 8), hexToRgba(palette16[0]!)); // cell 0
-      expectPixelNear(readPixel(56, 8), hexToRgba(palette16[3]!)); // cell 3
-      // Batch 2 (sprites 8-15):
-      expectPixelNear(readPixel(8, 40), hexToRgba(palette16[8]!)); // cell 8
-      expectPixelNear(readPixel(40, 40), hexToRgba(palette16[10]!)); // cell 10
-      expectPixelNear(readPixel(56, 56), hexToRgba(palette16[15]!)); // cell 15
+      // First batch (early slots), a slot past the legacy 8-slot ceiling, one
+      // deep into the granted tier, and the tail cells of the LAST batch:
+      probeCell(0);
+      probeCell(3);
+      probeCell(10);
+      probeCell(20);
+      probeCell(33);
+      probeCell(35);
     } finally {
       root.destroy();
       textures.forEach(texture => texture.destroy());
@@ -413,8 +414,8 @@ describe('WebGPU single-submit frame', () => {
   // boundary. The fix ends the open pass before the growth.
   test('two render() calls in one frame — first batch-breaks, second grows transform storage — keep both plans, no validation error', async ctx => {
     const backend = await setupBackend();
-    const breakTextures = palette16.slice(1, 9).map(color => createSolidTexture(color, 8));
-    const cornerTexture = createSolidTexture(palette16[0]!, 8);
+    const breakTextures = palette36.slice(1).map(color => createSolidTexture(color, 8));
+    const cornerTexture = createSolidTexture(palette36[0]!, 8);
     const fillTexture = createSolidTexture('#00ff80', 16);
     const planOne = buildBreakScene(breakTextures, cornerTexture);
 
@@ -440,7 +441,7 @@ describe('WebGPU single-submit frame', () => {
 
       backend.resetStats();
       backend.clear(Color.black);
-      planOne.render(backend); // 9 distinct textures → batch break → pass open
+      planOne.render(backend); // 36 distinct textures (> max slot tier) → batch break → pass open
       planTwo.render(backend); // reserve() grows the storage while that pass is open
       backend.flush();
       planTwo.destroy();
@@ -465,7 +466,7 @@ describe('WebGPU single-submit frame', () => {
       const readPixel = readCanvas(backend);
 
       // First plan's corner sprite survived (its batch was not dropped):
-      expectPixelNear(readPixel(4, 4), hexToRgba(palette16[0]!));
+      expectPixelNear(readPixel(4, 4), hexToRgba(palette36[0]!));
       // Second plan's fill is present:
       expectPixelNear(readPixel(40, 40), hexToRgba('#00ff80'));
     } finally {
@@ -483,8 +484,8 @@ describe('WebGPU single-submit frame', () => {
   // open pass so the clear applies at the point it was requested.
   test('a mid-frame clear() applies where requested: it wipes prior content and keeps later content', async ctx => {
     const backend = await setupBackend();
-    const breakTextures = palette16.slice(1, 9).map(color => createSolidTexture(color, 8));
-    const cornerTexture = createSolidTexture(palette16[0]!, 8);
+    const breakTextures = palette36.slice(1).map(color => createSolidTexture(color, 8));
+    const cornerTexture = createSolidTexture(palette36[0]!, 8);
     const greenTexture = createSolidTexture('#00ff00', 16);
     const planOne = buildBreakScene(breakTextures, cornerTexture);
     const laterRoot = new Container();
@@ -538,7 +539,7 @@ describe('WebGPU single-submit frame', () => {
   // content and only the later draw sees the new content.
   test('a texture updated between two same-frame renders: the earlier draw keeps the OLD content', async ctx => {
     const backend = await setupBackend();
-    const breakTextures = palette16.slice(1, 9).map(color => createSolidTexture(color, 8));
+    const breakTextures = palette36.slice(1).map(color => createSolidTexture(color, 8));
     const mutable = createMutableTexture('#ff0000', 8);
     const planOne = buildBreakScene(breakTextures, mutable.texture);
     const laterRoot = new Container();

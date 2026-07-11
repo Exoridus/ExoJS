@@ -20,8 +20,100 @@ import type { WebGpuActiveRenderPass } from './WebGpuPassCoordinator';
 import { retainedGroupUniformBytes, type WebGpuRetainedBatchPayload } from './WebGpuRetainedGroupResources';
 import { stencilContentDepthStencilState } from './WebGpuStencilState';
 
-/** WGSL source for the default sprite pipeline. @internal */
-export const spriteShaderSource = `
+/**
+ * Multi-texture batch slot tiers the sprite pipeline can be generated for.
+ * Quantizing to fixed tiers means only these WGSL variants can ever ship —
+ * all of them covered by the shader-compile browser test.
+ * @internal
+ */
+export const spriteBatchTextureSlotTiers = [8, 16, 32] as const;
+
+/**
+ * Legacy slot count, used only when a device exposes no limits object
+ * (non-conformant mocks — every real WebGPU device reports limits).
+ * @internal
+ */
+export const fallbackSpriteBatchTextureSlots = 8;
+
+/**
+ * Slot tier guaranteed by WebGPU's base limits: both
+ * `maxSampledTexturesPerShaderStage` and `maxSamplersPerShaderStage` default
+ * to 16, so 16 texture+sampler pairs are bindable on every conformant device
+ * (parity with the WebGL2 batcher's 16 slots).
+ * @internal
+ */
+export const baseSpriteBatchTextureSlots = 16;
+
+/**
+ * Hard ceiling for the multi-texture batch layout. WebGpuBackend requests
+ * this much of `maxSampledTexturesPerShaderStage` / `maxSamplersPerShaderStage`
+ * at device creation when the adapter offers more than the base 16.
+ * Diminishing returns cap the tier here: beyond 32 the per-fragment slot
+ * switch and bind-group churn outgrow the flush savings.
+ * @internal
+ */
+export const maxSpriteBatchTextureSlots = 32;
+
+/**
+ * Number of multi-texture batch slots the sprite pipeline uses on `device`,
+ * derived from the GRANTED device limits and quantized to the
+ * {@link spriteBatchTextureSlotTiers} (8 / 16 / 32).
+ *
+ * WGSL `binding_array` is not core WebGPU (and has no standard feature flag
+ * to detect), so the batch ceiling is capability-gated on device limits
+ * instead: the WGSL source and the group(1) bind-group layout are generated
+ * for `min(maxSampledTexturesPerShaderStage, maxSamplersPerShaderStage)`
+ * quantized down to a tier. Every conformant device reaches at least the
+ * 16-slot tier (spec base limits); adapters granting 32+ reach the 32-slot
+ * tier. A device without a limits object falls back to the legacy 8-slot
+ * layout.
+ * @internal
+ */
+export const resolveSpriteBatchTextureSlots = (device: GPUDevice): number => {
+  // Defensive optional access: mocked devices in unit tests (and hypothetical
+  // non-conformant implementations) may not expose a limits object at all.
+  const limits = (device as { limits?: GPUSupportedLimits }).limits;
+
+  if (limits === undefined) {
+    return fallbackSpriteBatchTextureSlots;
+  }
+
+  const available = Math.min(limits.maxSampledTexturesPerShaderStage ?? 0, limits.maxSamplersPerShaderStage ?? 0);
+
+  if (available >= maxSpriteBatchTextureSlots) {
+    return maxSpriteBatchTextureSlots;
+  }
+
+  if (available >= baseSpriteBatchTextureSlots) {
+    return baseSpriteBatchTextureSlots;
+  }
+
+  return fallbackSpriteBatchTextureSlots;
+};
+
+/**
+ * WGSL source for the default sprite pipeline, generated for `textureSlots`
+ * multi-texture batch slots: group(1) binds `textureSlots` texture views at
+ * bindings [0, N) and their samplers at [N, 2N), and `sampleTexture`
+ * dispatches over the same slot range.
+ * @internal
+ */
+export const buildSpriteShaderSource = (textureSlots: number): string => {
+  const textureBindings = Array.from({ length: textureSlots }, (_, slot) => `@group(1) @binding(${slot})\nvar spriteTexture${slot}: texture_2d<f32>;`).join(
+    '\n',
+  );
+  const samplerBindings = Array.from(
+    { length: textureSlots },
+    (_, slot) => `@group(1) @binding(${textureSlots + slot})\nvar spriteSampler${slot}: sampler;`,
+  ).join('\n');
+  // The last slot is the switch default so every u32 value maps to a texture.
+  const sampleCases = Array.from({ length: textureSlots }, (_, slot) =>
+    slot < textureSlots - 1
+      ? `        case ${slot}u: {\n            return textureSampleGrad(spriteTexture${slot}, spriteSampler${slot}, uv, ddx, ddy);\n        }`
+      : `        default: {\n            return textureSampleGrad(spriteTexture${slot}, spriteSampler${slot}, uv, ddx, ddy);\n        }`,
+  ).join('\n');
+
+  return `
 struct ProjectionUniforms {
     matrix: mat4x4<f32>,
     group: mat4x4<f32>,
@@ -38,39 +130,9 @@ var<uniform> projection: ProjectionUniforms;
 @group(0) @binding(1)
 var<storage, read> transforms: array<TransformSlot>;
 
-@group(1) @binding(0)
-var spriteTexture0: texture_2d<f32>;
-@group(1) @binding(1)
-var spriteTexture1: texture_2d<f32>;
-@group(1) @binding(2)
-var spriteTexture2: texture_2d<f32>;
-@group(1) @binding(3)
-var spriteTexture3: texture_2d<f32>;
-@group(1) @binding(4)
-var spriteTexture4: texture_2d<f32>;
-@group(1) @binding(5)
-var spriteTexture5: texture_2d<f32>;
-@group(1) @binding(6)
-var spriteTexture6: texture_2d<f32>;
-@group(1) @binding(7)
-var spriteTexture7: texture_2d<f32>;
+${textureBindings}
 
-@group(1) @binding(8)
-var spriteSampler0: sampler;
-@group(1) @binding(9)
-var spriteSampler1: sampler;
-@group(1) @binding(10)
-var spriteSampler2: sampler;
-@group(1) @binding(11)
-var spriteSampler3: sampler;
-@group(1) @binding(12)
-var spriteSampler4: sampler;
-@group(1) @binding(13)
-var spriteSampler5: sampler;
-@group(1) @binding(14)
-var spriteSampler6: sampler;
-@group(1) @binding(15)
-var spriteSampler7: sampler;
+${samplerBindings}
 
 // Per-instance vertex layout (36 bytes per sprite). The four corners
 // of the quad are derived from @builtin(vertex_index) 0..3 inside the
@@ -127,30 +189,7 @@ fn vertexMain(input: VertexInput, @builtin(vertex_index) vid: u32) -> VertexOutp
 
 fn sampleTexture(slot: u32, uv: vec2<f32>, ddx: vec2<f32>, ddy: vec2<f32>) -> vec4<f32> {
     switch slot {
-        case 0u: {
-            return textureSampleGrad(spriteTexture0, spriteSampler0, uv, ddx, ddy);
-        }
-        case 1u: {
-            return textureSampleGrad(spriteTexture1, spriteSampler1, uv, ddx, ddy);
-        }
-        case 2u: {
-            return textureSampleGrad(spriteTexture2, spriteSampler2, uv, ddx, ddy);
-        }
-        case 3u: {
-            return textureSampleGrad(spriteTexture3, spriteSampler3, uv, ddx, ddy);
-        }
-        case 4u: {
-            return textureSampleGrad(spriteTexture4, spriteSampler4, uv, ddx, ddy);
-        }
-        case 5u: {
-            return textureSampleGrad(spriteTexture5, spriteSampler5, uv, ddx, ddy);
-        }
-        case 6u: {
-            return textureSampleGrad(spriteTexture6, spriteSampler6, uv, ddx, ddy);
-        }
-        default: {
-            return textureSampleGrad(spriteTexture7, spriteSampler7, uv, ddx, ddy);
-        }
+${sampleCases}
     }
 }
 
@@ -170,12 +209,15 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
     return resolvedSample * input.color;
 }
 `;
+};
 
 const instanceStrideBytes = 36;
 const wordsPerInstance = instanceStrideBytes / Uint32Array.BYTES_PER_ELEMENT;
 const projectionByteLength = 128;
 const initialBatchCapacity = 32;
-const maxBatchTextures = 8;
+// Deliberately decoupled from the multi-texture batch slot count — bumping the
+// default-path batch tiers must not silently widen the custom-material
+// contract (mirrors the WebGL2 renderer's maxCustomTextureSlots convention).
 const maxCustomTextureSlots = 7; // user texture uniforms; group(2) binding 1..N
 const indicesPerSprite = 6;
 // Static index buffer: two triangles forming a quad, vertex IDs 0..3 in
@@ -184,7 +226,7 @@ const quadIndices = new Uint16Array([0, 1, 2, 0, 2, 3]);
 
 /**
  * Cached group(1) bind group for one ordered set of batch textures.
- * `textures`, `views` and `samplers` are the fully-resolved 8-slot arrays
+ * `textures`, `views` and `samplers` are the fully-resolved slot-count arrays
  * (fillers included): the views detect a backend-recreated GPU texture
  * (resize / content-driven rebuild), the samplers detect a sampler-only
  * refresh — `_syncTexture` recreates the sampler on EVERY texture.version
@@ -262,7 +304,11 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
   private _instanceUint32 = new Uint32Array(this._instanceData);
   private readonly _pipelines: Map<string, GPURenderPipeline> = new Map<string, GPURenderPipeline>();
 
-  private readonly _activeTextures: Array<Texture | RenderTexture | null> = new Array(maxBatchTextures).fill(null);
+  // Multi-texture batch slot count for the connected device (resolved from
+  // its granted limits at connect; see resolveSpriteBatchTextureSlots). Fixed
+  // per connection: every cache keyed on it is dropped on disconnect.
+  private _maxBatchTextures = fallbackSpriteBatchTextureSlots;
+  private _activeTextures: Array<Texture | RenderTexture | null> = new Array(fallbackSpriteBatchTextureSlots).fill(null);
   // group(1) bind groups cached per ordered texture set, anchored on the
   // resolved slot-0 texture (WeakMap so short-lived textures do not pin their
   // GPU bind groups across long sessions). Rebuilt when the backend hands out
@@ -293,7 +339,12 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     }
 
     this._device = backend.device;
-    this._shaderModule = this._device.createShaderModule({ label: 'sprite:shader', code: spriteShaderSource });
+    // The slot count is a property of the granted device limits, so it is
+    // resolved once per connection — before the shader module and the
+    // group(1) layout are built from it.
+    this._maxBatchTextures = resolveSpriteBatchTextureSlots(this._device);
+    this._activeTextures = new Array<Texture | RenderTexture | null>(this._maxBatchTextures).fill(null);
+    this._shaderModule = this._device.createShaderModule({ label: 'sprite:shader', code: buildSpriteShaderSource(this._maxBatchTextures) });
 
     this._uniformBindGroupLayout = this._device.createBindGroupLayout({
       label: 'sprite:bind-group-layout:uniform',
@@ -317,15 +368,15 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     this._textureBindGroupLayout = this._device.createBindGroupLayout({
       label: 'sprite:bind-group-layout:texture',
       entries: [
-        ...Array.from({ length: maxBatchTextures }, (_, index) => ({
+        ...Array.from({ length: this._maxBatchTextures }, (_, index) => ({
           binding: index,
           visibility: GPUShaderStage.FRAGMENT,
           texture: {
             sampleType: 'float' as const,
           },
         })),
-        ...Array.from({ length: maxBatchTextures }, (_, index) => ({
-          binding: maxBatchTextures + index,
+        ...Array.from({ length: this._maxBatchTextures }, (_, index) => ({
+          binding: this._maxBatchTextures + index,
           visibility: GPUShaderStage.FRAGMENT,
           sampler: {
             type: 'filtering' as const,
@@ -406,6 +457,8 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     this._currentMaterial = null;
     this._currentBaseTexture = null;
     this._resetSlots();
+    this._maxBatchTextures = fallbackSpriteBatchTextureSlots;
+    this._activeTextures = new Array<Texture | RenderTexture | null>(fallbackSpriteBatchTextureSlots).fill(null);
   }
 
   public render(sprite: Sprite): void {
@@ -464,14 +517,14 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     return sprite.getRenderBounds(backend.view, snap.width, snap.height, this._snapBounds);
   }
 
-  /** Default multi-texture path: rotate the base texture through 8 slots. */
+  /** Default multi-texture path: rotate the base texture through the device's batch slots. */
   private _renderDefault(sprite: Sprite, texture: Texture | RenderTexture, backend: WebGpuBackend, nodeIndex: number): void {
     const blendMode = sprite.blendMode;
 
     // Flush triggers: blend-mode change, texture-slot exhaustion, or a custom
     // batch still in flight that must drain first.
     const blendModeChanged = this._currentBlendMode !== null && blendMode !== this._currentBlendMode;
-    const slotExhausted = !this._textureSlots.has(texture) && this._slotCount >= maxBatchTextures;
+    const slotExhausted = !this._textureSlots.has(texture) && this._slotCount >= this._maxBatchTextures;
     const materialSwitch = this._currentMaterial !== null && this._instanceCount > 0;
 
     if (blendModeChanged || slotExhausted || materialSwitch) {
@@ -1081,12 +1134,13 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     // Bindings are resolved BEFORE the cache lookup on purpose: resolving is
     // what syncs a dirty/mutated texture's content to the GPU, so it must run
     // every flush even when the bind group itself is served from cache.
+    const slotCapacity = this._maxBatchTextures;
     const fallbackTexture = textures[0] ?? Texture.empty;
     const fallbackBinding = backend.getTextureBinding(fallbackTexture);
-    const resolvedTextures = new Array<Texture | RenderTexture>(maxBatchTextures);
-    const resolvedBindings = new Array<ReturnType<WebGpuBackend['getTextureBinding']>>(maxBatchTextures);
+    const resolvedTextures = new Array<Texture | RenderTexture>(slotCapacity);
+    const resolvedBindings = new Array<ReturnType<WebGpuBackend['getTextureBinding']>>(slotCapacity);
 
-    for (let i = 0; i < maxBatchTextures; i++) {
+    for (let i = 0; i < slotCapacity; i++) {
       const texture = textures[i] ?? fallbackTexture;
 
       resolvedTextures[i] = texture;
@@ -1107,7 +1161,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     for (const entry of entries) {
       let texturesMatch = true;
 
-      for (let i = 0; i < maxBatchTextures; i++) {
+      for (let i = 0; i < slotCapacity; i++) {
         if (entry.textures[i] !== resolvedTextures[i]) {
           texturesMatch = false;
           break;
@@ -1120,8 +1174,8 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
 
       let bindingsMatch = true;
 
-      for (let i = 0; i < maxBatchTextures; i++) {
-        // In-bounds: all arrays are fixed at maxBatchTextures entries. The
+      for (let i = 0; i < slotCapacity; i++) {
+        // In-bounds: all arrays are fixed at the connection's slot count. The
         // sampler check is load-bearing: a texture.version bump (setScaleMode/
         // setWrapMode) refreshes the sampler while the view identity stays put.
         if (entry.views[i] !== resolvedBindings[i]!.view || entry.samplers[i] !== resolvedBindings[i]!.sampler) {
@@ -1156,19 +1210,20 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
   }
 
   private _buildTextureBindGroup(device: GPUDevice, resolvedBindings: ReadonlyArray<ReturnType<WebGpuBackend['getTextureBinding']>>): GPUBindGroup {
+    const slotCapacity = this._maxBatchTextures;
     const entries: GPUBindGroupEntry[] = [];
 
-    // resolvedBindings always holds maxBatchTextures fully-resolved bindings.
-    for (let i = 0; i < maxBatchTextures; i++) {
+    // resolvedBindings always holds one fully-resolved binding per batch slot.
+    for (let i = 0; i < slotCapacity; i++) {
       entries.push({
         binding: i,
         resource: resolvedBindings[i]!.view,
       });
     }
 
-    for (let i = 0; i < maxBatchTextures; i++) {
+    for (let i = 0; i < slotCapacity; i++) {
       entries.push({
-        binding: maxBatchTextures + i,
+        binding: slotCapacity + i,
         resource: resolvedBindings[i]!.sampler,
       });
     }

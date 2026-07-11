@@ -24,7 +24,7 @@ import { TransformBuffer } from '#rendering/TransformBuffer';
 import { instancedMeshShaderSource, WebGpuMeshRenderer } from '#rendering/webgpu/WebGpuMeshRenderer';
 import { nineSliceShaderSource } from '#rendering/webgpu/WebGpuNineSliceSpriteRenderer';
 import { geoPathEntries, shaderPathEntries } from '#rendering/webgpu/WebGpuRepeatingSpriteRenderer';
-import { spriteShaderSource } from '#rendering/webgpu/WebGpuSpriteRenderer';
+import { baseSpriteBatchTextureSlots, buildSpriteShaderSource } from '#rendering/webgpu/WebGpuSpriteRenderer';
 import { textShaderSource } from '#rendering/webgpu/WebGpuTextRenderer';
 
 // ── Fixtures: asymmetric (rotation + skew) affine matrices ───────────────────
@@ -136,7 +136,9 @@ describe('WGSL slot math parity across instanced renderers', () => {
     new RegExp(String.raw`slot\.m0\.z\s*\*\s*${lx}\s*\+\s*slot\.m0\.w\s*\*\s*${ly}\s*\+\s*slot\.m1\.y`);
 
   const cases: ReadonlyArray<{ name: string; source: string; lx: string; ly: string }> = [
-    { name: 'sprite', source: spriteShaderSource, lx: 'localX', ly: 'localY' },
+    // The vertex stage (where the TransformSlot math lives) is identical
+    // across the generated slot tiers; the base tier stands in for all.
+    { name: 'sprite', source: buildSpriteShaderSource(baseSpriteBatchTextureSlots), lx: 'localX', ly: 'localY' },
     { name: 'nine-slice', source: nineSliceShaderSource, lx: 'localX', ly: 'localY' },
     { name: 'repeating-sprite (shader path)', source: shaderPathEntries, lx: 'lx', ly: 'ly' },
     { name: 'repeating-sprite (geometry path)', source: geoPathEntries, lx: 'lx', ly: 'ly' },
