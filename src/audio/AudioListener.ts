@@ -7,7 +7,8 @@ import { getAudioContext, isAudioContextReady, onAudioContextReady } from './aud
 /**
  * Anything {@link AudioListener.target} can be set to. The listener reads
  * its world-space position from the target each frame:
- * - {@link SceneNode}: uses `getGlobalTransform()` translation
+ * - {@link SceneNode}: uses `getWorldTransform()` translation (true world
+ *   space, composed through RetainedContainer transform-group boundaries)
  * - {@link View}: uses `view.center`
  * - Plain `{ x, y }` object: read directly
  * - `null`: no automatic tracking — set `position` manually.
@@ -85,10 +86,12 @@ export class AudioListener {
     const target = this.target;
     if (target === null) return;
 
-    // Check for SceneNode (has getGlobalTransform)
+    // Check for SceneNode (has getWorldTransform). World — not global — so a
+    // node inside a RetainedContainer transform group reports its true
+    // on-screen position (AU1).
     const asSceneNode = target as Partial<SceneNode>;
-    if (typeof asSceneNode.getGlobalTransform === 'function') {
-      const m = asSceneNode.getGlobalTransform();
+    if (typeof asSceneNode.getWorldTransform === 'function') {
+      const m = asSceneNode.getWorldTransform();
       this.position.set(m.x, m.y);
       return;
     }
