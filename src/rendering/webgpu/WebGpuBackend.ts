@@ -39,7 +39,12 @@ import { WebGpuBackdropBlendCompositor } from './WebGpuBackdropBlendCompositor';
 import { WebGpuMaskCompositor } from './WebGpuMaskCompositor';
 import { WebGpuMeshRenderer } from './WebGpuMeshRenderer';
 import { WebGpuPassCoordinator } from './WebGpuPassCoordinator';
-import { retainedTransformSlotBytes, type WebGpuRetainedBatchPayload, WebGpuRetainedCaptureFrame, WebGpuRetainedGroupBundle } from './WebGpuRetainedGroupResources';
+import {
+  retainedTransformSlotBytes,
+  type WebGpuRetainedBatchPayload,
+  WebGpuRetainedCaptureFrame,
+  WebGpuRetainedGroupBundle,
+} from './WebGpuRetainedGroupResources';
 import type { WebGpuSpriteRenderer } from './WebGpuSpriteRenderer';
 import { WebGpuTransformStorage } from './WebGpuTransformStorage';
 
