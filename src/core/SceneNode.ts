@@ -859,7 +859,9 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
    * @internal — aggregate content-dirty stamp for this node's subtree
    * (transform/tint/visual-source changes at or below). Read by
    * {@link RetainedPlanCache}. Reading it advances the dirty-walk epoch —
-   * see {@link _markContentDirty}.
+   * see {@link _markContentDirty}. CAUTION: side-effecting getter — an
+   * incidental read (logging, devtools inspection, serialization) silently
+   * bumps the epoch and degrades (never breaks) the dirty-walk early-out.
    */
   public get _contentRevision(): number {
     dirtyWalkEpoch++;
@@ -870,7 +872,8 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
   /**
    * @internal — aggregate structure-dirty stamp (child add/remove/reorder,
    * visibility) for this node's subtree. Reading it advances the dirty-walk
-   * epoch — see {@link _markContentDirty}.
+   * epoch — see {@link _markContentDirty}. Same side-effecting-getter caution
+   * as {@link _contentRevision}.
    */
   public get _structureRevision(): number {
     dirtyWalkEpoch++;
