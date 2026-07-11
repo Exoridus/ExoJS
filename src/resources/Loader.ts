@@ -7,12 +7,21 @@ import type { Texture } from '#rendering/texture/Texture';
 
 import { type Asset, AssetImpl, type ValueAsset } from './Asset';
 import { parseContainer } from './AssetContainer';
-import type { AssetDefinitions, AssetInput, CatalogEntry, InferAssetResource, KindByPath, LeafForPath, ResourceForKind, ValueAssetKind } from './AssetDefinitions';
+import type {
+  AssetDefinitions,
+  AssetInput,
+  CatalogEntry,
+  InferAssetResource,
+  KindByPath,
+  LeafForPath,
+  ResourceForKind,
+  ValueAssetKind,
+} from './AssetDefinitions';
 import type { AssetFactory } from './AssetFactory';
 import { createLeaf } from './assetKindRegistry';
 import { _readMeta } from './assetMeta';
 import { AssetRef } from './AssetRef';
-import { _normalizeEntry,type Assets, AssetsImpl, type InferAssetsProperties } from './Assets';
+import { _normalizeEntry, type Assets, AssetsImpl, type InferAssetsProperties } from './Assets';
 import { CacheFirstStrategy } from './CacheFirstStrategy';
 import type { CacheStore } from './CacheStore';
 import type { CacheStrategy } from './CacheStrategy';

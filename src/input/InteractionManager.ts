@@ -857,7 +857,7 @@ export class InteractionManager implements InteractionHooks, System {
     logger.warn(
       `An interactive node${node.name ? ` '${node.name}'` : ''} was registered inside an engaged RetainedContainer. ` +
         'Pointer hit-testing maps through the group world transform automatically, but the node itself stays in ' +
-        "GROUP-LOCAL space: getBounds()/position are relative to the group, and event coordinates are world-space. " +
+        'GROUP-LOCAL space: getBounds()/position are relative to the group, and event coordinates are world-space. ' +
         'Use getWorldTransform() for world-space queries against such nodes.',
       { source: 'input' },
     );
