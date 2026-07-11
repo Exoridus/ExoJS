@@ -70,7 +70,14 @@ const EXPECTED = {
   // THIS ROW PINS THE RETAINED CAMERA-PAN WIN: if `collect` here ever climbs
   // toward `panPlain.collect`, the fragment stopped engaging under camera motion
   // and the retained tier's headline benefit silently regressed.
-  panRetained: { collect: 1, inView: 1, globalTransform: 1002, materialKey: 0, submittedNodes: 1000, culledNodes: 0, drawCalls: 1, batches: 1 },
+  //
+  // globalTransform re-pinned 1002 -> 2 with Slice 3 (WebGL2 instruction-set
+  // splice): the steady frame now replays recorded flush-level batches, so the
+  // player's Phase-1 transform pre-pass no longer touches the group's 1000
+  // rows — only the root's own matrix and the group boundary compose. If this
+  // climbs back toward 1002, the instruction tier stopped engaging and the
+  // splice regressed to per-node entry replay.
+  panRetained: { collect: 1, inView: 1, globalTransform: 2, materialKey: 0, submittedNodes: 1000, culledNodes: 0, drawCalls: 1, batches: 1 },
 
   // Plain Container, 10 of the 1000 sprites moved every frame. A child move
   // content-dirties the container, busting the Slice-1 cache → full re-collect

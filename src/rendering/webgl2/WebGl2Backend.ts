@@ -12,6 +12,12 @@ import type { Mesh } from '#rendering/mesh/Mesh';
 import { resolveUploadTransform } from '#rendering/pixelSnap';
 import { type DrawCommand, drawCommandUsesSharedTransform, RenderEntryKind } from '#rendering/plan/RenderCommand';
 import type { ScopeEntry } from '#rendering/plan/RenderScope';
+import {
+  type RetainedBatchCapableRenderer,
+  type RetainedBatchInstruction,
+  RetainedInstructionKind,
+  type RetainedInstructionSet,
+} from '#rendering/plan/RetainedInstructionSet';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import type { Renderer } from '#rendering/Renderer';
@@ -31,6 +37,12 @@ import { WebGl2BackdropBlendCompositor } from './WebGl2BackdropBlendCompositor';
 import { WebGl2MaskCompositor } from './WebGl2MaskCompositor';
 import { WebGl2MeshRenderer } from './WebGl2MeshRenderer';
 import { WebGl2PassCoordinator } from './WebGl2PassCoordinator';
+import {
+  type WebGl2RetainedBatchPayload,
+  type WebGl2RetainedBatchReplayer,
+  WebGl2RetainedGroupResources,
+  type WebGl2RetainedNodeIndexRange,
+} from './WebGl2RetainedGroupResources';
 import { WebGl2StencilClipper } from './WebGl2StencilClipper';
 import type { WebGl2VertexArrayObject } from './WebGl2VertexArrayObject';
 
@@ -120,6 +132,17 @@ interface DestroyListenable {
   removeDestroyListener(listener: () => void): unknown;
 }
 
+// One open retained-capture window (Track B Slice 3). Frames stack for nested
+// recording groups (S3-D6): a flushed batch's bytes are stored once in the
+// INNERMOST frame's bundle, while its instruction is appended to every open
+// frame's set. `payloads` collects this frame's own recorded batches for the
+// capture-end finalize (node-index rebase, transform-row copy, VAO wiring).
+interface RetainedCaptureFrame {
+  readonly set: RetainedInstructionSet;
+  readonly bundle: WebGl2RetainedGroupResources;
+  readonly payloads: WebGl2RetainedBatchPayload[];
+}
+
 // Scratch texture unit used to sync a RenderTexture target's color texture
 // (see _prepareRenderTarget). _syncTexture binds on the active unit and only
 // the ACTIVE unit is restored afterwards — the binding itself stays. The unit
@@ -198,6 +221,11 @@ export class WebGl2Backend implements RenderBackend {
   private _drawPlanDepth = 0;
   private readonly _planBaseStack: number[] = [];
   private readonly _planHashStack: number[] = [];
+  // Retained instruction-set capture state (Track B Slice 3, Tasks 6/7).
+  private readonly _retainedCaptures: RetainedCaptureFrame[] = [];
+  private readonly _retainedBundles = new Set<WebGl2RetainedGroupResources>();
+  // Reused scratch for the capture-end node-index scan (record frames only).
+  private readonly _retainedIndexRange: WebGl2RetainedNodeIndexRange = { min: 0, max: -1 };
 
   public constructor(app: Application) {
     const canvasOptions = app.options.canvas ?? {};
@@ -480,6 +508,14 @@ export class WebGl2Backend implements RenderBackend {
 
   public draw(drawable: Drawable): this {
     const renderer = this.rendererRegistry.resolve(drawable);
+
+    // Belt-and-braces for retained recording (S3-D5.1): the recordability
+    // predicate keeps non-capable renderers from ever arming a capture. If
+    // one still draws inside an open capture window, poison the recording so
+    // the set never validates — entry replay instead of missing draws.
+    if (this._retainedCaptures.length > 0 && (renderer as RetainedBatchCapableRenderer)._supportsRetainedBatches !== true) {
+      this._poisonRetainedCaptures();
+    }
 
     this._setActiveRenderer(renderer);
     renderer.render(drawable);
@@ -1016,6 +1052,228 @@ export class WebGl2Backend implements RenderBackend {
     this._renderGroupTransformId++;
   }
 
+  // ── Retained instruction-set hooks (Track B Slice 3, Tasks 6/7) ──────────
+
+  /**
+   * Whether at least one retained-capture window is open. Read by capable
+   * renderers at flush time to hand their packed batch to
+   * {@link _recordRetainedBatch}, and at render time for the belt-and-braces
+   * poison checks (S3-D5).
+   * @internal
+   */
+  public get _isRetainedCapturing(): boolean {
+    return this._retainedCaptures.length > 0;
+  }
+
+  /**
+   * Playback hook (RenderPlanPlayer): a retained group scope starts
+   * recording. The pending live batch is flushed first (contract: no batch
+   * spans into the capture window), the set's group bundle is (re)used or
+   * created, and its contents are rewritten — which bumps the generation, so
+   * instructions recorded by any previous capture stop validating.
+   * @internal
+   */
+  public _beginRetainedCapture(set: RetainedInstructionSet): void {
+    this._flushActiveRenderer();
+
+    const owned = set.ownedBundle;
+    let bundle: WebGl2RetainedGroupResources;
+
+    if (owned instanceof WebGl2RetainedGroupResources && this._retainedBundles.has(owned)) {
+      bundle = owned;
+    } else {
+      // No bundle yet, or one owned by a different backend instance (backend
+      // switch): start fresh. The stale bundle stays owned by its backend and
+      // is released by that backend's destroy().
+      bundle = new WebGl2RetainedGroupResources(destroyed => this._retainedBundles.delete(destroyed));
+      this._retainedBundles.add(bundle);
+      set.ownedBundle = bundle;
+    }
+
+    bundle._beginCapture();
+    this._retainedCaptures.push({ set, bundle, payloads: [] });
+  }
+
+  /**
+   * Playback hook (RenderPlanPlayer): the recording scope's playback ended.
+   * The pending batch flushes INTO the still-open captures (the group's
+   * trailing draws belong to the set), then this frame finalizes: node
+   * indices in the recorded bytes are rebased group-local (S3-D4), the
+   * group's shared-buffer transform rows are copied into the group-owned
+   * store, the instance bytes upload into the persistent buffer, and each
+   * batch gets its offset-based VAO.
+   * @internal
+   */
+  public _endRetainedCapture(set: RetainedInstructionSet): void {
+    this._flushActiveRenderer();
+
+    let index = this._retainedCaptures.length - 1;
+
+    while (index >= 0 && this._retainedCaptures[index]!.set !== set) {
+      index--;
+    }
+
+    if (index === -1) {
+      return;
+    }
+
+    // In-bounds: found above.
+    const frame = this._retainedCaptures.splice(index, 1)[0]!;
+
+    if (frame.payloads.length === 0) {
+      return;
+    }
+
+    if (this._contextLost) {
+      // GPU finalize is impossible; make sure the set can never validate.
+      frame.set.append(this._createPoisonInstruction(frame.bundle));
+
+      return;
+    }
+
+    const range = this._retainedIndexRange;
+
+    range.min = Number.MAX_SAFE_INTEGER;
+    range.max = -1;
+
+    for (const payload of frame.payloads) {
+      payload.replayer._scanRetainedNodeIndexRange(payload, range);
+    }
+
+    if (range.max < range.min) {
+      return;
+    }
+
+    for (const payload of frame.payloads) {
+      payload.replayer._rebaseRetainedNodeIndices(payload, range.min);
+    }
+
+    frame.bundle._storeTransformRows(this._transformBuffer.data, range.min, range.max - range.min + 1);
+    frame.bundle._connectDevice(this._context, this._accountant);
+    frame.bundle._uploadInstances();
+
+    for (let i = 0; i < frame.payloads.length; i++) {
+      // In-bounds: i < length.
+      const payload = frame.payloads[i]!;
+
+      payload.vao = frame.bundle._acquireVao(i);
+      payload.replayer._configureRetainedVao(payload);
+    }
+  }
+
+  /**
+   * Record one just-drawn renderer flush into the open capture windows: the
+   * instance words are copied once into the INNERMOST frame's bundle, and one
+   * batch instruction referencing that bundle is appended to EVERY open
+   * frame's set (S3-D6 — outer sets hold inner bundles' batches verbatim).
+   * Called by capable renderers from `flush()` while a capture is open.
+   * @internal
+   */
+  public _recordRetainedBatch(
+    replayer: WebGl2RetainedBatchReplayer,
+    words: Uint32Array,
+    instanceCount: number,
+    blendMode: BlendModes,
+    textures: ReadonlyArray<Texture | RenderTexture | null>,
+    textureCount: number,
+  ): void {
+    const captures = this._retainedCaptures;
+
+    if (captures.length === 0) {
+      return;
+    }
+
+    // In-bounds: length > 0.
+    const innermost = captures[captures.length - 1]!;
+    const byteOffset = innermost.bundle._appendInstanceWords(words);
+    const boundTextures: Array<Texture | RenderTexture> = [];
+
+    for (let i = 0; i < textureCount; i++) {
+      // Non-null: slots `0..textureCount-1` are the renderer's bound textures.
+      boundTextures.push(textures[i]!);
+    }
+
+    const payload: WebGl2RetainedBatchPayload = {
+      bundle: innermost.bundle,
+      replayer,
+      blendMode,
+      textures: boundTextures,
+      instanceCount,
+      byteOffset,
+      vao: null,
+    };
+
+    innermost.payloads.push(payload);
+
+    const instruction: RetainedBatchInstruction = {
+      kind: RetainedInstructionKind.Batch,
+      bundle: innermost.bundle,
+      generation: innermost.bundle.generation,
+      instanceCount,
+      drawCalls: 1,
+      payload,
+    };
+
+    for (const frameEntry of captures) {
+      frameEntry.set.append(instruction);
+    }
+  }
+
+  /**
+   * Invalidate every open capture window by appending an instruction whose
+   * recorded generation can never match its bundle — the resulting sets fail
+   * collect-time validation forever and the group stays on the (correct)
+   * entry-replay tier. Belt-and-braces for draws the recordability predicate
+   * should have excluded (S3-D5); never expected on a healthy path.
+   * @internal
+   */
+  public _poisonRetainedCaptures(): void {
+    for (const frame of this._retainedCaptures) {
+      frame.set.append(this._createPoisonInstruction(frame.bundle));
+    }
+  }
+
+  private _createPoisonInstruction(bundle: WebGl2RetainedGroupResources): RetainedBatchInstruction {
+    return {
+      kind: RetainedInstructionKind.Batch,
+      bundle,
+      generation: bundle.generation - 1,
+      instanceCount: 0,
+      drawCalls: 0,
+      payload: null,
+    };
+  }
+
+  /**
+   * Playback hook (RenderPlanPlayer): replay one recorded batch for a spliced
+   * group scope. The pending live batch drains first (in practice the group
+   * boundary's transform switch already flushed it — hook contract), then the
+   * owning renderer re-issues the batch from group-owned resources with all
+   * state resolved live. Stats are bumped from the descriptor so the spliced
+   * tier stays comparable with the entry tiers (batches / drawCalls /
+   * submittedNodes parity).
+   * @internal
+   */
+  public _replayRetainedBatch(batch: RetainedBatchInstruction): void {
+    this._flushActiveRenderer();
+
+    if (this._contextLost) {
+      return;
+    }
+
+    const payload = batch.payload as WebGl2RetainedBatchPayload | null;
+
+    if (payload === null) {
+      return;
+    }
+
+    this._bindRenderTarget(this._renderTarget);
+    payload.replayer._replayRetainedBatch(payload);
+    this._stats.batches++;
+    this._stats.drawCalls += batch.drawCalls;
+    this._stats.submittedNodes += batch.instanceCount;
+  }
+
   public destroy(): void {
     this._removeEvents();
     this.onContextLost.destroy();
@@ -1026,6 +1284,15 @@ export class WebGl2Backend implements RenderBackend {
     this.bindVertexArrayObject(null);
     this.bindShader(null);
     this.bindTexture(null);
+
+    // Release every retained group bundle created against this context.
+    // Copy first: bundle.destroy() removes itself from the set.
+    for (const bundle of [...this._retainedBundles]) {
+      bundle.destroy();
+    }
+
+    this._retainedBundles.clear();
+    this._retainedCaptures.length = 0;
 
     this.rendererRegistry.destroy();
     this._clearColor.destroy();
@@ -1123,6 +1390,15 @@ export class WebGl2Backend implements RenderBackend {
 
   private _onContextRestored(): void {
     this._contextLost = false;
+
+    // Every retained group bundle's GL objects died with the lost context:
+    // drop them and bump the generations so all recorded instruction sets
+    // fail collect-time validation and re-record against the restored
+    // context (S3-D3, stale-instruction pitfall #9).
+    for (const bundle of this._retainedBundles) {
+      bundle._invalidateDeviceResources();
+    }
+
     this.onContextRestored.dispatch();
   }
 
