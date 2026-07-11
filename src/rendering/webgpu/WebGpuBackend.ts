@@ -45,7 +45,7 @@ import {
   WebGpuRetainedCaptureFrame,
   WebGpuRetainedGroupBundle,
 } from './WebGpuRetainedGroupResources';
-import type { WebGpuSpriteRenderer } from './WebGpuSpriteRenderer';
+import { baseSpriteBatchTextureSlots, maxSpriteBatchTextureSlots, type WebGpuSpriteRenderer } from './WebGpuSpriteRenderer';
 import { WebGpuTransformStorage } from './WebGpuTransformStorage';
 
 interface ManagedWebGpuTextureState {
@@ -1491,7 +1491,35 @@ export class WebGpuBackend implements RenderBackend {
       // that way (float RenderTextures default to nearest, so this is a bonus).
       const floatFeatures = (['float32-filterable', 'float32-blendable'] as const).filter(feature => adapter.features?.has(feature) ?? false);
 
-      device = await adapter.requestDevice(floatFeatures.length > 0 ? { requiredFeatures: floatFeatures } : undefined);
+      // The sprite batcher sizes its multi-texture bind-group layout from the
+      // GRANTED device limits (resolveSpriteBatchTextureSlots): request up to
+      // the 32-slot ceiling when the adapter offers more than the spec base of
+      // 16 texture/sampler bindings per stage. Requesting min(adapterLimit,
+      // ceiling) is always satisfiable, so this can never fail the request.
+      const requiredLimits: Record<string, number> = {};
+      const adapterLimits = (adapter as { limits?: GPUSupportedLimits }).limits;
+
+      if (adapterLimits !== undefined) {
+        for (const limit of ['maxSampledTexturesPerShaderStage', 'maxSamplersPerShaderStage'] as const) {
+          const available = adapterLimits[limit];
+
+          if (typeof available === 'number' && available > baseSpriteBatchTextureSlots) {
+            requiredLimits[limit] = Math.min(maxSpriteBatchTextureSlots, available);
+          }
+        }
+      }
+
+      const descriptor: GPUDeviceDescriptor = {};
+
+      if (floatFeatures.length > 0) {
+        descriptor.requiredFeatures = floatFeatures;
+      }
+
+      if (Object.keys(requiredLimits).length > 0) {
+        descriptor.requiredLimits = requiredLimits;
+      }
+
+      device = await adapter.requestDevice(Object.keys(descriptor).length > 0 ? descriptor : undefined);
     } catch (error) {
       throw this._createInitializationError('Failed to request a WebGPU device.', error);
     }

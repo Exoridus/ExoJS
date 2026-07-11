@@ -173,24 +173,33 @@ interface FragmentCarrier {
 
 const fragmentOf = (group: RetainedContainer): RetainedGroupFragment => (group as unknown as FragmentCarrier)._fragment;
 
-// 9 distinct fully-saturated colours: enough to overflow the 8-slot batcher so
-// one retained group records TWO batches (multi-batch replay coverage).
-const palette9 = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff', '#ff8000', '#8000ff', '#00ff80'];
+// Distinct colours built from four channel levels (black skipped): enough of
+// them to overflow the batcher's MAXIMUM texture-slot tier (32, see
+// resolveSpriteBatchTextureSlots) so one retained group records TWO batches
+// (multi-batch replay coverage) whatever slot count the device was granted.
+const channelLevels = ['00', '55', 'aa', 'ff'] as const;
+const paletteColor = (index: number): string => {
+  const combo = index + 1; // +1 skips black (the clear colour)
+
+  return `#${channelLevels[combo % 4]!}${channelLevels[Math.floor(combo / 4) % 4]!}${channelLevels[Math.floor(combo / 16) % 4]!}`;
+};
+const palette36 = Array.from({ length: 36 }, (_, i) => paletteColor(i));
 
 describe('WebGPU renderer matrix: retained instruction replay cells', () => {
   test('cell 1 — multi-batch replay is pixel-identical to the record frame (fast/slow equivalence)', async ctx => {
     const backend = await setupBackend();
-    const textures = palette9.map(color => createSolidTexture(color, 8));
+    const textures = palette36.map(color => createSolidTexture(color, 8));
     const root = new Container();
     const group = new RetainedContainer();
 
     try {
-      // A 3x3 grid of 8px sprites over 9 distinct textures: sprites 0-7 land
-      // in the first recorded batch, sprite 8 in the second.
+      // A 6x6 grid of 8px sprites over 36 distinct textures: more than the
+      // granted texture-slot tier, so the first `slots` sprites land in the
+      // first recorded batch and the rest in the second.
       for (let i = 0; i < textures.length; i++) {
         const sprite = new Sprite(textures[i]!);
 
-        sprite.setPosition((i % 3) * 8, Math.floor(i / 3) * 8);
+        sprite.setPosition((i % 6) * 8, Math.floor(i / 6) * 8);
         group.addChild(sprite);
       }
 
@@ -208,11 +217,15 @@ describe('WebGPU renderer matrix: retained instruction replay cells', () => {
 
       expect(fragmentOf(group).instructions?.hasRecording).toBe(true);
 
+      // Cell i centre = ((i % 6) * 8 + 4, floor(i / 6) * 8 + 4). Cells 0-15
+      // sit in the first recorded batch on every tier; cells 33 and 35 sit in
+      // the second batch on every tier (the tier ceiling is 32).
       const probes: ReadonlyArray<readonly [number, number, string]> = [
-        [4, 4, palette9[0]!], // batch 1
-        [20, 4, palette9[2]!], // batch 1
-        [12, 12, palette9[4]!], // batch 1
-        [20, 20, palette9[8]!], // batch 2
+        [4, 4, palette36[0]!], // batch 1
+        [20, 4, palette36[2]!], // batch 1
+        [12, 12, palette36[7]!], // batch 1
+        [28, 44, palette36[33]!], // batch 2
+        [44, 44, palette36[35]!], // batch 2
       ];
       let readPixel = readCanvas(backend);
       const slowPixels = probes.map(([x, y]) => readPixel(x, y));
