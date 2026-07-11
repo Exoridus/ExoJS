@@ -197,7 +197,10 @@ describe('WebGPU sprite batcher texture-slot capacity (real device)', () => {
       // last slot of the generated layout.
       const readFull = readCanvas(backend);
       const probe = (read: (x: number, y: number) => RgbaTuple, index: number): void => {
-        expectPixelNear(read((index % gridColumns) * gridCell + gridCell / 2, Math.floor(index / gridColumns) * gridCell + gridCell / 2), hexToRgba(colors[index]!));
+        expectPixelNear(
+          read((index % gridColumns) * gridCell + gridCell / 2, Math.floor(index / gridColumns) * gridCell + gridCell / 2),
+          hexToRgba(colors[index]!),
+        );
       };
 
       probe(readFull, 0);
