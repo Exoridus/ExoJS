@@ -13,7 +13,12 @@
  * - a static frame after warmup creates ZERO new bind groups and issues ZERO
  *   projection-uniform writes (while still drawing),
  * - a view mutation re-writes the projection exactly once,
- * - a new texture set builds a new bind group once and is cached thereafter.
+ * - a new texture set builds a new bind group once and is cached thereafter,
+ * - a sampler-affecting texture mutation (setScaleMode/setWrapMode bumps
+ *   texture.version, which recreates state.sampler WITHOUT changing the view)
+ *   rebuilds the cached bind group instead of serving the stale sampler,
+ * - a texture resize (fresh GPU texture → fresh view) rebuilds the entry in
+ *   place and stays cached afterwards.
  */
 
 import type { Application } from '#core/Application';
@@ -22,6 +27,7 @@ import { materializeRendererBindings } from '#extensions/materialize';
 import { buildCoreRendererBindings } from '#rendering/coreRendererBindings';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { Texture } from '#rendering/texture/Texture';
+import { ScaleModes } from '#rendering/types';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 interface LabeledBuffer {
@@ -321,6 +327,86 @@ describe('WebGPU sprite flush hot-path caching', () => {
       renderFrame(backend, [spriteA, spriteB]);
 
       expect(environment.bindGroupCount() - afterCombined).toBe(0);
+
+      backend.destroy();
+    } finally {
+      environment.restore();
+    }
+  });
+
+  test('a sampler-affecting texture mutation rebuilds the cached bind group', async () => {
+    const environment = createMockWebGpuEnvironment();
+    const textureBindGroupLabel = 'sprite:texture-bind-group';
+
+    try {
+      const backend = await createBackend(environment);
+      const texture = createCanvasTexture();
+      const sprite = new Sprite(texture);
+
+      renderFrame(backend, [sprite]);
+      renderFrame(backend, [sprite]); // warm: cache hit established
+
+      const mark = environment.bindGroupLabels().length;
+
+      // setScaleMode bumps texture.version; the backend recreates the SAMPLER
+      // for the same GPU texture, leaving the view identity unchanged. The
+      // cache must rebuild the bind group or the mode change is silently lost.
+      texture.setScaleMode(ScaleModes.Nearest);
+      renderFrame(backend, [sprite]);
+
+      expect(countLabel(environment.bindGroupLabels(), textureBindGroupLabel, mark)).toBe(1);
+
+      // The rebuilt entry serves subsequent unchanged frames from cache again.
+      const afterRebuild = environment.bindGroupLabels().length;
+
+      renderFrame(backend, [sprite]);
+
+      expect(countLabel(environment.bindGroupLabels(), textureBindGroupLabel, afterRebuild)).toBe(0);
+
+      backend.destroy();
+    } finally {
+      environment.restore();
+    }
+  });
+
+  test('a texture resize (fresh view identity) rebuilds the cached bind group in place', async () => {
+    const environment = createMockWebGpuEnvironment();
+    const textureBindGroupLabel = 'sprite:texture-bind-group';
+
+    try {
+      const backend = await createBackend(environment);
+      const source = document.createElement('canvas');
+
+      source.width = 16;
+      source.height = 16;
+
+      const texture = new Texture(source);
+
+      texture.generateMipMap = false;
+      texture.updateSource();
+
+      const sprite = new Sprite(texture);
+
+      renderFrame(backend, [sprite]);
+      renderFrame(backend, [sprite]); // warm: cache hit established
+
+      const mark = environment.bindGroupLabels().length;
+
+      // Resizing the source recreates the GPU texture, handing the cache a
+      // fresh view identity for the same texture set → rebuild in place.
+      source.width = 32;
+      source.height = 32;
+      texture.updateSource();
+      renderFrame(backend, [sprite]);
+
+      expect(countLabel(environment.bindGroupLabels(), textureBindGroupLabel, mark)).toBe(1);
+
+      // The refreshed entry serves subsequent unchanged frames from cache.
+      const afterRebuild = environment.bindGroupLabels().length;
+
+      renderFrame(backend, [sprite]);
+
+      expect(countLabel(environment.bindGroupLabels(), textureBindGroupLabel, afterRebuild)).toBe(0);
 
       backend.destroy();
     } finally {
