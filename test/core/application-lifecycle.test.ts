@@ -125,6 +125,7 @@ const loadHarness = async (options: LifecycleHarnessOptions = {}): Promise<Lifec
     clearColor: new Color(100, 149, 237, 1),
     onContextLost: { add: vi.fn(), destroy: vi.fn() },
     onContextRestored: { add: vi.fn(), destroy: vi.fn() },
+    onRenderError: { add: vi.fn(), destroy: vi.fn() },
     rendererRegistry,
     backendType: 'webgl2',
   };
@@ -139,6 +140,7 @@ const loadHarness = async (options: LifecycleHarnessOptions = {}): Promise<Lifec
     clearColor: new Color(10, 20, 30, 1),
     onDeviceLost: { add: vi.fn(), destroy: vi.fn() },
     onDeviceRestored: { add: vi.fn(), destroy: vi.fn() },
+    onRenderError: { add: vi.fn(), destroy: vi.fn() },
     rendererRegistry,
     backendType: 'webgpu',
   };

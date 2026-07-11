@@ -73,6 +73,7 @@ const loadApplicationHarness = async (
     renderTarget: { setView: vi.fn() },
     onContextLost: { add: vi.fn(), destroy: vi.fn() },
     onContextRestored: { add: vi.fn(), destroy: vi.fn() },
+    onRenderError: { add: vi.fn(), destroy: vi.fn() },
     rendererRegistry,
     backendType: 'webgl2',
   };
@@ -86,6 +87,7 @@ const loadApplicationHarness = async (
     renderTarget: { setView: vi.fn() },
     onDeviceLost: { add: vi.fn(), destroy: vi.fn() },
     onDeviceRestored: { add: vi.fn(), destroy: vi.fn() },
+    onRenderError: { add: vi.fn(), destroy: vi.fn() },
     rendererRegistry,
     backendType: 'webgpu',
   };

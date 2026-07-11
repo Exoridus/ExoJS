@@ -6,10 +6,10 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 23,
+  "memberCount": 24,
   "counts": {
     "constructors": 0,
-    "methods": 16,
+    "methods": 17,
     "properties": 7,
     "events": 0
   },
@@ -413,6 +413,74 @@
           ],
           "returnType": "AssetBinding<Result, Options>",
           "description": "Declare a built-in asset type in one place. For a **leaf-capable** kind — one with a SeamlessAdapter (resource) or isValue: true (value) — this registers its placeholder strategy and suffix→kind inference GLOBALLY at import time, so a loader-free Assets.from resolves it before any Application exists. A **non-leaf** resource kind (isValue: false and no adapter — e.g. bmFont, font) has no placeholder strategy, so it is deliberately NOT registered globally: its bare path cannot be inferred and must be declared via Asset.kind(...) or an explicit config. Its extensions still travel on the returned binding for the per-Loader map. The returned AssetBinding flows through the unchanged materializeAssetBindings path exactly like any extension package's binding — defineAsset adds no second per-loader registration channel."
+        },
+        {
+          "name": "formatShaderError",
+          "signature": "formatShaderError(source: string, infoLog: string): string",
+          "signatureTokens": [
+            {
+              "text": "formatShaderError",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "infoLog",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "source",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "infoLog",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "string",
+          "description": "Format a driver info log against its shader source: parses ERROR: 0:<line>: (ANGLE/Mesa GLSL) and WGSL :<line>:<col> positions, and returns the raw log plus a numbered source excerpt (±2 lines, > marker on each failing line). Falls back to the raw log verbatim when no line references parse (or none of them land inside source)."
         },
         {
           "name": "getAudioContext",

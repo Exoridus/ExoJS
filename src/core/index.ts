@@ -5,6 +5,7 @@ export type {
   CanvasApplicationOptions,
   CanvasSizingMode,
   InputApplicationOptions,
+  RecentErrorEntry,
   RenderingApplicationOptions,
   WebGl2BackendConfig,
   WebGpuBackendConfig,

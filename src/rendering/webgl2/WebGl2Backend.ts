@@ -24,6 +24,7 @@ import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import type { Renderer } from '#rendering/Renderer';
 import { RendererRegistry } from '#rendering/RendererRegistry';
+import type { RenderError } from '#rendering/RenderError';
 import type { RenderStats } from '#rendering/RenderStats';
 import { createRenderStats, resetRenderStats } from '#rendering/RenderStats';
 import { RenderTarget } from '#rendering/RenderTarget';
@@ -186,6 +187,13 @@ export class WebGl2Backend implements RenderBackend {
   public readonly rendererRegistry: RendererRegistry<WebGl2Backend> = new RendererRegistry<WebGl2Backend>();
   public readonly onContextLost = new Signal();
   public readonly onContextRestored = new Signal();
+  /**
+   * See {@link RenderBackend.onRenderError}. WebGL2 currently dispatches
+   * nothing here — its shader compile/link failures surface as synchronous
+   * {@link RenderError} throws from `flush()` — but the signal satisfies the
+   * backend interface and gives custom passes a stable reporting surface.
+   */
+  public readonly onRenderError = new Signal<[RenderError]>();
 
   private readonly _context: WebGL2RenderingContext;
   private readonly _rootRenderTarget: RenderTarget;
@@ -1384,6 +1392,7 @@ export class WebGl2Backend implements RenderBackend {
     this._removeEvents();
     this.onContextLost.destroy();
     this.onContextRestored.destroy();
+    this.onRenderError.destroy();
 
     this.setRenderTarget(null);
     this._setActiveRenderer(null);

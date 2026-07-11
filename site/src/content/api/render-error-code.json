@@ -1,0 +1,103 @@
+{
+  "title": "RenderErrorCode",
+  "description": "Machine-readable classification of a GPU/render failure. Carried by RenderError.code so tooling can branch on the failure class without parsing a driver log.",
+  "symbol": "RenderErrorCode",
+  "kind": "type",
+  "subsystem": "rendering",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Machine-readable classification of a GPU/render failure. Carried by RenderError.code so tooling can branch on the failure class without parsing a driver log."
+      ],
+      "importLine": "import { RenderErrorCode } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "RenderErrorCode",
+          "signature": "\"shader-compile\" | \"shader-link\" | \"pipeline-creation\" | \"validation\" | \"out-of-memory\" | \"internal\"",
+          "signatureTokens": [
+            {
+              "text": "\"shader-compile\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"shader-link\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"pipeline-creation\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"validation\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"out-of-memory\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"internal\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/rendering/RenderError.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/RenderError.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/rendering/RenderError.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/RenderError.ts"
+}

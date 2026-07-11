@@ -1440,7 +1440,9 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     }
 
     const device = this._device;
-    const shaderModule = device.createShaderModule({ label: 'mesh:material-shader', code: material.shader.wgsl });
+    // Routed through the backend so WGSL compilation errors in user-supplied
+    // material shaders surface via backend.onRenderError (S3 diagnostics).
+    const shaderModule = this.getBackend()._createShaderModule(material.shader.wgsl, 'mesh:material-shader');
 
     const meshUniformLayout = device.createBindGroupLayout({
       label: 'mesh:material-bind-group-layout:uniform',

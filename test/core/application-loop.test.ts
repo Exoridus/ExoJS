@@ -18,6 +18,7 @@ vi.mock('#rendering/webgl2/WebGl2Backend', () => ({
     return {
       onContextLost: { add: vi.fn() },
       onContextRestored: { add: vi.fn() },
+      onRenderError: { add: vi.fn(), destroy: vi.fn() },
       stats: {
         frameTimeMs: 0,
         drawCalls: 0,
@@ -55,6 +56,7 @@ vi.mock('#rendering/webgpu/WebGpuBackend', () => ({
     return {
       onDeviceLost: { add: vi.fn() },
       onDeviceRestored: { add: vi.fn() },
+      onRenderError: { add: vi.fn(), destroy: vi.fn() },
       stats: {
         frameTimeMs: 0,
         drawCalls: 0,

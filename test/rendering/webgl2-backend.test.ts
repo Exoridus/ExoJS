@@ -119,6 +119,7 @@ describe('Application.setCursor', () => {
           renderTarget: { setView: vi.fn() },
           onContextLost: { add: vi.fn(), destroy: vi.fn() },
           onContextRestored: { add: vi.fn(), destroy: vi.fn() },
+          onRenderError: { add: vi.fn(), destroy: vi.fn() },
         };
       }),
     }));
