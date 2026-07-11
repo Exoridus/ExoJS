@@ -28,6 +28,8 @@ export interface MockWebGpuEnvironment {
   bindGroupLabels(): readonly string[];
   /** Labels of every queue.writeBuffer target, in call order. */
   writeBufferLabels(): readonly string[];
+  /** Labels of every device.createBuffer call, in call order. */
+  createBufferLabels(): readonly string[];
   /** Number of render pipelines synchronously created (async prewarm excluded). */
   syncPipelineCount(): number;
   drawIndexedCount(): number;
@@ -50,6 +52,7 @@ export const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
   let syncPipelineCount = 0;
   const bindGroupLabels: string[] = [];
   const writeBufferLabels: string[] = [];
+  const createBufferLabels: string[] = [];
 
   const pass = {
     setPipeline: (): void => {},
@@ -94,11 +97,14 @@ export const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
     },
     createRenderPipelineAsync: async (): Promise<GPURenderPipeline> => ({}) as GPURenderPipeline,
     createCommandEncoder: () => encoder as unknown as GPUCommandEncoder,
-    createBuffer: (descriptor: GPUBufferDescriptor): GPUBuffer =>
-      ({
+    createBuffer: (descriptor: GPUBufferDescriptor): GPUBuffer => {
+      createBufferLabels.push(descriptor.label ?? '');
+
+      return {
         label: descriptor.label ?? '',
         destroy: (): void => {},
-      }) as unknown as GPUBuffer,
+      } as unknown as GPUBuffer;
+    },
     createTexture: (): GPUTexture => {
       // A stable view per GPU texture, matching the backend's cached-view
       // contract (a fresh view identity means "texture was recreated").
@@ -146,6 +152,7 @@ export const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
     bindGroupCount: () => bindGroupCount,
     bindGroupLabels: () => bindGroupLabels,
     writeBufferLabels: () => writeBufferLabels,
+    createBufferLabels: () => createBufferLabels,
     syncPipelineCount: () => syncPipelineCount,
     drawIndexedCount: () => drawIndexedCount,
     restore: (): void => {
