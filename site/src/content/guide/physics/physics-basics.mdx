@@ -152,6 +152,45 @@ const app = new Application({ fixedTimeStep: 1 / 60 });
 Stepping inside `update` works — pass `delta.seconds` the same way — but `fixedUpdate` runs with a constant delta, which keeps the simulation deterministic regardless of display refresh rate.
 </Callout>
 
+### Fixed timestep vs. the variable render loop
+
+`world.step(frameDeltaSeconds)` owns its **own** fixed-timestep accumulator — it
+does not assume the delta you pass is already fixed-size. Internally it adds
+whatever you give it to a running total and converts that into a whole number
+of `1 / 60 s` sub-steps (configurable via `fixedDelta`), carrying any leftover
+fraction into the next call. That means both of these are correct:
+
+- **`fixedUpdate(delta)`** (the recommendation above) — the engine's own
+  fixed-timestep accumulator already turns the browser's variable
+  `requestAnimationFrame` delta into a constant-rate hook, so `world.step`
+  typically consumes exactly one sub-step per call here.
+- **`update(delta)`** — passing the *raw*, variable per-frame `delta.seconds`
+  straight from the render loop also works: `world.step`'s own accumulator
+  still produces the right number of fixed sub-steps (`0`, `1`, or several on
+  a slow frame), so the simulation stays frame-rate independent either way.
+  This is the "fixed timestep + accumulator against a variable RAF loop"
+  pattern — ExoJS's physics package implements the accumulator half of it for
+  you; you only need to feed it a delta, fixed or not.
+
+```ts no-check
+public override update(delta: Time): void {
+  // Also valid: world.step owns its own accumulator, so a raw variable delta
+  // from requestAnimationFrame still yields deterministic, frame-rate
+  // independent physics — you don't have to build your own accumulator.
+  this.world.step(delta.seconds);
+}
+```
+
+One visible consequence: because bound sprites are written once per
+`world.step` call (once per rendered frame), a display refresh rate *above*
+the fixed step rate (e.g. 144 Hz rendering against 60 Hz physics) can show the
+same simulated position across a couple of frames before the next fixed
+sub-step lands — a slight stutter compared to a fully interpolated renderer.
+`world.timeStepper.alpha` (`[0, 1)`) exposes the leftover sub-step fraction
+after each `step` call if you want to interpolate a bound node's rendered
+position yourself between the last two fixed states; bindings do not do this
+automatically.
+
 ## Binding bodies to sprites
 
 A body is pure simulation — it has no visual. To draw it, link it to a `Drawable`
@@ -248,6 +287,25 @@ class DropScene extends Scene {
 The ball falls under gravity, hits the floor, bounces a few times (restitution `0.5`)
 and settles. Because the body is bound to the sprite, the sprite follows automatically —
 you never touch its position in `update`.
+
+## Performance envelope: broad phase
+
+Collision detection's broad phase (which colliders are worth a precise test)
+is a stateless sort-and-sweep: every fixed step, it re-sorts **all** live
+colliders by their AABB's X position and sweeps once. That is exact (no missed
+overlaps) and deterministic, and it is cheap enough for typical scenes — a
+platformer level, a puzzle board, a few hundred physics props. It re-sorts
+from scratch every step rather than keeping a persistent structure, so it
+degrades as the live collider count grows into the thousands, and there is no
+built-in spatial hash or incremental broadphase for very high-N worlds (tens
+of thousands of simultaneously-live colliders). If you hit that ceiling,
+splitting a large world into several smaller `PhysicsWorld` instances (e.g.
+one per room, chunk or off-screen region) keeps each instance's live collider
+count low.
+
+<Callout type="info" title="No built-in spatial broadphase">
+There is currently no persistent/incremental broad phase (spatial hash, grid, or similar) in `@codexo/exojs-physics` — see the tracking issue "physics: spatial broadphase for high-N worlds (P4f)" for the follow-up.
+</Callout>
 
 ## Where to go next
 

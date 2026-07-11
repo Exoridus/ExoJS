@@ -9,6 +9,15 @@ import type { BroadPhase, CandidatePair } from './BroadPhase';
  * an exact AABB-overlap broad phase (zero false negatives) with a deterministic,
  * id-sorted output. The recompute-each-step design keeps it stateless between
  * frames — two worlds never share sweep state.
+ *
+ * **Operating envelope.** This is `O(n log n)` for the sort plus a near-linear
+ * sweep for typical, spread-out scenes, degrading toward `O(n²)` when many
+ * colliders' X intervals overlap at once (a dense horizontal cluster). There is
+ * no persistent incremental structure (no coherence carried between steps) and
+ * no spatial hash — fine up to the low thousands of live colliders; very
+ * high-N worlds (tens of thousands) will spend a growing share of each fixed
+ * step here. See the tracking issue "physics: spatial broadphase for high-N
+ * worlds (P4f)" for the follow-up.
  */
 export class SweepAndPrune implements BroadPhase {
   private readonly _sorted: Collider[] = [];

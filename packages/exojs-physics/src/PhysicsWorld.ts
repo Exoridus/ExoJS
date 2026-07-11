@@ -31,6 +31,44 @@ const ccdEmbed = 0.05;
 /** Impact speed (px/s) below which a bullet's CCD response does not bounce (mirrors the contact solver). */
 const ccdRestitutionThreshold = 1;
 
+/**
+ * {@link PhysicsWorld.attach}'s default `position`: `node`'s current WORLD
+ * translation, duck-typed the same way `AudioListener` reads a follow target —
+ * real {@link SceneNode}s expose `getWorldTransform()`, test doubles that omit
+ * it fall back to `(0, 0)` (the previous, surprising default).
+ */
+function worldPositionOf(node: SceneNode): VectorLike {
+  const asNode = node as Partial<SceneNode>;
+
+  if (typeof asNode.getWorldTransform === 'function') {
+    const world = asNode.getWorldTransform();
+
+    return { x: world.x, y: world.y };
+  }
+
+  return { x: 0, y: 0 };
+}
+
+/**
+ * {@link PhysicsWorld.attach}'s default `angle` (radians): `node`'s current
+ * WORLD rotation, decomposed from `getWorldTransform()`'s linear part
+ * (`atan2(-c, a)` — `SceneNode.updateTransform` builds its rotation block as
+ * `[[cosθ, sinθ], [-sinθ, cosθ]]`, i.e. `b = sinθ`/`c = -sinθ`, matching the
+ * radians ⇄ degrees round-trip `PhysicsBinding.sync` already relies on).
+ * Falls back to `0` for a duck-typed node without `getWorldTransform`.
+ */
+function worldAngleOf(node: SceneNode): number {
+  const asNode = node as Partial<SceneNode>;
+
+  if (typeof asNode.getWorldTransform === 'function') {
+    const world = asNode.getWorldTransform();
+
+    return Math.atan2(-world.c, world.a);
+  }
+
+  return 0;
+}
+
 /** Construction options for a {@link PhysicsWorld}. */
 export interface PhysicsWorldOptions {
   /** Gravity in px/s² (+Y down). Integrated each sub-step. Default `(0, 0)`. */
@@ -67,9 +105,9 @@ export interface PhysicsWorldOptions {
 export interface AttachOptions {
   /** Simulation role of the created body. Default `'dynamic'`. */
   type?: BodyType;
-  /** Initial world position of the body. Default the node's position is left untouched and `(0, 0)` is used. */
+  /** Initial world position of the body. Default the node's current WORLD position ({@link SceneNode.getWorldTransform}) at attach time. */
   position?: VectorLike;
-  /** Initial rotation (radians) of the body. Default `0`. */
+  /** Initial rotation (radians) of the body. Default the node's current WORLD rotation at attach time. */
   angle?: number;
   /** Per-body multiplier on world gravity. Default `1`. */
   gravityScale?: number;
@@ -129,6 +167,16 @@ export interface AttachOptions {
  * - **{@link PhysicsWorldOptions.subStepCount}** — the default `4` is
  *   load-bearing for tall-stack stability; lowering it below `2` visibly
  *   degrades stacking, so do not reduce it for performance.
+ * - **Broad phase is a stateless O(n log n) sort-and-sweep** (`SweepAndPrune`),
+ *   re-sorting every live collider by X each fixed step — no persistent
+ *   incremental structure or spatial hash. Fine up to the low thousands of
+ *   colliders; a world with tens of thousands of simultaneously-live colliders
+ *   will spend a growing share of the step re-sorting and scanning near
+ *   misses. There is currently no built-in spatial broadphase for that
+ *   regime — see the tracking issue "physics: spatial broadphase for high-N
+ *   worlds (P4f)" if you need one; in the meantime, split very large worlds
+ *   into several smaller `PhysicsWorld` instances (e.g. per room/chunk) to
+ *   keep each one's live collider count low.
  */
 export class PhysicsWorld implements BodyOwner {
   /** Fires when two solid colliders begin touching. Argument is an immutable snapshot. */
@@ -259,12 +307,18 @@ export class PhysicsWorld implements BodyOwner {
    * Convenience: create a body carrying a single collider, add it to the world
    * and bind it to `node` in one call. The node tracks `body.position` after each
    * step. Returns the body. Equivalent to `new PhysicsBody(...)` + `add` + `bind`.
+   *
+   * When `options.position`/`options.angle` are omitted, the body starts at
+   * `node`'s current WORLD position/rotation (via `getWorldTransform()`,
+   * composed through any transform-group boundary) rather than `(0, 0)` —
+   * otherwise a body attached to an already-placed node would visibly "teleport"
+   * to the origin on the next step. Pass `position`/`angle` explicitly to override.
    */
   public attach(node: SceneNode, options: AttachOptions): PhysicsBody {
     const body = new PhysicsBody({
       ...(options.type !== undefined && { type: options.type }),
-      ...(options.position !== undefined && { position: options.position }),
-      ...(options.angle !== undefined && { angle: options.angle }),
+      position: options.position ?? worldPositionOf(node),
+      angle: options.angle ?? worldAngleOf(node),
       ...(options.gravityScale !== undefined && { gravityScale: options.gravityScale }),
       ...(options.fixedRotation !== undefined && { fixedRotation: options.fixedRotation }),
       colliders: [
@@ -343,6 +397,31 @@ export class PhysicsWorld implements BodyOwner {
    * gravity, solve contacts with a soft bias, integrate positions, relax) and a
    * restitution pass, then writes the accumulated motion into each body. Finally
    * dispatches events and writes bound node transforms.
+   *
+   * **Fixed timestep against a variable render loop.** `frameDeltaSeconds` does
+   * **not** need to already be a fixed-size delta — `step` owns its own
+   * accumulator ({@link timeStepper}, a `TimeStepper`) that converts whatever
+   * you pass into a whole number of `fixedDelta`-sized sub-steps (dropping any
+   * backlog beyond {@link PhysicsWorldOptions.maxSubSteps} so a slow frame
+   * cannot spiral). Two equally valid ways to drive it:
+   * - **`Scene.fixedUpdate(delta)`** (recommended) — the engine's own
+   *   fixed-timestep accumulator already calls this hook a constant number of
+   *   times per rendered frame, so `step` typically consumes exactly one
+   *   sub-step per call. This is the idiomatic hook and keeps physics in step
+   *   with any other fixed-rate game logic.
+   * - **`Scene.update(delta)`** — passing the raw, variable per-frame
+   *   `delta.seconds` straight from the render loop also works correctly:
+   *   `step`'s internal accumulator still produces exactly the right number of
+   *   fixed sub-steps (0, 1 or several) regardless of how irregular the calls
+   *   are. Useful when you don't want a `fixedUpdate` split for anything else.
+   *
+   * Either way the simulation is frame-rate independent and deterministic —
+   * the same sequence of deltas replays identically. `timeStepper.alpha`
+   * (`[0, 1)`) is the leftover sub-step fraction after this call, for callers
+   * that want to interpolate a bound node's rendered position between the last
+   * two fixed states instead of snapping to the latest one (bindings do not do
+   * this automatically — {@link bind} always writes the latest fixed-step
+   * transform verbatim).
    */
   public step(frameDeltaSeconds: number): void {
     this._assertAlive();
