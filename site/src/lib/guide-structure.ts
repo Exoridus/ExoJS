@@ -388,6 +388,18 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
                 examples: ['geometry-graphics/immediate-mode-rendering'],
                 apiLinks: ['rendering-context', 'render-batch', 'geometry', 'matrix', 'color'],
             },
+            {
+                slug: 'retained-containers',
+                level: 'advanced',
+                learningGoals: [
+                    'declare a large, mostly-static subtree as a RetainedContainer',
+                    'pan the whole group as one GPU-matrix update instead of touching every child',
+                    'recognise the group-local space, lifecycle, and invalidation rules the tier trades for that speed',
+                ],
+                prerequisites: ['runtime/scene-graph'],
+                examples: ['scene-graph/retained-container'],
+                apiLinks: ['retained-container', 'container', 'scene-node'],
+            },
         ],
     },
     {

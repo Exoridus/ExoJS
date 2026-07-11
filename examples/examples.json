@@ -1221,6 +1221,20 @@
             "level": "intro"
         },
         {
+            "slug": "retained-container",
+            "path": "scene-graph/retained-container.js",
+            "language": "typescript",
+            "title": "Retained Container",
+            "description": "Hold a large static sprite field in a RetainedContainer and pan the whole group as a camera: the retained tier replays the subtree as O(batches) with one group-matrix update, while a plain Container walks every child each frame. Toggle the tier and compare the frame-time readout.",
+            "backend": "core",
+            "tags": [
+                "scene-graph",
+                "rendering",
+                "performance"
+            ],
+            "level": "advanced"
+        },
+        {
             "slug": "pivot-and-anchor",
             "path": "scene-graph/pivot-and-anchor.js",
             "language": "typescript",
