@@ -21,7 +21,7 @@ export interface BodyOptions {
   gravityScale?: number;
   /** When `true`, the body never rotates under contacts (infinite rotational inertia). Default `false`. */
   fixedRotation?: boolean;
-  /** When `true`, the body is swept against static geometry each step (CCD) so it cannot tunnel through thin walls. Default `false`. */
+  /** When `true`, the body's colliders are shape-cast along each step's motion (CCD) so it cannot tunnel through thin geometry. Default `false`. */
   isBullet?: boolean;
   /** Colliders to attach up-front. Each may be a {@link Collider} instance or its {@link ColliderOptions}. */
   colliders?: Array<Collider | ColliderOptions>;
@@ -56,7 +56,7 @@ export class PhysicsBody {
   public gravityScale: number;
   /** When `true`, rotational inertia is treated as infinite. */
   public fixedRotation: boolean;
-  /** When `true`, the body is swept against static geometry each step (CCD) so it cannot tunnel through thin walls. */
+  /** When `true`, the body's colliders are shape-cast along each step's motion (CCD) so it cannot tunnel through thin geometry. */
   public isBullet: boolean;
 
   /** Total mass (0 for static/kinematic). */

@@ -2,11 +2,14 @@ import type { SceneNode } from '@codexo/exojs';
 import { Signal, Vector } from '@codexo/exojs';
 
 import type { Aabb } from './Aabb';
+import { aabbOverlap, createAabb } from './Aabb';
 import { NativePhysicsBackend } from './backend/NativePhysicsBackend';
 import type { PhysicsBackend } from './backend/PhysicsBackend';
 import { BindingRegistry } from './binding/BindingRegistry';
 import type { PhysicsBinding } from './binding/PhysicsBinding';
 import { Collider } from './Collider';
+import type { SweepHit } from './collision/sweep';
+import { sweepProxies } from './collision/sweep';
 import type { CollisionEvent, SensorEvent } from './events';
 import type { Joint } from './joints/Joint';
 import type { BodyOwner } from './PhysicsBody';
@@ -16,9 +19,15 @@ import { QueryEngine } from './query/QueryEngine';
 import type { AnyShape } from './shapes/AnyShape';
 import { TimeStepper } from './TimeStepper';
 import type { BodyType, CollisionFilter, VectorLike } from './types';
+import { shouldCollide } from './types';
 
-/** Gap left between a clamped bullet and the surface it hit (so it does not re-hit from inside). */
-const ccdSkin = 0.05;
+/**
+ * Overlap left after clamping a bullet at its time of impact (the clamp
+ * overshoots the contact by this much along the motion), so the next step's
+ * discrete detection forms a real contact and the solver owns resting,
+ * friction and events from then on.
+ */
+const ccdEmbed = 0.05;
 /** Impact speed (px/s) below which a bullet's CCD response does not bounce (mirrors the contact solver). */
 const ccdRestitutionThreshold = 1;
 
@@ -109,10 +118,14 @@ export interface AttachOptions {
  *   the velocity-capped soft push-out (`maxBiasVelocity`) lets the lighter body
  *   settle progressively deeper (≈6px at 500:1, fully through a thin floor by
  *   ~5000:1) — always finite, never exploding.
- * - **No CCD** — detection runs once per fixed step with no swept test, so a
- *   body that travels farther than an obstacle's thickness in one step tunnels
- *   straight through it (it stays finite). Reliably stopping fast projectiles is
- *   a future bullet-mode feature.
+ * - **CCD is opt-in and translation-only** — detection runs once per fixed
+ *   step, so an ordinary body that travels farther than an obstacle's thickness
+ *   in one step tunnels straight through it (it stays finite). Flag fast
+ *   projectiles with {@link PhysicsBody.isBullet}: each of the body's colliders
+ *   is then shape-cast along the step's motion (an exact translation-only sweep
+ *   of the full shape, not just the centre) and clamped at the first impact.
+ *   Rotation over the step is not swept — a long body spinning fast enough to
+ *   sweep past an obstacle within one step can still miss it.
  * - **{@link PhysicsWorldOptions.subStepCount}** — the default `4` is
  *   load-bearing for tall-stack stability; lowering it below `2` visibly
  *   degrades stacking, so do not reduce it for performance.
@@ -157,10 +170,20 @@ export class PhysicsWorld implements BodyOwner {
   private readonly _islandParent: number[] = [];
   /** Pooled per-island minimum sleep time, indexed by union-find root. */
   private readonly _islandMinSleep: number[] = [];
-  /** Pooled ray-hit buffer + origin/direction for the CCD swept test. */
-  private readonly _ccdHits: RayHit[] = [];
-  private readonly _ccdOrigin = { x: 0, y: 0 };
-  private readonly _ccdDir = { x: 0, y: 0 };
+  /** Pooled scratch for the CCD pass (clamp target, per-pair sweep hit, best hit, swept AABB) — keeps the sweep allocation-free. */
+  private readonly _ccdClampPosition = { x: 0, y: 0 };
+  private readonly _ccdSweepHit: SweepHit = { t: 0, normalX: 0, normalY: 0 };
+  private readonly _ccdBestHit: SweepHit = { t: 0, normalX: 0, normalY: 0 };
+  private readonly _ccdSweptAabb: Aabb = createAabb();
+
+  /**
+   * Narrow-phase sweep tests run by the CCD pass since world creation. Pairs
+   * rejected by the swept-AABB prune never count, so slow bullets far from any
+   * geometry keep this at zero (the cheap path).
+   *
+   * @internal — test/diagnostic hook.
+   */
+  public _ccdSweepTests = 0;
 
   private _nextBodyId = 1;
   private _nextColliderId = 1;
@@ -677,12 +700,16 @@ export class PhysicsWorld implements BodyOwner {
   }
 
   /**
-   * Sweep each bullet's centre of mass along this fixed step's motion against every
-   * other body's colliders; if it would cross one, clamp the body just short of the
-   * surface and resolve the impact about the surface normal (a slide for a non-bouncy
-   * body, an elastic reflection as restitution → 1) so it cannot tunnel. Sweeps the
-   * centre point — good for small/point-like projectiles; a full swept-shape TOI for
-   * large fast bodies is backlog (raise sub-steps or thicken geometry meanwhile).
+   * Shape-cast each bullet's colliders along this fixed step's motion against
+   * every other body's colliders; if any would cross one, clamp the body at the
+   * earliest impact and resolve it about the surface normal (a slide for a
+   * non-bouncy body, an elastic reflection as restitution → 1) so it cannot
+   * tunnel. The sweep is an exact translation-only cast of the full shapes
+   * (Minkowski ray for circles, swept SAT for polygon pairs) — the step's
+   * rotation is applied before the sweep, not swept through. Pairs already
+   * overlapping at the start of the step are skipped: the discrete solver owns
+   * them (that hand-off is what lets a landed bullet rest on real contacts).
+   * Filters and sensors behave exactly as in the discrete narrow phase.
    */
   private _advanceBullets(): void {
     for (const body of this._bodies) {
@@ -690,65 +717,103 @@ export class PhysicsWorld implements BodyOwner {
         continue;
       }
 
+      // The step's centre-of-mass motion; every collider translated by it too.
       const newX = body.worldCenterOfMassX;
       const newY = body.worldCenterOfMassY;
-      let dirX = newX - body._ccdPrevX;
-      let dirY = newY - body._ccdPrevY;
-      const distance = Math.hypot(dirX, dirY);
+      const dx = newX - body._ccdPrevX;
+      const dy = newY - body._ccdPrevY;
+      const distance = Math.hypot(dx, dy);
 
       if (distance < 1e-6) {
         continue;
       }
 
-      dirX /= distance;
-      dirY /= distance;
-
-      this._ccdOrigin.x = body._ccdPrevX;
-      this._ccdOrigin.y = body._ccdPrevY;
-      this._ccdDir.x = dirX;
-      this._ccdDir.y = dirY;
-
-      const hits = this._query.rayCastAll(this._ccdOrigin, this._ccdDir, undefined, this._ccdHits, distance);
-      let blocked: RayHit | null = null;
-
-      for (const hit of hits) {
-        // Sweep against every other body (static, kinematic, dynamic); sensors never
-        // block. Hits are distance-sorted, so the first match is the nearest surface.
-        if (hit.body !== body && !hit.collider.isSensor) {
-          blocked = hit;
-          break;
-        }
-      }
+      const blocked = this._sweepBulletColliders(body, dx, dy);
 
       if (blocked === null) {
         continue;
       }
 
-      // Clamp the CoM just short of the surface (a pure translation — the rotation
-      // is already applied), then resolve the impact about the surface normal.
-      const clampDistance = Math.max(0, blocked.distance - ccdSkin);
-      const deltaX = body._ccdPrevX + dirX * clampDistance - newX;
-      const deltaY = body._ccdPrevY + dirY * clampDistance - newY;
+      // Clamp the step's translation at the impact, overshooting by a small
+      // embed along the motion (a pure translation — the rotation is already
+      // applied) so the next step's detection forms a real discrete contact.
+      const best = this._ccdBestHit;
+      const clampDistance = Math.min(distance, best.t * distance + ccdEmbed);
 
-      this._ccdOrigin.x = body.x + deltaX;
-      this._ccdOrigin.y = body.y + deltaY;
-      body.setTransform(this._ccdOrigin, body.angle);
+      if (clampDistance < distance) {
+        const pullBack = (clampDistance - distance) / distance;
+
+        this._ccdClampPosition.x = body.x + dx * pullBack;
+        this._ccdClampPosition.y = body.y + dy * pullBack;
+        body.setTransform(this._ccdClampPosition, body.angle);
+      }
 
       // Reflect about the true surface normal: a slide for a non-bouncy body
       // (restitution 0), an elastic bounce as restitution → 1. The body's own
       // restitution combines (max) with the surface's, matching the contact solver.
-      const nx = blocked.normal.x;
-      const ny = blocked.normal.y;
-      const vn = body.linearVelocityX * nx + body.linearVelocityY * ny;
+      const vn = body.linearVelocityX * best.normalX + body.linearVelocityY * best.normalY;
 
       if (vn < 0) {
-        const restitution = vn < -ccdRestitutionThreshold ? Math.max(this._bulletRestitution(body), blocked.collider.restitution) : 0;
+        const restitution = vn < -ccdRestitutionThreshold ? Math.max(this._bulletRestitution(body), blocked.restitution) : 0;
         const impulse = -(1 + restitution) * vn;
 
-        body.linearVelocityX += impulse * nx;
-        body.linearVelocityY += impulse * ny;
+        body.linearVelocityX += impulse * best.normalX;
+        body.linearVelocityY += impulse * best.normalY;
       }
     }
+  }
+
+  /**
+   * Find the earliest impact across all (bullet collider × world collider)
+   * pairs for a bullet whose colliders translated by `(dx, dy)` this step.
+   * Returns the blocking collider (with the impact written into
+   * {@link _ccdBestHit}), or `null` when nothing blocks the motion.
+   */
+  private _sweepBulletColliders(body: PhysicsBody, dx: number, dy: number): Collider | null {
+    const hit = this._ccdSweepHit;
+    const best = this._ccdBestHit;
+    const swept = this._ccdSweptAabb;
+    let blocked: Collider | null = null;
+
+    best.t = Infinity;
+
+    for (const collider of body.colliders) {
+      if (collider.isSensor) {
+        continue; // Sensors never block — not even their own body's motion.
+      }
+
+      // Cheap path: the collider's end-pose AABB unioned with its start pose;
+      // anything outside it cannot be hit, so no narrow-phase sweep runs.
+      const aabb = collider.aabb;
+
+      swept.minX = dx > 0 ? aabb.minX - dx : aabb.minX;
+      swept.maxX = dx < 0 ? aabb.maxX - dx : aabb.maxX;
+      swept.minY = dy > 0 ? aabb.minY - dy : aabb.minY;
+      swept.maxY = dy < 0 ? aabb.maxY - dy : aabb.maxY;
+
+      for (const other of this._colliders) {
+        // Sweep against every other body (static, kinematic, dynamic) under the
+        // discrete narrow phase's rules: sensors never block, filtered pairs never collide.
+        if (other.isSensor || other.body === body || !shouldCollide(collider.filter, other.filter)) {
+          continue;
+        }
+
+        if (!aabbOverlap(swept, other.aabb)) {
+          continue;
+        }
+
+        this._ccdSweepTests++;
+
+        if (sweepProxies(collider, dx, dy, other, hit) && hit.t < best.t) {
+          best.t = hit.t;
+          best.normalX = hit.normalX;
+          best.normalY = hit.normalY;
+          blocked = other;
+        }
+      }
+    }
+
+    return blocked;
   }
 
   /** The highest restitution among a body's colliders (its CCD bounce factor). */

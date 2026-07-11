@@ -188,7 +188,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "When true, the body is swept against static geometry each step (CCD) so it cannot tunnel through thin walls. Default false."
+          "description": "When true, the body's colliders are shape-cast along each step's motion (CCD) so it cannot tunnel through thin geometry. Default false."
         },
         {
           "name": "linearDamping",
