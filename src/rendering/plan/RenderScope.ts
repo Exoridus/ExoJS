@@ -5,6 +5,7 @@ import type { MaskSource, RenderNode } from '#rendering/RenderNode';
 import type { BlendModes } from '#rendering/types';
 
 import type { DrawCommand, RenderEntryKind } from './RenderCommand';
+import type { RetainedInstructionSet } from './RetainedInstructionSet';
 
 /**
  * Geometric clip kind for a {@link RenderNode}'s `clip`/`clipShape`. Distinct
@@ -82,6 +83,18 @@ export interface GroupScope {
    * collect and play (or across multi-render() bases) is always honored.
    */
   transformNode: RenderNode | null;
+  /**
+   * Valid instruction set spliced into this scope (Track B Slice 3, S3-D2):
+   * the scope's entries are EMPTY and the plan player replays the recorded
+   * batches instead of walking entries. `null` on every other scope.
+   */
+  retainedInstructions: RetainedInstructionSet | null;
+  /**
+   * Armed record target (Slice 3): the plan player records this scope's
+   * playback (flush-level batches + nested-group markers) into the set.
+   * `null` unless the collect switch armed recording for this frame.
+   */
+  retainedRecordTarget: RetainedInstructionSet | null;
 }
 
 /** @internal */

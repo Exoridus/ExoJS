@@ -1,7 +1,8 @@
 import type { Drawable } from '#rendering/Drawable';
 import type { RenderBackend } from '#rendering/RenderBackend';
+import { BlendModes } from '#rendering/types';
 
-import type { MaterialKey } from './RenderCommand';
+import { copyMaterialKeyInto, type DrawCommand, type MaterialKey } from './RenderCommand';
 
 /**
  * The replayable payload of one previously-collected draw: everything
@@ -35,6 +36,24 @@ export interface RetainedDrawSlot extends RetainedDrawData {
 }
 
 /**
+ * Mutable pooled backing record for a {@link RetainedDrawSlot} (Slice 3,
+ * F11a): the cache rewrites these in place on recapture so a steady-state
+ * recapture of a same-shaped child list allocates zero objects. Structurally
+ * satisfies the readonly {@link RetainedDrawSlot} contract consumers read.
+ */
+interface MutableRetainedDrawSlot {
+  childIndex: number;
+  drawable: Drawable;
+  seq: number;
+  zIndex: number;
+  readonly material: MaterialKey;
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+}
+
+/**
  * Per-`Container` fragment cache for the Wave 3 static-subtree-skip (Track B,
  * Slice 1 — design spec §5.2/§5.4). Lazily allocated by `Container` the first
  * time a direct drawable child produces a capturable slot; containers without
@@ -51,9 +70,18 @@ export interface RetainedDrawSlot extends RetainedDrawData {
  * This keeps every reused scope shape byte-for-byte identical to a full
  * collect (nested containers keep their own material-grouping/z-sort
  * locality), so reuse is provably semantics-neutral.
+ *
+ * Capture protocol (Slice 3, F11a — pooled): `_beginCapture()` once per full
+ * collect, `_appendSlot()` per captured direct-drawable draw (writes into a
+ * grow-only record pool), `_commitCapture()` to key the capture. Records are
+ * rewritten in place, so steady-state recapture allocates zero slot objects.
  */
 export class RetainedPlanCache {
-  private _slots: readonly RetainedDrawSlot[] = [];
+  /** Active slot list, reused across captures (pointer pushes only). */
+  private readonly _slots: MutableRetainedDrawSlot[] = [];
+  /** Grow-only record pool; `_slots` holds a cursor-ordered prefix of it. */
+  private readonly _slotPool: MutableRetainedDrawSlot[] = [];
+  private _poolCursor = 0;
   private _contentRevision = -1;
   private _structureRevision = -1;
   private _viewUpdateId = -1;
@@ -74,8 +102,38 @@ export class RetainedPlanCache {
     );
   }
 
-  public capture(contentRevision: number, structureRevision: number, viewUpdateId: number, backend: RenderBackend, slots: readonly RetainedDrawSlot[]): void {
-    this._slots = slots;
+  /**
+   * Start a new capture: drops the previous one (it is being replaced) and
+   * rewinds the record pool. A freshly constructed cache is already "begun".
+   */
+  public _beginCapture(): void {
+    this._hasCapture = false;
+    this._slots.length = 0;
+    this._poolCursor = 0;
+  }
+
+  /**
+   * Record one direct-drawable draw into the capture, copying the command's
+   * placement/material/bounds into a pooled record (no allocation once the
+   * pool has grown to the child count).
+   */
+  public _appendSlot(childIndex: number, command: DrawCommand): void {
+    const slot = this._acquireSlot();
+
+    slot.childIndex = childIndex;
+    slot.drawable = command.drawable;
+    slot.seq = command.seq;
+    slot.zIndex = command.zIndex;
+    copyMaterialKeyInto(slot.material, command.material);
+    slot.minX = command.minX;
+    slot.minY = command.minY;
+    slot.maxX = command.maxX;
+    slot.maxY = command.maxY;
+    this._slots.push(slot);
+  }
+
+  /** Key the capture; only after this does {@link isClean} consider it. */
+  public _commitCapture(contentRevision: number, structureRevision: number, viewUpdateId: number, backend: RenderBackend): void {
     this._contentRevision = contentRevision;
     this._structureRevision = structureRevision;
     this._viewUpdateId = viewUpdateId;
@@ -85,6 +143,34 @@ export class RetainedPlanCache {
 
   public invalidate(): void {
     this._hasCapture = false;
-    this._slots = [];
+    this._slots.length = 0;
+    this._poolCursor = 0;
+  }
+
+  private _acquireSlot(): MutableRetainedDrawSlot {
+    const pooled = this._slotPool[this._poolCursor];
+
+    if (pooled !== undefined) {
+      this._poolCursor++;
+
+      return pooled;
+    }
+
+    const slot: MutableRetainedDrawSlot = {
+      childIndex: 0,
+      drawable: undefined as unknown as Drawable,
+      seq: 0,
+      zIndex: 0,
+      material: { rendererId: 0, blendMode: BlendModes.Normal, textureId: -1, shaderId: -1, pipelineKey: 0, bindKey: 0 },
+      minX: 0,
+      minY: 0,
+      maxX: 0,
+      maxY: 0,
+    };
+
+    this._slotPool[this._poolCursor] = slot;
+    this._poolCursor++;
+
+    return slot;
   }
 }

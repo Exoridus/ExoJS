@@ -3,7 +3,7 @@ import { Drawable } from '#rendering/Drawable';
 import { type DrawCommand, type MaterialKey, RenderEntryKind } from '#rendering/plan/RenderCommand';
 import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RenderPlanOptimizer } from '#rendering/plan/RenderPlanOptimizer';
-import type { GroupScope } from '#rendering/plan/RenderScope';
+import type { DrawScopeEntry, GroupScope } from '#rendering/plan/RenderScope';
 import { type RetainedFragmentEntry, RetainedGroupFragment } from '#rendering/plan/RetainedGroupFragment';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
@@ -14,16 +14,25 @@ const material: MaterialKey = { rendererId: 1, blendMode: 0, textureId: -1, shad
 const fakeBackendA = {} as RenderBackend;
 const fakeBackendB = {} as RenderBackend;
 
-const makeDrawEntry = (drawable: Drawable): RetainedFragmentEntry => ({
+// A scope entry as the builder's current scope would hold it — the fragment
+// deep-copies it into its own pooled records at capture (Slice 3, F11a).
+const makeScopeDrawEntry = (drawable: Drawable): DrawScopeEntry => ({
   kind: RenderEntryKind.Draw,
-  drawable,
   seq: 0,
   zIndex: 0,
-  material,
-  minX: 0,
-  minY: 0,
-  maxX: 16,
-  maxY: 16,
+  command: {
+    kind: RenderEntryKind.Draw,
+    drawable,
+    nodeIndex: 0,
+    seq: 0,
+    zIndex: 0,
+    material,
+    groupIndex: undefined,
+    minX: 0,
+    minY: 0,
+    maxX: 16,
+    maxY: 16,
+  },
 });
 
 describe('RetainedGroupFragment', () => {
@@ -38,13 +47,23 @@ describe('RetainedGroupFragment', () => {
   test('isClean requires content, structure and backend to match — and nothing else (no view key)', () => {
     const fragment = new RetainedGroupFragment();
     const drawable = new Drawable();
-    const entries = [makeDrawEntry(drawable)];
 
-    fragment.capture(5, 3, fakeBackendA, entries);
+    fragment.capture(5, 3, fakeBackendA, [makeScopeDrawEntry(drawable)]);
 
     expect(fragment.hasCapture).toBe(true);
     expect(fragment.isClean(5, 3, fakeBackendA)).toBe(true);
-    expect(fragment.entries).toBe(entries);
+    expect(fragment.entries).toHaveLength(1);
+
+    const record = fragment.entries[0]!;
+
+    expect(record.kind).toBe(RenderEntryKind.Draw);
+
+    if (record.kind === RenderEntryKind.Draw) {
+      expect(record.drawable).toBe(drawable);
+      expect(record.material).not.toBe(material); // deep-copied into a pooled key
+      expect(record.material).toEqual(material);
+      expect(record.maxX).toBe(16);
+    }
 
     expect(fragment.isClean(6, 3, fakeBackendA)).toBe(false); // content changed
     expect(fragment.isClean(5, 4, fakeBackendA)).toBe(false); // structure changed
@@ -57,7 +76,7 @@ describe('RetainedGroupFragment', () => {
     const fragment = new RetainedGroupFragment();
     const drawable = new Drawable();
 
-    fragment.capture(1, 1, fakeBackendA, [makeDrawEntry(drawable)]);
+    fragment.capture(1, 1, fakeBackendA, [makeScopeDrawEntry(drawable)]);
     fragment.invalidate();
 
     expect(fragment.hasCapture).toBe(false);
@@ -212,11 +231,15 @@ class LeafDrawable extends Drawable {
 }
 
 class SnapshotProbeContainer extends BoundaryContainer {
-  public lastSnapshot: RetainedFragmentEntry[] | null = null;
+  // Snapshotting is fragment-owned since Slice 3 (F11a): the probe captures
+  // its scope entries into a fragment exactly like RetainedContainer does.
+  public readonly probeFragment = new RetainedGroupFragment();
+  public lastSnapshot: readonly RetainedFragmentEntry[] | null = null;
 
   protected override _collectContent(builder: RenderPlanBuilder): void {
     super._collectContent(builder);
-    this.lastSnapshot = builder._snapshotScopeEntries(builder._peekCurrentScopeEntries());
+    this.probeFragment.capture(0, 0, builder.backend, builder._peekCurrentScopeEntries());
+    this.lastSnapshot = this.probeFragment.entries;
   }
 }
 

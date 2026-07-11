@@ -192,11 +192,33 @@ export class RetainedContainer extends Container {
     }
 
     if (this._fragment.isClean(this._contentRevision, this._structureRevision, builder.backend)) {
+      // Fast tier (Slice 3, S3-D2): a valid recorded instruction set splices
+      // as an EMPTY scope — the player replays O(batches), the optimizer sees
+      // nothing. Falls through the ladder: instruction replay -> entry replay
+      // (Slice 2) -> plain collect; every gate failure degrades to today's
+      // correct behavior, never to wrong pixels.
+      const set = this._fragment.instructions;
+
+      if (set !== null && builder._markCurrentScopeRetained(set)) {
+        this._fragment.markReplayed();
+
+        if (__DEV__) {
+          this._trackRetention(false);
+        }
+
+        return;
+      }
+
       // The whole-range splice (spec §4.2): no walk, no cull, no material
       // keys. The key deliberately omits View.updateId (group-level culling
       // makes the fragment view-independent — the camera-pan win) and the
       // container's own transform (a move only changes the group matrix).
       builder._replayRetainedFragment(this._fragment.entries);
+      this._fragment.markReplayed();
+      // Record-on-first-clean-frame (S3-D8 composition): this clean playback
+      // is the recording source; the player captures it if the backend
+      // implements the hooks and the fragment is recordable (S3-D5).
+      builder._armRetainedRecord(this._fragment);
 
       if (__DEV__) {
         this._trackRetention(false);
@@ -205,20 +227,33 @@ export class RetainedContainer extends Container {
       return;
     }
 
+    // For the S2-D1 diagnostic, a dirty build "invalidates" whenever prior
+    // retention state existed — a live capture OR an active suppression
+    // window (F11b) — so per-frame thrash keeps counting as invalidation
+    // even while suppressed frames no longer carry a capture.
+    const invalidated = this._fragment.hasCapture || this._fragment.captureSuppressed;
+    // Thrash suppression (Slice 3, F11b): when the previous captures were
+    // never replayed, this dirty frame skips the snapshot entirely and pays
+    // only the plain collect.
+    const suppressCapture = this._fragment.shouldSuppressCapture(this._contentRevision, this._structureRevision);
+
     for (let index = 0; index < this._children.length; index++) {
       // In-bounds: index < length.
       this._children[index]!._collect(builder, index);
     }
 
     if (__DEV__) {
-      this._trackRetention(this._fragment.hasCapture);
+      this._trackRetention(invalidated);
     }
 
-    this._fragment.capture(this._contentRevision, this._structureRevision, builder.backend, builder._snapshotScopeEntries(builder._peekCurrentScopeEntries()));
+    if (!suppressCapture) {
+      this._fragment.capture(this._contentRevision, this._structureRevision, builder.backend, builder._peekCurrentScopeEntries());
+    }
   }
 
   public override destroy(): void {
-    this._fragment.invalidate();
+    // dispose(): invalidates AND releases the retained GPU bundle (Slice 3, S3-D3).
+    this._fragment.dispose();
     this._groupAggregate.destroy();
     this._liveBoundsChildren.length = 0;
 
@@ -298,9 +333,10 @@ export class RetainedContainer extends Container {
 
     this._boundaryDisengaged = disengage;
     // Spaces flip: descendants recombine lazily through the live boundary
-    // getter; the fragment (captured in the other space) and the aggregate
-    // bounds must drop immediately.
-    this._fragment.invalidate();
+    // getter; the fragment (captured in the other space), its retained GPU
+    // bundle (S3-D3: disengage frees resources), and the aggregate bounds
+    // must drop immediately.
+    this._fragment.dispose();
     this._invalidateBoundsFlags();
     // The flip changes the transform SPACE of every descendant without
     // touching their bounds flags or revisions, so spatial-index consumers

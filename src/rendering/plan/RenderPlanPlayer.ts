@@ -6,6 +6,13 @@ import { RenderEffectExecutor } from './RenderEffectExecutor';
 import type { RenderInstruction } from './RenderInstruction';
 import type { RenderPlan } from './RenderPlan';
 import type { GroupScope, RenderScope, ScopeEntry } from './RenderScope';
+import {
+  type RetainedBatchInstruction,
+  type RetainedInstruction,
+  RetainedInstructionKind,
+  type RetainedInstructionSet,
+  retainedLeaveGroupInstruction,
+} from './RetainedInstructionSet';
 
 interface RenderInstructionSlot {
   readonly groupInstructionIndex: number;
@@ -24,6 +31,13 @@ interface RenderPlanPlaybackContext {
   passGroupIndex: number;
   activeGroupTransform: Matrix | null;
   groupTransformDepth: number;
+  /**
+   * Active retained-capture recorder stack (Track B Slice 3, S3-D6),
+   * innermost last. Recorders STACK: a batch flushed (or an inner set
+   * replayed) inside nested recording groups is appended to every active
+   * target; instance bytes are stored once, owned by the innermost group.
+   */
+  captureTargets: RetainedInstructionSet[];
 }
 
 /**
@@ -33,6 +47,47 @@ interface RenderPlanPlaybackContext {
  * reads each command via `entries[i].command`. The plan player no longer
  * materializes a `RenderGroup[]` per scope (Slice 2c); the range carries the
  * same information allocation-free.
+ *
+ * Retained instruction-set hooks (Track B Slice 3): a backend that supports
+ * flush-level batch recording implements all four. Contract:
+ *
+ * - `_beginRetainedCapture(set)` — a retained group scope starts recording.
+ *   The backend MUST flush any pending renderer batch BEFORE capture starts
+ *   (so no batch spans the boundary; the enclosing group-transform switch
+ *   already forces this on both shipped backends) and then append one
+ *   {@link RetainedBatchInstruction} to every active capture set for each
+ *   renderer flush until the matching end call.
+ * - `_endRetainedCapture(set)` — the scope's playback ended. The backend MUST
+ *   flush its pending batch INTO the still-active captures before removing
+ *   `set` from its stack (the group's trailing draws belong to the set).
+ * - `_replayRetainedBatch(batch)` — replay one recorded batch: flush any
+ *   pending live batch first (WebGPU: without ending the pass, S3-D7), then
+ *   issue the batch from group-owned resources with all STATE resolved live
+ *   (pipeline, projection/group uniforms, texture bindings) and bump stats
+ *   from the descriptor.
+ * - `_setRenderGroupTransform` MUST flush the pending batch while capturing
+ *   (both shipped backends already treat a group as a flush boundary), so
+ *   recorded batches never straddle an Enter/LeaveGroup marker.
+ *
+ * Ordering guarantee the player provides in return: every retained scope
+ * (capture OR splice) is entered exclusively through a Group entry whose
+ * `transformNode` is the retained boundary node — the collect switch only
+ * marks/arms scopes of engaged RetainedContainers, and those are transform-
+ * group boundaries by construction. The player therefore ALWAYS calls
+ * `_setRenderGroupTransform` immediately before `_beginRetainedCapture` fires
+ * or the first `_replayRetainedBatch` of a spliced scope runs (and again on
+ * scope exit). Because that switch is the flush boundary, a backend's pending
+ * LIVE batch is guaranteed to have drained before any replay instruction
+ * executes — backends may rely on this ordering invariant (the WebGL2 half
+ * does, for its pending-live-batch vs. replay-instruction ordering); the
+ * flush inside `_replayRetainedBatch` is belt-and-braces only.
+ *
+ * Generation stamping: batch instructions are created with
+ * {@link retainedGenerationUnstamped} and stamped via
+ * {@link stampRetainedBatchGeneration} at capture end, once the bundle's
+ * grow-only resources are final (growth during finalization bumps the
+ * generation). A capture that never finalizes leaves the sentinel behind and
+ * the set can never validate.
  */
 interface RenderPlanPlaybackHooks {
   _beginDrawPlan?(nodeCount: number): void;
@@ -43,6 +98,9 @@ interface RenderPlanPlaybackHooks {
   _endRenderGroup?(entries: readonly ScopeEntry[], startIndex: number, count: number): void;
   _endDrawPlan?(): void;
   _setRenderGroupTransform?(transform: Matrix | null): void;
+  _beginRetainedCapture?(set: RetainedInstructionSet): void;
+  _endRetainedCapture?(set: RetainedInstructionSet): void;
+  _replayRetainedBatch?(batch: RetainedBatchInstruction): void;
 }
 
 /**
@@ -127,6 +185,59 @@ export class RenderPlanPlayer {
   }
 
   private static _playGroup(scope: GroupScope, backend: RenderBackend, hooks: RenderPlanPlaybackHooks, context: RenderPlanPlaybackContext): void {
+    // Retained instruction splice (Slice 3, S3-D2): the collect switch left
+    // this scope EMPTY and attached the recorded batch list — replay it in
+    // O(batches) instead of walking entries. Truthy check: pooled scopes
+    // always carry the field, but hand-built test scopes may omit it.
+    if (scope.retainedInstructions) {
+      this._replayRetainedInstructions(scope.retainedInstructions, hooks, context);
+
+      return;
+    }
+
+    // Record arming (Slice 3): capture this scope's normal playback at
+    // renderer-flush granularity. Skipped when the target already holds a
+    // valid recording (the multi-render()/multi-play guard) or the backend
+    // does not implement the capture hooks (dormant fallback). Truthy read:
+    // see retainedInstructions above.
+    const armed = scope.retainedRecordTarget;
+    let recordTarget: RetainedInstructionSet | null = null;
+
+    if (armed && hooks._beginRetainedCapture !== undefined && hooks._endRetainedCapture !== undefined && !armed.isValidFor(backend)) {
+      recordTarget = armed;
+      recordTarget.beginRecording(backend);
+      context.captureTargets.push(recordTarget);
+      hooks._beginRetainedCapture(recordTarget);
+    }
+
+    if (recordTarget === null) {
+      this._playGroupEntries(scope, backend, hooks, context);
+
+      return;
+    }
+
+    let failed = false;
+
+    try {
+      this._playGroupEntries(scope, backend, hooks, context);
+    } catch (error) {
+      failed = true;
+      throw error;
+    } finally {
+      // The backend flushes its pending batch INTO the captures here (the
+      // group's trailing draws), then the recorder leaves the stack.
+      hooks._endRetainedCapture!(recordTarget);
+      context.captureTargets.pop();
+
+      if (failed) {
+        recordTarget.abortRecording();
+      } else {
+        recordTarget.commitRecording();
+      }
+    }
+  }
+
+  private static _playGroupEntries(scope: GroupScope, backend: RenderBackend, hooks: RenderPlanPlaybackHooks, context: RenderPlanPlaybackContext): void {
     const entries = scope.entries;
 
     // Phase 1 — populate the CPU transform buffer for all groups in this scope
@@ -231,12 +342,25 @@ export class RenderPlanPlayer {
           context.activeGroupTransform = scratch;
           hooks._setRenderGroupTransform(scratch);
 
+          // Group-transform markers (Slice 3, S3-D6): active recorders learn
+          // the nested boundary as a LIVE node reference — never a captured
+          // matrix — so replay composes the group matrix of the day. The
+          // transform switch above already flushed the pending batch into the
+          // recorders (hook contract), so no batch straddles the marker.
+          if (context.captureTargets.length > 0) {
+            this._appendToCaptures(context, { kind: RetainedInstructionKind.EnterGroup, node: transformNode });
+          }
+
           try {
             this._playGroup(entry.scope, backend, hooks, context);
           } finally {
             context.groupTransformDepth--;
             context.activeGroupTransform = outer;
             hooks._setRenderGroupTransform(outer);
+
+            if (context.captureTargets.length > 0) {
+              this._appendToCaptures(context, retainedLeaveGroupInstruction);
+            }
           }
         } else {
           this._playGroup(entry.scope, backend, hooks, context);
@@ -266,12 +390,90 @@ export class RenderPlanPlayer {
     }
   }
 
+  /**
+   * Replay a recorded instruction set for a spliced group scope (Slice 3,
+   * S3-D1/S3-D2): O(batches) backend dispatches. Group markers re-compose the
+   * LIVE nested-boundary matrices through the same scratch logic the entry
+   * path uses (camera pan and group moves stay one-matrix-cheap); batches go
+   * to the backend's `_replayRetainedBatch` hook, which resolves all STATE
+   * (pipeline, projection/group uniforms, textures) live and reuses only the
+   * recorded DATA. While an OUTER group records, every replayed instruction
+   * is appended to the active recorders verbatim — same descriptors, same
+   * buffers (S3-D6).
+   */
+  private static _replayRetainedInstructions(set: RetainedInstructionSet, hooks: RenderPlanPlaybackHooks, context: RenderPlanPlaybackContext): void {
+    const instructions = set.instructions;
+    const capturing = context.captureTargets.length > 0;
+    // Restore stack for Enter/LeaveGroup markers (balanced by construction —
+    // the recorder appends them in matched pairs). Shared scratch, non-
+    // reentrant: replayed sets are flat (no nested _playGroup below them).
+    const outerStack = RenderPlanPlayer._replayOuterStack;
+    const outerBase = outerStack.length;
+
+    try {
+      for (let i = 0; i < instructions.length; i++) {
+        // In-bounds: i < length.
+        const instruction = instructions[i]!;
+
+        if (capturing) {
+          this._appendToCaptures(context, instruction);
+        }
+
+        if (instruction.kind === RetainedInstructionKind.Batch) {
+          hooks._replayRetainedBatch?.(instruction);
+        } else if (instruction.kind === RetainedInstructionKind.EnterGroup) {
+          const outer = context.activeGroupTransform;
+          const scratch = (RenderPlanPlayer._groupTransformScratch[context.groupTransformDepth] ??= new Matrix());
+
+          scratch.copy(instruction.node.getGlobalTransform());
+
+          if (outer !== null) {
+            scratch.combine(outer);
+          }
+
+          outerStack.push(outer);
+          context.groupTransformDepth++;
+          context.activeGroupTransform = scratch;
+          hooks._setRenderGroupTransform?.(scratch);
+        } else if (outerStack.length > outerBase) {
+          const outer = outerStack.pop() ?? null;
+
+          context.groupTransformDepth--;
+          context.activeGroupTransform = outer;
+          hooks._setRenderGroupTransform?.(outer);
+        }
+      }
+    } finally {
+      // Unwind any unbalanced markers (only reachable on a mid-replay throw).
+      while (outerStack.length > outerBase) {
+        const outer = outerStack.pop() ?? null;
+
+        context.groupTransformDepth--;
+        context.activeGroupTransform = outer;
+        hooks._setRenderGroupTransform?.(outer);
+      }
+    }
+  }
+
+  private static _appendToCaptures(context: RenderPlanPlaybackContext, instruction: RetainedInstruction): void {
+    const targets = context.captureTargets;
+
+    for (let i = 0; i < targets.length; i++) {
+      // In-bounds: i < length.
+      targets[i]!.append(instruction);
+    }
+  }
+
+  /** Shared marker-restore scratch for {@link _replayRetainedInstructions}. */
+  private static readonly _replayOuterStack: Array<Matrix | null> = [];
+
   private static _createPlaybackContext(): RenderPlanPlaybackContext {
     return {
       passInstructionIndex: 0,
       passGroupIndex: 0,
       activeGroupTransform: null,
       groupTransformDepth: 0,
+      captureTargets: [],
     };
   }
 
