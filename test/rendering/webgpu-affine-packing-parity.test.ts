@@ -130,8 +130,10 @@ describe('shared TransformSlot convention', () => {
 describe('WGSL slot math parity across instanced renderers', () => {
   // The canonical orientation, as WGSL source patterns. `lx` / `ly` are the
   // renderer-specific local-coordinate expressions (pre-escaped for regex).
-  const canonicalWorldX = (lx: string, ly: string): RegExp => new RegExp(String.raw`slot\.m0\.x\s*\*\s*${lx}\s*\+\s*slot\.m0\.y\s*\*\s*${ly}\s*\+\s*slot\.m1\.x`);
-  const canonicalWorldY = (lx: string, ly: string): RegExp => new RegExp(String.raw`slot\.m0\.z\s*\*\s*${lx}\s*\+\s*slot\.m0\.w\s*\*\s*${ly}\s*\+\s*slot\.m1\.y`);
+  const canonicalWorldX = (lx: string, ly: string): RegExp =>
+    new RegExp(String.raw`slot\.m0\.x\s*\*\s*${lx}\s*\+\s*slot\.m0\.y\s*\*\s*${ly}\s*\+\s*slot\.m1\.x`);
+  const canonicalWorldY = (lx: string, ly: string): RegExp =>
+    new RegExp(String.raw`slot\.m0\.z\s*\*\s*${lx}\s*\+\s*slot\.m0\.w\s*\*\s*${ly}\s*\+\s*slot\.m1\.y`);
 
   const cases: ReadonlyArray<{ name: string; source: string; lx: string; ly: string }> = [
     { name: 'sprite', source: spriteShaderSource, lx: 'localX', ly: 'localY' },
