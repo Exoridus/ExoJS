@@ -5,6 +5,7 @@ import { BlendModes } from '#rendering/types';
 
 import { copyMaterialKeyInto, type MaterialKey, RenderEntryKind } from './RenderCommand';
 import type { ScopeEntry } from './RenderScope';
+import { isRetainedFragmentRecordable, RetainedInstructionSet } from './RetainedInstructionSet';
 
 /**
  * A captured draw: replayed verbatim with a fresh frame-local nodeIndex.
@@ -33,6 +34,15 @@ export interface RetainedFragmentGroup {
   zIndex: number;
   preserveDrawOrder: boolean;
   transformNode: RenderNode | null;
+  /**
+   * The inner group's instruction set when it SPLICED during the capture
+   * frame (Slice 3, S3-D6): its scope had no entries, so the outer fragment
+   * must carry the set reference to reproduce the splice at replay. The set
+   * object is per-fragment stable; validity is re-checked per replay, and a
+   * stale set falls back to re-dispatching `transformNode._collect`. `null`
+   * for scopes that collected entries normally.
+   */
+  retainedInstructions: RetainedInstructionSet | null;
   /** Pooled entry list owned by this record, reset and refilled on recapture. */
   readonly entries: RetainedFragmentEntry[];
 }
@@ -97,8 +107,46 @@ export class RetainedGroupFragment {
   private _observedContent = -1;
   private _observedStructure = -1;
 
+  // Instruction-set tier (Slice 3, S3-D1/S3-D3). `_instructions` is a stable
+  // per-fragment singleton (lazily created on first record arming) so
+  // captured references to it — e.g. inside an OUTER group's fragment —
+  // survive re-records; validity is re-checked per collect. Recordability
+  // (S3-D5) is computed lazily per capture and cached.
+  private _instructions: RetainedInstructionSet | null = null;
+  private _recordable = false;
+  private _recordableFor: RenderBackend | null = null;
+
   public get hasCapture(): boolean {
     return this._hasCapture;
+  }
+
+  /** The group's instruction set, or `null` if recording was never armed. */
+  public get instructions(): RetainedInstructionSet | null {
+    return this._instructions;
+  }
+
+  /** The group's instruction set, created on first record arming (Task 5). */
+  public instructionsForRecording(): RetainedInstructionSet {
+    return (this._instructions ??= new RetainedInstructionSet());
+  }
+
+  /**
+   * Whether the active capture satisfies the v1 recordability predicate
+   * (S3-D5) against `backend`'s renderer registry. Computed lazily on first
+   * ask per capture (so backends without record hooks never pay the O(N)
+   * walk) and cached until the next capture.
+   */
+  public isRecordable(backend: RenderBackend): boolean {
+    if (!this._hasCapture) {
+      return false;
+    }
+
+    if (this._recordableFor !== backend) {
+      this._recordable = isRetainedFragmentRecordable(this._entries, backend);
+      this._recordableFor = backend;
+    }
+
+    return this._recordable;
   }
 
   /** `true` while capture is thrash-suppressed (F11b). */
@@ -192,6 +240,11 @@ export class RetainedGroupFragment {
     this._backend = backend;
     this._hasCapture = true;
     this._replayedSinceCapture = false;
+    // The subtree changed: any recorded batches and the cached recordability
+    // verdict are stale. The instruction set keeps its GPU bundle (grow-only,
+    // S3-D3) and re-records from the next clean playback.
+    this._recordableFor = null;
+    this._instructions?.invalidate();
   }
 
   public invalidate(): void {
@@ -200,6 +253,17 @@ export class RetainedGroupFragment {
     this._replayedSinceCapture = false;
     this._suppressed = false;
     this._wastedCaptures = 0;
+    this._recordableFor = null;
+    this._instructions?.invalidate();
+  }
+
+  /**
+   * Release the fragment's retained GPU resources along with the capture
+   * (container destroy, deep-barrier disengage, S3-D3 lifecycle).
+   */
+  public dispose(): void {
+    this.invalidate();
+    this._instructions?.dispose();
   }
 
   private _snapshotInto(target: RetainedFragmentEntry[], entries: readonly ScopeEntry[]): void {
@@ -224,6 +288,8 @@ export class RetainedGroupFragment {
         record.zIndex = entry.zIndex;
         record.preserveDrawOrder = entry.scope.preserveDrawOrder;
         record.transformNode = entry.scope.transformNode;
+        // ?? null: hand-built test scopes may omit the Slice-3 field.
+        record.retainedInstructions = entry.scope.retainedInstructions ?? null;
         record.entries.length = 0;
         this._snapshotInto(record.entries, entry.scope.entries);
         target.push(record);
@@ -279,6 +345,7 @@ export class RetainedGroupFragment {
       zIndex: 0,
       preserveDrawOrder: false,
       transformNode: null,
+      retainedInstructions: null,
       entries: [],
     };
 

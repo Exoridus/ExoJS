@@ -131,12 +131,33 @@ export class RetainedContainer extends Container {
     }
 
     if (this._fragment.isClean(this._contentRevision, this._structureRevision, builder.backend)) {
+      // Fast tier (Slice 3, S3-D2): a valid recorded instruction set splices
+      // as an EMPTY scope — the player replays O(batches), the optimizer sees
+      // nothing. Falls through the ladder: instruction replay -> entry replay
+      // (Slice 2) -> plain collect; every gate failure degrades to today's
+      // correct behavior, never to wrong pixels.
+      const set = this._fragment.instructions;
+
+      if (set !== null && builder._markCurrentScopeRetained(set)) {
+        this._fragment.markReplayed();
+
+        if (__DEV__) {
+          this._trackRetention(false);
+        }
+
+        return;
+      }
+
       // The whole-range splice (spec §4.2): no walk, no cull, no material
       // keys. The key deliberately omits View.updateId (group-level culling
       // makes the fragment view-independent — the camera-pan win) and the
       // container's own transform (a move only changes the group matrix).
       builder._replayRetainedFragment(this._fragment.entries);
       this._fragment.markReplayed();
+      // Record-on-first-clean-frame (S3-D8 composition): this clean playback
+      // is the recording source; the player captures it if the backend
+      // implements the hooks and the fragment is recordable (S3-D5).
+      builder._armRetainedRecord(this._fragment);
 
       if (__DEV__) {
         this._trackRetention(false);
@@ -170,7 +191,8 @@ export class RetainedContainer extends Container {
   }
 
   public override destroy(): void {
-    this._fragment.invalidate();
+    // dispose(): also releases the retained GPU bundle (Slice 3, S3-D3).
+    this._fragment.dispose();
 
     super.destroy();
   }
@@ -248,9 +270,10 @@ export class RetainedContainer extends Container {
 
     this._boundaryDisengaged = disengage;
     // Spaces flip: descendants recombine lazily through the live boundary
-    // getter; the fragment (captured in the other space) and the aggregate
-    // bounds must drop immediately.
-    this._fragment.invalidate();
+    // getter; the fragment (captured in the other space), its retained GPU
+    // bundle (S3-D3: disengage frees resources), and the aggregate bounds
+    // must drop immediately.
+    this._fragment.dispose();
     this._invalidateBoundsFlags();
 
     if (__DEV__ && disengage && !this._deepBarrierWarned) {

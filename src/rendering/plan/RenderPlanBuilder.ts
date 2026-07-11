@@ -18,8 +18,23 @@ import {
   type GroupScopeEntry,
   type ScopeEntry,
 } from './RenderScope';
-import type { RetainedFragmentEntry, RetainedFragmentGroup } from './RetainedGroupFragment';
+import type { RetainedFragmentEntry, RetainedFragmentGroup, RetainedGroupFragment } from './RetainedGroupFragment';
+import type { RetainedInstructionSet } from './RetainedInstructionSet';
 import type { RetainedDrawData } from './RetainedPlanCache';
+
+/**
+ * Collect-time view of the backend's retained-batch hooks (Track B Slice 3).
+ * `_replayRetainedBatch` gates the splice tier, the capture pair gates record
+ * arming, and `_validateRetainedInstructionSet` is the backend's optional
+ * extra collect-time validation (e.g. WebGPU texture-view identity, S3-D3) on
+ * top of the plan-level generation check.
+ */
+interface RetainedBackendHooks {
+  _beginRetainedCapture?(set: RetainedInstructionSet): void;
+  _endRetainedCapture?(set: RetainedInstructionSet): void;
+  _replayRetainedBatch?(batch: unknown): void;
+  _validateRetainedInstructionSet?(set: RetainedInstructionSet): boolean;
+}
 
 interface MutableGroupScope extends GroupScope {
   _nextSeq: number;
@@ -347,6 +362,63 @@ export class RenderPlanBuilder {
   }
 
   /**
+   * @internal — instruction splice (Track B Slice 3, S3-D2): when the current
+   * scope belongs to a clean RetainedContainer whose fragment holds a valid
+   * recorded instruction set for this backend, mark the scope and push NO
+   * entries. The plan player replays the recorded batches in O(batches);
+   * the optimizer sees an empty scope (O(1)). Returns `false` — caller falls
+   * back to entry replay — when the backend does not implement the replay
+   * hook, the set is stale (backend identity / bundle generation), or the
+   * backend's own collect-time validation rejects it.
+   */
+  public _markCurrentScopeRetained(set: RetainedInstructionSet): boolean {
+    if (!this._validateRetainedSet(set)) {
+      return false;
+    }
+
+    this._currentScope().retainedInstructions = set;
+
+    return true;
+  }
+
+  /**
+   * @internal — arm instruction recording for the current scope (Slice 3):
+   * called on a CLEAN entry-replay frame (record-on-first-clean-frame
+   * policy), so the record cost is never wasted on a frame whose capture is
+   * about to be invalidated. No-op when the backend lacks the capture hooks
+   * (dormant fallback — shipped behavior unchanged) or the fragment fails the
+   * v1 recordability predicate (S3-D5).
+   */
+  public _armRetainedRecord(fragment: RetainedGroupFragment): void {
+    const hooks = this.backend as RenderBackend & RetainedBackendHooks;
+
+    if (typeof hooks._beginRetainedCapture !== 'function' || typeof hooks._endRetainedCapture !== 'function' || typeof hooks._replayRetainedBatch !== 'function') {
+      return;
+    }
+
+    if (!fragment.isRecordable(this.backend)) {
+      return;
+    }
+
+    this._currentScope().retainedRecordTarget = fragment.instructionsForRecording();
+  }
+
+  /** Collect-time replay eligibility (S3-D3) for `set` on this backend. */
+  private _validateRetainedSet(set: RetainedInstructionSet): boolean {
+    const hooks = this.backend as RenderBackend & RetainedBackendHooks;
+
+    if (typeof hooks._replayRetainedBatch !== 'function') {
+      return false;
+    }
+
+    if (!set.isValidFor(this.backend)) {
+      return false;
+    }
+
+    return hooks._validateRetainedInstructionSet?.(set) !== false;
+  }
+
+  /**
    * @internal — replay a captured fragment into the current scope: the
    * whole-range splice (spec §4.2). No scene-graph walk, no cull, no bounds,
    * no material keys — draws re-acquire pooled commands with fresh
@@ -367,6 +439,27 @@ export class RenderPlanBuilder {
   }
 
   private _replayRetainedGroup(fragment: RetainedFragmentGroup): void {
+    // A nested group that SPLICED its instruction set during the capture
+    // frame was recorded with EMPTY entries + the set reference (Slice 3,
+    // S3-D6). If the set is still replay-eligible, reproduce the splice; if
+    // it went stale (bundle generation, backend validation), re-dispatch the
+    // live node so the inner container rebuilds from its own fragment —
+    // never replay the empty scope as-is.
+    let innerSet = fragment.retainedInstructions;
+
+    if (innerSet !== null && !this._validateRetainedSet(innerSet)) {
+      if (fragment.transformNode !== null) {
+        fragment.transformNode._collect(this, fragment.seq);
+
+        return;
+      }
+
+      // Unreachable by construction (only transform-group boundaries splice);
+      // degrade to the captured (empty) entries rather than replaying stale
+      // instructions.
+      innerSet = null;
+    }
+
     // Mirror _replayRetainedDraw's scope bookkeeping for the group entry's
     // verbatim seq/zIndex (see the invariants documented there).
     const scope = this._currentScope();
@@ -384,6 +477,13 @@ export class RenderPlanBuilder {
     const groupScope = this._acquireGroupScope(fragment.preserveDrawOrder);
 
     groupScope.transformNode = fragment.transformNode;
+
+    if (innerSet !== null) {
+      groupScope.retainedInstructions = innerSet;
+      this._pushGroupEntry(fragment.seq, fragment.zIndex, groupScope);
+
+      return; // empty scope: the player replays the instructions
+    }
 
     this._pushGroupEntry(fragment.seq, fragment.zIndex, groupScope);
     this._scopeStack.push(groupScope);
@@ -415,6 +515,8 @@ export class RenderPlanBuilder {
       hasMixedZ: false,
       preserveDrawOrder: false,
       transformNode: null,
+      retainedInstructions: null,
+      retainedRecordTarget: null,
       _nextSeq: 0,
       firstZ: null,
     };
@@ -426,6 +528,8 @@ export class RenderPlanBuilder {
     scope.hasMixedZ = false;
     scope.preserveDrawOrder = preserveDrawOrder;
     scope.transformNode = null;
+    scope.retainedInstructions = null;
+    scope.retainedRecordTarget = null;
     scope._nextSeq = 0;
     scope.firstZ = null;
 
