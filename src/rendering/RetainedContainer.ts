@@ -38,6 +38,12 @@ const retainedDiagnosticThreshold = 108;
  * then renders as an exact plain {@link Container} (correct output, no
  * retention) and warns once in dev builds.
  *
+ * World-space queries against nodes inside the group (picking, spatial
+ * audio, physics, cross-group math) go through
+ * {@link SceneNode.getWorldTransform}, which composes through the boundary
+ * and returns the true world matrix.
+ *
+ * @advanced
  * @example
  * ```ts
  * const world = new RetainedContainer(); // large static tilemap decor

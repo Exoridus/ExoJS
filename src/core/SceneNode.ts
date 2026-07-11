@@ -444,6 +444,14 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
     return this._localBounds;
   }
 
+  /**
+   * Axis-aligned bounding box of this node in its GLOBAL-transform space.
+   * That is world space for ordinary nodes, but GROUP-LOCAL space for nodes
+   * inside an engaged {@link RetainedContainer} transform group (the group
+   * matrix is applied on the GPU, not here) — this is deliberate and matches
+   * the rendering convention. For a true world-space extent of such a node,
+   * lift this rect by the group's {@link getWorldTransform} matrix.
+   */
   public getBounds(): Rectangle {
     this.getGlobalTransform(); // ensures this node's own _globalTransformVersion is current
 
