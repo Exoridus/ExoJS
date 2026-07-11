@@ -1,4 +1,4 @@
-import type { SceneNode } from '@codexo/exojs';
+import { Container, Drawable, type SceneNode } from '@codexo/exojs';
 import { describe, expect, it } from 'vitest';
 
 import { createAabb, expandAabb } from '../src/Aabb';
@@ -500,5 +500,106 @@ describe('PhysicsWorld.attach convenience', () => {
     expect(collider.restitution).toBeCloseTo(0.6, 9);
     expect(collider.isSensor).toBe(true);
     expect(collider.filter.category).toBe(0x0002);
+  });
+});
+
+describe('PhysicsWorld.attach: defaults to the node\'s world position (P2f)', () => {
+  it('places the body at the node\'s current world position when no position option is given', () => {
+    const world = new PhysicsWorld();
+    const node = new Drawable();
+
+    node.setPosition(100, 50);
+
+    const body = world.attach(node, { shape: new CircleShape(5) });
+
+    expect(body.x).toBe(100);
+    expect(body.y).toBe(50);
+
+    node.destroy();
+  });
+
+  it('respects an explicit position option over the node\'s world position', () => {
+    const world = new PhysicsWorld();
+    const node = new Drawable();
+
+    node.setPosition(100, 50);
+
+    const body = world.attach(node, { position: { x: 5, y: 9 }, shape: new CircleShape(5) });
+
+    expect(body.x).toBe(5);
+    expect(body.y).toBe(9);
+
+    node.destroy();
+  });
+
+  it('uses the WORLD position (not the local position) for a node nested under a transformed parent', () => {
+    const world = new PhysicsWorld();
+    const parent = new Container();
+    const node = new Drawable();
+
+    parent.setPosition(90, 40);
+    node.setPosition(10, 10);
+    parent.addChild(node);
+
+    const body = world.attach(node, { shape: new CircleShape(5) });
+
+    expect(body.x).toBe(100);
+    expect(body.y).toBe(50);
+
+    parent.destroy();
+  });
+
+  it('defaults the body angle to the node\'s current world rotation when no angle option is given', () => {
+    const world = new PhysicsWorld();
+    const node = new Drawable();
+
+    node.setRotation(90); // degrees
+
+    const body = world.attach(node, { shape: new CircleShape(5) });
+
+    expect(body.angle).toBeCloseTo(Math.PI / 2, 6);
+
+    node.destroy();
+  });
+
+  it('respects an explicit angle option over the node\'s world rotation', () => {
+    const world = new PhysicsWorld();
+    const node = new Drawable();
+
+    node.setRotation(90);
+
+    const body = world.attach(node, { angle: 0, shape: new CircleShape(5) });
+
+    expect(body.angle).toBe(0);
+
+    node.destroy();
+  });
+
+  it('composes WORLD rotation through a rotated parent (not just the node\'s own local rotation)', () => {
+    const world = new PhysicsWorld();
+    const parent = new Container();
+    const node = new Drawable();
+
+    parent.setRotation(30);
+    node.setRotation(15);
+    parent.addChild(node);
+
+    const body = world.attach(node, { shape: new CircleShape(5) });
+
+    expect(body.angle).toBeCloseTo((45 * Math.PI) / 180, 6);
+
+    parent.destroy();
+  });
+
+  it('falls back to (0, 0) for a duck-typed node without getWorldTransform', () => {
+    const world = new PhysicsWorld();
+    const node = fakeNode();
+
+    node.setPosition(123, 456); // ignored: no getWorldTransform to read from
+
+    const body = world.attach(node as unknown as SceneNode, { shape: new CircleShape(5) });
+
+    expect(body.x).toBe(0);
+    expect(body.y).toBe(0);
   });
 });

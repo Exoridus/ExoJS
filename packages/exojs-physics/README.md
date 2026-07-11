@@ -79,6 +79,21 @@ guarantees across builds or machines** (floating-point reality). The package is
 single-threaded and 2D only — no workers, GPU, 3D, soft bodies, fluids or
 vehicles.
 
+`step()` owns its own fixed-timestep accumulator, so you can drive it from
+either the engine's `Scene.fixedUpdate` (already a constant-rate hook — the
+idiomatic choice) or straight from `Scene.update`'s raw, variable per-frame
+delta; either way `step` converts whatever it's given into the right number of
+fixed sub-steps. See the "Stepping the world" section of the
+[physics guide](https://exoridus.github.io/ExoJS/en/guide/physics/physics-basics/)
+for the details and an interpolation note (`world.timeStepper.alpha`).
+
+**Broad-phase scale.** Collision detection uses a stateless `O(n log n)`
+sort-and-sweep over every live collider each fixed step — no persistent
+incremental structure or spatial hash. Fine up to the low thousands of
+colliders; very high-N worlds (tens of thousands) will spend a growing share
+of the step here. There is currently no built-in spatial broadphase for that
+regime.
+
 This release contains **no dynamics solver**: bodies move only via
 `setTransform`. The narrow phase already produces full contact manifolds (normal,
 1–2 points, stable feature ids) so the solver can be added without changing the

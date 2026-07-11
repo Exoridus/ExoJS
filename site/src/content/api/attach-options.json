@@ -51,7 +51,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Initial rotation (radians) of the body. Default 0."
+          "description": "Initial rotation (radians) of the body. Default the node's current WORLD rotation at attach time."
         },
         {
           "name": "density",
@@ -263,7 +263,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Initial world position of the body. Default the node's position is left untouched and (0, 0) is used."
+          "description": "Initial world position of the body. Default the node's current WORLD position (SceneNode.getWorldTransform) at attach time."
         },
         {
           "name": "restitution",
