@@ -45,14 +45,6 @@ export interface WebGpuRetainedBatchPayload {
   readonly recordedViews: readonly GPUTextureView[];
 }
 
-/**
- * A recorded batch instruction whose `generation` the backend stamps at
- * capture end (after the bundle's grow-only buffers are finalized — growth
- * bumps the generation, so stamping earlier would self-invalidate the set).
- * @internal
- */
-export type WebGpuMutableRetainedBatchInstruction = Omit<RetainedBatchInstruction, 'generation'> & { generation: number };
-
 /** One sprite flush staged during a capture window, finalized at capture end. @internal */
 export interface WebGpuStagedRetainedBatch {
   /** CPU copy of the packed instance bytes (word 8 rebased at capture end). */
@@ -63,7 +55,13 @@ export interface WebGpuStagedRetainedBatch {
   readonly minNodeIndex: number;
   /** Highest frame-global transform row referenced by the bytes. */
   readonly maxNodeIndex: number;
-  readonly instruction: WebGpuMutableRetainedBatchInstruction;
+  /**
+   * Created with `retainedGenerationUnstamped` at flush time and stamped via
+   * `stampRetainedBatchGeneration` at capture end, after the bundle's
+   * grow-only buffers are finalized — growth bumps the generation, so
+   * stamping earlier would self-invalidate the set.
+   */
+  readonly instruction: RetainedBatchInstruction;
 }
 
 /**

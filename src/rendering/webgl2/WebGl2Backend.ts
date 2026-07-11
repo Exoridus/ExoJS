@@ -15,8 +15,10 @@ import type { ScopeEntry } from '#rendering/plan/RenderScope';
 import {
   type RetainedBatchCapableRenderer,
   type RetainedBatchInstruction,
+  retainedGenerationUnstamped,
   RetainedInstructionKind,
   type RetainedInstructionSet,
+  stampRetainedBatchGeneration,
 } from '#rendering/plan/RetainedInstructionSet';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
@@ -141,6 +143,13 @@ interface RetainedCaptureFrame {
   readonly set: RetainedInstructionSet;
   readonly bundle: WebGl2RetainedGroupResources;
   readonly payloads: WebGl2RetainedBatchPayload[];
+  /**
+   * This frame's own batch instructions, created with the unstamped
+   * generation sentinel and stamped at capture end via the official
+   * plan-layer seam (after the bundle finalize; a capture that never
+   * finalizes — context loss — leaves them unstamped and the set invalid).
+   */
+  readonly instructions: RetainedBatchInstruction[];
 }
 
 // Scratch texture unit used to sync a RenderTexture target's color texture
@@ -1091,7 +1100,7 @@ export class WebGl2Backend implements RenderBackend {
     }
 
     bundle._beginCapture();
-    this._retainedCaptures.push({ set, bundle, payloads: [] });
+    this._retainedCaptures.push({ set, bundle, payloads: [], instructions: [] });
   }
 
   /**
@@ -1159,6 +1168,14 @@ export class WebGl2Backend implements RenderBackend {
       payload.vao = frame.bundle._acquireVao(i);
       payload.replayer._configureRetainedVao(payload);
     }
+
+    // Resources are final: stamp this frame's instructions with the bundle's
+    // generation (official plan-layer seam). Skipped by the early returns
+    // above (context loss, empty range) — unstamped instructions keep the
+    // set invalid, which is exactly the wanted failure mode there.
+    for (const instruction of frame.instructions) {
+      stampRetainedBatchGeneration(instruction);
+    }
   }
 
   /**
@@ -1205,14 +1222,21 @@ export class WebGl2Backend implements RenderBackend {
 
     innermost.payloads.push(payload);
 
+    // Generation is stamped at capture end (official plan-layer seam). On
+    // WebGL2 the generation is stable for the whole capture (_beginCapture
+    // bumps once, growth is CPU-staged), so end-stamping yields the same
+    // value — but a capture that never finalizes (context loss) now leaves
+    // the sentinel behind and the set can never validate.
     const instruction: RetainedBatchInstruction = {
       kind: RetainedInstructionKind.Batch,
       bundle: innermost.bundle,
-      generation: innermost.bundle.generation,
+      generation: retainedGenerationUnstamped,
       instanceCount,
       drawCalls: 1,
       payload,
     };
+
+    innermost.instructions.push(instruction);
 
     for (const frameEntry of captures) {
       frameEntry.set.append(instruction);

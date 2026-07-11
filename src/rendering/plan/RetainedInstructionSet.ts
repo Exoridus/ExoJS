@@ -85,6 +85,34 @@ export type RetainedInstruction = RetainedBatchInstruction | RetainedEnterGroupI
 export const retainedLeaveGroupInstruction: RetainedLeaveGroupInstruction = Object.freeze({ kind: RetainedInstructionKind.LeaveGroup });
 
 /**
+ * Sentinel for {@link RetainedBatchInstruction.generation} on a batch whose
+ * capture has not been finalized yet. Out of the generation domain (bundle
+ * generations start at 1 and only grow), so a set whose capture never reached
+ * finalization — device loss mid-capture, an aborted playback — can never
+ * pass {@link RetainedInstructionSet.isValidFor}.
+ * @internal
+ */
+export const retainedGenerationUnstamped = -1;
+
+/**
+ * Stamp `instruction.generation` with its bundle's CURRENT generation — the
+ * one sanctioned mutation point of the otherwise readonly field (S3-D3).
+ *
+ * Why stamping exists: group GPU resources are grow-only and (re)created at
+ * CAPTURE END (finalization), and every recreation bumps the bundle
+ * generation. A batch instruction created at flush time therefore cannot know
+ * its final generation yet — backends create it with
+ * {@link retainedGenerationUnstamped} and call this once per recorded batch
+ * after the bundle's resources are final. Deliberately per-instruction:
+ * poison instructions (a forced generation mismatch that permanently vetoes a
+ * set) are simply never stamped.
+ * @internal
+ */
+export const stampRetainedBatchGeneration = (instruction: RetainedBatchInstruction): void => {
+  (instruction as { generation: number }).generation = instruction.bundle.generation;
+};
+
+/**
  * The recorded flush-level batch list for one retained group (Track B
  * Slice 3, S3-D1/S3-D3): what the group's playback produced at renderer-flush
  * granularity, replayable in O(batches) instead of O(nodes). Owned by the

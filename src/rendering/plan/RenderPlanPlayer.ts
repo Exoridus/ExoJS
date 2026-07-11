@@ -68,6 +68,26 @@ interface RenderPlanPlaybackContext {
  * - `_setRenderGroupTransform` MUST flush the pending batch while capturing
  *   (both shipped backends already treat a group as a flush boundary), so
  *   recorded batches never straddle an Enter/LeaveGroup marker.
+ *
+ * Ordering guarantee the player provides in return: every retained scope
+ * (capture OR splice) is entered exclusively through a Group entry whose
+ * `transformNode` is the retained boundary node — the collect switch only
+ * marks/arms scopes of engaged RetainedContainers, and those are transform-
+ * group boundaries by construction. The player therefore ALWAYS calls
+ * `_setRenderGroupTransform` immediately before `_beginRetainedCapture` fires
+ * or the first `_replayRetainedBatch` of a spliced scope runs (and again on
+ * scope exit). Because that switch is the flush boundary, a backend's pending
+ * LIVE batch is guaranteed to have drained before any replay instruction
+ * executes — backends may rely on this ordering invariant (the WebGL2 half
+ * does, for its pending-live-batch vs. replay-instruction ordering); the
+ * flush inside `_replayRetainedBatch` is belt-and-braces only.
+ *
+ * Generation stamping: batch instructions are created with
+ * {@link retainedGenerationUnstamped} and stamped via
+ * {@link stampRetainedBatchGeneration} at capture end, once the bundle's
+ * grow-only resources are final (growth during finalization bumps the
+ * generation). A capture that never finalizes leaves the sentinel behind and
+ * the set can never validate.
  */
 interface RenderPlanPlaybackHooks {
   _beginDrawPlan?(nodeCount: number): void;

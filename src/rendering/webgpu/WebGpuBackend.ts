@@ -14,7 +14,13 @@ import type { Mesh } from '#rendering/mesh/Mesh';
 import { resolveUploadTransform } from '#rendering/pixelSnap';
 import { type DrawCommand, drawCommandUsesSharedTransform, RenderEntryKind } from '#rendering/plan/RenderCommand';
 import type { ScopeEntry } from '#rendering/plan/RenderScope';
-import { type RetainedBatchInstruction, RetainedInstructionKind, type RetainedInstructionSet } from '#rendering/plan/RetainedInstructionSet';
+import {
+  type RetainedBatchInstruction,
+  retainedGenerationUnstamped,
+  RetainedInstructionKind,
+  type RetainedInstructionSet,
+  stampRetainedBatchGeneration,
+} from '#rendering/plan/RetainedInstructionSet';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import type { Renderer } from '#rendering/Renderer';
@@ -33,13 +39,7 @@ import { WebGpuBackdropBlendCompositor } from './WebGpuBackdropBlendCompositor';
 import { WebGpuMaskCompositor } from './WebGpuMaskCompositor';
 import { WebGpuMeshRenderer } from './WebGpuMeshRenderer';
 import { WebGpuPassCoordinator } from './WebGpuPassCoordinator';
-import {
-  retainedTransformSlotBytes,
-  type WebGpuMutableRetainedBatchInstruction,
-  type WebGpuRetainedBatchPayload,
-  WebGpuRetainedCaptureFrame,
-  WebGpuRetainedGroupBundle,
-} from './WebGpuRetainedGroupResources';
+import { retainedTransformSlotBytes, type WebGpuRetainedBatchPayload, WebGpuRetainedCaptureFrame, WebGpuRetainedGroupBundle } from './WebGpuRetainedGroupResources';
 import type { WebGpuSpriteRenderer } from './WebGpuSpriteRenderer';
 import { WebGpuTransformStorage } from './WebGpuTransformStorage';
 
@@ -1297,12 +1297,13 @@ export class WebGpuBackend implements RenderBackend {
       textures: textureList,
       recordedViews,
     };
-    // Generation is stamped at capture end (post-growth); the -1 sentinel
-    // keeps the set invalid if finalization never runs (device loss mid-capture).
-    const instruction: WebGpuMutableRetainedBatchInstruction = {
+    // Generation is stamped at capture end (post-growth, official plan-layer
+    // seam); the sentinel keeps the set invalid if finalization never runs
+    // (device loss mid-capture).
+    const instruction: RetainedBatchInstruction = {
       kind: RetainedInstructionKind.Batch,
       bundle: owner.bundle,
-      generation: -1,
+      generation: retainedGenerationUnstamped,
       instanceCount,
       drawCalls: 1,
       payload,
@@ -1380,7 +1381,7 @@ export class WebGpuBackend implements RenderBackend {
       }
 
       device.queue.writeBuffer(bundle.instanceBuffer!, batch.byteOffset, batch.bytes.buffer, batch.bytes.byteOffset, batch.bytes.byteLength);
-      batch.instruction.generation = bundle.generation;
+      stampRetainedBatchGeneration(batch.instruction);
     }
 
     // Copy the group's transform rows [base, base + rowCount) — written by

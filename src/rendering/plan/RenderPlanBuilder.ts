@@ -28,6 +28,24 @@ import type { RetainedDrawData } from './RetainedPlanCache';
  * arming, and `_validateRetainedInstructionSet` is the backend's optional
  * extra collect-time validation (e.g. WebGPU texture-view identity, S3-D3) on
  * top of the plan-level generation check.
+ *
+ * `_validateRetainedInstructionSet` failure contract — the backend chooses
+ * between two sanctioned failure modes. Either way the splice is refused and
+ * the frame takes the (correct) entry-replay tier; what differs is whether
+ * the player re-records, and that is governed solely by the PLAN-level key
+ * (`set.isValidFor`, the record-once guard):
+ *
+ * - **Drop & re-record (same frame):** call `set.invalidate()` AND return
+ *   `false`. The plan-level key stops validating, so this same clean frame
+ *   entry-replays, re-arms recording, and the player re-records — one frame,
+ *   no tier loss. Use when the recording merely went stale against live GPU
+ *   state (WebGPU does this on texture-view recreate/resize).
+ * - **Persistent veto (no re-record):** return `false` WITHOUT invalidating.
+ *   While the set still validates plan-level (committed recording, matching
+ *   generations), the record-once guard keeps skipping re-capture — the
+ *   group stays on entry replay every frame without record churn. Use for
+ *   sets that would fail again identically (WebGPU's rejected/poisoned
+ *   sets: re-recording would just re-poison).
  */
 interface RetainedBackendHooks {
   _beginRetainedCapture?(set: RetainedInstructionSet): void;

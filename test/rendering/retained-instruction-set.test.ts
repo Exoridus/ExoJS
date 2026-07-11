@@ -10,9 +10,11 @@ import type { GroupScope, GroupScopeEntry } from '#rendering/plan/RenderScope';
 import type { RetainedGroupFragment } from '#rendering/plan/RetainedGroupFragment';
 import {
   type RetainedBatchInstruction,
+  retainedGenerationUnstamped,
   RetainedInstructionKind,
   RetainedInstructionSet,
   retainedLeaveGroupInstruction,
+  stampRetainedBatchGeneration,
 } from '#rendering/plan/RetainedInstructionSet';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
@@ -322,6 +324,47 @@ describe('RetainedInstructionSet: recording lifecycle and validity (S3-D3)', () 
 
     backendA.destroy();
     backendB.destroy();
+  });
+
+  test('generation stamping seam: unstamped instructions never validate; stampRetainedBatchGeneration at capture end makes them live', () => {
+    const backend = createTestBackend();
+    const set = new RetainedInstructionSet();
+    const bundle = { generation: 1 };
+
+    // A backend whose bundle generation moves during capture finalization
+    // (grow-only buffers are (re)created at capture end) records with the
+    // unstamped sentinel...
+    const instruction = makeBatch(bundle, retainedGenerationUnstamped);
+
+    set.beginRecording(backend);
+    set.append(instruction);
+    set.commitRecording();
+
+    // ...so a capture whose finalize never ran (device loss mid-capture) can
+    // never validate...
+    expect(set.isValidFor(backend)).toBe(false);
+
+    // ...even if the bundle generation were somehow -1-adjacent; the sentinel
+    // is out of the generation domain (generations start at 1).
+    bundle.generation = 2; // growth during finalize
+
+    stampRetainedBatchGeneration(instruction);
+
+    expect(instruction.generation).toBe(2); // the FINAL generation, post-growth
+    expect(set.isValidFor(backend)).toBe(true);
+
+    // Stamping is per-instruction by design: a poison instruction (forced
+    // generation mismatch) is simply never stamped and keeps its veto.
+    const poison = makeBatch(bundle, bundle.generation - 1);
+
+    set.beginRecording(backend);
+    set.append(makeBatch(bundle));
+    set.append(poison);
+    set.commitRecording();
+
+    expect(set.isValidFor(backend)).toBe(false);
+
+    backend.destroy();
   });
 
   test('a stale bundle generation invalidates the set (S3-D6 belt-and-braces)', () => {
