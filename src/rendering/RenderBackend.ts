@@ -1,4 +1,5 @@
 import type { Color } from '#core/Color';
+import type { Signal } from '#core/Signal';
 import type { Matrix } from '#math/Matrix';
 import type { Rectangle } from '#math/Rectangle';
 import type { Geometry } from '#rendering/geometry/Geometry';
@@ -11,6 +12,7 @@ import type { BackendRenderPass } from './BackendRenderPass';
 import type { Drawable } from './Drawable';
 import type { RenderBackendType } from './RenderBackendType';
 import type { RendererRegistry } from './RendererRegistry';
+import type { RenderError } from './RenderError';
 import type { RenderStats } from './RenderStats';
 import type { RenderTarget } from './RenderTarget';
 import type { BlendModes } from './types';
@@ -42,6 +44,15 @@ export interface RenderBackend {
    * next frame. Both backends initialise it from `app.options.clearColor`.
    */
   readonly clearColor: Color;
+
+  /**
+   * Dispatched when the backend detects a GPU error that does not surface as a
+   * synchronous exception — WGSL compilation errors, WebGPU uncaptured
+   * validation/OOM/internal errors. Synchronous failures (WebGL2 shader
+   * compile/link) throw {@link RenderError} from `flush()` instead and are
+   * caught by the Application frame guard. Deduplicated per unique message.
+   */
+  readonly onRenderError: Signal<[RenderError]>;
 
   initialize(): Promise<this>;
   resetStats(): this;

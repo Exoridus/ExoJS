@@ -13,6 +13,7 @@ import type { PointLike } from '#math/PointLike';
 import { Random } from '#math/Random';
 import { buildCoreRendererBindings } from '#rendering/coreRendererBindings';
 import type { RenderBackend } from '#rendering/RenderBackend';
+import { RenderError, type RenderErrorCode } from '#rendering/RenderError';
 import { type CaptureOptions, RenderingContext } from '#rendering/RenderingContext';
 import { type RenderNode } from '#rendering/RenderNode';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
@@ -26,6 +27,7 @@ import { Capabilities } from './capabilities';
 import { Clock } from './Clock';
 import { Color } from './Color';
 import { assert, invariant } from './dev';
+import { showDevErrorOverlay } from './devErrorOverlay';
 import { FixedTimestep } from './FixedTimestep';
 import { computeLetterboxLayout } from './letterbox';
 import { hello, logger } from './logging';
@@ -152,11 +154,28 @@ export interface AutoBackendConfig {
 
 export type BackendConfig = AutoBackendConfig | WebGl2BackendConfig | WebGpuBackendConfig;
 
+/**
+ * One entry of the bounded {@link Application.recentErrors} ring buffer —
+ * a JSON-friendly snapshot of an engine error (feeds future debug dumps).
+ */
+export interface RecentErrorEntry {
+  /** `Date.now()` at the moment the error was recorded. */
+  readonly time: number;
+  readonly message: string;
+  /** Machine-readable failure class — present for {@link RenderError}s. */
+  readonly code?: RenderErrorCode;
+  readonly stack?: string;
+}
+
 const maxDeltaMs = 100;
 /** Default fixed-timestep size in milliseconds (60 Hz). */
 const defaultFixedStepMs = 1000 / 60;
 /** Max fixed steps run in one frame — the spiral-of-death guard. */
 const maxFixedSteps = 5;
+/** Consecutive failing frames tolerated before the frame guard halts the loop. */
+const maxConsecutiveFrameErrors = 3;
+/** Bounded size of the {@link Application.recentErrors} ring buffer. */
+const maxRecentErrors = 20;
 
 // User Timing mark/measure names for the per-frame loop (dev-only, see `update()`).
 // Constant strings so the Performance panel groups every frame's entries
@@ -276,7 +295,21 @@ export class Application {
   public readonly onVisibilityChange = new Signal<[visible: boolean]>();
   public readonly onBackendLost = new Signal();
   public readonly onBackendRestored = new Signal();
-  /** Dispatched when an unhandled error occurs in scene lifecycle. */
+  /**
+   * Dispatched for every engine error: an exception thrown by any part of the
+   * per-frame body (systems tick, fixed steps, scene update/draw,
+   * {@link Application.onFrame} subscribers, backend flush — including
+   * synchronous WebGL2 shader compile/link failures, which surface as
+   * {@link RenderError}s), an asynchronous GPU error reported by the backend
+   * ({@link RenderBackend.onRenderError} — WGSL compilation errors, WebGPU
+   * uncaptured validation/OOM/internal errors), or a scene-unload failure in
+   * {@link Application.stop}.
+   *
+   * The frame guard keeps the loop alive through intermittent failures and
+   * halts it (status `Stopped`) after 3 consecutive failing frames. Narrow
+   * with `error instanceof RenderError` for structured GPU failure details;
+   * see {@link Application.recentErrors} for the bounded error history.
+   */
   public readonly onError = new Signal<[error: Error]>();
   public pauseOnHidden = false;
 
@@ -302,6 +335,8 @@ export class Application {
   private _capabilities: Capabilities | null = null;
   private _documentVisible = true;
   private _cursor = 'default';
+  private _consecutiveFrameErrors = 0;
+  private readonly _recentErrors: RecentErrorEntry[] = [];
   private readonly _visibilityChangeHandler = this._onDocumentVisibilityChange.bind(this);
   private _resizeObserver: ResizeObserver | null = null;
   private _sizingMode: CanvasSizingMode = 'fixed';
@@ -446,6 +481,15 @@ export class Application {
 
   public get frameCount(): number {
     return this._frameCount;
+  }
+
+  /**
+   * Bounded (20 entries) list of recent engine errors, newest last. Populated
+   * by the frame guard and by asynchronous backend render errors; feeds the
+   * debug dump. See {@link Application.onError} for live notification.
+   */
+  public get recentErrors(): readonly RecentErrorEntry[] {
+    return this._recentErrors;
   }
 
   /**
@@ -679,50 +723,121 @@ export class Application {
         return this;
       }
 
-      const rawDeltaMs = this._frameClock.elapsedTime.milliseconds;
-      const clampedDeltaMs = Math.min(rawDeltaMs, maxDeltaMs);
-      const frameDelta = Time.temp.set(clampedDeltaMs);
-      const frameStart = performance.now();
+      // Frame guard (render-fail surface): a throwing frame is reported
+      // through the error pipeline instead of killing the RAF loop; the loop
+      // halts only after `maxConsecutiveFrameErrors` consecutive failures.
+      try {
+        const rawDeltaMs = this._frameClock.elapsedTime.milliseconds;
+        const clampedDeltaMs = Math.min(rawDeltaMs, maxDeltaMs);
+        const frameDelta = Time.temp.set(clampedDeltaMs);
+        const frameStart = performance.now();
 
-      if (__DEV__) Perf.mark(frameStartMark);
+        if (__DEV__) Perf.mark(frameStartMark);
 
-      this.backend.resetStats();
-      this.backend.stats.rawFrameDeltaMs = rawDeltaMs;
+        this.backend.resetStats();
+        this.backend.stats.rawFrameDeltaMs = rawDeltaMs;
 
-      if (__DEV__) Perf.mark(systemsStartMark);
-      this.systems._tick(frameDelta);
-      if (__DEV__) Perf.measure(systemsMeasure, systemsStartMark);
+        if (__DEV__) Perf.mark(systemsStartMark);
+        this.systems._tick(frameDelta);
+        if (__DEV__) Perf.measure(systemsMeasure, systemsStartMark);
 
-      // Fixed-timestep steps (0..N) for deterministic logic/physics, after input
-      // so they see this frame's input and before the variable update/draw.
-      const fixedSteps = this._fixed.advance(clampedDeltaMs);
+        // Fixed-timestep steps (0..N) for deterministic logic/physics, after input
+        // so they see this frame's input and before the variable update/draw.
+        const fixedSteps = this._fixed.advance(clampedDeltaMs);
 
-      for (let step = 0; step < fixedSteps; step++) {
-        this.scene.fixedUpdate(this._fixedTime);
-        this.onFixedFrame.dispatch(this._fixedTime);
+        for (let step = 0; step < fixedSteps; step++) {
+          this.scene.fixedUpdate(this._fixedTime);
+          this.onFixedFrame.dispatch(this._fixedTime);
+        }
+
+        this._frameAlpha = this._fixed.alpha;
+
+        this.scene.update(frameDelta);
+        this.onFrame.dispatch(frameDelta);
+        this.backend.flush();
+        this.backend.stats.frameTimeMs = performance.now() - frameStart;
+
+        if (__DEV__) {
+          Perf.measure(frameMeasure, frameStartMark);
+          Perf.clearMarks(frameStartMark);
+          Perf.clearMarks(systemsStartMark);
+          Perf.clearMeasures(frameMeasure);
+          Perf.clearMeasures(systemsMeasure);
+        }
+
+        this._consecutiveFrameErrors = 0;
+      } catch (error) {
+        this._handleFrameError(error);
+      } finally {
+        // RAF rescheduling always happens unless the guard halted the loop —
+        // this is what keeps the canvas alive through a throwing frame.
+        if (this._status === ApplicationStatus.Running) {
+          this._frameRequest = requestAnimationFrame(this._updateHandler);
+          this._frameClock.restart();
+          this._frameCount++;
+        }
       }
-
-      this._frameAlpha = this._fixed.alpha;
-
-      this.scene.update(frameDelta);
-      this.onFrame.dispatch(frameDelta);
-      this.backend.flush();
-      this.backend.stats.frameTimeMs = performance.now() - frameStart;
-
-      if (__DEV__) {
-        Perf.measure(frameMeasure, frameStartMark);
-        Perf.clearMarks(frameStartMark);
-        Perf.clearMarks(systemsStartMark);
-        Perf.clearMeasures(frameMeasure);
-        Perf.clearMeasures(systemsMeasure);
-      }
-
-      this._frameRequest = requestAnimationFrame(this._updateHandler);
-      this._frameClock.restart();
-      this._frameCount++;
     }
 
     return this;
+  }
+
+  /**
+   * Frame-guard error pipeline: normalize → log → ring buffer → `onError` →
+   * dev banner → halt after {@link maxConsecutiveFrameErrors} consecutive
+   * failing frames. Deliberately does NOT call {@link Application.stop} on
+   * halt — unloading the scene could rethrow the same error.
+   */
+  private _handleFrameError(error: unknown): void {
+    const normalized = error instanceof Error ? error : new Error(String(error));
+
+    this._consecutiveFrameErrors++;
+
+    const fatal = this._consecutiveFrameErrors >= maxConsecutiveFrameErrors;
+
+    this._reportError(normalized, fatal);
+
+    if (fatal) {
+      cancelAnimationFrame(this._frameRequest);
+      this._status = ApplicationStatus.Stopped;
+      logger.error(`Frame loop halted after ${maxConsecutiveFrameErrors} consecutive frame errors.`, { source: 'core', error: normalized });
+    }
+  }
+
+  /**
+   * Async render-error pipeline ({@link RenderBackend.onRenderError}): same
+   * log + ring buffer + `onError` + banner steps as the frame guard, but no
+   * consecutive-failure counting — async validation errors do not break the
+   * frame loop, and the backend already deduplicates them.
+   */
+  private _handleAsyncRenderError(error: RenderError): void {
+    this._reportError(error, false);
+  }
+
+  /** Shared error-pipeline steps: log, ring buffer, `onError`, dev banner. */
+  private _reportError(error: Error, fatal: boolean): void {
+    const isRenderError = error instanceof RenderError;
+
+    logger.error(error.message, { source: isRenderError ? 'rendering' : 'core', error });
+
+    this._recentErrors.push({
+      time: Date.now(),
+      message: error.message,
+      ...(isRenderError && { code: error.code }),
+      ...(error.stack !== undefined && { stack: error.stack }),
+    });
+
+    if (this._recentErrors.length > maxRecentErrors) {
+      this._recentErrors.shift();
+    }
+
+    this.onError.dispatch(error);
+
+    if (__DEV__) {
+      const detail = isRenderError && error.detail !== null ? `\n${error.detail}` : '';
+
+      showDevErrorOverlay(this.canvas, `${error.message}${detail}`, { fatal });
+    }
   }
 
   /**
@@ -976,6 +1091,9 @@ export class Application {
       backend.onDeviceRestored.add(() => {
         this.onBackendRestored.dispatch();
       });
+      backend.onRenderError.add(error => {
+        this._handleAsyncRenderError(error);
+      });
 
       try {
         materializeRendererBindings(backend, allBindings);
@@ -998,6 +1116,9 @@ export class Application {
     });
     backend.onContextRestored.add(() => {
       this.onBackendRestored.dispatch();
+    });
+    backend.onRenderError.add(error => {
+      this._handleAsyncRenderError(error);
     });
 
     try {

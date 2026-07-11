@@ -1,4 +1,6 @@
 import type { TypedArray } from '#core/types';
+import { RenderBackendType } from '#rendering/RenderBackendType';
+import { formatShaderError, RenderError } from '#rendering/RenderError';
 import type { Shader, ShaderProgram } from '#rendering/shader/Shader';
 import { ShaderAttribute } from '#rendering/shader/ShaderAttribute';
 import { ShaderUniform } from '#rendering/shader/ShaderUniform';
@@ -83,7 +85,15 @@ const uniformUploadFunctions: Record<number, UniformUploadFunction> = {
   },
 };
 
-export function createWebGl2ShaderProgram(gl: WebGL2RenderingContext): ShaderProgram {
+/**
+ * Create the WebGL2 {@link ShaderProgram} runtime for a {@link Shader}.
+ * Compilation/link status checks are deferred to first bind (see the
+ * `KHR_parallel_shader_compile` note below); a compile or link failure at that
+ * point throws a structured {@link RenderError} (`shader-compile` /
+ * `shader-link`). `label` names the program in those errors (renderer name,
+ * material label) — omit it when no cheap label is available.
+ */
+export function createWebGl2ShaderProgram(gl: WebGL2RenderingContext, label?: string): ShaderProgram {
   let program: WebGLProgram | null = null;
   let vertexShader: WebGLShader | null = null;
   let fragmentShader: WebGLShader | null = null;
@@ -137,19 +147,25 @@ export function createWebGl2ShaderProgram(gl: WebGL2RenderingContext): ShaderPro
     if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
       const log = gl.getShaderInfoLog(vertexShader);
 
-      throw new Error(`Vertex shader compilation failed: ${log ?? '<no log>'}`);
+      throw createCompileError('vertex', pendingShader.vertexSource, log, label);
     }
 
     if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
       const log = gl.getShaderInfoLog(fragmentShader);
 
-      throw new Error(`Fragment shader compilation failed: ${log ?? '<no log>'}`);
+      throw createCompileError('fragment', pendingShader.fragmentSource, log, label);
     }
 
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
       const log = gl.getProgramInfoLog(program);
 
-      throw new Error(`Shader program linking failed: ${log ?? '<no log>'}`);
+      throw new RenderError({
+        code: 'shader-link',
+        backendType: RenderBackendType.WebGl2,
+        message: `[ExoJS] ${label ?? 'shader'}: shader program failed to link.`,
+        detail: log ?? '<no log>',
+        ...(label !== undefined && { resource: label }),
+      });
     }
 
     extractAttributes(gl, program, pendingShader);
@@ -217,6 +233,17 @@ export function createWebGl2ShaderProgram(gl: WebGL2RenderingContext): ShaderPro
       shader.disconnect();
     },
   };
+}
+
+/** Build a structured shader-compile {@link RenderError} for one failed stage. */
+function createCompileError(stage: 'vertex' | 'fragment', source: string, log: string | null, label: string | undefined): RenderError {
+  return new RenderError({
+    code: 'shader-compile',
+    backendType: RenderBackendType.WebGl2,
+    message: `[ExoJS] ${label ?? 'shader'}: ${stage} shader failed to compile.`,
+    detail: formatShaderError(source, log ?? '<no log>'),
+    ...(label !== undefined && { resource: label }),
+  });
 }
 
 // compileShader / linkProgram intentionally do NOT query COMPILE_STATUS or

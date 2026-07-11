@@ -2,6 +2,7 @@
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
+import { logger } from '#core/logging';
 import { Signal } from '#core/Signal';
 import { Matrix } from '#math/Matrix';
 import type { Rectangle } from '#math/Rectangle';
@@ -25,6 +26,7 @@ import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import type { Renderer } from '#rendering/Renderer';
 import { RendererRegistry } from '#rendering/RendererRegistry';
+import { formatShaderError, RenderError, type RenderErrorCode } from '#rendering/RenderError';
 import type { RenderStats } from '#rendering/RenderStats';
 import { createRenderStats, resetRenderStats } from '#rendering/RenderStats';
 import { RenderTarget } from '#rendering/RenderTarget';
@@ -141,6 +143,13 @@ export class WebGpuBackend implements RenderBackend {
   public readonly rendererRegistry: RendererRegistry<WebGpuBackend> = new RendererRegistry<WebGpuBackend>();
   public readonly onDeviceLost = new Signal<[GPUDeviceLostInfo]>();
   public readonly onDeviceRestored = new Signal();
+  /**
+   * See {@link RenderBackend.onRenderError}. Dispatched (deduplicated per
+   * unique `code + message`) for WGSL compilation errors detected via
+   * `getCompilationInfo()` and for the device's `uncapturederror` events
+   * (validation / out-of-memory / internal).
+   */
+  public readonly onRenderError = new Signal<[RenderError]>();
 
   private readonly _canvas: HTMLCanvasElement;
   private readonly _rootRenderTarget: RenderTarget;
@@ -194,6 +203,13 @@ export class WebGpuBackend implements RenderBackend {
   private readonly _retainedCaptureFrames: WebGpuRetainedCaptureFrame[] = [];
   private readonly _retainedBundles = new Set<WebGpuRetainedGroupBundle>();
   private readonly _rejectedRetainedSets = new WeakSet<RetainedInstructionSet>();
+  // Render-error surface (S3 diagnostics): dedupe keys for onRenderError, and
+  // the bound uncapturederror listener (re-installed by _initialize after
+  // device-loss recovery).
+  private readonly _reportedErrorKeys = new Set<string>();
+  private readonly _onUncapturedError = (event: Event): void => {
+    this._handleUncapturedError((event as GPUUncapturedErrorEvent).error);
+  };
 
   public constructor(app: Application) {
     const canvasOptions = app.options.canvas ?? {};
@@ -801,8 +817,10 @@ export class WebGpuBackend implements RenderBackend {
 
   public destroy(): void {
     this._destroyed = true;
+    this._removeUncapturedErrorListener();
     this.onDeviceLost.destroy();
     this.onDeviceRestored.destroy();
+    this.onRenderError.destroy();
     this._setActiveRenderer(null);
     this.rendererRegistry.destroy();
     this._destroyManagedTextures();
@@ -1530,6 +1548,15 @@ export class WebGpuBackend implements RenderBackend {
 
     this._context = context;
     this._device = device;
+
+    // Surface uncaptured GPU errors (validation / OOM / internal) through
+    // onRenderError. Re-installed automatically after device-loss recovery
+    // because recovery re-runs _initialize. Guarded: mock devices in the Node
+    // test environment do not extend EventTarget.
+    if (typeof device.addEventListener === 'function') {
+      device.addEventListener('uncapturederror', this._onUncapturedError);
+    }
+
     this._format = format;
     this._hasPresentedFrame = false;
     this._subscribeToDeviceLoss();
@@ -1635,6 +1662,10 @@ export class WebGpuBackend implements RenderBackend {
    * the new device.
    */
   private _teardownDeviceState(): void {
+    // The uncapturederror listener belongs to the dead device; _initialize
+    // installs a fresh one on the replacement device.
+    this._removeUncapturedErrorListener();
+
     // Detach destroy listeners from cached textures, then drop the cache.
     // The underlying GPUTexture objects belonged to the dead device, so we
     // do not (and cannot) call .destroy() on them — the dead device will
@@ -1716,6 +1747,103 @@ export class WebGpuBackend implements RenderBackend {
     const gpuNavigator = navigator as Navigator & Partial<{ gpu: GPU }>;
 
     return gpuNavigator.gpu ? gpuNavigator : null;
+  }
+
+  /**
+   * `device.createShaderModule` + async `getCompilationInfo()` check. Returns
+   * the module immediately (never blocks the frame). If compilation reported
+   * any `error`-type messages, dispatches a deduped {@link onRenderError} with
+   * `code: 'shader-compile'` and a formatted source excerpt.
+   * @internal
+   */
+  public _createShaderModule(code: string, label?: string): GPUShaderModule {
+    const module = this.device.createShaderModule(label !== undefined ? { label, code } : { code });
+
+    try {
+      // Some mock devices return modules without getCompilationInfo; treat
+      // absence (or a sync throw) as "no check available".
+      const infoPromise = typeof module.getCompilationInfo === 'function' ? module.getCompilationInfo() : null;
+
+      if (infoPromise !== null) {
+        infoPromise
+          .then(info => {
+            const compileErrors = info.messages.filter(message => message.type === 'error');
+
+            if (compileErrors.length === 0) {
+              return;
+            }
+
+            const log = compileErrors.map(message => `:${message.lineNum}:${message.linePos} ${message.message}`).join('\n');
+
+            this._reportRenderError(
+              new RenderError({
+                code: 'shader-compile',
+                backendType: RenderBackendType.WebGpu,
+                message: `[ExoJS] ${label ?? 'shader'}: WGSL shader failed to compile.`,
+                detail: formatShaderError(code, log),
+                ...(label !== undefined && { resource: label }),
+              }),
+            );
+          })
+          .catch(() => {
+            /* compilation-info retrieval failure is non-fatal */
+          });
+      }
+    } catch {
+      /* no compilation-info support — skip the check */
+    }
+
+    return module;
+  }
+
+  /**
+   * Dispatch `error` through {@link onRenderError}, deduplicated per unique
+   * `code + message` key (capped at 100 keys — a pathological error storm
+   * stops reporting new uniques beyond that). Logs through the `rendering`
+   * channel on first occurrence so headless/backend-only users get the log
+   * without subscribing.
+   */
+  private _reportRenderError(error: RenderError): void {
+    const key = `${error.code}\n${error.message}`;
+
+    if (this._reportedErrorKeys.has(key) || this._reportedErrorKeys.size >= 100) {
+      return;
+    }
+
+    this._reportedErrorKeys.add(key);
+    logger.error(error.message, { source: 'rendering', error });
+    this.onRenderError.dispatch(error);
+  }
+
+  /** Map an uncaptured GPU error to a deduped {@link onRenderError} dispatch. */
+  private _handleUncapturedError(error: unknown): void {
+    let code: RenderErrorCode = 'internal';
+
+    if (typeof GPUValidationError !== 'undefined' && error instanceof GPUValidationError) {
+      code = 'validation';
+    } else if (typeof GPUOutOfMemoryError !== 'undefined' && error instanceof GPUOutOfMemoryError) {
+      code = 'out-of-memory';
+    }
+
+    const message = typeof (error as { message?: unknown } | null)?.message === 'string' ? (error as { message: string }).message : String(error);
+
+    this._reportRenderError(
+      new RenderError({
+        code,
+        backendType: RenderBackendType.WebGpu,
+        message: `[ExoJS] WebGPU ${code} error: ${message}`,
+        cause: error,
+      }),
+    );
+  }
+
+  /** Detach the uncapturederror listener from the current device, if any. */
+  private _removeUncapturedErrorListener(): void {
+    const device = this._device;
+
+    if (device !== null && typeof device.removeEventListener === 'function') {
+      device.removeEventListener('uncapturederror', this._onUncapturedError);
+    }
   }
 
   private _createInitializationError(message: string, error: unknown): Error {

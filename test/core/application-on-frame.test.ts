@@ -32,8 +32,10 @@ const loadOnFrameHarness = async (): Promise<OnFrameTestHarness> => {
     setView: vi.fn().mockReturnThis(),
     onContextLost: { add: vi.fn(), destroy: vi.fn() },
     onContextRestored: { add: vi.fn(), destroy: vi.fn() },
+    onRenderError: { add: vi.fn(), destroy: vi.fn() },
     onDeviceLost: { add: vi.fn(), destroy: vi.fn() },
     onDeviceRestored: { add: vi.fn(), destroy: vi.fn() },
+    onRenderError: { add: vi.fn(), destroy: vi.fn() },
   };
   const sceneManager = {
     update: vi.fn(),

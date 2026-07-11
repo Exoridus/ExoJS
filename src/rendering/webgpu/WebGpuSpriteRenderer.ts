@@ -1314,7 +1314,9 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     // The engine owns the vertex stage: prepend the canonical sprite vertex
     // module (VertexInput/VertexOutput, group(0) projection + transform storage,
     // group(1) base texture + sampler) to the material's fragment WGSL.
-    const shaderModule = device.createShaderModule({ label: 'sprite:material-shader', code: `${spriteVertexWgsl}\n${wgsl}` });
+    // Routed through the backend so WGSL compilation errors in user-supplied
+    // material shaders surface via backend.onRenderError (S3 diagnostics).
+    const shaderModule = this.getBackend()._createShaderModule(`${spriteVertexWgsl}\n${wgsl}`, 'sprite:material-shader');
     const userLayout = this._buildUserBindGroupLayout(device, material);
     const pipelineLayout = device.createPipelineLayout({
       label: 'sprite:material-pipeline-layout',

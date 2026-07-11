@@ -6,11 +6,11 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 48,
+  "memberCount": 49,
   "counts": {
     "constructors": 1,
     "methods": 8,
-    "properties": 31,
+    "properties": 32,
     "events": 8
   },
   "sections": [
@@ -1064,6 +1064,39 @@
           "description": "Device/render pixel ratio applied to the backing buffer. Defaults to the host devicePixelRatio clamped to 2 (crisp on HiDPI out of the box, but capped to avoid a runaway fill-rate cost on DPR-3 phones) unless an explicit canvas.pixelRatio option was given. Holds the invariant app.canvas.width === Math.round(app.width × app.pixelRatio)."
         },
         {
+          "name": "recentErrors",
+          "signature": "recentErrors: readonly RecentErrorEntry[]",
+          "signatureTokens": [
+            {
+              "text": "recentErrors",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RecentErrorEntry",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Bounded (20 entries) list of recent engine errors, newest last. Populated by the frame guard and by asynchronous backend render errors; feeds the debug dump. See Application.onError for live notification."
+        },
+        {
           "name": "rendering",
           "signature": "rendering: RenderingContext",
           "signatureTokens": [
@@ -1331,7 +1364,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Dispatched when an unhandled error occurs in scene lifecycle."
+          "description": "Dispatched for every engine error: an exception thrown by any part of the per-frame body (systems tick, fixed steps, scene update/draw, Application.onFrame subscribers, backend flush — including synchronous WebGL2 shader compile/link failures, which surface as RenderErrors), an asynchronous GPU error reported by the backend (RenderBackend.onRenderError — WGSL compilation errors, WebGPU uncaptured validation/OOM/internal errors), or a scene-unload failure in Application.stop. The frame guard keeps the loop alive through intermittent failures and halts it (status Stopped) after 3 consecutive failing frames. Narrow with error instanceof RenderError for structured GPU failure details; see Application.recentErrors for the bounded error history."
         },
         {
           "name": "onFixedFrame",
