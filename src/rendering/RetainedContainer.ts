@@ -251,6 +251,18 @@ export class RetainedContainer extends Container {
     }
   }
 
+  /**
+   * Release the retained GPU instruction set and fragment cache, then destroy
+   * this container and its subtree.
+   *
+   * Beware the in-place-destroy footgun: {@link SceneNode.destroy} does not
+   * detach a node from its parent, and the retained fragment keeps the whole
+   * previously-collected command range — including a child's resources — until
+   * a structural change drops it. Destroying a child directly leaves the
+   * fragment replaying freed resources, because nothing invalidated it. Call
+   * {@link Container.removeChild} first (removal bumps the structure revision
+   * and drops the fragment), or destroy the whole group at once.
+   */
   public override destroy(): void {
     // dispose(): invalidates AND releases the retained GPU bundle (Slice 3, S3-D3).
     this._fragment.dispose();

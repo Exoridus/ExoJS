@@ -559,7 +559,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": ""
+          "description": "Release the retained GPU instruction set and fragment cache, then destroy this container and its subtree. Beware the in-place-destroy footgun: SceneNode.destroy does not detach a node from its parent, and the retained fragment keeps the whole previously-collected command range — including a child's resources — until a structural change drops it. Destroying a child directly leaves the fragment replaying freed resources, because nothing invalidated it. Call Container.removeChild first (removal bumps the structure revision and drops the fragment), or destroy the whole group at once."
         },
         {
           "name": "focus",

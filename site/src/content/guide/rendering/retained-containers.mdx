@@ -1,0 +1,132 @@
+---
+title: 'Retained containers'
+description: 'Declare a large, mostly-static subtree as a RetainedContainer so it replays as O(batches) and moves as a single GPU-matrix update — and learn the group-local space, invalidation, and lifecycle rules the tier trades for that speed.'
+---
+
+import ExamplePreview from '../../../components/ExamplePreview.astro';
+import Callout from '../../../components/Callout.astro';
+
+# Retained containers
+
+The scene graph earns its keep on content that changes: every frame the engine walks the tree, resolves transforms, culls, and rebuilds the render plan. For a subtree that is _mostly static and/or moves as a whole_ — a decorated tilemap, a parallax backdrop, a built-once UI panel with hundreds of icons — that per-frame walk is pure overhead. You already know the subtree looks the same as last frame; the engine re-derives it anyway.
+
+[`RetainedContainer`](/ExoJS/en/api/retained-container/) is a [`Container`](/ExoJS/en/api/container/) that lets you _declare_ that fact. While its subtree is unchanged, the whole previously-collected command range is spliced straight into the render plan — no walk, no per-child culling, no material keys — and moving the container (or the camera over it) changes exactly one per-group GPU matrix instead of touching every descendant.
+
+It is the third rendering tier, sitting between the two you already have:
+
+- **Plain scene graph** — the default. Flexible, re-walked every frame. Right for anything that changes.
+- **`RetainedContainer`** — a static subtree that replays whole and moves as a unit.
+- **[Immediate mode](/ExoJS/en/guide/rendering/immediate-mode/)** — no nodes at all; you draw geometry yourself each frame. Right for throwaway, procedural, or self-simulated content.
+
+## When to reach for it
+
+A subtree is a good `RetainedContainer` when all of these hold:
+
+- **It is large.** A handful of nodes is not worth the machinery — the per-frame walk was already cheap. The win scales with child count.
+- **It is static, or nearly so.** Children are authored once and then left alone. The group as a whole may still move, rotate, or scale freely — that is the point.
+- **It moves as a unit, if it moves.** Panning a camera over a static world, scrolling a background, sliding a whole panel on-screen. One matrix update covers the entire subtree.
+
+Reach for immediate mode instead when the content is procedural or changes completely every frame; reach for a plain container when children animate independently. `RetainedContainer` is specifically the "thousands of things that sit still while the camera glides over them" case.
+
+<Callout type="hint" title="It is opt-in, and only at construction">
+There is no runtime toggle and no configuration. You choose the tier by constructing a `RetainedContainer` instead of a `Container`; everything else is the normal node API. If the subtree turns out to be a poor fit, swapping back is a one-word edit.
+</Callout>
+
+## Declaring one
+
+```ts
+import { RetainedContainer } from '@codexo/exojs';
+
+// Opt in at construction. From here it is an ordinary Container.
+const decor = new RetainedContainer();
+```
+
+Fill it once with static children, add it to your scene, and move only the group:
+
+```js
+init() {
+    this.decor = new RetainedContainer();
+
+    for (const tile of this.level.decorTiles) {
+        const sprite = new Sprite(this.atlas);
+        sprite.setPosition(tile.x, tile.y);
+        this.decor.addChild(sprite);
+    }
+}
+
+draw(context) {
+    context.backend.clear();
+
+    // Panning the camera over the world is ONE group-matrix update — no
+    // descendant transform is recomputed, no child is re-collected.
+    this.decor.setPosition(-this.cameraX, -this.cameraY);
+    context.render(this.decor);
+}
+```
+
+## Transform semantics: group-local space
+
+The speed comes from a deliberate trade: descendants of an engaged group resolve their transforms in **group-local space**, and the group matrix is applied once, on the GPU, at playback. That is invisible to rendering — the pixels are identical to a plain container — but it changes what spatial queries return _inside_ the group.
+
+- [`getBounds()`](/ExoJS/en/api/scene-node/) and hit-testing on a child report **group-local** coordinates, not world coordinates.
+- Per-child view culling is disabled inside the group; the group is culled as a whole.
+- `pixelSnapMode` snapping operates on group-local coordinates.
+
+For a true world-space position or orientation of a node inside the group — picking, spatial audio, physics, any math against nodes outside the group — use [`getWorldTransform()`](/ExoJS/en/api/scene-node/), which composes through the group boundary and returns the real world matrix:
+
+```js
+update() {
+    // getBounds() here is group-local. For a real world position, compose
+    // through the boundary:
+    const worldMatrix = this.enemyInsideGroup.getWorldTransform();
+    this.audio.setPosition(worldMatrix.tx, worldMatrix.ty);
+}
+```
+
+<Callout type="warning" title="getBounds() inside a group is group-local">
+This is the one behavioural surprise of the tier. If you read a child's `getBounds()` and expect world coordinates, you will be off by the group's transform. `getWorldTransform()` is the escape hatch, and it is exact — it accounts for group engage/disengage flips too.
+</Callout>
+
+The engine has no inherited alpha, so a group-wide fade is not a property you set on the container. Tint each drawable, or cache the whole group as a bitmap and fade that.
+
+## Invalidation: any mutation drops the fragment
+
+The retained fragment is kept in lockstep with the subtree by the same revision contract every node already uses. **Any mutation inside the subtree drops the fragment for one frame** — that frame re-walks and re-collects normally, then the fragment is recaptured. Adding or removing a child, changing a sprite's texture, moving a descendant: each one invalidates automatically. You never manage the cache by hand.
+
+If you mutate through a custom `Drawable` backed by externally mutable data (the pattern the tilemap package uses), call [`invalidateContent()`](/ExoJS/en/api/scene-node/) after the mutation so the skip does not serve a stale frame.
+
+<Callout type="pitfall" title="A group that changes every frame is pure overhead">
+The tier pays off only while the subtree holds still. If a child mutates on every frame, the fragment is dropped on every frame — you pay the full walk _plus_ the retention bookkeeping, and a reference build measured the retained path ~1.5× slower than immediate mode on fully-dynamic content. In a development build the engine watches for this and warns once if a group invalidates on effectively every frame. If you see that warning, split the moving children out into a sibling plain container and keep only the static remainder retained.
+</Callout>
+
+## Lifecycle and the in-place-destroy footgun
+
+Adding and removing children works exactly as on a plain container, and both correctly invalidate the fragment. Destroying is where the retained tier has a sharp edge.
+
+Because the fragment holds the whole previously-collected command range, it keeps references to the resources of every child — and [`destroy()`](/ExoJS/en/api/scene-node/) does **not** detach a node from its parent. So calling `child.destroy()` on a child that is still in the group leaves the child in the child list, does not bump the structure revision, and the fragment keeps replaying the freed resources until some _other_ change happens to invalidate it.
+
+<Callout type="pitfall" title="Remove before you destroy a child">
+`retained.removeChild(child)` first, then `child.destroy()`. Removal bumps the structure revision, which drops the fragment, so the next frame re-collects without the departed child. Destroying a child in place skips that step. Destroying the whole `RetainedContainer` is always safe — it tears down its subtree and releases the retained GPU bundle together.
+</Callout>
+
+## Effects on children: supported, with one depth rule
+
+Nodes with filters, a mask, a clip, or `cacheAsBitmap` are supported as **direct** children of a `RetainedContainer`. They stay in world space and re-collect every frame, layered correctly with the retained remainder.
+
+Nesting such an effect-bearing node _deeper_ than one level below the group boundary disengages the whole group: it falls back to rendering as an exact plain `Container` — correct pixels, no retention — and warns once in a development build. Keep effect-heavy nodes at the top level of the group, or move them out of it.
+
+## Performance, honestly
+
+The retained tier removes **CPU** work: the per-frame subtree walk, per-child transform resolution, per-child culling, and render-plan rebuilding. It does not change the number of draw calls — batching is identical to a plain container — so a GPU-bound scene will not get faster, and a small subtree will not show a measurable difference because its walk was already cheap.
+
+Where it wins is a large, static subtree that the camera pans across: the walk that a plain container repeats every frame collapses to an O(batches) replay plus one matrix update. The gap grows with child count and is widest on lower-end machines and mobile. Measure it in your scene rather than assuming — the [Performance](/ExoJS/en/guide/debugging/performance/) chapter and the debug overlay's frame-time and submitted-node counters are the right instruments.
+
+## Worked example
+
+The example holds a field of several thousand static sprites and pans it as a camera along a slow path. Toggle between the retained tier and a plain container holding the identical field, and watch the smoothed frame-time readout: same pixels, same draw calls, different CPU cost per frame.
+
+<ExamplePreview chapter="scene-graph" slug="retained-container" />
+
+## Where to go next
+
+`RetainedContainer` and [immediate mode](/ExoJS/en/guide/rendering/immediate-mode/) are the two escape hatches from the per-frame scene-graph walk — retention for static node trees, immediate mode for procedural geometry with no nodes at all. To find out whether the walk is actually your bottleneck before reaching for either, start with the [Performance](/ExoJS/en/guide/debugging/performance/) chapter.
