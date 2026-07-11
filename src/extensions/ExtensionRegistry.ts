@@ -62,20 +62,22 @@ export class ExtensionRegistry {
     freezeExtension(extension);
   }
 
-  /** True if an extension with `id` is currently registered. */
+  /** Report whether an extension with `id` is currently registered. */
   public static has(id: string): boolean {
     return _byId.has(id);
   }
 
-  /** The registered descriptor for `id`, or `undefined`. */
+  /** Return the registered descriptor for `id`, or `undefined` if none is registered. */
   public static get(id: string): Readonly<Extension> | undefined {
     return _byId.get(id);
   }
 
   /**
-   * All registered descriptors in registration order.
-   * Returns a cached readonly view; no allocation on repeated calls while the
-   * registry is unchanged. Invalidated only after a new registration.
+   * List all registered descriptors in registration order.
+   *
+   * Returns a cached readonly view — no allocation on repeated calls while the
+   * registry is unchanged; the cache is invalidated only by a new
+   * {@link ExtensionRegistry.register register} call.
    */
   public static list(): ReadonlyArray<Readonly<Extension>> {
     return getGlobalSnapshotInternal().extensions;

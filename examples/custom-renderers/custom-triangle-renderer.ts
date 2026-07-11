@@ -1,5 +1,6 @@
 import { Application, Color, Scene } from '@codexo/exojs';
 import { WebGpuBackend } from '@codexo/exojs/renderer-sdk';
+import type { RenderBackend } from '@codexo/exojs/renderer-sdk';
 
 const TRIANGLE_VERTICES = new Float32Array([0.0, 0.72, 1.0, 0.38, 0.23, -0.72, -0.52, 0.18, 0.77, 0.98, 0.72, -0.52, 0.95, 0.85, 0.24]);
 
@@ -29,12 +30,12 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
 `;
 
 class CustomTriangleRenderer {
-    private renderManager: any;
-    private device: any;
-    private pipeline: any;
-    private vertexBuffer: any;
+    private renderManager: WebGpuBackend;
+    private device: GPUDevice;
+    private pipeline: GPURenderPipeline;
+    private vertexBuffer: GPUBuffer;
 
-    constructor(backend: any) {
+    constructor(backend: RenderBackend) {
         if (!(backend instanceof WebGpuBackend)) {
             throw new Error('This example requires ExoJS to provide a WebGpuBackend.');
         }
@@ -74,11 +75,10 @@ class CustomTriangleRenderer {
     }
 
     destroy(): void {
-        this.vertexBuffer?.destroy();
-        this.pipeline = null;
+        this.vertexBuffer.destroy();
     }
 
-    private createPipeline(): any {
+    private createPipeline(): GPURenderPipeline {
         const shaderModule = this.device.createShaderModule({
             code: SHADER_SOURCE,
         });
@@ -121,7 +121,7 @@ class CustomTriangleRenderer {
         });
     }
 
-    private createVertexBuffer(): any {
+    private createVertexBuffer(): GPUBuffer {
         const buffer = this.device.createBuffer({
             size: TRIANGLE_VERTICES.byteLength,
             usage: GPUBufferUsage.VERTEX,

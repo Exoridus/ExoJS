@@ -1,0 +1,201 @@
+---
+title: 'Authoring extensions'
+description: 'Package custom renderers, asset handlers, and node serializers as a distributable ExoJS extension — the descriptor model, the ExtensionRegistry, and the package policy the official extensions follow.'
+---
+
+import Callout from '../../../components/Callout.astro';
+
+# Authoring extensions
+
+The [previous chapter](/ExoJS/en/guide/debugging/custom-renderers/) showed how to register a custom renderer against one running `Application`. An **extension** packages that same work — plus custom asset handlers and node serializers — into a single immutable descriptor you can publish as an npm package and drop into any project. This is exactly how the official `@codexo/exojs-particles`, `@codexo/exojs-tiled`, `@codexo/exojs-tilemap`, and `@codexo/exojs-physics` packages plug into the core.
+
+The model is deliberately small and **add-only**: an extension can only *contribute* capabilities (a new drawable type's renderer, a new asset type, a new serializable node). It never patches or replaces core behaviour. The core ships nothing extension-specific — an `Application` understands your drawable or asset type only once its extension is active.
+
+## Extension anatomy
+
+An [`Extension`](/ExoJS/en/api/extension/) is a plain, immutable descriptor. It holds **no** `Application`, backend, GPU, or loader instances — only *bindings* that describe how to build those things later. The registry reads it exactly once, at `Application` construction, and never touches it on a hot path.
+
+```ts no-check
+import type { Extension } from '@codexo/exojs/extensions';
+
+const myExtension: Extension = {
+    id: 'com.example.confetti', // globally unique; reverse-DNS or the npm package name
+    dependencies: [], // other Extensions this one needs materialised first
+    renderers: [], // RendererBinding[] — drawable type → renderer factory
+    assets: [], // AssetBinding[] — asset type + lookup keys → loader-local handler
+    serializers: [], // SerializerBinding[] — node type ↔ serialize/deserialize pair
+};
+```
+
+Every field except `id` is optional, so the smallest possible extension is just an id. The three binding arrays are the interesting part:
+
+- **`renderers`** — a [`RendererBinding`](/ExoJS/en/api/extension/) maps one or more `Drawable` constructors to a renderer factory. This is the typesafe custom-renderer path (below).
+- **`assets`** — an `AssetBinding` maps an asset type and its lookup keys (file extensions, config-map type names) to a loader-local `AssetHandler` factory. This is how `@codexo/exojs-tiled` teaches the `Loader` about `.tmj` files.
+- **`serializers`** — a `SerializerBinding` maps a custom `SceneNode` type to a `NodeSerializer`, so your node type survives [`Scene.serialize`/`deserialize`](/ExoJS/en/guide/runtime/serialization-and-prefabs/).
+
+Bindings are **pure descriptors** — no active renderer, no GPU resources, no side effects until their `create(...)` is called once per backend/loader during `Application` construction.
+
+## Registering with the ExtensionRegistry
+
+The [`ExtensionRegistry`](/ExoJS/en/guide/debugging/custom-renderers/) is a process-wide static catalogue of descriptors. There are two activation paths, mirroring the [Tiled](/ExoJS/en/guide/assets/tiled-maps/) and [Particles](/ExoJS/en/guide/effects/particles/) chapters.
+
+**Explicit (recommended).** Pass the descriptor to `ApplicationOptions.extensions`. Explicit, tree-shakeable, and order-independent — the extension binds to exactly this one `Application`:
+
+```ts
+import { Application } from '@codexo/exojs';
+import type { Extension } from '@codexo/exojs/extensions';
+
+const confettiExtension: Extension = { id: 'com.example.confetti' };
+
+const app = new Application({ extensions: [confettiExtension] });
+```
+
+**Global registration.** Register the descriptor once, and every subsequently constructed `Application` that uses global defaults picks it up:
+
+```ts
+import { ExtensionRegistry } from '@codexo/exojs/extensions';
+import type { Extension } from '@codexo/exojs/extensions';
+
+const confettiExtension: Extension = { id: 'com.example.confetti' };
+
+ExtensionRegistry.register(confettiExtension);
+```
+
+An `Application` constructed with an explicit `extensions: []` takes **no** extensions — not even globally registered ones — so it stays fully core-only.
+
+<Callout type="pitfall" title="An id collision means a duplicate install">
+`register` is idempotent for the *same descriptor object* under the same id, but throws if a *different* object is already registered under that id. That is not a bug to work around — it is how the registry surfaces two copies (or mismatched versions) of your package in one dependency tree. Keep your descriptor a single module-level singleton so the same object is registered every time.
+</Callout>
+
+### Snapshot semantics
+
+The registry is read exactly once per `Application`, when it flattens the active descriptors into an immutable **snapshot**:
+
+- **Dependency ordering** — descriptors listed in `dependencies` are materialised *before* their dependents (stable depth-first, post-order). A binding can safely assume its dependencies' bindings already exist.
+- **De-duplication** — the same descriptor object reached by several paths (a diamond dependency) is materialised once.
+- **Loud failures** — the same id provided by two *different* objects, or a dependency *cycle*, throws with a descriptive path rather than silently winning.
+- **Immutability** — in development builds every visited descriptor and its nested binding arrays are frozen, so an accidental post-registration mutation fails fast.
+
+`ExtensionRegistry.list()` returns a cached readonly view of the globally registered descriptors in registration order; the cache is invalidated only by a new `register` call, so repeated reads allocate nothing. Use `ExtensionRegistry.has(id)` / `get(id)` to query the catalogue.
+
+## Typesafe renderer registration
+
+A `RendererBinding` is `{ targets, create }`: the drawable constructors it renders, and a factory that receives the live `RenderBackend` and returns a matching renderer — or `undefined` when the backend is unsupported (the binding is then skipped for that backend). Branch on `backend.backendType` to build the right per-backend renderer; the `satisfies never` exhaustiveness check makes an unhandled backend a *compile* error, not a runtime surprise:
+
+```ts no-check
+import type { Extension, RendererBinding } from '@codexo/exojs/extensions';
+import type { RenderBackend } from '@codexo/exojs/renderer-sdk';
+import { RenderBackendType } from '@codexo/exojs/renderer-sdk';
+
+// `Confetti` is your own Drawable subtype; `WebGl2ConfettiRenderer` /
+// `WebGpuConfettiRenderer` extend the ABSTRACT SDK base renderers.
+const confettiRenderer: RendererBinding = {
+    targets: [Confetti],
+    create(backend: RenderBackend) {
+        if (backend.backendType === RenderBackendType.WebGl2) {
+            return new WebGl2ConfettiRenderer();
+        }
+        if (backend.backendType === RenderBackendType.WebGpu) {
+            return new WebGpuConfettiRenderer();
+        }
+        throw new Error(`Unsupported render backend: ${String(backend.backendType satisfies never)}`);
+    },
+};
+
+export const confettiExtension: Extension = {
+    id: 'com.example.confetti',
+    renderers: [confettiRenderer],
+};
+```
+
+A renderer implements the [`Renderer`](/ExoJS/en/guide/debugging/custom-renderers/) contract — `connect(backend)`, `disconnect()`, `render(drawable)`, `flush()` — mapping to GPU resource acquisition, release, per-drawable recording, and batch submission.
+
+<Callout type="warning" title="Extend the abstract SDK renderers, not the concrete ones">
+Build your renderer by subclassing the abstract base renderers from `@codexo/exojs/renderer-sdk` (`AbstractWebGpuRenderer`, `AbstractWebGl2Renderer` / `AbstractWebGl2BatchedRenderer`) — exactly how the particles and tilemap packages build theirs. The engine's *concrete* renderers (e.g. `WebGl2SpriteRenderer`) are internal, coupled to private data paths, and not part of the SDK surface; subclassing them will break.
+</Callout>
+
+Asset and serializer bindings follow the same shape — a descriptor plus a factory. Use `satisfies AssetBinding<MyAsset, MyLoadOptions>` on the object literal to get typed load options in the handler and enforce the produced result type without repeating it. See the [Loader](/ExoJS/en/api/loader/) reference for the handler lifecycle and the [serialization chapter](/ExoJS/en/guide/runtime/serialization-and-prefabs/) for registering a serializer for a custom node type.
+
+## Packaging policy
+
+Study how `@codexo/exojs-particles` is set up — the official packages all follow the same shape.
+
+**Two entry points.** The package root is **side-effect-free**: importing `@codexo/exojs-particles` registers nothing globally and only exports the descriptor and public API. A separate `/register` entry is the **only** side-effectful module — it calls `ExtensionRegistry.register(...)` at evaluation time:
+
+```ts no-check
+// src/register.ts — the only side-effectful entry
+import { ExtensionRegistry } from '@codexo/exojs/extensions';
+import { confettiExtension } from './confettiExtension';
+
+ExtensionRegistry.register(confettiExtension);
+
+export * from './public';
+```
+
+**`package.json`.** Declare both entries under `exports`, mark only the register module in `sideEffects` (so bundlers can tree-shake the rest), and depend on the core as a **peer** dependency — never a regular one, or a project could end up with two copies of `@codexo/exojs`:
+
+```jsonc
+{
+    "name": "@codexo/exojs-confetti",
+    "type": "module",
+    "sideEffects": ["./dist/esm/register.js"],
+    "exports": {
+        ".": {
+            "types": "./dist/esm/index.d.ts",
+            "import": "./dist/esm/index.js"
+        },
+        "./register": {
+            "types": "./dist/esm/register.d.ts",
+            "import": "./dist/esm/register.js"
+        },
+        "./package.json": "./package.json"
+    },
+    "files": ["dist/esm/", "README.md", "LICENSE"],
+    "peerDependencies": {
+        "@codexo/exojs": "0.15.x"
+    },
+    "devDependencies": {
+        "@codexo/exojs": "workspace:*"
+    }
+}
+```
+
+**Import the SDK, not internals.** Author against the three public entry points only: `@codexo/exojs` (core runtime types), `@codexo/exojs/extensions` (the `Extension`/binding types and `ExtensionRegistry`), and `@codexo/exojs/renderer-sdk` (the abstract base renderers, `RenderBackend`, and `RenderBackendType`). Anything reached by a deep path is internal and unstable.
+
+## Versioning pre-1.0
+
+ExoJS is pre-1.0, so every minor release is a **clean break** — no back-compat shims. Extensions track the core in **lockstep**:
+
+- Pin the peer range to the core's current minor (`"@codexo/exojs": "0.15.x"`), and publish a matching minor of your extension for each core minor.
+- Publish your extension version to move in step with the core version it targets; document the compatibility in a small table in your README (`0.15.x ↔ 0.15.x`), as the official packages do.
+- Because the id-collision check is by descriptor identity, a mismatched-version duplicate install throws loudly at registration rather than failing subtly at draw time.
+
+## A tiny extension end to end
+
+Putting the pieces together, the smallest useful extension is a descriptor plus one binding, registered against an `Application`:
+
+```ts
+import { Application } from '@codexo/exojs';
+import { ExtensionRegistry } from '@codexo/exojs/extensions';
+import type { Extension } from '@codexo/exojs/extensions';
+
+// 1. Define one immutable, module-level descriptor.
+export const confettiExtension: Extension = {
+    id: 'com.example.confetti',
+    // renderers: [confettiRenderer]  // ← the RendererBinding shown above
+};
+
+// 2a. Explicit activation — binds to exactly this Application.
+const app = new Application({ extensions: [confettiExtension] });
+
+// 2b. Or global activation for a `/register`-style entry.
+ExtensionRegistry.register(confettiExtension);
+```
+
+From here, add real bindings: subclass an abstract SDK renderer for your `Drawable` type (see [Custom renderers](/ExoJS/en/guide/debugging/custom-renderers/)), wire it into a `RendererBinding`, split the package into a side-effect-free root and a `/register` entry, and pin the peer range. The result installs and activates exactly like the official extensions.
+
+## Where to go next
+
+- **Custom renderers:** [the previous chapter](/ExoJS/en/guide/debugging/custom-renderers/) covers the renderer contract and the abstract SDK base classes your `RendererBinding` builds on.
+- **Reference extensions:** read the [Particles](/ExoJS/en/guide/effects/particles/) and [Tiled](/ExoJS/en/guide/assets/tiled-maps/) chapters and their package sources for a renderer-contributing and an asset-contributing extension respectively.
+- **Serialization:** [Serialization & prefabs](/ExoJS/en/guide/runtime/serialization-and-prefabs/) shows the serializer side of the binding model.
