@@ -328,6 +328,7 @@ exports[`root index type-level export inventory > all exported symbols with kind
   "SoundOptions: interface",
   "SoundPlayOptions: interface",
   "SoundPoolStrategy: enum",
+  "SpatialSmoothingSettings: interface",
   "Spatializable: interface",
   "Sprite: class",
   "SpriteFlags: enum",

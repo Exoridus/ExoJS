@@ -1,3 +1,4 @@
+import { getAudioContext } from '#audio/audio-context';
 import { AudioBus } from '#audio/AudioBus';
 import type { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { Video } from '#rendering/video/Video';
@@ -110,6 +111,14 @@ const createBuilder = (): { view: View; backend: { stats: { culledNodes: number 
 });
 
 describe('Video', () => {
+  // Video defers its audio-node setup until the AudioContext exists. Since AU2,
+  // merely constructing audio components no longer eagerly spawns a live context
+  // (that waits for the first user gesture), so create it explicitly here — the
+  // global mock starts 'running', standing in for an already-unlocked context.
+  beforeAll(() => {
+    getAudioContext();
+  });
+
   test('updates texture frame when metadata arrives even before render()', () => {
     const mockVideo = createMockVideoElement();
     const video = new Video(mockVideo.element);

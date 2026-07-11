@@ -1,0 +1,92 @@
+{
+  "title": "SpatialSmoothingSettings",
+  "description": "Tunable smoothing settings shared by the listener and all spatial voices. Owned by AudioManager and reachable as `app.audio.spatial`.",
+  "symbol": "SpatialSmoothingSettings",
+  "kind": "interface",
+  "subsystem": "audio",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Tunable smoothing settings shared by the listener and all spatial voices. Owned by AudioManager and reachable as `app.audio.spatial`."
+      ],
+      "importLine": "import { SpatialSmoothingSettings } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "smoothing",
+          "signature": "smoothing: number",
+          "signatureTokens": [
+            {
+              "text": "smoothing",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Time constant (seconds) passed to setTargetAtTime when ramping a moving position toward its target. 0 (or negative) disables ramping — positions snap each frame. Default DEFAULT_SPATIAL_SMOOTHING (20 ms)."
+        },
+        {
+          "name": "teleportThreshold",
+          "signature": "teleportThreshold: number",
+          "signatureTokens": [
+            {
+              "text": "teleportThreshold",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Position jump (world units) treated as a teleport: the param snaps with setValueAtTime instead of ramping. Default DEFAULT_TELEPORT_THRESHOLD."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/audio/spatial-smoothing.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/spatial-smoothing.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/audio/spatial-smoothing.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/spatial-smoothing.ts"
+}

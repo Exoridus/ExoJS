@@ -48,6 +48,15 @@ export class AudioBus {
   private readonly _effects: AudioEffect[] = [];
   private _setup: AudioBusSetup | null = null;
   private _scheduledStopId: ReturnType<typeof setTimeout> | null = null;
+  /**
+   * Callbacks queued via {@link AudioBus.onceSetup} while the context is still
+   * locked, flushed once this bus's nodes exist. Kept on the bus (not the global
+   * unlock signal) so pre-gesture deferrals don't accumulate there and are
+   * dropped on {@link AudioBus.destroy} (AU3).
+   */
+  private _pendingSetup: Array<() => void> | null = null;
+  /** Unsubscribe for this bus's deferred connect to a not-yet-ready parent. */
+  private _parentSetupDispose: (() => void) | null = null;
   private readonly _onAudioContextReady = (ctx: AudioContext): void => {
     onAudioContextReady.remove(this._onAudioContextReady);
     this._setupAudio(ctx);
@@ -184,6 +193,11 @@ export class AudioBus {
 
   public destroy(): void {
     onAudioContextReady.remove(this._onAudioContextReady);
+    this._parentSetupDispose?.();
+    this._parentSetupDispose = null;
+    // Drop any setup callbacks still queued on this bus so they neither fire nor
+    // linger after teardown (AU3).
+    this._pendingSetup = null;
     this._clearScheduledStop();
     for (const effect of this._effects) {
       effect.destroy();
@@ -219,6 +233,7 @@ export class AudioBus {
     this._setup = { audioContext, inputNode, outputNode, panNode };
     this._rebuildEffectChain();
     this._connectUpstream();
+    this._flushPendingSetup();
   }
 
   private _connectUpstream(): void {
@@ -228,8 +243,10 @@ export class AudioBus {
       if (parentInput) {
         this._setup.outputNode.connect(parentInput);
       } else {
-        // Parent not yet ready — subscribe to parent's setup
-        this._parent.onceSetup(() => {
+        // Parent not yet ready — subscribe to parent's setup, keeping the
+        // disposer so a teardown before the parent unlocks unsubscribes (AU3).
+        this._parentSetupDispose = this._parent.onceSetup(() => {
+          this._parentSetupDispose = null;
           if (this._setup && this._parent) {
             const node = this._parent._getInputNode();
             if (node) this._setup.outputNode.connect(node);
@@ -241,15 +258,41 @@ export class AudioBus {
     }
   }
 
-  /** Subscribe to the moment this bus's audio nodes are ready. Internal use. */
-  public onceSetup(callback: () => void): void {
+  /** Run every callback queued via {@link AudioBus.onceSetup} now that the nodes exist. */
+  private _flushPendingSetup(): void {
+    const pending = this._pendingSetup;
+    if (pending === null) return;
+    this._pendingSetup = null;
+    for (const callback of pending) {
+      callback();
+    }
+  }
+
+  /**
+   * Run `callback` the moment this bus's audio nodes are ready: immediately if it
+   * is already set up, otherwise queued on the bus and flushed when the context
+   * unlocks. Returns an unsubscribe function that removes the still-pending
+   * callback (a no-op once it has fired). Internal use.
+   *
+   * The queue lives on the bus rather than the global unlock signal, so many
+   * voices deferring a reconnect before the first user gesture do not pile
+   * listeners onto that singleton, and anything torn down pre-unlock drops its
+   * own pending callback (AU3).
+   */
+  public onceSetup(callback: () => void): () => void {
     if (this._setup) {
       callback();
-    } else {
-      onAudioContextReady.once(() => {
-        if (this._setup) callback();
-      });
+      return (): void => undefined;
     }
+
+    const pending = (this._pendingSetup ??= []);
+    pending.push(callback);
+
+    return (): void => {
+      if (this._pendingSetup === null) return;
+      const index = this._pendingSetup.indexOf(callback);
+      if (index !== -1) this._pendingSetup.splice(index, 1);
+    };
   }
 
   private _rebuildEffectChain(): void {

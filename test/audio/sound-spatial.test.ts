@@ -23,9 +23,9 @@ interface MockPannerNode {
   maxDistance: number;
   refDistance: number;
   rolloffFactor: number;
-  positionX: { setValueAtTime: MockInstance };
-  positionY: { setValueAtTime: MockInstance };
-  positionZ: { setValueAtTime: MockInstance };
+  positionX: { setValueAtTime: MockInstance; setTargetAtTime: MockInstance; cancelScheduledValues: MockInstance };
+  positionY: { setValueAtTime: MockInstance; setTargetAtTime: MockInstance; cancelScheduledValues: MockInstance };
+  positionZ: { setValueAtTime: MockInstance; setTargetAtTime: MockInstance; cancelScheduledValues: MockInstance };
 }
 
 const setupPannerSpy = (): {
@@ -44,9 +44,9 @@ const setupPannerSpy = (): {
       maxDistance: 10000,
       refDistance: 1,
       rolloffFactor: 1,
-      positionX: { setValueAtTime: vi.fn() },
-      positionY: { setValueAtTime: vi.fn() },
-      positionZ: { setValueAtTime: vi.fn() },
+      positionX: { setValueAtTime: vi.fn(), setTargetAtTime: vi.fn(), cancelScheduledValues: vi.fn() },
+      positionY: { setValueAtTime: vi.fn(), setTargetAtTime: vi.fn(), cancelScheduledValues: vi.fn() },
+      positionZ: { setValueAtTime: vi.fn(), setTargetAtTime: vi.fn(), cancelScheduledValues: vi.fn() },
     };
     panners.push(panner);
     return panner as unknown as PannerNode;
@@ -129,21 +129,28 @@ describe('Sound — spatial (PannerNode)', () => {
     sound.destroy();
   });
 
-  // 4. update() calls _tickSpatial with position coordinates
-  test('update() writes sound.position x/y to PannerNode', () => {
+  // 4. Position is written to the panner: the first write snaps it into place,
+  // and a stationary source is not re-written every frame (epsilon-skip, AU4).
+  test('update() writes sound.position x/y to PannerNode, then skips a stationary source', () => {
     const spy = setupPannerSpy();
     const mixer = new AudioManager();
     const sound = new Sound(createAudioBufferStub());
     sound.position = { x: 55, y: 66 };
     mixer.play(sound);
     const panner = spy.panners[0];
-    panner.positionX.setValueAtTime.mockClear();
-    panner.positionY.setValueAtTime.mockClear();
-    panner.positionZ.setValueAtTime.mockClear();
-    mixer.update();
+
+    // The first spatial write (at play time) snaps the position into place.
     expect(panner.positionX.setValueAtTime).toHaveBeenCalledWith(55, expect.any(Number));
     expect(panner.positionY.setValueAtTime).toHaveBeenCalledWith(66, expect.any(Number));
     expect(panner.positionZ.setValueAtTime).toHaveBeenCalledWith(0, expect.any(Number));
+
+    // Stationary → no further param scheduling on the next frame.
+    panner.positionX.setValueAtTime.mockClear();
+    panner.positionX.setTargetAtTime.mockClear();
+    mixer.update();
+    expect(panner.positionX.setValueAtTime).not.toHaveBeenCalled();
+    expect(panner.positionX.setTargetAtTime).not.toHaveBeenCalled();
+
     spy.restore();
     sound.destroy();
   });
@@ -301,15 +308,16 @@ describe('Sound — spatial (PannerNode)', () => {
     expect(panner.positionX.setValueAtTime).toHaveBeenCalledWith(305, expect.any(Number));
     expect(panner.positionY.setValueAtTime).toHaveBeenCalledWith(406, expect.any(Number));
 
-    // A group move (camera pan) is picked up on the next spatial tick.
+    // A group move (camera pan) is picked up on the next spatial tick — a
+    // moderate move ramps smoothly (setTargetAtTime) rather than snapping (AU4).
     group.setPosition(-100, 0);
-    panner.positionX.setValueAtTime.mockClear();
-    panner.positionY.setValueAtTime.mockClear();
+    panner.positionX.setTargetAtTime.mockClear();
+    panner.positionY.setTargetAtTime.mockClear();
 
     voice._tickSpatial();
 
-    expect(panner.positionX.setValueAtTime).toHaveBeenCalledWith(-95, expect.any(Number));
-    expect(panner.positionY.setValueAtTime).toHaveBeenCalledWith(6, expect.any(Number));
+    expect(panner.positionX.setTargetAtTime).toHaveBeenCalledWith(-95, expect.any(Number), expect.any(Number));
+    expect(panner.positionY.setTargetAtTime).toHaveBeenCalledWith(6, expect.any(Number), expect.any(Number));
 
     spy.restore();
     group.destroy();

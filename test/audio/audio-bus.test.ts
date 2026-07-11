@@ -570,7 +570,7 @@ describe('AudioBus', () => {
     bus.destroy();
   });
 
-  test('onceSetup() defers the callback via onAudioContextReady.once() when not yet set up, and skips it if still not set up when that fires', async () => {
+  test('onceSetup() queues the callback on the bus (NOT the global unlock signal) while locked — no per-callback accumulation (AU3)', async () => {
     vi.resetModules();
     const fakeSignal = new Signal<[AudioContext]>();
 
@@ -582,21 +582,51 @@ describe('AudioBus', () => {
 
     const { AudioBus: DeferredAudioBus } = await import('#audio/AudioBus');
     const bus = new DeferredAudioBus('deferred-once-setup');
+
+    // The bus's own setup handler is the ONLY listener on the global signal.
+    // onceSetup must not add another per registered callback — deferrals are
+    // queued on the bus itself, so a chatty pre-unlock game does not pile
+    // closures onto the singleton (AU3).
+    const countAfterConstruct = fakeSignal.count;
+    bus.onceSetup(vi.fn());
+    bus.onceSetup(vi.fn());
+    bus.onceSetup(vi.fn());
+    expect(fakeSignal.count).toBe(countAfterConstruct);
+
+    vi.doUnmock('#audio/audio-context');
+    vi.resetModules();
+  });
+
+  test('onceSetup() drops a still-pending callback on destroy() so it never fires (AU3 leak fix)', async () => {
+    vi.resetModules();
+    const fakeSignal = new Signal<[AudioContext]>();
+
+    const makeFakeGain = () => ({ connect: vi.fn(), disconnect: vi.fn(), gain: { setTargetAtTime: vi.fn() } });
+    const fakeCtx = {
+      currentTime: 0,
+      destination: {},
+      createGain: makeFakeGain,
+      createStereoPanner: () => ({ connect: vi.fn(), disconnect: vi.fn(), pan: { setTargetAtTime: vi.fn() } }),
+    } as unknown as AudioContext;
+
+    vi.doMock('#audio/audio-context', () => ({
+      getAudioContext: () => fakeCtx,
+      isAudioContextReady: () => false,
+      onAudioContextReady: fakeSignal,
+    }));
+
+    const { AudioBus: DeferredAudioBus } = await import('#audio/AudioBus');
+    const bus = new DeferredAudioBus('deferred-destroyed');
     const callback = vi.fn();
 
-    // Remove the bus's own pending `_onAudioContextReady` subscription so it
-    // never sets up (simulates a bus whose own setup is stuck / far off) —
-    // isolating onceSetup()'s independent deferred-check behavior below.
-    const ownHandler = (bus as unknown as { _onAudioContextReady: (ctx: AudioContext) => void })._onAudioContextReady;
-    fakeSignal.remove(ownHandler);
-
-    const countBeforeOnceSetup = fakeSignal.count;
     bus.onceSetup(callback);
-    expect(fakeSignal.count).toBe(countBeforeOnceSetup + 1);
+    // Destroying before the context unlocks drops the queued callback...
+    bus.destroy();
 
-    // The global "ready" event fires, but this bus is STILL not set up — the
-    // once-handler's internal `if (this._setup)` guard must skip the callback.
-    fakeSignal.dispatch({} as AudioContext);
+    // ...so when the bus would have set up, nothing fires.
+    const ready = (bus as unknown as { _onAudioContextReady: (ctx: AudioContext) => void })._onAudioContextReady;
+    ready(fakeCtx);
+    fakeSignal.dispatch(fakeCtx);
 
     expect(callback).not.toHaveBeenCalled();
 
@@ -604,9 +634,48 @@ describe('AudioBus', () => {
     vi.resetModules();
   });
 
+  test('onceSetup() flushes queued callbacks once the bus sets up (AU3)', async () => {
+    vi.resetModules();
+    const fakeSignal = new Signal<[AudioContext]>();
+
+    const makeFakeGain = () => ({ connect: vi.fn(), disconnect: vi.fn(), gain: { setTargetAtTime: vi.fn() } });
+    const fakeCtx = {
+      currentTime: 0,
+      destination: {},
+      createGain: makeFakeGain,
+      createStereoPanner: () => ({ connect: vi.fn(), disconnect: vi.fn(), pan: { setTargetAtTime: vi.fn() } }),
+    } as unknown as AudioContext;
+
+    vi.doMock('#audio/audio-context', () => ({
+      getAudioContext: () => fakeCtx,
+      isAudioContextReady: () => false,
+      onAudioContextReady: fakeSignal,
+    }));
+
+    const { AudioBus: DeferredAudioBus } = await import('#audio/AudioBus');
+    const bus = new DeferredAudioBus('deferred-flush');
+    const callback = vi.fn();
+
+    bus.onceSetup(callback);
+    expect(callback).not.toHaveBeenCalled();
+
+    // The bus sets up when the context unlocks — its queued callbacks flush then.
+    const ready = (bus as unknown as { _onAudioContextReady: (ctx: AudioContext) => void })._onAudioContextReady;
+    ready(fakeCtx);
+
+    expect(callback).toHaveBeenCalledTimes(1);
+
+    // The unsubscribe handle is inert once the callback has fired.
+    const dispose = bus.onceSetup(vi.fn()); // already set up → fires immediately, returns a no-op disposer
+    expect(() => dispose()).not.toThrow();
+
+    vi.doUnmock('#audio/audio-context');
+    vi.resetModules();
+  });
+
   // ---- _connectUpstream(): parent not yet set up -> subscribe, then connect once it is ----
 
-  test('a child bus whose parent is not yet set up subscribes via onceSetup and connects once the parent becomes ready', async () => {
+  test('a child bus whose parent is not yet set up subscribes via onceSetup and connects when the parent sets up (flush)', async () => {
     vi.resetModules();
     const fakeSignal = new Signal<[AudioContext]>();
 
@@ -642,21 +711,17 @@ describe('AudioBus', () => {
     childReady(fakeCtx);
     expect(child._getInputNode()).not.toBeNull();
     expect(parent._getInputNode()).toBeNull();
-    // The child's output has not been connected upstream yet.
+    // The child's output has not been connected upstream yet — it queued a
+    // reconnect on the parent via parent.onceSetup(...).
     const childOutput = child._getOutputNode() as unknown as { connect: MockInstance };
     expect(childOutput.connect).not.toHaveBeenCalled();
 
-    // Now the parent becomes ready — its own setup runs, and (deferred from
-    // above) the pending onceSetup subscription registered on the shared
-    // signal is still pending.
+    // Now the parent becomes ready — its own setup runs and flushes the queued
+    // onceSetup callback, which connects the child's output into the parent's
+    // freshly-created input node (AU3: the flush happens on the bus's own setup,
+    // not on a separate global dispatch).
     parentReady(fakeCtx);
     expect(parent._getInputNode()).not.toBeNull();
-
-    // Firing the shared signal again runs the once-handler registered by
-    // onceSetup, which — now that the parent is set up — connects the child's
-    // output into the parent's input node.
-    fakeSignal.dispatch(fakeCtx);
-
     expect(childOutput.connect).toHaveBeenCalledWith(parent._getInputNode());
 
     vi.doUnmock('#audio/audio-context');

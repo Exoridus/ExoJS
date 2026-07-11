@@ -7,6 +7,7 @@ import type { AudioBus } from './AudioBus';
 import type { AudioEffect } from './AudioEffect';
 import type { AudioManager } from './AudioManager';
 import type { Spatializable, Voice } from './Playable';
+import { SmoothedAudioParam } from './spatial-smoothing';
 
 /** Distance-attenuation configuration for a spatial voice. */
 export interface VoiceSpatialConfig {
@@ -79,6 +80,11 @@ export abstract class BaseVoice implements Voice, Spatializable, SpatialVoice {
   private _position: Vector | null = null;
   private _followNode: SceneNode | null = null;
   private _spatialRegistered = false;
+  private readonly _smoothX = new SmoothedAudioParam();
+  private readonly _smoothY = new SmoothedAudioParam();
+  private readonly _smoothZ = new SmoothedAudioParam();
+  /** Unsubscribe for a deferred bus-reconnect queued while the bus was locked (AU3). */
+  private _pendingBusSetup: (() => void) | null = null;
 
   /** Per-voice effect chain, inserted between the output gain and the bus. */
   private readonly _effects: AudioEffect[] = [];
@@ -270,10 +276,14 @@ export abstract class BaseVoice implements Voice, Spatializable, SpatialVoice {
     }>;
     const t = this._audioContext.currentTime;
     if (panner.positionX) {
-      panner.positionX.setValueAtTime(x, t);
-      panner.positionY!.setValueAtTime(y, t);
-      panner.positionZ!.setValueAtTime(0, t);
+      // Route through the smoothing layer (setTargetAtTime + epsilon-skip +
+      // teleport-snap) to eliminate per-frame zipper noise on moving sources (AU4).
+      const settings = this._manager.spatial;
+      this._smoothX.write(panner.positionX, x, t, settings);
+      this._smoothY.write(panner.positionY!, y, t, settings);
+      this._smoothZ.write(panner.positionZ!, 0, t, settings);
     } else if (panner.setPosition) {
+      // Legacy AudioParam-less API: snap only (no smoothing available).
       panner.setPosition(x, y, 0);
     }
   }
@@ -301,9 +311,14 @@ export abstract class BaseVoice implements Voice, Spatializable, SpatialVoice {
     }
 
     // Bus not set up yet (AudioContext still locked) — route to the destination
-    // for now and reconnect to the bus once it comes online.
+    // for now and reconnect to the bus once it comes online. Keep the disposer
+    // and drop any previous pending reconnect so a voice deferring repeatedly
+    // (or ending) before the first gesture never leaves stale callbacks queued
+    // on the bus (AU3).
     tail.connect(this._audioContext.destination);
-    this._bus.onceSetup((): void => {
+    this._pendingBusSetup?.();
+    this._pendingBusSetup = this._bus.onceSetup((): void => {
+      this._pendingBusSetup = null;
       if (this._ended) return;
       const node = this._bus._getInputNode();
       if (node !== null) {
@@ -365,6 +380,11 @@ export abstract class BaseVoice implements Voice, Spatializable, SpatialVoice {
     if (this._ended) return;
     this._ended = true;
     this._clearStopTimer();
+
+    // Drop a still-pending deferred bus reconnect so it doesn't linger on the
+    // bus (or fire) after this voice ends pre-unlock (AU3).
+    this._pendingBusSetup?.();
+    this._pendingBusSetup = null;
 
     this._teardownSource();
     this._panner?.disconnect();

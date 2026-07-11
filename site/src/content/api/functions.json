@@ -325,7 +325,7 @@
             }
           ],
           "returnType": "Promise<AudioBuffer>",
-          "description": "Decode raw audio bytes into an AudioBuffer using the shared OfflineAudioContext. The context's sample rate is derived from the live AudioContext, ensuring decoded buffers are compatible with playback nodes. Note: on some older mobile WebKit versions decodeAudioData requires a running (live) context — decoding may fail with a browser-level error rather than an ExoJS-shaped error in those environments."
+          "description": "Decode raw audio bytes into an AudioBuffer using the shared OfflineAudioContext. The context's sample rate matches the live AudioContext when one exists, else defaults to 44.1 kHz — decoding never forces a live context into existence. Note: on some older mobile WebKit versions decodeAudioData requires a running (live) context — decoding may fail with a browser-level error rather than an ExoJS-shaped error in those environments."
         },
         {
           "name": "defineAsset",
@@ -470,7 +470,7 @@
           ],
           "params": [],
           "returnType": "OfflineAudioContext",
-          "description": "Return the shared singleton OfflineAudioContext used for audio decoding. Its sample rate matches the live AudioContext. Creates the live context as a side effect if it does not exist yet."
+          "description": "Return the shared singleton OfflineAudioContext used for audio decoding. Its sample rate matches the live AudioContext when one already exists, otherwise a 44.1 kHz default is used. Never creates a live AudioContext — decoding before the first user gesture must not spawn a suspended context (AU2); buffers resample transparently on playback if the rates differ."
         },
         {
           "name": "inRange",

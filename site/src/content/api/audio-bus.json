@@ -395,7 +395,7 @@
         },
         {
           "name": "onceSetup",
-          "signature": "onceSetup(callback: () => void): void",
+          "signature": "onceSetup(callback: () => void): () => void",
           "signatureTokens": [
             {
               "text": "onceSetup",
@@ -434,6 +434,14 @@
               "kind": "punctuation"
             },
             {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
               "text": "void",
               "kind": "keyword"
             }
@@ -445,8 +453,8 @@
               "optional": false
             }
           ],
-          "returnType": "void",
-          "description": "Subscribe to the moment this bus's audio nodes are ready. Internal use."
+          "returnType": "() => void",
+          "description": "Run callback the moment this bus's audio nodes are ready: immediately if it is already set up, otherwise queued on the bus and flushed when the context unlocks. Returns an unsubscribe function that removes the still-pending callback (a no-op once it has fired). Internal use. The queue lives on the bus rather than the global unlock signal, so many voices deferring a reconnect before the first user gesture do not pile listeners onto that singleton, and anything torn down pre-unlock drops its own pending callback (AU3)."
         },
         {
           "name": "removeEffect",

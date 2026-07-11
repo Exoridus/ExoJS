@@ -67,7 +67,7 @@ describe('utils/audio-context', () => {
     expect(addEventListenerSpy).not.toHaveBeenCalled();
   });
 
-  it('creates the audio context lazily when a ready subscriber is added', async () => {
+  it('does NOT create the audio context when a ready subscriber is added — only registers interaction listeners, deferring creation to the first user gesture (AU2)', async () => {
     let audioContextCreations = 0;
 
     class TestAudioContext {
@@ -105,8 +105,14 @@ describe('utils/audio-context', () => {
 
     onAudioContextReady.once(() => undefined);
 
-    expect(audioContextCreations).toBe(1);
+    // A suspended live AudioContext must not be spawned before a user gesture —
+    // subscribing only wires up the interaction listeners (AU2).
+    expect(audioContextCreations).toBe(0);
     expect(addEventListenerSpy).toHaveBeenCalled();
+
+    // The first gesture is what finally creates and resumes the live context.
+    document.dispatchEvent(new MouseEvent('mousedown'));
+    expect(audioContextCreations).toBe(1);
   });
 
   it('registers keydown alongside pointer events as an unlock gesture', async () => {

@@ -3,6 +3,7 @@ import { Vector } from '#math/Vector';
 import type { View } from '#rendering/View';
 
 import { getAudioContext, isAudioContextReady, onAudioContextReady } from './audio-context';
+import { createSpatialSmoothingSettings, SmoothedAudioParam, type SpatialSmoothingSettings } from './spatial-smoothing';
 
 /**
  * Anything {@link AudioListener.target} can be set to. The listener reads
@@ -37,12 +38,22 @@ export class AudioListener {
 
   private _audioListener: WebAudioListener | null = null;
   private _ctx: AudioContext | null = null;
+  private readonly _settings: SpatialSmoothingSettings;
+  private readonly _smoothX = new SmoothedAudioParam();
+  private readonly _smoothY = new SmoothedAudioParam();
+  private readonly _smoothZ = new SmoothedAudioParam();
   private readonly _onAudioContextReady = (ctx: AudioContext): void => {
     onAudioContextReady.remove(this._onAudioContextReady);
     this._setup(ctx);
   };
 
-  public constructor() {
+  /**
+   * @param settings - Shared position-smoothing settings (normally
+   *   `app.audio.spatial`, supplied by {@link AudioManager}). Defaults to a
+   *   fresh settings object with the standard 20 ms time constant when omitted.
+   */
+  public constructor(settings: SpatialSmoothingSettings = createSpatialSmoothingSettings()) {
+    this._settings = settings;
     if (isAudioContextReady()) {
       this._setup(getAudioContext());
     } else {
@@ -64,10 +75,13 @@ export class AudioListener {
         setPosition: (x: number, y: number, z: number) => void;
       }>;
       if (listener.positionX && listener.positionY && listener.positionZ) {
-        listener.positionX.setValueAtTime(this.position.x, t);
-        listener.positionY.setValueAtTime(this.position.y, t);
-        listener.positionZ.setValueAtTime(0, t);
+        // Route through the smoothing layer (setTargetAtTime + epsilon-skip +
+        // teleport-snap) so listener motion never zippers the whole mix (AU4).
+        this._smoothX.write(listener.positionX, this.position.x, t, this._settings);
+        this._smoothY.write(listener.positionY, this.position.y, t, this._settings);
+        this._smoothZ.write(listener.positionZ, 0, t, this._settings);
       } else if (listener.setPosition) {
+        // Legacy AudioParam-less API: snap only (no smoothing available).
         listener.setPosition(this.position.x, this.position.y, 0);
       }
     }

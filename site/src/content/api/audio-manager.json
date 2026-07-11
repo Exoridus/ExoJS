@@ -6,11 +6,11 @@
   "subsystem": "audio",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 18,
+  "memberCount": 19,
   "counts": {
     "constructors": 1,
     "methods": 10,
-    "properties": 6,
+    "properties": 7,
     "events": 1
   },
   "sections": [
@@ -636,6 +636,27 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "spatial",
+          "signature": "spatial: SpatialSmoothingSettings",
+          "signatureTokens": [
+            {
+              "text": "spatial",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SpatialSmoothingSettings",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Tunable smoothing applied to per-frame panner/listener position updates, shared by the AudioListener and every spatial voice. Adjust smoothing (the setTargetAtTime time constant) or teleportThreshold (the snap-instead-of-ramp jump distance) to trade responsiveness against zipper-noise suppression (AU4). Reachable as app.audio.spatial."
         },
         {
           "name": "locked",

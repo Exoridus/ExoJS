@@ -63,7 +63,7 @@ describe('audio/audio-context — getOfflineAudioContext()', () => {
     vi.resetModules();
   });
 
-  it('returns a lazily-created singleton, reused across repeated calls (public wrapper)', async () => {
+  it('returns a lazily-created singleton, reused across repeated calls, WITHOUT spawning a live context (AU2)', async () => {
     let audioContextCreations = 0;
     let offlineCreations = 0;
 
@@ -98,8 +98,12 @@ describe('audio/audio-context — getOfflineAudioContext()', () => {
     const second = getOfflineAudioContext();
 
     expect(second).toBe(first);
-    expect(audioContextCreations).toBe(1); // the live context is created once as a side effect
+    // Decoding must NOT force a live AudioContext into existence — it falls back
+    // to the default 44.1 kHz sample rate before any gesture (AU2).
+    expect(audioContextCreations).toBe(0);
     expect(offlineCreations).toBe(1);
+    // The default sample rate is used when no live context exists yet.
+    expect((first as unknown as { sampleRate: number }).sampleRate).toBe(44100);
   });
 });
 
