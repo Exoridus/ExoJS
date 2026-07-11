@@ -6,10 +6,10 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 93,
+  "memberCount": 94,
   "counts": {
     "constructors": 1,
-    "methods": 43,
+    "methods": 44,
     "properties": 36,
     "events": 13
   },
@@ -588,7 +588,7 @@
           ],
           "params": [],
           "returnType": "Rectangle",
-          "description": ""
+          "description": "Axis-aligned bounding box of this node in its GLOBAL-transform space. That is world space for ordinary nodes, but GROUP-LOCAL space for nodes inside an engaged RetainedContainer transform group (the group matrix is applied on the GPU, not here) — this is deliberate and matches the rendering convention. For a true world-space extent of such a node, lift this rect by the group's getWorldTransform matrix."
         },
         {
           "name": "getChildAt",
@@ -803,6 +803,35 @@
           "params": [],
           "returnType": "Matrix",
           "description": ""
+        },
+        {
+          "name": "getWorldTransform",
+          "signature": "getWorldTransform(): Matrix",
+          "signatureTokens": [
+            {
+              "text": "getWorldTransform",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Matrix",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "Matrix",
+          "description": "The node's TRUE world-space transform, composed through every transform-group boundary (RetainedContainer) in the ancestor chain. getGlobalTransform deliberately stops at the nearest engaged boundary (descendants resolve group-RELATIVE transforms; the renderer multiplies the group matrix back in on the GPU), so it is the right space for rendering but the wrong one for spatial queries. Use THIS accessor whenever a real world position/orientation is needed — picking, spatial audio, physics, world-space math against nodes outside the group. Without any engaged boundary ancestor it returns the exact getGlobalTransform matrix (same instance, no extra work). With one, it lazily caches groupLocal × groupWorld and revalidates on read via version/stamp compares — including boundary engage/disengage flips, which RetainedContainer performs at runtime (deep-barrier fallback)."
         },
         {
           "name": "intersectsWith",

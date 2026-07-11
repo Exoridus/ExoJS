@@ -1,6 +1,6 @@
 {
   "title": "AudioListenerTarget",
-  "description": "Anything AudioListener.target can be set to. The listener reads its world-space position from the target each frame: - SceneNode: uses `getGlobalTransform()` translation - View: uses `view.center` - Plain `{ x, y }` object: read directly - `null`: no automatic tracking — set `position` manually.",
+  "description": "Anything AudioListener.target can be set to. The listener reads its world-space position from the target each frame: - SceneNode: uses `getWorldTransform()` translation (true world space, composed through RetainedContainer transform-group boundaries) - View: uses `view.center` - Plain `{ x, y }` object: read directly - `null`: no automatic tracking — set `position` manually.",
   "symbol": "AudioListenerTarget",
   "kind": "type",
   "subsystem": "audio",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Anything AudioListener.target can be set to. The listener reads its world-space position from the target each frame: - SceneNode: uses `getGlobalTransform()` translation - View: uses `view.center` - Plain `{ x, y }` object: read directly - `null`: no automatic tracking — set `position` manually."
+        "Anything AudioListener.target can be set to. The listener reads its world-space position from the target each frame: - SceneNode: uses `getWorldTransform()` translation (true world space, composed through RetainedContainer transform-group boundaries) - View: uses `view.center` - Plain `{ x, y }` object: read directly - `null`: no automatic tracking — set `position` manually."
       ],
       "importLine": "import { AudioListenerTarget } from '@codexo/exojs'",
       "sourceLink": null
