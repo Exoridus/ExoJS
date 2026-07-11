@@ -484,10 +484,9 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
    * `true` on transform-group boundary nodes ({@link RetainedContainer}):
    * descendants combine against identity instead of this node's world matrix,
    * so their global transforms are group-relative (Track B Slice 2, §5).
-   * A getter, not a field: the boundary is LIVE state — RetainedContainer
-   * disengages it when a deep barrier forces the plain-Container fallback
-   * (plan D-P4), and descendants pick the flip up lazily through the
-   * parent-version compare below.
+   * A getter, not a field, read live on every seam evaluation below:
+   * subclasses may flip it at runtime, and descendants pick a flip up lazily
+   * through the parent-version compare.
    * @internal
    */
   public get _isTransformGroupBoundary(): boolean {
@@ -498,7 +497,10 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
    * Whether this node opts back OUT of a parent transform-group boundary and
    * resolves world-space transforms. Overridden by RenderNode for
    * barrier-effect nodes (filters/mask/clip/cacheAsBitmap), whose effect
-   * machinery composites in world space (plan decision D-P4).
+   * machinery composites in world space (plan decision D-P4), and for direct
+   * children a RetainedContainer pushed out because their subtree contains a
+   * DEEP barrier — the sub-branch escape (F13/R3). Escapes are LIVE state,
+   * picked up lazily through the same parent-version seam as boundary flips.
    * @internal
    */
   protected _escapesTransformGroup(): boolean {
@@ -542,8 +544,8 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
    * Without any engaged boundary ancestor it returns the exact
    * {@link getGlobalTransform} matrix (same instance, no extra work). With
    * one, it lazily caches `groupLocal × groupWorld` and revalidates on read
-   * via version/stamp compares — including boundary engage/disengage flips,
-   * which RetainedContainer performs at runtime (deep-barrier fallback).
+   * via version/stamp compares — including runtime space flips such as
+   * RetainedContainer's deep-barrier sub-branch escape (F13/R3).
    */
   public getWorldTransform(): Matrix {
     const anchor = this._resolveTransformGroupAnchor();
@@ -595,10 +597,10 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
    * The nearest ancestor whose ENGAGED transform-group boundary this node's
    * global transform is relative to, or `null` when {@link getGlobalTransform}
    * is already world-space. Mirrors the exact seam getGlobalTransform uses:
-   * the boundary getter is LIVE (engage/disengage flips are picked up on every
-   * call) and a barrier-bearing direct child escapes via
-   * {@link _escapesTransformGroup}, taking its whole subtree back to world
-   * space with it.
+   * the boundary getter and {@link _escapesTransformGroup} are both LIVE
+   * (flips are picked up on every call), and an escaping direct child — its
+   * own barrier effects, or the deep-barrier sub-branch escape (F13/R3) —
+   * takes its whole subtree back to world space with it.
    * @internal
    */
   public _resolveTransformGroupAnchor(): SceneNode | null {

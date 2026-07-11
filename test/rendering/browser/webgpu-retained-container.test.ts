@@ -10,8 +10,8 @@
  * group move via the group matrix, a child mutation inside the group, a
  * tint/alpha change inside the group, bitmap text lifted by the group
  * uniform, an effect-bearing direct child (cacheAsBitmap) that escapes the
- * group convention, and a depth-2 effect node that disengages the boundary
- * (plan D-P4 Option A) while keeping pixel-correct plain-Container output.
+ * group convention, and a depth-2 effect node whose branch escapes the group
+ * (F13/R3 sub-branch escape) while keeping pixel-correct output.
  *
  * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
  * against Mesa lavapipe); `renderScene` only skips when the software adapter
@@ -400,7 +400,7 @@ describe('WebGPU renderer matrix: RetainedContainer cells', () => {
     }
   });
 
-  test('cell 7 — effect-bearing node nested TWO levels deep: the boundary disengages and output stays correct', async ctx => {
+  test('cell 7 — effect-bearing node nested TWO levels deep: its branch escapes the group and output stays correct', async ctx => {
     const backend = await setupBackend();
     const red = createSolidTexture('#ff0000', 16);
     const green = createSolidTexture('#00ff00', 16);
@@ -411,7 +411,7 @@ describe('WebGPU renderer matrix: RetainedContainer cells', () => {
     const plainLeaf = new Sprite(green);
 
     try {
-      deepCached.cacheAsBitmap = true; // barrier at depth 2 -> D-P4 Option A fallback
+      deepCached.cacheAsBitmap = true; // barrier at depth 2 -> mid's branch escapes (F13/R3)
       mid.setPosition(8, 8);
       mid.addChild(deepCached);
       group.addChild(mid);
@@ -426,16 +426,16 @@ describe('WebGPU renderer matrix: RetainedContainer cells', () => {
       let readPixel = readCanvas(backend);
 
       // CORRECT output, not a warning: the deep effect lands at its true
-      // world position (16+8 -> 24..40) and the plain sibling at the group
-      // position (16..32) — the disengaged group renders exactly like a
-      // plain Container (group uniform identity, world-space transforms).
+      // world position (16+8 -> 24..40) via the escaped world-space branch,
+      // and the plain sibling stays group-local under the group uniform
+      // (16..32) — retention and the group transform survive for it (F13/R3).
       expectPixelNear(readPixel(36, 36), [255, 0, 0, 255]); // deep cached sprite only
       expectPixelNear(readPixel(18, 18), [0, 255, 0, 255]); // plain leaf only
       expectPixelNear(readPixel(8, 8), [0, 0, 0, 255]);
       expectPixelNear(readPixel(46, 46), [0, 0, 0, 255]);
 
       if (!(await renderScene(ctx, backend, root))) {
-        // second frame: identical (no retention, no drift)
+        // second frame: identical (sibling splices, branch re-dispatches)
         return;
       }
 

@@ -7,8 +7,8 @@
  * move via the group matrix, a child mutation inside the group, a tint/alpha
  * change inside the group, bitmap text lifted by the group uniform, an
  * effect-bearing direct child (cacheAsBitmap) that escapes the group
- * convention, and a depth-2 effect node that disengages the boundary
- * (plan D-P4 Option A) while keeping pixel-correct plain-Container output.
+ * convention, and a depth-2 effect node whose branch escapes the group
+ * (F13/R3 sub-branch escape) while keeping pixel-correct output.
  *
  * Run via:  pnpm test:browser:webgl
  */
@@ -417,7 +417,7 @@ describe('WebGL2 renderer matrix: RetainedContainer cells', () => {
     }
   });
 
-  test('cell 7 — effect-bearing node nested TWO levels deep: the boundary disengages and output stays correct', async () => {
+  test('cell 7 — effect-bearing node nested TWO levels deep: its branch escapes the group and output stays correct', async () => {
     const backend = await createBackend();
     const red = createSolidTexture('#ff0000', 16, 16);
     const green = createSolidTexture('#00ff00', 16, 16);
@@ -428,7 +428,7 @@ describe('WebGL2 renderer matrix: RetainedContainer cells', () => {
     const plainLeaf = new Sprite(green);
 
     try {
-      deepCached.cacheAsBitmap = true; // barrier at depth 2 -> D-P4 Option A fallback
+      deepCached.cacheAsBitmap = true; // barrier at depth 2 -> mid's branch escapes (F13/R3)
       mid.setPosition(8, 8);
       mid.addChild(deepCached);
       group.addChild(mid);
@@ -439,15 +439,15 @@ describe('WebGL2 renderer matrix: RetainedContainer cells', () => {
       render(backend, root);
 
       // CORRECT output, not a warning: the deep effect lands at its true
-      // world position (16+8 -> 24..40) and the plain sibling at the group
-      // position (16..32) — the disengaged group renders exactly like a
-      // plain Container (group uniform identity, world-space transforms).
+      // world position (16+8 -> 24..40) via the escaped world-space branch,
+      // and the plain sibling stays group-local under the group uniform
+      // (16..32) — retention and the group transform survive for it (F13/R3).
       expectPixelNear(readPixel(backend, 36, 36), [255, 0, 0, 255]); // deep cached sprite only
       expectPixelNear(readPixel(backend, 18, 18), [0, 255, 0, 255]); // plain leaf only
       expectPixelNear(readPixel(backend, 8, 8), [0, 0, 0, 255]);
       expectPixelNear(readPixel(backend, 46, 46), [0, 0, 0, 255]);
 
-      render(backend, root); // second frame: identical (no retention, no drift)
+      render(backend, root); // second frame: identical (sibling splices, branch re-dispatches)
       expectPixelNear(readPixel(backend, 36, 36), [255, 0, 0, 255]);
       expectPixelNear(readPixel(backend, 18, 18), [0, 255, 0, 255]);
     } finally {

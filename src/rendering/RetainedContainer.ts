@@ -35,9 +35,13 @@ const retainedDiagnosticThreshold = 108;
  * per-drawable tint (the engine has no inherited alpha) or via
  * {@link RenderNode.cacheAsBitmap}. Nodes with filters/mask/clip/
  * cacheAsBitmap are supported as DIRECT children (they stay world-space and
- * re-collect every frame); nesting them deeper DISENGAGES the group — it
- * then renders as an exact plain {@link Container} (correct output, no
- * retention) and warns once in dev builds.
+ * re-collect every frame); nesting one deeper pushes ONLY the direct child
+ * branch containing it out of the group (F13/R3) — that sub-branch renders
+ * world-space and re-collects every frame like a direct barrier child, while
+ * retention and the group transform stay active for the rest of the group —
+ * and warns once in dev builds. Note that any escaped branch keeps the
+ * group's fragment off the recorded-instruction tier (barrier entries are
+ * not batch-recordable, S3-D5); the group stays on entry replay.
  *
  * World-space queries against nodes inside the group (picking, spatial
  * audio, physics, cross-group math) go through
@@ -56,21 +60,20 @@ const retainedDiagnosticThreshold = 108;
 export class RetainedContainer extends Container {
   private readonly _fragment = new RetainedGroupFragment();
   private _groupVersion = 0;
-  private _boundaryDisengaged = false;
   private _devFragmentBuilds = 0;
   private _devFragmentInvalidations = 0;
   private _devRetentionWarned = false;
 
   /**
-   * The group convention is LIVE state (plan D-P4, Option A): `true` while
-   * engaged; flips to `false` when a barrier-effect node sits deeper than
-   * one level inside the subtree, falling back to exact plain-Container
-   * behavior instead of rendering wrong effect placement. Descendants pick
-   * a flip up lazily through the getGlobalTransform parent-version seam.
+   * The boundary is ALWAYS engaged (F13/R3 superseded the whole-group
+   * deep-barrier disengage of plan D-P4 Option A): a deep barrier now pushes
+   * only its own direct-child branch out of the group via
+   * {@link _childEscapesTransformGroup}, and affected descendants pick a flip
+   * up lazily through the getGlobalTransform parent-version seam.
    * @internal
    */
   public override get _isTransformGroupBoundary(): boolean {
-    return !this._boundaryDisengaged;
+    return true;
   }
 
   /**
@@ -124,10 +127,9 @@ export class RetainedContainer extends Container {
    * culling/hit-prefilter consumers of container bounds.
    */
   public override updateBounds(): this {
-    if (this._boundaryDisengaged) {
-      // Deep-barrier fallback: children are world-space, aggregate plainly.
-      return super.updateBounds();
-    }
+    // Escape membership feeds the live-children split below; refresh it first
+    // (revision-keyed, O(1) when the subtree is unchanged).
+    this._refreshBranchEscapes();
 
     const world = this.getGlobalTransform();
 
@@ -143,8 +145,8 @@ export class RetainedContainer extends Container {
     for (let index = 0; index < this._liveBoundsChildren.length; index++) {
       const child = this._liveBoundsChildren[index]!;
 
-      if (child._renderPlanHasBarrierEffects()) {
-        // World-space escape: no lift.
+      if (child._renderPlanHasBarrierEffects() || this._escapedBranches.has(child)) {
+        // World-space escape (own barrier, or a deep-barrier branch): no lift.
         this._bounds.addRect(child.getBounds());
       } else {
         // Nested transform group: group-local rect, lift like the aggregate.
@@ -167,10 +169,10 @@ export class RetainedContainer extends Container {
         continue;
       }
 
-      // Nested-group detection is by TYPE, not the live boundary getter: a
-      // (rare) disengaged nested RetainedContainer still decouples its own
-      // moves from the content revision, so it must stay out of the cache.
-      if (child._renderPlanHasBarrierEffects() || child instanceof RetainedContainer || child._isTransformGroupBoundary) {
+      // Escaped branches are world-space: they follow the container's own
+      // moves, which bump no revision — like barrier children they must be
+      // re-read live. Nested groups decouple their own moves the same way.
+      if (child._renderPlanHasBarrierEffects() || this._escapedBranches.has(child) || child instanceof RetainedContainer || child._isTransformGroupBoundary) {
         this._liveBoundsChildren.push(child);
       } else {
         this._groupAggregate.addRect(child.getBounds());
@@ -181,14 +183,6 @@ export class RetainedContainer extends Container {
   /** @internal */
   protected override _collectContent(builder: RenderPlanBuilder): void {
     if (this._children.length === 0) {
-      return;
-    }
-
-    if (this._boundaryDisengaged) {
-      // Deep-barrier fallback (plan D-P4): exact plain-Container behavior,
-      // including the Slice-1 per-child cache. Never captures a fragment.
-      super._collectContent(builder);
-
       return;
     }
 
@@ -269,6 +263,7 @@ export class RetainedContainer extends Container {
     this._fragment.dispose();
     this._groupAggregate.destroy();
     this._liveBoundsChildren.length = 0;
+    this._escapedBranches.clear();
 
     super.destroy();
   }
@@ -310,64 +305,135 @@ export class RetainedContainer extends Container {
     this._devFragmentInvalidations = 0;
   }
 
-  private _deepBarrierCheckContent = -1;
-  private _deepBarrierCheckStructure = -1;
+  private _escapeCheckContent = -1;
+  private _escapeCheckStructure = -1;
   private _deepBarrierWarned = false;
+  /**
+   * Direct children whose subtrees contain a deep barrier (F13/R3): they
+   * escape the group — world-space transforms, effect-less barrier wrap at
+   * collect, live re-dispatch on fragment replay — while their siblings keep
+   * retention and the group transform. Membership is revision-keyed by
+   * {@link _refreshBranchEscapes}.
+   */
+  private readonly _escapedBranches = new Set<RenderNode>();
 
   /** @internal */
   public override _collect(builder: RenderPlanBuilder, seq?: number): void {
-    // Re-evaluate the deep-barrier fallback BEFORE culling/bounds run, so an
-    // engagement flip never mixes spaces within one frame (plan D-P4).
-    // Skipped entirely while the subtree revisions are unchanged.
-    this._refreshBoundaryEngagement();
+    // Re-evaluate branch escapes BEFORE culling/bounds run, so an escape
+    // flip never mixes spaces within one frame (plan D-P4). Skipped entirely
+    // while the subtree revisions are unchanged.
+    this._refreshBranchEscapes();
     super._collect(builder, seq);
   }
 
   /**
-   * Deep-barrier fallback decision (plan D-P4, Option A). Re-scans the
-   * subtree only when its content/structure revisions changed since the last
-   * check — every effect toggle and attach/detach bumps them (task 1), so the
-   * runtime-toggle path invalidates for free, and the scan cost lands only on
-   * frames that already pay an O(subtree) re-collect.
+   * @internal — the transform-seam and collect-time query for the sub-branch
+   * escape (F13/R3). Lazily refreshes the revision-keyed escape set so every
+   * consumer (getGlobalTransform seam, plan builder, interaction anchors)
+   * observes the same membership.
    */
-  private _refreshBoundaryEngagement(): void {
-    if (this._deepBarrierCheckContent === this._contentRevision && this._deepBarrierCheckStructure === this._structureRevision) {
+  public override _childEscapesTransformGroup(child: RenderNode): boolean {
+    this._refreshBranchEscapes();
+
+    return this._escapedBranches.has(child);
+  }
+
+  /**
+   * Sub-branch escape decision (F13/R3, superseding the whole-group
+   * disengage of plan D-P4 Option A). Re-scans the subtree only when its
+   * content/structure revisions changed since the last check — every effect
+   * toggle and attach/detach bumps them, so the runtime-toggle path
+   * invalidates for free, and the scan cost lands only on frames that
+   * already pay an O(subtree) re-collect.
+   */
+  private _refreshBranchEscapes(): void {
+    if (this._escapeCheckContent === this._contentRevision && this._escapeCheckStructure === this._structureRevision) {
       return;
     }
 
-    this._deepBarrierCheckContent = this._contentRevision;
-    this._deepBarrierCheckStructure = this._structureRevision;
+    this._escapeCheckContent = this._contentRevision;
+    this._escapeCheckStructure = this._structureRevision;
 
-    const disengage = this._subtreeHasDeepBarrier();
+    let changed = false;
+    let escapedCount = 0;
 
-    if (disengage === this._boundaryDisengaged) {
+    for (let index = 0; index < this._children.length; index++) {
+      const child = this._children[index]!;
+      // A direct barrier child escapes on its own (supported, world-space
+      // wholesale), so its subtree is skipped — same rule the pre-R3 scan
+      // used. Only Containers can hold a deep barrier.
+      const escapes = !child._renderPlanHasBarrierEffects() && child instanceof Container && this._scanForBarriers(child);
+
+      if (escapes) {
+        escapedCount++;
+
+        if (!this._escapedBranches.has(child)) {
+          this._escapedBranches.add(child);
+          this._notifyBranchSpaceFlipped(child);
+          changed = true;
+        }
+      } else if (this._escapedBranches.delete(child)) {
+        this._notifyBranchSpaceFlipped(child);
+        changed = true;
+      }
+    }
+
+    // Drop members that are no longer children (the reparent/removal is what
+    // bumped the structure revision and got us here). Their new space is the
+    // new parent's business; the removal path already notified interaction.
+    if (this._escapedBranches.size > escapedCount) {
+      for (const branch of this._escapedBranches) {
+        if (branch.parent !== this) {
+          this._escapedBranches.delete(branch);
+          changed = true;
+        }
+      }
+    }
+
+    if (!changed) {
       return;
     }
 
-    this._boundaryDisengaged = disengage;
-    // Spaces flip: descendants recombine lazily through the live boundary
-    // getter; the fragment (captured in the other space), its retained GPU
-    // bundle (S3-D3: disengage frees resources), and the aggregate bounds
-    // must drop immediately.
-    this._fragment.dispose();
+    // Spaces flipped under at least one branch: the fragment (captured in
+    // the other space) and the aggregate bounds must drop immediately. While
+    // any branch is escaped the fragment can never record instructions
+    // (barrier records gate S3-D5), so the retained GPU bundle is released
+    // with it; a fully re-engaged group keeps the grow-only bundle for the
+    // next recording (S3-D3).
+    if (this._escapedBranches.size > 0) {
+      this._fragment.dispose();
+    } else {
+      this._fragment.invalidate();
+    }
+
     this._invalidateBoundsFlags();
-    // The flip changes the transform SPACE of every descendant without
-    // touching their bounds flags or revisions, so spatial-index consumers
-    // (InteractionManager buckets nodes by group anchor) must be told
-    // per-node. The manager filters to tracked interactive nodes (O(1)
-    // Set-miss for the rest); flips are rare and already pay an O(subtree)
-    // barrier scan, so the extra walk is in budget.
-    this._notifySubtreeBoundsInvalidated(this);
 
-    if (__DEV__ && disengage && !this._deepBarrierWarned) {
+    if (__DEV__ && this._escapedBranches.size > 0 && !this._deepBarrierWarned) {
       this._deepBarrierWarned = true;
       logger.warn(
         `RetainedContainer${this.name ? ` '${this.name}'` : ''} contains a node with filters/mask/clip/cacheAsBitmap ` +
-          'nested deeper than one level below the group boundary. Retention and the group transform are disabled — ' +
-          'it renders as a plain Container — until the effect-bearing node is moved up to a direct child of the ' +
-          'group or out of it.',
+          'nested deeper than one level below the group boundary. That sub-branch leaves the transform group and ' +
+          're-collects in world space every frame — retention and the group transform stay active for the rest of ' +
+          'the group — until the effect-bearing node is moved up to a direct child of the group or out of it.',
         { source: 'rendering' },
       );
+    }
+  }
+
+  /**
+   * An escape flip changes the transform SPACE of the whole branch without
+   * touching its bounds flags or revisions, so spatial-index consumers
+   * (InteractionManager buckets nodes by group anchor) must be told per-node.
+   * The manager filters to tracked interactive nodes (O(1) Set-miss for the
+   * rest); flips are rare and already pay an O(subtree) barrier scan, so the
+   * walk is in budget — and it is scoped to the flipped branch only (F13/R3),
+   * never the whole group.
+   */
+  private _notifyBranchSpaceFlipped(branch: RenderNode): void {
+    branch._getStage()?.interaction._notifyBoundsInvalidated(branch);
+
+    if (branch instanceof Container) {
+      this._notifySubtreeBoundsInvalidated(branch);
     }
   }
 
@@ -380,25 +446,6 @@ export class RetainedContainer extends Container {
         this._notifySubtreeBoundsInvalidated(child);
       }
     }
-  }
-
-  /**
-   * `true` when any barrier-effect node sits deeper than one level below this
-   * boundary. Direct barrier children escape to world space (supported), and
-   * their subtrees are world-space wholesale, so the scan skips them.
-   */
-  private _subtreeHasDeepBarrier(): boolean {
-    for (const child of this._children) {
-      if (child._renderPlanHasBarrierEffects()) {
-        continue;
-      }
-
-      if (child instanceof Container && this._scanForBarriers(child)) {
-        return true;
-      }
-    }
-
-    return false;
   }
 
   private _scanForBarriers(container: Container): boolean {

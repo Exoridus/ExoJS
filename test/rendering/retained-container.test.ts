@@ -350,36 +350,8 @@ describe('RetainedContainer: group bounds and group-level culling (spec 6)', () 
   });
 });
 
-describe('RetainedContainer: deep-barrier fallback (plan D-P4, spec 8)', () => {
-  test('a barrier nested deeper than one level disengages the boundary: descendants go world-space', () => {
-    const backend = createTestBackend();
-    const root = new Container();
-    const group = new RetainedContainer();
-    const mid = new Container();
-    const deepClipped = new LeafDrawable('deep');
-    const plainLeaf = new LeafDrawable('plain');
-
-    deepClipped.clip = true;
-    deepClipped.clipShape = new Rectangle(0, 0, 8, 8);
-    mid.setPosition(10, 0);
-    mid.addChild(deepClipped);
-    group.setPosition(40, 0);
-    group.addChild(mid);
-    group.addChild(plainLeaf);
-    root.addChild(group);
-
-    // Engagement is (re-)evaluated at the top of the group's _collect.
-    collectDraws(root, backend);
-
-    expect(group._isTransformGroupBoundary).toBe(false);
-    expect(mid.getGlobalTransform().x).toBe(50); // world (40 + 10), not group-relative 10
-    expect(plainLeaf.getGlobalTransform().x).toBe(40); // world, not group-relative 0
-
-    root.destroy();
-    backend.destroy();
-  });
-
-  test('the disengaged plan is unmarked and byte-identical to a plain Container scene', () => {
+describe('RetainedContainer: deep-barrier escape output equivalence (plan D-P4 spec 8, scoped per F13/R3)', () => {
+  test('the escaped branch renders byte-identical to the same branch in a plain Container scene (world space)', () => {
     const backend = createTestBackend();
 
     const buildScene = (groupNode: Container): Container => {
@@ -393,7 +365,6 @@ describe('RetainedContainer: deep-barrier fallback (plan D-P4, spec 8)', () => {
       midNode.addChild(deep);
       groupNode.setPosition(40, 0);
       groupNode.addChild(midNode);
-      groupNode.addChild(new LeafDrawable('plain'));
       sceneRoot.addChild(groupNode);
 
       return sceneRoot;
@@ -402,102 +373,13 @@ describe('RetainedContainer: deep-barrier fallback (plan D-P4, spec 8)', () => {
     const plainRoot = buildScene(new Container());
     const retainedRoot = buildScene(new RetainedContainer());
 
+    // The branch containing the deep barrier escapes the group, so it
+    // collects the exact plain-Container plan for that branch: same world
+    // bounds, same material keys, same order.
     expect(snapshot(collectDraws(retainedRoot, backend))).toEqual(snapshot(collectDraws(plainRoot, backend)));
 
-    // And the scope carries NO transformNode (group uniform stays identity).
-    const builder = RenderPlanBuilder.acquire();
-    const plan = builder.build(retainedRoot, backend);
-    const groupEntry = plan.passes[0]!.root.entries.find(entry => entry.kind === RenderEntryKind.Group);
-
-    expect(groupEntry).toBeDefined();
-
-    if (groupEntry?.kind === RenderEntryKind.Group) {
-      expect(groupEntry.scope.transformNode).toBeNull();
-    }
-
-    RenderPlanBuilder.release(builder);
     plainRoot.destroy();
     retainedRoot.destroy();
-    backend.destroy();
-  });
-
-  test('runtime toggle: removing the deep barrier re-engages the boundary on the next collect', () => {
-    const backend = createTestBackend();
-    const root = new Container();
-    const group = new RetainedContainer();
-    const mid = new Container();
-    const deepClipped = new LeafDrawable('deep');
-
-    deepClipped.clip = true;
-    deepClipped.clipShape = new Rectangle(0, 0, 8, 8);
-    mid.addChild(deepClipped);
-    group.addChild(mid);
-    group.setPosition(40, 0);
-    root.addChild(group);
-
-    collectDraws(root, backend);
-    expect(group._isTransformGroupBoundary).toBe(false);
-
-    deepClipped.clip = false; // structure-dirty (task 1) -> re-scan on next collect
-
-    collectDraws(root, backend);
-    expect(group._isTransformGroupBoundary).toBe(true);
-    expect(mid.getGlobalTransform().x).toBe(0); // group-relative again (lazy recombine)
-
-    root.destroy();
-    backend.destroy();
-  });
-
-  test('a barrier DIRECT child does not disengage; a barrier direct child of a NESTED group disengages the outer group only', () => {
-    const backend = createTestBackend();
-    const root = new Container();
-    const outer = new RetainedContainer();
-    const inner = new RetainedContainer();
-    const directBarrier = new LeafDrawable('direct');
-
-    directBarrier.clip = true;
-    directBarrier.clipShape = new Rectangle(0, 0, 8, 8);
-    inner.addChild(directBarrier);
-    outer.addChild(inner);
-    root.addChild(outer);
-
-    collectDraws(root, backend);
-
-    // Depth 1 for inner (supported escape) but depth 2 for outer: only the
-    // outer boundary disengages, so inner.getGlobalTransform is true world
-    // and the escaped barrier composes correctly.
-    expect(inner._isTransformGroupBoundary).toBe(true);
-    expect(outer._isTransformGroupBoundary).toBe(false);
-
-    root.destroy();
-    backend.destroy();
-  });
-
-  test('disengaging warns once in dev builds, naming the container', () => {
-    const backend = createTestBackend();
-    const warnSpy = vi.spyOn(logger, 'warn');
-    const root = new Container();
-    const group = new RetainedContainer();
-    const mid = new Container();
-    const deepClipped = new LeafDrawable('deep');
-
-    group.name = 'decor';
-    deepClipped.clip = true;
-    deepClipped.clipShape = new Rectangle(0, 0, 8, 8);
-    mid.addChild(deepClipped);
-    group.addChild(mid);
-    root.addChild(group);
-
-    collectDraws(root, backend);
-    collectDraws(root, backend);
-
-    const disengageWarnings = warnSpy.mock.calls.filter(call => String(call[0]).includes('renders as a plain Container'));
-
-    expect(disengageWarnings).toHaveLength(1);
-    expect(String(disengageWarnings[0]![0])).toContain('decor');
-
-    warnSpy.mockRestore();
-    root.destroy();
     backend.destroy();
   });
 });
@@ -839,36 +721,44 @@ describe('RetainedContainer: invalidation gates and view independence', () => {
     backend.destroy();
   });
 
-  test('a deep barrier disables retention entirely; removing it re-engages and splices again', () => {
+  test('a deep barrier keeps retention for sibling branches; removing it returns the whole group to the splice', () => {
     const backend = createTestBackend();
     const root = new Container();
     const group = new RetainedContainer();
+    const staticMid = new Container();
     const mid = new Container();
     const deep = new LeafDrawable('deep');
 
-    deep.cacheAsBitmap = true; // barrier at depth 2 -> boundary disengages
+    deep.cacheAsBitmap = true; // barrier at depth 2 -> mid's branch escapes (F13/R3)
+    staticMid.addChild(new LeafDrawable('a'));
     mid.addChild(deep);
+    group.addChild(staticMid);
     group.addChild(mid);
     root.addChild(group);
 
     collectDraws(root, backend);
-    expect(group._isTransformGroupBoundary).toBe(false);
+    expect(group._isTransformGroupBoundary).toBe(true); // never disengages
 
-    // Disengaged: plain-Container collect every frame, no fragment splice.
-    const collectSpy = vi.spyOn(mid, '_collect');
+    // Clean frame: the static sibling splices from the fragment while ONLY
+    // the escaped branch re-dispatches live.
+    const staticCollectSpy = vi.spyOn(staticMid, '_collect');
+    const escapedCollectSpy = vi.spyOn(mid, '_collect');
 
     collectDraws(root, backend);
-    expect(collectSpy).toHaveBeenCalledTimes(1);
+    expect(staticCollectSpy).not.toHaveBeenCalled();
+    expect(escapedCollectSpy).toHaveBeenCalledTimes(1);
 
-    // Remove the deep barrier: re-engage, capture, then splice.
+    // Remove the deep barrier: the branch re-joins the group, capture, then
+    // the whole group splices with no walk at all.
     deep.cacheAsBitmap = false;
     collectDraws(root, backend); // full collect + capture
-    expect(group._isTransformGroupBoundary).toBe(true);
 
-    collectSpy.mockClear();
+    staticCollectSpy.mockClear();
+    escapedCollectSpy.mockClear();
     collectDraws(root, backend); // spliced
 
-    expect(collectSpy).not.toHaveBeenCalled();
+    expect(staticCollectSpy).not.toHaveBeenCalled();
+    expect(escapedCollectSpy).not.toHaveBeenCalled();
 
     root.destroy();
     backend.destroy();
@@ -1333,8 +1223,204 @@ describe('RetainedContainer: group-local bounds aggregate cache (F12)', () => {
   });
 });
 
-describe('RetainedContainer: engagement flips re-index spatial consumers (F2)', () => {
-  const createSpyStage = (): { stage: Stage; invalidated: unknown[] } => {
+describe('RetainedContainer: deep-barrier escape scoped to the offending sub-branch (F13/R3)', () => {
+  test('a deep barrier escapes only its own branch: the boundary stays engaged and siblings stay group-relative', () => {
+    const backend = createTestBackend();
+    const root = new Container();
+    const group = new RetainedContainer();
+    const mid = new Container();
+    const deepClipped = new LeafDrawable('deep');
+    const plainLeaf = new LeafDrawable('plain');
+
+    deepClipped.clip = true;
+    deepClipped.clipShape = new Rectangle(0, 0, 8, 8);
+    mid.setPosition(10, 0);
+    mid.addChild(deepClipped);
+    group.setPosition(40, 0);
+    group.addChild(mid);
+    group.addChild(plainLeaf);
+    root.addChild(group);
+
+    collectDraws(root, backend);
+
+    // The group stays a live boundary — only the offending branch leaves it.
+    expect(group._isTransformGroupBoundary).toBe(true);
+    expect(mid.getGlobalTransform().x).toBe(50); // escaped branch: world (40 + 10)
+    expect(deepClipped.getGlobalTransform().x).toBe(50); // its subtree is world-space wholesale
+    expect(plainLeaf.getGlobalTransform().x).toBe(0); // untouched sibling: still group-relative
+
+    root.destroy();
+    backend.destroy();
+  });
+
+  test('retention survives a deep barrier: a clean frame splices sibling draws and re-dispatches only the escaped branch', () => {
+    const backend = createTestBackend();
+    const root = new Container();
+    const group = new RetainedContainer();
+    const staticMid = new Container();
+    const leafA = new LeafDrawable('a');
+    const dirtyMid = new Container();
+    const deepClipped = new LeafDrawable('deep');
+
+    deepClipped.clip = true;
+    deepClipped.clipShape = new Rectangle(0, 0, 8, 8);
+    staticMid.addChild(leafA);
+    dirtyMid.addChild(deepClipped);
+    group.addChild(staticMid);
+    group.addChild(dirtyMid);
+    root.addChild(group);
+
+    const frame1 = snapshot(collectDraws(root, backend)); // full collect + capture
+
+    const boundsSpyA = vi.spyOn(leafA, 'getBounds');
+    const materialSpyA = vi.spyOn(leafA, '_getOrComputeMaterialKey');
+    const staticCollectSpy = vi.spyOn(staticMid, '_collect');
+    const dirtyCollectSpy = vi.spyOn(dirtyMid, '_collect');
+
+    const frame2 = snapshot(collectDraws(root, backend)); // clean frame: splice
+
+    // The static sibling branch replays from the fragment — no walk, no
+    // bounds, no material keys (the F13 cliff was losing exactly this).
+    expect(staticCollectSpy).not.toHaveBeenCalled();
+    expect(boundsSpyA).not.toHaveBeenCalled();
+    expect(materialSpyA).not.toHaveBeenCalled();
+
+    // The escaped branch re-dispatches live every frame (world-space, like a
+    // direct barrier child).
+    expect(dirtyCollectSpy).toHaveBeenCalledTimes(1);
+
+    expect(frame2.map(d => d.id)).toEqual(frame1.map(d => d.id));
+
+    root.destroy();
+    backend.destroy();
+  });
+
+  test('plan shape: the group keeps its transformNode and the escaped branch sits behind a barrier entry that suspends it', () => {
+    const backend = createTestBackend();
+    const root = new Container();
+    const group = new RetainedContainer();
+    const staticMid = new Container();
+    const dirtyMid = new Container();
+    const deepClipped = new LeafDrawable('deep');
+
+    deepClipped.clip = true;
+    deepClipped.clipShape = new Rectangle(0, 0, 8, 8);
+    staticMid.addChild(new LeafDrawable('a'));
+    dirtyMid.addChild(deepClipped);
+    group.addChild(staticMid);
+    group.addChild(dirtyMid);
+    root.addChild(group);
+
+    const builder = RenderPlanBuilder.acquire();
+    const plan = builder.build(root, backend);
+    const groupEntry = findGroupEntryFor(plan.passes[0]!.root, group);
+
+    expect(groupEntry).toBeDefined();
+    expect(groupEntry!.scope.transformNode).toBe(group);
+
+    // The escaped branch is wrapped in a barrier entry (group-transform
+    // suspension at playback) with NO actual effect of its own.
+    const barrierEntries = groupEntry!.scope.entries.filter(entry => entry.kind === RenderEntryKind.Barrier);
+
+    expect(barrierEntries).toHaveLength(1);
+
+    const escaped = barrierEntries[0]!;
+
+    if (escaped.kind === RenderEntryKind.Barrier) {
+      expect(escaped.scope.node).toBe(dirtyMid);
+      expect(escaped.scope.effect.filters).toHaveLength(0);
+      expect(escaped.scope.effect.maskSource).toBeNull();
+      expect(escaped.scope.effect.cacheAsBitmap).toBe(false);
+
+      const branchDraws: DrawCommand[] = [];
+
+      gatherScopeDraws(escaped.scope.childPlan!, branchDraws);
+      expect(branchDraws.map(d => (d.drawable as LeafDrawable).id)).toEqual(['deep']);
+    }
+
+    RenderPlanBuilder.release(builder);
+    root.destroy();
+    backend.destroy();
+  });
+
+  test('runtime toggle: removing the deep barrier re-engages the branch without the group ever disengaging', () => {
+    const backend = createTestBackend();
+    const root = new Container();
+    const group = new RetainedContainer();
+    const mid = new Container();
+    const deepClipped = new LeafDrawable('deep');
+
+    deepClipped.clip = true;
+    deepClipped.clipShape = new Rectangle(0, 0, 8, 8);
+    mid.setPosition(10, 0);
+    mid.addChild(deepClipped);
+    group.addChild(mid);
+    group.setPosition(40, 0);
+    root.addChild(group);
+
+    collectDraws(root, backend);
+    expect(group._isTransformGroupBoundary).toBe(true);
+    expect(mid.getGlobalTransform().x).toBe(50); // escaped: world
+
+    deepClipped.clip = false; // content-dirty -> re-scan on next collect
+
+    collectDraws(root, backend);
+    expect(group._isTransformGroupBoundary).toBe(true);
+    expect(mid.getGlobalTransform().x).toBe(10); // group-relative again (lazy recombine)
+
+    // And the branch is retained again: a clean frame splices with no walk.
+    collectDraws(root, backend);
+
+    const collectSpy = vi.spyOn(mid, '_collect');
+
+    collectDraws(root, backend);
+    expect(collectSpy).not.toHaveBeenCalled();
+
+    root.destroy();
+    backend.destroy();
+  });
+
+  test('a barrier direct child of a NESTED group escapes the nested-group branch of the outer group; both boundaries stay engaged', () => {
+    const backend = createTestBackend();
+    const root = new Container();
+    const outer = new RetainedContainer();
+    const inner = new RetainedContainer();
+    const directBarrier = new LeafDrawable('direct');
+
+    directBarrier.clip = true;
+    directBarrier.clipShape = new Rectangle(0, 0, 8, 8);
+    inner.setPosition(5, 0);
+    inner.addChild(directBarrier);
+    outer.setPosition(40, 0);
+    outer.addChild(inner);
+    root.addChild(outer);
+
+    collectDraws(root, backend);
+
+    // Depth 1 for inner (supported escape); depth 2 for outer: the outer
+    // group escapes ONLY the inner branch instead of disengaging.
+    expect(inner._isTransformGroupBoundary).toBe(true);
+    expect(outer._isTransformGroupBoundary).toBe(true);
+    expect(inner.getGlobalTransform().x).toBe(45); // escaped branch: true world
+    expect(directBarrier.getGlobalTransform().x).toBe(45); // escapes inner too: world
+
+    root.destroy();
+    backend.destroy();
+  });
+
+  test('an escape flip notifies bounds invalidation for the escaped branch only, not for unaffected siblings', () => {
+    const backend = createTestBackend();
+    const root = new Container();
+    const group = new RetainedContainer();
+    const mid = new Container();
+    const deep = new LeafDrawable('deep');
+    const siblingLeaf = new LeafDrawable('sibling');
+
+    mid.addChild(deep);
+    group.addChild(mid);
+    group.addChild(siblingLeaf);
+    root.addChild(group);
+
     const invalidated: unknown[] = [];
     const stage = {
       interaction: {
@@ -1347,38 +1433,12 @@ describe('RetainedContainer: engagement flips re-index spatial consumers (F2)', 
       app: {},
     } as unknown as Stage;
 
-    return { stage, invalidated };
-  };
-
-  test('a disengage flip notifies bounds invalidation for every descendant (space changed under them)', () => {
-    const backend = createTestBackend();
-    const root = new Container();
-    const group = new RetainedContainer();
-    const mid = new Container();
-    const deep = new LeafDrawable('deep');
-
-    mid.addChild(deep);
-    group.addChild(mid);
-    root.addChild(group);
-
-    const { stage, invalidated } = createSpyStage();
-
     root._setStage(stage);
 
     collectDraws(root, backend); // engaged, settled
 
-    deep.clip = true; // deep barrier -> next collect disengages
+    deep.clip = true; // deep barrier -> next collect escapes mid's branch
     deep.clipShape = new Rectangle(0, 0, 8, 8);
-    invalidated.length = 0;
-
-    collectDraws(root, backend);
-
-    expect(group._isTransformGroupBoundary).toBe(false);
-    expect(invalidated).toContain(mid);
-    expect(invalidated).toContain(deep);
-
-    // Re-engage: the reverse flip must notify again.
-    deep.clip = false;
     invalidated.length = 0;
 
     collectDraws(root, backend);
@@ -1386,7 +1446,46 @@ describe('RetainedContainer: engagement flips re-index spatial consumers (F2)', 
     expect(group._isTransformGroupBoundary).toBe(true);
     expect(invalidated).toContain(mid);
     expect(invalidated).toContain(deep);
+    expect(invalidated).not.toContain(siblingLeaf); // its space never changed
 
+    // Re-engage: the reverse flip must notify the branch again.
+    deep.clip = false;
+    invalidated.length = 0;
+
+    collectDraws(root, backend);
+
+    expect(invalidated).toContain(mid);
+    expect(invalidated).toContain(deep);
+    expect(invalidated).not.toContain(siblingLeaf);
+
+    root.destroy();
+    backend.destroy();
+  });
+
+  test('escaping warns once in dev builds, naming the container and the sub-branch semantics', () => {
+    const backend = createTestBackend();
+    const warnSpy = vi.spyOn(logger, 'warn');
+    const root = new Container();
+    const group = new RetainedContainer();
+    const mid = new Container();
+    const deepClipped = new LeafDrawable('deep');
+
+    group.name = 'decor';
+    deepClipped.clip = true;
+    deepClipped.clipShape = new Rectangle(0, 0, 8, 8);
+    mid.addChild(deepClipped);
+    group.addChild(mid);
+    root.addChild(group);
+
+    collectDraws(root, backend);
+    collectDraws(root, backend);
+
+    const escapeWarnings = warnSpy.mock.calls.filter(call => String(call[0]).includes('sub-branch'));
+
+    expect(escapeWarnings).toHaveLength(1);
+    expect(String(escapeWarnings[0]![0])).toContain('decor');
+
+    warnSpy.mockRestore();
     root.destroy();
     backend.destroy();
   });
