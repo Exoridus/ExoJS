@@ -173,9 +173,13 @@ const renderTargetTextureSyncUnit = 17;
  * {@link WebGl2ParticleRenderer}) registered in the {@link RendererRegistry}.
  *
  * Emits {@link WebGl2Backend.onContextLost} / {@link WebGl2Backend.onContextRestored}
- * Signals when the browser loses or regains the GL context. The browser
- * recreates the context automatically; renderers reconnect their
- * GPU-side state as needed on the next draw.
+ * Signals when the browser loses or regains the GL context. On loss the
+ * `webglcontextlost` default is cancelled (`preventDefault`) so the browser
+ * schedules a `webglcontextrestored` event; on restore every device-bound GL
+ * object (texture / framebuffer / renderbuffer handles, renderer buffers, VAOs
+ * and shader programs, the shared transform texture, compositors and retained
+ * bundles) is evicted and rebuilt against the fresh context — mirroring the
+ * WebGPU backend's `_teardownDeviceState`. See {@link _reinitializeDeviceState}.
  */
 export class WebGl2Backend implements RenderBackend {
   public readonly backendType = RenderBackendType.WebGl2;
@@ -185,7 +189,7 @@ export class WebGl2Backend implements RenderBackend {
 
   private readonly _context: WebGL2RenderingContext;
   private readonly _rootRenderTarget: RenderTarget;
-  private readonly _onContextLostHandler: () => void;
+  private readonly _onContextLostHandler: (event: Event) => void;
   private readonly _onContextRestoredHandler: () => void;
   private readonly _textureStates: Map<Texture | RenderTexture, ManagedTextureState> = new Map<Texture | RenderTexture, ManagedTextureState>();
   private readonly _renderTargetStates: Map<RenderTarget, ManagedRenderTargetState> = new Map<RenderTarget, ManagedRenderTargetState>();
@@ -207,6 +211,13 @@ export class WebGl2Backend implements RenderBackend {
 
   private _canvas: HTMLCanvasElement;
   private _contextLost: boolean;
+  private _destroyed = false;
+  private _pendingRestore: ReturnType<typeof setTimeout> | null = null;
+  // Cached BEFORE any context loss: `restoreContext()` only restores the
+  // context when invoked on the same extension instance `loseContext()` was
+  // triggered on. A fresh `getExtension()` after the loss returns a different
+  // object that cannot drive the restore (verified against headless Chromium).
+  private readonly _loseContextExtension: WEBGL_lose_context | null;
   /** Whether `EXT_color_buffer_float` is available (float RenderTexture targets are renderable). */
   private _floatRenderable = false;
   private _renderTarget: RenderTarget;
@@ -259,6 +270,12 @@ export class WebGl2Backend implements RenderBackend {
     // Enable + cache float color-buffer renderability. getExtension() is the
     // enable call; without it, RGBA16F/RGBA32F are not color-renderable in WebGL2.
     this._floatRenderable = this._context.getExtension('EXT_color_buffer_float') !== null;
+
+    // Grab the lose-context extension up front so a later restore can act on the
+    // live instance (see the field comment). `null` on backends that don't
+    // expose it — the recovery path then simply relies on the browser's own
+    // automatic restoration.
+    this._loseContextExtension = this._context.getExtension('WEBGL_lose_context');
 
     if (this._contextLost) {
       this._restoreContext();
@@ -1357,6 +1374,13 @@ export class WebGl2Backend implements RenderBackend {
   }
 
   public destroy(): void {
+    this._destroyed = true;
+
+    if (this._pendingRestore !== null) {
+      clearTimeout(this._pendingRestore);
+      this._pendingRestore = null;
+    }
+
     this._removeEvents();
     this.onContextLost.destroy();
     this.onContextRestored.destroy();
@@ -1437,7 +1461,26 @@ export class WebGl2Backend implements RenderBackend {
   }
 
   private _restoreContext(): void {
-    this._context.getExtension('WEBGL_lose_context')?.restoreContext();
+    // Schedule the extension-driven restore on a fresh task. A synchronous
+    // `restoreContext()` call from inside the `webglcontextlost` handler is
+    // silently ignored by Chromium — the browser only honours it once the lost
+    // event has finished processing. Deferring is also correct for a real GPU
+    // loss: `restoreContext()` only affects extension-triggered losses, so it
+    // is a harmless no-op there (the browser auto-restores because we called
+    // `preventDefault`). Guarded against a destroy() that lands first.
+    if (this._pendingRestore !== null) {
+      return;
+    }
+
+    this._pendingRestore = setTimeout(() => {
+      this._pendingRestore = null;
+
+      if (this._destroyed || !this._contextLost) {
+        return;
+      }
+
+      this._loseContextExtension?.restoreContext();
+    }, 0);
   }
 
   private _setupContext(): void {
@@ -1464,7 +1507,15 @@ export class WebGl2Backend implements RenderBackend {
     this._canvas.removeEventListener('webglcontextrestored', this._onContextRestoredHandler, false);
   }
 
-  private _onContextLost(): void {
+  private _onContextLost(event: Event): void {
+    // WebGL only fires `webglcontextrestored` if the `webglcontextlost`
+    // default action is cancelled — without this the context stays dead
+    // forever after a real GPU reset (mobile tab-switch, driver TDR) and the
+    // canvas goes permanently blank. This is separate from the synthetic
+    // `WEBGL_lose_context.restoreContext()` call below, which only drives the
+    // extension-based lose/restore cycle used in tests.
+    event.preventDefault();
+
     this._contextLost = true;
     this.onContextLost.dispatch();
     this._restoreContext();
@@ -1473,15 +1524,110 @@ export class WebGl2Backend implements RenderBackend {
   private _onContextRestored(): void {
     this._contextLost = false;
 
+    // Every GL object created against the lost context is dead. Evict and
+    // rebuild all device-bound state before drawing resumes; otherwise the
+    // caches keep dangling handles and the next frame is a blank canvas or an
+    // INVALID_OPERATION storm.
+    this._reinitializeDeviceState();
+
+    this.onContextRestored.dispatch();
+  }
+
+  /**
+   * Drop every device-bound GL object cached against the lost context and
+   * rebuild the pieces needed to draw against the fresh one. User-facing
+   * handles ({@link Texture}, {@link RenderTexture}, {@link RenderTarget})
+   * keep their identity — their GPU-side state is recreated lazily on next
+   * use. Mirrors the WebGPU backend's `_teardownDeviceState` (B-09).
+   */
+  private _reinitializeDeviceState(): void {
+    const gl = this._context;
+
+    // Re-enable the float color-buffer extension: extension enablement does
+    // not survive a context loss, so RGBA16F/RGBA32F render targets would stop
+    // being color-renderable until this is re-fetched on the fresh context.
+    this._floatRenderable = gl.getExtension('EXT_color_buffer_float') !== null;
+
+    // Evict all managed texture / render-target state (deletes the now-dead
+    // handles — harmless on the fresh context — frees the resource accountant,
+    // and detaches destroy listeners). The maps are repopulated lazily with
+    // fresh handles on next access. Clears `_stencilStates` too (each entry is
+    // dropped when its render target is evicted).
+    this._destroyManagedResources();
+
+    // The shared transform texture's handle died with the context. Drop the
+    // wrapper (its GL handle was just evicted above) and reset the upload
+    // bookkeeping so a fresh DataTexture + full re-upload happens on next bind.
+    this._transformTexture = null;
+    this._transformTextureCount = -1;
+    this._transformTextureHash = 0;
+
+    // Disconnect renderers so they release their (dead) buffers / VAOs / shader
+    // programs, then reconnect to rebuild them against the fresh context. This
+    // also resets each batched renderer's `appliedVersion` VAO cache.
+    this.rendererRegistry.disconnect();
+
+    // Compositors and the stencil clipper connect lazily on first use; drop
+    // their dead GPU state and clear the connected flags so the next use
+    // reconnects against the fresh context.
+    if (this._maskCompositorConnected) {
+      this._maskCompositor.disconnect();
+      this._maskCompositorConnected = false;
+    }
+
+    if (this._backdropBlendCompositorConnected) {
+      this._backdropBlendCompositor.disconnect();
+      this._backdropBlendCompositorConnected = false;
+    }
+
+    if (this._stencilClipperConnected) {
+      this._stencilClipper.disconnect();
+      this._stencilClipperConnected = false;
+    }
+
+    this._stencilStates.clear();
+
     // Every retained group bundle's GL objects died with the lost context:
     // drop them and bump the generations so all recorded instruction sets
     // fail collect-time validation and re-record against the restored
-    // context (S3-D3, stale-instruction pitfall #9).
+    // context (S3-D3, stale-instruction pitfall #9). Any capture in flight is
+    // abandoned — its instructions keep the sentinel generation.
     for (const bundle of this._retainedBundles) {
       bundle._invalidateDeviceResources();
     }
 
-    this.onContextRestored.dispatch();
+    this._retainedCaptures.length = 0;
+
+    // Reset the cached GL bind state — every handle these tracked is dead, so
+    // the next bind must run unconditionally rather than short-circuiting on a
+    // stale identity match.
+    this._boundFramebuffer = null;
+    this._texture = null;
+    this._textureUnit = 0;
+    this._vao = null;
+    this._shader = null;
+    this._blendMode = null;
+    this._renderer = null;
+    this._renderTarget = this._rootRenderTarget;
+    this._activeDrawCommand = null;
+
+    this.rendererRegistry.connect(this);
+
+    // Re-apply the GL global state the constructor establishes (blend enable,
+    // clear color, disabled depth / stencil / cull) and re-bind the root
+    // target + default blend mode so the next frame draws correctly.
+    this._setupContext();
+    this._bindRenderTarget(this._renderTarget);
+    this.setBlendMode(BlendModes.Normal);
+
+    // Deleting GL objects that belonged to the lost context raises a benign
+    // INVALID_OPERATION on some drivers (the handles no longer belong to the
+    // live context). Drain the error queue so the rebuilt context starts clean
+    // and the application's own `getError()` checks aren't tripped by teardown
+    // artifacts. Bounded so a genuinely wedged context can't spin here.
+    for (let drained = 0; drained < 64 && gl.getError() !== gl.NO_ERROR; drained++) {
+      // Intentionally empty: each getError() call pops one queued error.
+    }
   }
 
   private _createFramebuffer(): WebGLFramebuffer {
