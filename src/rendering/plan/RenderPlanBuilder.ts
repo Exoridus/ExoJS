@@ -392,7 +392,11 @@ export class RenderPlanBuilder {
   public _armRetainedRecord(fragment: RetainedGroupFragment): void {
     const hooks = this.backend as RenderBackend & RetainedBackendHooks;
 
-    if (typeof hooks._beginRetainedCapture !== 'function' || typeof hooks._endRetainedCapture !== 'function' || typeof hooks._replayRetainedBatch !== 'function') {
+    if (
+      typeof hooks._beginRetainedCapture !== 'function' ||
+      typeof hooks._endRetainedCapture !== 'function' ||
+      typeof hooks._replayRetainedBatch !== 'function'
+    ) {
       return;
     }
 
