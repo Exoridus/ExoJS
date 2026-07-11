@@ -138,11 +138,11 @@ A center-aligned text node at `(400, 20)` centers its glyphs horizontally around
 `Text` extends `Container`, so it carries position, rotation, scale, origin, and anchor. You can rotate text, tint the whole node, apply filters, and nest it inside other containers:
 
 ```js
-this.ui = new Container();
+this.hud = new Container();
 this.scoreLabel = new Text('Score: 0', { fillColor: Color.white, fontSize: 24 });
 this.scoreLabel.setPosition(10, 10);
-this.ui.addChild(this.scoreLabel);
-this.addChild(this.ui);
+this.hud.addChild(this.scoreLabel);
+this.addChild(this.hud);
 ```
 
 The text node's internal mesh is a `Container` child. Assigning to `text.text` rebuilds the glyph mesh. This means:
