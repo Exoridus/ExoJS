@@ -184,10 +184,6 @@ importers:
         version: 3.0.0
 
   packages/exojs-ldtk:
-    dependencies:
-      '@codexo/exojs-tilemap':
-        specifier: workspace:*
-        version: link:../exojs-tilemap
     devDependencies:
       '@codexo/exojs':
         specifier: workspace:*
@@ -195,6 +191,9 @@ importers:
       '@codexo/exojs-config':
         specifier: workspace:*
         version: link:../exojs-config
+      '@codexo/exojs-tilemap':
+        specifier: workspace:*
+        version: link:../exojs-tilemap
 
   packages/exojs-particles:
     devDependencies:
@@ -240,10 +239,6 @@ importers:
         version: 18.3.31
 
   packages/exojs-tiled:
-    dependencies:
-      '@codexo/exojs-tilemap':
-        specifier: workspace:*
-        version: link:../exojs-tilemap
     devDependencies:
       '@codexo/exojs':
         specifier: workspace:*
@@ -251,6 +246,9 @@ importers:
       '@codexo/exojs-config':
         specifier: workspace:*
         version: link:../exojs-config
+      '@codexo/exojs-tilemap':
+        specifier: workspace:*
+        version: link:../exojs-tilemap
 
   packages/exojs-tilemap:
     devDependencies:
