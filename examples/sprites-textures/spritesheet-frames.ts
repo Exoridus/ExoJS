@@ -1,4 +1,4 @@
-import { Application, Asset, Color, Scene, Spritesheet, type SpritesheetData } from '@codexo/exojs';
+import { Application, Asset, Color, type RenderingContext, Scene, Spritesheet, type SpritesheetData, type Time } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -26,7 +26,9 @@ class SpritesheetFramesScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
 
     override async init(): Promise<void> {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         const texture = this.loader.get('image/platformer-characters.png');
         const data = (await this.loader.load(Asset.kind('json', 'json/platformer-characters.json'))) as SpritesheetData;
 
@@ -72,7 +74,7 @@ class SpritesheetFramesScene extends Scene {
         this.hud.setStatus(`Frame: ${frames[this.frameIndex]}  (${this.frameIndex + 1}/${frames.length})`);
     }
 
-    override update(delta): void {
+    override update(delta: Time): void {
         if (!this.playing) {
             return;
         }
@@ -88,7 +90,7 @@ class SpritesheetFramesScene extends Scene {
         }
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         context.render(this.spritesheet.getFrameSprite(this.walkFrames()[this.frameIndex]));
     }

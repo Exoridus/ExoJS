@@ -30,7 +30,10 @@ class DialogSystemScene extends Scene {
     done = false;
     awaitingChoice = false;
     init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         // Portrait sits on the left; the dialog column runs to its right and
         // fills the wider 16:9 frame as a classic VN bottom-third box.
         this.portrait = new Sprite(this.loader.get(assets.demo.textures.shipA)).setAnchor(0.5).setScale(2.4).setPosition(width * 0.16, height * 0.62);
@@ -56,7 +59,7 @@ class DialogSystemScene extends Scene {
             this.panel.addButton({ label: choice, onClick: () => this.choose(choice) });
         }
         this.setChoicesVisible(false);
-        this.app.input.onPointerTap.add(() => this.advance());
+        app.input.onPointerTap.add(() => this.advance());
     }
     advance() {
         if (this.awaitingChoice) {
@@ -84,7 +87,10 @@ class DialogSystemScene extends Scene {
         this.namePlate.text = lines[this.lineIndex].speaker;
     }
     choose(choice) {
-        this.app.audio.play(this.beep, { playbackRate: 1.2, volume: 0.3 });
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        app.audio.play(this.beep, { playbackRate: 1.2, volume: 0.3 });
         this.choicePrompt.text = `You chose: ${choice}`;
         this.hud.setStatus(`Reply: ${choice}`);
         this.awaitingChoice = false;
@@ -98,12 +104,15 @@ class DialogSystemScene extends Scene {
         this.choicePrompt.visible = !visible && this.choicePrompt.text.length > 0;
     }
     update(delta) {
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         if (!this.done && !this.awaitingChoice) {
             this.timer += delta.seconds;
             while (this.timer > 0.035 && this.chars < lines[this.lineIndex].text.length) {
                 this.timer -= 0.035;
                 this.chars++;
-                this.app.audio.play(this.beep, { playbackRate: 1.9, volume: 0.14 });
+                app.audio.play(this.beep, { playbackRate: 1.9, volume: 0.14 });
             }
             this.done = this.chars >= lines[this.lineIndex].text.length;
         }

@@ -22,9 +22,12 @@ class VinylRecordScene extends Scene {
     hud;
     tapPrompt;
     init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         this.music = this.loader.get(Asset.kind('music', assets.demo.audio.musicLoop));
-        this.analyser = new AudioAnalyser({ fftSize: 1024, source: this.app.audio.music });
+        this.analyser = new AudioAnalyser({ fftSize: 1024, source: app.audio.music });
         this.disc = new Graphics();
         this.bars = new Graphics();
         this.hud = mountControls({
@@ -40,7 +43,7 @@ class VinylRecordScene extends Scene {
             .setPosition(width / 2, height - 64);
         // Core defers playback until the AudioContext unlocks on the first
         // gesture, then starts automatically — play() returns the Voice now.
-        this.musicVoice = this.app.audio.play(this.music, { loop: true, volume: 0.8 });
+        this.musicVoice = app.audio.play(this.music, { loop: true, volume: 0.8 });
     }
     update(delta) {
         // Spin speed is driven by live audio energy, not a constant fallback BPM.
@@ -55,7 +58,10 @@ class VinylRecordScene extends Scene {
         }
     }
     draw(context) {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         const cx = width / 2;
         const cy = height / 2;
         const spectrum = this.analyser.getSpectrum();
@@ -89,7 +95,7 @@ class VinylRecordScene extends Scene {
             this.bars.drawLine(x0, y0, x1, y1);
         }
         context.render(this.bars);
-        if (this.app.audio.locked) {
+        if (app.audio.locked) {
             context.render(this.tapPrompt);
         }
     }

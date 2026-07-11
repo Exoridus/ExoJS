@@ -1,4 +1,4 @@
-import { Application, Button, Color, Label, Panel, ProgressBar, Scene, Stack } from '@codexo/exojs';
+import { Application, Button, Color, Label, Panel, ProgressBar, type RenderingContext, Scene, Stack, type Time } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -65,12 +65,12 @@ class HudScene extends Scene {
         this.ui.addChild(panel);
     }
 
-    override update(delta): void {
+    override update(delta: Time): void {
         this.angle += delta.seconds * 60;
         this.spinner.setRotation(this.angle);
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         // scene.root is explicit; scene.ui is auto-rendered above it.
         context.render(this.root);
     }

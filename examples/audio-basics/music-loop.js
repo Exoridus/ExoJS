@@ -21,7 +21,10 @@ class MusicLoopScene extends Scene {
     hud;
     panel;
     async init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         // Wide progress bar centred horizontally on the 16:9 canvas.
         this.bar = { x: width * 0.15, y: height * 0.5, w: width * 0.7, h: 28 };
         // A single streaming track — the browser's media pipeline loops it
@@ -32,7 +35,7 @@ class MusicLoopScene extends Scene {
         // Core defers playback until the AudioContext unlocks on the first
         // gesture, then starts automatically — play() returns the Voice now,
         // and all live control (volume, rate, loop, seek) lives on it.
-        this.musicVoice = this.app.audio.play(this.music, { loop: true, volume: 0.7, playbackRate: 1 });
+        this.musicVoice = app.audio.play(this.music, { loop: true, volume: 0.7, playbackRate: 1 });
         this.graphics = new Graphics();
         this.status = new Text('', { fillColor: Color.white, fontSize: 18 }).setPosition(this.bar.x, this.bar.y - 36);
         // Shown while the browser still blocks audio (`app.audio.locked`); the
@@ -87,6 +90,9 @@ class MusicLoopScene extends Scene {
         this.hud.setStatus('Playing — use the panel to mix.');
     }
     draw(context) {
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         context.backend.clear();
         this.graphics.clear();
         const duration = this.musicVoice.duration;
@@ -107,7 +113,7 @@ class MusicLoopScene extends Scene {
         this.status.text = `${state}   ${position}   ${Math.round(this.musicVoice.playbackRate * 100)}% speed   Loop ${this.musicVoice.loop ? 'on' : 'off'}`;
         context.render(this.graphics);
         context.render(this.status);
-        if (this.app.audio.locked) {
+        if (app.audio.locked) {
             context.render(this.tapPrompt);
         }
     }

@@ -1,4 +1,4 @@
-import { Application, Color, Graphics, Scene, Sprite } from '@codexo/exojs';
+import { Application, Color, Graphics, type RenderingContext, Scene, Sprite, type Time } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -20,7 +20,9 @@ class CameraBasicScene extends Scene {
     private zoom = 1;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         this.bunny = new Sprite(this.loader.get('image/ship-a.png'));
         this.bunny.setAnchor(0.5).setPosition(width / 2, height / 2);
@@ -41,22 +43,26 @@ class CameraBasicScene extends Scene {
         this.uiBar.fillColor = new Color(0, 0, 0, 0.6);
         this.uiBar.drawRectangle(0, 0, width, 40);
 
-        this.app.input.onPointerMove.add(p => {
-            this.app.rendering.view.setCenter(p.x, p.y);
+        app.input.onPointerMove.add(p => {
+            app.rendering.view.setCenter(p.x, p.y);
         });
 
-        this.app.input.onMouseWheel.add(delta => {
+        app.input.onMouseWheel.add(delta => {
             this.zoom = Math.max(0.2, Math.min(4, this.zoom - delta.y * 0.001));
-            this.app.rendering.view.setZoom(this.zoom);
+            app.rendering.view.setZoom(this.zoom);
         });
     }
 
-    override update(delta): void {
-        this.app.rendering.view.rotation += delta.seconds * 15;
+    override update(delta: Time): void {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        app.rendering.view.rotation += delta.seconds * 15;
     }
 
-    override draw(context): void {
-        const { width } = this.app.canvas;
+    override draw(context: RenderingContext): void {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width } = app.canvas;
 
         context.backend.clear();
         context.render(this.grid);

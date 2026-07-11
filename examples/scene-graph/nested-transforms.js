@@ -19,7 +19,10 @@ class NestedTransformsScene extends Scene {
     moonOrbit;
     moon;
     init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         this.sun = new Graphics();
         this.sun.fillColor = new Color(255, 220, 90);
         this.sun.drawCircle(0, 0, 30);

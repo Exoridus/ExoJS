@@ -44,7 +44,10 @@ class FireworksScene extends Scene {
     launchCount = 0;
     hud;
     init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         this.canvasSize = new Size(width, height);
         this.rocketTexture = this.loader.get(assets.demo.textures.particleStar);
         // Single explosion system shared by every detonation. We reposition and
@@ -67,7 +70,7 @@ class FireworksScene extends Scene {
             { t: 1, v: 0 },
         ])));
         // Click anywhere to launch a rocket from the bottom at that x.
-        this.app.input.onPointerDown.add(pointer => this.launchRocket(pointer.x));
+        app.input.onPointerDown.add(pointer => this.launchRocket(pointer.x));
         // Ambient fallback: keep the sky alive even without clicks.
         this.autoLaunchTimer = new Timer(autoLaunchInterval, true);
         this.hud = mountControls({

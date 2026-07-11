@@ -1,4 +1,4 @@
-import { Application, Color, Ease, Graphics, Scene, Text } from '@codexo/exojs';
+import { Application, Color, Ease, Graphics, type RenderingContext, Scene, Text, type Time } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -64,7 +64,9 @@ class EasingCurvesScene extends Scene {
     private cellHeight = 0;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         this.cellWidth = width / COLS;
         this.cellHeight = (height - HEADER) / ROWS;
@@ -97,7 +99,7 @@ class EasingCurvesScene extends Scene {
         return plotTop + plotHeight * (1 - Math.max(0, Math.min(1, norm)));
     }
 
-    override update(delta): void {
+    override update(delta: Time): void {
         this.t += this.direction * delta.seconds * 0.6;
 
         if (this.t >= 1) {
@@ -109,7 +111,7 @@ class EasingCurvesScene extends Scene {
         }
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
 
         const g = this.graphics;

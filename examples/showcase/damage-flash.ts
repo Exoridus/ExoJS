@@ -1,4 +1,4 @@
-import { Application, Color, ColorFilter, Scene, Signal, Sprite } from '@codexo/exojs';
+import { Application, Color, ColorFilter, type RenderingContext, Scene, Signal, Sprite } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -23,7 +23,9 @@ class DamageFlashScene extends Scene {
     private hits = 0;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         this.hit = new Signal();
         this.ship = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setScale(2.2).setPosition(width / 2, height / 2);
@@ -41,14 +43,14 @@ class DamageFlashScene extends Scene {
             this.hits++;
             this.hud.setStatus(`Hits: ${this.hits}`);
             this.filterColor.set(255, 120, 120, 1);
-            this.app.tweens.create(this.filterColor).to({ r: 255, g: 255, b: 255 }, 0.2).start();
+            app.tweens.create(this.filterColor).to({ r: 255, g: 255, b: 255 }, 0.2).start();
         });
-        this.app.input.onPointerTap.add(() => {
+        app.input.onPointerTap.add(() => {
             this.hit.dispatch();
         });
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         context.render(this.ship);
     }

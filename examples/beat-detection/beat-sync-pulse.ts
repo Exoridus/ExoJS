@@ -1,4 +1,4 @@
-import { Application, Asset, Assets, AudioStream, Color, Scene, Sprite, Text, Vector } from '@codexo/exojs';
+import { Application, Asset, Assets, AudioStream, Color, type RenderingContext, Scene, Sprite, Text, type Time, Vector } from '@codexo/exojs';
 import { BeatDetector } from '@codexo/exojs-audio-fx';
 import {
     AlphaFadeOverLifetime,
@@ -37,7 +37,9 @@ class BeatSyncPulseScene extends Scene {
     private tapPrompt!: Text;
 
     override async init(): Promise<void> {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         // AudioStream has no seamless adapter — await it explicitly.
         const { track } = await this.loader.load(Assets.from({ track: Asset.kind('music', 'audio/demo-loop-main.ogg') }));
@@ -79,7 +81,7 @@ class BeatSyncPulseScene extends Scene {
         });
 
         this.detector = new BeatDetector();
-        this.detector.source = this.app.audio.music;
+        this.detector.source = app.audio.music;
         this.detector.onBeat.add(() => {
             this.pulse = this.intensity;
             this.burst.reset();
@@ -89,21 +91,23 @@ class BeatSyncPulseScene extends Scene {
 
         // Core defers playback until the AudioContext unlocks on the first
         // gesture, then starts automatically.
-        this.app.audio.play(this.music, { loop: true, volume: 0.8 });
+        app.audio.play(this.music, { loop: true, volume: 0.8 });
     }
 
-    override update(delta): void {
+    override update(delta: Time): void {
         this.pulse = Math.max(0, this.pulse - delta.seconds * 1.2);
         this.sprite.setScale(1 + this.pulse);
         this.particles.update(delta);
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         context.backend.clear();
         context.render(this.particles);
         context.render(this.sprite);
 
-        if (this.app.audio.locked) {
+        if (app.audio.locked) {
             context.render(this.tapPrompt);
         }
     }

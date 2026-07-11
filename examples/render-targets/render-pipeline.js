@@ -29,8 +29,11 @@ class RenderPipelineScene extends Scene {
     detachResize = null;
     time = 0;
     init() {
-        const screenView = this.app.rendering.screenView;
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const screenView = app.rendering.screenView;
+        const { width, height } = app.canvas;
         this.sceneRt = new RenderTexture(width, height);
         this.blurredRt = new RenderTexture(width, height);
         this.composite = new Sprite(this.blurredRt);
@@ -61,11 +64,14 @@ class RenderPipelineScene extends Scene {
             this.blurredRt.setSize(width, height);
             this.frame.resize(width, height);
         };
-        this.app.onResize.add(handleResize);
-        this.detachResize = () => this.app.onResize.remove(handleResize);
+        app.onResize.add(handleResize);
+        this.detachResize = () => app.onResize.remove(handleResize);
     }
     update(delta) {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         this.time += delta.seconds;
         // `enabled` lives on the pass — flip it and the composer skips the step next frame.
         this.blurPass.enabled = Math.floor(this.time / 2.5) % 2 === 0;

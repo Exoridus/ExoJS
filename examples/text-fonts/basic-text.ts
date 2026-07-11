@@ -1,4 +1,4 @@
-import { Application, Asset, Color, Scene, Text, Time } from '@codexo/exojs';
+import { Application, Asset, Color, type RenderingContext, Scene, Text, Time } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -18,9 +18,11 @@ class BasicTextScene extends Scene {
     private text!: Text;
 
     override async init(): Promise<void> {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         await this.loader.load(Asset.kind('font', 'font/Kenney Future.ttf', { family: 'Kenney Future' }));
 
-        const { width, height } = this.app.canvas;
+        const { width, height } = app.canvas;
 
         this.time = new Time();
 
@@ -37,12 +39,12 @@ class BasicTextScene extends Scene {
         this.text.setAnchor(0.5, 0.5);
     }
 
-    override update(delta): void {
+    override update(delta: Time): void {
         this.text.text = `Hello World! ${this.time.addTime(delta).seconds | 0}`;
         this.text.rotate(delta.seconds * 36);
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         context.render(this.text);
     }

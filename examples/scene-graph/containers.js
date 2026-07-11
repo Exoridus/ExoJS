@@ -16,7 +16,10 @@ class ContainersScene extends Scene {
     rainbow;
     bunnies;
     init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         const { bunny, rainbow } = this.loader.get(Assets.from({ bunny: Asset.kind('texture', 'image/ship-a.png'), rainbow: Asset.kind('texture', 'image/hue-ramp.png') }));
         this.rainbow = new Sprite(rainbow);
         this.bunnies = new Container();

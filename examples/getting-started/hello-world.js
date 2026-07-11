@@ -16,7 +16,10 @@ const app = new Application({
 class HelloWorldScene extends Scene {
     sprite;
     init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         this.sprite = new Sprite(this.loader.get('image/ship-a.png'));
         this.sprite.setAnchor(0.5);
         this.sprite.setPosition(width / 2, height / 2);

@@ -19,7 +19,10 @@ class FrameAnimationScene extends Scene {
     frameCount = 0;
     hud;
     async init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         const texture = this.loader.get('image/platformer-characters.png');
         const data = (await this.loader.load(Asset.kind('json', 'json/platformer-characters.json')));
         const sheet = new Spritesheet(texture, data);

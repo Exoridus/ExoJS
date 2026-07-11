@@ -9,9 +9,15 @@
   // editor-visible "`fill` does not exist in TextStyleOptions" diagnostics also
   // fail `pnpm typecheck:examples`.
   //
-  // `strict` is intentionally off so idiomatic example patterns (untyped
-  // `draw(context)` params, etc.) don't add noise — TypeScript's object-literal
-  // excess-property check, which flags the stale style keys, runs regardless.
+  // `strict` is ON. Example code is a copy-paste surface for `create-exo-app`
+  // scaffolds, which are strict by default — code that only compiles under
+  // `strict: false` here would fail to compile the moment a user pastes it in.
+  // All lifecycle overrides (`update(delta: Time)`, `draw(context:
+  // RenderingContext)`, etc.) are explicitly typed, and every `this.app` read
+  // is narrowed via a local `const app = this.app; if (app === null) throw ...`
+  // guard at the top of the owning method (mirrors the `Scene.inputs` /
+  // `Scene.tweens` / `Scene.loader` getters, which throw the same way when
+  // accessed before the scene is attached).
   //
   // Scope: the full example catalog. Every `.js` under `examples/` is
   // type-checked against the engine source types, so stale TextStyle keys are
@@ -38,7 +44,7 @@
     "allowJs": true,
     "checkJs": true,
     "noEmit": true,
-    "strict": false,
+    "strict": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,

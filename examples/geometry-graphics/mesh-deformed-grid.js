@@ -52,7 +52,10 @@ class MeshDeformedGridScene extends Scene {
     mesh;
     time = 0;
     init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         const grid = buildGrid();
         this.restVertices = grid.vertices.slice();
         this.mesh = new Mesh({

@@ -1,5 +1,5 @@
 import { Application, Asset, Color, Graphics, Scene, Sound, Text } from '@codexo/exojs';
-import type { Spatializable, Voice } from '@codexo/exojs';
+import type { RenderingContext, Spatializable, Time, Voice } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -39,7 +39,9 @@ class MovingSourceScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
 
     override async init(): Promise<void> {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         // A continuous music loop, not a one-shot: spatialization is only
         // audible while there is sustained signal to pan/attenuate. The derived
@@ -76,11 +78,11 @@ class MovingSourceScene extends Scene {
         // Core defers playback until the AudioContext unlocks on the first
         // gesture, then starts automatically — just call play().
         // play() returns the narrow Voice interface; Sound voices are spatializable.
-        this.voice = this.app.audio.play(this.sound, { loop: true, volume: 1 }) as Voice & Spatializable;
+        this.voice = app.audio.play(this.sound, { loop: true, volume: 1 }) as Voice & Spatializable;
         this.hud.setStatus('Source orbiting the listener');
     }
 
-    override update(delta): void {
+    override update(delta: Time): void {
         this.angle += delta.seconds * 1.1;
         const position = {
             x: this.listener.x + Math.cos(this.angle) * ORBIT_X,
@@ -92,7 +94,9 @@ class MovingSourceScene extends Scene {
         this.voice.position = position;
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const source = this.sound.position ?? { x: 0, y: 0 };
         const dx = source.x - this.listener.x;
         const dy = source.y - this.listener.y;
@@ -123,7 +127,7 @@ class MovingSourceScene extends Scene {
         context.render(this.graphics);
         context.render(this.label);
 
-        if (this.app.audio.locked) {
+        if (app.audio.locked) {
             context.render(this.tapPrompt);
         }
     }

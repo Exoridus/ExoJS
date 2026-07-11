@@ -24,7 +24,10 @@ class SpriteFollowsBodyScene extends Scene {
     settled = 0;
     hud;
     async init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         // Gravity in px/s², +Y down — matches the engine's screen space.
         this.world = new PhysicsWorld({ gravity: { x: 0, y: 1400 } });
         const characters = new Spritesheet(this.loader.get(assets.demo.spritesheets.platformerCharacters.image), (await this.loader.load(Asset.kind('json', assets.demo.spritesheets.platformerCharacters.data))));
@@ -65,9 +68,12 @@ class SpriteFollowsBodyScene extends Scene {
         });
     }
     update(delta) {
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         // Advance the simulation; bound sprites are synced inside step().
         this.world.step(delta.seconds);
-        const { width, height } = this.app.canvas;
+        const { width, height } = app.canvas;
         const body = this.actorBody;
         const restingSpeed = Math.hypot(body.linearVelocityX, body.linearVelocityY);
         if (body.y > this.floorY - 60 && restingSpeed < 6) {

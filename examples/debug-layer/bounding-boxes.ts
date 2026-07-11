@@ -1,4 +1,4 @@
-import { Application, Color, Scene, Sprite } from '@codexo/exojs';
+import { Application, Color, type RenderingContext, Scene, Sprite, type Time } from '@codexo/exojs';
 import { DebugOverlay } from '@codexo/exojs/debug';
 
 const app = new Application({
@@ -22,7 +22,9 @@ class BoundingBoxesScene extends Scene {
     private time = 0;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         const count = 7;
         const margin = width * 0.12;
         const step = (width - 2 * margin) / (count - 1);
@@ -38,8 +40,10 @@ class BoundingBoxesScene extends Scene {
         });
     }
 
-    override update(delta): void {
-        const { height } = this.app.canvas;
+    override update(delta: Time): void {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { height } = app.canvas;
 
         this.time += delta.seconds;
         for (const { sprite, speed } of this.sprites) {
@@ -48,7 +52,7 @@ class BoundingBoxesScene extends Scene {
         }
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         context.render(this.root);
     }

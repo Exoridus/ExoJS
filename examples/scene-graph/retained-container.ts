@@ -1,4 +1,4 @@
-import { Application, Color, Container, Rectangle, RetainedContainer, Scene, Sprite, Texture } from '@codexo/exojs';
+import { Application, Color, Container, Rectangle, type RenderingContext, RetainedContainer, Scene, Sprite, Texture, type Time } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -62,12 +62,14 @@ class RetainedContainerScene extends Scene {
         });
     }
 
-    override update(delta): void {
+    override update(delta: Time): void {
         this.elapsed += delta.seconds;
     }
 
-    override draw(context): void {
-        const { width, height } = this.app.canvas;
+    override draw(context: RenderingContext): void {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         context.backend.clear();
 

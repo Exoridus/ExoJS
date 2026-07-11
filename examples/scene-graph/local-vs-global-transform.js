@@ -19,7 +19,10 @@ class LocalVsGlobalTransformScene extends Scene {
     localLabel;
     globalLabel;
     init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         const texture = this.loader.get('image/ship-a.png');
         this.parent = new Container().setPosition(width / 4, height / 2);
         this.localSprite = new Sprite(texture)

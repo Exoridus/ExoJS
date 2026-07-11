@@ -1,4 +1,4 @@
-import { Application, Color, Graphics, Keyboard, Scene } from '@codexo/exojs';
+import { Application, Color, Graphics, Keyboard, type RenderingContext, Scene, type Time } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -68,7 +68,9 @@ class KeyRebindingScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
 
     override init(): void {
-        const { height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { height } = app.canvas;
 
         this.groundY = height - 240;
         this.heroY = this.groundY;
@@ -82,7 +84,7 @@ class KeyRebindingScene extends Scene {
             this.refreshHud();
         });
 
-        this.app.input.onKeyDown.add(channel => {
+        app.input.onKeyDown.add(channel => {
             if (!this.rebindRequested) {
                 return;
             }
@@ -127,7 +129,7 @@ class KeyRebindingScene extends Scene {
         this.hud.setHint(this.rebindRequested ? 'Press any key to assign jump…' : 'Binding restored from localStorage on reload.');
     }
 
-    override update(delta): void {
+    override update(delta: Time): void {
         // Simple gravity so the rebound jump is visible.
         this.jumpVelocity = Math.min(900, this.jumpVelocity + 1800 * delta.seconds);
         this.heroY += this.jumpVelocity * delta.seconds;
@@ -138,8 +140,10 @@ class KeyRebindingScene extends Scene {
         }
     }
 
-    override draw(context): void {
-        const { width } = this.app.canvas;
+    override draw(context: RenderingContext): void {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width } = app.canvas;
 
         context.backend.clear();
         this.graphics.clear();

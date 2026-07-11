@@ -1,4 +1,4 @@
-import { Application, Color, Scene, Vector } from '@codexo/exojs';
+import { Application, Color, type RenderingContext, Scene, type Time, Vector } from '@codexo/exojs';
 import {
     AlphaFadeOverLifetime,
     AttractToPoint,
@@ -34,7 +34,9 @@ class CursorAttractorParticlesScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         this.system = new ParticleSystem(this.loader.get(assets.demo.textures.particleLight), { capacity: 32000 });
         this.system.setPosition(width / 2, height / 2);
@@ -60,7 +62,7 @@ class CursorAttractorParticlesScene extends Scene {
         this.system.addUpdateModule(this.repeller);
         this.system.addUpdateModule(new AlphaFadeOverLifetime());
 
-        this.app.input.onPointerMove.add(pointer => {
+        app.input.onPointerMove.add(pointer => {
             const localX = pointer.x - this.system.position.x;
             const localY = pointer.y - this.system.position.y;
 
@@ -88,7 +90,7 @@ class CursorAttractorParticlesScene extends Scene {
 
         // A pointer button also flips the mode, so the demo is usable without
         // the slider panel; keep the toggle UI in sync when that happens.
-        this.app.input.onPointerDown.add(() => {
+        app.input.onPointerDown.add(() => {
             const next = this.mode === 'attract' ? 'repel' : 'attract';
 
             this.setMode(next);
@@ -112,11 +114,11 @@ class CursorAttractorParticlesScene extends Scene {
         }
     }
 
-    override update(delta): void {
+    override update(delta: Time): void {
         this.system.update(delta);
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         context.render(this.system);
     }

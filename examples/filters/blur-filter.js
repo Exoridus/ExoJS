@@ -21,7 +21,10 @@ class BlurFilterScene extends Scene {
     panel;
     slider;
     init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         this.blur = new BlurFilter({ radius: 4, quality: 2 });
         this.sprite = new Sprite(this.loader.get(PIXEL_GRID)).setAnchor(0.5).setScale(4.5).setPosition(width / 2, height / 2);
         this.sprite.filters = [this.blur];

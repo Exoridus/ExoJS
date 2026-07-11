@@ -1,4 +1,4 @@
-import { Application, CallbackRenderPass, Color, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite } from '@codexo/exojs';
+import { Application, CallbackRenderPass, Color, type RenderingContext, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite, type Time } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -27,7 +27,9 @@ class TrailFeedbackScene extends Scene {
     private time = 0;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         this.rtA = new RenderTexture(width, height);
         this.rtB = new RenderTexture(width, height);
@@ -68,13 +70,15 @@ class TrailFeedbackScene extends Scene {
             .addPass(new RenderNodePass(showA, { clear: Color.black }));
     }
 
-    override update(delta): void {
-        const { width, height } = this.app.canvas;
+    override update(delta: Time): void {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         this.time += delta.seconds;
         this.bunny.setPosition(width / 2 + Math.cos(this.time * 2.0) * (width * 0.36), height / 2 + Math.sin(this.time * 2.7) * (height * 0.34));
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         (this.forward ? this.pipeAtoB : this.pipeBtoA).execute(context);
         this.forward = !this.forward;
     }

@@ -1,4 +1,4 @@
-import { Application, AudioGenerator, Color, GamepadAxis, GamepadButton, Graphics, Scene, Sprite, Text, Vector, type Voice } from '@codexo/exojs';
+import { Application, AudioGenerator, Color, type Gamepad, GamepadAxis, GamepadButton, Graphics, type RenderingContext, Scene, Sprite, Text, type Time, Vector, type Voice } from '@codexo/exojs';
 import {
     AlphaFadeOverLifetime,
     BurstSpawn,
@@ -47,17 +47,19 @@ class GamepadSpaceshipScene extends Scene {
     private fx!: Graphics;
     private particles!: ParticleSystem;
     private burst!: BurstSpawn;
-    private pad: any = null;
+    private pad: Gamepad | null = null;
     private score = 0;
     private hasPad = false;
     private connectPrompt!: Text;
     private hud!: ReturnType<typeof mountControls>;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         this.ship = new Sprite(this.loader.get(assets.demo.textures.shipA)).setAnchor(0.5).setScale(0.5).setPosition(width / 2, height / 2);
-        this.engine = this.app.audio.play(new AudioGenerator({ type: 'sawtooth', frequency: 90 }), { volume: 0 });
+        this.engine = app.audio.play(new AudioGenerator({ type: 'sawtooth', frequency: 90 }), { volume: 0 });
 
         this.fx = new Graphics();
 
@@ -73,10 +75,10 @@ class GamepadSpaceshipScene extends Scene {
         this.particles.addUpdateModule(new AlphaFadeOverLifetime());
 
         for (let i = 0; i < 4; i++) {
-            this.asteroids.push(this.spawnAsteroid());
+            this.asteroids.push(this.spawnAsteroid(width, height));
         }
 
-        this.pad = this.app.input.getGamepad(0);
+        this.pad = app.input.getGamepad(0);
         this.pad.onActive(GamepadAxis.LeftStickX, (v: number) => (this.thrust.x = v));
         this.pad.onStop(GamepadAxis.LeftStickX, () => (this.thrust.x = 0));
         this.pad.onActive(GamepadAxis.LeftStickY, (v: number) => (this.thrust.y = v));
@@ -85,9 +87,9 @@ class GamepadSpaceshipScene extends Scene {
 
         // Track controller presence with the engine's connect/disconnect signals
         // and prompt with an on-screen Text while none is attached.
-        this.hasPad = this.app.input.gamepads.some(pad => pad.connected);
-        this.app.input.onGamepadConnected.add(() => (this.hasPad = true));
-        this.app.input.onGamepadDisconnected.add(() => (this.hasPad = this.app.input.gamepads.some(pad => pad.connected)));
+        this.hasPad = app.input.gamepads.some(pad => pad.connected);
+        app.input.onGamepadConnected.add(() => (this.hasPad = true));
+        app.input.onGamepadDisconnected.add(() => (this.hasPad = app.input.gamepads.some(pad => pad.connected)));
         this.connectPrompt = new Text('Connect a controller to fly', { fillColor: Color.white, fontSize: 24, align: 'center' })
             .setAnchor(0.5, 0.5)
             .setPosition(width / 2, height / 2);
@@ -102,8 +104,7 @@ class GamepadSpaceshipScene extends Scene {
         });
     }
 
-    private spawnAsteroid(): Asteroid {
-        const { width, height } = this.app.canvas;
+    private spawnAsteroid(width: number, height: number): Asteroid {
         const fromLeft = Math.random() < 0.5;
 
         return {
@@ -140,8 +141,10 @@ class GamepadSpaceshipScene extends Scene {
         }
     }
 
-    override update(delta): void {
-        const { width, height } = this.app.canvas;
+    override update(delta: Time): void {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         const mag = Math.min(1, Math.hypot(this.thrust.x, this.thrust.y));
 
@@ -183,7 +186,7 @@ class GamepadSpaceshipScene extends Scene {
 
                 if (Math.hypot(bullet.x - asteroid.x, bullet.y - asteroid.y) < asteroid.radius) {
                     this.impact(asteroid.x, asteroid.y);
-                    this.asteroids[a] = this.spawnAsteroid();
+                    this.asteroids[a] = this.spawnAsteroid(width, height);
                     this.bullets.splice(i, 1);
                     break;
                 }
@@ -201,7 +204,7 @@ class GamepadSpaceshipScene extends Scene {
         else if (point.y > height + 24) point.y = -24;
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
 
         this.fx.clear();

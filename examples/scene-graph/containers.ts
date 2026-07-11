@@ -1,4 +1,4 @@
-import { Application, Asset, Assets, Color, Container, Scene, Sprite } from '@codexo/exojs';
+import { Application, Asset, Assets, Color, Container, type RenderingContext, Scene, Sprite, type Time } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -18,7 +18,9 @@ class ContainersScene extends Scene {
     private bunnies!: Container;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         const { bunny, rainbow } = this.loader.get(Assets.from({ bunny: Asset.kind('texture', 'image/ship-a.png'), rainbow: Asset.kind('texture', 'image/hue-ramp.png') }));
 
         this.rainbow = new Sprite(rainbow);
@@ -37,7 +39,7 @@ class ContainersScene extends Scene {
         this.bunnies.setAnchor(0.5);
     }
 
-    override update(delta): void {
+    override update(delta: Time): void {
         const bounds = this.bunnies.getBounds();
 
         this.rainbow.x = bounds.x;
@@ -48,7 +50,7 @@ class ContainersScene extends Scene {
         this.bunnies.rotate(delta.seconds * 36);
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         context.render(this.rainbow);
         context.render(this.bunnies);

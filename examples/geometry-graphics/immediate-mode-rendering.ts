@@ -1,4 +1,4 @@
-import { Application, Color, Geometry, Matrix, RenderBatch, Scene } from '@codexo/exojs';
+import { Application, Color, Geometry, Matrix, RenderBatch, type RenderingContext, Scene, type Time } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -107,7 +107,9 @@ class ImmediateModeScene extends Scene {
     private panel!: ReturnType<typeof mountControlPanel>;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         const centerX = width / 2;
         const centerY = height / 2;
 
@@ -170,12 +172,14 @@ class ImmediateModeScene extends Scene {
         });
     }
 
-    override update(delta): void {
+    override update(delta: Time): void {
         this.elapsed += delta.seconds;
     }
 
-    override draw(context): void {
-        const { width, height } = this.app.canvas;
+    override draw(context: RenderingContext): void {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         const centerX = width / 2;
         const centerY = height / 2;
         const time = this.elapsed;

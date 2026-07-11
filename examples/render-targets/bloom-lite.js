@@ -23,7 +23,10 @@ class BloomLiteScene extends Scene {
     pipeline;
     time = 0;
     init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         this.baseRt = new RenderTexture(width, height);
         this.glowRt = new RenderTexture(width, height);
         this.blurredRt = new RenderTexture(width, height);
@@ -47,7 +50,10 @@ class BloomLiteScene extends Scene {
             .addPass(new RenderNodePass(this.glowSprite));
     }
     update(delta) {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         this.time += delta.seconds;
         this.bunny.setPosition(width / 2 + Math.cos(this.time * 1.7) * (width * 0.32), height / 2 + Math.sin(this.time * 1.2) * (height * 0.32));
     }

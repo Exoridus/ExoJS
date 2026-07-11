@@ -30,8 +30,11 @@ class PointerToWorldScene extends Scene {
     userZoom = 1;
     hud;
     init() {
-        const width = this.app.width;
-        const height = this.app.height;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const width = app.width;
+        const height = app.height;
         this.view = new View(width / 2, height / 2, width, height);
         this.grid = new Graphics();
         this.markers = new Graphics();
@@ -46,16 +49,16 @@ class PointerToWorldScene extends Scene {
         for (let y = -480; y <= height + 480; y += 80) {
             this.grid.drawLine(-640, y, width + 640, y);
         }
-        this.app.input.onPointerMove.add(pointer => {
+        app.input.onPointerMove.add(pointer => {
             this.cursor.x = pointer.x;
             this.cursor.y = pointer.y;
         });
-        this.app.input.onPointerTap.add(pointer => {
+        app.input.onPointerTap.add(pointer => {
             const world = this.view.screenToWorld(pointer.x, pointer.y);
             this.markerWorld.push({ x: world.x, y: world.y });
         });
         // Scroll to nudge a user-controlled zoom that the automatic breath multiplies.
-        this.app.input.onMouseWheel.add(offset => {
+        app.input.onMouseWheel.add(offset => {
             this.userZoom = Math.max(0.4, Math.min(3, this.userZoom + (offset.y < 0 ? 0.1 : -0.1)));
         });
         this.hud = mountControls({
@@ -70,8 +73,11 @@ class PointerToWorldScene extends Scene {
         });
     }
     update(delta) {
-        const width = this.app.width;
-        const height = this.app.height;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const width = app.width;
+        const height = app.height;
         this.elapsed += delta.seconds;
         // Slow figure-eight pan plus a gentle zoom breath.
         const centerX = width / 2 + Math.sin(this.elapsed * 0.5) * 220;

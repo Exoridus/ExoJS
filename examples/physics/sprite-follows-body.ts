@@ -1,4 +1,4 @@
-import { Application, Asset, Color, Scene, Sprite, Spritesheet, type SpritesheetData, Vector } from '@codexo/exojs';
+import { Application, Asset, Color, type RenderingContext, Scene, Sprite, Spritesheet, type SpritesheetData, type Time, Vector } from '@codexo/exojs';
 import { BoxShape, type PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
 import { mountControls } from '@examples/runtime';
 
@@ -27,7 +27,9 @@ class SpriteFollowsBodyScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
 
     override async init(): Promise<void> {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         // Gravity in px/s², +Y down — matches the engine's screen space.
         this.world = new PhysicsWorld({ gravity: { x: 0, y: 1400 } });
@@ -80,11 +82,13 @@ class SpriteFollowsBodyScene extends Scene {
         });
     }
 
-    override update(delta): void {
+    override update(delta: Time): void {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         // Advance the simulation; bound sprites are synced inside step().
         this.world.step(delta.seconds);
 
-        const { width, height } = this.app.canvas;
+        const { width, height } = app.canvas;
         const body = this.actorBody;
         const restingSpeed = Math.hypot(body.linearVelocityX, body.linearVelocityY);
 
@@ -107,7 +111,7 @@ class SpriteFollowsBodyScene extends Scene {
         }
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         context.render(this.floor);
         context.render(this.actor);

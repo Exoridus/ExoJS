@@ -77,7 +77,10 @@ class ColorGradingScene extends Scene {
     hud;
     cycle;
     init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         this.luts = LOOKS.map(look => LutFilter.fromImage(buildLut3D(look.transform)));
         this.filter = new LutFilter({ mode: '3d', size: LUT_SIZE }).setLut(this.luts[0]);
         this.sprite = new Sprite(this.loader.get(PRIMARY_RAMP)).setAnchor(0.5).setScale(3.5);

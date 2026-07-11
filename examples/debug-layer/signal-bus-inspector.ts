@@ -1,4 +1,4 @@
-import { Application, Color, Scene, Signal, Text, Time, Timer } from '@codexo/exojs';
+import { Application, Color, type RenderingContext, Scene, Signal, Text, Time, Timer } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -49,7 +49,7 @@ class SignalBusInspectorScene extends Scene {
         }
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         this.text.text =
             `Manual Signal Inspector\n\nspawn listeners: ${this.signals.spawn.count}\n` +
                 `damage listeners: ${this.signals.damage.count}\n` +

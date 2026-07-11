@@ -1,4 +1,4 @@
-import { Application, Color, Graphics, Keyboard, Scene, Sound, Text } from '@codexo/exojs';
+import { Application, Color, Graphics, Keyboard, type RenderingContext, Scene, Sound, Text, type Time } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -31,7 +31,9 @@ class RandomPitchPoolScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         this.centerX = width / 2;
         this.trackY = height * 0.55;
@@ -76,23 +78,27 @@ class RandomPitchPoolScene extends Scene {
         });
     }
 
-    override update(delta): void {
+    override update(delta: Time): void {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         this.flash = Math.max(0, this.flash - delta.seconds * 4);
 
         // Core defers playback until the AudioContext unlocks on the first
         // gesture; skip firing while audio is still locked.
-        if (!this.active || this.app.audio.locked) return;
+        if (!this.active || app.audio.locked) return;
 
         this.timer += delta.seconds;
         while (this.timer > FIRE_INTERVAL) {
             this.timer -= FIRE_INTERVAL;
             this.lastCents = Math.random() * (DETUNE_RANGE * 2) - DETUNE_RANGE;
             this.flash = 1;
-            this.app.audio.play(this.sound, { playbackRate: Math.pow(2, this.lastCents / 1200) });
+            app.audio.play(this.sound, { playbackRate: Math.pow(2, this.lastCents / 1200) });
         }
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         context.backend.clear();
         this.graphics.clear();
 
@@ -114,7 +120,7 @@ class RandomPitchPoolScene extends Scene {
         context.render(this.label);
         context.render(this.readout);
 
-        if (this.app.audio.locked) {
+        if (app.audio.locked) {
             context.render(this.tapPrompt);
         }
     }

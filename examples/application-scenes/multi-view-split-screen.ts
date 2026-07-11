@@ -1,4 +1,4 @@
-import { Application, Color, Graphics, Keyboard, Scene, Sprite, Texture, View } from '@codexo/exojs';
+import { Application, Color, Graphics, Keyboard, type RenderingContext, Scene, Sprite, Texture, type Time, View } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -32,7 +32,9 @@ class SplitScreenScene extends Scene {
     };
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         this.texture = this.loader.get('image/ship-a.png');
 
@@ -102,7 +104,7 @@ class SplitScreenScene extends Scene {
         });
     }
 
-    override update(delta): void {
+    override update(delta: Time): void {
         const speed = 300 * delta.seconds;
 
         this.leftPlayer.move((this.move.d - this.move.a) * speed, (this.move.s - this.move.w) * speed);
@@ -111,7 +113,7 @@ class SplitScreenScene extends Scene {
         this.rightView.setCenter(this.rightPlayer.position.x, this.rightPlayer.position.y);
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.clear(Color.black);
         context.render(this.leftPlayer, { view: this.leftView });
         context.render(this.rightPlayer, { view: this.leftView });

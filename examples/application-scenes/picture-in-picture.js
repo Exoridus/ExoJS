@@ -19,7 +19,10 @@ class PictureInPictureScene extends Scene {
     velocity = 220;
     frame;
     init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         this.sprite = new Sprite(this.loader.get('image/ship-a.png'));
         this.mainView = new View(0, 0, width, height);
         this.pipView = new View(0, 0, width * 0.3, height * 0.3).setViewport(0.68, 0.04, 0.28, 0.28);

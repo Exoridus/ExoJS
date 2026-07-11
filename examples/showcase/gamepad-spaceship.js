@@ -29,9 +29,12 @@ class GamepadSpaceshipScene extends Scene {
     connectPrompt;
     hud;
     init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         this.ship = new Sprite(this.loader.get(assets.demo.textures.shipA)).setAnchor(0.5).setScale(0.5).setPosition(width / 2, height / 2);
-        this.engine = this.app.audio.play(new AudioGenerator({ type: 'sawtooth', frequency: 90 }), { volume: 0 });
+        this.engine = app.audio.play(new AudioGenerator({ type: 'sawtooth', frequency: 90 }), { volume: 0 });
         this.fx = new Graphics();
         this.particles = new ParticleSystem(this.loader.get(assets.demo.textures.particleSpark), { capacity: 4000 });
         this.burst = new BurstSpawn({
@@ -44,9 +47,9 @@ class GamepadSpaceshipScene extends Scene {
         this.particles.addSpawnModule(this.burst);
         this.particles.addUpdateModule(new AlphaFadeOverLifetime());
         for (let i = 0; i < 4; i++) {
-            this.asteroids.push(this.spawnAsteroid());
+            this.asteroids.push(this.spawnAsteroid(width, height));
         }
-        this.pad = this.app.input.getGamepad(0);
+        this.pad = app.input.getGamepad(0);
         this.pad.onActive(GamepadAxis.LeftStickX, (v) => (this.thrust.x = v));
         this.pad.onStop(GamepadAxis.LeftStickX, () => (this.thrust.x = 0));
         this.pad.onActive(GamepadAxis.LeftStickY, (v) => (this.thrust.y = v));
@@ -54,9 +57,9 @@ class GamepadSpaceshipScene extends Scene {
         this.pad.onStart(GamepadButton.RightTrigger, () => this.fire());
         // Track controller presence with the engine's connect/disconnect signals
         // and prompt with an on-screen Text while none is attached.
-        this.hasPad = this.app.input.gamepads.some(pad => pad.connected);
-        this.app.input.onGamepadConnected.add(() => (this.hasPad = true));
-        this.app.input.onGamepadDisconnected.add(() => (this.hasPad = this.app.input.gamepads.some(pad => pad.connected)));
+        this.hasPad = app.input.gamepads.some(pad => pad.connected);
+        app.input.onGamepadConnected.add(() => (this.hasPad = true));
+        app.input.onGamepadDisconnected.add(() => (this.hasPad = app.input.gamepads.some(pad => pad.connected)));
         this.connectPrompt = new Text('Connect a controller to fly', { fillColor: Color.white, fontSize: 24, align: 'center' })
             .setAnchor(0.5, 0.5)
             .setPosition(width / 2, height / 2);
@@ -69,8 +72,7 @@ class GamepadSpaceshipScene extends Scene {
             status: 'Score: 0',
         });
     }
-    spawnAsteroid() {
-        const { width, height } = this.app.canvas;
+    spawnAsteroid(width, height) {
         const fromLeft = Math.random() < 0.5;
         return {
             x: fromLeft ? -20 : width + 20,
@@ -102,7 +104,10 @@ class GamepadSpaceshipScene extends Scene {
         }
     }
     update(delta) {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         const mag = Math.min(1, Math.hypot(this.thrust.x, this.thrust.y));
         if (mag > 0.05) {
             this.facing = Math.atan2(this.thrust.y, this.thrust.x);
@@ -136,7 +141,7 @@ class GamepadSpaceshipScene extends Scene {
                 const asteroid = this.asteroids[a];
                 if (Math.hypot(bullet.x - asteroid.x, bullet.y - asteroid.y) < asteroid.radius) {
                     this.impact(asteroid.x, asteroid.y);
-                    this.asteroids[a] = this.spawnAsteroid();
+                    this.asteroids[a] = this.spawnAsteroid(width, height);
                     this.bullets.splice(i, 1);
                     break;
                 }

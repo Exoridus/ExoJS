@@ -27,9 +27,12 @@ class ActionMappingScene extends Scene {
     actions = { moveX: 0, moveY: 0, jump: false };
     hud;
     init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         this.sprite = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(width / 2, height / 2);
-        const pad0 = this.app.input.getGamepad(0);
+        const pad0 = app.input.getGamepad(0);
         // --- Move action: keyboard WASD/arrows feed key axes ---
         this.inputs.onActive([Keyboard.A, Keyboard.Left], () => (this.keys.left = 1));
         this.inputs.onStop([Keyboard.A, Keyboard.Left], () => (this.keys.left = 0));

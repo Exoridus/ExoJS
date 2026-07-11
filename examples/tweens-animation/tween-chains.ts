@@ -1,4 +1,4 @@
-import { Application, Color, Scene, Sprite } from '@codexo/exojs';
+import { Application, Color, type RenderingContext, Scene, Sprite } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -17,7 +17,9 @@ class TweenChainsScene extends Scene {
     private sprite!: Sprite;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         // A rectangle centred in the frame, spread across the wider 16:9 space.
         const left = width / 2 - width * 0.28;
         const right = width / 2 + width * 0.28;
@@ -26,25 +28,25 @@ class TweenChainsScene extends Scene {
 
         this.sprite = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(left, top);
 
-        const a = this.app.tweens
+        const a = app.tweens
             .create(this.sprite.position)
             .to({ x: right, y: top }, 0.6)
             .onComplete(() => {
                 this.sprite.setRotation(90);
             });
-        const b = this.app.tweens
+        const b = app.tweens
             .create(this.sprite.position)
             .to({ x: right, y: bottom }, 0.6)
             .onComplete(() => {
                 this.sprite.setRotation(180);
             });
-        const c = this.app.tweens
+        const c = app.tweens
             .create(this.sprite.position)
             .to({ x: left, y: bottom }, 0.6)
             .onComplete(() => {
                 this.sprite.setRotation(270);
             });
-        const d = this.app.tweens
+        const d = app.tweens
             .create(this.sprite.position)
             .to({ x: left, y: top }, 0.6)
             .onComplete(() => {
@@ -58,7 +60,7 @@ class TweenChainsScene extends Scene {
         a.start();
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         context.render(this.sprite);
     }

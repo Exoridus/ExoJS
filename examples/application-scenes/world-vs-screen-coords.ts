@@ -1,4 +1,4 @@
-import { Application, Color, Graphics, Scene, Text, View } from '@codexo/exojs';
+import { Application, Color, Graphics, type RenderingContext, Scene, Text, View } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -21,8 +21,10 @@ class WorldScreenScene extends Scene {
     private pointer = { x: 0, y: 0 };
 
     override init(): void {
-        const width = this.app.width;
-        const height = this.app.height;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const width = app.width;
+        const height = app.height;
 
         this.view = new View(260, 160, width, height);
         this.grid = new Graphics();
@@ -40,18 +42,18 @@ class WorldScreenScene extends Scene {
             this.grid.drawLine(-200, y, 1200, y);
         }
 
-        this.app.input.onPointerMove.add(pointer => {
+        app.input.onPointerMove.add(pointer => {
             this.pointer = { x: pointer.x, y: pointer.y };
         });
 
-        this.app.input.onPointerTap.add(pointer => {
+        app.input.onPointerTap.add(pointer => {
             const world = this.toWorld(pointer.x, pointer.y);
             this.markers.fillColor = new Color(255, 220, 80);
             this.markers.drawCircle(world.x, world.y, 8);
         });
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         const world = this.toWorld(this.pointer.x, this.pointer.y);
 
         this.text.text = `screen: ${this.pointer.x | 0}, ${this.pointer.y | 0}\nworld: ${world.x | 0}, ${world.y | 0}`;
@@ -65,7 +67,7 @@ class WorldScreenScene extends Scene {
         context.render(this.text);
     }
 
-    private toWorld(screenX, screenY): { x: number; y: number } {
+    private toWorld(screenX: number, screenY: number): { x: number; y: number } {
         // Pointer coordinates are already in design space, so screenToWorld only
         // has to undo this view's camera transform (pan/zoom) to reach world space.
         return this.view.screenToWorld(screenX, screenY);

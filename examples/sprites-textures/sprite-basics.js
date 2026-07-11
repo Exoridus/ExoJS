@@ -20,7 +20,10 @@ class SpriteBasicsScene extends Scene {
     elapsed = 0;
     hud;
     init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         this.ship = new Sprite(this.loader.get('image/ship-a.png'));
         this.ship.setPosition((width / 2) | 0, (height / 2) | 0);
         this.ship.setAnchor(0.5);
@@ -33,8 +36,11 @@ class SpriteBasicsScene extends Scene {
         });
     }
     update(delta) {
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         this.elapsed += delta.seconds;
-        const { width, height } = this.app.canvas;
+        const { width, height } = app.canvas;
         // Position: a gentle figure-eight drift around the canvas centre.
         const driftX = Math.sin(this.elapsed * 0.8) * 90;
         const driftY = Math.sin(this.elapsed * 1.6) * 50;

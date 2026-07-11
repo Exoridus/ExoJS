@@ -1,4 +1,4 @@
-import { Application, BlurFilter, CallbackRenderPass, Color, ColorFilter, Graphics, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite } from '@codexo/exojs';
+import { Application, BlurFilter, CallbackRenderPass, Color, ColorFilter, Graphics, type RenderingContext, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite, type Time } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -25,7 +25,9 @@ class PostProcessingChainScene extends Scene {
     private time = 0;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         this.scene = new Graphics();
         this.a = new RenderTexture(width, height);
@@ -43,8 +45,10 @@ class PostProcessingChainScene extends Scene {
             .addPass(new RenderNodePass(this.final, { clear: Color.black }));
     }
 
-    override update(delta): void {
-        const { width, height } = this.app.canvas;
+    override update(delta: Time): void {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         this.time += delta.seconds;
         this.scene.clear();
         this.scene.fillColor = new Color(80, 130, 255);
@@ -53,7 +57,7 @@ class PostProcessingChainScene extends Scene {
         this.scene.drawCircle(width / 2 + Math.cos(this.time * 1.2 + 1) * (width * 0.3), height / 2 + Math.sin(this.time * 1.3 + 0.7) * (height * 0.34), 54);
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         this.pipeline.execute(context);
     }
 

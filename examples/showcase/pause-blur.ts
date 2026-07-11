@@ -1,4 +1,4 @@
-import { Application, BlurFilter, Color, Keyboard, Label, Panel, Scene, Sprite } from '@codexo/exojs';
+import { Application, BlurFilter, Color, Keyboard, Label, Panel, type RenderingContext, Scene, Sprite, type Time } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -32,7 +32,9 @@ class GameScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         this.sprite = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setScale(2).setPosition(width / 2, height / 2);
         this.addChild(this.sprite);
@@ -56,16 +58,16 @@ class GameScene extends Scene {
 
         this.inputs.onTrigger(Keyboard.Escape, () => this.togglePause());
         // Same toggle on click/tap so the pause works without a keyboard.
-        this.app.input.onPointerTap.add(() => this.togglePause());
+        app.input.onPointerTap.add(() => this.togglePause());
     }
 
-    override update(delta): void {
+    override update(delta: Time): void {
         // Not called while paused — the SceneManager skips update() + systems.
         this.time += delta.seconds;
         this.sprite.setRotation(this.time * 80);
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear(new Color(20, 24, 34));
         context.render(this.root);
     }

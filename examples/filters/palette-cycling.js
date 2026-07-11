@@ -39,7 +39,10 @@ class PaletteCyclingScene extends Scene {
     offset = 0;
     hud;
     init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         this.palette = LutFilter.fromImage(buildPaletteCanvas(0));
         this.filter = new LutFilter({ mode: '1d' }).setLut(this.palette);
         this.sprite = new Sprite(this.loader.get(PRIMARY_RAMP)).setAnchor(0.5).setScale(4);

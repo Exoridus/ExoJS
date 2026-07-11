@@ -42,11 +42,14 @@ class FrequencyBandsScene extends Scene {
     hud;
     tapPrompt;
     async init() {
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         // AudioStream has no seamless adapter — await it explicitly.
         const { track } = await this.loader.load(Assets.from({ track: Asset.kind('music', 'audio/demo-loop-main.ogg') }));
         this.music = track;
         this.analyser = new AudioAnalyser({ fftSize: 2048, smoothingTimeConstant: 0.75 });
-        this.analyser.source = this.app.audio.music;
+        this.analyser.source = app.audio.music;
         // Log-spaced bin boundaries across the spectrum. Index 0 (DC) is skipped
         // so the lowest band starts at the first meaningful bin.
         const binCount = this.analyser.frequencyBinCount;
@@ -57,7 +60,7 @@ class FrequencyBandsScene extends Scene {
             this.bandEdges.push(Math.round(minBin * Math.pow(maxBin / minBin, t)));
         }
         this.bars = new Graphics();
-        const { width, height } = this.app.canvas;
+        const { width, height } = app.canvas;
         const gap = 16;
         const slotWidth = (width - gap) / BAND_COUNT;
         const barWidth = slotWidth - gap;
@@ -79,7 +82,7 @@ class FrequencyBandsScene extends Scene {
             .setPosition(width / 2, height - 48);
         // Core defers playback until the AudioContext unlocks on the first
         // gesture, then starts automatically.
-        this.app.audio.play(this.music, { loop: true, volume: 0.8 });
+        app.audio.play(this.music, { loop: true, volume: 0.8 });
     }
     update() {
         const spectrum = this.analyser.getSpectrum();
@@ -95,8 +98,11 @@ class FrequencyBandsScene extends Scene {
         }
     }
     draw(context) {
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         context.backend.clear();
-        const { width, height } = this.app.canvas;
+        const { width, height } = app.canvas;
         const gap = 16;
         const slotWidth = (width - gap) / BAND_COUNT;
         const barWidth = slotWidth - gap;
@@ -115,7 +121,7 @@ class FrequencyBandsScene extends Scene {
         for (const label of this.labels) {
             context.render(label);
         }
-        if (this.app.audio.locked) {
+        if (app.audio.locked) {
             context.render(this.tapPrompt);
         }
     }

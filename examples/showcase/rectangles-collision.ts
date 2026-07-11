@@ -1,4 +1,4 @@
-import { Application, Color, Graphics, Scene, Sprite, Texture } from '@codexo/exojs';
+import { Application, Color, Graphics, type RenderingContext, Scene, Sprite, Texture } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -24,7 +24,9 @@ class RectanglesCollisionScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         const texture = this.loader.get('image/hue-ramp.png');
 
         // Two axis-aligned rectangles (no rotation) so collision is a true AABB
@@ -87,7 +89,7 @@ class RectanglesCollisionScene extends Scene {
         }
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear(new Color(18, 22, 30));
         context.render(this.boxA);
         context.render(this.boxB);

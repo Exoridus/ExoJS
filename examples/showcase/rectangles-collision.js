@@ -21,7 +21,10 @@ class RectanglesCollisionScene extends Scene {
     overlap;
     hud;
     init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         const texture = this.loader.get('image/hue-ramp.png');
         // Two axis-aligned rectangles (no rotation) so collision is a true AABB
         // test. Explicit width/height drive the sprite scale; anchor 0.5 keeps the

@@ -14,7 +14,10 @@ const HALF = 300;
 class MeshTexturedQuadScene extends Scene {
     quad;
     init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         this.quad = new Mesh({
             vertices: new Float32Array([
                 -HALF,

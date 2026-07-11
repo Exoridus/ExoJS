@@ -1,4 +1,4 @@
-import { Application, Color, Graphics, Label, ProgressBar, Scene } from '@codexo/exojs';
+import { Application, Color, Graphics, Label, ProgressBar, type RenderingContext, Scene, type Time } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -34,14 +34,16 @@ class GameScene extends Scene {
         this.ui.addChild(this.health);
     }
 
-    override update(delta): void {
+    override update(delta: Time): void {
         this.angle += delta.seconds * 90;
         this.time += delta.seconds;
         this.health.value = (Math.sin(this.time) + 1) / 2;
     }
 
-    override draw(context): void {
-        const { width, height } = this.app.canvas;
+    override draw(context: RenderingContext): void {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         context.backend.clear(new Color(20, 32, 58));
         this.ring.clear();

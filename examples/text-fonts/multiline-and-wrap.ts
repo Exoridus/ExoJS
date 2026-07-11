@@ -1,4 +1,4 @@
-import { Application, Color, Scene, Text } from '@codexo/exojs';
+import { Application, Color, type RenderingContext, Scene, Text } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -24,7 +24,9 @@ class MultilineAndWrapScene extends Scene {
     private textC!: Text;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         // Three wrap modes side by side across the 16:9 canvas: one column each.
         const colWidth = width / 3;
@@ -51,7 +53,7 @@ class MultilineAndWrapScene extends Scene {
         this.textC.setPosition(colX(2), bodyY);
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         context.render(this.titleA);
         context.render(this.titleB);

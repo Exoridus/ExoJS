@@ -1,4 +1,4 @@
-import { Application, Color, Graphics, Scene, Text } from '@codexo/exojs';
+import { Application, Color, Graphics, type RenderingContext, Scene, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -43,6 +43,8 @@ class MultitouchScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
 
     override init(): void {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         this.graphics = new Graphics();
 
         // Reusable label pool — one Text per possible touch, repositioned each frame.
@@ -50,7 +52,7 @@ class MultitouchScene extends Scene {
             this.labels.push(new Text('', { fillColor: Color.white, fontSize: 16 }).setAnchor(0.5));
         }
 
-        this.app.input.onPointerDown.add(pointer => {
+        app.input.onPointerDown.add(pointer => {
             if (this.pointers.size >= MAX_TOUCHES || this.pointers.has(pointer.id)) {
                 return;
             }
@@ -58,7 +60,7 @@ class MultitouchScene extends Scene {
             this.pointers.set(pointer.id, { id: pointer.id, x: pointer.x, y: pointer.y });
             this.refreshHud();
         });
-        this.app.input.onPointerMove.add(pointer => {
+        app.input.onPointerMove.add(pointer => {
             const touch = this.pointers.get(pointer.id);
 
             if (touch) {
@@ -66,11 +68,11 @@ class MultitouchScene extends Scene {
                 touch.y = pointer.y;
             }
         });
-        this.app.input.onPointerUp.add(pointer => {
+        app.input.onPointerUp.add(pointer => {
             this.pointers.delete(pointer.id);
             this.refreshHud();
         });
-        this.app.input.onPointerCancel.add(pointer => {
+        app.input.onPointerCancel.add(pointer => {
             this.pointers.delete(pointer.id);
             this.refreshHud();
         });
@@ -87,7 +89,7 @@ class MultitouchScene extends Scene {
         this.hud.setStatus(`Active touches: ${this.pointers.size} / ${MAX_TOUCHES}`);
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         this.graphics.clear();
 

@@ -27,7 +27,10 @@ class VocoderScene extends Scene {
     tapPrompt;
     hud;
     init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         // The spoken voice is the modulator: route every phrase onto its own bus
         // so the vocoder can read its spectral envelope.
         this.modulatorBus = new AudioBus('modulator', { parent: app.audio.master });
@@ -61,30 +64,36 @@ class VocoderScene extends Scene {
             onChange: index => (this.phraseIndex = index),
         });
         panel.addButton({ label: 'Speak', onClick: () => this.speak() });
-        this.app.input.onPointerTap.add(() => this.speak());
+        app.input.onPointerTap.add(() => this.speak());
         // The carrier is a sustained saw tone shaped by the voice envelope.
         // Core defers playback until the AudioContext unlocks on the first
         // gesture, then starts the carrier automatically.
-        this.app.audio.play(new AudioGenerator({ frequency: 110, type: 'sawtooth' }), { volume: 0.45 });
+        app.audio.play(new AudioGenerator({ frequency: 110, type: 'sawtooth' }), { volume: 0.45 });
         this.hud.setStatus('Ready — pick a phrase and speak.');
     }
     speak() {
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         // The pointer gesture also unlocks the AudioContext; speaking while
         // still locked would be silent, so wait until audio is ready.
-        if (this.app.audio.locked) {
+        if (app.audio.locked) {
             return;
         }
         const phrase = PHRASES[this.phraseIndex];
         const sound = this.phrases.get(phrase.key);
         if (sound)
-            this.app.audio.play(sound, { bus: this.modulatorBus });
+            app.audio.play(sound, { bus: this.modulatorBus });
         this.hud.setStatus(`Speaking: "${phrase.label}"`);
         this.phraseLabel.text = `"${phrase.label}"`;
     }
     draw(context) {
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         context.backend.clear();
         context.render(this.phraseLabel);
-        if (this.app.audio.locked) {
+        if (app.audio.locked) {
             context.render(this.tapPrompt);
         }
     }

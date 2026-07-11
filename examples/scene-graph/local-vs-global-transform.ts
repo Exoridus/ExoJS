@@ -1,4 +1,4 @@
-import { Application, Color, Container, Scene, Sprite, Text } from '@codexo/exojs';
+import { Application, Color, Container, type RenderingContext, Scene, Sprite, Text, type Time } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -21,7 +21,9 @@ class LocalVsGlobalTransformScene extends Scene {
     private globalLabel!: Text;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         const texture = this.loader.get('image/ship-a.png');
 
         this.parent = new Container().setPosition(width / 4, height / 2);
@@ -43,11 +45,11 @@ class LocalVsGlobalTransformScene extends Scene {
         this.globalLabel.setPosition((width * 3) / 4 - 50, height / 2 - 220);
     }
 
-    override update(delta): void {
+    override update(delta: Time): void {
         this.parent.rotate(delta.seconds * 60);
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         context.render(this.parent);
         context.render(this.globalSprite);

@@ -1,4 +1,4 @@
-import { Application, Asset, Assets, AudioStream, Color, Graphics, type Loopable, type Pausable, type RatePitched, Scene, type Seekable, Text, type Voice } from '@codexo/exojs';
+import { Application, Asset, Assets, AudioStream, Color, Graphics, type Loopable, type Pausable, type RatePitched, type RenderingContext, Scene, type Seekable, Text, type Voice } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -23,7 +23,9 @@ class MusicLoopScene extends Scene {
     private panel!: ReturnType<typeof mountControlPanel>;
 
     override async init(): Promise<void> {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         // Wide progress bar centred horizontally on the 16:9 canvas.
         this.bar = { x: width * 0.15, y: height * 0.5, w: width * 0.7, h: 28 };
@@ -37,7 +39,7 @@ class MusicLoopScene extends Scene {
         // Core defers playback until the AudioContext unlocks on the first
         // gesture, then starts automatically — play() returns the Voice now,
         // and all live control (volume, rate, loop, seek) lives on it.
-        this.musicVoice = this.app.audio.play(this.music, { loop: true, volume: 0.7, playbackRate: 1 }) as Voice & Seekable & Pausable & Loopable & RatePitched;
+        this.musicVoice = app.audio.play(this.music, { loop: true, volume: 0.7, playbackRate: 1 }) as Voice & Seekable & Pausable & Loopable & RatePitched;
 
         this.graphics = new Graphics();
         this.status = new Text('', { fillColor: Color.white, fontSize: 18 }).setPosition(this.bar.x, this.bar.y - 36);
@@ -97,7 +99,9 @@ class MusicLoopScene extends Scene {
         this.hud.setStatus('Playing — use the panel to mix.');
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         context.backend.clear();
         this.graphics.clear();
 
@@ -124,7 +128,7 @@ class MusicLoopScene extends Scene {
         context.render(this.graphics);
         context.render(this.status);
 
-        if (this.app.audio.locked) {
+        if (app.audio.locked) {
             context.render(this.tapPrompt);
         }
     }

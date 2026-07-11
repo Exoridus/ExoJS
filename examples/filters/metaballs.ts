@@ -1,4 +1,4 @@
-import { Application, BlurFilter, Color, Graphics, RenderBackendType, Scene, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
+import { Application, BlurFilter, Color, Graphics, RenderBackendType, type RenderingContext, Scene, type Time, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -55,8 +55,10 @@ class MetaballsScene extends Scene {
         });
     }
 
-    override update(delta): void {
-        const { width, height } = this.app.canvas;
+    override update(delta: Time): void {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         for (const point of this.points) {
             point.a += delta.seconds * (0.4 + point.r / 600);
@@ -71,7 +73,7 @@ class MetaballsScene extends Scene {
         }
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         context.render(this.balls);
     }

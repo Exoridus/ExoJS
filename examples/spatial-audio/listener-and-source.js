@@ -37,7 +37,10 @@ class ListenerAndSourceScene extends Scene {
     tapPrompt;
     hud;
     async init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         // A continuous music loop, not a one-shot: spatialization is only
         // audible while there is sustained signal to pan/attenuate. The derived
         // Sound below reads .audioBuffer synchronously, so await load() instead
@@ -66,7 +69,7 @@ class ListenerAndSourceScene extends Scene {
             status: 'Click or press any key to start…',
             hint: 'The green dot is the listener. Drag the red source — volume falls off with distance.',
         });
-        this.app.input.onPointerDown.add(pointer => {
+        app.input.onPointerDown.add(pointer => {
             const source = this.sound.position;
             if (!source)
                 return;
@@ -76,7 +79,7 @@ class ListenerAndSourceScene extends Scene {
             if (dx * dx + dy * dy < SOURCE_RADIUS * SOURCE_RADIUS * 4)
                 this.dragging = true;
         });
-        this.app.input.onPointerMove.add(pointer => {
+        app.input.onPointerMove.add(pointer => {
             if (!this.dragging)
                 return;
             // sound.position only seeds NEW voices - a live voice moves via
@@ -84,16 +87,19 @@ class ListenerAndSourceScene extends Scene {
             this.sound.position = { x: pointer.x, y: pointer.y };
             this.voice.position = { x: pointer.x, y: pointer.y };
         });
-        this.app.input.onPointerUp.add(() => {
+        app.input.onPointerUp.add(() => {
             this.dragging = false;
         });
         // Core defers playback until the AudioContext unlocks on the first
         // gesture, then starts automatically — just call play().
         // play() returns the narrow Voice interface; Sound voices are spatializable.
-        this.voice = this.app.audio.play(this.sound, { loop: true, volume: 1 });
+        this.voice = app.audio.play(this.sound, { loop: true, volume: 1 });
         this.hud.setStatus('Drag the red source to move it');
     }
     draw(context) {
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const source = this.sound.position ?? { x: 0, y: 0 };
         const dx = source.x - this.listener.x;
         const dy = source.y - this.listener.y;
@@ -119,7 +125,7 @@ class ListenerAndSourceScene extends Scene {
         this.graphics.drawCircle(source.x, source.y, SOURCE_RADIUS);
         context.render(this.graphics);
         context.render(this.label);
-        if (this.app.audio.locked) {
+        if (app.audio.locked) {
             context.render(this.tapPrompt);
         }
     }

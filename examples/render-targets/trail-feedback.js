@@ -25,7 +25,10 @@ class TrailFeedbackScene extends Scene {
     forward = true;
     time = 0;
     init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         this.rtA = new RenderTexture(width, height);
         this.rtB = new RenderTexture(width, height);
         this.bunny = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5);
@@ -52,7 +55,10 @@ class TrailFeedbackScene extends Scene {
             .addPass(new RenderNodePass(showA, { clear: Color.black }));
     }
     update(delta) {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         this.time += delta.seconds;
         this.bunny.setPosition(width / 2 + Math.cos(this.time * 2.0) * (width * 0.36), height / 2 + Math.sin(this.time * 2.7) * (height * 0.34));
     }

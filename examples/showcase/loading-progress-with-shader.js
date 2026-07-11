@@ -32,7 +32,10 @@ class LoadingProgressWithShaderScene extends Scene {
     ring;
     filter;
     init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         this.progress = { v: 0 };
         this.label = new Text('0%', { fillColor: Color.white, fontSize: 42, align: 'center' });
         this.label.setAnchor(0.5, 0.5).setPosition(width / 2, height / 2);
@@ -42,7 +45,7 @@ class LoadingProgressWithShaderScene extends Scene {
                 ? new WebGpuShaderFilter({ fragmentSource: wgsl, uniforms: { uProgress: 0 } })
                 : new WebGl2ShaderFilter({ fragmentSource: glsl, uniforms: { uProgress: 0 } });
         this.ring.filters = [this.filter];
-        this.app.tweens.create(this.progress).to({ v: 1 }, 2.4).start();
+        app.tweens.create(this.progress).to({ v: 1 }, 2.4).start();
     }
     update() {
         this.filter.uniforms.uProgress = this.progress.v;

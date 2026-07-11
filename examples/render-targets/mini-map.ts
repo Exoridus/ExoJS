@@ -1,4 +1,4 @@
-import { Application, Color, Container, Graphics, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite, View } from '@codexo/exojs';
+import { Application, Color, Container, Graphics, type RenderingContext, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite, type Time, View } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -26,7 +26,9 @@ class MiniMapScene extends Scene {
     private time = 0;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         const miniX = width - 220 - 20;
         const miniY = 20;
 
@@ -64,8 +66,10 @@ class MiniMapScene extends Scene {
             .addPass(new RenderNodePass(this.overlay));
     }
 
-    override update(delta): void {
-        const { width, height } = this.app.canvas;
+    override update(delta: Time): void {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         const marginX = 80;
         const marginY = 60;
 
@@ -88,7 +92,7 @@ class MiniMapScene extends Scene {
         this.player.drawCircle(px, py, 18);
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         this.pipeline.execute(context);
     }
 

@@ -1,4 +1,4 @@
-import { Application, Asset, Color, Scene, Sprite, SvgAsset, Texture } from '@codexo/exojs';
+import { Application, Asset, Color, type RenderingContext, Scene, Sprite, SvgAsset, Texture } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -18,7 +18,9 @@ class SvgDrawableScene extends Scene {
     private sprite!: Sprite;
 
     override async init(): Promise<void> {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         // SvgAsset has no seamless adapter (unlike Texture/Sound), so it is
         // awaited via `load()` rather than fetched synchronously via `get()`.
@@ -40,7 +42,7 @@ class SvgDrawableScene extends Scene {
         this.sprite.setPosition((width / 2) | 0, (height / 2) | 0);
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         context.render(this.sprite);
     }

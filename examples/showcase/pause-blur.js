@@ -29,7 +29,10 @@ class GameScene extends Scene {
     pauseLabel;
     hud;
     init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         this.sprite = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setScale(2).setPosition(width / 2, height / 2);
         this.addChild(this.sprite);
         // Pause overlay on the UI layer, hidden until paused.
@@ -48,7 +51,7 @@ class GameScene extends Scene {
         });
         this.inputs.onTrigger(Keyboard.Escape, () => this.togglePause());
         // Same toggle on click/tap so the pause works without a keyboard.
-        this.app.input.onPointerTap.add(() => this.togglePause());
+        app.input.onPointerTap.add(() => this.togglePause());
     }
     update(delta) {
         // Not called while paused — the SceneManager skips update() + systems.

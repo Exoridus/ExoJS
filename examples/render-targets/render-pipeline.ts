@@ -1,4 +1,4 @@
-import { Application, BlurFilter, CallbackRenderPass, Color, Container, Graphics, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite } from '@codexo/exojs';
+import { Application, BlurFilter, CallbackRenderPass, Color, Container, Graphics, type RenderingContext, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite, type Time } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -31,8 +31,10 @@ class RenderPipelineScene extends Scene {
     private time = 0;
 
     override init(): void {
-        const screenView = this.app!.rendering.screenView;
-        const { width, height } = this.app!.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const screenView = app.rendering.screenView;
+        const { width, height } = app.canvas;
 
         this.sceneRt = new RenderTexture(width, height);
         this.blurredRt = new RenderTexture(width, height);
@@ -65,17 +67,19 @@ class RenderPipelineScene extends Scene {
 
         // Keep the caller-owned off-screen targets matched to the canvas, then cascade resize into the
         // pipeline (effect passes would rebuild their scratch here).
-        const handleResize = (width, height): void => {
+        const handleResize = (width: number, height: number): void => {
             this.sceneRt.setSize(width, height);
             this.blurredRt.setSize(width, height);
             this.frame.resize(width, height);
         };
-        this.app!.onResize.add(handleResize);
-        this.detachResize = () => this.app!.onResize.remove(handleResize);
+        app.onResize.add(handleResize);
+        this.detachResize = () => app.onResize.remove(handleResize);
     }
 
-    override update(delta): void {
-        const { width, height } = this.app!.canvas;
+    override update(delta: Time): void {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         this.time += delta.seconds;
 
         // `enabled` lives on the pass — flip it and the composer skips the step next frame.
@@ -90,7 +94,7 @@ class RenderPipelineScene extends Scene {
         this.hudBar.drawRectangle(20, 20, 200, 16);
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         this.frame.execute(context);
     }
 

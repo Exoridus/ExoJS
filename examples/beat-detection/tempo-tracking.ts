@@ -1,4 +1,4 @@
-import { Application, Asset, Assets, AudioStream, Color, Graphics, Scene, Text } from '@codexo/exojs';
+import { Application, Asset, Assets, AudioStream, Color, Graphics, type RenderingContext, Scene, Text, type Time } from '@codexo/exojs';
 import { BeatDetector } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 
@@ -30,7 +30,9 @@ class TempoTrackingScene extends Scene {
     private tapPrompt!: Text;
 
     override async init(): Promise<void> {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         const marginX = width * 0.08;
 
         // AudioStream has no seamless adapter — await it explicitly.
@@ -38,7 +40,7 @@ class TempoTrackingScene extends Scene {
         this.music = track;
 
         this.detector = new BeatDetector();
-        this.detector.source = this.app.audio.music;
+        this.detector.source = app.audio.music;
 
         this.readout = new Text('BPM —', { fillColor: Color.white, fontSize: 40 });
         this.readout.setPosition(marginX, height * 0.18);
@@ -65,10 +67,10 @@ class TempoTrackingScene extends Scene {
 
         // Core defers playback until the AudioContext unlocks on the first
         // gesture, then starts automatically.
-        this.app.audio.play(this.music, { loop: true, volume: 0.8 });
+        app.audio.play(this.music, { loop: true, volume: 0.8 });
     }
 
-    override update(delta): void {
+    override update(delta: Time): void {
         // Raw onset strength straight from the detector (positive spectral flux).
         this.onset = this.detector.onsetStrength;
 
@@ -77,7 +79,9 @@ class TempoTrackingScene extends Scene {
         this.onsetPeak = Math.max(this.onset, this.onsetPeak * (1 - delta.seconds * 0.4));
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const bpm = this.detector.tempo;
         const confidence = this.detector.confidence;
         const onsetNorm = Math.min(1, this.onset / this.onsetPeak);
@@ -86,7 +90,7 @@ class TempoTrackingScene extends Scene {
         this.confidenceLabel.text = `Confidence  ${confidence.toFixed(2)}`;
         this.onsetLabel.text = `Onset energy  ${this.onset.toFixed(2)}`;
 
-        const { width, height } = this.app.canvas;
+        const { width, height } = app.canvas;
         const marginX = width * 0.08;
         const meterWidth = width - marginX * 2;
         const meterHeight = 30;
@@ -114,7 +118,7 @@ class TempoTrackingScene extends Scene {
         context.render(this.confidenceLabel);
         context.render(this.onsetLabel);
 
-        if (this.app.audio.locked) {
+        if (app.audio.locked) {
             context.render(this.tapPrompt);
         }
     }

@@ -28,13 +28,16 @@ class TempoTrackingScene extends Scene {
     hud;
     tapPrompt;
     async init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         const marginX = width * 0.08;
         // AudioStream has no seamless adapter — await it explicitly.
         const { track } = await this.loader.load(Assets.from({ track: Asset.kind('music', 'audio/demo-loop-main.ogg') }));
         this.music = track;
         this.detector = new BeatDetector();
-        this.detector.source = this.app.audio.music;
+        this.detector.source = app.audio.music;
         this.readout = new Text('BPM —', { fillColor: Color.white, fontSize: 40 });
         this.readout.setPosition(marginX, height * 0.18);
         this.confidenceLabel = new Text('Confidence', { fillColor: new Color(150, 220, 175), fontSize: 20 });
@@ -54,7 +57,7 @@ class TempoTrackingScene extends Scene {
             .setPosition(width / 2, height - 48);
         // Core defers playback until the AudioContext unlocks on the first
         // gesture, then starts automatically.
-        this.app.audio.play(this.music, { loop: true, volume: 0.8 });
+        app.audio.play(this.music, { loop: true, volume: 0.8 });
     }
     update(delta) {
         // Raw onset strength straight from the detector (positive spectral flux).
@@ -64,13 +67,16 @@ class TempoTrackingScene extends Scene {
         this.onsetPeak = Math.max(this.onset, this.onsetPeak * (1 - delta.seconds * 0.4));
     }
     draw(context) {
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const bpm = this.detector.tempo;
         const confidence = this.detector.confidence;
         const onsetNorm = Math.min(1, this.onset / this.onsetPeak);
         this.readout.text = bpm > 0 ? `BPM ${bpm.toFixed(1)}` : 'BPM —  (listening…)';
         this.confidenceLabel.text = `Confidence  ${confidence.toFixed(2)}`;
         this.onsetLabel.text = `Onset energy  ${this.onset.toFixed(2)}`;
-        const { width, height } = this.app.canvas;
+        const { width, height } = app.canvas;
         const marginX = width * 0.08;
         const meterWidth = width - marginX * 2;
         const meterHeight = 30;
@@ -92,7 +98,7 @@ class TempoTrackingScene extends Scene {
         context.render(this.readout);
         context.render(this.confidenceLabel);
         context.render(this.onsetLabel);
-        if (this.app.audio.locked) {
+        if (app.audio.locked) {
             context.render(this.tapPrompt);
         }
     }

@@ -35,7 +35,10 @@ class MovingSourceScene extends Scene {
     tapPrompt;
     hud;
     async init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         // A continuous music loop, not a one-shot: spatialization is only
         // audible while there is sustained signal to pan/attenuate. The derived
         // Sound below reads .audioBuffer synchronously, so await load() instead
@@ -67,7 +70,7 @@ class MovingSourceScene extends Scene {
         // Core defers playback until the AudioContext unlocks on the first
         // gesture, then starts automatically — just call play().
         // play() returns the narrow Voice interface; Sound voices are spatializable.
-        this.voice = this.app.audio.play(this.sound, { loop: true, volume: 1 });
+        this.voice = app.audio.play(this.sound, { loop: true, volume: 1 });
         this.hud.setStatus('Source orbiting the listener');
     }
     update(delta) {
@@ -82,6 +85,9 @@ class MovingSourceScene extends Scene {
         this.voice.position = position;
     }
     draw(context) {
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const source = this.sound.position ?? { x: 0, y: 0 };
         const dx = source.x - this.listener.x;
         const dy = source.y - this.listener.y;
@@ -106,7 +112,7 @@ class MovingSourceScene extends Scene {
         this.graphics.drawCircle(source.x, source.y, 16);
         context.render(this.graphics);
         context.render(this.label);
-        if (this.app.audio.locked) {
+        if (app.audio.locked) {
             context.render(this.tapPrompt);
         }
     }

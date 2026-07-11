@@ -1,4 +1,4 @@
-import { Application, Color, Scene, Sprite } from '@codexo/exojs';
+import { Application, Color, type RenderingContext, Scene, Sprite, type Time } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -17,18 +17,20 @@ class GameLoopScene extends Scene {
     private sprite!: Sprite;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         this.sprite = new Sprite(this.loader.get('image/ship-a.png'));
         this.sprite.setAnchor(0.5);
         this.sprite.setPosition(width / 2, height / 2);
     }
 
-    override update(delta): void {
+    override update(delta: Time): void {
         this.sprite.rotate(delta.seconds * 120);
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         context.render(this.sprite);
     }

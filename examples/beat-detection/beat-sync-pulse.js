@@ -28,7 +28,10 @@ class BeatSyncPulseScene extends Scene {
     hud;
     tapPrompt;
     async init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         // AudioStream has no seamless adapter — await it explicitly.
         const { track } = await this.loader.load(Assets.from({ track: Asset.kind('music', 'audio/demo-loop-main.ogg') }));
         this.music = track;
@@ -64,7 +67,7 @@ class BeatSyncPulseScene extends Scene {
             },
         });
         this.detector = new BeatDetector();
-        this.detector.source = this.app.audio.music;
+        this.detector.source = app.audio.music;
         this.detector.onBeat.add(() => {
             this.pulse = this.intensity;
             this.burst.reset();
@@ -73,7 +76,7 @@ class BeatSyncPulseScene extends Scene {
         });
         // Core defers playback until the AudioContext unlocks on the first
         // gesture, then starts automatically.
-        this.app.audio.play(this.music, { loop: true, volume: 0.8 });
+        app.audio.play(this.music, { loop: true, volume: 0.8 });
     }
     update(delta) {
         this.pulse = Math.max(0, this.pulse - delta.seconds * 1.2);
@@ -81,10 +84,13 @@ class BeatSyncPulseScene extends Scene {
         this.particles.update(delta);
     }
     draw(context) {
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         context.backend.clear();
         context.render(this.particles);
         context.render(this.sprite);
-        if (this.app.audio.locked) {
+        if (app.audio.locked) {
             context.render(this.tapPrompt);
         }
     }

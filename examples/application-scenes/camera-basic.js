@@ -18,7 +18,10 @@ class CameraBasicScene extends Scene {
     uiBar;
     zoom = 1;
     init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         this.bunny = new Sprite(this.loader.get('image/ship-a.png'));
         this.bunny.setAnchor(0.5).setPosition(width / 2, height / 2);
         this.grid = new Graphics();
@@ -33,19 +36,25 @@ class CameraBasicScene extends Scene {
         this.uiBar = new Graphics();
         this.uiBar.fillColor = new Color(0, 0, 0, 0.6);
         this.uiBar.drawRectangle(0, 0, width, 40);
-        this.app.input.onPointerMove.add(p => {
-            this.app.rendering.view.setCenter(p.x, p.y);
+        app.input.onPointerMove.add(p => {
+            app.rendering.view.setCenter(p.x, p.y);
         });
-        this.app.input.onMouseWheel.add(delta => {
+        app.input.onMouseWheel.add(delta => {
             this.zoom = Math.max(0.2, Math.min(4, this.zoom - delta.y * 0.001));
-            this.app.rendering.view.setZoom(this.zoom);
+            app.rendering.view.setZoom(this.zoom);
         });
     }
     update(delta) {
-        this.app.rendering.view.rotation += delta.seconds * 15;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        app.rendering.view.rotation += delta.seconds * 15;
     }
     draw(context) {
-        const { width } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width } = app.canvas;
         context.backend.clear();
         context.render(this.grid);
         context.render(this.bunny);

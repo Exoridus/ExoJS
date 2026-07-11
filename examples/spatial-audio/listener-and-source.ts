@@ -1,5 +1,5 @@
 import { Application, Asset, Color, Graphics, Scene, Sound, Text } from '@codexo/exojs';
-import type { Spatializable, Voice } from '@codexo/exojs';
+import type { RenderingContext, Spatializable, Voice } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -41,7 +41,9 @@ class ListenerAndSourceScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
 
     override async init(): Promise<void> {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         // A continuous music loop, not a one-shot: spatialization is only
         // audible while there is sustained signal to pan/attenuate. The derived
@@ -75,7 +77,7 @@ class ListenerAndSourceScene extends Scene {
             hint: 'The green dot is the listener. Drag the red source — volume falls off with distance.',
         });
 
-        this.app.input.onPointerDown.add(pointer => {
+        app.input.onPointerDown.add(pointer => {
             const source = this.sound.position;
             if (!source) return;
             const dx = pointer.x - source.x;
@@ -83,25 +85,27 @@ class ListenerAndSourceScene extends Scene {
             // Generous grab radius so the source is easy to pick up.
             if (dx * dx + dy * dy < SOURCE_RADIUS * SOURCE_RADIUS * 4) this.dragging = true;
         });
-        this.app.input.onPointerMove.add(pointer => {
+        app.input.onPointerMove.add(pointer => {
             if (!this.dragging) return;
             // sound.position only seeds NEW voices - a live voice moves via
             // voice.position, so update both (descriptor + running loop).
             this.sound.position = { x: pointer.x, y: pointer.y };
             this.voice.position = { x: pointer.x, y: pointer.y };
         });
-        this.app.input.onPointerUp.add(() => {
+        app.input.onPointerUp.add(() => {
             this.dragging = false;
         });
 
         // Core defers playback until the AudioContext unlocks on the first
         // gesture, then starts automatically — just call play().
         // play() returns the narrow Voice interface; Sound voices are spatializable.
-        this.voice = this.app.audio.play(this.sound, { loop: true, volume: 1 }) as Voice & Spatializable;
+        this.voice = app.audio.play(this.sound, { loop: true, volume: 1 }) as Voice & Spatializable;
         this.hud.setStatus('Drag the red source to move it');
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const source = this.sound.position ?? { x: 0, y: 0 };
         const dx = source.x - this.listener.x;
         const dy = source.y - this.listener.y;
@@ -133,7 +137,7 @@ class ListenerAndSourceScene extends Scene {
         context.render(this.graphics);
         context.render(this.label);
 
-        if (this.app.audio.locked) {
+        if (app.audio.locked) {
             context.render(this.tapPrompt);
         }
     }

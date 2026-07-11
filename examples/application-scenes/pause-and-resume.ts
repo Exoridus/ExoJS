@@ -1,4 +1,4 @@
-import { Application, Color, Keyboard, Scene, Sprite, Text } from '@codexo/exojs';
+import { Application, Color, Keyboard, type RenderingContext, Scene, Sprite, Text, type Time } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -18,7 +18,9 @@ class PauseResumeScene extends Scene {
     private label!: Text;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         this.sprite = new Sprite(this.loader.get('image/ship-a.png'));
         this.sprite.setAnchor(0.5);
@@ -35,19 +37,19 @@ class PauseResumeScene extends Scene {
         });
 
         // Same toggle on click/tap so the pause works without a keyboard.
-        this.app.input.onPointerTap.add(() => {
+        app.input.onPointerTap.add(() => {
             // scene.paused skips update() + systems each frame; drawing continues.
             this.paused = !this.paused;
             this.label.text = this.paused ? 'Paused (draw running)' : 'Running';
         });
     }
 
-    override update(delta): void {
+    override update(delta: Time): void {
         // Not called while paused — the SceneManager skips a paused scene's update().
         this.sprite.rotate(delta.seconds * 180);
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         context.render(this.sprite);
         context.render(this.label);

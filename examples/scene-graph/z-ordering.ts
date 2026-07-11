@@ -1,4 +1,4 @@
-import { Application, Color, Container, Keyboard, Scene, Sprite, Text } from '@codexo/exojs';
+import { Application, Color, Container, Keyboard, type RenderingContext, Scene, Sprite, Text } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -19,7 +19,9 @@ class ZOrderingScene extends Scene {
     private sprites!: Sprite[];
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         const texture = this.loader.get('image/ship-a.png');
 
         this.group = new Container();
@@ -52,7 +54,7 @@ class ZOrderingScene extends Scene {
         this.label.text = `Press 1, 2, 3 — front: ${names[index]}`;
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         context.render(this.group);
         context.render(this.label);

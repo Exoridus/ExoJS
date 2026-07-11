@@ -1,4 +1,4 @@
-import { Application, Color, Scene, Texture } from '@codexo/exojs';
+import { Application, Color, type RenderingContext, Scene, Texture, type Time } from '@codexo/exojs';
 import {
     AlphaFadeOverLifetime,
     ApplyForce,
@@ -34,7 +34,7 @@ class TintCycle extends UpdateModule {
         this.palette = palette;
     }
 
-    apply(system): void {
+    override apply(system: ParticleSystem): void {
         const { color, liveCount, elapsed } = system;
         for (let i = 0; i < liveCount; i++) {
             if (elapsed[i] === 0) {
@@ -49,7 +49,9 @@ class ParticleStressScene extends Scene {
     private particleSystems!: { instance: ParticleSystem; baseX: number; baseY: number }[];
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         this.sharedTexture = createParticleTexture();
         this.particleSystems = [];
@@ -152,8 +154,10 @@ class ParticleStressScene extends Scene {
         return { instance: system, baseX: config.x, baseY: config.y };
     }
 
-    override update(delta): void {
-        const time = this.app.activeTime.seconds;
+    override update(delta: Time): void {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const time = app.activeTime.seconds;
 
         for (let i = 0; i < this.particleSystems.length; i++) {
             const entry = this.particleSystems[i];
@@ -165,7 +169,7 @@ class ParticleStressScene extends Scene {
         }
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
 
         for (const entry of this.particleSystems) {

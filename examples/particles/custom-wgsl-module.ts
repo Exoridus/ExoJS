@@ -1,4 +1,4 @@
-import { Application, Color, Scene, Vector } from '@codexo/exojs';
+import { Application, Color, type RenderingContext, Scene, type Time, Vector } from '@codexo/exojs';
 import {
     Constant,
     particlesExtension,
@@ -38,7 +38,7 @@ class SwayModule extends UpdateModule {
         this.frequency = frequency;
     }
 
-    apply(system, dt): void {
+    override apply(system: ParticleSystem, dt: number): void {
         for (let i = 0; i < system.liveCount; i++) {
             system.velX[i] += Math.sin(system.elapsed[i] * this.frequency) * this.amplitude * dt;
         }
@@ -67,7 +67,9 @@ class CustomWgslModuleScene extends Scene {
     private reportedMode = false;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         this.system = new ParticleSystem(this.loader.get(assets.demo.textures.particleLight), { capacity: 26000 });
         this.system.setPosition(width / 2, height - 60);
@@ -91,7 +93,7 @@ class CustomWgslModuleScene extends Scene {
         });
     }
 
-    override update(delta): void {
+    override update(delta: Time): void {
         this.system.update(delta);
 
         // gpuMode is only meaningful after the first update() compiled the
@@ -102,7 +104,7 @@ class CustomWgslModuleScene extends Scene {
         }
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         context.render(this.system);
     }

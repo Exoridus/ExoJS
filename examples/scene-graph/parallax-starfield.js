@@ -19,7 +19,10 @@ class ParallaxStarfieldScene extends Scene {
     layers;
     pointer = { x: 0, y: 0 };
     init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         const margin = 80;
         this.pointer = { x: width / 2, y: height / 2 };
         this.layers = counts.map((count, index) => {
@@ -33,12 +36,15 @@ class ParallaxStarfieldScene extends Scene {
             }
             return g;
         });
-        this.app.input.onPointerMove.add(pointer => {
+        app.input.onPointerMove.add(pointer => {
             this.pointer = { x: pointer.x, y: pointer.y };
         });
     }
     draw(context) {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         context.backend.clear();
         for (let i = 0; i < this.layers.length; i++) {
             const layer = this.layers[i];

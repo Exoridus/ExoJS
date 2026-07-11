@@ -41,6 +41,9 @@ class TiledMapPhysicsActorScene extends Scene {
     debug;
     hud;
     async init() {
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         this.world = new PhysicsWorld({ gravity: { x: 0, y: 1500 } });
         // ── Tileset + a single ground tile layer ──────────────────────────
         // The map-pack tilesheet is a uniform 64×64 grid (17 columns), so it
@@ -120,11 +123,14 @@ class TiledMapPhysicsActorScene extends Scene {
         this.actorBody.applyImpulse(2600, 0);
         // Physics debug overlay: outlines every collider so the bridge output
         // is visible on top of the rendered tiles.
-        this.debug = new PhysicsDebugDraw(this.app, this.world, { drawShapes: true, drawCenters: true });
+        this.debug = new PhysicsDebugDraw(app, this.world, { drawShapes: true, drawCenters: true });
     }
     update(delta) {
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         this.world.step(delta.seconds);
-        const { width, height } = this.app.canvas;
+        const { width, height } = app.canvas;
         const body = this.actorBody;
         // Loop the demo: nudge the actor again once it settles, and rescue it if
         // it ever escapes the bounds.

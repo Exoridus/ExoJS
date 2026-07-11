@@ -1,4 +1,4 @@
-import { Application, Color, Graphics, Rectangle, Scene, Sprite } from '@codexo/exojs';
+import { Application, Color, Graphics, Rectangle, type RenderingContext, Scene, Sprite, type Time } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -19,7 +19,9 @@ class MasksScene extends Scene {
     private time = 0;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         const tex = this.loader.get(ALPHA_RINGS);
 
         this.rectSprite = new Sprite(tex);
@@ -40,8 +42,10 @@ class MasksScene extends Scene {
         this.gfxSprite.mask = circle;
     }
 
-    override update(delta): void {
-        const { width, height } = this.app.canvas;
+    override update(delta: Time): void {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         this.time += delta.seconds;
 
         const r = 80;
@@ -49,7 +53,7 @@ class MasksScene extends Scene {
         this.rectMask.y = (height / 2 + Math.sin(this.time * 1.4) * r - 55) | 0;
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         context.render(this.rectSprite);
         context.render(this.gfxSprite);

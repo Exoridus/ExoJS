@@ -1,4 +1,4 @@
-import { Application, BlurFilter, Color, Scene, Sprite } from '@codexo/exojs';
+import { Application, BlurFilter, Color, type RenderingContext, Scene, Sprite } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -25,7 +25,9 @@ class BlurFilterScene extends Scene {
     private slider!: ReturnType<ReturnType<typeof mountControlPanel>['addSlider']>;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         this.blur = new BlurFilter({ radius: 4, quality: 2 });
         this.sprite = new Sprite(this.loader.get(PIXEL_GRID)).setAnchor(0.5).setScale(4.5).setPosition(width / 2, height / 2);
@@ -76,7 +78,7 @@ class BlurFilterScene extends Scene {
         this.hud.setStatus(this.statusText());
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         context.render(this.sprite);
     }
