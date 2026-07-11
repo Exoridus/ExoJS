@@ -14,6 +14,7 @@ import type { Mesh } from '#rendering/mesh/Mesh';
 import { resolveUploadTransform } from '#rendering/pixelSnap';
 import { type DrawCommand, drawCommandUsesSharedTransform, RenderEntryKind } from '#rendering/plan/RenderCommand';
 import type { ScopeEntry } from '#rendering/plan/RenderScope';
+import { type RetainedBatchInstruction, RetainedInstructionKind, type RetainedInstructionSet } from '#rendering/plan/RetainedInstructionSet';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import type { Renderer } from '#rendering/Renderer';
@@ -32,6 +33,14 @@ import { WebGpuBackdropBlendCompositor } from './WebGpuBackdropBlendCompositor';
 import { WebGpuMaskCompositor } from './WebGpuMaskCompositor';
 import { WebGpuMeshRenderer } from './WebGpuMeshRenderer';
 import { WebGpuPassCoordinator } from './WebGpuPassCoordinator';
+import {
+  retainedTransformSlotBytes,
+  type WebGpuMutableRetainedBatchInstruction,
+  type WebGpuRetainedBatchPayload,
+  WebGpuRetainedCaptureFrame,
+  WebGpuRetainedGroupBundle,
+} from './WebGpuRetainedGroupResources';
+import type { WebGpuSpriteRenderer } from './WebGpuSpriteRenderer';
 import { WebGpuTransformStorage } from './WebGpuTransformStorage';
 
 interface ManagedWebGpuTextureState {
@@ -174,6 +183,12 @@ export class WebGpuBackend implements RenderBackend {
   private _drawPlanDepth = 0;
   private readonly _planBaseStack: number[] = [];
   private readonly _planHashStack: number[] = [];
+  // Retained instruction-set record/replay (Track B Slice 3, Tasks 9/10).
+  // Active capture windows, innermost last (S3-D6); live bundle registry for
+  // device-loss generation bumps; permanently vetoed (poisoned) sets.
+  private readonly _retainedCaptureFrames: WebGpuRetainedCaptureFrame[] = [];
+  private readonly _retainedBundles = new Set<WebGpuRetainedGroupBundle>();
+  private readonly _rejectedRetainedSets = new WeakSet<RetainedInstructionSet>();
 
   public constructor(app: Application) {
     const canvasOptions = app.options.canvas ?? {};
@@ -432,6 +447,13 @@ export class WebGpuBackend implements RenderBackend {
 
     const renderer = this.rendererRegistry.resolve(drawable);
 
+    // Defensive (S3-D5): a draw the recorder cannot capture inside an active
+    // window poisons it — the predicate excludes these at collect time, but
+    // an incomplete replay stream must never be committable.
+    if (this._retainedCaptureFrames.length > 0 && (renderer as { _supportsRetainedBatches?: boolean })._supportsRetainedBatches !== true) {
+      this._poisonActiveRetainedCaptures();
+    }
+
     this._setActiveRenderer(renderer);
     renderer.render(drawable);
     this._activeDrawCommand = null;
@@ -450,6 +472,10 @@ export class WebGpuBackend implements RenderBackend {
 
     if (!(renderer instanceof WebGpuMeshRenderer)) {
       throw new Error('drawInstanced requires a mesh handled by the WebGPU mesh renderer.');
+    }
+
+    if (this._retainedCaptureFrames.length > 0) {
+      this._poisonActiveRetainedCaptures();
     }
 
     this._setActiveRenderer(renderer);
@@ -476,6 +502,10 @@ export class WebGpuBackend implements RenderBackend {
   public execute(pass: BackendRenderPass): this {
     if (this._deviceLost || this._device === null) {
       return this;
+    }
+
+    if (this._retainedCaptureFrames.length > 0) {
+      this._poisonActiveRetainedCaptures();
     }
 
     this._flushActiveRenderer();
@@ -544,6 +574,10 @@ export class WebGpuBackend implements RenderBackend {
       return this;
     }
 
+    if (this._retainedCaptureFrames.length > 0) {
+      this._poisonActiveRetainedCaptures();
+    }
+
     this._flushActiveRenderer();
     this._setActiveRenderer(null);
 
@@ -564,6 +598,10 @@ export class WebGpuBackend implements RenderBackend {
 
     if (this._deviceLost || this._device === null) {
       return this;
+    }
+
+    if (this._retainedCaptureFrames.length > 0) {
+      this._poisonActiveRetainedCaptures();
     }
 
     this._flushActiveRenderer();
@@ -787,6 +825,15 @@ export class WebGpuBackend implements RenderBackend {
     this._transformStorage?.destroy();
     this._transformStorage = null;
     this._activeDrawCommand = null;
+
+    // Release retained group GPU resources; the plan-side sets keep their
+    // (now generation-stale) bundle references and re-record elsewhere.
+    for (const bundle of [...this._retainedBundles]) {
+      bundle.invalidateDeviceState(this._device !== null && !this._deviceLost);
+    }
+
+    this._retainedBundles.clear();
+    this._retainedCaptureFrames.length = 0;
     this._passCoordinatorInstance?.destroyStencil();
     this._drawPlanDepth = 0;
 
@@ -1007,13 +1054,349 @@ export class WebGpuBackend implements RenderBackend {
   /**
    * Playback hook (RenderPlanPlayer): enter/leave a retained transform group.
    * A group is a flush boundary by design (S2-D2) — the pending batch must
-   * drain under the OLD group matrix before the new one takes effect.
+   * drain under the OLD group matrix before the new one takes effect. The GPU
+   * pass deliberately stays OPEN across the boundary (B-06, S3-D7): renderers
+   * that share a per-flush projection UBO guard it themselves against content
+   * changes within an open pass (`_endPassOnProjectionChange`, so uncached
+   * playback splits lazily at the next conflicting flush instead of eagerly
+   * here), and replayed retained batches bind group-owned UBOs that never
+   * alias the shared one — N cached groups cost zero extra submits.
    * @internal
    */
   public _setRenderGroupTransform(transform: Matrix | null): void {
-    this._flushActiveRenderer();
+    this._renderer?.flush();
     this._renderGroupTransform = transform;
     this._renderGroupTransformId++;
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Retained instruction-set record/replay (Track B Slice 3, S3-D1/D3/D7).
+  // ───────────────────────────────────────────────────────────────────────────
+
+  /** Whether at least one retained capture window is active. @internal */
+  public get _retainedCaptureActive(): boolean {
+    return this._retainedCaptureFrames.length > 0;
+  }
+
+  /**
+   * Playback hook: a retained group scope starts recording (contract in
+   * RenderPlanPlayer). The pending batch is flushed first so no batch spans
+   * into the capture window; the set's grow-only bundle is created (or reused
+   * across recaptures) and a capture frame joins the stack.
+   * @internal
+   */
+  public _beginRetainedCapture(set: RetainedInstructionSet): void {
+    this._renderer?.flush();
+
+    let bundle = set.ownedBundle instanceof WebGpuRetainedGroupBundle ? set.ownedBundle : null;
+
+    if (bundle === null) {
+      // A bundle from another backend (backend switch): release it before
+      // claiming ownership, so the old backend's GPU memory is not leaked.
+      set.ownedBundle?.destroy?.();
+
+      bundle = new WebGpuRetainedGroupBundle(this._accountant, released => this._retainedBundles.delete(released));
+      this._retainedBundles.add(bundle);
+      set.ownedBundle = bundle;
+    }
+
+    this._retainedCaptureFrames.push(new WebGpuRetainedCaptureFrame(set, bundle));
+  }
+
+  /**
+   * Playback hook: the recording scope's playback ended. Flushes the pending
+   * batch INTO the still-active captures (the group's trailing draws belong
+   * to the set), pops the frame, and finalizes the bundle: node indices in
+   * the staged bytes are rebased group-local, instance bytes and the group's
+   * transform rows are uploaded into the group-owned buffers, and every
+   * staged instruction is stamped with the final resource generation.
+   * @internal
+   */
+  public _endRetainedCapture(set: RetainedInstructionSet): void {
+    this._renderer?.flush();
+
+    const frames = this._retainedCaptureFrames;
+    let index = frames.length - 1;
+
+    while (index >= 0 && frames[index]!.set !== set) {
+      index--;
+    }
+
+    if (index === -1) {
+      return;
+    }
+
+    // Non-empty by construction: index was found above.
+    const frame = frames[index]!;
+
+    frames.splice(index, 1);
+    this._finalizeRetainedCapture(frame);
+  }
+
+  /**
+   * Playback hook: replay one recorded batch from group-owned resources into
+   * the OPEN pass (no end/submit at group boundaries on the cached path,
+   * B-06). All state — pipeline, projection/group uniforms, texture bindings
+   * — is resolved live; only the recorded data is reused. Dispatches to the
+   * sprite renderer that recorded the batch.
+   * @internal
+   */
+  public _replayRetainedBatch(batch: RetainedBatchInstruction): void {
+    if (this._deviceLost || this._device === null) {
+      return;
+    }
+
+    const payload = batch.payload as WebGpuRetainedBatchPayload | null;
+
+    if (payload === null || typeof payload !== 'object' || !(payload.bundle instanceof WebGpuRetainedGroupBundle)) {
+      return;
+    }
+
+    // Parity with the live path: draw() counts submitted nodes before any
+    // flush-time visibility decision (mask/scissor) can drop the batch.
+    this._stats.submittedNodes += batch.instanceCount;
+    this._setActiveRenderer(payload.renderer);
+    payload.renderer._replayRecordedSpriteBatch(payload);
+  }
+
+  /**
+   * Collect-time backend validation (S3-D3) on top of the plan-level
+   * generation check: every recorded batch's managed texture views must still
+   * be the recorded identities — `_syncTexture` recreates the view on resize,
+   * and resized textures invalidate the UV words baked into the cached
+   * instance bytes. A failed check also DROPS the recording (the plan-level
+   * key would otherwise stay "valid" and block the player from re-recording),
+   * so the group re-records on this same clean frame and returns to the fast
+   * tier. Poisoned sets stay vetoed without re-record (entry replay forever —
+   * correct, and re-recording would just re-poison).
+   * @internal
+   */
+  public _validateRetainedInstructionSet(set: RetainedInstructionSet): boolean {
+    if (this._rejectedRetainedSets.has(set)) {
+      return false;
+    }
+
+    if (this._deviceLost || this._device === null) {
+      return false;
+    }
+
+    for (const instruction of set.instructions) {
+      if (instruction.kind !== RetainedInstructionKind.Batch) {
+        continue;
+      }
+
+      const payload = instruction.payload as WebGpuRetainedBatchPayload | null;
+
+      if (payload === null || typeof payload !== 'object' || !(payload.bundle instanceof WebGpuRetainedGroupBundle)) {
+        return false;
+      }
+
+      if (!payload.bundle.isReady) {
+        set.invalidate();
+
+        return false;
+      }
+
+      const textures = payload.textures;
+
+      for (let i = 0; i < textures.length; i++) {
+        // In-bounds: i < textures.length; recordedViews is parallel.
+        const texture = textures[i]!;
+        const state = this._textureStates.get(texture);
+
+        // The dimension check catches a resize that has not SYNCED yet (the
+        // managed view only refreshes at the next binding resolve, which
+        // happens after this collect-time validation): recorded UV words are
+        // normalized against the record-time texture size, so any size change
+        // — pending or materialized — must force a recapture.
+        if (state === undefined || state.view !== payload.recordedViews[i] || state.width !== texture.width || state.height !== texture.height) {
+          set.invalidate();
+
+          return false;
+        }
+      }
+    }
+
+    return true;
+  }
+
+  /**
+   * Stage one recorded sprite flush (called by the sprite renderer while a
+   * capture window is active): copies the packed instance bytes (owned by the
+   * INNERMOST capture's bundle, S3-D6), resolves the recorded texture views,
+   * and appends one shared instruction to every active set.
+   * @internal
+   */
+  public _recordRetainedSpriteBatch(
+    renderer: WebGpuSpriteRenderer,
+    instanceData: ArrayBuffer,
+    byteLength: number,
+    instanceCount: number,
+    blendMode: BlendModes,
+    textures: ReadonlyArray<Texture | RenderTexture | null>,
+    slotCount: number,
+  ): void {
+    const frames = this._retainedCaptureFrames;
+
+    if (frames.length === 0) {
+      return;
+    }
+
+    // Non-empty checked above.
+    const owner = frames[frames.length - 1]!;
+
+    if (owner.poisoned) {
+      return;
+    }
+
+    const bytes = new Uint8Array(byteLength);
+
+    bytes.set(new Uint8Array(instanceData, 0, byteLength));
+
+    // Scan the frame-global node indices (word 8 of each 9-word instance) so
+    // capture end can rebase them group-local and copy the row range once.
+    const words = new Uint32Array(bytes.buffer);
+    let minNodeIndex = 0xffffffff;
+    let maxNodeIndex = 0;
+
+    for (let i = 8; i < words.length; i += 9) {
+      // In-bounds: i < words.length via the loop guard.
+      const nodeIndex = words[i]!;
+
+      if (nodeIndex < minNodeIndex) {
+        minNodeIndex = nodeIndex;
+      }
+
+      if (nodeIndex > maxNodeIndex) {
+        maxNodeIndex = nodeIndex;
+      }
+    }
+
+    const textureList: Array<Texture | RenderTexture> = [];
+    const recordedViews: GPUTextureView[] = [];
+
+    for (let i = 0; i < slotCount; i++) {
+      const texture = textures[i];
+
+      if (texture === null || texture === undefined) {
+        continue;
+      }
+
+      textureList.push(texture);
+      // The flush that stages this batch just resolved every slot's binding,
+      // so the managed state exists and this is a pure cache read.
+      recordedViews.push(this._getTextureState(texture).view);
+    }
+
+    const payload: WebGpuRetainedBatchPayload = {
+      renderer,
+      bundle: owner.bundle,
+      byteOffset: owner.totalBytes,
+      instanceCount,
+      blendMode,
+      textures: textureList,
+      recordedViews,
+    };
+    // Generation is stamped at capture end (post-growth); the -1 sentinel
+    // keeps the set invalid if finalization never runs (device loss mid-capture).
+    const instruction: WebGpuMutableRetainedBatchInstruction = {
+      kind: RetainedInstructionKind.Batch,
+      bundle: owner.bundle,
+      generation: -1,
+      instanceCount,
+      drawCalls: 1,
+      payload,
+    };
+
+    owner.staged.push({ bytes, byteOffset: owner.totalBytes, minNodeIndex, maxNodeIndex, instruction });
+    owner.totalBytes += byteLength;
+
+    for (const frame of frames) {
+      frame.set.append(instruction);
+    }
+  }
+
+  /**
+   * Mark every active capture window as unreplayable (defensive, see
+   * {@link WebGpuRetainedCaptureFrame.poisoned}). The recordability predicate
+   * makes this unreachable; if it ever fires, the produced sets are vetoed in
+   * `_validateRetainedInstructionSet` so the group stays on the (correct)
+   * entry-replay tier instead of replaying incomplete instruction streams.
+   * @internal
+   */
+  public _poisonActiveRetainedCaptures(): void {
+    for (const frame of this._retainedCaptureFrames) {
+      frame.poisoned = true;
+    }
+  }
+
+  private _finalizeRetainedCapture(frame: WebGpuRetainedCaptureFrame): void {
+    if (frame.poisoned) {
+      this._rejectedRetainedSets.add(frame.set);
+
+      return;
+    }
+
+    // A markers-only / empty capture needs no GPU resources; instruction sets
+    // without batches validate trivially. Device loss mid-capture leaves the
+    // staged instructions at the -1 generation sentinel → the set stays invalid.
+    if (frame.staged.length === 0 || this._device === null || this._deviceLost) {
+      return;
+    }
+
+    const device = this._device;
+    const bundle = frame.bundle;
+    const staged = frame.staged;
+    let base = 0xffffffff;
+    let maxNodeIndex = 0;
+
+    for (const batch of staged) {
+      if (batch.minNodeIndex < base) {
+        base = batch.minNodeIndex;
+      }
+
+      if (batch.maxNodeIndex > maxNodeIndex) {
+        maxNodeIndex = batch.maxNodeIndex;
+      }
+    }
+
+    const rowCount = maxNodeIndex - base + 1;
+    const transformBytes = rowCount * retainedTransformSlotBytes;
+
+    // Growth is safe against the open pass: a bundle can only be re-recorded
+    // on a frame whose set was invalid at collect time, so no draw recorded
+    // into the open pass references the buffers replaced here.
+    bundle.ensureCapacity(device, frame.totalBytes, transformBytes);
+
+    for (const batch of staged) {
+      // Rebase word 8 (nodeIndex) of every 9-word instance to group-local
+      // indices — the cached bytes become immune to frame-local index shifts
+      // (S3-D4) and address the group-owned row copy below.
+      const words = new Uint32Array(batch.bytes.buffer, batch.bytes.byteOffset, batch.bytes.byteLength / Uint32Array.BYTES_PER_ELEMENT);
+
+      for (let i = 8; i < words.length; i += 9) {
+        // In-bounds: i < words.length via the loop guard.
+        words[i] = words[i]! - base;
+      }
+
+      device.queue.writeBuffer(bundle.instanceBuffer!, batch.byteOffset, batch.bytes.buffer, batch.bytes.byteOffset, batch.bytes.byteLength);
+      batch.instruction.generation = bundle.generation;
+    }
+
+    // Copy the group's transform rows [base, base + rowCount) — written by
+    // this playback's Phase-1 pre-pass into the frame-scoped CPU buffer —
+    // into the group-owned storage at group-local row 0. Rows carry tint
+    // (texel 2), so tint is covered by the copy.
+    const transformData = this._getTransformStorage().buffer.data;
+
+    device.queue.writeBuffer(
+      bundle.transformBuffer!,
+      0,
+      transformData.buffer,
+      transformData.byteOffset + base * retainedTransformSlotBytes,
+      transformBytes,
+    );
+    this._accountant.recordBufferUpload(frame.totalBytes + transformBytes);
   }
 
   /**
@@ -1290,6 +1673,17 @@ export class WebGpuBackend implements RenderBackend {
     this._transformStorage?.destroy();
     this._transformStorage = null;
     this._activeDrawCommand = null;
+
+    // Retained group bundles hold buffers of the dead device: drop the GPU
+    // handles and bump every generation so recorded instruction sets fail
+    // validation and re-record against the fresh device (S3-D3). Any capture
+    // in flight is abandoned (its instructions keep the -1 sentinel).
+    for (const bundle of this._retainedBundles) {
+      bundle.invalidateDeviceState(false);
+    }
+
+    this._retainedCaptureFrames.length = 0;
+
     // Stencil GPU resources belong to the dead device; drop them so they are
     // lazily rebuilt against the fresh device on the next clip.
     this._passCoordinatorInstance?.destroyStencil();

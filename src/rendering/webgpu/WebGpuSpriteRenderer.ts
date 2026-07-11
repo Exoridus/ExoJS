@@ -16,6 +16,8 @@ import { AbstractWebGpuRenderer } from './AbstractWebGpuRenderer';
 import type { WebGpuBackend } from './WebGpuBackend';
 import { getWebGpuBlendState } from './WebGpuBlendState';
 import { WebGpuInstanceArena } from './WebGpuInstanceArena';
+import type { WebGpuActiveRenderPass } from './WebGpuPassCoordinator';
+import { retainedGroupUniformBytes, type WebGpuRetainedBatchPayload } from './WebGpuRetainedGroupResources';
 import { stencilContentDepthStencilState } from './WebGpuStencilState';
 
 /** WGSL source for the default sprite pipeline. @internal */
@@ -219,13 +221,24 @@ interface CustomSpriteResources {
 }
 
 export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
+  /** Retained-batch capability flag (Track B Slice 3, S3-D5.1): the default path records/replays flush-level batches. */
+  public readonly _supportsRetainedBatches = true;
+
   private readonly _projectionData = new Float32Array(projectionByteLength / Float32Array.BYTES_PER_ELEMENT);
-  private _writtenGroupTransformId = -1;
   // View whose transform the projection UBO currently holds, plus its updateId
-  // at write time — a matching (view, updateId, groupTransformId) triple means
-  // the 128-byte projection write can be skipped for this flush.
+  // at write time — a matching (view, updateId) pair AND unchanged group-matrix
+  // CONTENT (compared against the packed bytes at [16, 32), staged into
+  // `_stagedGroupData` by `_groupContentChanged`) means the 128-byte projection
+  // write can be skipped for this flush. Content comparison (not the backend's
+  // group-transform id) keeps a leave-group boundary that restores identical
+  // group bytes from splitting the open pass (B-06 cached path).
   private _writtenView: View | null = null;
   private _writtenViewUpdateId = -1;
+  private _hasWrittenProjection = false;
+  private readonly _stagedGroupData = new Float32Array(16);
+  // The open pass replayed retained batches were last recorded into — feeds
+  // the "does the open pass already hold draws?" checks alongside the arena.
+  private _lastReplayPass: WebGpuActiveRenderPass | null = null;
 
   private _device: GPUDevice | null = null;
   private _shaderModule: GPUShaderModule | null = null;
@@ -373,7 +386,8 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     this._textureSetBindGroups = new WeakMap<Texture | RenderTexture, TextureSetBindGroupEntry[]>();
     this._writtenView = null;
     this._writtenViewUpdateId = -1;
-    this._writtenGroupTransformId = -1;
+    this._hasWrittenProjection = false;
+    this._lastReplayPass = null;
     this._uniformBuffer = null;
     this._pipelineLayout = null;
     this._customBaseTextureLayout = null;
@@ -410,6 +424,13 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     }
 
     const material = sprite.material;
+
+    // Defensive (S3-D5.3): pixel-snapped instance words are view-dependent —
+    // the recordability predicate excludes them at collect time, so a snapped
+    // sprite inside a capture window means the stream cannot be replayed.
+    if (sprite.pixelSnapMode !== 'none' && backend._retainedCaptureActive) {
+      backend._poisonActiveRetainedCaptures();
+    }
 
     // The transform lives in the shared storage buffer, keyed by the draw
     // command's stable nodeIndex (already packed at the draw-command boundary).
@@ -533,17 +554,17 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
 
     // ProjectionUniforms layout: mat4x4 projection + mat4x4 group, packed via
     // the shared canonical (non-transposed) column order. The write is skipped
-    // when the UBO already holds this exact (view, updateId, group) state —
-    // static frames then issue zero projection uploads.
+    // when the UBO already holds this exact (view, updateId, group-bytes)
+    // state — static frames then issue zero projection uploads.
     const view = backend.view;
 
-    if (this._writtenView !== view || this._writtenViewUpdateId !== view.updateId || this._writtenGroupTransformId !== backend.renderGroupTransformId) {
+    if (!this._hasWrittenProjection || this._writtenView !== view || this._writtenViewUpdateId !== view.updateId || this._groupContentChanged(backend)) {
       packAffineMat4(view.getTransform(), this._projectionData, 0);
       packAffineMat4(backend.renderGroupTransform ?? Matrix.identity, this._projectionData, 16);
 
       this._writtenView = view;
       this._writtenViewUpdateId = view.updateId;
-      this._writtenGroupTransformId = backend.renderGroupTransformId;
+      this._hasWrittenProjection = true;
 
       device.queue.writeBuffer(uniformBuffer, 0, this._projectionData.buffer, this._projectionData.byteOffset, this._projectionData.byteLength);
     }
@@ -621,7 +642,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
 
       if (material === null) {
         const pipeline = this._getPipeline(this._currentBlendMode!, backend.renderTargetFormat, stencil);
-        const textureBindGroup = this._getOrCreateTextureBindGroup(device, backend);
+        const textureBindGroup = this._getOrCreateTextureBindGroup(device, backend, this._activeTextures);
 
         pass.setPipeline(pipeline);
         pass.setBindGroup(0, transformBindGroup);
@@ -644,6 +665,28 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
       backend._passCoordinator.acquirePass();
     }
 
+    // Retained capture (Track B Slice 3, Task 9): while a capture window is
+    // active, additionally stage this batch's exact packed bytes into the
+    // group-owned bundle — the recorded data IS the drawn data, byte-identical
+    // by construction. Custom-material batches are unreplayable (live user
+    // uniforms, S3-D5.2) and poison the window instead; the recordability
+    // predicate makes that unreachable.
+    if (this._instanceCount > 0 && backend._retainedCaptureActive) {
+      if (isCustom) {
+        backend._poisonActiveRetainedCaptures();
+      } else if (this._currentBlendMode !== null) {
+        backend._recordRetainedSpriteBatch(
+          this,
+          this._instanceData,
+          this._instanceCount * instanceStrideBytes,
+          this._instanceCount,
+          this._currentBlendMode,
+          this._activeTextures,
+          this._slotCount,
+        );
+      }
+    }
+
     // Batch flushes no longer submit; the backend ends the pass at genuine
     // boundaries. The exception is a custom-material batch, isolated above.
     if (isCustom) {
@@ -660,9 +703,12 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
 
   /**
    * End the open pass if its recorded batches were projected with a different
-   * view transform than the one this flush is about to write into the shared
-   * projection uniform. Guarded on the arena tracking the *current* active pass
-   * so a stale post-boundary cursor never triggers a spurious split.
+   * view transform — or different group-matrix BYTES — than the ones this
+   * flush is about to write into the shared projection uniform. Guarded on
+   * the arena tracking the *current* active pass so a stale post-boundary
+   * cursor never triggers a spurious split. Content comparison keeps group
+   * boundaries that restore identical bytes (enter/leave around a replayed
+   * retained group) from fragmenting the single-submit frame (B-06).
    */
   private _endPassOnProjectionChange(backend: WebGpuBackend): void {
     const activePass = backend._passCoordinator.activePass;
@@ -671,11 +717,33 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
       activePass !== null &&
       this._instanceArena.cursor > 0 &&
       this._instanceArena.tracksPass(activePass) &&
-      (activePass.viewUpdateId !== backend.view.updateId || this._writtenGroupTransformId !== backend.renderGroupTransformId)
+      (activePass.viewUpdateId !== backend.view.updateId || this._groupContentChanged(backend))
     ) {
       backend._passCoordinator.endPass();
       this._instanceArena.resetPass();
     }
+  }
+
+  /**
+   * Whether the packed bytes of the active group matrix differ from what the
+   * shared projection UBO currently holds at [16, 32). Stages the packed
+   * matrix into `_stagedGroupData` as a side effect (idempotent — safe to
+   * call more than once per flush).
+   */
+  private _groupContentChanged(backend: WebGpuBackend): boolean {
+    packAffineMat4(backend.renderGroupTransform ?? Matrix.identity, this._stagedGroupData, 0);
+
+    if (!this._hasWrittenProjection) {
+      return true;
+    }
+
+    for (let i = 0; i < 16; i++) {
+      if (this._stagedGroupData[i] !== this._projectionData[16 + i]) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   /**
@@ -721,6 +789,130 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
 
     return this._transformBindGroup;
   }
+
+  /**
+   * Replay one recorded batch from its group-owned bundle into the OPEN pass
+   * (Track B Slice 3, Task 10 / S3-D7). Reuses only recorded DATA (instance
+   * bytes, transform rows, texture list, blend mode); every piece of STATE is
+   * resolved live:
+   *
+   * - pipeline via the existing `_getPipeline(blend, targetFormat, stencil)`
+   *   cache,
+   * - texture bind group(1) via the existing texture-set cache — resolving
+   *   re-syncs dirty texture content exactly like a live flush,
+   * - the group's 128-byte UBO (projection from the live view + the live
+   *   player-composed group matrix) written only when its content changed —
+   *   a static camera and group cost zero uniform writes per frame,
+   * - the same-frame double-replay hazard (one group under two different
+   *   views while the open pass already holds this bundle's draws) ends the
+   *   pass first, mirroring the shared-UBO projection guard.
+   *
+   * The shared per-flush projection UBO is never touched, so group boundaries
+   * on the cached path do not fragment the single-submit frame (B-06).
+   * @internal
+   */
+  public _replayRecordedSpriteBatch(payload: WebGpuRetainedBatchPayload): void {
+    const backend = this._backend;
+    const device = this._device;
+    const bundle = payload.bundle;
+
+    if (!backend || !device || this._indexBuffer === null || !bundle.isReady) {
+      return;
+    }
+
+    // Drain any pending live batch into the open pass first (defensive — the
+    // group boundary already flushed; flush() never ends the pass on the
+    // default path and guards its own shared-UBO hazards).
+    this.flush();
+
+    // Match the live path's visibility handling: a fully-clipped scissor
+    // draws nothing (the batch stays recorded; visibility is live per frame).
+    const scissor = backend.getScissorRect();
+
+    if (scissor !== null && (scissor.width <= 0 || scissor.height <= 0)) {
+      return;
+    }
+
+    const coordinator = backend._passCoordinator;
+    let activePass = coordinator.activePass;
+    const passHasDraws =
+      activePass !== null && ((this._instanceArena.cursor > 0 && this._instanceArena.tracksPass(activePass)) || this._lastReplayPass === activePass);
+
+    // Same-frame texture mutation guard (S3-D7): resolving the bindings below
+    // re-uploads mutated content on the queue timeline BEFORE the deferred
+    // submit, which would retroactively change draws already recorded into
+    // the open pass. End (submit) the pass first so they keep the
+    // pre-mutation content — the `_batchWouldMutateTexture` hazard, applied
+    // to the recorded texture list.
+    if (passHasDraws) {
+      for (const texture of payload.textures) {
+        if (backend._textureUploadWouldMutate(texture)) {
+          coordinator.endPass();
+          this._instanceArena.resetPass();
+          break;
+        }
+      }
+    }
+
+    // Resolve the batch textures LIVE through the shared texture-set cache
+    // (syncs dirty content, adopts refreshed views/samplers).
+    const textureBindGroup = this._getOrCreateTextureBindGroup(device, backend, payload.textures);
+
+    // Group UBO: skip the write while (view, updateId, group bytes) match
+    // what the buffer holds; guard the double-replay aliasing case first.
+    const view = backend.view;
+    const scratch = this._stagedReplayGroupData;
+
+    packAffineMat4(backend.renderGroupTransform ?? Matrix.identity, scratch, 0);
+
+    let uboDirty = !bundle.uboWritten || bundle.uboView !== view || bundle.uboViewUpdateId !== view.updateId;
+
+    if (!uboDirty) {
+      for (let i = 0; i < 16; i++) {
+        if (scratch[i] !== bundle.uboData[16 + i]) {
+          uboDirty = true;
+          break;
+        }
+      }
+    }
+
+    if (uboDirty) {
+      activePass = coordinator.activePass;
+
+      if (activePass !== null && bundle.drawsInPass === activePass) {
+        // Rewriting the UBO would retroactively re-project this bundle's
+        // draws already recorded into the open pass (RenderTexture pass +
+        // main pass replaying one group under different views): end it first.
+        coordinator.endPass();
+        this._instanceArena.resetPass();
+      }
+
+      packAffineMat4(view.getTransform(), bundle.uboData, 0);
+      bundle.uboData.set(scratch, 16);
+      bundle.uboView = view;
+      bundle.uboViewUpdateId = view.updateId;
+      bundle.uboWritten = true;
+      device.queue.writeBuffer(bundle.uniformBuffer!, 0, bundle.uboData.buffer, bundle.uboData.byteOffset, retainedGroupUniformBytes);
+    }
+
+    const active = coordinator.acquirePass();
+    const pass = active.pass;
+
+    pass.setPipeline(this._getPipeline(payload.blendMode, backend.renderTargetFormat, coordinator.stencilActive));
+    pass.setBindGroup(0, bundle.getBindGroup(device, this._uniformBindGroupLayout!));
+    pass.setBindGroup(1, textureBindGroup);
+    pass.setVertexBuffer(0, bundle.instanceBuffer, payload.byteOffset);
+    pass.setIndexBuffer(this._indexBuffer, 'uint16');
+    pass.drawIndexed(indicesPerSprite, payload.instanceCount, 0, 0, 0);
+
+    bundle.drawsInPass = active;
+    this._lastReplayPass = active;
+    backend.stats.batches++;
+    backend.stats.drawCalls++;
+  }
+
+  /** Scratch for the packed group matrix compared at replay (see `_replayRecordedSpriteBatch`). */
+  private readonly _stagedReplayGroupData = new Float32Array(16);
 
   public destroy(): void {
     this.disconnect();
@@ -872,22 +1064,26 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     }
   }
 
-  private _getOrCreateTextureBindGroup(device: GPUDevice, backend: WebGpuBackend): GPUBindGroup {
+  private _getOrCreateTextureBindGroup(device: GPUDevice, backend: WebGpuBackend, textures: ReadonlyArray<Texture | RenderTexture | null | undefined>): GPUBindGroup {
     // Slots beyond the active count get the slot-0 texture as a filler so
     // the bind-group layout always sees N valid texture views and samplers.
     // The fragment shader's switch only ever dispatches to the active slot
     // count, so unsampled fillers cost nothing visually.
     //
+    // `textures` is the slot-ordered batch list: the live `_activeTextures`
+    // scratch for a pending flush, or a recorded batch's texture list at
+    // retained replay — both share this cache.
+    //
     // Bindings are resolved BEFORE the cache lookup on purpose: resolving is
     // what syncs a dirty/mutated texture's content to the GPU, so it must run
     // every flush even when the bind group itself is served from cache.
-    const fallbackTexture = this._activeTextures[0] ?? Texture.empty;
+    const fallbackTexture = textures[0] ?? Texture.empty;
     const fallbackBinding = backend.getTextureBinding(fallbackTexture);
     const resolvedTextures = new Array<Texture | RenderTexture>(maxBatchTextures);
     const resolvedBindings = new Array<ReturnType<WebGpuBackend['getTextureBinding']>>(maxBatchTextures);
 
     for (let i = 0; i < maxBatchTextures; i++) {
-      const texture = this._activeTextures[i] ?? fallbackTexture;
+      const texture = textures[i] ?? fallbackTexture;
 
       resolvedTextures[i] = texture;
       resolvedBindings[i] = texture === fallbackTexture ? fallbackBinding : backend.getTextureBinding(texture);

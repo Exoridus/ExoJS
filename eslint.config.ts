@@ -866,7 +866,7 @@ export default defineConfig([
   },
 
   {
-    files: ['src/rendering/webgpu/WebGpuBackend.ts', 'src/rendering/webgpu/WebGpuMeshRenderer.ts'],
+    files: ['src/rendering/webgpu/WebGpuBackend.ts', 'src/rendering/webgpu/WebGpuMeshRenderer.ts', 'src/rendering/webgpu/WebGpuSpriteRenderer.ts'],
     rules: {
       // Cohesive WebGPU backend/renderer surface; each file is a single
       // tightly-coupled unit (device/pipeline state, draw submission).
