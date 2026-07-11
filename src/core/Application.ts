@@ -314,6 +314,15 @@ export class Application {
     const inputOptions = appSettings.input ?? {};
     const canvas = canvasOptions.element ?? createDefaultCanvas();
 
+    // A wrong `canvas.element` (e.g. a <div> from a mistyped querySelector cast)
+    // otherwise surfaces much later as a misleading "This browser or hardware
+    // does not support WebGL." from the backend, once `canvas.getContext` turns
+    // out not to be a function. Catch the real cause here instead.
+    assert(
+      canvas instanceof HTMLCanvasElement,
+      `Application canvas.element must be an HTMLCanvasElement (got ${(canvas as object).constructor?.name ?? typeof canvas}). Pass a real <canvas> element, or omit canvas.element to let Application create one.`,
+    );
+
     const logicalWidth = canvasOptions.width ?? defaultCanvasSettings.width;
     const logicalHeight = canvasOptions.height ?? defaultCanvasSettings.height;
 
@@ -779,7 +788,19 @@ export class Application {
 
     const target = typeof mount === 'string' ? document.querySelector(mount) : mount;
 
-    target?.append(this.canvas);
+    if (target === null) {
+      // A string selector that matches nothing is a common typo — warn instead
+      // of silently leaving the canvas unattached (a beginner otherwise sees a
+      // blank page with no signal as to why).
+      logger.warn(
+        `Application canvas.mount selector "${mount as string}" did not match any element — the canvas was created but never attached to the page. Check the selector for typos, or append \`app.canvas\` to the DOM yourself.`,
+        { source: 'Application', once: `application:mount-miss:${mount as string}` },
+      );
+
+      return;
+    }
+
+    target.append(this.canvas);
   }
 
   /**

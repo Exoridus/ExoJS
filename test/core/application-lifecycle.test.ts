@@ -471,6 +471,30 @@ describe('Application lifecycle / getters / sizing', () => {
 
       expect(app.canvas.parentElement).toBeNull();
     });
+
+    test('warns once and leaves the canvas unattached when the mount selector matches no element', async () => {
+      const { Application } = await loadHarness();
+      // `loadHarness()` calls `vi.resetModules()`, so `Application` resolved its
+      // `#core/logging` singleton fresh — grab THAT instance, not the one bound
+      // by this file's static top-level import.
+      const { logger: freshLogger, LogSeverity: freshLogSeverity } = await import('#core/logging');
+      const messages: string[] = [];
+      const removeSink = freshLogger.addSink(entry => {
+        if (entry.severity >= freshLogSeverity.Warning) messages.push(entry.message);
+      });
+
+      try {
+        const app = new Application({ canvas: { mount: '#does-not-exist-anywhere' }, backend: { type: 'webgl2' } });
+
+        expect(app.canvas.parentElement).toBeNull();
+        expect(messages).toEqual([
+          'Application canvas.mount selector "#does-not-exist-anywhere" did not match any element — the canvas was created but never attached to the page. Check the selector for typos, or append `app.canvas` to the DOM yourself.',
+        ]);
+      } finally {
+        removeSink();
+        freshLogger._resetOnce();
+      }
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -948,6 +972,15 @@ describe('Application lifecycle / getters / sizing', () => {
       expect(
         () => new Application({ backend: { type: 'webgl2' }, extensions: null as unknown as ReadonlyArray<import('#extensions/Extension').Extension> }),
       ).not.toThrow();
+    });
+
+    test('throws a targeted message when canvas.element is not an HTMLCanvasElement', async () => {
+      const { Application } = await loadHarness();
+      const div = document.createElement('div');
+
+      expect(() => new Application({ canvas: { element: div as unknown as HTMLCanvasElement }, backend: { type: 'webgl2' } })).toThrow(
+        'Application canvas.element must be an HTMLCanvasElement (got HTMLDivElement). Pass a real <canvas> element, or omit canvas.element to let Application create one.',
+      );
     });
   });
 
