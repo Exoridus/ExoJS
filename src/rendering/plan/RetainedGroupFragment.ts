@@ -82,8 +82,82 @@ export class RetainedGroupFragment {
   private readonly _barrierPool: RetainedFragmentBarrier[] = [];
   private _barrierCursor = 0;
 
+  // Thrash suppression (Slice 3, F11b): a capture that is invalidated without
+  // ever having been replayed was pure waste. One wasted capture is tolerated
+  // (a lone mutation between replays keeps the Slice-2 recapture-immediately
+  // behavior); the SECOND consecutive wasted capture is evidence of
+  // per-frame thrash — from then on dirty frames skip the snapshot entirely
+  // (plain collect, cheapest possible dirty frame) until the revisions
+  // observed on consecutive dirty frames stop moving, at which point one full
+  // collect + capture recovers the retained tier (one frame late,
+  // self-correcting, no tunables).
+  private _replayedSinceCapture = false;
+  private _suppressed = false;
+  private _wastedCaptures = 0;
+  private _observedContent = -1;
+  private _observedStructure = -1;
+
   public get hasCapture(): boolean {
     return this._hasCapture;
+  }
+
+  /** `true` while capture is thrash-suppressed (F11b). */
+  public get captureSuppressed(): boolean {
+    return this._suppressed;
+  }
+
+  /** The active capture was replayed (spliced) at least once — it earned its keep. */
+  public markReplayed(): void {
+    this._replayedSinceCapture = true;
+  }
+
+  /**
+   * Decide, on a DIRTY build (the isClean gate already failed), whether this
+   * frame's snapshot should be skipped (F11b). Mutates the suppression state
+   * machine; call exactly once per dirty build, before collecting. Returns
+   * `true` to skip the capture.
+   */
+  public shouldSuppressCapture(contentRevision: number, structureRevision: number): boolean {
+    if (this._hasCapture) {
+      if (this._replayedSinceCapture) {
+        this._wastedCaptures = 0;
+
+        return false;
+      }
+
+      this._wastedCaptures++;
+
+      if (this._wastedCaptures < 2) {
+        // Grace: a single wasted capture recaptures immediately (Slice-2
+        // behavior for one-shot mutations).
+        return false;
+      }
+
+      // Two consecutive captures invalidated without a single replay: thrash.
+      this.invalidate();
+      this._suppressed = true;
+      this._observedContent = contentRevision;
+      this._observedStructure = structureRevision;
+
+      return true;
+    }
+
+    if (this._suppressed) {
+      if (this._observedContent === contentRevision && this._observedStructure === structureRevision) {
+        // The revisions stopped moving: this frame would have been clean if a
+        // capture existed. Recover the retained tier now.
+        this._suppressed = false;
+
+        return false;
+      }
+
+      this._observedContent = contentRevision;
+      this._observedStructure = structureRevision;
+
+      return true;
+    }
+
+    return false;
   }
 
   public get entries(): readonly RetainedFragmentEntry[] {
@@ -117,11 +191,15 @@ export class RetainedGroupFragment {
     this._structureRevision = structureRevision;
     this._backend = backend;
     this._hasCapture = true;
+    this._replayedSinceCapture = false;
   }
 
   public invalidate(): void {
     this._hasCapture = false;
     this._entries.length = 0;
+    this._replayedSinceCapture = false;
+    this._suppressed = false;
+    this._wastedCaptures = 0;
   }
 
   private _snapshotInto(target: RetainedFragmentEntry[], entries: readonly ScopeEntry[]): void {

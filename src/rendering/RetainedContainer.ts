@@ -136,6 +136,7 @@ export class RetainedContainer extends Container {
       // makes the fragment view-independent — the camera-pan win) and the
       // container's own transform (a move only changes the group matrix).
       builder._replayRetainedFragment(this._fragment.entries);
+      this._fragment.markReplayed();
 
       if (__DEV__) {
         this._trackRetention(false);
@@ -144,16 +145,28 @@ export class RetainedContainer extends Container {
       return;
     }
 
+    // For the S2-D1 diagnostic, a dirty build "invalidates" whenever prior
+    // retention state existed — a live capture OR an active suppression
+    // window (F11b) — so per-frame thrash keeps counting as invalidation
+    // even while suppressed frames no longer carry a capture.
+    const invalidated = this._fragment.hasCapture || this._fragment.captureSuppressed;
+    // Thrash suppression (Slice 3, F11b): when the previous captures were
+    // never replayed, this dirty frame skips the snapshot entirely and pays
+    // only the plain collect.
+    const suppressCapture = this._fragment.shouldSuppressCapture(this._contentRevision, this._structureRevision);
+
     for (let index = 0; index < this._children.length; index++) {
       // In-bounds: index < length.
       this._children[index]!._collect(builder, index);
     }
 
     if (__DEV__) {
-      this._trackRetention(this._fragment.hasCapture);
+      this._trackRetention(invalidated);
     }
 
-    this._fragment.capture(this._contentRevision, this._structureRevision, builder.backend, builder._peekCurrentScopeEntries());
+    if (!suppressCapture) {
+      this._fragment.capture(this._contentRevision, this._structureRevision, builder.backend, builder._peekCurrentScopeEntries());
+    }
   }
 
   public override destroy(): void {

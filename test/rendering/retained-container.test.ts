@@ -9,7 +9,7 @@ import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RenderPlanOptimizer } from '#rendering/plan/RenderPlanOptimizer';
 import { RenderPlanPlayer } from '#rendering/plan/RenderPlanPlayer';
 import type { GroupScope, GroupScopeEntry } from '#rendering/plan/RenderScope';
-import type { RetainedFragmentEntry, RetainedGroupFragment } from '#rendering/plan/RetainedGroupFragment';
+import { type RetainedFragmentEntry, RetainedGroupFragment } from '#rendering/plan/RetainedGroupFragment';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import { createRenderStats } from '#rendering/RenderStats';
@@ -643,12 +643,14 @@ describe('RetainedContainer: pooled fragment snapshot (Slice 3, F11a)', () => {
     root.addChild(group);
 
     collectDraws(root, backend); // capture with 1 draw
+    collectDraws(root, backend); // splice (marks the capture replayed, so the F11b thrash guard stays out of the way)
 
     const fragment = (group as unknown as FragmentCarrier)._fragment;
     const firstRecord = fragment.entries[0]!;
 
     group.addChild(leafB);
     collectDraws(root, backend); // capture with 2 draws (pool grows)
+    collectDraws(root, backend); // splice
 
     expect(fragment.entries).toHaveLength(2);
     expect(fragment.entries[0]).toBe(firstRecord);
@@ -657,6 +659,7 @@ describe('RetainedContainer: pooled fragment snapshot (Slice 3, F11a)', () => {
 
     group.removeChild(leafB);
     collectDraws(root, backend); // capture with 1 draw (pool keeps record 2)
+    collectDraws(root, backend); // splice
 
     expect(fragment.entries).toHaveLength(1);
     expect(fragment.entries[0]).toBe(firstRecord);
@@ -1009,6 +1012,134 @@ describe('RetainedContainer: alpha/tint staleness guard (spec 8, plan D-P2)', ()
 
     expect(collectDraws(root, backend)).toHaveLength(1);
 
+    root.destroy();
+    backend.destroy();
+  });
+});
+
+describe('RetainedContainer: capture suppression under thrash (Slice 3, F11b)', () => {
+  test('continuous per-frame mutation performs a bounded number of captures, then plain collects only', () => {
+    const backend = createTestBackend();
+    const captureSpy = vi.spyOn(RetainedGroupFragment.prototype, 'capture');
+
+    captureSpy.mockClear();
+    const root = new Container();
+    const group = new RetainedContainer();
+    const leaf = new LeafDrawable('a');
+
+    group.addChild(leaf);
+    root.addChild(group);
+
+    for (let frame = 0; frame < 120; frame++) {
+      leaf.setPosition(frame, 0);
+      collectDraws(root, backend);
+    }
+
+    // F1 captures fresh; F2 recaptures once (single-shot grace, so a lone
+    // mutation between replays keeps Slice-2 recapture behavior); from F3 on
+    // the fragment knows the captures are pure waste and every dirty frame is
+    // a plain collect. Bounded — NOT O(frames).
+    expect(captureSpy).toHaveBeenCalledTimes(2);
+
+    captureSpy.mockRestore();
+    root.destroy();
+    backend.destroy();
+  });
+
+  test('suppressed dirty frames still collect fresh data (pitfall 14: suppression never serves stale state)', () => {
+    const backend = createTestBackend();
+    const root = new Container();
+    const group = new RetainedContainer();
+    const leaf = new LeafDrawable('a');
+
+    group.addChild(leaf);
+    root.addChild(group);
+
+    for (let frame = 0; frame < 10; frame++) {
+      leaf.setPosition(frame, 0);
+
+      const draws = collectDraws(root, backend);
+
+      expect(draws[0]!.minX).toBe(frame); // every frame renders the CURRENT position
+    }
+
+    root.destroy();
+    backend.destroy();
+  });
+
+  test('when mutation stops, the next frame does one full collect + capture and subsequent frames splice', () => {
+    const backend = createTestBackend();
+    const captureSpy = vi.spyOn(RetainedGroupFragment.prototype, 'capture');
+
+    captureSpy.mockClear();
+    const root = new Container();
+    const group = new RetainedContainer();
+    const leaf = new LeafDrawable('a');
+
+    group.addChild(leaf);
+    root.addChild(group);
+
+    for (let frame = 0; frame < 8; frame++) {
+      leaf.setPosition(frame, 0);
+      collectDraws(root, backend); // thrash: suppression active from frame 3 on
+    }
+
+    expect(captureSpy).toHaveBeenCalledTimes(2);
+
+    // Mutation stops. The first would-have-been-clean frame finds no capture:
+    // one full collect + capture (one frame late, self-correcting).
+    const materialSpy = vi.spyOn(leaf, '_getOrComputeMaterialKey');
+    const recovery = collectDraws(root, backend);
+
+    expect(materialSpy).toHaveBeenCalled();
+    expect(captureSpy).toHaveBeenCalledTimes(3);
+    expect(recovery[0]!.minX).toBe(7);
+
+    // ...and from then on the fragment splices again.
+    materialSpy.mockClear();
+
+    const spliced = collectDraws(root, backend);
+
+    expect(materialSpy).not.toHaveBeenCalled();
+    expect(captureSpy).toHaveBeenCalledTimes(3);
+    expect(spliced[0]!.minX).toBe(7);
+
+    captureSpy.mockRestore();
+    root.destroy();
+    backend.destroy();
+  });
+
+  test('a single mutation between replays keeps the Slice-2 recapture behavior (no suppression)', () => {
+    const backend = createTestBackend();
+    const captureSpy = vi.spyOn(RetainedGroupFragment.prototype, 'capture');
+
+    captureSpy.mockClear();
+    const root = new Container();
+    const group = new RetainedContainer();
+    const leaf = new LeafDrawable('a');
+
+    group.addChild(leaf);
+    root.addChild(group);
+
+    // Steady replay-mutate-replay cadence: every dirty frame recaptures
+    // because the previous capture WAS replayed at least once.
+    collectDraws(root, backend); // capture 1
+    collectDraws(root, backend); // splice
+    leaf.setPosition(5, 5);
+    collectDraws(root, backend); // capture 2
+    collectDraws(root, backend); // splice
+    leaf.setPosition(9, 9);
+    collectDraws(root, backend); // capture 3
+
+    expect(captureSpy).toHaveBeenCalledTimes(3);
+
+    const materialSpy = vi.spyOn(leaf, '_getOrComputeMaterialKey');
+
+    collectDraws(root, backend); // splice again
+
+    expect(materialSpy).not.toHaveBeenCalled();
+
+    captureSpy.mockRestore();
     root.destroy();
     backend.destroy();
   });
