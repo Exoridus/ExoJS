@@ -901,6 +901,130 @@ describe('RetainedContainer: alpha/tint staleness guard (spec 8, plan D-P2)', ()
   });
 });
 
+describe('RetainedContainer: group-local bounds aggregate cache (F12)', () => {
+  test('moving the group N times aggregates the children ONCE; each move only re-lifts by the world matrix', () => {
+    const group = new RetainedContainer();
+    const leafA = new LeafDrawable('a');
+    const leafB = new LeafDrawable('b');
+
+    leafB.setPosition(100, 0);
+    group.addChild(leafA);
+    group.addChild(leafB);
+
+    group.getBounds(); // settle: one full aggregation
+
+    const boundsSpyA = vi.spyOn(leafA, 'getBounds');
+    const boundsSpyB = vi.spyOn(leafB, 'getBounds');
+
+    for (let move = 1; move <= 10; move++) {
+      group.setPosition(move * 10, move * 5);
+
+      const bounds = group.getBounds();
+
+      // Correctness on every move: group-local 0..116 x 0..16 lifted by the
+      // new translation.
+      expect(bounds.left).toBe(move * 10);
+      expect(bounds.top).toBe(move * 5);
+      expect(bounds.right).toBe(move * 10 + 116);
+      expect(bounds.bottom).toBe(move * 5 + 16);
+    }
+
+    // The aggregate was served from the cache: no per-child bounds work.
+    expect(boundsSpyA).not.toHaveBeenCalled();
+    expect(boundsSpyB).not.toHaveBeenCalled();
+
+    group.destroy();
+  });
+
+  test('a child mutation invalidates the aggregate and recomputes it once', () => {
+    const group = new RetainedContainer();
+    const leaf = new LeafDrawable('a');
+
+    group.addChild(leaf);
+    group.getBounds(); // settle
+
+    leaf.setPosition(50, 0);
+
+    const bounds = group.getBounds();
+
+    expect(bounds.right).toBe(66); // fresh aggregate: 50 + 16
+
+    const boundsSpy = vi.spyOn(leaf, 'getBounds');
+
+    group.setPosition(10, 0);
+    group.getBounds();
+
+    expect(boundsSpy).not.toHaveBeenCalled(); // re-cached after the recompute
+
+    group.destroy();
+  });
+
+  test('hiding a child drops it from the aggregate on the next bounds refresh (structure-revision key)', () => {
+    const group = new RetainedContainer();
+    const near = new LeafDrawable('near');
+    const far = new LeafDrawable('far');
+
+    far.setPosition(1000, 0);
+    group.addChild(near);
+    group.addChild(far);
+
+    expect(group.getBounds().right).toBe(1016);
+
+    // NOTE: a visibility flip alone does not dirty bounds anywhere in the
+    // engine (pre-existing SceneNode contract, plain Container included);
+    // what the cache MUST NOT do is keep serving the hidden child once a
+    // bounds refresh does run — the structure revision keys the aggregate.
+    far.visible = false;
+    group.setPosition(10, 0);
+
+    expect(group.getBounds().right).toBe(26); // 10 + near's 16, far dropped
+
+    group.destroy();
+  });
+
+  test('a barrier-bearing direct child stays world-space and follows its own moves', () => {
+    const group = new RetainedContainer();
+    const clipped = new LeafDrawable('clipped');
+    const plain = new LeafDrawable('plain');
+
+    clipped.clip = true;
+    clipped.clipShape = new Rectangle(0, 0, 8, 8);
+    group.addChild(clipped);
+    group.addChild(plain);
+    group.setPosition(100, 0);
+
+    // plain: group-local 0..16 lifted to 100..116; clipped (escaped): world
+    // 100..116 as well (group translation composes into ITS global directly).
+    expect(group.getBounds().right).toBe(116);
+
+    clipped.setPosition(200, 0);
+
+    // clipped world rect is now 300..316.
+    expect(group.getBounds().right).toBe(316);
+
+    group.destroy();
+  });
+
+  test('a NESTED RetainedContainer child follows its own decoupled moves (no content-revision bump)', () => {
+    const outer = new RetainedContainer();
+    const inner = new RetainedContainer();
+    const leaf = new LeafDrawable('a');
+
+    inner.addChild(leaf);
+    outer.addChild(inner);
+
+    expect(outer.getBounds().right).toBe(16);
+
+    // Inner-group moves bump only its group-matrix version — the outer
+    // aggregate must not serve a stale rect for it.
+    inner.setPosition(500, 0);
+
+    expect(outer.getBounds().right).toBe(516);
+
+    outer.destroy();
+  });
+});
+
 describe('RetainedContainer: engagement flips re-index spatial consumers (F2)', () => {
   const createSpyStage = (): { stage: Stage; invalidated: unknown[] } => {
     const invalidated: unknown[] = [];
