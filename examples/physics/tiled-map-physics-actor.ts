@@ -50,7 +50,9 @@ class TiledMapPhysicsActorScene extends Scene {
         // ── Tileset + a single ground tile layer ──────────────────────────
         // The map-pack tilesheet is a uniform 64×64 grid (17 columns), so it
         // works as a classic grid tileset. We only need one solid-looking tile.
-        const tilesTexture = this.loader.get(assets.demo.tilesets.map.image);
+        // Await the atlas load: TileSet needs a TextureRegion with real
+        // dimensions, so a not-yet-hydrated `loader.get()` handle is not enough.
+        const tilesTexture = await this.loader.load(Asset.kind('texture', assets.demo.tilesets.map.image));
         const tileset = new TileSet({
             name: 'map',
             texture: new TextureRegion(tilesTexture, { x: 0, y: 0, width: tilesTexture.width, height: tilesTexture.height }),

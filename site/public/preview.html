@@ -72,6 +72,8 @@
                 var tiledRegisterEntry;
                 var tilemapEntry;
                 var tilemapRegisterEntry;
+                var ldtkEntry;
+                var ldtkRegisterEntry;
                 var physicsEntry;
                 var physicsDebugEntry;
                 if (!safeVersion || safeVersion === 'current') {
@@ -87,6 +89,8 @@
                     tiledRegisterEntry = './vendor/exojs-tiled/esm/register.js?no-cache=' + noCache;
                     tilemapEntry = './vendor/exojs-tilemap/esm/index.js?no-cache=' + noCache;
                     tilemapRegisterEntry = './vendor/exojs-tilemap/esm/register.js?no-cache=' + noCache;
+                    ldtkEntry = './vendor/exojs-ldtk/esm/index.js?no-cache=' + noCache;
+                    ldtkRegisterEntry = './vendor/exojs-ldtk/esm/register.js?no-cache=' + noCache;
                     physicsEntry = './vendor/exojs-physics/esm/index.js?no-cache=' + noCache;
                     physicsDebugEntry = './vendor/exojs-physics/esm/debug/index.js?no-cache=' + noCache;
                 } else {
@@ -105,6 +109,8 @@
                     tiledRegisterEntry = cdnBase + 'exojs-tiled@' + safeVersion + '/dist/esm/register.js';
                     tilemapEntry = cdnBase + 'exojs-tilemap@' + safeVersion + '/dist/esm/index.js';
                     tilemapRegisterEntry = cdnBase + 'exojs-tilemap@' + safeVersion + '/dist/esm/register.js';
+                    ldtkEntry = cdnBase + 'exojs-ldtk@' + safeVersion + '/dist/esm/index.js';
+                    ldtkRegisterEntry = cdnBase + 'exojs-ldtk@' + safeVersion + '/dist/esm/register.js';
                     physicsEntry = cdnBase + 'exojs-physics@' + safeVersion + '/dist/esm/index.js';
                     physicsDebugEntry = cdnBase + 'exojs-physics@' + safeVersion + '/dist/esm/debug/index.js';
                 }
@@ -123,6 +129,8 @@
                         '@codexo/exojs-tiled/register': tiledRegisterEntry,
                         '@codexo/exojs-tilemap': tilemapEntry,
                         '@codexo/exojs-tilemap/register': tilemapRegisterEntry,
+                        '@codexo/exojs-ldtk': ldtkEntry,
+                        '@codexo/exojs-ldtk/register': ldtkRegisterEntry,
                         '@codexo/exojs-physics': physicsEntry,
                         '@codexo/exojs-physics/debug': physicsDebugEntry,
                         '@examples/runtime': './examples/shared/runtime.js?no-cache=' + noCache,
