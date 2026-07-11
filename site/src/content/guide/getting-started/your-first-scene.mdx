@@ -40,12 +40,12 @@ There's nothing visible yet because the scene doesn't render anything beyond the
 
 Scenes have four lifecycle hooks. You override the ones you need:
 
-- `async load(loader)` — declare assets. Resolves before `init` runs.
-- `init(loader)` — set up state. The assets you declared during `load` are available via `loader.get(...)`.
+- `async load(loader)` — declare assets upfront. Resolves before `init` runs.
+- `init(loader)` — set up state. Assets are available via `loader.get(...)`.
 - `update(delta)` — per-frame logic.
 - `draw(context)` — per-frame rendering.
 
-Adding a single sprite means using `load` to fetch the texture and build the sprite, `init` to position it, and `draw` to render it:
+This scene skips `load` entirely. `Texture` is a *seamless* asset type: `loader.get(...)` never throws, even for a path nothing has fetched yet — it hands back a placeholder immediately and heals it in place once the network request resolves. That's enough to build and position a sprite directly in `init`:
 
 <SourceSnippet
   source="examples/getting-started/hello-world.ts"
@@ -56,8 +56,13 @@ Adding a single sprite means using `load` to fetch the texture and build the spr
 
 A few things worth pointing out:
 
-- `await loader.load('image/ship-a.png')` resolves straight to the loaded `Texture` — the path is a literal string, so its `.png` extension tells the loader what type to produce, and there's no need to import `Texture` just to load one. Building the `Sprite` right there in `load` means it's already textured by the time `init` runs.
+- `this.loader.get('image/ship-a.png')` returns a `Texture` synchronously — the path is a literal string, so its `.png` extension tells the loader what type to produce, and there's no need to import `Texture` just to ask for one. Nothing declared this path in `load`; the `get()` call in `init` is what kicks off the fetch.
+- Building the `Sprite` in `init` means `draw` only ever reads state — it never creates it. If the texture is still loading when the first frame renders, the sprite shows a "missing" placeholder that heals in place once the fetch resolves; see [Loading and resources](/ExoJS/en/guide/assets/loading-and-resources/) for the full status-channel contract.
 - The default sprite anchor is `(0, 0)` — the top-left. With `setAnchor(0.5)`, the sprite's center becomes its pivot point, so `setPosition(width / 2, height / 2)` places the sprite at the canvas center rather than offset to one corner.
+
+<Callout type="hint" title="Prefer load() once a scene has more than a placeholder">
+Getting away without `load` works because `Texture` heals in place — fine for a one-sprite demo. Once a scene has several assets, or you don't want a visible pop-in while the texture arrives, declare them upfront with `async load(loader) { await loader.load(...); }` instead — see [Loading and resources](/ExoJS/en/guide/assets/loading-and-resources/).
+</Callout>
 
 <Callout type="pitfall" title="A sprite that won't center">
 A sprite's default anchor is its top-left corner. `setPosition(width / 2, height / 2)` then places the corner — not the center — at the middle of the canvas. Call `setAnchor(0.5)` first.
@@ -69,7 +74,7 @@ Override `update` to advance state once per frame. The `delta` argument carries 
 
 ```js
 update(delta) {
-    this.bunny.rotate(120 * delta.seconds);
+    this.sprite.rotate(120 * delta.seconds);
 }
 ```
 
