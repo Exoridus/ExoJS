@@ -8,7 +8,8 @@ import { computeShaderTiling, type RepeatingSpriteQuad } from '#rendering/sprite
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { RepeatMode } from '#rendering/texture/repeat';
 import { Texture } from '#rendering/texture/Texture';
-import { type BlendModes } from '#rendering/types';
+import { BlendModes } from '#rendering/types';
+import type { View } from '#rendering/View';
 
 import { AbstractWebGpuRenderer } from './AbstractWebGpuRenderer';
 import type { WebGpuBackend } from './WebGpuBackend';
@@ -150,12 +151,20 @@ function repeatModeToAddressMode(mode: RepeatMode): GPUAddressMode {
 /** Instanced renderer for {@link RepeatingSprite} using WebGPU. */
 export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<RepeatingSprite> {
   private readonly _projData = new Float32Array(projectionByteLength / Float32Array.BYTES_PER_ELEMENT);
+  // Projection-uniform skip state: a matching (view identity, view.updateId,
+  // group-transform id) triple means the shared UBO already holds this flush's
+  // projection, so the 128-byte write is skipped — static frames issue zero
+  // projection uploads. Mirrors the sprite renderer's redundant-write skip.
+  private _writtenView: View | null = null;
+  private _writtenViewUpdateId = -1;
   private _writtenGroupTransformId = -1;
+  private _hasWrittenProjection = false;
 
   // Shared GPU objects
   private _device: GPUDevice | null = null;
   private _uniformBindGroupLayout: GPUBindGroupLayout | null = null;
   private _textureBindGroupLayout: GPUBindGroupLayout | null = null;
+  private _pipelineLayout: GPUPipelineLayout | null = null;
   private _shaderModule: GPUShaderModule | null = null;
   private _uniformBuffer: GPUBuffer | null = null;
   private _indexBuffer: GPUBuffer | null = null;
@@ -163,6 +172,13 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
   private _transformStorageBuf: GPUBuffer | null = null;
   private readonly _pipelines = new Map<string, GPURenderPipeline>();
   private readonly _samplers = new Map<string, GPUSampler>();
+  // Single-texture group(1) bind groups cached per texture (WeakMap so a
+  // short-lived texture does not pin its GPU bind group). The entry stores the
+  // resolved view AND sampler it was built from: the view detects a
+  // backend-recreated GPU texture (resize / content rebuild), the sampler
+  // detects a sampler-only refresh (setScaleMode / setWrapMode, or the two
+  // paths' distinct samplers). Dropped wholesale on disconnect / device loss.
+  private _textureBindGroups = new WeakMap<Texture | RenderTexture, { group: GPUBindGroup; view: GPUTextureView; sampler: GPUSampler }>();
 
   // Frame-scoped append arena shared by both paths: a single flush only ever
   // draws one path (render() flushes on a path change), so consecutive batch
@@ -222,6 +238,14 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
       ],
     });
 
+    // Both entry points (shader / geometry) share the same group layout, so a
+    // single pipeline layout is built once at connect and reused for every
+    // pipeline variant (and by prewarm) instead of per pipeline compile.
+    this._pipelineLayout = device.createPipelineLayout({
+      label: 'repeating-sprite:pipeline-layout',
+      bindGroupLayouts: [this._uniformBindGroupLayout, this._textureBindGroupLayout],
+    });
+
     this._uniformBuffer = device.createBuffer({
       label: 'repeating-sprite:uniform-buffer',
       size: projectionByteLength,
@@ -242,11 +266,19 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     this._uniformBuffer?.destroy();
     this._pipelines.clear();
     this._samplers.clear();
+    // Bind groups and the projection UBO belong to the (possibly lost) device;
+    // drop the caches so reconnect rebuilds them against the fresh device.
+    this._textureBindGroups = new WeakMap<Texture | RenderTexture, { group: GPUBindGroup; view: GPUTextureView; sampler: GPUSampler }>();
+    this._writtenView = null;
+    this._writtenViewUpdateId = -1;
+    this._writtenGroupTransformId = -1;
+    this._hasWrittenProjection = false;
 
     this._indexBuffer = null;
     this._uniformBuffer = null;
     this._transformBindGroup = null;
     this._transformStorageBuf = null;
+    this._pipelineLayout = null;
     this._textureBindGroupLayout = null;
     this._uniformBindGroupLayout = null;
     this._shaderModule = null;
@@ -440,13 +472,27 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     }
 
     // ProjectionUniforms layout: mat4x4 projection + mat4x4 group, packed via
-    // the shared canonical (non-transposed) column order.
-    packAffineMat4(backend.view.getTransform(), this._projData, 0);
-    packAffineMat4(backend.renderGroupTransform ?? Matrix.identity, this._projData, 16);
+    // the shared canonical (non-transposed) column order. The write is skipped
+    // when the UBO already holds this exact (view, updateId, group-id) state —
+    // static frames then issue zero projection uploads.
+    const view = backend.view;
 
-    this._writtenGroupTransformId = backend.renderGroupTransformId;
+    if (
+      !this._hasWrittenProjection ||
+      this._writtenView !== view ||
+      this._writtenViewUpdateId !== view.updateId ||
+      this._writtenGroupTransformId !== backend.renderGroupTransformId
+    ) {
+      packAffineMat4(view.getTransform(), this._projData, 0);
+      packAffineMat4(backend.renderGroupTransform ?? Matrix.identity, this._projData, 16);
 
-    device.queue.writeBuffer(uniform, 0, this._projData.buffer, this._projData.byteOffset, this._projData.byteLength);
+      this._writtenView = view;
+      this._writtenViewUpdateId = view.updateId;
+      this._writtenGroupTransformId = backend.renderGroupTransformId;
+      this._hasWrittenProjection = true;
+
+      device.queue.writeBuffer(uniform, 0, this._projData.buffer, this._projData.byteOffset, this._projData.byteLength);
+    }
 
     const scissor = backend.getScissorRect();
     const maskClipsAll = scissor !== null && (scissor.width <= 0 || scissor.height <= 0);
@@ -537,15 +583,10 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     const modeX = this._currentModeX ?? 'repeat';
     const modeY = this._currentModeY ?? 'repeat';
     const sampler = this._getOrCreateSampler(device, modeX, modeY);
+    // The shader path pairs the resolved texture view with a wrap-mode sampler
+    // (not the backend's default), so the cache is keyed on both identities.
     const texView = backend.getTextureBinding(this._currentTexture).view;
-    const textureBindGroup = device.createBindGroup({
-      label: 'repeating-sprite:texture-bind-group:shader',
-      layout: this._textureBindGroupLayout!,
-      entries: [
-        { binding: 0, resource: texView },
-        { binding: 1, resource: sampler },
-      ],
-    });
+    const textureBindGroup = this._getOrCreateTextureBindGroup(device, this._currentTexture, texView, sampler, 'repeating-sprite:texture-bind-group:shader');
 
     const pipeline = this._getPipeline('shader', this._currentBlendMode, backend.renderTargetFormat, stencil);
 
@@ -577,14 +618,13 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
 
     // Geometry path: use backend's default (clamp) sampler.
     const binding = backend.getTextureBinding(this._currentTexture);
-    const textureBindGroup = device.createBindGroup({
-      label: 'repeating-sprite:texture-bind-group:geo',
-      layout: this._textureBindGroupLayout!,
-      entries: [
-        { binding: 0, resource: binding.view },
-        { binding: 1, resource: binding.sampler },
-      ],
-    });
+    const textureBindGroup = this._getOrCreateTextureBindGroup(
+      device,
+      this._currentTexture,
+      binding.view,
+      binding.sampler,
+      'repeating-sprite:texture-bind-group:geo',
+    );
 
     const pipeline = this._getPipeline('geo', this._currentBlendMode, backend.renderTargetFormat, stencil);
 
@@ -639,19 +679,58 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     return this._transformBindGroup;
   }
 
+  /**
+   * Build (or reuse) the group(1) texture bind group pairing `view` with
+   * `sampler`. Cached per texture; the caller resolves the binding (syncing
+   * dirty content) before this runs. The entry is reused while both the view
+   * AND sampler identities match, and rebuilt in place otherwise (resize → new
+   * view; setScaleMode/setWrapMode or a path switch → new sampler).
+   */
+  private _getOrCreateTextureBindGroup(
+    device: GPUDevice,
+    texture: Texture | RenderTexture,
+    view: GPUTextureView,
+    sampler: GPUSampler,
+    label: string,
+  ): GPUBindGroup {
+    const cached = this._textureBindGroups.get(texture);
+
+    if (cached?.view === view && cached.sampler === sampler) {
+      return cached.group;
+    }
+
+    const group = device.createBindGroup({
+      label,
+      layout: this._textureBindGroupLayout!,
+      entries: [
+        { binding: 0, resource: view },
+        { binding: 1, resource: sampler },
+      ],
+    });
+
+    this._textureBindGroups.set(texture, { group, view, sampler });
+
+    return group;
+  }
+
   private _getPipeline(kind: 'shader' | 'geo', blend: BlendModes, format: GPUTextureFormat, stencil: boolean): GPURenderPipeline {
     const key = `${kind}:${blend}:${format}:${stencil ? 's' : 'n'}`;
     const existing = this._pipelines.get(key);
     if (existing) return existing;
 
-    if (!this._device || !this._shaderModule || !this._uniformBindGroupLayout || !this._textureBindGroupLayout) {
+    if (!this._device || !this._shaderModule || !this._pipelineLayout) {
       throw new Error('WebGpuRepeatingSpriteRenderer: not connected.');
     }
 
-    const layout = this._device.createPipelineLayout({
-      label: 'repeating-sprite:pipeline-layout',
-      bindGroupLayouts: [this._uniformBindGroupLayout, this._textureBindGroupLayout],
-    });
+    const pipeline = this._device.createRenderPipeline(this._buildPipelineDescriptor(kind, blend, format, stencil));
+    this._pipelines.set(key, pipeline);
+    return pipeline;
+  }
+
+  private _buildPipelineDescriptor(kind: 'shader' | 'geo', blend: BlendModes, format: GPUTextureFormat, stencil = false): GPURenderPipelineDescriptor {
+    if (!this._shaderModule || !this._pipelineLayout) {
+      throw new Error('WebGpuRepeatingSpriteRenderer: not connected.');
+    }
 
     const isShader = kind === 'shader';
     const strideBytes = isShader ? shaderStrideBytes : geoStrideBytes;
@@ -684,7 +763,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
 
     const desc: GPURenderPipelineDescriptor = {
       label: 'repeating-sprite:render-pipeline',
-      layout,
+      layout: this._pipelineLayout,
       vertex: {
         module: this._shaderModule,
         entryPoint: isShader ? 'shaderVert' : 'geoVert',
@@ -702,9 +781,60 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
       desc.depthStencil = stencilContentDepthStencilState();
     }
 
-    const pipeline = this._device.createRenderPipeline(desc);
-    this._pipelines.set(key, pipeline);
-    return pipeline;
+    return desc;
+  }
+
+  /**
+   * Pre-create render pipelines for every entry point (shader / geometry) ×
+   * blend-mode × target-format combination this renderer can produce,
+   * asynchronously and in parallel. Called from the backend init path so
+   * first-frame draws do not block on synchronous WGSL compilation. Only the
+   * no-clip (`:n`) variants are prewarmed; stencil pipelines compile lazily on
+   * the first clipped draw (mirrors the sprite, mesh and text renderers).
+   */
+  public async prewarmPipelines(formats: readonly GPUTextureFormat[]): Promise<void> {
+    const device = this._device;
+
+    if (!device || !this._shaderModule || !this._pipelineLayout) {
+      return;
+    }
+
+    if (typeof device.createRenderPipelineAsync !== 'function') {
+      return;
+    }
+
+    const kinds: ReadonlyArray<'shader' | 'geo'> = ['shader', 'geo'];
+    const blendModes: readonly BlendModes[] = [
+      BlendModes.Normal,
+      BlendModes.Additive,
+      BlendModes.Subtract,
+      BlendModes.Multiply,
+      BlendModes.Screen,
+      BlendModes.Darken,
+      BlendModes.Lighten,
+    ];
+
+    const promises: Array<Promise<void>> = [];
+
+    for (const kind of kinds) {
+      for (const blendMode of blendModes) {
+        for (const format of formats) {
+          const key = `${kind}:${blendMode}:${format}:n`;
+
+          if (this._pipelines.has(key)) {
+            continue;
+          }
+
+          promises.push(
+            device.createRenderPipelineAsync(this._buildPipelineDescriptor(kind, blendMode, format)).then(pipeline => {
+              this._pipelines.set(key, pipeline);
+            }),
+          );
+        }
+      }
+    }
+
+    await Promise.all(promises);
   }
 
   // Grow the CPU staging arrays for the batch being packed. The GPU instance

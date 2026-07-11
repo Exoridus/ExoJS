@@ -7,6 +7,7 @@ import type { TextPageQuads } from '#rendering/text/Text';
 import { Text } from '#rendering/text/Text';
 import type { Texture } from '#rendering/texture/Texture';
 import { BlendModes } from '#rendering/types';
+import type { View } from '#rendering/View';
 
 import { AbstractWebGpuRenderer } from './AbstractWebGpuRenderer';
 import type { WebGpuBackend } from './WebGpuBackend';
@@ -283,6 +284,16 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
   private _frameBindGroup: GPUBindGroup | null = null;
   private _frameBindGroupDirty = true;
 
+  // FrameUniforms (projection + group) skip state: a matching (view identity,
+  // view.updateId, group-transform id) triple means the proj UBO already holds
+  // this flush's transform, so the 96-byte write is skipped. Per-node style
+  // data (the storage buffer) is uploaded unconditionally — it genuinely
+  // changes per frame; only the shared projection is elided here.
+  private _writtenView: View | null = null;
+  private _writtenViewUpdateId = -1;
+  private _writtenGroupTransformId = -1;
+  private _hasWrittenProjection = false;
+
   // CPU-side working arrays
   private _vertexCapacity = initialVertexCapacity;
   private _indexCapacity = initialIndexCapacity;
@@ -336,11 +347,27 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     });
 
     // Upload FrameUniforms: projection + group as vec4-padded mat3x3 columns,
-    // packed via the shared canonical (non-transposed) column order.
-    packAffineMat3Std140(backend.view.getTransform(), this._projData, 0);
-    packAffineMat3Std140(backend.renderGroupTransform ?? Matrix.identity, this._projData, 12);
+    // packed via the shared canonical (non-transposed) column order. The write
+    // is skipped when the UBO already holds this exact (view, updateId,
+    // group-id) state — static text then issues zero projection uploads.
+    const view = backend.view;
 
-    device.queue.writeBuffer(this._projBuffer!, 0, this._projData.buffer, 0, projectionBytes);
+    if (
+      !this._hasWrittenProjection ||
+      this._writtenView !== view ||
+      this._writtenViewUpdateId !== view.updateId ||
+      this._writtenGroupTransformId !== backend.renderGroupTransformId
+    ) {
+      packAffineMat3Std140(view.getTransform(), this._projData, 0);
+      packAffineMat3Std140(backend.renderGroupTransform ?? Matrix.identity, this._projData, 12);
+
+      this._writtenView = view;
+      this._writtenViewUpdateId = view.updateId;
+      this._writtenGroupTransformId = backend.renderGroupTransformId;
+      this._hasWrittenProjection = true;
+
+      device.queue.writeBuffer(this._projBuffer!, 0, this._projData.buffer, 0, projectionBytes);
+    }
 
     // Upload per-node style data (may reallocate the storage buffer)
     this._uploadNodeBuffer(device);
@@ -584,6 +611,10 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
 
     this._frameBindGroup = null;
     this._frameBindGroupDirty = true;
+    this._writtenView = null;
+    this._writtenViewUpdateId = -1;
+    this._writtenGroupTransformId = -1;
+    this._hasWrittenProjection = false;
 
     this._pipelines.clear();
     this._texBindGroups = new WeakMap<Texture, { group: GPUBindGroup; view: GPUTextureView }>();
