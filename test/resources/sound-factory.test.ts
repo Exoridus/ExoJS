@@ -89,10 +89,16 @@ describe('SoundFactory', () => {
     ).rejects.toThrow();
   });
 
-  test('create() propagates decode errors', async () => {
-    decodeAudioDataMock.mockRejectedValueOnce(new Error('corrupt audio data'));
+  test('create() wraps decode errors with a kind-mismatch hint, preserving the original as .cause', async () => {
+    const decodeError = new Error('corrupt audio data');
+    decodeAudioDataMock.mockRejectedValueOnce(decodeError);
     const factory = new SoundFactory();
 
-    await expect(factory.create(new ArrayBuffer(8))).rejects.toThrow('corrupt audio data');
+    const promise = factory.create(new ArrayBuffer(8));
+
+    await expect(promise).rejects.toThrow(
+      'Failed to decode audio data: corrupt audio data (if loaded with the wrong Asset.kind, this file may not be an audio format at all).',
+    );
+    await expect(promise).rejects.toMatchObject({ cause: decodeError });
   });
 });

@@ -47,7 +47,17 @@ export class SoundFactory extends AbstractAssetFactory<Sound> {
    * constructs a {@link Sound} with the given options.
    */
   public async create(source: ArrayBuffer, options: SoundFactoryOptions = {}): Promise<Sound> {
-    const audioBuffer = await decodeAudioData(source);
+    let audioBuffer: AudioBuffer;
+
+    try {
+      audioBuffer = await decodeAudioData(source);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+
+      throw new Error(`Failed to decode audio data: ${message} (if loaded with the wrong Asset.kind, this file may not be an audio format at all).`, {
+        cause: error,
+      });
+    }
 
     const sound = new Sound(audioBuffer, {
       ...options.playbackOptions,

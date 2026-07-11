@@ -108,7 +108,9 @@ describe('TextureFactory', () => {
       const promise = factory.create(PNG_HEADER);
       lastImage().dispatchEvent(new Event('error'));
 
-      await expect(promise).rejects.toThrow('Error loading image source.');
+      await expect(promise).rejects.toThrow(
+        'Failed to decode image source — the bytes may be corrupted, an unsupported format, or (if loaded with the wrong Asset.kind) not an image at all.',
+      );
     });
 
     test('create() rejects with a clear message on "abort"', async () => {

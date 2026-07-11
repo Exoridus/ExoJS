@@ -76,7 +76,9 @@ describe('SvgFactory', () => {
     const promise = factory.create('<svg></svg>');
     lastImage().dispatchEvent(new Event('error'));
 
-    await expect(promise).rejects.toThrow('Error loading image source.');
+    await expect(promise).rejects.toThrow(
+      'Failed to decode SVG source — the markup may be malformed, or (if loaded with the wrong Asset.kind) not SVG at all.',
+    );
   });
 
   test('create() rejects with a clear message on "abort"', async () => {
