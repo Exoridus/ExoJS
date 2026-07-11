@@ -1,5 +1,7 @@
 /// <reference types="@webgpu/types" />
 
+import { Matrix } from '#math/Matrix';
+import { packAffineMat3Std140 } from '#rendering/affinePacking';
 import { type BitmapText } from '#rendering/text/BitmapText';
 import type { TextPageQuads } from '#rendering/text/Text';
 import { Text } from '#rendering/text/Text';
@@ -39,7 +41,6 @@ const initialNodeCapacity = 32;
 
 // FrameUniforms: 6 × vec4<f32> = 96 bytes (projection + group mat3x3, column-major)
 const projectionBytes = 96;
-const identityGroupMat3 = new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]);
 
 type ShaderType = 'sdf' | 'msdf' | 'color';
 
@@ -334,37 +335,10 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
       return (this._textureKeyMap.get(a.atlasTexture) ?? 0) - (this._textureKeyMap.get(b.atlasTexture) ?? 0);
     });
 
-    // Upload projection (3 × vec4<f32> = column-major mat3x3)
-    // `toArray` returns a fixed Float32Array(9); indices 0..8 are always valid.
-    const m = backend.view.getTransform().toArray(false);
-    this._projData[0] = m[0]!;
-    this._projData[1] = m[1]!;
-    this._projData[2] = m[2]!;
-    this._projData[3] = 0;
-    this._projData[4] = m[3]!;
-    this._projData[5] = m[4]!;
-    this._projData[6] = m[5]!;
-    this._projData[7] = 0;
-    this._projData[8] = m[6]!;
-    this._projData[9] = m[7]!;
-    this._projData[10] = m[8]!;
-    this._projData[11] = 0;
-
-    const groupTransform = backend.renderGroupTransform;
-    const g = groupTransform !== null ? groupTransform.toArray(false) : identityGroupMat3;
-
-    this._projData[12] = g[0]!;
-    this._projData[13] = g[1]!;
-    this._projData[14] = g[2]!;
-    this._projData[15] = 0;
-    this._projData[16] = g[3]!;
-    this._projData[17] = g[4]!;
-    this._projData[18] = g[5]!;
-    this._projData[19] = 0;
-    this._projData[20] = g[6]!;
-    this._projData[21] = g[7]!;
-    this._projData[22] = g[8]!;
-    this._projData[23] = 0;
+    // Upload FrameUniforms: projection + group as vec4-padded mat3x3 columns,
+    // packed via the shared canonical (non-transposed) column order.
+    packAffineMat3Std140(backend.view.getTransform(), this._projData, 0);
+    packAffineMat3Std140(backend.renderGroupTransform ?? Matrix.identity, this._projData, 12);
 
     device.queue.writeBuffer(this._projBuffer!, 0, this._projData.buffer, 0, projectionBytes);
 

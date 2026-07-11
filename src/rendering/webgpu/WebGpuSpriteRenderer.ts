@@ -1,6 +1,8 @@
 /// <reference types="@webgpu/types" />
 
+import { Matrix } from '#math/Matrix';
 import { Rectangle } from '#math/Rectangle';
+import { packAffineMat4 } from '#rendering/affinePacking';
 import type { UniformValue } from '#rendering/material/Material';
 import type { SpriteMaterial } from '#rendering/material/SpriteMaterial';
 import type { Sprite } from '#rendering/sprite/Sprite';
@@ -8,6 +10,7 @@ import { spriteVertexWgsl } from '#rendering/sprite/spriteMaterialSources';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 import { BlendModes } from '#rendering/types';
+import type { View } from '#rendering/View';
 
 import { AbstractWebGpuRenderer } from './AbstractWebGpuRenderer';
 import type { WebGpuBackend } from './WebGpuBackend';
@@ -169,7 +172,6 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
 const instanceStrideBytes = 36;
 const wordsPerInstance = instanceStrideBytes / Uint32Array.BYTES_PER_ELEMENT;
 const projectionByteLength = 128;
-const identityGroupMat4 = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
 const initialBatchCapacity = 32;
 const maxBatchTextures = 8;
 const maxCustomTextureSlots = 7; // user texture uniforms; group(2) binding 1..N
@@ -177,6 +179,28 @@ const indicesPerSprite = 6;
 // Static index buffer: two triangles forming a quad, vertex IDs 0..3 in
 // TL/TR/BR/BL order so the WGSL `cornerX/cornerY` derivation matches.
 const quadIndices = new Uint16Array([0, 1, 2, 0, 2, 3]);
+
+/**
+ * Cached group(1) bind group for one ordered set of batch textures.
+ * `textures`, `views` and `samplers` are the fully-resolved 8-slot arrays
+ * (fillers included): the views detect a backend-recreated GPU texture
+ * (resize / content-driven rebuild), the samplers detect a sampler-only
+ * refresh — `_syncTexture` recreates the sampler on EVERY texture.version
+ * bump (setScaleMode / setWrapMode) while the view identity stays put, so a
+ * views-only check would silently keep serving the stale sampler.
+ */
+interface TextureSetBindGroupEntry {
+  readonly textures: ReadonlyArray<Texture | RenderTexture>;
+  views: GPUTextureView[];
+  samplers: GPUSampler[];
+  group: GPUBindGroup;
+}
+
+// Distinct ordered texture sets cached per slot-0 anchor texture before the
+// oldest entry is evicted. Sets sharing an anchor differ only in trailing
+// slots, so a small bound keeps lookups cheap without letting pathological
+// texture rotations grow the cache unboundedly.
+const maxTextureSetsPerAnchor = 8;
 
 /**
  * Per-material GPU resources for the custom sprite path, cached against the
@@ -197,6 +221,11 @@ interface CustomSpriteResources {
 export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
   private readonly _projectionData = new Float32Array(projectionByteLength / Float32Array.BYTES_PER_ELEMENT);
   private _writtenGroupTransformId = -1;
+  // View whose transform the projection UBO currently holds, plus its updateId
+  // at write time — a matching (view, updateId, groupTransformId) triple means
+  // the 128-byte projection write can be skipped for this flush.
+  private _writtenView: View | null = null;
+  private _writtenViewUpdateId = -1;
 
   private _device: GPUDevice | null = null;
   private _shaderModule: GPUShaderModule | null = null;
@@ -221,6 +250,11 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
   private readonly _pipelines: Map<string, GPURenderPipeline> = new Map<string, GPURenderPipeline>();
 
   private readonly _activeTextures: Array<Texture | RenderTexture | null> = new Array(maxBatchTextures).fill(null);
+  // group(1) bind groups cached per ordered texture set, anchored on the
+  // resolved slot-0 texture (WeakMap so short-lived textures do not pin their
+  // GPU bind groups across long sessions). Rebuilt when the backend hands out
+  // a new view for any slot; dropped wholesale on disconnect / device loss.
+  private _textureSetBindGroups = new WeakMap<Texture | RenderTexture, TextureSetBindGroupEntry[]>();
   private readonly _textureSlots = new Map<Texture | RenderTexture, number>();
   private _slotCount = 0;
   private _instanceCount = 0;
@@ -334,6 +368,12 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     this._indexBuffer = null;
     this._transformBindGroup = null;
     this._transformStorageBuffer = null;
+    // Bind groups and the projection UBO belong to the (possibly lost) device;
+    // drop the caches so reconnect rebuilds them against the fresh device.
+    this._textureSetBindGroups = new WeakMap<Texture | RenderTexture, TextureSetBindGroupEntry[]>();
+    this._writtenView = null;
+    this._writtenViewUpdateId = -1;
+    this._writtenGroupTransformId = -1;
     this._uniformBuffer = null;
     this._pipelineLayout = null;
     this._customBaseTextureLayout = null;
@@ -491,41 +531,22 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     // (submit) that pass first so its draws keep their original projection.
     this._endPassOnProjectionChange(backend);
 
-    const viewMatrix = backend.view.getTransform();
+    // ProjectionUniforms layout: mat4x4 projection + mat4x4 group, packed via
+    // the shared canonical (non-transposed) column order. The write is skipped
+    // when the UBO already holds this exact (view, updateId, group) state —
+    // static frames then issue zero projection uploads.
+    const view = backend.view;
 
-    this._projectionData.set([viewMatrix.a, viewMatrix.c, 0, 0, viewMatrix.b, viewMatrix.d, 0, 0, 0, 0, 1, 0, viewMatrix.x, viewMatrix.y, 0, viewMatrix.z]);
+    if (this._writtenView !== view || this._writtenViewUpdateId !== view.updateId || this._writtenGroupTransformId !== backend.renderGroupTransformId) {
+      packAffineMat4(view.getTransform(), this._projectionData, 0);
+      packAffineMat4(backend.renderGroupTransform ?? Matrix.identity, this._projectionData, 16);
 
-    const groupTransform = backend.renderGroupTransform;
+      this._writtenView = view;
+      this._writtenViewUpdateId = view.updateId;
+      this._writtenGroupTransformId = backend.renderGroupTransformId;
 
-    if (groupTransform !== null) {
-      this._projectionData.set(
-        [
-          groupTransform.a,
-          groupTransform.c,
-          0,
-          0,
-          groupTransform.b,
-          groupTransform.d,
-          0,
-          0,
-          0,
-          0,
-          1,
-          0,
-          groupTransform.x,
-          groupTransform.y,
-          0,
-          groupTransform.z,
-        ],
-        16,
-      );
-    } else {
-      this._projectionData.set(identityGroupMat4, 16);
+      device.queue.writeBuffer(uniformBuffer, 0, this._projectionData.buffer, this._projectionData.byteOffset, this._projectionData.byteLength);
     }
-
-    this._writtenGroupTransformId = backend.renderGroupTransformId;
-
-    device.queue.writeBuffer(uniformBuffer, 0, this._projectionData.buffer, this._projectionData.byteOffset, this._projectionData.byteLength);
 
     const scissor = backend.getScissorRect();
     const maskClipsAll = scissor !== null && (scissor.width <= 0 || scissor.height <= 0);
@@ -600,7 +621,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
 
       if (material === null) {
         const pipeline = this._getPipeline(this._currentBlendMode!, backend.renderTargetFormat, stencil);
-        const textureBindGroup = this._createTextureBindGroup(device, backend);
+        const textureBindGroup = this._getOrCreateTextureBindGroup(device, backend);
 
         pass.setPipeline(pipeline);
         pass.setBindGroup(0, transformBindGroup);
@@ -741,7 +762,11 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
 
     for (const blendMode of blendModes) {
       for (const format of formats) {
-        const pipelineKey = `${blendMode}:${format}`;
+        // Store under the exact key _getPipeline queries. Only the no-clip
+        // (`:n`) variants are prewarmed; the stencil pipelines are created
+        // lazily on the first clipped draw (a rare path not worth the upfront
+        // compile cost), matching the mesh and text renderers.
+        const pipelineKey = `${blendMode}:${format}:n`;
 
         if (this._pipelines.has(pipelineKey)) {
           continue;
@@ -847,24 +872,93 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     }
   }
 
-  private _createTextureBindGroup(device: GPUDevice, backend: WebGpuBackend): GPUBindGroup {
+  private _getOrCreateTextureBindGroup(device: GPUDevice, backend: WebGpuBackend): GPUBindGroup {
     // Slots beyond the active count get the slot-0 texture as a filler so
     // the bind-group layout always sees N valid texture views and samplers.
     // The fragment shader's switch only ever dispatches to the active slot
     // count, so unsampled fillers cost nothing visually.
+    //
+    // Bindings are resolved BEFORE the cache lookup on purpose: resolving is
+    // what syncs a dirty/mutated texture's content to the GPU, so it must run
+    // every flush even when the bind group itself is served from cache.
     const fallbackTexture = this._activeTextures[0] ?? Texture.empty;
     const fallbackBinding = backend.getTextureBinding(fallbackTexture);
+    const resolvedTextures = new Array<Texture | RenderTexture>(maxBatchTextures);
     const resolvedBindings = new Array<ReturnType<WebGpuBackend['getTextureBinding']>>(maxBatchTextures);
 
     for (let i = 0; i < maxBatchTextures; i++) {
       const texture = this._activeTextures[i] ?? fallbackTexture;
 
+      resolvedTextures[i] = texture;
       resolvedBindings[i] = texture === fallbackTexture ? fallbackBinding : backend.getTextureBinding(texture);
     }
 
+    // Cache lookup, anchored on the resolved slot-0 texture. An entry matches
+    // when the full ordered texture set is identical; its bind group is reused
+    // while every backend-resolved view is unchanged, and refreshed in place
+    // when the backend recreated any slot's GPU texture (new view identity).
+    let entries = this._textureSetBindGroups.get(fallbackTexture);
+
+    if (entries === undefined) {
+      entries = [];
+      this._textureSetBindGroups.set(fallbackTexture, entries);
+    }
+
+    for (const entry of entries) {
+      let texturesMatch = true;
+
+      for (let i = 0; i < maxBatchTextures; i++) {
+        if (entry.textures[i] !== resolvedTextures[i]) {
+          texturesMatch = false;
+          break;
+        }
+      }
+
+      if (!texturesMatch) {
+        continue;
+      }
+
+      let bindingsMatch = true;
+
+      for (let i = 0; i < maxBatchTextures; i++) {
+        // In-bounds: all arrays are fixed at maxBatchTextures entries. The
+        // sampler check is load-bearing: a texture.version bump (setScaleMode/
+        // setWrapMode) refreshes the sampler while the view identity stays put.
+        if (entry.views[i] !== resolvedBindings[i]!.view || entry.samplers[i] !== resolvedBindings[i]!.sampler) {
+          bindingsMatch = false;
+          break;
+        }
+      }
+
+      if (!bindingsMatch) {
+        entry.views = resolvedBindings.map(binding => binding.view);
+        entry.samplers = resolvedBindings.map(binding => binding.sampler);
+        entry.group = this._buildTextureBindGroup(device, resolvedBindings);
+      }
+
+      return entry.group;
+    }
+
+    const group = this._buildTextureBindGroup(device, resolvedBindings);
+
+    entries.push({
+      textures: resolvedTextures,
+      views: resolvedBindings.map(binding => binding.view),
+      samplers: resolvedBindings.map(binding => binding.sampler),
+      group,
+    });
+
+    if (entries.length > maxTextureSetsPerAnchor) {
+      entries.shift();
+    }
+
+    return group;
+  }
+
+  private _buildTextureBindGroup(device: GPUDevice, resolvedBindings: ReadonlyArray<ReturnType<WebGpuBackend['getTextureBinding']>>): GPUBindGroup {
     const entries: GPUBindGroupEntry[] = [];
 
-    // resolvedBindings has length maxBatchTextures and was fully populated above.
+    // resolvedBindings always holds maxBatchTextures fully-resolved bindings.
     for (let i = 0; i < maxBatchTextures; i++) {
       entries.push({
         binding: i,

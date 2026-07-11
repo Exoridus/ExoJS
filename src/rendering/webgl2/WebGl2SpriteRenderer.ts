@@ -45,21 +45,30 @@ import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './
  *
  * # Default vs custom-material path
  *
- * Sprites without a material take the default path: up to 8 base textures
- * rotate through `u_texture0..7`, selected per-instance via `a_textureSlot`,
+ * Sprites without a material take the default path: up to 16 base textures
+ * rotate through `u_texture0..15`, selected per-instance via `a_textureSlot`,
  * so unrelated sprites merge into one draw. Sprites with a {@link SpriteMaterial}
  * take the custom path: the material's fragment program runs against the same
  * instance buffer, the single base texture binds to unit 0 as `u_texture`, and
- * material uniforms/textures bind once per batch (units 1..N). The custom path
- * keeps instancing but not the opportunistic 8-slot merge — a custom batch
+ * material uniforms/textures bind once per batch (units 1..7). The custom path
+ * keeps instancing but not the opportunistic 16-slot merge — a custom batch
  * breaks on material instance, base texture, blend mode, or buffer capacity.
  */
 
 const identityGroupMat3 = new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]);
-const maxBatchTextures = 8;
-// Sprite base textures occupy units 0..7; the shared transform buffer texture
-// binds on unit 8, matching the mesh renderer's convention.
-const transformTextureUnit = 8;
+// WebGL2 guarantees MAX_TEXTURE_IMAGE_UNITS >= 16, so a batch can bind up to 16
+// distinct base textures and merge otherwise-unrelated sprites into one draw.
+const maxBatchTextures = 16;
+// Sprite base textures occupy units 0..15; the shared transform buffer texture
+// binds on the next unit (16). That needs 17 combined units, well within the
+// WebGL2 >= 32 MAX_COMBINED_TEXTURE_IMAGE_UNITS guarantee.
+const transformTextureUnit = 16;
+// Custom-material texture bindings (base texture on unit 0 + material textures
+// on units 1..7) keep the pre-16-slot cap: the material CONTRACT stays at 7
+// extra textures, matching WebGl2MeshRenderer and the WebGPU sprite renderer.
+// Deliberately decoupled from maxBatchTextures — bumping the default-path
+// batch capacity must not silently widen what materials may request.
+const maxCustomTextureSlots = 8;
 const instanceStrideBytes = 36;
 const wordsPerInstance = instanceStrideBytes / Uint32Array.BYTES_PER_ELEMENT;
 
@@ -79,6 +88,11 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> {
   private readonly _activeTextures: Array<Texture | RenderTexture | null> = new Array(maxBatchTextures).fill(null);
   private readonly _textureSlots = new Map<Texture | RenderTexture, number>();
   private _slotCount = 0;
+  // Effective base-texture slot cap for this context. Defaults to the compile-
+  // time capacity and is clamped down at connect to the driver's reported
+  // MAX_TEXTURE_IMAGE_UNITS — a defensive floor that WebGL2's >= 16 guarantee
+  // means should never actually reduce the batch below maxBatchTextures.
+  private _maxTextureSlots = maxBatchTextures;
 
   // Custom-material state. Compiled fragment programs are cached per material
   // instance; the current batch's material/base-texture decide when to flush.
@@ -243,6 +257,13 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> {
   protected onConnect(backend: WebGl2Backend): void {
     const gl = backend.context;
 
+    // Clamp the batch's base-texture capacity to what the driver actually
+    // exposes to the fragment stage. WebGL2 mandates >= 16, so this is a
+    // belt-and-braces floor that should never trim below maxBatchTextures.
+    const maxImageUnits = gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS) as number;
+
+    this._maxTextureSlots = Math.min(maxBatchTextures, maxImageUnits);
+
     this._shader.connect(createWebGl2ShaderProgram(gl));
     this._connection = this._createConnection(gl);
     this._instanceBuffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this._instanceData, BufferUsage.DynamicDraw).connect(
@@ -259,10 +280,15 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> {
       .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_nodeIndex'), gl.UNSIGNED_INT, false, instanceStrideBytes, 32, true, 1)
       .connect(this._createVaoRuntime(this._connection));
 
-    // Pin the per-slot sampler uniforms to texture units 0..N-1.
+    // Pin the per-slot sampler uniforms to texture units 0..N-1. Strict on
+    // purpose (getUniform throws on a missing name): every slot the batcher
+    // can reach must have its sampler in the program — a silently unpinned
+    // sampler would default to unit 0 and sample the wrong texture without
+    // any error. Test mocks must therefore declare all 16 samplers (see
+    // test/rendering/browser/_spriteFragMock.ts).
     const samplerUnit = new Int32Array(1);
 
-    for (let i = 0; i < maxBatchTextures; i++) {
+    for (let i = 0; i < this._maxTextureSlots; i++) {
       samplerUnit[0] = i;
       this._shader.getUniform(`u_texture${i}`).setValue(samplerUnit);
     }
@@ -296,12 +322,12 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> {
     this._shader.destroy();
   }
 
-  /** Default multi-texture path: rotate the base texture through 8 slots. */
+  /** Default multi-texture path: rotate the base texture through 16 slots. */
   private _renderDefault(sprite: Sprite, texture: Texture | RenderTexture, backend: WebGl2Backend, nodeIndex: number): void {
     const blendMode = sprite.blendMode;
     const batchFull = this._instanceCount >= this._batchSize;
     const blendModeChanged = blendMode !== this._currentBlendMode;
-    const slotExhausted = !this._textureSlots.has(texture) && this._slotCount >= maxBatchTextures;
+    const slotExhausted = !this._textureSlots.has(texture) && this._slotCount >= this._maxTextureSlots;
     // A custom batch in flight must drain before default sprites resume.
     const materialSwitch = this._currentMaterial !== null && this._instanceCount > 0;
 
@@ -456,13 +482,13 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> {
       const uniform = shader.getUniform(name);
 
       if (value instanceof Texture || value instanceof RenderTexture) {
-        if (textureSlot >= maxBatchTextures) {
-          throw new Error(`SpriteMaterial requested more than ${maxBatchTextures - 1} texture bindings.`);
+        if (textureSlot >= maxCustomTextureSlots) {
+          throw new Error(`SpriteMaterial requested more than ${maxCustomTextureSlots - 1} texture bindings.`);
         }
 
         backend.bindTexture(value, textureSlot);
-        // In-bounds: `textureSlot < maxBatchTextures` (guarded) and `_slotScratches`
-        // is pre-allocated with `maxBatchTextures` entries.
+        // In-bounds: `textureSlot < maxCustomTextureSlots <= maxBatchTextures`
+        // (guarded) and `_slotScratches` has `maxBatchTextures` entries.
         uniform.setValue(this._slotScratches[textureSlot]!);
         textureSlot++;
       } else {
@@ -477,8 +503,8 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> {
         continue;
       }
 
-      if (textureSlot >= maxBatchTextures) {
-        throw new Error(`SpriteMaterial requested more than ${maxBatchTextures - 1} texture bindings.`);
+      if (textureSlot >= maxCustomTextureSlots) {
+        throw new Error(`SpriteMaterial requested more than ${maxCustomTextureSlots - 1} texture bindings.`);
       }
 
       // `name` iterates own keys of `textures`, so the lookup is defined.

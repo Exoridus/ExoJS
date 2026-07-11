@@ -18,7 +18,7 @@ import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './
 // ---------------------------------------------------------------------------
 
 const shaderPathVertSource = `#version 300 es
-precision mediump float;
+precision highp float;
 precision highp int;
 
 layout(location = 0) in vec4 a_quadBounds;   // x0,y0,x1,y1 (local space)
@@ -68,7 +68,7 @@ void main(void) {
 // ---------------------------------------------------------------------------
 
 const geoPathVertSource = `#version 300 es
-precision lowp float;
+precision highp float;
 precision highp int;
 
 layout(location = 0) in vec4 a_quadBounds;   // x0,y0,x1,y1 (local space)
@@ -111,7 +111,10 @@ precision lowp float;
 
 uniform sampler2D u_texture;
 
-in vec2 v_texcoord;
+// UVs need full precision on mobile GLES — especially on the shader path,
+// whose tiling UVs can span many repeats and would quantise visibly at lowp.
+// The color varying stays lowp for 8-bit output.
+in highp vec2 v_texcoord;
 in vec4 v_color;
 
 layout(location = 0) out vec4 fragColor;

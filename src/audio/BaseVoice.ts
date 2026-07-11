@@ -224,6 +224,13 @@ export abstract class BaseVoice implements Voice, Spatializable, SpatialVoice {
     this._tickSpatial();
   }
 
+  /**
+   * Track `node`'s position each frame and pan this voice from it (or stop
+   * tracking with `null`). Reads {@link SceneNode.getWorldTransform} — the
+   * TRUE world position, composed through {@link RetainedContainer}
+   * transform-group boundaries — so an emitter inside a camera-panned world
+   * group sounds where it is drawn.
+   */
   public follow(node: SceneNode | null): void {
     if (this._ended) return;
     this._followNode = node;
@@ -241,7 +248,11 @@ export abstract class BaseVoice implements Voice, Spatializable, SpatialVoice {
     let y: number;
 
     if (this._followNode !== null) {
-      const transform = this._followNode.getGlobalTransform();
+      // World transform, NOT the global one: getGlobalTransform is
+      // group-RELATIVE under a RetainedContainer boundary, which would pan
+      // the sound with the group's local origin instead of its on-screen
+      // world position (AU1).
+      const transform = this._followNode.getWorldTransform();
       x = transform.x;
       y = transform.y;
     } else if (this._position !== null) {

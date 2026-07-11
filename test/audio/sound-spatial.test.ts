@@ -2,6 +2,8 @@ import { getAudioContext } from '#audio/audio-context';
 import { AudioManager } from '#audio/AudioManager';
 import { Sound } from '#audio/Sound';
 import type { SoundVoice } from '#audio/SoundVoice';
+import { Drawable } from '#rendering/Drawable';
+import { RetainedContainer } from '#rendering/RetainedContainer';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -275,6 +277,43 @@ describe('Sound — spatial (PannerNode)', () => {
     sound.position = { x: 1, y: 2 };
     sound.velocity = { x: 3, y: 4 };
     expect(() => sound.destroy()).not.toThrow();
+  });
+
+  // AU1: voice.follow must track WORLD positions, not group-local ones.
+  test('voice.follow of a node inside a translated RetainedContainer writes the WORLD position to the panner', () => {
+    const spy = setupPannerSpy();
+    const manager = new AudioManager();
+    const sound = new Sound(createAudioBufferStub());
+    const voice = manager.play(sound) as SoundVoice;
+
+    const group = new RetainedContainer();
+    const emitter = new Drawable();
+
+    group.setPosition(300, 400);
+    emitter.setPosition(5, 6);
+    group.addChild(emitter);
+
+    voice.follow(emitter); // creates the panner and ticks once
+
+    const panner = spy.panners[0];
+
+    // World position (305, 406) — NOT the group-local (5, 6).
+    expect(panner.positionX.setValueAtTime).toHaveBeenCalledWith(305, expect.any(Number));
+    expect(panner.positionY.setValueAtTime).toHaveBeenCalledWith(406, expect.any(Number));
+
+    // A group move (camera pan) is picked up on the next spatial tick.
+    group.setPosition(-100, 0);
+    panner.positionX.setValueAtTime.mockClear();
+    panner.positionY.setValueAtTime.mockClear();
+
+    voice._tickSpatial();
+
+    expect(panner.positionX.setValueAtTime).toHaveBeenCalledWith(-95, expect.any(Number));
+    expect(panner.positionY.setValueAtTime).toHaveBeenCalledWith(6, expect.any(Number));
+
+    spy.restore();
+    group.destroy();
+    sound.destroy();
   });
 
   // 10. distanceModel / refDistance / maxDistance / rolloffFactor accessors

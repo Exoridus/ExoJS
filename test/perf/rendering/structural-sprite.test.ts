@@ -3,8 +3,8 @@
  * GPU-free, CI-safe: they assert draw-call / batching / culling / upload
  * invariants captured by the recording fake context — never wall-clock time.
  *
- * Baseline facts (measured): the sprite renderer multi-texture-batches up to 8
- * textures into one draw, breaks the batch at a 9th distinct texture or a blend
+ * Baseline facts (measured): the sprite renderer multi-texture-batches up to 16
+ * textures into one draw, breaks the batch at a 17th distinct texture or a blend
  * change, and splits into ⌈instances / 4096⌉ draws on batch-buffer overflow.
  */
 import { describe, expect, it } from 'vitest';
@@ -42,9 +42,9 @@ describe('structural — Sprite', () => {
     });
   });
 
-  it('1000 sprites / 8 textures → one draw (multi-texture slot merge)', () => {
+  it('1000 sprites / 16 textures → one draw (multi-texture slot merge)', () => {
     withHarness(harness => {
-      const { root } = buildSpriteScene({ count: 1000, textures: makeTextures(8), assign: 'cycle' });
+      const { root } = buildSpriteScene({ count: 1000, textures: makeTextures(16), assign: 'cycle' });
       const m = measureSteadyFrame(harness, root, 2);
 
       expect(m.drawCalls).toBe(1);
@@ -54,11 +54,24 @@ describe('structural — Sprite', () => {
     });
   });
 
-  it('9 / 16 distinct textures → 2 draws; 17 → 3 draws (slot exhaustion at the 9th)', () => {
+  it('16 distinct textures batch into one draw (slot merge up to 16)', () => {
+    withHarness(harness => {
+      const { root } = buildSpriteScene({ count: 16, textures: makeTextures(16), assign: 'distinct' });
+      const m = measureSteadyFrame(harness, root, 2);
+
+      expect(m.drawCalls).toBe(1);
+      expect(m.batches).toBe(1);
+      expect(m.instances).toBe(16);
+
+      root.destroy();
+    });
+  });
+
+  it('17 / 32 distinct textures → 2 draws; 33 → 3 draws (slot exhaustion at the 17th)', () => {
     for (const [textureCount, expectedDraws] of [
-      [9, 2],
-      [16, 2],
-      [17, 3],
+      [17, 2],
+      [32, 2],
+      [33, 3],
     ] as const) {
       withHarness(harness => {
         const { root } = buildSpriteScene({ count: textureCount, textures: makeTextures(textureCount), assign: 'distinct' });

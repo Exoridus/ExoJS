@@ -50,33 +50,6 @@ void main() {
   v_color = a_color;
   v_textureSlot = a_textureSlot;
 }`,
-  spriteFragmentSource: `#version 300 es
-precision mediump float;
-in vec2 v_uv;
-in vec4 v_color;
-flat in uint v_textureSlot;
-uniform sampler2D u_texture0;
-uniform sampler2D u_texture1;
-uniform sampler2D u_texture2;
-uniform sampler2D u_texture3;
-uniform sampler2D u_texture4;
-uniform sampler2D u_texture5;
-uniform sampler2D u_texture6;
-uniform sampler2D u_texture7;
-out vec4 outColor;
-vec4 sampleTexture(uint slot, vec2 uv) {
-  if (slot == uint(0)) return texture(u_texture0, uv);
-  if (slot == uint(1)) return texture(u_texture1, uv);
-  if (slot == uint(2)) return texture(u_texture2, uv);
-  if (slot == uint(3)) return texture(u_texture3, uv);
-  if (slot == uint(4)) return texture(u_texture4, uv);
-  if (slot == uint(5)) return texture(u_texture5, uv);
-  if (slot == uint(6)) return texture(u_texture6, uv);
-  return texture(u_texture7, uv);
-}
-void main() {
-  outColor = sampleTexture(v_textureSlot, v_uv) * v_color;
-}`,
   meshVertexSource: `#version 300 es
 precision mediump float;
 in vec2 a_position;
@@ -172,7 +145,7 @@ void main() {
 }));
 
 vi.mock('#rendering/webgl2/glsl/sprite.vert', () => ({ default: shaderSources.spriteVertexSource }));
-vi.mock('#rendering/webgl2/glsl/sprite.frag', () => ({ default: shaderSources.spriteFragmentSource }));
+vi.mock('#rendering/webgl2/glsl/sprite.frag', async () => ({ default: (await import('./_spriteFragMock')).createSpriteFragMockSource('v_uv') }));
 vi.mock('#rendering/webgl2/glsl/mesh.vert', () => ({ default: shaderSources.meshVertexSource }));
 vi.mock('#rendering/webgl2/glsl/mesh.frag', () => ({ default: shaderSources.meshFragmentSource }));
 vi.mock('#rendering/webgl2/glsl/particle.vert', () => ({ default: shaderSources.particleVertexSource }));
@@ -740,6 +713,77 @@ describe('RenderTo WebGL2 browser', () => {
       pipeline.destroy();
       worldRt.destroy();
       worldView.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('a full 16-texture batch renders into a RenderTexture without a feedback loop (slot 15 vs sync unit)', async () => {
+    // Regression (review P1-1): the backend used texture unit 15 as its
+    // render-target sync scratch unit. _flushActiveRenderer re-binds the
+    // active target (unconditionally binding the target's own color texture
+    // on that unit) BEFORE the sprite renderer flushes — so with 16 batch
+    // slots, sampler slot 15 pointed at the target's own texture. Drawing
+    // into the target then formed a WebGL feedback loop: INVALID_OPERATION,
+    // whole draw dropped, target left at its clear color.
+    const backend = await createBackend();
+    const target = new RenderTexture(canvasSize, canvasSize);
+    const palette: ReadonlyArray<readonly [number, number, number]> = [
+      [255, 0, 0],
+      [0, 255, 0],
+      [0, 0, 255],
+      [255, 255, 0],
+      [255, 0, 255],
+      [0, 255, 255],
+      [255, 128, 0],
+      [128, 0, 255],
+      [0, 128, 255],
+      [128, 255, 0],
+      [255, 0, 128],
+      [0, 255, 128],
+      [128, 128, 255],
+      [255, 128, 128],
+      [128, 255, 128],
+      [200, 200, 200],
+    ];
+    const toHex = (c: number): string => c.toString(16).padStart(2, '0');
+    const textures = palette.map(([r, g, b]) => createSolidTexture(`#${toHex(r)}${toHex(g)}${toHex(b)}`, 8, 8));
+    const root = new Container();
+
+    try {
+      // 4x4 grid of 16px cells; each 8x8 sprite inset by +4 so its centre
+      // pixel is (col*16+8, row*16+8) with no neighbour overlap.
+      textures.forEach((texture, i) => {
+        const sprite = new Sprite(texture);
+
+        sprite.setPosition((i % 4) * 16 + 4, Math.floor(i / 4) * 16 + 4);
+        root.addChild(sprite);
+      });
+
+      backend.resetStats();
+      backend.execute(
+        new BackendTargetPass(
+          passBackend => {
+            root.render(passBackend);
+          },
+          { target, view: target.view, clearColor: Color.black },
+        ),
+      );
+      backend.flush();
+
+      // All 16 distinct textures merge into a single draw call.
+      expect(backend.stats.drawCalls).toBe(1);
+
+      // Every sprite painted its own texture INTO THE TARGET. On the broken
+      // backend the whole draw is discarded and these pixels stay black.
+      palette.forEach(([r, g, b], i) => {
+        const pixel = readPixelsFromTarget(backend, target, (i % 4) * 16 + 8, Math.floor(i / 4) * 16 + 8);
+
+        expectPixelNear(pixel, [r, g, b, 255]);
+      });
+    } finally {
+      root.destroy();
+      textures.forEach(texture => texture.destroy());
+      target.destroy();
       backend.destroy();
     }
   });

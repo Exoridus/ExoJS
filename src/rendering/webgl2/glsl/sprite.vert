@@ -1,5 +1,5 @@
 #version 300 es
-precision lowp float;
+precision highp float;
 precision highp int;
 
 // Per-instance attributes (divisor = 1). Each Sprite contributes one entry

@@ -62,6 +62,18 @@ enum SceneNodeVectorChannel {
 const orientedCorners = [new Vector(), new Vector(), new Vector(), new Vector()];
 
 /**
+ * Process-wide dirty-walk epoch (F10). Advanced by EVERY consumer read of a
+ * node revision ({@link SceneNode._contentRevision}/`_structureRevision` —
+ * plan builds read them, so each build starts a fresh epoch implicitly and
+ * any extra read only bumps more often, which is the conservative direction:
+ * more bumps mean more full walks, never a missed one). Within one epoch,
+ * repeated up-walks over an already-stamped ancestor chain early-out — see
+ * {@link SceneNode._markContentDirty}. Starts at 1 so the initial per-node
+ * epoch stamps (0) are never spuriously "current".
+ */
+let dirtyWalkEpoch = 1;
+
+/**
  * Transform-bearing leaf in the scene-graph hierarchy. Carries position,
  * rotation, scale, skew, origin, and a 2-component {@link Vector} `anchor`
  * used to derive `origin` from the local bounds. Implements {@link Collidable}
@@ -111,6 +123,34 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
 
   private _visible = true;
   private _globalTransform = new Matrix();
+  /**
+   * World-transform cache for nodes below a transform-group boundary — see
+   * {@link getWorldTransform}. Lazily allocated: nodes that never sit inside a
+   * {@link RetainedContainer} pay only the null field.
+   */
+  private _worldTransform: Matrix | null = null;
+  /**
+   * Stamp identifying the current content AND identity of the matrix returned
+   * by {@link getWorldTransform}. Consumers caching a composition against this
+   * node's world matrix compare the stamp instead of the matrix contents.
+   *
+   * T3 guard (review): stamps are drawn from {@link nextNodeRevision} (a
+   * process-wide monotonic counter starting at 1), never from the small
+   * per-node `_globalTransformVersion` sequence, so a source flip between the
+   * delegated path (world === global) and the composed path can never produce
+   * a false-clean version collision. `0` uniquely means "never computed".
+   */
+  private _worldStamp = 0;
+  /** Whether the last {@link getWorldTransform} call took the delegated (world === global) path. */
+  private _worldDelegatesToGlobal = false;
+  /** `_globalTransformVersion` last observed by the delegated path (stamp bookkeeping only). */
+  private _worldSyncedGlobalVersion = -1;
+  /** `_globalTransformVersion` the composed `_worldTransform` was built from. */
+  private _worldOwnVersion = -1;
+  /** Boundary ancestor the composed `_worldTransform` was built against. */
+  private _worldAnchor: SceneNode | null = null;
+  /** That anchor's `_worldStamp` at build time. */
+  private _worldAnchorStamp = -1;
   /**
    * Monotonic counter bumped every time {@link getGlobalTransform} actually
    * recomputes this node's world matrix. Children compare the parent's version
@@ -404,6 +444,14 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
     return this._localBounds;
   }
 
+  /**
+   * Axis-aligned bounding box of this node in its GLOBAL-transform space.
+   * That is world space for ordinary nodes, but GROUP-LOCAL space for nodes
+   * inside an engaged {@link RetainedContainer} transform group (the group
+   * matrix is applied on the GPU, not here) — this is deliberate and matches
+   * the rendering convention. For a true world-space extent of such a node,
+   * lift this rect by the group's {@link getWorldTransform} matrix.
+   */
   public getBounds(): Rectangle {
     this.getGlobalTransform(); // ensures this node's own _globalTransformVersion is current
 
@@ -477,6 +525,105 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
     }
 
     return this._globalTransform;
+  }
+
+  /**
+   * The node's TRUE world-space transform, composed through every
+   * transform-group boundary ({@link RetainedContainer}) in the ancestor
+   * chain.
+   *
+   * {@link getGlobalTransform} deliberately stops at the nearest engaged
+   * boundary (descendants resolve group-RELATIVE transforms; the renderer
+   * multiplies the group matrix back in on the GPU), so it is the right space
+   * for rendering but the wrong one for spatial queries. Use THIS accessor
+   * whenever a real world position/orientation is needed — picking, spatial
+   * audio, physics, world-space math against nodes outside the group.
+   *
+   * Without any engaged boundary ancestor it returns the exact
+   * {@link getGlobalTransform} matrix (same instance, no extra work). With
+   * one, it lazily caches `groupLocal × groupWorld` and revalidates on read
+   * via version/stamp compares — including boundary engage/disengage flips,
+   * which RetainedContainer performs at runtime (deep-barrier fallback).
+   */
+  public getWorldTransform(): Matrix {
+    const anchor = this._resolveTransformGroupAnchor();
+
+    if (anchor === null) {
+      // No engaged boundary above: world space IS global space. Delegate, but
+      // keep the world stamp in sync so consumers keyed on `_worldStamp`
+      // (descendants anchored to this node, or external caches) observe the
+      // change when the underlying global matrix recomputes or when a former
+      // composed cache is replaced by this delegated source.
+      const matrix = this.getGlobalTransform();
+
+      if (!this._worldDelegatesToGlobal || this._worldSyncedGlobalVersion !== this._globalTransformVersion) {
+        this._worldDelegatesToGlobal = true;
+        this._worldSyncedGlobalVersion = this._globalTransformVersion;
+        this._worldStamp = nextNodeRevision();
+      }
+
+      return matrix;
+    }
+
+    // Freshen both inputs FIRST: the group-local matrix (bumps our
+    // `_globalTransformVersion` when stale — this also covers boundary
+    // re-engagement, which flips the parent-version seam and forces a
+    // recompute) and the anchor's world matrix (bumps `anchor._worldStamp`
+    // when stale; recursion composes nested groups).
+    const groupLocal = this.getGlobalTransform();
+    const anchorWorld = anchor.getWorldTransform();
+
+    if (
+      this._worldTransform === null ||
+      this._worldDelegatesToGlobal ||
+      this._worldOwnVersion !== this._globalTransformVersion ||
+      this._worldAnchor !== anchor ||
+      this._worldAnchorStamp !== anchor._worldStamp
+    ) {
+      (this._worldTransform ??= new Matrix()).copy(groupLocal).combine(anchorWorld);
+      this._worldDelegatesToGlobal = false;
+      this._worldOwnVersion = this._globalTransformVersion;
+      this._worldAnchor = anchor;
+      this._worldAnchorStamp = anchor._worldStamp;
+      this._worldStamp = nextNodeRevision();
+    }
+
+    return this._worldTransform;
+  }
+
+  /**
+   * The nearest ancestor whose ENGAGED transform-group boundary this node's
+   * global transform is relative to, or `null` when {@link getGlobalTransform}
+   * is already world-space. Mirrors the exact seam getGlobalTransform uses:
+   * the boundary getter is LIVE (engage/disengage flips are picked up on every
+   * call) and a barrier-bearing direct child escapes via
+   * {@link _escapesTransformGroup}, taking its whole subtree back to world
+   * space with it.
+   * @internal
+   */
+  public _resolveTransformGroupAnchor(): SceneNode | null {
+    let node: SceneNode | null = this._parentNode;
+
+    if (node === null) {
+      return null;
+    }
+
+    if (node._isTransformGroupBoundary && !this._escapesTransformGroup()) {
+      return node;
+    }
+
+    let parent: SceneNode | null = node._parentNode;
+
+    while (parent !== null) {
+      if (parent._isTransformGroupBoundary && !node._escapesTransformGroup()) {
+        return parent;
+      }
+
+      node = parent;
+      parent = node._parentNode;
+    }
+
+    return null;
   }
 
   public getNormals(): Vector[] {
@@ -618,6 +765,8 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
     this.flags.destroy();
 
     this._globalTransform.destroy();
+    this._worldTransform?.destroy();
+    this._worldAnchor = null;
     this._localBounds.destroy();
     this._bounds.destroy();
     this._anchor.destroy();
@@ -706,40 +855,95 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
     }
   }
 
-  /** @internal — aggregate content-dirty stamp for this node's subtree (transform/tint/visual-source changes at or below). Read by {@link RetainedPlanCache}. */
+  /**
+   * @internal — aggregate content-dirty stamp for this node's subtree
+   * (transform/tint/visual-source changes at or below). Read by
+   * {@link RetainedPlanCache}. Reading it advances the dirty-walk epoch —
+   * see {@link _markContentDirty}. CAUTION: side-effecting getter — an
+   * incidental read (logging, devtools inspection, serialization) silently
+   * bumps the epoch and degrades (never breaks) the dirty-walk early-out.
+   */
   public get _contentRevision(): number {
+    dirtyWalkEpoch++;
+
     return this._nodeRevision.content;
   }
 
-  /** @internal — aggregate structure-dirty stamp (child add/remove/reorder, visibility) for this node's subtree. */
+  /**
+   * @internal — aggregate structure-dirty stamp (child add/remove/reorder,
+   * visibility) for this node's subtree. Reading it advances the dirty-walk
+   * epoch — see {@link _markContentDirty}. Same side-effecting-getter caution
+   * as {@link _contentRevision}.
+   */
   public get _structureRevision(): number {
+    dirtyWalkEpoch++;
+
     return this._nodeRevision.structure;
   }
 
-  /** @internal — mark this node's content dirty and propagate the stamp up to the root. */
+  /** Dirty-walk epoch stamps for the F10 early-out — see {@link _markContentDirty}. */
+  private _contentWalkEpoch = 0;
+  private _structureWalkEpoch = 0;
+
+  /**
+   * @internal — mark this node's content dirty and propagate the stamp up to
+   * the root. The walk deliberately runs THROUGH transform-group boundaries
+   * (nested retained snapshots key on ancestor revisions — plan decision D7
+   * is superseded; do not add boundary stops here).
+   *
+   * F10 early-out: a second revision bump of an ancestor is redundant exactly
+   * when no consumer has read revisions since the first bump — the consumer
+   * only needs to observe SOME new value relative to its last read, not the
+   * newest one. Every consumer read (the revision getters above) advances the
+   * process-wide `dirtyWalkEpoch`; the walk stamps each visited ancestor with
+   * the current epoch and stops at the first ancestor that is already
+   * epoch-current. Induction invariant: an epoch-current node implies ALL its
+   * ancestors are epoch-current, because every stamping walk is contiguous
+   * from a node up to either the root or an epoch-current ancestor (whose own
+   * ancestors are epoch-current by the same invariant), and a global epoch
+   * bump un-currents every node at once. So stopping early never skips a
+   * stale ancestor. N same-path mutations between two reads cost
+   * O(depth + N) stamps instead of O(N * depth).
+   */
   protected _markContentDirty(): void {
     const revision = nextNodeRevision();
+    const epoch = dirtyWalkEpoch;
 
     this._nodeRevision.touchContent(revision);
+    this._contentWalkEpoch = epoch;
 
     let ancestor = this._parentNode;
 
-    while (ancestor !== null) {
+    while (ancestor !== null && ancestor._contentWalkEpoch !== epoch) {
       ancestor._nodeRevision.touchContent(revision);
+      ancestor._contentWalkEpoch = epoch;
       ancestor = ancestor.parent;
     }
   }
 
-  /** @internal — mark this node's structure dirty (implies content-dirty) and propagate up to the root. */
+  /**
+   * @internal — mark this node's structure dirty (implies content-dirty) and
+   * propagate up to the root. Same through-boundary walk and epoch early-out
+   * as {@link _markContentDirty}; because `touchStructure` stamps BOTH
+   * revisions, the walk stamps both epochs, and it keys the early-out on the
+   * STRUCTURE epoch (structure-current implies content-current, since only
+   * this walk stamps the structure epoch — the converse does not hold, so a
+   * content walk can never wrongly block a structure walk).
+   */
   protected _markStructureDirty(): void {
     const revision = nextNodeRevision();
+    const epoch = dirtyWalkEpoch;
 
     this._nodeRevision.touchStructure(revision);
+    this._structureWalkEpoch = epoch;
+    this._contentWalkEpoch = epoch;
 
     let ancestor = this._parentNode;
 
-    while (ancestor !== null) {
+    while (ancestor !== null && ancestor._structureWalkEpoch !== epoch) {
       ancestor._nodeRevision.touchStructure(revision);
+      ancestor._structureWalkEpoch = epoch;
+      ancestor._contentWalkEpoch = epoch;
       ancestor = ancestor.parent;
     }
   }

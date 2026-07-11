@@ -74,7 +74,7 @@ The `setZoom(z)` method scales how much world fits inside the view. `setZoom(2)`
 init() {
     this.zoom = 1;
 
-    this.inputs.onTrigger(Keyboard.Plus, () => {
+    this.inputs.onTrigger(Keyboard.Equals, () => { // the =/+ key
         this.zoom += 0.1;
     });
 }
