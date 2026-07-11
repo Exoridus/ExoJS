@@ -259,7 +259,7 @@ export class RetainedGroupFragment {
 
   /**
    * Release the fragment's retained GPU resources along with the capture
-   * (container destroy, deep-barrier disengage, S3-D3 lifecycle).
+   * (container destroy, deep-barrier branch escape, S3-D3 lifecycle).
    */
   public dispose(): void {
     this.invalidate();

@@ -3,7 +3,7 @@ import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { RenderNode } from '#rendering/RenderNode';
-import { isAdvancedBlendMode } from '#rendering/types';
+import { BlendModes, isAdvancedBlendMode } from '#rendering/types';
 import type { View } from '#rendering/View';
 
 import { type DrawCommand, RenderEntryKind } from './RenderCommand';
@@ -58,6 +58,23 @@ interface MutableGroupScope extends GroupScope {
   _nextSeq: number;
   firstZ: number | null;
 }
+
+/**
+ * Effect-less descriptor shared by every sub-branch escape barrier (F13/R3):
+ * all effect stages are disabled, so {@link RenderEffectExecutor.play} is a
+ * pure passthrough into the child plan. The barrier entry exists only for its
+ * playback semantics — the group uniform is suspended (the branch collected
+ * world-space transforms) and fragment capture records a live re-dispatch.
+ */
+const groupEscapeEffect: EffectDescriptor = Object.freeze({
+  filters: [],
+  clip: ClipKind.None,
+  clipShape: null,
+  maskSource: null,
+  cacheAsBitmap: false,
+  blendMode: BlendModes.Normal,
+  needsBackdropBlend: false,
+});
 
 /** @internal */
 export class RenderPlanBuilder {
@@ -231,6 +248,41 @@ export class RenderPlanBuilder {
         } finally {
           this._scopeStack.pop();
         }
+      }
+
+      return;
+    }
+
+    // Sub-branch escape (F13/R3): a DIRECT child of the engaged transform-
+    // group boundary being collected (the scope guard keeps this off every
+    // other emit) whose subtree contains a deep barrier leaves the group,
+    // while its siblings keep retention + the group transform. Wrap it in an
+    // effect-less barrier entry — playback suspends the group uniform (the
+    // branch resolves world-space transforms via the matching
+    // `_escapesTransformGroup` seam) and fragment capture records a live
+    // re-dispatch (spec §8) — then re-enter emitNode inside the child plan,
+    // where the guard no longer matches and the node collects through its
+    // normal path (a nested boundary still gets its own transformNode scope).
+    if (node.parent !== null && this._currentScope().transformNode === node.parent && node.parent._childEscapesTransformGroup(node)) {
+      const childPlan = this._acquireGroupScope(this._resolvePreserveDrawOrder(node));
+      const barrierScope: BarrierScope = {
+        kind: RenderEntryKind.Barrier,
+        node,
+        effect: groupEscapeEffect,
+        childPlan,
+        left: 0,
+        top: 0,
+        width: 0,
+        height: 0,
+      };
+
+      this._pushBarrierEntry(reservedSeq, reservedZ, barrierScope);
+      this._scopeStack.push(childPlan);
+
+      try {
+        this.emitNode(node, seq);
+      } finally {
+        this._scopeStack.pop();
       }
 
       return;

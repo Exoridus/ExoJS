@@ -234,6 +234,19 @@ export class Container extends RenderNode {
     return this;
   }
 
+  /**
+   * @internal — whether `child` (a DIRECT child of this container) opts out of
+   * this container's transform-group boundary and resolves world-space
+   * transforms. Always `false` on plain containers; {@link RetainedContainer}
+   * overrides it with its revision-keyed deep-barrier branch-escape set
+   * (F13/R3). Every caller guards on the parent being an engaged boundary (or
+   * on the collect-scope's `transformNode`), so the base implementation is
+   * never on a hot path.
+   */
+  public _childEscapesTransformGroup(_child: RenderNode): boolean {
+    return false;
+  }
+
   /** @internal — propagate the owning stage down the whole subtree. */
   public override _setStage(stage: Stage | null): void {
     if (this._stage === stage) {
