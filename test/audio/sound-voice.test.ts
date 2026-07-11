@@ -378,21 +378,21 @@ describe('SoundVoice — capabilities', () => {
     sound.destroy();
   });
 
-  test('follow(node) tracks the node global transform on each manager tick', () => {
+  test('follow(node) tracks the node WORLD transform on each manager tick', () => {
     const factory = setupSourceSpy();
     const pannerSpy = setupPannerSpy();
     const manager = new AudioManager();
     const sound = new Sound(createAudioBufferStub());
 
     const voice = manager.play(sound) as SoundVoice;
-    const node = { getGlobalTransform: vi.fn().mockReturnValue({ x: 10, y: 20 }) };
+    const node = { getWorldTransform: vi.fn().mockReturnValue({ x: 10, y: 20 }) };
     voice.follow(node as never);
 
     expect(pannerSpy.panners.length).toBe(1);
 
     manager.update();
 
-    expect(node.getGlobalTransform).toHaveBeenCalled();
+    expect(node.getWorldTransform).toHaveBeenCalled();
     expect(pannerSpy.panners[0].positionX.setValueAtTime).toHaveBeenCalledWith(10, expect.any(Number));
     expect(pannerSpy.panners[0].positionY.setValueAtTime).toHaveBeenCalledWith(20, expect.any(Number));
 
