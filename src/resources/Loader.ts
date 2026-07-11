@@ -31,6 +31,7 @@ import { FactoryRegistry } from './FactoryRegistry';
 import { LoadingQueue } from './LoadingQueue';
 import type { SeamlessAdapter } from './seamless';
 import { BinaryAsset, CsvAsset, FontAsset, type ImageAsset, Json, SubtitleAsset, type SvgAsset, TextAsset, WasmAsset, XmlAsset } from './tokens';
+import { WeakHandleSet } from './WeakHandleSet';
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -288,15 +289,37 @@ export class Loader {
 
   // ── Seamless deferred handles (asset-system v2) ───────────────────────────
   // Adapter per seamless type; handles pending or failed, keyed by _key(type, source).
-  // Each entry tracks the SET of distinct handles in flight for the key (§7
+  // Each entry tracks the SET of distinct live handles for the key (§7
   // multi-handle fill): two catalog leaves for one source share a single
   // source-keyed decode yet are each filled in place. The first handle inserted
   // is the representative — the object that becomes the canonical `_resources`
-  // entry on store, mirroring the old single-handle contract. Successful fills
-  // remove the entry (the representative moves to _resources); failed entries
-  // stay so a later get() retries and heals the SAME handles in place.
+  // entry on store, mirroring the old single-handle contract.
+  //
+  // The entry PERSISTS across the store→evict→heal cycle (it is not dropped once
+  // the payload converges into `_resources`): the stored resource is registered
+  // here too, so a co-handle adopted from an already-stored donor joins the same
+  // set (audit A5) and a refcount-0 eviction re-arms EVERY live consumer, not
+  // just the representative. Handles are held WEAKLY ({@link WeakHandleSet}) so a
+  // fully-released source does not pin its evicted 0×0 `Texture`/`Sound` for the
+  // loader's lifetime (audit A4); `_deferredFinalization` prunes the emptied
+  // entry once the GC reclaims the last handle.
   private readonly _seamlessAdapters = new Map<AssetConstructor, SeamlessAdapter<unknown>>();
-  private readonly _deferred = new Map<string, { readonly handles: Set<object>; readonly options: unknown }>();
+  private readonly _deferred = new Map<string, { readonly handles: WeakHandleSet; readonly options: unknown }>();
+
+  // Prunes a deferred entry once the GC reclaims a handle registered under its
+  // key. When the last live handle for a key is gone the entry (and any evicted
+  // marker) is dropped, so `_deferred` cannot grow unbounded with dead handles
+  // at streaming scale (audit A4). The held value is the resource key. Spurious
+  // callbacks (a handle re-registered across evict cycles fires more than once)
+  // are safe — prune + delete-if-empty is idempotent.
+  private readonly _deferredFinalization = new FinalizationRegistry<string>((key: string): void => {
+    const entry = this._deferred.get(key);
+
+    if (entry !== undefined && !entry.handles.prune()) {
+      this._deferred.delete(key);
+      this._evicted.delete(key);
+    }
+  });
 
   // Value-asset refs (asset-system v2 §4.6): the ref is the stable identity —
   // entries persist for the loader's lifetime (fill keeps them, fail keeps
@@ -1426,8 +1449,7 @@ export class Loader {
     const stored = this._resources.get(ctor)?.get(meta.src);
 
     if (deferredEntry === undefined && stored === undefined) {
-      this._deferred.set(key, { handles: new Set([handle]), options: meta.opts });
-      this._handleKeys.set(handle, key);
+      this._createDeferredEntry(key, handle, meta.opts);
       this._claim(key, ctor, meta.src, claimer);
 
       if (background) {
@@ -1447,22 +1469,25 @@ export class Loader {
       // caller already holds this leaf) and register it so `release(handle)`
       // can resolve its key.
       //
-      // §7 remainder: this co-handle fills once from the stored payload but is
-      // NOT entered into the (already-cleared) deferred set, so a LATER
-      // evict+heal of this key will not touch it (it keeps the stale payload).
-      // Weak-retention over the full lifetime is the §7 follow-up; out of scope.
+      // Enter the co-handle into the key's (persistent) deferred set so a LATER
+      // evict+heal of this key re-arms and re-fills it too (audit A5). The stored
+      // donor was itself registered here at store time, so the entry already
+      // exists (its representative stays canonical); the co-handle only ever
+      // joins, never displaces it.
       const adapter = this._seamlessAdapters.get(ctor);
 
       adapter?.fill(handle, stored);
-      this._handleKeys.set(handle, key);
+
+      const entry = deferredEntry ?? this._createDeferredEntry(key, stored as object, meta.opts);
+
+      this._addDeferredHandle(key, entry, handle);
     } else if (deferredEntry !== undefined && stored === undefined && !deferredEntry.handles.has(handle)) {
       // A distinct handle is in flight for this key and nothing is stored yet:
       // join the key's handle set so `_storeResource` fills THIS handle too
       // (§7 multi-handle fill — this is the former silent hang). A conflicting
       // FETCH option (source-keyed decode can't differ) warns; differing
       // per-handle sampler options are fine (each handle carries its own).
-      deferredEntry.handles.add(handle);
-      this._handleKeys.set(handle, key);
+      this._addDeferredHandle(key, deferredEntry, handle);
       this._warnOnFetchOptionConflict(ctor, meta.src, key, deferredEntry.options, meta.opts);
     }
     // else: the SAME handle re-adopted, or already filled — a no-op.
@@ -1490,7 +1515,7 @@ export class Loader {
       // FETCH option warns — per-handle sampler/pre-size differences are fine.
       this._warnOnFetchOptionConflict(type, source, key, entry.options, options);
 
-      const representative = this._representative(entry.handles);
+      const representative = entry.handles.first();
 
       if (representative !== undefined) {
         if (adapter.stateOf(representative) === 'failed') {
@@ -1513,8 +1538,7 @@ export class Loader {
     // renders with the requested sampler options instead of the default.
     const handle = adapter.createPlaceholder(options);
 
-    this._deferred.set(key, { handles: new Set([handle as object]), options });
-    this._handleKeys.set(handle as object, key);
+    this._createDeferredEntry(key, handle as object, options);
     this._startSeamlessFetch(type, source, options);
 
     return handle;
@@ -1673,33 +1697,53 @@ export class Loader {
   }
 
   /**
-   * Free a key's payload while keeping its handle identity: find the handle
-   * (post-fill in `_resources`, or in-flight in `_deferred`), adapter-evict it
-   * (drops payload + re-arms to 'loading'), remove the stored resource, and
-   * re-register the handle in `_deferred` so the next claim heals in place.
-   * Also drops a not-yet-started background-queue entry. Seamless payloads only
-   * this slice — value-ref eviction is an accepted gap (§6 follow-up).
+   * Free a key's payload while keeping its handle identity: adapter-evict EVERY
+   * live consumer handle for the key (drops payload + re-arms each to 'loading'),
+   * remove the stored resource, and leave the handles registered in `_deferred`
+   * so the next claim heals them all in place. Also drops a not-yet-started
+   * background-queue entry. Seamless payloads only this slice — value-ref
+   * eviction is an accepted gap (§6 follow-up).
+   *
+   * Only a payload that has already converged into `_resources` is dropped here.
+   * A fetch still in flight (nothing stored yet) is left to the running fetch,
+   * which fills then frees on arrival (§4.7) — evicting mid-flight would race it.
    * @internal
    */
   private _evictKey(key: string, type: AssetConstructor, source: string): void {
     const adapter = this._seamlessAdapters.get(type);
-    // A still-deferred handle means the fetch is in flight and has not filled
-    // yet: leave it to the running fetch (which completes and fills the — now
-    // unclaimed — handle; §4.7 minimal). Only a payload that already converged
-    // into `_resources` is dropped in place here.
-    const deferred = this._deferred.get(key);
-    const handle = this._representative(deferred?.handles) ?? this._resources.get(type)?.get(source);
+    const stored = this._resources.get(type)?.get(source);
 
-    if (adapter !== undefined && deferred === undefined && handle !== undefined) {
-      adapter.evict(handle);
+    if (adapter !== undefined && stored !== undefined) {
+      const entry = this._deferred.get(key);
+      // Re-arm every live consumer handle in place: the representative AND any
+      // co-handle adopted from the stored donor (audit A5), so a later claim
+      // heals them all — not just the canonical one. The stored donor is itself
+      // a member (registered at store time); guard the fallback for the (defensive)
+      // case where no entry exists.
+      let evictedStored = false;
+
+      if (entry !== undefined) {
+        for (const handle of entry.handles) {
+          adapter.evict(handle);
+
+          if (handle === stored) {
+            evictedStored = true;
+          }
+        }
+      }
+
+      if (!evictedStored) {
+        adapter.evict(stored);
+      }
+
       this._resources.get(type)?.delete(source);
-      // The original options were consumed when the payload converged into
-      // `_resources` (the pre-fill `_deferred` entry is gone); the re-fetch
-      // re-derives them from the manifest entry, if any. Only the canonical
-      // representative is re-armed here — co-handles filled alongside it keep
-      // their payload (the §7 remainder gap).
-      this._deferred.set(key, { handles: new Set([handle as object]), options: undefined });
-      this._handleKeys.set(handle as object, key);
+
+      // Keep the handles registered (weakly) so the next claim heals them in
+      // place; the entry persists from store time, carrying the original options.
+      if (entry === undefined) {
+        this._createDeferredEntry(key, stored as object);
+      }
+
       this._evicted.add(key);
       // A load that just settled may leave a resolved-but-not-yet-cleaned
       // in-flight entry (its `.finally` cleanup is a pending microtask). Drop it
@@ -2233,9 +2277,39 @@ export class Loader {
     );
   }
 
-  /** The representative (first-inserted) member of a handle/ref set, or `undefined` if empty. @internal */
+  /** The representative (first-inserted) member of a ref set, or `undefined` if empty. @internal */
   private _representative<T>(members: ReadonlySet<T> | undefined): T | undefined {
     return members === undefined ? undefined : members.values().next().value;
+  }
+
+  /**
+   * Register a fresh deferred entry for `key` holding `handle` weakly, wire the
+   * reverse `handle → key` lookup, and arm GC pruning. Returns the entry so the
+   * caller can add further co-handles.
+   */
+  private _createDeferredEntry(key: string, handle: object, options?: unknown): { readonly handles: WeakHandleSet; readonly options: unknown } {
+    const entry = { handles: new WeakHandleSet(handle), options };
+
+    this._deferred.set(key, entry);
+    this._handleKeys.set(handle, key);
+    this._deferredFinalization.register(handle, key);
+
+    return entry;
+  }
+
+  /**
+   * Add `handle` to an existing deferred entry's weak handle set (idempotent for
+   * an already-tracked handle), wire the reverse lookup, and arm GC pruning.
+   */
+  private _addDeferredHandle(key: string, entry: { readonly handles: WeakHandleSet }, handle: object): void {
+    this._handleKeys.set(handle, key);
+
+    if (entry.handles.has(handle)) {
+      return;
+    }
+
+    entry.handles.add(handle);
+    this._deferredFinalization.register(handle, key);
   }
 
   /**
@@ -2441,8 +2515,9 @@ export class Loader {
         adapter.fill(handle, resource);
       }
 
-      this._deferred.delete(key);
-
+      // The entry is NOT dropped here: it persists as the key's live-handle
+      // registry so a co-handle adopt (audit A5) joins it and a refcount-0
+      // eviction re-arms every consumer. The representative stays canonical.
       if (representative !== undefined && representative !== resource) {
         resource = representative;
         filledDeferredHandle = true;
@@ -2473,6 +2548,15 @@ export class Loader {
     // Record the canonical reverse key (first alias wins) for object resources.
     if (typeof resource === 'object' && resource !== null && !this._resourceKeys.has(resource)) {
       this._resourceKeys.set(resource, { type, source: alias });
+    }
+
+    // Register the stored seamless resource as its key's representative so a
+    // later eviction re-arms it and a co-handle adopt (audit A5) joins the same
+    // set. A resource that already came from a deferred handle is a member
+    // already; a plain `load()` donor (no prior get()) is added here. Held
+    // weakly, so a fully-released source does not pin its evicted payload (A4).
+    if (typeof resource === 'object' && resource !== null && this._seamlessAdapters.has(type) && this._deferred.get(key) === undefined) {
+      this._createDeferredEntry(key, resource);
     }
 
     this.onLoaded.dispatch(type, alias, resource);
