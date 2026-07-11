@@ -1389,13 +1389,7 @@ export class WebGpuBackend implements RenderBackend {
     // (texel 2), so tint is covered by the copy.
     const transformData = this._getTransformStorage().buffer.data;
 
-    device.queue.writeBuffer(
-      bundle.transformBuffer!,
-      0,
-      transformData.buffer,
-      transformData.byteOffset + base * retainedTransformSlotBytes,
-      transformBytes,
-    );
+    device.queue.writeBuffer(bundle.transformBuffer!, 0, transformData.buffer, transformData.byteOffset + base * retainedTransformSlotBytes, transformBytes);
     this._accountant.recordBufferUpload(frame.totalBytes + transformBytes);
   }
 

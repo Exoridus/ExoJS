@@ -1064,7 +1064,11 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     }
   }
 
-  private _getOrCreateTextureBindGroup(device: GPUDevice, backend: WebGpuBackend, textures: ReadonlyArray<Texture | RenderTexture | null | undefined>): GPUBindGroup {
+  private _getOrCreateTextureBindGroup(
+    device: GPUDevice,
+    backend: WebGpuBackend,
+    textures: ReadonlyArray<Texture | RenderTexture | null | undefined>,
+  ): GPUBindGroup {
     // Slots beyond the active count get the slot-0 texture as a filler so
     // the bind-group layout always sees N valid texture views and samplers.
     // The fragment shader's switch only ever dispatches to the active slot
