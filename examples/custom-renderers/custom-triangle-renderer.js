@@ -65,8 +65,7 @@ class CustomTriangleRenderer {
         return this;
     }
     destroy() {
-        this.vertexBuffer?.destroy();
-        this.pipeline = null;
+        this.vertexBuffer.destroy();
     }
     createPipeline() {
         const shaderModule = this.device.createShaderModule({

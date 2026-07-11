@@ -710,6 +710,13 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
                 level: 'advanced',
                 examples: ['custom-renderers/custom-render-pass', 'custom-renderers/custom-triangle-renderer'],
             },
+            {
+                slug: 'authoring-extensions',
+                level: 'advanced',
+                prerequisites: ['debugging/custom-renderers'],
+                examples: ['custom-renderers/custom-triangle-renderer', 'particles/emitter-basics'],
+                apiLinks: ['extension', 'application', 'application-options'],
+            },
         ],
     },
     {
