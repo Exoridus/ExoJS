@@ -62,6 +62,18 @@ enum SceneNodeVectorChannel {
 const orientedCorners = [new Vector(), new Vector(), new Vector(), new Vector()];
 
 /**
+ * Process-wide dirty-walk epoch (F10). Advanced by EVERY consumer read of a
+ * node revision ({@link SceneNode._contentRevision}/`_structureRevision` —
+ * plan builds read them, so each build starts a fresh epoch implicitly and
+ * any extra read only bumps more often, which is the conservative direction:
+ * more bumps mean more full walks, never a missed one). Within one epoch,
+ * repeated up-walks over an already-stamped ancestor chain early-out — see
+ * {@link SceneNode._markContentDirty}. Starts at 1 so the initial per-node
+ * epoch stamps (0) are never spuriously "current".
+ */
+let dirtyWalkEpoch = 1;
+
+/**
  * Transform-bearing leaf in the scene-graph hierarchy. Carries position,
  * rotation, scale, skew, origin, and a 2-component {@link Vector} `anchor`
  * used to derive `origin` from the local bounds. Implements {@link Collidable}
@@ -835,40 +847,92 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
     }
   }
 
-  /** @internal — aggregate content-dirty stamp for this node's subtree (transform/tint/visual-source changes at or below). Read by {@link RetainedPlanCache}. */
+  /**
+   * @internal — aggregate content-dirty stamp for this node's subtree
+   * (transform/tint/visual-source changes at or below). Read by
+   * {@link RetainedPlanCache}. Reading it advances the dirty-walk epoch —
+   * see {@link _markContentDirty}.
+   */
   public get _contentRevision(): number {
+    dirtyWalkEpoch++;
+
     return this._nodeRevision.content;
   }
 
-  /** @internal — aggregate structure-dirty stamp (child add/remove/reorder, visibility) for this node's subtree. */
+  /**
+   * @internal — aggregate structure-dirty stamp (child add/remove/reorder,
+   * visibility) for this node's subtree. Reading it advances the dirty-walk
+   * epoch — see {@link _markContentDirty}.
+   */
   public get _structureRevision(): number {
+    dirtyWalkEpoch++;
+
     return this._nodeRevision.structure;
   }
 
-  /** @internal — mark this node's content dirty and propagate the stamp up to the root. */
+  /** Dirty-walk epoch stamps for the F10 early-out — see {@link _markContentDirty}. */
+  private _contentWalkEpoch = 0;
+  private _structureWalkEpoch = 0;
+
+  /**
+   * @internal — mark this node's content dirty and propagate the stamp up to
+   * the root. The walk deliberately runs THROUGH transform-group boundaries
+   * (nested retained snapshots key on ancestor revisions — plan decision D7
+   * is superseded; do not add boundary stops here).
+   *
+   * F10 early-out: a second revision bump of an ancestor is redundant exactly
+   * when no consumer has read revisions since the first bump — the consumer
+   * only needs to observe SOME new value relative to its last read, not the
+   * newest one. Every consumer read (the revision getters above) advances the
+   * process-wide `dirtyWalkEpoch`; the walk stamps each visited ancestor with
+   * the current epoch and stops at the first ancestor that is already
+   * epoch-current. Induction invariant: an epoch-current node implies ALL its
+   * ancestors are epoch-current, because every stamping walk is contiguous
+   * from a node up to either the root or an epoch-current ancestor (whose own
+   * ancestors are epoch-current by the same invariant), and a global epoch
+   * bump un-currents every node at once. So stopping early never skips a
+   * stale ancestor. N same-path mutations between two reads cost
+   * O(depth + N) stamps instead of O(N * depth).
+   */
   protected _markContentDirty(): void {
     const revision = nextNodeRevision();
+    const epoch = dirtyWalkEpoch;
 
     this._nodeRevision.touchContent(revision);
+    this._contentWalkEpoch = epoch;
 
     let ancestor = this._parentNode;
 
-    while (ancestor !== null) {
+    while (ancestor !== null && ancestor._contentWalkEpoch !== epoch) {
       ancestor._nodeRevision.touchContent(revision);
+      ancestor._contentWalkEpoch = epoch;
       ancestor = ancestor.parent;
     }
   }
 
-  /** @internal — mark this node's structure dirty (implies content-dirty) and propagate up to the root. */
+  /**
+   * @internal — mark this node's structure dirty (implies content-dirty) and
+   * propagate up to the root. Same through-boundary walk and epoch early-out
+   * as {@link _markContentDirty}; because `touchStructure` stamps BOTH
+   * revisions, the walk stamps both epochs, and it keys the early-out on the
+   * STRUCTURE epoch (structure-current implies content-current, since only
+   * this walk stamps the structure epoch — the converse does not hold, so a
+   * content walk can never wrongly block a structure walk).
+   */
   protected _markStructureDirty(): void {
     const revision = nextNodeRevision();
+    const epoch = dirtyWalkEpoch;
 
     this._nodeRevision.touchStructure(revision);
+    this._structureWalkEpoch = epoch;
+    this._contentWalkEpoch = epoch;
 
     let ancestor = this._parentNode;
 
-    while (ancestor !== null) {
+    while (ancestor !== null && ancestor._structureWalkEpoch !== epoch) {
       ancestor._nodeRevision.touchStructure(revision);
+      ancestor._structureWalkEpoch = epoch;
+      ancestor._contentWalkEpoch = epoch;
       ancestor = ancestor.parent;
     }
   }
