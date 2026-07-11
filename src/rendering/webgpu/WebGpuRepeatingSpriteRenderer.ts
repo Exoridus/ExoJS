@@ -1,6 +1,8 @@
 /// <reference types="@webgpu/types" />
 
+import { Matrix } from '#math/Matrix';
 import { Rectangle } from '#math/Rectangle';
+import { packAffineMat4 } from '#rendering/affinePacking';
 import type { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
 import { computeShaderTiling, type RepeatingSpriteQuad } from '#rendering/sprite/repeatingSpritePlan';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
@@ -131,7 +133,6 @@ fn geoFrag(input: VOut) -> @location(0) vec4<f32> {
 const shaderStrideBytes = 40; // float32x4 bounds + float32x4 uvParams + unorm8x4 + uint32
 const geoStrideBytes = 32; // float32x4 bounds + unorm16x4 + unorm8x4 + uint32 (NineSlice layout)
 const projectionByteLength = 128;
-const identityGroupMat4 = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
 const initialBatchCapacity = 32;
 const indicesPerInstance = 6;
 const quadIndices = new Uint16Array([0, 1, 2, 0, 2, 3]);
@@ -438,36 +439,10 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
       this._instanceArena.resetPass();
     }
 
-    const vm = backend.view.getTransform();
-    this._projData.set([vm.a, vm.c, 0, 0, vm.b, vm.d, 0, 0, 0, 0, 1, 0, vm.x, vm.y, 0, vm.z]);
-
-    const groupTransform = backend.renderGroupTransform;
-
-    if (groupTransform !== null) {
-      this._projData.set(
-        [
-          groupTransform.a,
-          groupTransform.c,
-          0,
-          0,
-          groupTransform.b,
-          groupTransform.d,
-          0,
-          0,
-          0,
-          0,
-          1,
-          0,
-          groupTransform.x,
-          groupTransform.y,
-          0,
-          groupTransform.z,
-        ],
-        16,
-      );
-    } else {
-      this._projData.set(identityGroupMat4, 16);
-    }
+    // ProjectionUniforms layout: mat4x4 projection + mat4x4 group, packed via
+    // the shared canonical (non-transposed) column order.
+    packAffineMat4(backend.view.getTransform(), this._projData, 0);
+    packAffineMat4(backend.renderGroupTransform ?? Matrix.identity, this._projData, 16);
 
     this._writtenGroupTransformId = backend.renderGroupTransformId;
 

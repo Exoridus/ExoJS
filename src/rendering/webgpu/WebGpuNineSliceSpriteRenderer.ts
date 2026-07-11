@@ -1,5 +1,7 @@
 /// <reference types="@webgpu/types" />
 
+import { Matrix } from '#math/Matrix';
+import { packAffineMat4 } from '#rendering/affinePacking';
 import type { NineSliceQuad } from '#rendering/sprite/nineSlice';
 import type { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
@@ -84,7 +86,6 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
 const instanceStrideBytes = 32;
 const wordsPerInstance = instanceStrideBytes / Uint32Array.BYTES_PER_ELEMENT; // = 8
 const projectionByteLength = 128;
-const identityGroupMat4 = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
 const initialBatchCapacity = 32;
 const indicesPerInstance = 6;
 const quadIndices = new Uint16Array([0, 1, 2, 0, 2, 3]);
@@ -294,37 +295,10 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
       this._instanceArena.resetPass();
     }
 
-    const viewMatrix = backend.view.getTransform();
-
-    this._projectionData.set([viewMatrix.a, viewMatrix.c, 0, 0, viewMatrix.b, viewMatrix.d, 0, 0, 0, 0, 1, 0, viewMatrix.x, viewMatrix.y, 0, viewMatrix.z]);
-
-    const groupTransform = backend.renderGroupTransform;
-
-    if (groupTransform !== null) {
-      this._projectionData.set(
-        [
-          groupTransform.a,
-          groupTransform.c,
-          0,
-          0,
-          groupTransform.b,
-          groupTransform.d,
-          0,
-          0,
-          0,
-          0,
-          1,
-          0,
-          groupTransform.x,
-          groupTransform.y,
-          0,
-          groupTransform.z,
-        ],
-        16,
-      );
-    } else {
-      this._projectionData.set(identityGroupMat4, 16);
-    }
+    // ProjectionUniforms layout: mat4x4 projection + mat4x4 group, packed via
+    // the shared canonical (non-transposed) column order.
+    packAffineMat4(backend.view.getTransform(), this._projectionData, 0);
+    packAffineMat4(backend.renderGroupTransform ?? Matrix.identity, this._projectionData, 16);
 
     this._writtenGroupTransformId = backend.renderGroupTransformId;
 
