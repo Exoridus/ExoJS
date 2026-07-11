@@ -32,8 +32,7 @@ interface FragmentCarrier {
 
 const fragmentOf = (group: RetainedContainer): RetainedGroupFragment => (group as unknown as FragmentCarrier)._fragment;
 
-const bundleOf = (group: RetainedContainer): WebGl2RetainedGroupResources =>
-  fragmentOf(group).instructions!.ownedBundle as WebGl2RetainedGroupResources;
+const bundleOf = (group: RetainedContainer): WebGl2RetainedGroupResources => fragmentOf(group).instructions!.ownedBundle as WebGl2RetainedGroupResources;
 
 const withHarness = (fn: (harness: WebGl2Harness) => void): void => {
   const harness = createWebGl2Harness();
