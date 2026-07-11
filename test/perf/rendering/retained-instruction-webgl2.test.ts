@@ -236,6 +236,43 @@ describe('WebGL2 retained instruction set: record + splice ladder (Tasks 6/7)', 
     });
   });
 
+  it('a texture RESIZE inside the group fails collect-time validation, falls back and re-records the same frame (S3-D3)', () => {
+    withHarness(harness => {
+      const { root, group, textureA } = buildScene();
+
+      measureFrame(harness, root); // F1 capture
+      measureFrame(harness, root); // F2 record
+      measureFrame(harness, root); // F3 splice
+
+      expect(fragmentOf(group).instructions?.hasRecording).toBe(true);
+
+      const beginSpy = vi.spyOn(harness.backend, '_beginRetainedCapture');
+      const replaySpy = vi.spyOn(harness.backend, '_replayRetainedBatch');
+
+      // Resize: bumps only the texture version — no node revision, the
+      // fragment stays clean. The recorded UV words are normalized against
+      // the record-time size (WebGl2SpriteRenderer._packInstance), so a
+      // replay would sample a stale region: only the backend's collect-time
+      // validation can catch this (the WebGPU parity guard).
+      textureA.setSize(128, 128);
+
+      measureFrame(harness, root); // must fall back to entry replay + re-record
+
+      expect(replaySpy).not.toHaveBeenCalled(); // no stale batch replayed
+      expect(beginSpy).toHaveBeenCalledTimes(1); // re-recorded the SAME frame
+      expect(fragmentOf(group).instructions?.hasRecording).toBe(true);
+
+      // Steady state: the fresh recording (packed against 128x128) replays.
+      const spliced = measureFrame(harness, root);
+
+      expect(replaySpy).toHaveBeenCalledTimes(1);
+      expect(beginSpy).toHaveBeenCalledTimes(1);
+      expect(spliced.instances).toBe(4);
+
+      root.destroy();
+    });
+  });
+
   it('nested retained groups: the outer set replays the whole spine; a nested group move stays replay-only (S3-D6)', () => {
     withHarness(harness => {
       const [texture] = makeTextures(1);

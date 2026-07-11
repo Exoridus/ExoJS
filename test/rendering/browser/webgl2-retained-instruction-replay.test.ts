@@ -19,6 +19,7 @@
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
+import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
 import type { RenderNode } from '#rendering/RenderNode';
 import { RetainedContainer } from '#rendering/RetainedContainer';
@@ -485,6 +486,98 @@ describe('WebGL2 renderer matrix: retained instruction-set replay cells', () => 
     } finally {
       yellow.destroy();
       scene.destroy();
+      backend.destroy();
+    }
+  });
+
+  test('cell 7 — texture RESIZE inside the group is never served stale UVs by the fast tier', async () => {
+    const backend = await createBackend();
+
+    // Dedicated scene: the group sprite samples a canvas texture through a
+    // PINNED 16x16 frame, so a source resize changes only the UV
+    // normalization — the instance words the recorder baked (S3-D5.3 class:
+    // view-independent DATA that silently went stale). A resize bumps only
+    // the texture version, never a node revision, so the fragment stays
+    // clean and ONLY the backend's collect-time validation can catch it.
+    const src = document.createElement('canvas');
+
+    src.width = 16;
+    src.height = 16;
+
+    const ctx = src.getContext('2d')!;
+
+    ctx.fillStyle = '#ff0000';
+    ctx.fillRect(0, 0, 16, 16);
+
+    const tex = new Texture(src);
+    const blue = createSolidTexture('#0000ff');
+    const root = new Container();
+    const outside = new Sprite(blue); // keeps the group-local rebase load-bearing
+    const group = new RetainedContainer();
+    const sprite = new Sprite(tex);
+
+    outside.setPosition(48, 0);
+    sprite.textureFrame = new Rectangle(0, 0, 16, 16); // pinned across the resize
+    group.addChild(sprite);
+    group.setPosition(8, 24);
+    root.addChild(outside);
+    root.addChild(group);
+
+    try {
+      render(backend, root); // F1 capture
+      render(backend, root); // F2 record
+      render(backend, root); // F3 splice
+
+      expectPixelNear(readPixel(backend, 12, 28), [255, 0, 0, 255]);
+      expectPixelNear(readPixel(backend, 20, 36), [255, 0, 0, 255]);
+
+      // Resize the source to 32x32: left half green, right half blue. The
+      // recorded UV words are normalized against the OLD 16x16 size (u in
+      // 0..1 over the full width); live packing normalizes the pinned 16x16
+      // frame against the NEW 32x32 size (u in 0..0.5 -> pure green). A
+      // stale replay samples the full new width, so blue bleeds into the
+      // right half of the quad.
+      src.width = 32;
+      src.height = 32;
+      ctx.fillStyle = '#00ff00';
+      ctx.fillRect(0, 0, 16, 32);
+      ctx.fillStyle = '#0000ff';
+      ctx.fillRect(16, 0, 16, 32);
+      tex.updateSource();
+
+      const beginSpy = vi.spyOn(backend, '_beginRetainedCapture');
+
+      render(backend, root); // validation must reject -> live fallback + re-record
+
+      expectPixelNear(readPixel(backend, 12, 28), [0, 255, 0, 255]);
+      expectPixelNear(readPixel(backend, 20, 36), [0, 255, 0, 255]); // stale UVs would show BLUE here
+      expect(beginSpy).toHaveBeenCalledTimes(1); // re-recorded the same frame
+
+      const replaySpy = vi.spyOn(backend, '_replayRetainedBatch');
+
+      render(backend, root); // the fresh recording replays
+
+      expect(replaySpy).toHaveBeenCalled();
+      expect(beginSpy).toHaveBeenCalledTimes(1);
+      expectPixelNear(readPixel(backend, 20, 36), [0, 255, 0, 255]);
+
+      // Same-size repaint: a pure content update keeps the recorded UVs
+      // valid — the fast tier must keep replaying (no recapture) and sample
+      // the re-uploaded pixels.
+      ctx.fillStyle = '#ff00ff';
+      ctx.fillRect(0, 0, 32, 32);
+      tex.updateSource();
+      replaySpy.mockClear();
+
+      render(backend, root);
+
+      expect(replaySpy).toHaveBeenCalled();
+      expect(beginSpy).toHaveBeenCalledTimes(1); // still no recapture
+      expectPixelNear(readPixel(backend, 12, 28), [255, 0, 255, 255]); // magenta via the valid cached UVs
+    } finally {
+      tex.destroy();
+      blue.destroy();
+      root.destroy();
       backend.destroy();
     }
   });

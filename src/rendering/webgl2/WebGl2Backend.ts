@@ -40,6 +40,7 @@ import { WebGl2MaskCompositor } from './WebGl2MaskCompositor';
 import { WebGl2MeshRenderer } from './WebGl2MeshRenderer';
 import { WebGl2PassCoordinator } from './WebGl2PassCoordinator';
 import {
+  type WebGl2RecordedTextureState,
   type WebGl2RetainedBatchPayload,
   type WebGl2RetainedBatchReplayer,
   WebGl2RetainedGroupResources,
@@ -1204,10 +1205,17 @@ export class WebGl2Backend implements RenderBackend {
     const innermost = captures[captures.length - 1]!;
     const byteOffset = innermost.bundle._appendInstanceWords(words);
     const boundTextures: Array<Texture | RenderTexture> = [];
+    const recordedTextureState: WebGl2RecordedTextureState[] = [];
 
     for (let i = 0; i < textureCount; i++) {
       // Non-null: slots `0..textureCount-1` are the renderer's bound textures.
-      boundTextures.push(textures[i]!);
+      const texture = textures[i]!;
+
+      boundTextures.push(texture);
+      // Record-time size/flipY: the packed UV words are normalized against
+      // these, so collect-time validation must reject the batch when they
+      // move (see _validateRetainedInstructionSet).
+      recordedTextureState.push({ width: texture.width, height: texture.height, flipY: texture.flipY });
     }
 
     const payload: WebGl2RetainedBatchPayload = {
@@ -1215,6 +1223,7 @@ export class WebGl2Backend implements RenderBackend {
       replayer,
       blendMode,
       textures: boundTextures,
+      recordedTextureState,
       instanceCount,
       byteOffset,
       vao: null,
@@ -1266,6 +1275,55 @@ export class WebGl2Backend implements RenderBackend {
       drawCalls: 0,
       payload: null,
     };
+  }
+
+  /**
+   * Collect-time backend validation (S3-D3) on top of the plan-level
+   * generation check — the WebGPU view-identity guard's WebGL2 counterpart:
+   * every recorded batch's textures must still have their record-time size
+   * and flipY orientation. The per-instance UV words baked into the group
+   * instance buffer are normalized against the record-time texture size
+   * (with the flipY swap applied at pack time), and a texture resize bumps
+   * only the texture VERSION — never a node revision — so the fragment stays
+   * clean and replaying would sample a stale region. A failed check also
+   * DROPS the recording (`set.invalidate()`, the sanctioned drop-&-re-record
+   * mode), so the group entry-replays live and re-records on this same
+   * frame. Same-size content updates pass: textures are re-bound and
+   * re-synced live at replay, only the normalization inputs matter here.
+   * @internal
+   */
+  public _validateRetainedInstructionSet(set: RetainedInstructionSet): boolean {
+    if (this._contextLost) {
+      return false;
+    }
+
+    for (const instruction of set.instructions) {
+      if (instruction.kind !== RetainedInstructionKind.Batch) {
+        continue;
+      }
+
+      const payload = instruction.payload as WebGl2RetainedBatchPayload | null;
+
+      if (payload === null || typeof payload !== 'object' || !(payload.bundle instanceof WebGl2RetainedGroupResources)) {
+        return false;
+      }
+
+      const textures = payload.textures;
+
+      for (let i = 0; i < textures.length; i++) {
+        // In-bounds: i < textures.length; recordedTextureState is parallel.
+        const texture = textures[i]!;
+        const recorded = payload.recordedTextureState[i]!;
+
+        if (texture.width !== recorded.width || texture.height !== recorded.height || texture.flipY !== recorded.flipY) {
+          set.invalidate();
+
+          return false;
+        }
+      }
+    }
+
+    return true;
   }
 
   /**

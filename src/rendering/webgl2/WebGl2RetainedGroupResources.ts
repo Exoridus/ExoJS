@@ -25,6 +25,23 @@ export interface WebGl2RetainedNodeIndexRange {
 }
 
 /**
+ * Record-time state of one texture slot, parallel to a payload's `textures`
+ * list (S3-D3 collect-time validation — the WebGPU view-identity guard's
+ * WebGL2 counterpart). The recorded per-instance UV words are normalized
+ * against the texture size with the flipY swap baked in
+ * (`WebGl2SpriteRenderer._packInstance`), and a resize bumps only the texture
+ * VERSION — never a node revision — so the fragment stays clean and only
+ * `_validateRetainedInstructionSet` can force the recapture. Same-size
+ * content updates stay replayable (textures are re-bound live at replay).
+ * @internal
+ */
+export interface WebGl2RecordedTextureState {
+  readonly width: number;
+  readonly height: number;
+  readonly flipY: boolean;
+}
+
+/**
  * Backend-side replay descriptor for one recorded sprite flush (S3-D1). This
  * is the opaque `payload` carried by a plan-level `RetainedBatchInstruction`:
  * everything the owning renderer needs to re-issue the batch from group-owned
@@ -41,6 +58,8 @@ export interface WebGl2RetainedBatchPayload {
   readonly blendMode: BlendModes;
   /** Base textures in recorded slot order (bound to units `0..length-1` at replay). */
   readonly textures: ReadonlyArray<Texture | RenderTexture>;
+  /** Record-time size/flipY per slot (see {@link WebGl2RecordedTextureState}). */
+  readonly recordedTextureState: readonly WebGl2RecordedTextureState[];
   /** Instances drawn by this batch. */
   readonly instanceCount: number;
   /** Byte offset of this batch's instance data inside the bundle's instance buffer. */
