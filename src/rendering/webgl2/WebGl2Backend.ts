@@ -120,7 +120,16 @@ interface DestroyListenable {
   removeDestroyListener(listener: () => void): unknown;
 }
 
-const renderTargetTextureSyncUnit = 15;
+// Scratch texture unit used to sync a RenderTexture target's color texture
+// (see _prepareRenderTarget). _syncTexture binds on the active unit and only
+// the ACTIVE unit is restored afterwards — the binding itself stays. The unit
+// must therefore be one no shader program ever samples: units 0..15 are the
+// sprite batcher's base-texture slots and unit 16 hosts the shared transform
+// buffer texture, so the scratch unit sits above them at 17 (WebGL2 guarantees
+// MAX_COMBINED_TEXTURE_IMAGE_UNITS >= 32). A stale render-target binding on a
+// sampled unit while that texture is the FBO color attachment is a WebGL
+// feedback loop: INVALID_OPERATION, whole draw dropped.
+const renderTargetTextureSyncUnit = 17;
 
 /**
  * WebGL 2.0 implementation of {@link RenderBackend}. Manages the GL
