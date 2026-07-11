@@ -35,4 +35,34 @@ describe('Assets.group', () => {
     // per-entry mimeType wins over shared
     expect(group.boss).toEqual({ kind: 'texture', source: 'b.png', mimeType: 'image/png' });
   });
+
+  it('rejects an entry that carries its own "kind" instead of silently overriding the group kind (A2)', () => {
+    expect(() =>
+      Assets.group('texture', {
+        // A kind-carrying entry contradicts the same-kind contract — previously
+        // { kind, ...base, ...entry } let entry.kind silently win.
+        boss: { kind: 'sound', source: 'b.png' } as never,
+      }),
+    ).toThrow(/kind/);
+  });
+
+  it('rejects a nested group spread into another group (A2)', () => {
+    expect(() =>
+      Assets.group('texture', {
+        // A nested group produces { kind, source, ... } values — reject them with
+        // guidance to spread groups into Assets.from(...) instead.
+        ...(Assets.group('sound', { jump: 'jump.wav' }) as never),
+      } as never),
+    ).toThrow(/kind/);
+  });
+
+  it('still composes multiple groups when spread into Assets.from()', () => {
+    const assets = Assets.from({
+      ...Assets.group('texture', { player: 'player.png' }),
+      ...Assets.group('sound', { jump: 'jump.wav' }),
+    });
+
+    expect(assets.player).toBeInstanceOf(Texture);
+    expect(assets.jump.state).toBe('idle');
+  });
 });

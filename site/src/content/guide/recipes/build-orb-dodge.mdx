@@ -66,18 +66,18 @@ The player is a filled circle drawn with `Graphics`. Keyboard movement uses `thi
 
 ```js
 init() {
-    this._world = new Container();
+    this.world = new Container();
 
-    this._player = new Graphics();
-    this._player.fillColor = new Color(80, 160, 255);
-    this._player.drawCircle(0, 0, PLAYER_RADIUS);
-    this._player.setPosition(this._px, this._py);
-    this._world.addChild(this._player);
+    this.player = new Graphics();
+    this.player.fillColor = new Color(80, 160, 255);
+    this.player.drawCircle(0, 0, PLAYER_RADIUS);
+    this.player.setPosition(this.px, this.py);
+    this.world.addChild(this.player);
 
-    this.inputs.onActive(Keyboard.W, () => { this._dy = -1; });
-    this.inputs.onStop(Keyboard.W,  () => { if (this._dy < 0) this._dy = 0; });
-    this.inputs.onActive(Keyboard.Up, () => { this._dy = -1; });
-    this.inputs.onStop(Keyboard.Up,  () => { if (this._dy < 0) this._dy = 0; });
+    this.inputs.onActive(Keyboard.W, () => { this.dy = -1; });
+    this.inputs.onStop(Keyboard.W,  () => { if (this.dy < 0) this.dy = 0; });
+    this.inputs.onActive(Keyboard.Up, () => { this.dy = -1; });
+    this.inputs.onStop(Keyboard.Up,  () => { if (this.dy < 0) this.dy = 0; });
     // ... A/D and Left/Right similarly
 }
 ```
@@ -90,14 +90,14 @@ In `update`, normalize the direction vector so diagonal movement is not faster t
 
 ```js
 update(delta) {
-    const mag = Math.hypot(this._dx, this._dy) || 1;
-    if (this._dx !== 0 || this._dy !== 0) {
-        this._px += (this._dx / mag) * PLAYER_SPEED * delta.seconds;
-        this._py += (this._dy / mag) * PLAYER_SPEED * delta.seconds;
+    const mag = Math.hypot(this.dx, this.dy) || 1;
+    if (this.dx !== 0 || this.dy !== 0) {
+        this.px += (this.dx / mag) * PLAYER_SPEED * delta.seconds;
+        this.py += (this.dy / mag) * PLAYER_SPEED * delta.seconds;
     }
-    this._px = Math.max(PLAYER_RADIUS, Math.min(CANVAS_WIDTH - PLAYER_RADIUS, this._px));
-    this._py = Math.max(PLAYER_RADIUS, Math.min(CANVAS_HEIGHT - PLAYER_RADIUS, this._py));
-    this._player.setPosition(this._px, this._py);
+    this.px = Math.max(PLAYER_RADIUS, Math.min(CANVAS_WIDTH - PLAYER_RADIUS, this.px));
+    this.py = Math.max(PLAYER_RADIUS, Math.min(CANVAS_HEIGHT - PLAYER_RADIUS, this.py));
+    this.player.setPosition(this.px, this.py);
 }
 ```
 
@@ -108,7 +108,7 @@ update(delta) {
 Orbs are created dynamically during `update` on a timer. Each orb spawns just outside one of the four edges and moves toward the center area with a small random offset:
 
 ```js
-_spawnOrb() {
+spawnOrb() {
     const danger = Math.random() < 0.4;
     // pick a random edge (0=top, 1=right, 2=bottom, 3=left)
     const side = Math.floor(Math.random() * 4);
@@ -129,8 +129,8 @@ _spawnOrb() {
     gfx.fillColor = danger ? new Color(255, 80, 80) : new Color(80, 220, 120);
     gfx.drawCircle(0, 0, ORB_RADIUS);
     gfx.setPosition(ox, oy);
-    this._world.addChild(gfx);
-    this._orbs.push({ gfx, vx: ((tx - ox) / dist) * speed, vy: ((ty - oy) / dist) * speed, danger });
+    this.world.addChild(gfx);
+    this.orbs.push({ gfx, vx: ((tx - ox) / dist) * speed, vy: ((ty - oy) / dist) * speed, danger });
 }
 ```
 
@@ -141,21 +141,21 @@ Orbs are stored in an array of `{ gfx, vx, vy, danger }` objects. Danger orbs ar
 Each frame, move every orb and check its distance to the player. Distance collision is reliable for circles because it captures overlap without axis-aligned assumptions:
 
 ```js
-const dist = Math.hypot(ox - this._px, oy - this._py);
+const dist = Math.hypot(ox - this.px, oy - this.py);
 if (dist < PLAYER_RADIUS + ORB_RADIUS) {
-    this._world.removeChild(orb.gfx);
+    this.world.removeChild(orb.gfx);
     orb.gfx.destroy();
     if (orb.danger) {
         // clean up remaining orbs, switch to game over
         for (const o of survived) {
-            this._world.removeChild(o.gfx);
+            this.world.removeChild(o.gfx);
             o.gfx.destroy();
         }
         gameEnded = true;
         continue;
     }
-    this._score++;
-    this._scoreText.text = `Score: ${this._score}`;
+    this.score++;
+    this.scoreText.text = `Score: ${this.score}`;
     continue;
 }
 ```
@@ -164,27 +164,27 @@ Orbs that leave the canvas are also removed. After the loop, if `gameEnded` is t
 
 ## HUD text
 
-Score and elapsed time sit on top of the world as plain `Text` nodes — rendered after `context.render(this._world)` so they always appear in front:
+Score and elapsed time sit on top of the world as plain `Text` nodes — rendered after `context.render(this.world)` so they always appear in front:
 
 ```js
 draw(context) {
     context.backend.clear();
-    context.render(this._world);
-    context.render(this._scoreText);
-    context.render(this._timeText);
+    context.render(this.world);
+    context.render(this.scoreText);
+    context.render(this.timeText);
 }
 ```
 
 `Text` content is updated by assigning to `.text`:
 
 ```js
-this._scoreText.text = `Score: ${this._score}`;
-this._timeText.text  = `${this._elapsed.toFixed(1)} s`;
+this.scoreText.text = `Score: ${this.score}`;
+this.timeText.text  = `${this.elapsed.toFixed(1)} s`;
 ```
 
 ## Game-over scene and restart
 
-`GameOverScene` receives the final score and time via a `setResult` method called just before `setScene`. This decouples data transfer from scene initialization — `init` always reads from `_finalScore` / `_finalTime`, whatever they were set to:
+`GameOverScene` receives the final score and time via a `setResult` method called just before `setScene`. This decouples data transfer from scene initialization — `init` always reads from `finalScore` / `finalTime`, whatever they were set to:
 
 <SourceSnippet
   source="examples/showcase/orb-dodge.ts"
@@ -214,10 +214,10 @@ When `SceneManager` switches scenes it calls `destroy()` on the outgoing scene. 
 
 ```js
 override destroy() {
-    for (const orb of this._orbs) {
+    for (const orb of this.orbs) {
         orb.gfx.destroy();
     }
-    this._world?.destroy();
+    this.world?.destroy();
     super.destroy();
 }
 ```

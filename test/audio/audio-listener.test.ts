@@ -1,6 +1,8 @@
 ﻿import { getAudioContext } from '#audio/audio-context';
 import { AudioListener } from '#audio/AudioListener';
 import { Signal } from '#core/Signal';
+import { Drawable } from '#rendering/Drawable';
+import { RetainedContainer } from '#rendering/RetainedContainer';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -22,7 +24,7 @@ const getListenerMock = (): {
 } => (getCtx() as unknown as { listener: ReturnType<typeof getListenerMock> }).listener;
 
 const makeSceneNodeStub = (x: number, y: number) => ({
-  getGlobalTransform: vi.fn().mockReturnValue({ x, y }),
+  getWorldTransform: vi.fn().mockReturnValue({ x, y }),
 });
 
 const makeViewStub = (x: number, y: number) => ({
@@ -73,16 +75,38 @@ describe('AudioListener', () => {
     listener.destroy();
   });
 
-  // 2. target = sceneNode: _tick() reads sceneNode.getGlobalTransform
-  test('_tick() reads position from SceneNode.getGlobalTransform() when target is a SceneNode', () => {
+  // 2. target = sceneNode: _tick() reads sceneNode.getWorldTransform (AU1:
+  // the WORLD matrix, not the group-relative global one).
+  test('_tick() reads position from SceneNode.getWorldTransform() when target is a SceneNode', () => {
     const listener = new AudioListener();
     const node = makeSceneNodeStub(100, 200);
     listener.target = node as unknown as Parameters<(typeof listener)['target'] extends infer T ? (t: T) => void : never>[0];
     listener._tick();
-    expect(node.getGlobalTransform).toHaveBeenCalledTimes(1);
+    expect(node.getWorldTransform).toHaveBeenCalledTimes(1);
     expect(listener.position.x).toBe(100);
     expect(listener.position.y).toBe(200);
     listener.destroy();
+  });
+
+  // AU1: a listener following a node inside a translated RetainedContainer
+  // must observe the node's WORLD position.
+  test('_tick() resolves the world position for a target node inside a translated RetainedContainer', () => {
+    const listener = new AudioListener();
+    const group = new RetainedContainer();
+    const hero = new Drawable();
+
+    group.setPosition(-500, 40);
+    hero.setPosition(600, 10);
+    group.addChild(hero);
+
+    listener.target = hero;
+    listener._tick();
+
+    expect(listener.position.x).toBe(100);
+    expect(listener.position.y).toBe(50);
+
+    listener.destroy();
+    group.destroy();
   });
 
   // 3. target = view: _tick() reads view.center
@@ -220,12 +244,12 @@ describe('AudioListener', () => {
   });
 
   // R4. _tick() reads global transform from a SceneNode target
-  test('_tick() reads global transform from SceneNode target', () => {
+  test('_tick() reads the world transform from a SceneNode target', () => {
     const listener = new AudioListener();
     const node = makeSceneNodeStub(77, 88);
     listener.target = node as unknown as Parameters<(typeof listener)['target'] extends infer T ? (t: T) => void : never>[0];
     listener._tick();
-    expect(node.getGlobalTransform).toHaveBeenCalledTimes(1);
+    expect(node.getWorldTransform).toHaveBeenCalledTimes(1);
     expect(listener.position.x).toBe(77);
     expect(listener.position.y).toBe(88);
     listener.destroy();

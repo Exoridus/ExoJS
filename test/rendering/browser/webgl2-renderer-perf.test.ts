@@ -60,34 +60,6 @@ void main() {
   v_textureSlot = a_textureSlot;
 }`,
 
-  spriteFragmentSource: `#version 300 es
-precision mediump float;
-in vec2 v_texcoord;
-in vec4 v_color;
-flat in uint v_textureSlot;
-uniform sampler2D u_texture0;
-uniform sampler2D u_texture1;
-uniform sampler2D u_texture2;
-uniform sampler2D u_texture3;
-uniform sampler2D u_texture4;
-uniform sampler2D u_texture5;
-uniform sampler2D u_texture6;
-uniform sampler2D u_texture7;
-out vec4 outColor;
-vec4 sampleTexture(uint slot, vec2 uv) {
-  if (slot == uint(0)) return texture(u_texture0, uv);
-  if (slot == uint(1)) return texture(u_texture1, uv);
-  if (slot == uint(2)) return texture(u_texture2, uv);
-  if (slot == uint(3)) return texture(u_texture3, uv);
-  if (slot == uint(4)) return texture(u_texture4, uv);
-  if (slot == uint(5)) return texture(u_texture5, uv);
-  if (slot == uint(6)) return texture(u_texture6, uv);
-  return texture(u_texture7, uv);
-}
-void main() {
-  outColor = sampleTexture(v_textureSlot, v_texcoord) * v_color;
-}`,
-
   meshVertexSource: `#version 300 es
 precision lowp float;
 layout(location = 0) in vec2 a_position;
@@ -150,7 +122,7 @@ void main() {
 }));
 
 vi.mock('#rendering/webgl2/glsl/sprite.vert', () => ({ default: shaderSources.spriteVertexSource }));
-vi.mock('#rendering/webgl2/glsl/sprite.frag', () => ({ default: shaderSources.spriteFragmentSource }));
+vi.mock('#rendering/webgl2/glsl/sprite.frag', async () => ({ default: (await import('./_spriteFragMock')).createSpriteFragMockSource('v_texcoord') }));
 vi.mock('#rendering/webgl2/glsl/mesh.vert', () => ({ default: shaderSources.meshVertexSource }));
 vi.mock('#rendering/webgl2/glsl/mesh.frag', () => ({ default: shaderSources.meshFragmentSource }));
 vi.mock('#rendering/webgl2/glsl/text.vert', () => ({ default: shaderSources.textVertexSource }));
@@ -495,9 +467,9 @@ describe('WebGL2 renderer perf — Sprite', () => {
     }
   });
 
-  it('200 sprites / 8 cycled textures → 1 draw (multi-texture slot merge)', async () => {
+  it('200 sprites / 16 cycled textures → 1 draw (multi-texture slot merge)', async () => {
     const backend = await createCoreBackend();
-    const textures = makeTextures(8);
+    const textures = makeTextures(16);
     const { root } = buildSprites(200, textures, 'cycle');
 
     try {
@@ -509,10 +481,10 @@ describe('WebGL2 renderer perf — Sprite', () => {
     }
   });
 
-  it('9 distinct textures → 2 draws (slot exhaustion at 9th texture)', async () => {
+  it('17 distinct textures → 2 draws (slot exhaustion at 17th texture)', async () => {
     const backend = await createCoreBackend();
-    const textures = makeTextures(9);
-    const { root } = buildSprites(9, textures, 'distinct');
+    const textures = makeTextures(17);
+    const { root } = buildSprites(17, textures, 'distinct');
 
     try {
       expect(render(backend, root)).toBe(2);
@@ -523,10 +495,10 @@ describe('WebGL2 renderer perf — Sprite', () => {
     }
   });
 
-  it('17 distinct textures → 3 draws (two slot-exhaustion flushes)', async () => {
+  it('33 distinct textures → 3 draws (two slot-exhaustion flushes)', async () => {
     const backend = await createCoreBackend();
-    const textures = makeTextures(17);
-    const { root } = buildSprites(17, textures, 'distinct');
+    const textures = makeTextures(33);
+    const { root } = buildSprites(33, textures, 'distinct');
 
     try {
       expect(render(backend, root)).toBe(3);

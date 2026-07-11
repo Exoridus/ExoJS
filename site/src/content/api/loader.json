@@ -2433,7 +2433,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Removes all loaded assets from the in-memory store. If type is provided, only that type's assets are cleared; otherwise all types are flushed. Does not cancel in-flight fetches."
+          "description": "Removes loaded assets from the in-memory store. If type is provided, only that type's assets are cleared; otherwise all types are flushed. Does not cancel in-flight fetches — but, like unload, it forgets each key's claim/handle bookkeeping so repeated load→unloadAll cycles cannot accumulate stale entries (A3)."
         }
       ],
       "paragraphs": [],

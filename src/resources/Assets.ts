@@ -35,7 +35,7 @@ export type InferAssetsProperties<M extends Record<string, CatalogEntry>> = {
  * already-constructed `Asset` contributes its `_config`; a plain config passes
  * through unchanged.
  */
-function _normalizeEntry(value: CatalogEntry): AnyAssetConfig {
+export function _normalizeEntry(value: CatalogEntry): AnyAssetConfig {
   if (typeof value === 'string') {
     const kind = resolveKindByPath(value);
     if (kind === undefined) {
@@ -148,10 +148,19 @@ type AssetsFacade = AssetsConstructorFn & {
   one<const E extends CatalogEntry>(entry: E): InferCatalogLeaf<E>;
 
   /**
-   * Build a record of same-`kind` configs to SPREAD into {@link from} (or into
-   * another group), applying `shared` options to every entry (asset-system v2
-   * §6). A per-entry object overrides the shared options; a bare-string entry
-   * takes just the shared options. Entries do not repeat the `kind`.
+   * Build a record of same-`kind` configs to SPREAD into {@link from}, applying
+   * `shared` options to every entry (asset-system v2 §6). A per-entry object
+   * overrides the shared options; a bare-string entry takes just the shared
+   * options. Entries do not repeat the `kind`.
+   *
+   * @remarks `group()` is a SAME-KIND helper: every entry is stamped with the
+   * `kind` passed here. An entry may therefore NOT carry its own `kind` — the
+   * type forbids it (`kind?: never`) and the runtime rejects it with a guiding
+   * error (A2). This closes the former silent-override hole where `{ kind,
+   * ...shared, ...entry }` let an `entry.kind` win. To COMBINE different kinds,
+   * spread each group into {@link from} (as the example shows) — do not nest one
+   * group's output inside another group's entries (nesting produces kind-carrying
+   * values and is rejected).
    *
    * @example
    * ```ts
@@ -161,7 +170,7 @@ type AssetsFacade = AssetsConstructorFn & {
    * });
    * ```
    */
-  group<K extends keyof AssetDefinitions, E extends Record<string, string | ({ source: string } & OptionsForKind<K>)>>(
+  group<K extends keyof AssetDefinitions, E extends Record<string, string | ({ source: string; kind?: never } & OptionsForKind<K>)>>(
     kind: K,
     entries: E,
     shared?: OptionsForKind<K>,
@@ -187,6 +196,18 @@ type AssetsFacade = AssetsConstructorFn & {
   const base = shared ?? {};
 
   for (const [key, entry] of Object.entries(entries)) {
+    // `group()` is a same-kind helper: an entry may not carry its own `kind`.
+    // Reject it instead of letting `{ kind, ...base, ...entry }` silently
+    // override the group kind (A2). This also rejects a nested group's output
+    // (whose values are kind-carrying configs) — combine groups by spreading
+    // each into `Assets.from(...)`, not by nesting.
+    if (typeof entry !== 'string' && Object.hasOwn(entry, 'kind')) {
+      throw new Error(
+        `Assets.group('${String(kind)}', …): entry "${key}" must not carry its own "kind" — group() stamps a single kind on every entry. ` +
+          `To combine different kinds, spread each Assets.group(...) into Assets.from({ ... }); do not nest one group inside another.`,
+      );
+    }
+
     // A per-entry object overrides the shared options; a bare string takes only
     // the shared options. Either way the group's `kind` is stamped on.
     out[key] = (typeof entry === 'string' ? { kind, source: entry, ...base } : { kind, ...base, ...entry }) as AnyAssetConfig;

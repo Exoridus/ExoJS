@@ -1,9 +1,11 @@
+import { Bounds } from '#core/Bounds';
 import { logger } from '#core/logging';
 import { nextNodeRevision } from '#core/NodeRevision';
 import type { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RetainedGroupFragment } from '#rendering/plan/RetainedGroupFragment';
 
 import { Container } from './Container';
+import type { RenderNode } from './RenderNode';
 
 /** Observation window for the S2-D1 retention diagnostic, in fragment builds (~frames). */
 const retainedDiagnosticWindow = 120;
@@ -36,6 +38,12 @@ const retainedDiagnosticThreshold = 108;
  * then renders as an exact plain {@link Container} (correct output, no
  * retention) and warns once in dev builds.
  *
+ * World-space queries against nodes inside the group (picking, spatial
+ * audio, physics, cross-group math) go through
+ * {@link SceneNode.getWorldTransform}, which composes through the boundary
+ * and returns the true world matrix.
+ *
+ * @advanced
  * @example
  * ```ts
  * const world = new RetainedContainer(); // large static tilemap decor
@@ -85,11 +93,34 @@ export class RetainedContainer extends Container {
     this._invalidateBoundsFlags();
   }
 
+  // ── F12: group-local bounds aggregate cache ─────────────────────────────
+  // The group-local child aggregate only changes when the SUBTREE changes,
+  // which the content/structure revisions already key exactly — a group move
+  // (camera pan, every frame) only changes the lift matrix. Cache the
+  // aggregate and pay O(1) per move instead of O(children).
+  private readonly _groupAggregate = new Bounds();
+  /**
+   * Direct children whose rects must be re-read on EVERY updateBounds because
+   * their bounds move without bumping this container's revisions: barrier
+   * children are world-space and follow world ancestors; nested transform
+   * groups decouple their own moves from the content revision (spec §4.3).
+   * Membership is revision-keyed: effect toggles and reparenting bump
+   * content/structure, so the list rebuilds exactly when it can change.
+   */
+  private readonly _liveBoundsChildren: RenderNode[] = [];
+  private _aggregateContentRevision = -1;
+  private _aggregateStructureRevision = -1;
+
   /**
    * World AABB of the group: children aggregate in group-local space, so
-   * every child rect is lifted by the group's own world matrix (spec §6 —
+   * the aggregate rect is lifted by the group's own world matrix (spec §6 —
    * group-local aggregate × group matrix). Barrier-bearing direct children
    * escape the group convention (plan D-P4) and are already world-space.
+   *
+   * The group-local aggregate is served from a revision-keyed cache (F12);
+   * under a rotated group the lifted AABB of the cached union is a slightly
+   * looser (still conservative) cover than per-child lifting — fine for the
+   * culling/hit-prefilter consumers of container bounds.
    */
   public override updateBounds(): this {
     if (this._boundaryDisengaged) {
@@ -99,21 +130,51 @@ export class RetainedContainer extends Container {
 
     const world = this.getGlobalTransform();
 
-    this._bounds.reset().addRect(this.getLocalBounds(), world);
+    if (this._aggregateContentRevision !== this._contentRevision || this._aggregateStructureRevision !== this._structureRevision) {
+      this._rebuildGroupAggregate();
+      this._aggregateContentRevision = this._contentRevision;
+      this._aggregateStructureRevision = this._structureRevision;
+    }
 
-    for (const child of this._children) {
-      if (!child.visible) {
-        continue;
-      }
+    this._bounds.reset().addRect(this._groupAggregate.getRect(), world);
+
+    // Index loop, no iterator allocation: this runs on every group move.
+    for (let index = 0; index < this._liveBoundsChildren.length; index++) {
+      const child = this._liveBoundsChildren[index]!;
 
       if (child._renderPlanHasBarrierEffects()) {
+        // World-space escape: no lift.
         this._bounds.addRect(child.getBounds());
       } else {
+        // Nested transform group: group-local rect, lift like the aggregate.
         this._bounds.addRect(child.getBounds(), world);
       }
     }
 
     return this;
+  }
+
+  /** Rebuild the cached group-local aggregate + the live-children list (see the F12 block comment). */
+  private _rebuildGroupAggregate(): void {
+    this._groupAggregate.reset().addRect(this.getLocalBounds());
+    this._liveBoundsChildren.length = 0;
+
+    for (let index = 0; index < this._children.length; index++) {
+      const child = this._children[index]!;
+
+      if (!child.visible) {
+        continue;
+      }
+
+      // Nested-group detection is by TYPE, not the live boundary getter: a
+      // (rare) disengaged nested RetainedContainer still decouples its own
+      // moves from the content revision, so it must stay out of the cache.
+      if (child._renderPlanHasBarrierEffects() || child instanceof RetainedContainer || child._isTransformGroupBoundary) {
+        this._liveBoundsChildren.push(child);
+      } else {
+        this._groupAggregate.addRect(child.getBounds());
+      }
+    }
   }
 
   /** @internal */
@@ -191,8 +252,10 @@ export class RetainedContainer extends Container {
   }
 
   public override destroy(): void {
-    // dispose(): also releases the retained GPU bundle (Slice 3, S3-D3).
+    // dispose(): invalidates AND releases the retained GPU bundle (Slice 3, S3-D3).
     this._fragment.dispose();
+    this._groupAggregate.destroy();
+    this._liveBoundsChildren.length = 0;
 
     super.destroy();
   }
@@ -275,6 +338,13 @@ export class RetainedContainer extends Container {
     // must drop immediately.
     this._fragment.dispose();
     this._invalidateBoundsFlags();
+    // The flip changes the transform SPACE of every descendant without
+    // touching their bounds flags or revisions, so spatial-index consumers
+    // (InteractionManager buckets nodes by group anchor) must be told
+    // per-node. The manager filters to tracked interactive nodes (O(1)
+    // Set-miss for the rest); flips are rare and already pay an O(subtree)
+    // barrier scan, so the extra walk is in budget.
+    this._notifySubtreeBoundsInvalidated(this);
 
     if (__DEV__ && disengage && !this._deepBarrierWarned) {
       this._deepBarrierWarned = true;
@@ -285,6 +355,17 @@ export class RetainedContainer extends Container {
           'group or out of it.',
         { source: 'rendering' },
       );
+    }
+  }
+
+  /** Depth-first bounds-invalidation notification for every descendant (see the flip comment above). */
+  private _notifySubtreeBoundsInvalidated(container: Container): void {
+    for (const child of container.children) {
+      child._getStage()?.interaction._notifyBoundsInvalidated(child);
+
+      if (child instanceof Container) {
+        this._notifySubtreeBoundsInvalidated(child);
+      }
     }
   }
 

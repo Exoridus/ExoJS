@@ -4,47 +4,106 @@ import type { RenderNode } from '#rendering/RenderNode';
 
 import { measureFrameAllocation } from './allocation';
 import { buildFilteredScene, buildMeshScene, buildNestedScene, buildSpriteScene, makeTextures } from './fixtures';
-import { createWebGl2Harness } from './harness';
+import { createWebGl2Harness, type WebGl2Harness } from './harness';
 import { buildScenarioCatalog } from './scenarios';
 
 /**
- * Render-plan allocation gate (spec 04 §2a). Samples the per-frame allocation
- * RATE (throwaway garbage, not retained heap) on reference scenes via the V8
- * allocation sampling profiler (see `allocation.ts`).
+ * Render-plan allocation gate (spec 04 §2a; review finding R1/R2 hardening).
+ * Samples the per-frame allocation RATE (throwaway garbage, not retained heap)
+ * on reference scenes via the V8 allocation sampling profiler (see
+ * `allocation.ts`).
  *
- * The sampler needs no `--expose-gc` and the budget is always enforced — but it
- * is only correct because `allocation.ts` passes `includeObjectsCollectedBy*GC`
- * to `startSampling`. Without those flags the profiler reports ONLY objects still
- * live at stop, discarding the immediately-dead plan garbage (a ~500× undercount).
- * The `sampler counts dead garbage` test below guards that invariant.
+ * ── Methodology (R1/R2 fix) ─────────────────────────────────────────────────
+ * The sampler is a STATISTICAL profiler (Poisson, one sample per 512 B), so a
+ * single run scatters ±few-percent frame-to-frame. The previous gate asserted a
+ * hard `toBeLessThan` on ONE such run against a budget with ~1.34× headroom —
+ * pass/fail was environment luck (a clean tree measured +4% over budget on the
+ * dev box) and the wide headroom simultaneously hid real ≤25% regressions.
+ *
+ * This gate instead takes the MEDIAN of {@link WINDOWS} independent sampling
+ * windows (each its own fresh harness + profiler session) and asserts the median
+ * against a budget of `documented-baseline-median × TOLERANCE`. The median is
+ * immune to the occasional high outlier (see the `samples=[…]` log line — one
+ * window routinely lands ~13% high while the median sits within ~0.5% run to
+ * run), so the gate is reproducible; the 1.15 band is tight enough to catch a
+ * real ≥15% allocation regression while absorbing cross-machine / cross-Node
+ * drift. Baselines below were measured across 3×7-window passes; the median
+ * varied < 1% run-to-run on the environment recorded in {@link BASELINE_KB}.
+ *
+ * Update the baseline table when a slice deliberately changes allocation: run
+ * with `--disableConsoleIntercept` to read the `[alloc]` medians, paste the new
+ * numbers into {@link BASELINE_KB}, and record the environment + reason.
  *
  * NOTE: the source-accurate numbers come from THIS test (the vitest `rendering-perf`
  * project resolves `#*` imports to `src` and wires GLSL). The standalone
  * `pnpm perf:renderers:alloc` launcher resolves `#*` to the built `dist/esm` and so
  * reports the LAST BUILD, not the working tree — use it only as a rough cross-check.
- * Budgets ratchet down per slice; run with `--disableConsoleIntercept` to see them.
  */
 
-// Sprite reference budgets (bytes/frame), measured against src. empty ≈ 2.2 KB
-// (harness/recorder floor). After Slice 2c (collectRenderGroups eliminated — the
-// plan player walks groupIndex adjacency over scope.entries inline, so no
-// per-scope RenderGroup[]/instructions[] is materialized each frame): static
-// ≈ 288 KB (was ≈ 318 post-2b), moving ≈ 550 KB (was ≈ 578).
-const EMPTY_BUDGET = 16 * 1024;
-const STATIC_BUDGET = 384 * 1024;
-const MOVING_BUDGET = 736 * 1024;
+/** Independent sampling windows the median is taken over (R2: ≥5). */
+const WINDOWS = 5;
+/** Budget = baseline median × this. 15% band: catches a real ≥15% regression, absorbs sampler/machine drift. */
+const TOLERANCE = 1.15;
 
-// Complex-scene budgets — these exercise the paths flat sprites hide: many Group
-// scopes (deep nesting → per-scope plan work, 2c) and per-effect Barrier scopes
-// + child plans (2c). 2c eliminated the per-scope group materialization, so the
-// scope-heavy scenes dropped the most: nested 431→363, filtered 1425→1310 KB.
-// 2e eliminated the WebGl2 mesh renderer's per-batch `slice()` copy and the
-// per-mesh `PendingMeshDraw` literal (the queue now pools its slots and
-// `_drawStaticBatch` walks an index range), dropping mesh 753→644 KB.
-// Source-accurate post-2e status quo + ~1.3× headroom.
-const NESTED_BUDGET = 480 * 1024;
-const MESH_BUDGET = 832 * 1024;
-const FILTERED_BUDGET = 1728 * 1024;
+/**
+ * Documented baseline MEDIANS in KB/frame — the medians THIS gate itself
+ * produces (measured by running this test), against `src` on Node v24.14.1
+ * (win32/x64) on 2026-07-11 across repeated 5-window passes. Per-scene
+ * run-to-run median drift was < 1% (static 248–249, moving 574, nested 362–364,
+ * mesh 645–646, filtered 823); single-window spread ≤ 14%, which the median
+ * absorbs. Measure them from the gate, not an isolated micro-bench: the moving
+ * scene's median is ~5% higher in-suite (JIT tier state depends on the scenes
+ * that ran before it in the worker), so an isolated number would set a falsely
+ * tight budget. The live environment is printed in every `[alloc]` line and in
+ * the failure message so budget drift on another Node/OS is auditable.
+ *
+ * Scenes (why each is here — they exercise paths flat sprites hide):
+ *   static   — 1000 sprites, steady state: the plan-build fast paths (pooled
+ *              DrawCommand/ScopeEntry/MaterialKey, inline group walk).
+ *   moving   — 1000 sprites moved every frame: adds the per-frame transform
+ *              re-upload path.
+ *   nested   — 1000 sprites in a depth-4 container hierarchy: many Group scopes.
+ *   mesh     — 1000 textured-quad meshes: the mesh-renderer draw path (2e).
+ *   filtered — 100 sprites each with a ColorFilter: a Barrier scope + child plan
+ *              per sprite (the effect-node path).
+ */
+const BASELINE_KB = {
+  static: 248,
+  moving: 574,
+  nested: 363,
+  mesh: 646,
+  filtered: 823,
+} as const;
+
+/** Budget in bytes/frame for a documented KB baseline median. */
+const budgetBytes = (baselineKb: number): number => baselineKb * TOLERANCE * 1024;
+
+/**
+ * Empty scene is a harness/sampler FLOOR sanity, not a ratcheted budget: its
+ * true value (~2.3 KB) is near zero and noise-dominated (~35% window spread on
+ * a ~1 KB absolute base), so the 1.15 band is meaningless here. A fixed, roomy
+ * floor catches a gross regression (a real allocation would be orders larger)
+ * without flaking on ±1 KB jitter.
+ */
+const EMPTY_FLOOR_BYTES = 8 * 1024;
+
+const ENV = `Node ${process.version} ${process.platform}/${process.arch}`;
+
+const median = (values: readonly number[]): number => {
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+
+  return sorted.length % 2 === 1 ? sorted[mid]! : (sorted[mid - 1]! + sorted[mid]!) / 2;
+};
+
+interface AllocScene {
+  readonly root: RenderNode;
+  readonly beforeFrame?: () => void;
+  readonly teardown?: () => void;
+}
+
+/** Builds a fresh harness + scene for one window; caller destroys via the returned teardown. */
+type SceneFactory = (harness: WebGl2Harness) => AllocScene;
 
 const findScenario = (id: string): ReturnType<typeof buildScenarioCatalog>[number] => {
   const scenario = buildScenarioCatalog('full').find(s => s.id === id);
@@ -56,21 +115,45 @@ const findScenario = (id: string): ReturnType<typeof buildScenarioCatalog>[numbe
   return scenario;
 };
 
-const log = (label: string, bytesPerFrame: number): void => {
-  console.log(`[alloc] ${label.padEnd(20)} ${(bytesPerFrame / 1024).toFixed(2).padStart(9)} KB/frame`);
+/** Median bytes/frame over {@link WINDOWS} fresh-harness sampling windows, plus the per-window KB samples. */
+const measureMedianAllocation = async (factory: SceneFactory): Promise<{ medianBytes: number; samplesKb: number[] }> => {
+  const samples: number[] = [];
+
+  for (let i = 0; i < WINDOWS; i++) {
+    const harness = createWebGl2Harness();
+    const scene = factory(harness);
+
+    const alloc = await measureFrameAllocation(harness, scene.root, { beforeFrame: scene.beforeFrame });
+
+    samples.push(alloc.bytesPerFrame);
+    scene.teardown?.();
+    harness.destroy();
+  }
+
+  return { medianBytes: median(samples), samplesKb: samples.map(b => b / 1024) };
 };
 
-/** Build-and-measure a scene whose root is supplied directly (no scenario catalog). */
-const measureScene = async (label: string, root: RenderNode, budget: number): Promise<void> => {
-  const harness = createWebGl2Harness();
+/** Measure the median, log the paper-trail line, and gate it against `budget` bytes/frame. */
+const gate = async (label: string, factory: SceneFactory, budget: number): Promise<void> => {
+  const { medianBytes, samplesKb } = await measureMedianAllocation(factory);
+  const medianKb = medianBytes / 1024;
+  const budgetKb = budget / 1024;
 
-  const alloc = await measureFrameAllocation(harness, root);
-  log(label, alloc.bytesPerFrame);
+  console.log(
+    `[alloc] ${label.padEnd(20)} median=${medianKb.toFixed(2).padStart(8)} KB/frame  budget=${budgetKb.toFixed(0).padStart(4)} KB  ` +
+      `[${ENV}]  windows=[${samplesKb.map(kb => kb.toFixed(0)).join(', ')}]`,
+  );
 
-  root.destroy();
-  harness.destroy();
+  // Surface the environment + numbers on failure too (the vitest config's
+  // `valid-expect` rule forbids expect()'s message argument, so log it here).
+  if (medianBytes >= budget) {
+    console.error(
+      `[alloc] BUDGET EXCEEDED — ${label}: median ${medianKb.toFixed(1)} KB/frame >= budget ${budgetKb.toFixed(0)} KB (${ENV}). ` +
+        `If deliberate, re-measure and update BASELINE_KB in allocation.test.ts; otherwise a real allocation regression landed.`,
+    );
+  }
 
-  expect(alloc.bytesPerFrame).toBeLessThan(budget);
+  expect(medianBytes).toBeLessThan(budget);
 };
 
 describe('render-plan allocation gate', () => {
@@ -101,50 +184,75 @@ describe('render-plan allocation gate', () => {
     expect(bytesPerObject).toBeGreaterThan(20);
   });
 
-  it('empty scene allocates near-nothing (harness/sampler sanity)', async () => {
-    const harness = createWebGl2Harness();
-    const { root } = buildSpriteScene({ count: 0, textures: makeTextures(1) });
+  it('empty scene allocates near-nothing (harness/sampler floor sanity)', async () => {
+    await gate(
+      'empty',
+      () => {
+        const { root } = buildSpriteScene({ count: 0, textures: makeTextures(1) });
 
-    const alloc = await measureFrameAllocation(harness, root);
-    log('empty', alloc.bytesPerFrame);
-
-    root.destroy();
-    harness.destroy();
-
-    expect(alloc.bytesPerFrame).toBeLessThan(EMPTY_BUDGET);
-  });
+        return { root, teardown: () => root.destroy() };
+      },
+      EMPTY_FLOOR_BYTES,
+    );
+  }, 60000);
 
   it('static sprite scene stays within the plan-allocation budget', async () => {
-    const harness = createWebGl2Harness();
-    const scene = findScenario('sprite/1000/1tex/static').build(harness);
+    await gate(
+      'sprite/1000 static',
+      harness => {
+        const scene = findScenario('sprite/1000/1tex/static').build(harness);
 
-    const alloc = await measureFrameAllocation(harness, scene.root, { beforeFrame: scene.beforeFrame });
-    log('sprite/1000 static', alloc.bytesPerFrame);
-
-    scene.teardown?.();
-    harness.destroy();
-
-    expect(alloc.bytesPerFrame).toBeLessThan(STATIC_BUDGET);
-  });
+        return { root: scene.root, beforeFrame: scene.beforeFrame, teardown: scene.teardown };
+      },
+      budgetBytes(BASELINE_KB.static),
+    );
+  }, 60000);
 
   it('moving sprite scene stays within the (looser) moving budget', async () => {
-    const harness = createWebGl2Harness();
-    const scene = findScenario('sprite/1000/1tex/moving').build(harness);
+    await gate(
+      'sprite/1000 moving',
+      harness => {
+        const scene = findScenario('sprite/1000/1tex/moving').build(harness);
 
-    const alloc = await measureFrameAllocation(harness, scene.root, { beforeFrame: scene.beforeFrame });
-    log('sprite/1000 moving', alloc.bytesPerFrame);
+        return { root: scene.root, beforeFrame: scene.beforeFrame, teardown: scene.teardown };
+      },
+      budgetBytes(BASELINE_KB.moving),
+    );
+  }, 60000);
 
-    scene.teardown?.();
-    harness.destroy();
+  it('nested hierarchy (deep group scopes) stays within budget', async () => {
+    await gate(
+      'nested/1000 d4',
+      () => {
+        const { root } = buildNestedScene({ count: 1000, perContainer: 8, depth: 4, textures: makeTextures(1) });
 
-    expect(alloc.bytesPerFrame).toBeLessThan(MOVING_BUDGET);
-  });
+        return { root, teardown: () => root.destroy() };
+      },
+      budgetBytes(BASELINE_KB.nested),
+    );
+  }, 60000);
 
-  it('nested hierarchy (deep group scopes) stays within budget', () =>
-    measureScene('nested/1000 d4', buildNestedScene({ count: 1000, perContainer: 8, depth: 4, textures: makeTextures(1) }).root, NESTED_BUDGET));
+  it('mesh drawables stay within budget', async () => {
+    await gate(
+      'mesh/1000',
+      () => {
+        const { root } = buildMeshScene({ count: 1000, textures: makeTextures(1) });
 
-  it('mesh drawables stay within budget', () => measureScene('mesh/1000', buildMeshScene({ count: 1000, textures: makeTextures(1) }).root, MESH_BUDGET));
+        return { root, teardown: () => root.destroy() };
+      },
+      budgetBytes(BASELINE_KB.mesh),
+    );
+  }, 60000);
 
-  it('effect-barrier scene stays within budget', () =>
-    measureScene('filtered/100', buildFilteredScene({ count: 100, textures: makeTextures(1) }).root, FILTERED_BUDGET));
+  it('effect-barrier scene stays within budget', async () => {
+    await gate(
+      'filtered/100',
+      () => {
+        const { root } = buildFilteredScene({ count: 100, textures: makeTextures(1) });
+
+        return { root, teardown: () => root.destroy() };
+      },
+      budgetBytes(BASELINE_KB.filtered),
+    );
+  }, 60000);
 });

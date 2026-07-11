@@ -38,7 +38,9 @@ const shaders: readonly ShaderEntry[] = Object.entries(shaderModules)
 const sourceByName: Record<string, string> = Object.fromEntries(shaders.map(entry => [entry.name, entry.source]));
 
 // Vertex/fragment pairs as wired up by the WebGl2*Renderer sources; `text.vert`
-// is shared across all three text-fragment variants.
+// is shared across all three text-fragment variants. Every file the glob picks
+// up must appear here (guarded below) so a dead `.vert`/`.frag` cannot sit in
+// the folder being compiled-but-never-linked — it has to be wired or removed.
 const programPairs: ReadonlyArray<readonly [string, string]> = [
   ['sprite.vert', 'sprite.frag'],
   ['mesh.vert', 'mesh.frag'],
@@ -48,7 +50,10 @@ const programPairs: ReadonlyArray<readonly [string, string]> = [
   ['text.vert', 'text-msdf.frag'],
   ['stencil-clip.vert', 'stencil-clip.frag'],
   ['mask-compose.vert', 'mask-compose.frag'],
+  ['backdrop-blend.vert', 'backdrop-blend.frag'],
 ];
+
+const referencedShaderFiles = new Set(programPairs.flat());
 
 interface CompiledShader {
   readonly shader: WebGLShader;
@@ -89,12 +94,20 @@ describe('WebGL2 GLSL shader sources', () => {
   });
 
   test('imports the real shader sources, not the empty-string stub', () => {
-    // 8 vertex + 6 fragment files today; the stub would surface as empty strings.
+    // 7 vertex + 9 fragment files today; the stub would surface as empty strings.
     expect(shaders.length).toBeGreaterThanOrEqual(8);
 
     for (const { name, source } of shaders) {
       expect(source.length, `${name} is empty — the shader stub leaked into the test`).toBeGreaterThan(0);
       expect(source.startsWith('#version 300 es'), `${name} is missing its #version directive`).toBe(true);
+    }
+  });
+
+  test('every shader file is wired into a program pair (no dead sources)', () => {
+    // Guards against re-introducing an orphan .vert/.frag that the glob would
+    // otherwise compile in isolation while no renderer ever links it.
+    for (const { name } of shaders) {
+      expect(referencedShaderFiles.has(name), `${name} is not referenced by any program pair — wire it up or delete it`).toBe(true);
     }
   });
 
