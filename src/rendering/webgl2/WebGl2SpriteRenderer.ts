@@ -14,6 +14,7 @@ import fragmentSource from './glsl/sprite.frag';
 import vertexSource from './glsl/sprite.vert';
 import type { WebGl2Backend } from './WebGl2Backend';
 import { WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from './WebGl2RenderBuffer';
+import type { WebGl2RetainedBatchPayload, WebGl2RetainedBatchReplayer, WebGl2RetainedNodeIndexRange } from './WebGl2RetainedGroupResources';
 import { createWebGl2ShaderProgram } from './WebGl2ShaderProgram';
 import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './WebGl2VertexArrayObject';
 
@@ -78,7 +79,17 @@ interface SpriteRendererConnection {
   readonly vaoHandle: WebGLVertexArrayObject;
 }
 
-export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> {
+export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> implements WebGl2RetainedBatchReplayer {
+  /**
+   * Retained-batch capability opt-in (Track B Slice 3, S3-D5.1): the DEFAULT
+   * path's flushes can be recorded into a group's instruction set and
+   * replayed from group-owned resources. Custom-material and pixel-snapped
+   * draws are excluded by the plan-level recordability predicate (and
+   * belt-and-braces poisoning below).
+   * @internal
+   */
+  public readonly _supportsRetainedBatches = true;
+
   private readonly _shader: Shader;
   private readonly _batchSize: number;
   private readonly _instanceData: ArrayBuffer;
@@ -142,6 +153,15 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> {
     const backend = this.getBackend();
     const material = sprite.material;
 
+    // Belt-and-braces for retained recording (S3-D5.2/5.3): the collect-time
+    // recordability predicate excludes custom-material and pixel-snapped
+    // draws from ever arming a capture. If one still arrives inside an
+    // active capture window, poison the recording so the resulting set can
+    // never validate — degrading to entry replay instead of wrong pixels.
+    if (backend._isRetainedCapturing && (material !== null || sprite.pixelSnapMode !== 'none')) {
+      backend._poisonRetainedCaptures();
+    }
+
     // The transform lives in the shared buffer, keyed by the draw command's
     // stable nodeIndex (already packed at the render-group upload boundary).
     // A direct, non-plan `backend.draw(sprite)` has no command — push the
@@ -193,21 +213,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> {
     const shader = material === null ? this._shader : this._getOrCreateCustomShader(material, connection.gl);
 
     if (material === null) {
-      const view = backend.view;
-
-      if (this._currentView !== view || this._currentViewId !== view.updateId) {
-        this._currentView = view;
-        this._currentViewId = view.updateId;
-        this._shader.getUniform('u_projection').setValue(view.getTransform().toArray(false));
-      }
-
-      if (this._shader.uniforms.has('u_group') && this._currentGroupTransformId !== backend.renderGroupTransformId) {
-        this._currentGroupTransformId = backend.renderGroupTransformId;
-
-        const groupTransform = backend.renderGroupTransform;
-
-        this._shader.getUniform('u_group').setValue(groupTransform !== null ? groupTransform.toArray(false) : identityGroupMat3);
-      }
+      this._stageDefaultViewUniforms(backend);
     } else {
       // Custom path: projection is set per flush (cheap, and the cached
       // default-shader view state does not carry over to a custom program).
@@ -248,10 +254,166 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> {
     vao.drawInstanced(4, 0, this._instanceCount, RenderingPrimitives.TriangleStrip);
     backend.stats.batches++;
     backend.stats.drawCalls++;
+
+    // Retained recording (Slice 3, Task 6): while a capture window is open,
+    // hand the exact packed instance words of this DEFAULT-path flush to the
+    // backend — byte-identical to what just drew, no duplicated packing
+    // logic. Custom-material batches are never recorded (the render()-time
+    // poison above already invalidated the capture if one slipped through).
+    if (material === null && backend._isRetainedCapturing) {
+      backend._recordRetainedBatch(
+        this,
+        this._instanceUint32.subarray(0, this._instanceCount * wordsPerInstance),
+        this._instanceCount,
+        this._currentBlendMode ?? BlendModes.Normal,
+        this._activeTextures,
+        this._slotCount,
+      );
+    }
+
     this._instanceCount = 0;
     this._maxNodeIndex = 0;
 
     this._resetSlots();
+  }
+
+  /**
+   * Stage `u_projection` (live view) and `u_group` (live composed group
+   * matrix) on the default shader, guarded by the cached view/group stamps.
+   * Shared by the live flush path and retained-batch replay — replay resolves
+   * exactly the same live state a slow-path flush would (S3-D1).
+   */
+  private _stageDefaultViewUniforms(backend: WebGl2Backend): void {
+    const view = backend.view;
+
+    if (this._currentView !== view || this._currentViewId !== view.updateId) {
+      this._currentView = view;
+      this._currentViewId = view.updateId;
+      this._shader.getUniform('u_projection').setValue(view.getTransform().toArray(false));
+    }
+
+    if (this._shader.uniforms.has('u_group') && this._currentGroupTransformId !== backend.renderGroupTransformId) {
+      this._currentGroupTransformId = backend.renderGroupTransformId;
+
+      const groupTransform = backend.renderGroupTransform;
+
+      this._shader.getUniform('u_group').setValue(groupTransform !== null ? groupTransform.toArray(false) : identityGroupMat3);
+    }
+  }
+
+  // ── Retained-batch record/replay (Track B Slice 3, Tasks 6/7) ────────────
+  // The bundle stores raw instance bytes; this renderer owns the 36-byte
+  // layout, so the layout-aware finalize steps (node-index scan/rebase, VAO
+  // attribute wiring) and the replay dispatch live here.
+
+  /** @internal See {@link WebGl2RetainedBatchReplayer._scanRetainedNodeIndexRange}. */
+  public _scanRetainedNodeIndexRange(payload: WebGl2RetainedBatchPayload, range: WebGl2RetainedNodeIndexRange): void {
+    const words = payload.bundle.instanceWords;
+    const start = payload.byteOffset / Uint32Array.BYTES_PER_ELEMENT;
+
+    for (let i = 0; i < payload.instanceCount; i++) {
+      // In-bounds: the payload's word range was appended to the bundle store.
+      const node = words[start + i * wordsPerInstance + 8]!;
+
+      if (node < range.min) {
+        range.min = node;
+      }
+
+      if (node > range.max) {
+        range.max = node;
+      }
+    }
+  }
+
+  /** @internal See {@link WebGl2RetainedBatchReplayer._rebaseRetainedNodeIndices} (S3-D4: group-local indices). */
+  public _rebaseRetainedNodeIndices(payload: WebGl2RetainedBatchPayload, base: number): void {
+    const words = payload.bundle.instanceWords;
+    const start = payload.byteOffset / Uint32Array.BYTES_PER_ELEMENT;
+
+    for (let i = 0; i < payload.instanceCount; i++) {
+      const index = start + i * wordsPerInstance + 8;
+
+      // In-bounds: see the scan above.
+      words[index] = (words[index]! - base) >>> 0;
+    }
+  }
+
+  /**
+   * Point the batch VAO's per-instance attributes at the bundle's persistent
+   * instance buffer, based at the batch's byte offset (WebGL2 has no
+   * baseInstance, hence one small VAO per recorded batch). Same attribute
+   * set/locations as the live VAO in {@link onConnect}.
+   * @internal
+   */
+  public _configureRetainedVao(payload: WebGl2RetainedBatchPayload): void {
+    const gl = this.getBackend().context;
+    const buffer = payload.bundle.instanceBuffer;
+    const vao = payload.vao;
+
+    if (buffer === null || vao === null) {
+      throw new Error('WebGl2SpriteRenderer: retained batch VAO configuration requires an uploaded bundle.');
+    }
+
+    const base = payload.byteOffset;
+
+    vao
+      .addAttribute(buffer, this._shader.getAttribute('a_localBounds'), gl.FLOAT, false, instanceStrideBytes, base + 0, false, 1)
+      .addAttribute(buffer, this._shader.getAttribute('a_uvBounds'), gl.UNSIGNED_SHORT, true, instanceStrideBytes, base + 16, false, 1)
+      .addAttribute(buffer, this._shader.getAttribute('a_color'), gl.UNSIGNED_BYTE, true, instanceStrideBytes, base + 24, false, 1)
+      .addAttribute(buffer, this._shader.getAttribute('a_textureSlot'), gl.UNSIGNED_INT, false, instanceStrideBytes, base + 28, true, 1)
+      .addAttribute(buffer, this._shader.getAttribute('a_nodeIndex'), gl.UNSIGNED_INT, false, instanceStrideBytes, base + 32, true, 1);
+  }
+
+  /**
+   * Replay one recorded default-path batch (Task 7): all STATE is resolved
+   * live — blend mode via the backend's dedup, `u_projection` from the live
+   * view, `u_group` from the live composed group matrix (the camera-pan /
+   * group-move win), texture bindings by recorded slot order — and only the
+   * DATA is cached: the instance bytes in the bundle buffer (bound through
+   * the per-batch VAO) and the group-owned transform texture on the shared
+   * transform unit. The backend hook flushed any pending live batch before
+   * dispatching here and bumps the stats from the instruction descriptor.
+   * @internal
+   */
+  public _replayRetainedBatch(payload: WebGl2RetainedBatchPayload): void {
+    const backend = this.getBackendOrNull();
+    const vao = payload.vao;
+    const transformTexture = payload.bundle.transformTexture;
+
+    if (backend === null || vao === null || transformTexture === null) {
+      // Defensive: a bundle in this state never validates (generation), so a
+      // spliced replay cannot reach here; skip rather than crash mid-frame.
+      return;
+    }
+
+    // Keep this renderer's blend tracking in sync so the next live batch
+    // still detects its own blend changes correctly.
+    if (payload.blendMode !== this._currentBlendMode) {
+      this._currentBlendMode = payload.blendMode;
+    }
+
+    backend.setBlendMode(payload.blendMode);
+    this._stageDefaultViewUniforms(backend);
+
+    const textures = payload.textures;
+
+    for (let i = 0; i < textures.length; i++) {
+      // In-bounds: i < textures.length.
+      backend.bindTexture(textures[i]!, i);
+    }
+
+    // The group-owned transform store replaces the shared frame buffer on the
+    // SAME unit/sampler — zero GLSL changes (S3-D4). The next live flush
+    // re-binds the shared texture through bindTransformBufferTexture.
+    backend.bindTexture(transformTexture, transformTextureUnit);
+
+    if (this._shader.uniforms.has('u_transforms')) {
+      this._shader.getUniform('u_transforms').setValue(this._transformUnitScratch);
+    }
+
+    this._shader.sync();
+    backend.bindVertexArrayObject(vao);
+    vao.drawInstanced(4, 0, payload.instanceCount, RenderingPrimitives.TriangleStrip);
   }
 
   protected onConnect(backend: WebGl2Backend): void {
