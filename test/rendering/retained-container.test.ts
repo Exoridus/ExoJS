@@ -9,6 +9,7 @@ import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RenderPlanOptimizer } from '#rendering/plan/RenderPlanOptimizer';
 import { RenderPlanPlayer } from '#rendering/plan/RenderPlanPlayer';
 import type { GroupScope, GroupScopeEntry } from '#rendering/plan/RenderScope';
+import type { RetainedFragmentEntry, RetainedGroupFragment } from '#rendering/plan/RetainedGroupFragment';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import { createRenderStats } from '#rendering/RenderStats';
@@ -552,6 +553,119 @@ describe('RetainedContainer: whole-range fragment splice (spec 4.2)', () => {
     const frame2 = snapshot(collectDraws(root, backend));
 
     expect(frame2).toEqual(frame1);
+
+    root.destroy();
+    backend.destroy();
+  });
+});
+
+describe('RetainedContainer: pooled fragment snapshot (Slice 3, F11a)', () => {
+  interface FragmentCarrier {
+    _fragment: RetainedGroupFragment;
+  }
+
+  // Flatten every record object (draws, groups, barriers) plus each draw's
+  // material-key object in traversal order, so identity can be compared
+  // across recaptures.
+  const gatherRecords = (entries: readonly RetainedFragmentEntry[], out: object[]): void => {
+    for (const entry of entries) {
+      out.push(entry);
+
+      if (entry.kind === RenderEntryKind.Draw) {
+        out.push(entry.material);
+      } else if (entry.kind === RenderEntryKind.Group) {
+        gatherRecords(entry.entries, out);
+      }
+    }
+  };
+
+  test('recapture of a same-shaped subtree reuses every capture record in place (zero record allocations)', () => {
+    const backend = createTestBackend();
+    const root = new Container();
+    const group = new RetainedContainer();
+    const mid = new Container();
+    const leafA = new LeafDrawable('a');
+    const clipped = new LeafDrawable('clipped');
+
+    clipped.clip = true;
+    clipped.clipShape = new Rectangle(0, 0, 8, 8);
+    mid.addChild(leafA);
+    group.addChild(mid);
+    group.addChild(clipped); // direct-child barrier -> barrier record
+    group.addChild(new LeafDrawable('b'));
+    root.addChild(group);
+
+    collectDraws(root, backend); // frame 1: full collect + capture
+
+    const fragment = (group as unknown as FragmentCarrier)._fragment;
+    const entriesBefore = fragment.entries;
+    const recordsBefore: object[] = [];
+
+    gatherRecords(entriesBefore, recordsBefore);
+    expect(recordsBefore.length).toBeGreaterThan(0);
+
+    leafA.setPosition(7, 7); // content-dirty -> recapture on next collect
+
+    const frame2 = collectDraws(root, backend); // frame 2: full collect + pooled recapture
+
+    // Same-shaped subtree: the root entry list and every record object
+    // (including nested group entry arrays and material keys) are the SAME
+    // objects, mutated in place -- steady-state recapture allocates zero.
+    expect(fragment.entries).toBe(entriesBefore);
+
+    const recordsAfter: object[] = [];
+
+    gatherRecords(fragment.entries, recordsAfter);
+
+    expect(recordsAfter.length).toBe(recordsBefore.length);
+
+    for (let i = 0; i < recordsBefore.length; i++) {
+      expect(recordsAfter[i]).toBe(recordsBefore[i]);
+    }
+
+    // ...and the refreshed data is the NEW data, not the stale capture.
+    const drawA = frame2.find(d => (d.drawable as LeafDrawable).id === 'a');
+
+    expect(drawA?.minX).toBe(7);
+
+    root.destroy();
+    backend.destroy();
+  });
+
+  test('pools grow with the subtree and reuse the grown records after a shrink', () => {
+    const backend = createTestBackend();
+    const root = new Container();
+    const group = new RetainedContainer();
+    const leafA = new LeafDrawable('a');
+    const leafB = new LeafDrawable('b');
+
+    group.addChild(leafA);
+    root.addChild(group);
+
+    collectDraws(root, backend); // capture with 1 draw
+
+    const fragment = (group as unknown as FragmentCarrier)._fragment;
+    const firstRecord = fragment.entries[0]!;
+
+    group.addChild(leafB);
+    collectDraws(root, backend); // capture with 2 draws (pool grows)
+
+    expect(fragment.entries).toHaveLength(2);
+    expect(fragment.entries[0]).toBe(firstRecord);
+
+    const secondRecord = fragment.entries[1]!;
+
+    group.removeChild(leafB);
+    collectDraws(root, backend); // capture with 1 draw (pool keeps record 2)
+
+    expect(fragment.entries).toHaveLength(1);
+    expect(fragment.entries[0]).toBe(firstRecord);
+
+    group.addChild(leafB);
+    collectDraws(root, backend); // grow again: pooled record 2 is reused
+
+    expect(fragment.entries).toHaveLength(2);
+    expect(fragment.entries[1]).toBe(secondRecord);
 
     root.destroy();
     backend.destroy();

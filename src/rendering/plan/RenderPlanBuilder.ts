@@ -347,52 +347,6 @@ export class RenderPlanBuilder {
   }
 
   /**
-   * @internal — deep-copy the given scope entries into an owned, pool-free
-   * fragment tree (Track B Slice 2, plan decision D-P3). Draws copy their
-   * placement/material/bounds verbatim; nested groups recurse; barrier nodes
-   * are recorded as re-dispatch references only (spec §8). Called by
-   * {@link RetainedContainer} right after a full collect of its scope.
-   */
-  public _snapshotScopeEntries(entries: readonly ScopeEntry[]): RetainedFragmentEntry[] {
-    const captured: RetainedFragmentEntry[] = [];
-
-    for (const entry of entries) {
-      if (entry.kind === RenderEntryKind.Draw) {
-        const command = entry.command;
-
-        captured.push({
-          kind: RenderEntryKind.Draw,
-          drawable: command.drawable,
-          seq: command.seq,
-          zIndex: command.zIndex,
-          material: { ...command.material },
-          minX: command.minX,
-          minY: command.minY,
-          maxX: command.maxX,
-          maxY: command.maxY,
-        });
-      } else if (entry.kind === RenderEntryKind.Group) {
-        captured.push({
-          kind: RenderEntryKind.Group,
-          seq: entry.seq,
-          zIndex: entry.zIndex,
-          preserveDrawOrder: entry.scope.preserveDrawOrder,
-          transformNode: entry.scope.transformNode,
-          entries: this._snapshotScopeEntries(entry.scope.entries),
-        });
-      } else {
-        captured.push({
-          kind: RenderEntryKind.Barrier,
-          seq: entry.seq,
-          node: entry.scope.node,
-        });
-      }
-    }
-
-    return captured;
-  }
-
-  /**
    * @internal — replay a captured fragment into the current scope: the
    * whole-range splice (spec §4.2). No scene-graph walk, no cull, no bounds,
    * no material keys — draws re-acquire pooled commands with fresh

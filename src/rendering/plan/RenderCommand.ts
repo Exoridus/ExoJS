@@ -209,6 +209,25 @@ export const writeMaterialKeyInto = (target: MaterialKey, drawable: Drawable, ba
 };
 
 /**
+ * Copy all fields of `source` into `target` (both {@link MaterialKey}s) without
+ * allocating. Used by the pooled retained-snapshot records (Slice 3, F11a) so
+ * a recapture rewrites the held key object instead of spreading a fresh one.
+ * Returns `target` for chaining.
+ *
+ * @internal
+ */
+export const copyMaterialKeyInto = (target: MaterialKey, source: MaterialKey): MaterialKey => {
+  target.rendererId = source.rendererId;
+  target.blendMode = source.blendMode;
+  target.textureId = source.textureId;
+  target.shaderId = source.shaderId;
+  target.pipelineKey = source.pipelineKey;
+  target.bindKey = source.bindKey;
+
+  return target;
+};
+
+/**
  * Whether `drawable` carries its own {@link Material}. Such a drawable can mutate
  * its material's `pipelineKey`/`bindKey` internally without notifying the node,
  * so its material key must not be cached — it is recomputed every frame. The

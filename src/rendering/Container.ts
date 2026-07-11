@@ -3,7 +3,7 @@ import type { Stage } from '#core/Stage';
 import { removeArrayItems } from '#core/utils';
 import { RenderEntryKind } from '#rendering/plan/RenderCommand';
 import type { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
-import { type RetainedDrawSlot, RetainedPlanCache } from '#rendering/plan/RetainedPlanCache';
+import { RetainedPlanCache } from '#rendering/plan/RetainedPlanCache';
 
 import { RenderNode } from './RenderNode';
 
@@ -294,12 +294,16 @@ export class Container extends RenderNode {
   /**
    * Slow path (today's unmodified behavior): collect every child normally,
    * then snapshot exactly the direct-Drawable children that produced a single
-   * `Draw`-kind entry (a plain, non-barrier, visible Drawable) into a fresh
-   * set of retained slots for next frame's fast path.
+   * `Draw`-kind entry (a plain, non-barrier, visible Drawable) into the
+   * cache's pooled retained slots for next frame's fast path (Slice 3, F11a:
+   * steady-state recapture allocates zero slot records).
    */
   private _collectAndCaptureChildren(builder: RenderPlanBuilder, viewUpdateId: number): void {
     let sawSlotCandidate = false;
-    let capturedSlots: RetainedDrawSlot[] | null = null;
+
+    // Rewind an existing cache's slot pool; a cache created lazily below
+    // starts already-begun.
+    this._retainedPlan?._beginCapture();
 
     for (let index = 0; index < this._children.length; index++) {
       // In-bounds: index < length.
@@ -328,19 +332,7 @@ export class Container extends RenderNode {
         const entry = entries[entries.length - 1]!;
 
         if (entry.kind === RenderEntryKind.Draw && entry.command.drawable === child) {
-          const command = entry.command;
-
-          (capturedSlots ??= []).push({
-            childIndex: index,
-            drawable: command.drawable,
-            seq: command.seq,
-            zIndex: command.zIndex,
-            material: { ...command.material },
-            minX: command.minX,
-            minY: command.minY,
-            maxX: command.maxX,
-            maxY: command.maxY,
-          });
+          (this._retainedPlan ??= new RetainedPlanCache())._appendSlot(index, entry.command);
         }
       }
     }
@@ -349,13 +341,7 @@ export class Container extends RenderNode {
     // retain: a slot candidate this frame, or an already-live cache that must
     // be re-keyed so it cannot go stale-clean.
     if (sawSlotCandidate || this._retainedPlan !== null) {
-      (this._retainedPlan ??= new RetainedPlanCache()).capture(
-        this._contentRevision,
-        this._structureRevision,
-        viewUpdateId,
-        builder.backend,
-        capturedSlots ?? [],
-      );
+      (this._retainedPlan ??= new RetainedPlanCache())._commitCapture(this._contentRevision, this._structureRevision, viewUpdateId, builder.backend);
     }
   }
 

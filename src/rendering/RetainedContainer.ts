@@ -153,7 +153,7 @@ export class RetainedContainer extends Container {
       this._trackRetention(this._fragment.hasCapture);
     }
 
-    this._fragment.capture(this._contentRevision, this._structureRevision, builder.backend, builder._snapshotScopeEntries(builder._peekCurrentScopeEntries()));
+    this._fragment.capture(this._contentRevision, this._structureRevision, builder.backend, builder._peekCurrentScopeEntries());
   }
 
   public override destroy(): void {

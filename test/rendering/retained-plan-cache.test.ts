@@ -1,6 +1,6 @@
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
-import type { MaterialKey } from '#rendering/plan/RenderCommand';
+import type { DrawCommand, MaterialKey } from '#rendering/plan/RenderCommand';
 import { RenderEntryKind } from '#rendering/plan/RenderCommand';
 import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { type RetainedDrawSlot, RetainedPlanCache } from '#rendering/plan/RetainedPlanCache';
@@ -25,6 +25,26 @@ const makeSlot = (drawable: Drawable): RetainedDrawSlot => ({
   maxY: 16,
 });
 
+const makeCommand = (drawable: Drawable, minX = 0): DrawCommand => ({
+  kind: RenderEntryKind.Draw,
+  drawable,
+  nodeIndex: 0,
+  seq: 0,
+  zIndex: 0,
+  material,
+  groupIndex: undefined,
+  minX,
+  minY: 0,
+  maxX: minX + 16,
+  maxY: 16,
+});
+
+const captureOne = (cache: RetainedPlanCache, drawable: Drawable, content: number, structure: number, view: number, backend: RenderBackend): void => {
+  cache._beginCapture();
+  cache._appendSlot(0, makeCommand(drawable));
+  cache._commitCapture(content, structure, view, backend);
+};
+
 describe('RetainedPlanCache', () => {
   test('isClean is false before any capture', () => {
     const cache = new RetainedPlanCache();
@@ -36,12 +56,12 @@ describe('RetainedPlanCache', () => {
   test('isClean is true only when content, structure, view, and backend all match the last capture', () => {
     const cache = new RetainedPlanCache();
     const drawable = new Drawable();
-    const slots = [makeSlot(drawable)];
 
-    cache.capture(5, 3, 7, fakeBackendA, slots);
+    captureOne(cache, drawable, 5, 3, 7, fakeBackendA);
 
     expect(cache.isClean(5, 3, 7, fakeBackendA)).toBe(true);
-    expect(cache.slots).toBe(slots);
+    expect(cache.slots).toHaveLength(1);
+    expect(cache.slots[0]!.drawable).toBe(drawable);
 
     expect(cache.isClean(6, 3, 7, fakeBackendA)).toBe(false); // content changed
     expect(cache.isClean(5, 4, 7, fakeBackendA)).toBe(false); // structure changed
@@ -51,15 +71,52 @@ describe('RetainedPlanCache', () => {
     drawable.destroy();
   });
 
+  test('a begun-but-uncommitted capture is never clean (exception safety)', () => {
+    const cache = new RetainedPlanCache();
+    const drawable = new Drawable();
+
+    captureOne(cache, drawable, 1, 1, 1, fakeBackendA);
+    cache._beginCapture();
+    cache._appendSlot(0, makeCommand(drawable));
+
+    expect(cache.isClean(1, 1, 1, fakeBackendA)).toBe(false);
+
+    drawable.destroy();
+  });
+
   test('invalidate() clears the capture so isClean is false again', () => {
     const cache = new RetainedPlanCache();
     const drawable = new Drawable();
 
-    cache.capture(1, 1, 1, fakeBackendA, [makeSlot(drawable)]);
+    captureOne(cache, drawable, 1, 1, 1, fakeBackendA);
     cache.invalidate();
 
     expect(cache.isClean(1, 1, 1, fakeBackendA)).toBe(false);
     expect(cache.slots).toEqual([]);
+
+    drawable.destroy();
+  });
+
+  test('recapture rewrites pooled slot records in place (Slice 3, F11a: zero slot allocations)', () => {
+    const cache = new RetainedPlanCache();
+    const drawable = new Drawable();
+
+    captureOne(cache, drawable, 1, 1, 1, fakeBackendA);
+
+    const slotBefore = cache.slots[0]!;
+    const materialBefore = slotBefore.material;
+
+    expect(materialBefore).not.toBe(material); // copied, not aliased
+
+    cache._beginCapture();
+    cache._appendSlot(3, makeCommand(drawable, 9));
+    cache._commitCapture(2, 1, 1, fakeBackendA);
+
+    expect(cache.slots[0]).toBe(slotBefore); // same pooled record...
+    expect(cache.slots[0]!.material).toBe(materialBefore); // ...same pooled key object
+    expect(cache.slots[0]!.childIndex).toBe(3); // ...refreshed data
+    expect(cache.slots[0]!.minX).toBe(9);
+    expect(cache.slots[0]!.material.pipelineKey).toBe(material.pipelineKey);
 
     drawable.destroy();
   });

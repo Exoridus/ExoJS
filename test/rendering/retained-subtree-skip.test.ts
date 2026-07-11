@@ -396,9 +396,9 @@ describe('static-subtree skip: invalidation gates', () => {
 });
 
 describe('zero-slot containers pay no retained-cache overhead (S2-D4)', () => {
-  test('a container tree without any direct drawable children never calls capture()', () => {
+  test('a container tree without any direct drawable children never calls _commitCapture()', () => {
     const backend = createTestBackend();
-    const captureSpy = vi.spyOn(RetainedPlanCache.prototype, 'capture');
+    const captureSpy = vi.spyOn(RetainedPlanCache.prototype, '_commitCapture');
     const root = new Container();
     const branchA = new Container();
     const branchB = new Container();
@@ -436,7 +436,7 @@ describe('zero-slot containers pay no retained-cache overhead (S2-D4)', () => {
 
   test('mixed tree: only the drawable-bearing container captures', () => {
     const backend = createTestBackend();
-    const captureSpy = vi.spyOn(RetainedPlanCache.prototype, 'capture');
+    const captureSpy = vi.spyOn(RetainedPlanCache.prototype, '_commitCapture');
     const root = new Container();
     const drawableless = new Container();
     const drawableBearing = new Container();
