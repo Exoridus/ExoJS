@@ -14,7 +14,12 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
   { id: 'dynamic-heavy', nodeCounts: SCALING_COUNTS, nestingDepth: 4, textureCount: 1, mutationFraction: 0.075, cullingEnabled: true },
   { id: 'deep-hierarchy', nodeCounts: SCALING_COUNTS, nestingDepth: 16, textureCount: 1, mutationFraction: 0.01, cullingEnabled: true },
   { id: 'overdraw', nodeCounts: GPU_BOUND_COUNTS, nestingDepth: 2, textureCount: 1, mutationFraction: 0, cullingEnabled: false },
-  { id: 'batch-breaking', nodeCounts: GPU_BOUND_COUNTS, nestingDepth: 2, textureCount: 16, mutationFraction: 0, cullingEnabled: true },
+  // 24 textures: must exceed BOTH the exojs WebGL2 sprite batcher's 16 slots
+  // (raised from 8 in the F9 follow-up) and typical reference batchers'
+  // 16-texture ceiling, or the archetype stops breaking batches entirely.
+  // NOTE: this changes the benchmark definition — results measured before
+  // 2026-07-11 (textureCount 16) are not comparable on this archetype.
+  { id: 'batch-breaking', nodeCounts: GPU_BOUND_COUNTS, nestingDepth: 2, textureCount: 24, mutationFraction: 0, cullingEnabled: true },
 ];
 
 /** mulberry32 — small, fast, deterministic. Same seed => same stream. */
