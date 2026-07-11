@@ -1,4 +1,4 @@
-import { Application, Color, Scene, Sound, Text } from '@codexo/exojs';
+import { Application, Color, type RenderingContext, Scene, Sound, Text } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -23,7 +23,9 @@ class TypewriterTextScene extends Scene {
     private tapPrompt!: Text;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         this.sound = this.loader.get('audio/ui-click.ogg');
         this.text = new Text('', { fillColor: Color.white, fontSize: 40, lineHeight: 56, maxWidth: 900 });
@@ -35,23 +37,25 @@ class TypewriterTextScene extends Scene {
         this.tapPrompt = new Text('Click or press any key to enable the typing sound', { fillColor: Color.white, fontSize: 22, align: 'center' })
             .setAnchor(0.5, 0.5)
             .setPosition(width / 2, height - 64);
-        this.app.tweens
+        app.tweens
             .create(this.state)
             .to({ count: message.length }, 2.4)
             .onUpdate(() => {
                 const n = this.state.count | 0;
-                if (n > this.last) this.app.audio.play(this.sound, { playbackRate: 1.6 });
+                if (n > this.last) app.audio.play(this.sound, { playbackRate: 1.6 });
                 this.last = n;
                 this.text.text = message.slice(0, n);
             })
             .start();
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         context.backend.clear();
         context.render(this.text);
 
-        if (this.app.audio.locked) {
+        if (app.audio.locked) {
             context.render(this.tapPrompt);
         }
     }

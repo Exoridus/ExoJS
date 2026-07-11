@@ -37,7 +37,10 @@ class NoiseVignetteScene extends Scene {
     hud;
     panel;
     init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         this.filter =
             app.backend.backendType === RenderBackendType.WebGpu
                 ? new WebGpuShaderFilter({ fragmentSource: wgsl, uniforms: { uTime: 0, uIntensity: this.intensity } })

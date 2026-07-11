@@ -1,4 +1,4 @@
-import { Application, Color, RenderBackendType, Scene, Sprite, Text, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
+import { Application, Color, RenderBackendType, type RenderingContext, Scene, Sprite, Text, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -35,7 +35,9 @@ class LoadingProgressWithShaderScene extends Scene {
     private filter!: WebGl2ShaderFilter | WebGpuShaderFilter;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         this.progress = { v: 0 };
         this.label = new Text('0%', { fillColor: Color.white, fontSize: 42, align: 'center' });
@@ -46,7 +48,7 @@ class LoadingProgressWithShaderScene extends Scene {
                 ? new WebGpuShaderFilter({ fragmentSource: wgsl, uniforms: { uProgress: 0 } })
                 : new WebGl2ShaderFilter({ fragmentSource: glsl, uniforms: { uProgress: 0 } });
         this.ring.filters = [this.filter];
-        this.app.tweens.create(this.progress).to({ v: 1 }, 2.4).start();
+        app.tweens.create(this.progress).to({ v: 1 }, 2.4).start();
     }
 
     override update(): void {
@@ -54,7 +56,7 @@ class LoadingProgressWithShaderScene extends Scene {
         this.label.text = `${(this.progress.v * 100) | 0}%`;
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear(new Color(14, 18, 28));
         context.render(this.ring);
         context.render(this.label);

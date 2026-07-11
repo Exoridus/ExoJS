@@ -33,30 +33,33 @@ class MultitouchScene extends Scene {
     pointers = new Map();
     hud;
     init() {
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         this.graphics = new Graphics();
         // Reusable label pool — one Text per possible touch, repositioned each frame.
         for (let i = 0; i < MAX_TOUCHES; i++) {
             this.labels.push(new Text('', { fillColor: Color.white, fontSize: 16 }).setAnchor(0.5));
         }
-        this.app.input.onPointerDown.add(pointer => {
+        app.input.onPointerDown.add(pointer => {
             if (this.pointers.size >= MAX_TOUCHES || this.pointers.has(pointer.id)) {
                 return;
             }
             this.pointers.set(pointer.id, { id: pointer.id, x: pointer.x, y: pointer.y });
             this.refreshHud();
         });
-        this.app.input.onPointerMove.add(pointer => {
+        app.input.onPointerMove.add(pointer => {
             const touch = this.pointers.get(pointer.id);
             if (touch) {
                 touch.x = pointer.x;
                 touch.y = pointer.y;
             }
         });
-        this.app.input.onPointerUp.add(pointer => {
+        app.input.onPointerUp.add(pointer => {
             this.pointers.delete(pointer.id);
             this.refreshHud();
         });
-        this.app.input.onPointerCancel.add(pointer => {
+        app.input.onPointerCancel.add(pointer => {
             this.pointers.delete(pointer.id);
             this.refreshHud();
         });

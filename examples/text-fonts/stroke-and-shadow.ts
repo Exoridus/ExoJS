@@ -1,4 +1,4 @@
-import { Application, Color, Scene, Text } from '@codexo/exojs';
+import { Application, Color, type RenderingContext, Scene, Text } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -17,7 +17,9 @@ class StrokeAndShadowScene extends Scene {
     private title!: Text;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         this.title = new Text('EXOJS', {
             fillColor: new Color(230, 240, 255),
@@ -34,7 +36,7 @@ class StrokeAndShadowScene extends Scene {
         this.title.setPosition(width / 2, height / 2);
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear(new Color(24, 28, 42));
         context.render(this.title);
     }

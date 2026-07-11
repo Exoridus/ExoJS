@@ -1,4 +1,4 @@
-import { Application, Asset, AudioStream, Color, Scene, Sprite, Text, View, type Voice } from '@codexo/exojs';
+import { Application, Asset, AudioStream, Color, type RenderingContext, Scene, Sprite, Text, type Time, View, type Voice } from '@codexo/exojs';
 import { AudioAnalyser } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 
@@ -22,10 +22,12 @@ class LowBandCameraShakeScene extends Scene {
     private tapPrompt!: Text;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         this.music = this.loader.get(Asset.kind('music', assets.demo.audio.musicLoop));
-        this.analyser = new AudioAnalyser({ fftSize: 1024, source: this.app.audio.music });
+        this.analyser = new AudioAnalyser({ fftSize: 1024, source: app.audio.music });
         this.view = new View(width / 2, height / 2, width, height);
         this.sprite = new Sprite(this.loader.get(assets.demo.textures.shipA)).setAnchor(0.5).setScale(3).setPosition(width / 2, height / 2);
 
@@ -44,10 +46,10 @@ class LowBandCameraShakeScene extends Scene {
 
         // Core defers playback until the AudioContext unlocks on the first
         // gesture, then starts automatically — play() returns the Voice now.
-        this.musicVoice = this.app.audio.play(this.music, { loop: true, volume: 0.8 });
+        this.musicVoice = app.audio.play(this.music, { loop: true, volume: 0.8 });
     }
 
-    override update(delta): void {
+    override update(delta: Time): void {
         const low = this.analyser.getBandEnergy(20, 180);
 
         // No constant floor: amplitude is purely low-band energy, so a quiet
@@ -63,13 +65,15 @@ class LowBandCameraShakeScene extends Scene {
         }
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         context.backend.clear(new Color(22, 24, 34));
         context.backend.setView(this.view);
         context.render(this.sprite);
         context.backend.setView(null);
 
-        if (this.app.audio.locked) {
+        if (app.audio.locked) {
             context.render(this.tapPrompt);
         }
     }

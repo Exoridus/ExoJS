@@ -16,7 +16,10 @@ class PauseResumeScene extends Scene {
     sprite;
     label;
     init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         this.sprite = new Sprite(this.loader.get('image/ship-a.png'));
         this.sprite.setAnchor(0.5);
         this.sprite.setPosition(width / 2, height / 2);
@@ -29,7 +32,7 @@ class PauseResumeScene extends Scene {
             this.label.text = this.paused ? 'Paused (draw running)' : 'Running';
         });
         // Same toggle on click/tap so the pause works without a keyboard.
-        this.app.input.onPointerTap.add(() => {
+        app.input.onPointerTap.add(() => {
             // scene.paused skips update() + systems each frame; drawing continues.
             this.paused = !this.paused;
             this.label.text = this.paused ? 'Paused (draw running)' : 'Running';

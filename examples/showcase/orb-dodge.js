@@ -110,6 +110,9 @@ class PlayScene extends Scene {
         this.orbs.push({ gfx, vx: ((tx - ox) / dist) * speed, vy: ((ty - oy) / dist) * speed, danger });
     }
     update(delta) {
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         this.elapsed += delta.seconds;
         this.spawnTimer += delta.seconds;
         if (this.spawnTimer >= SPAWN_INTERVAL) {
@@ -161,7 +164,7 @@ class PlayScene extends Scene {
         this.orbs = gameEnded ? [] : survived;
         if (gameEnded) {
             gameOver.setResult(this.score, this.elapsed);
-            void this.app.scene.setScene(gameOver);
+            void app.scene.setScene(gameOver);
             return;
         }
         this.timeText.text = `${this.elapsed.toFixed(1)} s`;
@@ -192,6 +195,9 @@ class GameOverScene extends Scene {
         this.finalTime = time;
     }
     init() {
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         this.title = new Text('GAME OVER', {
             align: 'center',
             fillColor: new Color(255, 80, 80),
@@ -215,7 +221,7 @@ class GameOverScene extends Scene {
         this.hint.setAnchor(0.5);
         this.hint.setPosition(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 70);
         const restart = () => {
-            void this.app.scene.setScene(play);
+            void app.scene.setScene(play);
         };
         this.inputs.onTrigger(Keyboard.Space, restart);
         this.inputs.onTrigger(Keyboard.R, restart);

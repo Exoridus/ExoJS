@@ -28,7 +28,10 @@ class RandomPitchPoolScene extends Scene {
     trackHalf = 0;
     hud;
     init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         this.centerX = width / 2;
         this.trackY = height * 0.55;
         this.trackHalf = width * 0.38;
@@ -67,20 +70,26 @@ class RandomPitchPoolScene extends Scene {
         });
     }
     update(delta) {
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         this.flash = Math.max(0, this.flash - delta.seconds * 4);
         // Core defers playback until the AudioContext unlocks on the first
         // gesture; skip firing while audio is still locked.
-        if (!this.active || this.app.audio.locked)
+        if (!this.active || app.audio.locked)
             return;
         this.timer += delta.seconds;
         while (this.timer > FIRE_INTERVAL) {
             this.timer -= FIRE_INTERVAL;
             this.lastCents = Math.random() * (DETUNE_RANGE * 2) - DETUNE_RANGE;
             this.flash = 1;
-            this.app.audio.play(this.sound, { playbackRate: Math.pow(2, this.lastCents / 1200) });
+            app.audio.play(this.sound, { playbackRate: Math.pow(2, this.lastCents / 1200) });
         }
     }
     draw(context) {
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         context.backend.clear();
         this.graphics.clear();
         // Centre baseline.
@@ -97,7 +106,7 @@ class RandomPitchPoolScene extends Scene {
         context.render(this.graphics);
         context.render(this.label);
         context.render(this.readout);
-        if (this.app.audio.locked) {
+        if (app.audio.locked) {
             context.render(this.tapPrompt);
         }
     }

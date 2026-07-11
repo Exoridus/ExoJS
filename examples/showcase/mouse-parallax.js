@@ -20,8 +20,11 @@ class MouseParallaxScene extends Scene {
     pointer = { x: 0, y: 0 };
     hud;
     init() {
-        const width = this.app.width;
-        const height = this.app.height;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const width = app.width;
+        const height = app.height;
         this.pointer = { x: width / 2, y: height / 2 };
         // Spread the circle field across the full 16:9 canvas: 16 columns wide so
         // the layers fill the extra horizontal space instead of bunching on the left.
@@ -42,13 +45,16 @@ class MouseParallaxScene extends Scene {
             controls: [{ keys: 'Mouse', action: 'shift the layers' }],
             hint: 'Move the mouse — far layers drift slowly, near layers race ahead.',
         });
-        this.app.input.onPointerMove.add(p => {
+        app.input.onPointerMove.add(p => {
             this.pointer = { x: p.x, y: p.y };
         });
     }
     draw(context) {
-        const width = this.app.width;
-        const height = this.app.height;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const width = app.width;
+        const height = app.height;
         context.backend.clear(new Color(18, 22, 34));
         for (let i = 0; i < this.layers.length; i++) {
             const layer = this.layers[i];

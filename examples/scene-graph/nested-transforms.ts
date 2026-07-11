@@ -1,4 +1,4 @@
-import { Application, Color, Container, Graphics, Scene } from '@codexo/exojs';
+import { Application, Color, Container, Graphics, type RenderingContext, Scene, type Time } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -21,7 +21,9 @@ class NestedTransformsScene extends Scene {
     private moon!: Graphics;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         this.sun = new Graphics();
         this.sun.fillColor = new Color(255, 220, 90);
@@ -45,13 +47,13 @@ class NestedTransformsScene extends Scene {
         this.moonOrbit.addChild(this.moon);
     }
 
-    override update(delta): void {
+    override update(delta: Time): void {
         this.planetOrbit.rotate(delta.seconds * 30);
         this.planet.rotate(delta.seconds * 120);
         this.moonOrbit.rotate(delta.seconds * 180);
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         context.render(this.planetOrbit);
     }

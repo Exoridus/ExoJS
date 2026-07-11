@@ -16,36 +16,45 @@ class MenuScene extends Scene {
     label;
     onTap;
     init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         this.label = new Text('MENU\nClick to Start', { align: 'center', fillColor: Color.white, fontSize: 34, fontWeight: 'bold' });
         this.label.setAnchor(0.5);
         this.label.setPosition(width / 2, height / 2);
         this.inputs.onTrigger(Keyboard.Space, () => {
-            void this.app.scene.setScene(gameScene);
+            void app.scene.setScene(gameScene);
         });
         this.onTap = () => {
-            void this.app.scene.setScene(gameScene);
+            void app.scene.setScene(gameScene);
         };
-        this.app.input.onPointerTap.add(this.onTap);
+        app.input.onPointerTap.add(this.onTap);
     }
     draw(context) {
         context.backend.clear(new Color(18, 38, 72, 1));
         context.render(this.label);
     }
     destroy() {
-        this.app.input.onPointerTap.remove(this.onTap);
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        app.input.onPointerTap.remove(this.onTap);
         super.destroy();
     }
 }
 class GameScene extends Scene {
     label;
     init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         this.label = new Text('GAME\nEsc to Menu', { align: 'center', fillColor: Color.white, fontSize: 34, fontWeight: 'bold' });
         this.label.setAnchor(0.5);
         this.label.setPosition(width / 2, height / 2);
         this.inputs.onTrigger(Keyboard.Escape, () => {
-            void this.app.scene.setScene(menuScene);
+            void app.scene.setScene(menuScene);
         });
     }
     draw(context) {

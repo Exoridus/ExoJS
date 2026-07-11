@@ -1,4 +1,4 @@
-import { Application, Color, Graphics, Scene, View } from '@codexo/exojs';
+import { Application, Color, Graphics, type RenderingContext, Scene, type Time, View } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -32,8 +32,10 @@ class PointerToWorldScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
 
     override init(): void {
-        const width = this.app.width;
-        const height = this.app.height;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const width = app.width;
+        const height = app.height;
 
         this.view = new View(width / 2, height / 2, width, height);
         this.grid = new Graphics();
@@ -53,19 +55,19 @@ class PointerToWorldScene extends Scene {
             this.grid.drawLine(-640, y, width + 640, y);
         }
 
-        this.app.input.onPointerMove.add(pointer => {
+        app.input.onPointerMove.add(pointer => {
             this.cursor.x = pointer.x;
             this.cursor.y = pointer.y;
         });
 
-        this.app.input.onPointerTap.add(pointer => {
+        app.input.onPointerTap.add(pointer => {
             const world = this.view.screenToWorld(pointer.x, pointer.y);
 
             this.markerWorld.push({ x: world.x, y: world.y });
         });
 
         // Scroll to nudge a user-controlled zoom that the automatic breath multiplies.
-        this.app.input.onMouseWheel.add(offset => {
+        app.input.onMouseWheel.add(offset => {
             this.userZoom = Math.max(0.4, Math.min(3, this.userZoom + (offset.y < 0 ? 0.1 : -0.1)));
         });
 
@@ -81,9 +83,11 @@ class PointerToWorldScene extends Scene {
         });
     }
 
-    override update(delta): void {
-        const width = this.app.width;
-        const height = this.app.height;
+    override update(delta: Time): void {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const width = app.width;
+        const height = app.height;
 
         this.elapsed += delta.seconds;
 
@@ -102,7 +106,7 @@ class PointerToWorldScene extends Scene {
         this.hud.setStatus(`Screen ${Math.round(this.cursor.x)}, ${Math.round(this.cursor.y)} → World ${this.world.x.toFixed(0)}, ${this.world.y.toFixed(0)} · zoom ${this.view.zoomLevel.toFixed(2)}`);
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         context.backend.setView(this.view);
 

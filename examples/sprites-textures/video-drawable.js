@@ -28,7 +28,10 @@ class VideoDrawableScene extends Scene {
     loadedVideos = new Set();
     switching = false;
     async init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         // Video has no seamless adapter (unlike Texture/Sound), so it is
         // awaited via `load()` rather than fetched synchronously via `get()`.
         const loaded = await this.loader.load(Assets.from({ [VIDEOS[0].name]: Asset.kind('video', VIDEOS[0].url) }));
@@ -51,11 +54,11 @@ class VideoDrawableScene extends Scene {
             status: `Playing — ${VIDEOS[0].label}`,
             hint: 'The video streams as a live GPU texture with a sprite composited over it.',
         });
-        this.app.input.onPointerTap.add(() => {
+        app.input.onPointerTap.add(() => {
             this.video.toggle();
             this.hud.setStatus(this.video.playing ? `Playing — ${VIDEOS[this.videoIdx].label}` : 'Paused');
         });
-        this.app.input.onKeyDown.add(channel => {
+        app.input.onKeyDown.add(channel => {
             const idx = [Keyboard.One, Keyboard.Two, Keyboard.Three, Keyboard.Four].indexOf(channel);
             if (idx !== -1)
                 void this.switchVideo(idx);
@@ -64,7 +67,10 @@ class VideoDrawableScene extends Scene {
     }
     /** Sizing + playback options shared by every video the example swaps in. */
     configureVideo() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         this.video.width = width;
         this.video.height = height;
         // Muted playback autoplays reliably under browser autoplay policy without
@@ -95,8 +101,11 @@ class VideoDrawableScene extends Scene {
         }
     }
     update(delta) {
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         this.elapsed += delta.seconds;
-        const { width, height } = this.app.canvas;
+        const { width, height } = app.canvas;
         // Drift the composited sprite across the video so the overlay is obvious.
         this.overlay.setPosition(width / 2 + Math.sin(this.elapsed) * (width * 0.3), height / 2 + Math.cos(this.elapsed * 0.7) * (height * 0.25));
         this.overlay.rotate(delta.seconds * 60);

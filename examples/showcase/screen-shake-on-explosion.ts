@@ -1,4 +1,4 @@
-import { Application, Color, Scene, Vector, View } from '@codexo/exojs';
+import { Application, Color, type RenderingContext, Scene, type Time, Vector, View } from '@codexo/exojs';
 import {
     AlphaFadeOverLifetime,
     BurstSpawn,
@@ -29,7 +29,9 @@ class ScreenShakeOnExplosionScene extends Scene {
     private burst!: BurstSpawn;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         this.view = new View(width / 2, height / 2, width, height);
         this.ps = new ParticleSystem(this.loader.get('image/particle-light.png'), { capacity: 5000 });
@@ -44,18 +46,18 @@ class ScreenShakeOnExplosionScene extends Scene {
         });
         this.ps.addSpawnModule(this.burst);
         this.ps.addUpdateModule(new AlphaFadeOverLifetime());
-        this.app.input.onPointerTap.add(p => {
+        app.input.onPointerTap.add(p => {
             this.burstPos.set(p.x - this.ps.position.x, p.y - this.ps.position.y);
             this.burst.reset();
             this.view.shake(22, 280, { frequency: 26, decay: true });
         });
     }
 
-    override update(delta): void {
+    override update(delta: Time): void {
         this.ps.update(delta);
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         context.backend.setView(this.view);
         context.render(this.ps);

@@ -1,4 +1,4 @@
-import { Application, Color, Graphics, Scene, Sprite, View } from '@codexo/exojs';
+import { Application, Color, Graphics, type RenderingContext, Scene, Sprite, type Time, View } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -21,7 +21,9 @@ class PictureInPictureScene extends Scene {
     private frame!: Graphics;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         this.sprite = new Sprite(this.loader.get('image/ship-a.png'));
 
@@ -40,7 +42,7 @@ class PictureInPictureScene extends Scene {
         this.frame.drawRectangle(width * 0.68, height * 0.04, width * 0.28, height * 0.28);
     }
 
-    override update(delta): void {
+    override update(delta: Time): void {
         this.sprite.move(this.velocity * delta.seconds, 0);
 
         if (this.sprite.position.x > 320 || this.sprite.position.x < -320) {
@@ -50,7 +52,7 @@ class PictureInPictureScene extends Scene {
         this.pipView.follow(this.sprite, { lerp: 1 });
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.clear(Color.black);
         context.render(this.sprite, { view: this.mainView });
         context.render(this.sprite, { view: this.pipView });

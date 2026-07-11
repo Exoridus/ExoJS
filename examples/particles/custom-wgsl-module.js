@@ -53,7 +53,10 @@ class CustomWgslModuleScene extends Scene {
     hud;
     reportedMode = false;
     init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         this.system = new ParticleSystem(this.loader.get(assets.demo.textures.particleLight), { capacity: 26000 });
         this.system.setPosition(width / 2, height - 60);
         this.system.addSpawnModule(new RateSpawn({

@@ -17,7 +17,10 @@ class GraphicsPrimitivesScene extends Scene {
     diamond;
     star;
     init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         this.sceneRoot = new Container();
         this.sceneRoot.setPosition(width / 2, height / 2);
         this.panel = new Graphics();
@@ -35,9 +38,12 @@ class GraphicsPrimitivesScene extends Scene {
         this.sceneRoot.addChild(this.panel, this.circle, this.diamond, this.star);
     }
     update(delta) {
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         this.sceneRoot.rotate(delta.seconds * 9);
         this.star.rotate(delta.seconds * 60);
-        this.circle.y = Math.sin(this.app.activeTime.seconds * 2) * 18;
+        this.circle.y = Math.sin(app.activeTime.seconds * 2) * 18;
     }
     draw(context) {
         context.backend.clear();

@@ -28,16 +28,22 @@ class TweenFromArrayScene extends Scene {
     sprite;
     waypoints = [];
     init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         this.waypoints = waypointFractions.map(({ fx, fy }) => ({ x: fx * width, y: fy * height }));
         this.sprite = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(this.waypoints[0].x, this.waypoints[0].y);
         this.buildPath();
     }
     buildPath() {
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         let first = null;
         let prev = null;
         for (let i = 1; i < this.waypoints.length; i++) {
-            const next = this.app.tweens.create(this.sprite.position).to(this.waypoints[i], 0.35).easing(Ease.sineInOut);
+            const next = app.tweens.create(this.sprite.position).to(this.waypoints[i], 0.35).easing(Ease.sineInOut);
             if (first === null)
                 first = next;
             if (prev !== null)

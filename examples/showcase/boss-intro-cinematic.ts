@@ -1,4 +1,4 @@
-import { Application, Asset, AudioStream, Color, Graphics, Keyboard, type Pausable, Scene, type Seekable, Sprite, Text, View, type Voice } from '@codexo/exojs';
+import { Application, Asset, AudioStream, Color, Graphics, Keyboard, type Pausable, type RenderingContext, Scene, type Seekable, Sprite, Text, type Time, View, type Voice } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -29,7 +29,9 @@ class BossIntroCinematicScene extends Scene {
     private height = 0;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         this.width = width;
         this.height = height;
 
@@ -65,15 +67,17 @@ class BossIntroCinematicScene extends Scene {
 
         // Core defers playback until the AudioContext unlocks on the first
         // gesture; start the cinematic in lockstep with the sting on unlock.
-        this.musicVoice = this.app.audio.play(this.music, { loop: true, volume: 0.2 }) as Voice & Seekable & Pausable;
-        this.app.audio.onUnlock.add(() => this.playSequence());
+        this.musicVoice = app.audio.play(this.music, { loop: true, volume: 0.2 }) as Voice & Seekable & Pausable;
+        app.audio.onUnlock.add(() => this.playSequence());
 
         this.inputs.onTrigger(Keyboard.R, () => this.replay());
-        this.app.input.onPointerDown.add(() => this.replay());
+        app.input.onPointerDown.add(() => this.replay());
     }
 
     private replay(): void {
-        if (this.app.audio.locked) {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        if (app.audio.locked) {
             return;
         }
 
@@ -88,10 +92,12 @@ class BossIntroCinematicScene extends Scene {
     }
 
     private playSequence(): void {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const { width, height } = this;
 
         // Wipe any in-flight tweens and reset the visible state to frame zero.
-        this.app.tweens.clear();
+        app.tweens.clear();
         this.view.reset(width * 0.42, height / 2, width, height);
         this.view.stopShake();
         this.barSize.v = 0;
@@ -100,13 +106,13 @@ class BossIntroCinematicScene extends Scene {
         this.boss.setScale(0.4);
 
         // Letterbox bars slam in.
-        this.app.tweens.create(this.barSize).to({ v: 84 }, 0.6).start();
+        app.tweens.create(this.barSize).to({ v: 84 }, 0.6).start();
         // Slow camera push-in toward the boss.
-        this.app.tweens.create(this.view.center).to({ x: width * 0.55, y: height / 2 }, 2.0).start();
+        app.tweens.create(this.view.center).to({ x: width * 0.55, y: height / 2 }, 2.0).start();
         // The boss looms larger as the camera arrives.
-        this.app.tweens.create(this.boss.scale).to({ x: 2.1, y: 2.1 }, 1.8).delay(1.1).start();
+        app.tweens.create(this.boss.scale).to({ x: 2.1, y: 2.1 }, 1.8).delay(1.1).start();
         // Typewriter title reveal — its onStart IS the reveal beat: punch a shake.
-        this.app.tweens
+        app.tweens
             .create(this.titleState)
             .to({ count: titleText.length }, 1.0)
             .delay(1.6)
@@ -118,15 +124,17 @@ class BossIntroCinematicScene extends Scene {
             })
             .start();
         // Music swells up under the reveal.
-        this.app.tweens.create(this.musicVoice).to({ volume: 0.85 }, 2.0).start();
+        app.tweens.create(this.musicVoice).to({ volume: 0.85 }, 2.0).start();
     }
 
-    override update(delta): void {
+    override update(delta: Time): void {
         // Advance the camera shake (and follow/bounds) animation each frame.
         this.view.update(delta.milliseconds);
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const { width, height } = this;
 
         context.backend.clear(new Color(16, 16, 24));
@@ -145,7 +153,7 @@ class BossIntroCinematicScene extends Scene {
         this.bars.drawRectangle(0, height - this.barSize.v, width, this.barSize.v);
         context.render(this.bars);
 
-        if (this.app.audio.locked) {
+        if (app.audio.locked) {
             context.render(this.tapPrompt);
         }
     }

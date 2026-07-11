@@ -1,4 +1,4 @@
-import { Application, Color, Container, Graphics, Scene } from '@codexo/exojs';
+import { Application, Color, Container, Graphics, type RenderingContext, Scene, type Time } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -19,7 +19,9 @@ class GraphicsPrimitivesScene extends Scene {
     private star!: Graphics;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         this.sceneRoot = new Container();
         this.sceneRoot.setPosition(width / 2, height / 2);
@@ -43,13 +45,15 @@ class GraphicsPrimitivesScene extends Scene {
         this.sceneRoot.addChild(this.panel, this.circle, this.diamond, this.star);
     }
 
-    override update(delta): void {
+    override update(delta: Time): void {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         this.sceneRoot.rotate(delta.seconds * 9);
         this.star.rotate(delta.seconds * 60);
-        this.circle.y = Math.sin(this.app.activeTime.seconds * 2) * 18;
+        this.circle.y = Math.sin(app.activeTime.seconds * 2) * 18;
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         context.render(this.sceneRoot);
     }

@@ -59,7 +59,10 @@ class RetainedContainerScene extends Scene {
         this.elapsed += delta.seconds;
     }
     draw(context) {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         context.backend.clear();
         // Pan the whole field along a slow Lissajous path, like a camera drifting
         // over a static world. For a RetainedContainer this is ONE group-matrix

@@ -1,4 +1,4 @@
-import { Application, Color, Scene, Sprite } from '@codexo/exojs';
+import { Application, Color, type RenderingContext, Scene, Sprite } from '@codexo/exojs';
 import { DebugOverlay } from '@codexo/exojs/debug';
 
 const app = new Application({
@@ -22,7 +22,9 @@ class PointerAndHittestScene extends Scene {
     private sprites!: Sprite[];
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         this.sprites = [];
         for (let i = 0; i < 5; i++) {
@@ -43,7 +45,7 @@ class PointerAndHittestScene extends Scene {
         }
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         context.render(this.root);
     }

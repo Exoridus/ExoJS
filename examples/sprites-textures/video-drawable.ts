@@ -1,4 +1,4 @@
-import { Application, Asset, Assets, Color, Keyboard, Scene, Sprite, Texture, Video } from '@codexo/exojs';
+import { Application, Asset, Assets, Color, Keyboard, type RenderingContext, Scene, Sprite, Texture, type Time, Video } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 // Every video in the asset catalog, switchable at runtime with the number
@@ -31,7 +31,9 @@ class VideoDrawableScene extends Scene {
     private switching = false;
 
     override async init(): Promise<void> {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         // Video has no seamless adapter (unlike Texture/Sound), so it is
         // awaited via `load()` rather than fetched synchronously via `get()`.
@@ -59,12 +61,12 @@ class VideoDrawableScene extends Scene {
             hint: 'The video streams as a live GPU texture with a sprite composited over it.',
         });
 
-        this.app.input.onPointerTap.add(() => {
+        app.input.onPointerTap.add(() => {
             this.video.toggle();
             this.hud.setStatus(this.video.playing ? `Playing — ${VIDEOS[this.videoIdx].label}` : 'Paused');
         });
 
-        this.app.input.onKeyDown.add(channel => {
+        app.input.onKeyDown.add(channel => {
             const idx = [Keyboard.One, Keyboard.Two, Keyboard.Three, Keyboard.Four].indexOf(channel);
             if (idx !== -1) void this.switchVideo(idx);
         });
@@ -74,7 +76,9 @@ class VideoDrawableScene extends Scene {
 
     /** Sizing + playback options shared by every video the example swaps in. */
     private configureVideo(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         this.video.width = width;
         this.video.height = height;
         // Muted playback autoplays reliably under browser autoplay policy without
@@ -103,17 +107,19 @@ class VideoDrawableScene extends Scene {
         }
     }
 
-    override update(delta): void {
+    override update(delta: Time): void {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         this.elapsed += delta.seconds;
 
-        const { width, height } = this.app.canvas;
+        const { width, height } = app.canvas;
 
         // Drift the composited sprite across the video so the overlay is obvious.
         this.overlay.setPosition(width / 2 + Math.sin(this.elapsed) * (width * 0.3), height / 2 + Math.cos(this.elapsed * 0.7) * (height * 0.25));
         this.overlay.rotate(delta.seconds * 60);
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         context.render(this.video);
         context.render(this.overlay);

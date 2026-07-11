@@ -1,4 +1,4 @@
-import { Application, Color, Container, Keyboard, Scene, Sprite } from '@codexo/exojs';
+import { Application, Color, Container, Keyboard, type RenderingContext, Scene, Sprite, type Time } from '@codexo/exojs';
 import { DebugOverlay } from '@codexo/exojs/debug';
 
 const app = new Application({
@@ -22,7 +22,9 @@ class PerformanceOverlayScene extends Scene {
     private layer!: Container;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         // All sprites share one texture, so adding them to a single container and
         // rendering it once lets the renderer batch them into a single draw call.
@@ -44,8 +46,10 @@ class PerformanceOverlayScene extends Scene {
         });
     }
 
-    override update(delta): void {
-        const { width, height } = this.app.canvas;
+    override update(delta: Time): void {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         for (const item of this.sprites) {
             item.sprite.move(item.vx * delta.seconds, item.vy * delta.seconds);
@@ -54,7 +58,7 @@ class PerformanceOverlayScene extends Scene {
         }
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         context.render(this.layer);
     }

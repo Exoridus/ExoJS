@@ -32,7 +32,10 @@ class DuckingScene extends Scene {
     voiceBarY = 0;
     hud;
     async init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         // Wide meters centred on the 16:9 canvas.
         this.barX = width * 0.1;
         this.barW = width * 0.8;
@@ -73,17 +76,17 @@ class DuckingScene extends Scene {
             status: 'Click or press any key to start…',
             hint: 'When the voice plays, the music meter ducks down while the voice meter spikes.',
         });
-        this.app.input.onPointerTap.add(() => {
+        app.input.onPointerTap.add(() => {
             // The pointer gesture also unlocks the AudioContext; firing while
             // still locked would be silent, so wait until audio is ready.
-            if (this.app.audio.locked)
+            if (app.audio.locked)
                 return;
-            this.app.audio.play(this.voice, { bus: this.voiceBus });
+            app.audio.play(this.voice, { bus: this.voiceBus });
             this.hud.setStatus('Voice playing — music ducked');
         });
         // Core defers playback until the AudioContext unlocks on the first
         // gesture, then starts automatically.
-        this.app.audio.play(this.music, { loop: true, volume: 0.7 });
+        app.audio.play(this.music, { loop: true, volume: 0.7 });
         this.hud.setStatus('Music playing — click to duck it');
     }
     bar(label, name, y, level, color) {
@@ -94,6 +97,9 @@ class DuckingScene extends Scene {
         label.text = `${name}: ${(level * 100).toFixed(0)}%`;
     }
     draw(context) {
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         // RMS reads 0 in silence, so the meters are honest (flat until audio plays).
         const music = this.musicLevel.getRms();
         const voice = this.voiceLevel.getRms();
@@ -107,7 +113,7 @@ class DuckingScene extends Scene {
         context.render(this.gfx);
         context.render(this.musicLabel);
         context.render(this.voiceLabel);
-        if (this.app.audio.locked) {
+        if (app.audio.locked) {
             context.render(this.tapPrompt);
         }
     }

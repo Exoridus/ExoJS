@@ -17,9 +17,12 @@ class RenderToTextureScene extends Scene {
     renderTexture;
     renderSprite;
     init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         this.container = this.createBunnyContainer(this.loader.get('image/ship-a.png'));
-        this.renderTexture = this.createRenderTexture(this.container);
+        this.renderTexture = this.createRenderTexture(app.backend, this.container);
         this.renderSprite = new Sprite(this.renderTexture);
         this.renderSprite.setPosition(width, height);
         this.renderSprite.setAnchor(1, 1);
@@ -35,8 +38,7 @@ class RenderToTextureScene extends Scene {
         }
         return container;
     }
-    createRenderTexture(container) {
-        const backend = this.app.backend;
+    createRenderTexture(backend, container) {
         const renderTexture = new RenderTexture(Math.ceil(container.width), Math.ceil(container.height));
         backend.setRenderTarget(renderTexture);
         backend.clear();

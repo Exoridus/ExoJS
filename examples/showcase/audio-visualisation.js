@@ -25,14 +25,17 @@ class AudioVisualisationScene extends Scene {
     hud;
     tapPrompt;
     init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         this.music = this.loader.get(Asset.kind('music', assets.demo.audio.musicLoop));
         // One analyser tap for spectrum/waveform, one beat detector for the
         // beat-pulse ring. Both read the music bus the stream plays through,
         // without altering playback.
-        this.analyser = new AudioAnalyser({ source: this.app.audio.music });
+        this.analyser = new AudioAnalyser({ source: app.audio.music });
         this.detector = new BeatDetector();
-        this.detector.source = this.app.audio.music;
+        this.detector.source = app.audio.music;
         this.canvas = document.createElement('canvas');
         this.canvas.style.position = 'absolute';
         this.canvas.style.top = '12.5%';
@@ -61,10 +64,10 @@ class AudioVisualisationScene extends Scene {
         this.tapPrompt = new Text('Click or press any key to start the music', { fillColor: Color.white, fontSize: 22, align: 'center' })
             .setAnchor(0.5, 0.5)
             .setPosition(width / 2, height - 64);
-        this.app.input.onPointerDown.add(() => {
+        app.input.onPointerDown.add(() => {
             // The first gesture only unlocks audio (core auto-starts the queued
             // track); subsequent clicks toggle play / pause.
-            if (this.app.audio.locked) {
+            if (app.audio.locked) {
                 return;
             }
             if (this.musicVoice.paused) {
@@ -77,9 +80,12 @@ class AudioVisualisationScene extends Scene {
         });
         // Core defers playback until the AudioContext unlocks on the first
         // gesture, then starts automatically — play() returns the Voice now.
-        this.musicVoice = this.app.audio.play(this.music, { loop: true, volume: 0.8 });
+        this.musicVoice = app.audio.play(this.music, { loop: true, volume: 0.8 });
     }
     draw(context) {
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const canvas = this.canvas;
         const freqData = this.analyser.getSpectrum();
         const timeDomain = this.analyser.getWaveform();
@@ -122,7 +128,7 @@ class AudioVisualisationScene extends Scene {
         this.screen.updateTexture();
         context.backend.clear();
         context.render(this.screen);
-        if (this.app.audio.locked) {
+        if (app.audio.locked) {
             context.render(this.tapPrompt);
         }
     }

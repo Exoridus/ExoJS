@@ -1,4 +1,4 @@
-import { Application, BlurFilter, Color, ColorFilter, RenderBackendType, Scene, Sprite, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
+import { Application, BlurFilter, Color, ColorFilter, RenderBackendType, type RenderingContext, Scene, Sprite, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -29,7 +29,9 @@ class FilterStackScene extends Scene {
     private panel!: ReturnType<typeof mountControlPanel>;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         this.sprite = new Sprite(this.loader.get(PRIMARY_RAMP)).setAnchor(0.5).setScale(4).setPosition(width / 2, height / 2);
         this.blur = new BlurFilter({ radius: 4, quality: 2 });
@@ -91,7 +93,7 @@ class FilterStackScene extends Scene {
         return labels.length > 0 ? `Active: ${labels.join(' → ')}` : 'Active: none (original sprite)';
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         context.render(this.sprite);
     }

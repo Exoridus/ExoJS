@@ -1,4 +1,4 @@
-import { Application, Color, Scene, Sprite, Tween } from '@codexo/exojs';
+import { Application, Color, type RenderingContext, Scene, Sprite, Tween } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -18,18 +18,20 @@ class InterruptAndReplaceScene extends Scene {
     private moveTween: Tween | null = null;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         this.sprite = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(width / 2, height / 2);
-        this.app.input.onPointerTap.add(pointer => {
+        app.input.onPointerTap.add(pointer => {
             if (this.moveTween !== null) {
                 this.moveTween.stop();
             }
-            this.moveTween = this.app.tweens.create(this.sprite.position).to({ x: pointer.x, y: pointer.y }, 0.35).start();
+            this.moveTween = app.tweens.create(this.sprite.position).to({ x: pointer.x, y: pointer.y }, 0.35).start();
         });
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         context.render(this.sprite);
     }

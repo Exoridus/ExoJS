@@ -1,4 +1,4 @@
-import { Application, Color, Container, RenderTexture, Scene, Sprite, Texture } from '@codexo/exojs';
+import { Application, Color, Container, type RenderingContext, RenderTexture, Scene, Sprite, Texture } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -19,11 +19,13 @@ class RenderToTextureScene extends Scene {
     private renderSprite!: Sprite;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         this.container = this.createBunnyContainer(this.loader.get('image/ship-a.png'));
 
-        this.renderTexture = this.createRenderTexture(this.container);
+        this.renderTexture = this.createRenderTexture(app.backend, this.container);
 
         this.renderSprite = new Sprite(this.renderTexture);
         this.renderSprite.setPosition(width, height);
@@ -46,8 +48,7 @@ class RenderToTextureScene extends Scene {
         return container;
     }
 
-    private createRenderTexture(container: Container): RenderTexture {
-        const backend = this.app.backend;
+    private createRenderTexture(backend: Application['backend'], container: Container): RenderTexture {
         const renderTexture = new RenderTexture(Math.ceil(container.width), Math.ceil(container.height));
 
         backend.setRenderTarget(renderTexture);
@@ -60,7 +61,7 @@ class RenderToTextureScene extends Scene {
         return renderTexture;
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         context.render(this.container);
         context.render(this.renderSprite);

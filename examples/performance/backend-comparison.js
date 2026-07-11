@@ -19,7 +19,10 @@ let backendType = 'webgpu';
 class DemoScene extends Scene {
     sprites;
     init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         this.sprites = Array.from({ length: 2200 }, () => {
             const sprite = new Sprite(this.loader.get('image/ship-a.png'));
             sprite.setAnchor(0.5);
@@ -37,7 +40,10 @@ class DemoScene extends Scene {
         });
     }
     update(delta) {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         for (const item of this.sprites) {
             item.sprite.move(item.vx * delta.seconds, item.vy * delta.seconds);
             if (item.sprite.position.x < 0 || item.sprite.position.x > width)

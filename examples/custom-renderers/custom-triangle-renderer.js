@@ -133,7 +133,10 @@ const app = new Application({
 class CustomTriangleRendererScene extends Scene {
     triangleRenderer;
     init() {
-        this.triangleRenderer = new CustomTriangleRenderer(this.app.backend);
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        this.triangleRenderer = new CustomTriangleRenderer(app.backend);
     }
     draw() {
         this.triangleRenderer.draw();

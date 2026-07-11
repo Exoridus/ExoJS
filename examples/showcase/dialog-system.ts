@@ -1,4 +1,4 @@
-import { Application, Color, Scene, Sound, Sprite, Text } from '@codexo/exojs';
+import { Application, Color, type RenderingContext, Scene, Sound, Sprite, Text, type Time } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -39,7 +39,9 @@ class DialogSystemScene extends Scene {
     private awaitingChoice = false;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         // Portrait sits on the left; the dialog column runs to its right and
         // fills the wider 16:9 frame as a classic VN bottom-third box.
@@ -74,7 +76,7 @@ class DialogSystemScene extends Scene {
         }
         this.setChoicesVisible(false);
 
-        this.app.input.onPointerTap.add(() => this.advance());
+        app.input.onPointerTap.add(() => this.advance());
     }
 
     private advance(): void {
@@ -108,7 +110,9 @@ class DialogSystemScene extends Scene {
     }
 
     private choose(choice: string): void {
-        this.app.audio.play(this.beep, { playbackRate: 1.2, volume: 0.3 });
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        app.audio.play(this.beep, { playbackRate: 1.2, volume: 0.3 });
         this.choicePrompt.text = `You chose: ${choice}`;
         this.hud.setStatus(`Reply: ${choice}`);
         this.awaitingChoice = false;
@@ -123,20 +127,22 @@ class DialogSystemScene extends Scene {
         this.choicePrompt.visible = !visible && this.choicePrompt.text.length > 0;
     }
 
-    override update(delta): void {
+    override update(delta: Time): void {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         if (!this.done && !this.awaitingChoice) {
             this.timer += delta.seconds;
             while (this.timer > 0.035 && this.chars < lines[this.lineIndex].text.length) {
                 this.timer -= 0.035;
                 this.chars++;
-                this.app.audio.play(this.beep, { playbackRate: 1.9, volume: 0.14 });
+                app.audio.play(this.beep, { playbackRate: 1.9, volume: 0.14 });
             }
             this.done = this.chars >= lines[this.lineIndex].text.length;
         }
         this.box.text = lines[this.lineIndex].text.slice(0, this.chars);
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear(new Color(20, 24, 34));
         context.render(this.portrait);
         context.render(this.namePlate);

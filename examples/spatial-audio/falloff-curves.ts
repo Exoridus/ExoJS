@@ -1,4 +1,4 @@
-import { Application, Asset, Color, Graphics, Scene, Sound, Text } from '@codexo/exojs';
+import { Application, Asset, Color, Graphics, type RenderingContext, Scene, Sound, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -61,7 +61,9 @@ class FalloffCurvesScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
 
     override async init(): Promise<void> {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         // Sources spread across the lower half; the listener starts centred.
         const sourceY = height * 0.72;
@@ -106,18 +108,20 @@ class FalloffCurvesScene extends Scene {
             hint: 'Each source uses a different distance model — move the listener to compare attenuation.',
         });
 
-        this.app.input.onPointerMove.add(pointer => {
+        app.input.onPointerMove.add(pointer => {
             this.listener.x = pointer.x;
             this.listener.y = pointer.y;
         });
 
         // Core defers playback until the AudioContext unlocks on the first
         // gesture, then starts automatically — just call play().
-        for (const sound of this.sounds) this.app.audio.play(sound, { loop: true, volume: 0.5 });
+        for (const sound of this.sounds) app.audio.play(sound, { loop: true, volume: 0.5 });
         this.hud.setStatus('Move the pointer to relocate the listener');
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         context.backend.clear();
         this.graphics.clear();
 
@@ -157,7 +161,7 @@ class FalloffCurvesScene extends Scene {
         context.render(this.graphics);
         for (const label of this.labels) context.render(label);
 
-        if (this.app.audio.locked) {
+        if (app.audio.locked) {
             context.render(this.tapPrompt);
         }
     }

@@ -1,4 +1,4 @@
-import { Application, Color, Mesh, Scene } from '@codexo/exojs';
+import { Application, Color, Mesh, type RenderingContext, Scene, type Time } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -17,7 +17,9 @@ class MeshTexturedQuadScene extends Scene {
     private quad!: Mesh;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         this.quad = new Mesh({
             vertices: new Float32Array([
@@ -38,11 +40,11 @@ class MeshTexturedQuadScene extends Scene {
         this.quad.setPosition((width / 2) | 0, (height / 2) | 0);
     }
 
-    override update(delta): void {
+    override update(delta: Time): void {
         this.quad.rotate(delta.seconds * 30);
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         context.render(this.quad);
     }

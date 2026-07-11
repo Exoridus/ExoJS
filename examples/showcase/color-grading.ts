@@ -1,4 +1,4 @@
-import { Application, Color, Keyboard, LutFilter, Scene, Sprite, Texture } from '@codexo/exojs';
+import { Application, Color, Keyboard, LutFilter, type RenderingContext, Scene, Sprite, Texture } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -85,7 +85,9 @@ class ColorGradingScene extends Scene {
     private cycle!: { set(value: number): void };
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         this.luts = LOOKS.map(look => LutFilter.fromImage(buildLut3D(look.transform)));
         this.filter = new LutFilter({ mode: '3d', size: LUT_SIZE }).setLut(this.luts[0]);
@@ -126,7 +128,7 @@ class ColorGradingScene extends Scene {
         this.hud.setStatus(`${LOOKS[this.index].name}  (${this.index + 1}/${LOOKS.length})`);
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         context.render(this.sprite);
     }

@@ -1,4 +1,4 @@
-import { Application, Asset, Assets, AudioStream, Color, crossFade, Graphics, Scene, Text, type Voice } from '@codexo/exojs';
+import { Application, Asset, Assets, AudioStream, Color, crossFade, Graphics, type RenderingContext, Scene, Text, type Voice } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -39,7 +39,9 @@ class CrossfadeTracksScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
 
     override async init(): Promise<void> {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         // Spread the two meters across the wide canvas: each sits a third of the
         // way in from its side, centred on the meter width.
@@ -77,7 +79,7 @@ class CrossfadeTracksScene extends Scene {
             hint: 'The brighter meter with the bar above it is the active track; both loop continuously while their volumes ramp.',
         });
 
-        this.app.input.onPointerTap.add(() => {
+        app.input.onPointerTap.add(() => {
             // stopAfter: false keeps both loops alive so we can crossfade back.
             if (this.toB) {
                 void crossFade(this.trackAVoice, this.trackBVoice, 2000, { toVolume: PEAK, stopAfter: false });
@@ -92,8 +94,8 @@ class CrossfadeTracksScene extends Scene {
         // Core defers playback until the AudioContext unlocks on the first
         // gesture, then starts automatically — start both loops (B silent) so
         // crossFade only has to ramp gains rather than start playback mid-fade.
-        this.trackAVoice = this.app.audio.play(this.trackA, { loop: true, volume: PEAK });
-        this.trackBVoice = this.app.audio.play(this.trackB, { loop: true, volume: 0 });
+        this.trackAVoice = app.audio.play(this.trackA, { loop: true, volume: PEAK });
+        this.trackBVoice = app.audio.play(this.trackB, { loop: true, volume: 0 });
         this.hud.setStatus('Track A active — click to crossfade.');
     }
 
@@ -120,7 +122,9 @@ class CrossfadeTracksScene extends Scene {
         }
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         context.backend.clear();
         this.graphics.clear();
 
@@ -145,7 +149,7 @@ class CrossfadeTracksScene extends Scene {
         context.render(this.labelB);
         context.render(this.nowPlaying);
 
-        if (this.app.audio.locked) {
+        if (app.audio.locked) {
             context.render(this.tapPrompt);
         }
     }

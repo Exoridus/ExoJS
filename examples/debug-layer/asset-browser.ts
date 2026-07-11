@@ -1,7 +1,7 @@
 import { Asset } from '@codexo/exojs';
 import {
-    Application, AudioStream, Color, FontAsset, Graphics, Json, type Pausable, Scene,
-    type Seekable, type SpritesheetData, Sprite, Spritesheet, SvgAsset, Text, Texture, type Voice,
+    Application, AudioStream, Color, FontAsset, Graphics, Json, type Pausable, type RenderingContext, Scene,
+    type Seekable, type SpritesheetData, Sprite, Spritesheet, SvgAsset, Text, Texture, type Time, type Voice,
 } from '@codexo/exojs';
 
 // Dynamic category accessor: maps a category key to the correct sub-object
@@ -10,6 +10,21 @@ import {
 function getCategoryData(catKey: string): Record<string, unknown> {
     if (catKey === 'technical') return assets.technical as unknown as Record<string, unknown>;
     return (assets.demo as unknown as Record<string, Record<string, unknown>>)[catKey] ?? {};
+}
+
+// Union of the tileset catalog entry shapes — every entry declares
+// tileWidth/tileHeight even though only some also carry `data`.
+type TilesetEntry = (typeof assets.demo.tilesets)[keyof typeof assets.demo.tilesets];
+
+// Shape of the vendor pack manifest JSON files loaded per `vendor/*.json` key.
+interface VendorPack {
+    slug: string;
+    fileCountByExtension?: Record<string, number>;
+}
+
+interface VendorManifest {
+    license?: string;
+    packs?: VendorPack[];
 }
 
 const W = 1280;
@@ -122,7 +137,7 @@ class AssetBrowserScene extends Scene {
     cursorSprites  = new Map<string, Sprite>();
     tilesetSprites = new Map<string, Sprite>();
     soundSpriteData = new Map<string, any>();
-    vendorData     = new Map<string, any>();
+    vendorData     = new Map<string, VendorManifest>();
 
     animG: Graphics | null = null;
     audioG: Graphics | null = null;
@@ -173,12 +188,14 @@ class AssetBrowserScene extends Scene {
     loadingCats = new Set<string>();
 
     override async init(): Promise<void> {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         this.assetLoader = this.loader;
         await this.ensureCategory(this.cat);
 
-        this.app.input.onPointerTap.add(p => this.onTap(p.x, p.y));
-        this.app.input.onPointerMove.add(p => this.onMove(p.x, p.y));
-        this.app.input.onMouseWheel.add(v => this.onWheel(v.y));
+        app.input.onPointerTap.add(p => this.onTap(p.x, p.y));
+        app.input.onPointerMove.add(p => this.onMove(p.x, p.y));
+        app.input.onMouseWheel.add(v => this.onWheel(v.y));
 
         this.selectFirstInCategory();
     }
@@ -363,7 +380,7 @@ class AssetBrowserScene extends Scene {
             case 'vendor': {
                 await Promise.all(
                     Object.entries(assets.demo.vendor ?? {}).map(async ([k, url]) => {
-                        this.vendorData.set(k, await loader.load(Asset.kind('json', url as string)));
+                        this.vendorData.set(k, await loader.load(Asset.kind<VendorManifest>('json', url as string)));
                     }),
                 );
                 break;
@@ -377,7 +394,7 @@ class AssetBrowserScene extends Scene {
     private techFlatKeys(): string[] {
 
         const out: string[] = [];
-        for (const subcat of ['alpha', 'filtering', 'color']) {
+        for (const subcat of ['alpha', 'filtering', 'color'] as const) {
             const items = assets.technical[subcat];
             if (!items) continue;
             out.push(subcat);
@@ -450,6 +467,8 @@ class AssetBrowserScene extends Scene {
     }
 
     private toggleAudio(): void {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         if (!this.key) return;
         const map = this.currentPlayingMap();
         if (!map) return;
@@ -463,7 +482,7 @@ class AssetBrowserScene extends Scene {
         } else {
             // New asset: stop the previous preview and start this one.
             this.previewVoice?.stop();
-            this.previewVoice = this.app.audio.play(stream) as Voice & Pausable & Seekable;
+            this.previewVoice = app.audio.play(stream) as Voice & Pausable & Seekable;
             this.previewKey = this.key;
         }
     }
@@ -575,7 +594,7 @@ class AssetBrowserScene extends Scene {
         this.scrollOff = Math.max(0, Math.min(maxScroll, this.scrollOff + delta));
     }
 
-    override update(delta): void {
+    override update(delta: Time): void {
         if (!this.animPlaying) return;
         if (this.cat !== 'sprites' && this.cat !== 'spritesheets' && this.cat !== 'inputPrompts') return;
         const frames = this.currentFrameKeys();
@@ -587,7 +606,7 @@ class AssetBrowserScene extends Scene {
         }
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear(C.bg);
         this.drawPreviewBg(context);
         this.drawPreviewContent(context);
@@ -595,7 +614,7 @@ class AssetBrowserScene extends Scene {
         this.drawToolbar(context);
     }
 
-    private drawNoAssets(context): void {
+    private drawNoAssets(context: RenderingContext): void {
         const g = this.gPreview;
         g.clear();
         g.fillColor = C.panel;
@@ -604,7 +623,7 @@ class AssetBrowserScene extends Scene {
         context.render(this.txtNoAssets);
     }
 
-    private drawToolbar(context): void {
+    private drawToolbar(context: RenderingContext): void {
         const g = this.gToolbar;
         g.clear();
 
@@ -667,7 +686,7 @@ class AssetBrowserScene extends Scene {
         }
     }
 
-    private drawSidebar(context): void {
+    private drawSidebar(context: RenderingContext): void {
         const g = this.gSidebar;
         g.clear();
 
@@ -727,7 +746,7 @@ class AssetBrowserScene extends Scene {
         }
     }
 
-    private drawPreviewBg(context): void {
+    private drawPreviewBg(context: RenderingContext): void {
         const { r, g, b } = BG_OPTIONS[this.bgIdx];
         const bg = this.gPreview;
         bg.clear();
@@ -736,7 +755,7 @@ class AssetBrowserScene extends Scene {
         context.render(bg);
     }
 
-    private drawPreviewContent(context): void {
+    private drawPreviewContent(context: RenderingContext): void {
         if (!this.key) {
             this.txtNoSel.setPosition(PREVIEW_X + (PREVIEW_W / 2) - 130, H / 2 - 10);
             context.render(this.txtNoSel);
@@ -775,7 +794,7 @@ class AssetBrowserScene extends Scene {
         this.drawInfoBar(context);
     }
 
-    private drawInfoBar(context): void {
+    private drawInfoBar(context: RenderingContext): void {
         const g = this.gInfoBar;
         g.clear();
         g.fillColor = C.infoBar;
@@ -834,7 +853,7 @@ class AssetBrowserScene extends Scene {
         sprite.setPosition(cx, cy);
     }
 
-    private drawTexPreview(context): void {
+    private drawTexPreview(context: RenderingContext): void {
         const sprite = this.texSprites.get(this.key ?? '');
         if (!sprite) return;
         const { cx, cy, maxW, maxH } = this.previewCenter();
@@ -842,7 +861,7 @@ class AssetBrowserScene extends Scene {
         context.render(sprite);
     }
 
-    private drawSprPreview(context): void {
+    private drawSprPreview(context: RenderingContext): void {
         const ss = this.sprSheets.get(this.key ?? '');
         if (!ss) return;
         const frames = [...ss.sprites.keys()];
@@ -855,7 +874,7 @@ class AssetBrowserScene extends Scene {
         this.drawAnimControls(context, frames.length);
     }
 
-    private drawSshPreview(context): void {
+    private drawSshPreview(context: RenderingContext): void {
         const ss = this.sshSheets.get(this.key ?? '');
         if (!ss) return;
         const frames = [...ss.sprites.keys()];
@@ -868,7 +887,7 @@ class AssetBrowserScene extends Scene {
         this.drawAnimControls(context, frames.length);
     }
 
-    private drawInpPreview(context): void {
+    private drawInpPreview(context: RenderingContext): void {
         const ss = this.inpSheets.get(this.key ?? '');
         if (ss) {
             const frames = [...ss.sprites.keys()];
@@ -884,7 +903,7 @@ class AssetBrowserScene extends Scene {
         }
     }
 
-    private drawSvgPreview(context): void {
+    private drawSvgPreview(context: RenderingContext): void {
         const sprite = this.svgSprites.get(this.key ?? '');
         if (!sprite) return;
         const { cx, cy, maxW, maxH } = this.previewCenter();
@@ -892,7 +911,7 @@ class AssetBrowserScene extends Scene {
         context.render(sprite);
     }
 
-    private drawAudioPreview(context, musicMap: Map<string, AudioStream>): void {
+    private drawAudioPreview(context: RenderingContext, musicMap: Map<string, AudioStream>): void {
         if (!this.audioG) this.audioG = new Graphics();
         const music = musicMap.get(this.key ?? '');
         const isPlaying = music ? this.previewIsPlaying() : false;
@@ -916,7 +935,7 @@ class AssetBrowserScene extends Scene {
         context.render(this.txtMeta);
     }
 
-    private drawSoundSpritePreview(context): void {
+    private drawSoundSpritePreview(context: RenderingContext): void {
         if (!this.audioG) this.audioG = new Graphics();
         const music   = this.soundSpriteAudio.get(this.key ?? '');
         const data    = this.soundSpriteData.get(this.key ?? '');
@@ -949,7 +968,7 @@ class AssetBrowserScene extends Scene {
         }
     }
 
-    private drawFontPreview(context): void {
+    private drawFontPreview(context: RenderingContext): void {
         const family = this.fontFamilies.get(this.key ?? '');
         if (!family) {
             this.txtMeta.text = `Font: ${this.key}\n${this.assetPath()}`;
@@ -976,14 +995,14 @@ class AssetBrowserScene extends Scene {
         context.render(t2);
     }
 
-    private drawVideoPreview(context): void {
+    private drawVideoPreview(context: RenderingContext): void {
         this.txtMeta.text =
             `VIDEO\n\nKey: assets.video.${this.key}\nURL: ${this.assetPath()}\n\nOpen the URL in your browser to preview.`;
         this.txtMeta.setPosition(PREVIEW_X + 40, PREVIEW_Y + 80);
         context.render(this.txtMeta);
     }
 
-    private drawTechPreview(context): void {
+    private drawTechPreview(context: RenderingContext): void {
         if (!this.key?.includes('.')) return;
         const sprite = this.techSprites.get(this.key);
         if (!sprite) return;
@@ -1000,7 +1019,7 @@ class AssetBrowserScene extends Scene {
         }
     }
 
-    private drawBgPreview(context): void {
+    private drawBgPreview(context: RenderingContext): void {
         const sprite = this.bgSprites.get(this.key ?? '');
         if (!sprite) return;
         const { cx, cy, maxW, maxH } = this.previewCenter();
@@ -1008,7 +1027,7 @@ class AssetBrowserScene extends Scene {
         context.render(sprite);
     }
 
-    private drawCursorPreview(context): void {
+    private drawCursorPreview(context: RenderingContext): void {
         const sprite = this.cursorSprites.get(this.key ?? '');
         if (!sprite) return;
         const { cx, cy, maxW, maxH } = this.previewCenter();
@@ -1016,10 +1035,10 @@ class AssetBrowserScene extends Scene {
         context.render(sprite);
     }
 
-    private drawTilesetPreview(context): void {
+    private drawTilesetPreview(context: RenderingContext): void {
         const sprite = this.tilesetSprites.get(this.key ?? '');
         if (!sprite) return;
-        const entry: any = assets.demo.tilesets[this.key ?? '' as keyof typeof assets.demo.tilesets] as any;
+        const entry: TilesetEntry | undefined = assets.demo.tilesets[(this.key ?? '') as keyof typeof assets.demo.tilesets];
         const { cx, cy, maxW, maxH } = this.previewCenter();
         this.fitSprite(sprite, maxW, maxH - 30, cx, cy - 15);
         context.render(sprite);
@@ -1031,7 +1050,7 @@ class AssetBrowserScene extends Scene {
         }
     }
 
-    private drawVendorPreview(context): void {
+    private drawVendorPreview(context: RenderingContext): void {
         const data = this.vendorData.get(this.key ?? '');
         if (!data) {
             this.txtMeta.text = `Loading: ${this.assetPath()}`;
@@ -1039,19 +1058,19 @@ class AssetBrowserScene extends Scene {
             context.render(this.txtMeta);
             return;
         }
-        const packs: any[] = data.packs ?? [];
+        const packs = data.packs ?? [];
         const lines = [
             `License: ${data.license ?? 'CC0'}`,
             `Packs: ${packs.length}`,
             '',
-            ...packs.slice(0, 14).map((p: any) => `  ${p.slug}  (${Object.values(p.fileCountByExtension ?? {}).reduce((a: number, b: number) => a + b, 0)} files)`),
+            ...packs.slice(0, 14).map(p => `  ${p.slug}  (${Object.values(p.fileCountByExtension ?? {}).reduce((a, b) => a + b, 0)} files)`),
         ];
         this.txtMeta.text = lines.join('\n');
         this.txtMeta.setPosition(PREVIEW_X + 30, PREVIEW_Y + 60);
         context.render(this.txtMeta);
     }
 
-    private drawAnimControls(context, frameCount: number): void {
+    private drawAnimControls(context: RenderingContext, frameCount: number): void {
         if (!this.animG) this.animG = new Graphics();
         const g  = this.animG;
         const bx = PREVIEW_X + 16;

@@ -1,4 +1,4 @@
-import { Application, Asset, Color, Scene, Text, Time, Timer } from '@codexo/exojs';
+import { Application, Asset, Color, type RenderingContext, Scene, Text, Time, Timer } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -34,7 +34,9 @@ class LifecycleScene extends Scene {
     private text!: Text;
 
     override async init(): Promise<void> {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         // This scene is procedural — nothing to fetch — but a real scene would
         // resolve its assets here before touching the scene graph, e.g.:
@@ -65,7 +67,7 @@ class LifecycleScene extends Scene {
         }
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         this.drawCount++;
         context.backend.clear();
         this.text.text = [...this.events.slice(-8), `draw ${this.drawCount}`].join('\n');

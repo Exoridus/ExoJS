@@ -35,7 +35,10 @@ class GameScene extends Scene {
         this.health.value = (Math.sin(this.time) + 1) / 2;
     }
     draw(context) {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         context.backend.clear(new Color(20, 32, 58));
         this.ring.clear();
         this.ring.lineWidth = 20;

@@ -51,7 +51,10 @@ class BlendmodesScene extends Scene {
     // return value is intentionally unused. The subsequent 2-argument `get()`
     // calls for the same sources are unaffected and stay seamless.
     async init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         const samplerOptions = { scaleMode: ScaleModes.Nearest };
         await this.loader.load(Asset.kind('texture', ALPHA_RINGS, { samplerOptions }));
         await this.loader.load(Asset.kind('texture', assets.demo.textures.shipA, { samplerOptions }));
@@ -82,7 +85,7 @@ class BlendmodesScene extends Scene {
             index: 0,
             onChange: index => this.setIndex(index),
         });
-        this.app.input.onPointerDown.add(() => this.setIndex((this.index + 1) % BLEND_MODES.length));
+        app.input.onPointerDown.add(() => this.setIndex((this.index + 1) % BLEND_MODES.length));
         // Apply the initial mode (Normal) without skipping it.
         this.applyBlendMode();
     }
@@ -98,7 +101,10 @@ class BlendmodesScene extends Scene {
         this.hud.setStatus(`${name}  (${this.index + 1}/${BLEND_MODES.length})`);
     }
     update(delta) {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         const offset = (Math.cos(this.ticker * 1.4) * 0.5 + 0.5) * (width * 0.22);
         this.left.setPosition(width / 2 - offset, height / 2);
         this.right.setPosition(width / 2 + offset, height / 2);

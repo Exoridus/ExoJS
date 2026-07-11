@@ -1,4 +1,4 @@
-import { Application, Color, GamepadAxis, GamepadButton, Keyboard, Scene, Sprite } from '@codexo/exojs';
+import { Application, Color, GamepadAxis, GamepadButton, Keyboard, type RenderingContext, Scene, Sprite, type Time } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -29,11 +29,13 @@ class ActionMappingScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         this.sprite = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(width / 2, height / 2);
 
-        const pad0 = this.app.input.getGamepad(0);
+        const pad0 = app.input.getGamepad(0);
 
         // --- Move action: keyboard WASD/arrows feed key axes ---
         this.inputs.onActive([Keyboard.A, Keyboard.Left], () => (this.keys.left = 1));
@@ -72,7 +74,7 @@ class ActionMappingScene extends Scene {
         this.lastDevice = device;
     }
 
-    override update(delta): void {
+    override update(delta: Time): void {
         const keyX = this.keys.right - this.keys.left;
         const keyY = this.keys.down - this.keys.up;
 
@@ -93,7 +95,7 @@ class ActionMappingScene extends Scene {
         this.hud.setHint(`Driven by: ${this.lastDevice}`);
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         context.render(this.sprite);
     }

@@ -19,7 +19,10 @@ class PerformanceOverlayScene extends Scene {
     sprites;
     layer;
     init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         // All sprites share one texture, so adding them to a single container and
         // rendering it once lets the renderer batch them into a single draw call.
         // Rendering each sprite with its own `context.render(sprite)` call would
@@ -40,7 +43,10 @@ class PerformanceOverlayScene extends Scene {
         });
     }
     update(delta) {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         for (const item of this.sprites) {
             item.sprite.move(item.vx * delta.seconds, item.vy * delta.seconds);
             if (item.sprite.position.x < 0 || item.sprite.position.x > width)

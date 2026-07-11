@@ -26,13 +26,16 @@ class AudioReactiveParticlesScene extends Scene {
     hud;
     tapPrompt;
     init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         this.music = this.loader.get(Asset.kind('music', assets.demo.audio.musicLoop));
         // Two parallel taps of the same track: the analyser gives per-band
         // energy (drives emission), the detector gives beats (recolours).
-        this.analyser = new AudioAnalyser({ fftSize: 1024, source: this.app.audio.music });
+        this.analyser = new AudioAnalyser({ fftSize: 1024, source: app.audio.music });
         this.detector = new BeatDetector();
-        this.detector.source = this.app.audio.music;
+        this.detector.source = app.audio.music;
         this.ps = new ParticleSystem(this.loader.get(assets.demo.textures.particleLight), { capacity: 6000 });
         this.ps.setPosition(width / 2, height / 2);
         // The rate (density) and the cone speed range (spread) are mutated every
@@ -68,7 +71,7 @@ class AudioReactiveParticlesScene extends Scene {
             .setPosition(width / 2, height - 64);
         // Core defers playback until the AudioContext unlocks on the first
         // gesture, then starts automatically — play() returns the Voice now.
-        this.musicVoice = this.app.audio.play(this.music, { loop: true, volume: 0.8 });
+        this.musicVoice = app.audio.play(this.music, { loop: true, volume: 0.8 });
     }
     update(delta) {
         // Low band (bass) drives how MANY particles spawn this second.
@@ -86,9 +89,12 @@ class AudioReactiveParticlesScene extends Scene {
         this.ps.update(delta);
     }
     draw(context) {
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         context.backend.clear();
         context.render(this.ps);
-        if (this.app.audio.locked) {
+        if (app.audio.locked) {
             context.render(this.tapPrompt);
         }
     }

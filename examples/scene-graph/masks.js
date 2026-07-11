@@ -16,7 +16,10 @@ class MasksScene extends Scene {
     gfxSprite;
     time = 0;
     init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         const tex = this.loader.get(ALPHA_RINGS);
         this.rectSprite = new Sprite(tex);
         this.rectSprite.setScale(1);
@@ -34,7 +37,10 @@ class MasksScene extends Scene {
         this.gfxSprite.mask = circle;
     }
     update(delta) {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         this.time += delta.seconds;
         const r = 80;
         this.rectMask.x = (width / 4 + Math.cos(this.time * 1.4) * r - 55) | 0;

@@ -20,7 +20,10 @@ class ScreenShakeOnExplosionScene extends Scene {
     burstPos;
     burst;
     init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         this.view = new View(width / 2, height / 2, width, height);
         this.ps = new ParticleSystem(this.loader.get('image/particle-light.png'), { capacity: 5000 });
         this.ps.setPosition(width / 2, height / 2);
@@ -34,7 +37,7 @@ class ScreenShakeOnExplosionScene extends Scene {
         });
         this.ps.addSpawnModule(this.burst);
         this.ps.addUpdateModule(new AlphaFadeOverLifetime());
-        this.app.input.onPointerTap.add(p => {
+        app.input.onPointerTap.add(p => {
             this.burstPos.set(p.x - this.ps.position.x, p.y - this.ps.position.y);
             this.burst.reset();
             this.view.shake(22, 280, { frequency: 26, decay: true });

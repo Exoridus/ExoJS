@@ -33,7 +33,10 @@ class AudioBusesScene extends Scene {
     sfxButton = { x: 0, y: 0, w: 0, h: 0 };
     hud;
     async init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         // Centre the bus mixer horizontally and spread the bars across the wide
         // 16:9 canvas.
         this.trackW = width * 0.5;
@@ -65,25 +68,25 @@ class AudioBusesScene extends Scene {
             status: 'Click or press any key to start the music…',
             hint: 'Master scales every bus; Music and SFX scale only their own. Bars show live volume, labels show it in dB.',
         });
-        this.app.input.onPointerDown.add(p => {
+        app.input.onPointerDown.add(p => {
             this.drag = this.rowFromY(p.y);
             this.updateSlider(p.x);
         });
-        this.app.input.onPointerMove.add(p => {
+        app.input.onPointerMove.add(p => {
             this.updateSlider(p.x);
         });
-        this.app.input.onPointerUp.add(() => {
+        app.input.onPointerUp.add(() => {
             this.drag = -1;
         });
-        this.app.input.onPointerTap.add(p => {
+        app.input.onPointerTap.add(p => {
             if (this.insideSfxButton(p.x, p.y)) {
-                this.app.audio.play(this.sfx);
+                app.audio.play(this.sfx);
                 this.hud.setStatus('SFX fired on the SFX bus — try lowering Master or SFX, then fire again.');
             }
         });
         // Core defers playback until the AudioContext unlocks on the first
         // gesture, then starts automatically.
-        this.app.audio.play(this.music, { loop: true, volume: 0.6 });
+        app.audio.play(this.music, { loop: true, volume: 0.6 });
         this.hud.setStatus('Music playing on the Music bus. Drag a bar to mix.');
     }
     rowFromY(y) {
@@ -103,6 +106,9 @@ class AudioBusesScene extends Scene {
         rows[this.drag].bus().volume = t;
     }
     draw(context) {
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         context.backend.clear();
         this.graphics.clear();
         rows.forEach((row, index) => {
@@ -123,7 +129,7 @@ class AudioBusesScene extends Scene {
         for (const label of this.labels)
             context.render(label);
         context.render(this.sfxLabel);
-        if (this.app.audio.locked) {
+        if (app.audio.locked) {
             context.render(this.tapPrompt);
         }
     }

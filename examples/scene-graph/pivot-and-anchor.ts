@@ -1,4 +1,4 @@
-import { Application, Color, Graphics, Scene, Sprite, Text } from '@codexo/exojs';
+import { Application, Color, Graphics, type RenderingContext, Scene, Sprite, Text, type Time } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -27,7 +27,9 @@ class PivotAndAnchorScene extends Scene {
     private timer = 0;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         this.sprite = new Sprite(this.loader.get('image/ship-a.png')).setPosition(width / 2, height / 2);
         this.pivotMarker = new Graphics();
@@ -43,7 +45,7 @@ class PivotAndAnchorScene extends Scene {
         this.label.text = `mode: ${mode.name}`;
     }
 
-    override update(delta): void {
+    override update(delta: Time): void {
         this.timer += delta.seconds;
         this.sprite.rotate(delta.seconds * 90);
         if (this.timer > 1.8) {
@@ -53,7 +55,7 @@ class PivotAndAnchorScene extends Scene {
         }
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         const m = this.sprite.getGlobalTransform();
         context.backend.clear();
         context.render(this.sprite);

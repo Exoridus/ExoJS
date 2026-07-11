@@ -1,4 +1,4 @@
-import { Application, BlendModes, Color, Random, Scene, Size, Sprite, Texture, Time, Timer, Vector } from '@codexo/exojs';
+import { Application, BlendModes, Color, Random, type RenderingContext, Scene, Size, Sprite, Texture, Time, Timer, Vector } from '@codexo/exojs';
 import {
     AlphaFadeOverLifetime,
     ApplyForce,
@@ -65,7 +65,9 @@ class FireworksScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         this.canvasSize = new Size(width, height);
         this.rocketTexture = this.loader.get(assets.demo.textures.particleStar);
@@ -97,7 +99,7 @@ class FireworksScene extends Scene {
         );
 
         // Click anywhere to launch a rocket from the bottom at that x.
-        this.app.input.onPointerDown.add(pointer => this.launchRocket(pointer.x));
+        app.input.onPointerDown.add(pointer => this.launchRocket(pointer.x));
 
         // Ambient fallback: keep the sky alive even without clicks.
         this.autoLaunchTimer = new Timer(autoLaunchInterval, true);
@@ -141,7 +143,7 @@ class FireworksScene extends Scene {
         this.hud.setStatus(`Launched: ${this.launchCount} · in flight: ${this.rockets.length}`);
     }
 
-    override update(delta): void {
+    override update(delta: Time): void {
         const dt = delta.seconds;
 
         if (this.autoLaunchTimer.expired) {
@@ -169,7 +171,7 @@ class FireworksScene extends Scene {
         this.explosions.update(delta);
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         context.render(this.explosions);
 

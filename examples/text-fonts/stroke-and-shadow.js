@@ -15,7 +15,10 @@ const app = new Application({
 class StrokeAndShadowScene extends Scene {
     title;
     init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         this.title = new Text('EXOJS', {
             fillColor: new Color(230, 240, 255),
             fontSize: 120,

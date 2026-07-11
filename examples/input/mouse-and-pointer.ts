@@ -1,4 +1,4 @@
-import { Application, Color, Graphics, Scene, Sprite } from '@codexo/exojs';
+import { Application, Color, Graphics, type RenderingContext, Scene, Sprite } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -32,7 +32,9 @@ class MouseAndPointerScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         this.pointer = { x: width / 2, y: height / 2 };
         this.previous = { x: width / 2, y: height / 2 };
@@ -42,18 +44,18 @@ class MouseAndPointerScene extends Scene {
         this.ship.draggable = true;
         this.crosshair = new Graphics();
 
-        this.app.input.onPointerMove.add(pointer => {
+        app.input.onPointerMove.add(pointer => {
             this.pointer.x = pointer.x;
             this.pointer.y = pointer.y;
             this.buttons = pointer.buttons;
         });
-        this.app.input.onPointerDown.add(pointer => {
+        app.input.onPointerDown.add(pointer => {
             this.buttons = pointer.buttons;
         });
-        this.app.input.onPointerUp.add(pointer => {
+        app.input.onPointerUp.add(pointer => {
             this.buttons = pointer.buttons;
         });
-        this.app.input.onPointerTap.add(() => {
+        app.input.onPointerTap.add(() => {
             this.clicks++;
         });
 
@@ -86,7 +88,7 @@ class MouseAndPointerScene extends Scene {
         );
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         context.render(this.ship);
 

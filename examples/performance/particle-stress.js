@@ -32,7 +32,10 @@ class ParticleStressScene extends Scene {
     sharedTexture;
     particleSystems;
     init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         this.sharedTexture = createParticleTexture();
         this.particleSystems = [];
         this.particleSystems.push(this.buildSystem({
@@ -111,7 +114,10 @@ class ParticleStressScene extends Scene {
         return { instance: system, baseX: config.x, baseY: config.y };
     }
     update(delta) {
-        const time = this.app.activeTime.seconds;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const time = app.activeTime.seconds;
         for (let i = 0; i < this.particleSystems.length; i++) {
             const entry = this.particleSystems[i];
             const wave = time + i * 1.2;

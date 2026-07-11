@@ -49,7 +49,10 @@ class MetaballsScene extends Scene {
         });
     }
     update(delta) {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         for (const point of this.points) {
             point.a += delta.seconds * (0.4 + point.r / 600);
         }

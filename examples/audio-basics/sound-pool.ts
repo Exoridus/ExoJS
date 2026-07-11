@@ -1,4 +1,4 @@
-import { Application, Color, Graphics, Keyboard, Scene, Sound, Text } from '@codexo/exojs';
+import { Application, Color, Graphics, Keyboard, type RenderingContext, Scene, Sound, Text, type Time } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -31,7 +31,9 @@ class SoundPoolScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         // impactHeavy is long enough (~0.5 s) that rapid fire actually overlaps -
         // a short click ends before the next shot and the pool never fills.
@@ -75,6 +77,8 @@ class SoundPoolScene extends Scene {
     }
 
     private spawnVoice(): void {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         // Retire any voices that have finished naturally.
         this.voices = this.voices.filter(end => end > this.clock);
 
@@ -86,17 +90,19 @@ class SoundPoolScene extends Scene {
 
         this.voices.push(this.clock + this.sound.duration);
         // Small random pitch per shot keeps the barrage from sounding robotic.
-        this.app.audio.play(this.sound, { playbackRate: 0.85 + Math.random() * 0.3, volume: 0.5 });
+        app.audio.play(this.sound, { playbackRate: 0.85 + Math.random() * 0.3, volume: 0.5 });
     }
 
-    override update(delta): void {
+    override update(delta: Time): void {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         this.clock += delta.seconds;
         // Drop voices that have ended this frame so the meter reads truthfully.
         this.voices = this.voices.filter(end => end > this.clock);
 
         // Core defers playback until the AudioContext unlocks on the first
         // gesture; skip firing while audio is still locked.
-        if (!this.firing || this.app.audio.locked) return;
+        if (!this.firing || app.audio.locked) return;
 
         this.timer += delta.seconds;
         while (this.timer >= FIRE_INTERVAL) {
@@ -105,7 +111,9 @@ class SoundPoolScene extends Scene {
         }
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         context.backend.clear();
         this.graphics.clear();
 
@@ -116,8 +124,8 @@ class SoundPoolScene extends Scene {
         const cell = 70;
         const gap = 12;
         const totalW = cols * cell + (cols - 1) * gap;
-        const startX = (this.app.width - totalW) / 2;
-        const startY = this.app.height * 0.42;
+        const startX = (app.width - totalW) / 2;
+        const startY = app.height * 0.42;
 
         for (let i = 0; i < POOL_SIZE; i++) {
             const col = i % cols;
@@ -139,7 +147,7 @@ class SoundPoolScene extends Scene {
         context.render(this.label);
         context.render(this.readout);
 
-        if (this.app.audio.locked) {
+        if (app.audio.locked) {
             context.render(this.tapPrompt);
         }
     }

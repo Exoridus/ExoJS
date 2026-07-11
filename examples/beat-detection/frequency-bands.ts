@@ -1,4 +1,4 @@
-import { Application, Asset, Assets, AudioStream, Color, Graphics, Scene, Text } from '@codexo/exojs';
+import { Application, Asset, Assets, AudioStream, Color, Graphics, type RenderingContext, Scene, Text } from '@codexo/exojs';
 import { AudioAnalyser } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 
@@ -46,12 +46,14 @@ class FrequencyBandsScene extends Scene {
     private tapPrompt!: Text;
 
     override async init(): Promise<void> {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         // AudioStream has no seamless adapter — await it explicitly.
         const { track } = await this.loader.load(Assets.from({ track: Asset.kind('music', 'audio/demo-loop-main.ogg') }));
         this.music = track;
 
         this.analyser = new AudioAnalyser({ fftSize: 2048, smoothingTimeConstant: 0.75 });
-        this.analyser.source = this.app.audio.music;
+        this.analyser.source = app.audio.music;
 
         // Log-spaced bin boundaries across the spectrum. Index 0 (DC) is skipped
         // so the lowest band starts at the first meaningful bin.
@@ -65,7 +67,7 @@ class FrequencyBandsScene extends Scene {
 
         this.bars = new Graphics();
 
-        const { width, height } = this.app.canvas;
+        const { width, height } = app.canvas;
         const gap = 16;
         const slotWidth = (width - gap) / BAND_COUNT;
         const barWidth = slotWidth - gap;
@@ -90,7 +92,7 @@ class FrequencyBandsScene extends Scene {
 
         // Core defers playback until the AudioContext unlocks on the first
         // gesture, then starts automatically.
-        this.app.audio.play(this.music, { loop: true, volume: 0.8 });
+        app.audio.play(this.music, { loop: true, volume: 0.8 });
     }
 
     override update(): void {
@@ -110,10 +112,12 @@ class FrequencyBandsScene extends Scene {
         }
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         context.backend.clear();
 
-        const { width, height } = this.app.canvas;
+        const { width, height } = app.canvas;
         const gap = 16;
         const slotWidth = (width - gap) / BAND_COUNT;
         const barWidth = slotWidth - gap;
@@ -139,7 +143,7 @@ class FrequencyBandsScene extends Scene {
             context.render(label);
         }
 
-        if (this.app.audio.locked) {
+        if (app.audio.locked) {
             context.render(this.tapPrompt);
         }
     }

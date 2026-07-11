@@ -19,8 +19,11 @@ class WorldScreenScene extends Scene {
     text;
     pointer = { x: 0, y: 0 };
     init() {
-        const width = this.app.width;
-        const height = this.app.height;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const width = app.width;
+        const height = app.height;
         this.view = new View(260, 160, width, height);
         this.grid = new Graphics();
         this.markers = new Graphics();
@@ -33,10 +36,10 @@ class WorldScreenScene extends Scene {
         for (let y = -200; y <= 1000; y += 100) {
             this.grid.drawLine(-200, y, 1200, y);
         }
-        this.app.input.onPointerMove.add(pointer => {
+        app.input.onPointerMove.add(pointer => {
             this.pointer = { x: pointer.x, y: pointer.y };
         });
-        this.app.input.onPointerTap.add(pointer => {
+        app.input.onPointerTap.add(pointer => {
             const world = this.toWorld(pointer.x, pointer.y);
             this.markers.fillColor = new Color(255, 220, 80);
             this.markers.drawCircle(world.x, world.y, 8);

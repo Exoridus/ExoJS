@@ -1,4 +1,4 @@
-import { Application, Color, Scene } from '@codexo/exojs';
+import { Application, Color, type RenderingContext, Scene, type Time } from '@codexo/exojs';
 import {
     ApplyForce,
     ColorGradient,
@@ -30,7 +30,9 @@ class EmitterBasicsScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         this.system = new ParticleSystem(this.loader.get(assets.demo.textures.particleLight), { capacity: 4000 });
         this.system.setPosition(width / 2, height - 80);
@@ -82,11 +84,11 @@ class EmitterBasicsScene extends Scene {
         });
     }
 
-    override update(delta): void {
+    override update(delta: Time): void {
         this.system.update(delta);
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         context.render(this.system);
     }

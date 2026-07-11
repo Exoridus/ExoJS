@@ -1,4 +1,4 @@
-import { Application, Asset, Color, Scene, Sprite, Spritesheet, type SpritesheetData, TextureRegion, Vector } from '@codexo/exojs';
+import { Application, Asset, Color, type RenderingContext, Scene, Sprite, Spritesheet, type SpritesheetData, TextureRegion, type Time, Vector } from '@codexo/exojs';
 import { BoxShape, type PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
 import { PhysicsDebugDraw } from '@codexo/exojs-physics/debug';
 import { ObjectKind, ObjectLayer, type RectangleObject, TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, tilemapExtension, TileMapNode, TileSet } from '@codexo/exojs-tilemap';
@@ -45,6 +45,8 @@ class TiledMapPhysicsActorScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
 
     override async init(): Promise<void> {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         this.world = new PhysicsWorld({ gravity: { x: 0, y: 1500 } });
 
         // ── Tileset + a single ground tile layer ──────────────────────────
@@ -138,13 +140,15 @@ class TiledMapPhysicsActorScene extends Scene {
 
         // Physics debug overlay: outlines every collider so the bridge output
         // is visible on top of the rendered tiles.
-        this.debug = new PhysicsDebugDraw(this.app, this.world, { drawShapes: true, drawCenters: true });
+        this.debug = new PhysicsDebugDraw(app, this.world, { drawShapes: true, drawCenters: true });
     }
 
-    override update(delta): void {
+    override update(delta: Time): void {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         this.world.step(delta.seconds);
 
-        const { width, height } = this.app.canvas;
+        const { width, height } = app.canvas;
         const body = this.actorBody;
 
         // Loop the demo: nudge the actor again once it settles, and rescue it if
@@ -160,7 +164,7 @@ class TiledMapPhysicsActorScene extends Scene {
         }
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         context.render(this.mapNode);
         context.render(this.actor);

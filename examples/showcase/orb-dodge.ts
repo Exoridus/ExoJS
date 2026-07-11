@@ -1,4 +1,4 @@
-import { Application, Color, Container, Graphics, Keyboard, Scene, Text } from '@codexo/exojs';
+import { Application, Color, Container, Graphics, Keyboard, type RenderingContext, Scene, Text, type Time } from '@codexo/exojs';
 
 const CANVAS_WIDTH = 1280;
 const CANVAS_HEIGHT = 720;
@@ -111,7 +111,9 @@ class PlayScene extends Scene {
         this.orbs.push({ gfx, vx: ((tx - ox) / dist) * speed, vy: ((ty - oy) / dist) * speed, danger });
     }
 
-    override update(delta): void {
+    override update(delta: Time): void {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         this.elapsed += delta.seconds;
         this.spawnTimer += delta.seconds;
 
@@ -174,14 +176,14 @@ class PlayScene extends Scene {
 
         if (gameEnded) {
             gameOver.setResult(this.score, this.elapsed);
-            void this.app.scene.setScene(gameOver);
+            void app.scene.setScene(gameOver);
             return;
         }
 
         this.timeText.text = `${this.elapsed.toFixed(1)} s`;
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         context.render(this.world);
         context.render(this.scoreText);
@@ -211,6 +213,8 @@ class GameOverScene extends Scene {
     }
 
     override init(): void {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         this.title = new Text('GAME OVER', {
             align: 'center',
             fillColor: new Color(255, 80, 80),
@@ -237,13 +241,13 @@ class GameOverScene extends Scene {
         this.hint.setPosition(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 70);
 
         const restart = (): void => {
-            void this.app.scene.setScene(play);
+            void app.scene.setScene(play);
         };
         this.inputs.onTrigger(Keyboard.Space, restart);
         this.inputs.onTrigger(Keyboard.R, restart);
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         context.render(this.title);
         context.render(this.stats);

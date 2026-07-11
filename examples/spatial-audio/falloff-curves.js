@@ -45,7 +45,10 @@ class FalloffCurvesScene extends Scene {
     plot = { x: 0, y: 0, w: 0, h: 0 };
     hud;
     async init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         // Sources spread across the lower half; the listener starts centred.
         const sourceY = height * 0.72;
         this.sources = MODELS.map(({ model, color, tx }) => ({ model, color, x: width * tx, y: sourceY }));
@@ -83,17 +86,20 @@ class FalloffCurvesScene extends Scene {
             status: 'Click or press any key to start…',
             hint: 'Each source uses a different distance model — move the listener to compare attenuation.',
         });
-        this.app.input.onPointerMove.add(pointer => {
+        app.input.onPointerMove.add(pointer => {
             this.listener.x = pointer.x;
             this.listener.y = pointer.y;
         });
         // Core defers playback until the AudioContext unlocks on the first
         // gesture, then starts automatically — just call play().
         for (const sound of this.sounds)
-            this.app.audio.play(sound, { loop: true, volume: 0.5 });
+            app.audio.play(sound, { loop: true, volume: 0.5 });
         this.hud.setStatus('Move the pointer to relocate the listener');
     }
     draw(context) {
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         context.backend.clear();
         this.graphics.clear();
         // Falloff-curve plots in the upper canvas area.
@@ -127,7 +133,7 @@ class FalloffCurvesScene extends Scene {
         context.render(this.graphics);
         for (const label of this.labels)
             context.render(label);
-        if (this.app.audio.locked) {
+        if (app.audio.locked) {
             context.render(this.tapPrompt);
         }
     }

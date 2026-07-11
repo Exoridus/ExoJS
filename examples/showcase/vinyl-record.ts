@@ -1,4 +1,4 @@
-import { Application, Asset, AudioStream, Color, Graphics, Scene, Text, type Voice } from '@codexo/exojs';
+import { Application, Asset, AudioStream, Color, Graphics, type RenderingContext, Scene, Text, type Time, type Voice } from '@codexo/exojs';
 import { AudioAnalyser } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 
@@ -24,10 +24,12 @@ class VinylRecordScene extends Scene {
     private tapPrompt!: Text;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         this.music = this.loader.get(Asset.kind('music', assets.demo.audio.musicLoop));
-        this.analyser = new AudioAnalyser({ fftSize: 1024, source: this.app.audio.music });
+        this.analyser = new AudioAnalyser({ fftSize: 1024, source: app.audio.music });
         this.disc = new Graphics();
         this.bars = new Graphics();
 
@@ -46,10 +48,10 @@ class VinylRecordScene extends Scene {
 
         // Core defers playback until the AudioContext unlocks on the first
         // gesture, then starts automatically — play() returns the Voice now.
-        this.musicVoice = this.app.audio.play(this.music, { loop: true, volume: 0.8 });
+        this.musicVoice = app.audio.play(this.music, { loop: true, volume: 0.8 });
     }
 
-    override update(delta): void {
+    override update(delta: Time): void {
         // Spin speed is driven by live audio energy, not a constant fallback BPM.
         // Silence → energy 0 → the platter holds perfectly still.
         const energy = this.analyser.getRms();
@@ -64,8 +66,10 @@ class VinylRecordScene extends Scene {
         }
     }
 
-    override draw(context): void {
-        const { width, height } = this.app.canvas;
+    override draw(context: RenderingContext): void {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         const cx = width / 2;
         const cy = height / 2;
         const spectrum = this.analyser.getSpectrum();
@@ -101,7 +105,7 @@ class VinylRecordScene extends Scene {
         }
         context.render(this.bars);
 
-        if (this.app.audio.locked) {
+        if (app.audio.locked) {
             context.render(this.tapPrompt);
         }
     }

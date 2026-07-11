@@ -1,4 +1,4 @@
-import { Application, Asset, Assets, AudioStream, Color, Graphics, Scene, Text } from '@codexo/exojs';
+import { Application, Asset, Assets, AudioStream, Color, Graphics, type RenderingContext, Scene, Text } from '@codexo/exojs';
 import { CompressorEffect } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 
@@ -47,7 +47,9 @@ class CompressorScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
 
     override async init(): Promise<void> {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         // Wide horizontal bars centred on the 16:9 canvas; labels sit to the left.
         this.barW = width * 0.45;
@@ -80,20 +82,20 @@ class CompressorScene extends Scene {
             hint: 'The red bar shows live gain reduction — louder peaks pull it further right.',
         });
 
-        this.app.input.onPointerDown.add(p => {
+        app.input.onPointerDown.add(p => {
             this.drag = this.sliderAt(p.y);
             this.apply(p.x);
         });
-        this.app.input.onPointerMove.add(p => {
+        app.input.onPointerMove.add(p => {
             this.apply(p.x);
         });
-        this.app.input.onPointerUp.add(() => {
+        app.input.onPointerUp.add(() => {
             this.drag = -1;
         });
 
         // Core defers playback until the AudioContext unlocks on the first
         // gesture, then starts automatically.
-        this.app.audio.play(this.music, { loop: true, volume: 0.8 });
+        app.audio.play(this.music, { loop: true, volume: 0.8 });
         this.hud.setStatus('Compressing music bus…');
     }
 
@@ -113,7 +115,9 @@ class CompressorScene extends Scene {
         return this.filter[def.key];
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         context.backend.clear();
         this.gfx.clear();
         for (let i = 0; i < sliders.length; i++) {
@@ -141,7 +145,7 @@ class CompressorScene extends Scene {
 
         context.render(this.gfx);
 
-        if (this.app.audio.locked) {
+        if (app.audio.locked) {
             context.render(this.tapPrompt);
         }
     }

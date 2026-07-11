@@ -32,7 +32,10 @@ class WaterMirrorScene extends Scene {
     pipeline;
     time = 0;
     init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         const half = height / 2;
         this.rt = new RenderTexture(width, half);
         this.source = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(width / 2, half / 2).setScale(2.6);
@@ -54,7 +57,10 @@ class WaterMirrorScene extends Scene {
             .addPass(new RenderNodePass(this.mirror));
     }
     update(delta) {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         const quarter = height / 4;
         this.time += delta.seconds;
         this.source.setPosition(width / 2 + Math.cos(this.time * 1.7) * (width * 0.3), quarter + Math.sin(this.time * 1.3) * (quarter * 0.55));

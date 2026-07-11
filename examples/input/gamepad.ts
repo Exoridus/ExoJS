@@ -1,4 +1,4 @@
-import { Application, Asset, Color, Container, GamepadAxis, GamepadButton, lerp, Scene, Sprite, Spritesheet, type SpritesheetData, Vector } from '@codexo/exojs';
+import { Application, Asset, Color, Container, type Gamepad, GamepadAxis, GamepadButton, type InputChannel, lerp, type RenderingContext, Scene, Sprite, Spritesheet, type SpritesheetData, Vector } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -14,31 +14,34 @@ const app = new Application({
 });
 
 class GamepadScene extends Scene {
-    private activePad: any = null;
+    private activePad: Gamepad | null = null;
     private buttons!: Spritesheet;
     private buttonColor = new Color(255, 255, 255, 0.25);
-    private mappingButtons = new Map<any, any>();
-    private mappingFunctions = new Map<any, any>();
+    private mappingButtons = new Map<InputChannel, Sprite>();
+    private mappingFunctions = new Map<InputChannel, (value: number) => void>();
     private resetFunctions: Array<() => void> = [];
     private padBindings: Array<{ unbind(): void }> = [];
     private status!: Sprite;
     private container!: Container;
 
     override async init(): Promise<void> {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const buttonsData = (await this.loader.load(Asset.kind('json', 'json/buttons.json'))) as SpritesheetData;
 
         this.buttons = new Spritesheet(this.loader.get('image/buttons.png'), buttonsData);
-        this.status = this.createStatus();
-        this.container = this.createGamepad();
+        const { width, height } = app.canvas;
+        this.status = this.createStatus(width, height);
+        this.container = this.createGamepad(width, height);
 
         for (const sprite of this.mappingButtons.values()) {
             sprite.setTint(this.buttonColor);
         }
 
-        this.app.input.onGamepadConnected.add(pad => this.handleGamepadConnected(pad));
-        this.app.input.onGamepadDisconnected.add(pad => this.handleGamepadDisconnected(pad));
+        app.input.onGamepadConnected.add(pad => this.handleGamepadConnected(pad));
+        app.input.onGamepadDisconnected.add(pad => this.handleGamepadDisconnected(pad));
 
-        for (const pad of this.app.input.gamepads) {
+        for (const pad of app.input.gamepads) {
             if (pad.connected) {
                 this.setActivePad(pad);
                 break;
@@ -46,28 +49,30 @@ class GamepadScene extends Scene {
         }
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         context.render(this.status);
         context.render(this.container);
     }
 
-    private handleGamepadConnected(pad): void {
+    private handleGamepadConnected(pad: Gamepad): void {
         if (!this.activePad) {
             this.setActivePad(pad);
         }
     }
 
-    private handleGamepadDisconnected(pad): void {
+    private handleGamepadDisconnected(pad: Gamepad): void {
         if (this.activePad !== pad) {
             return;
         }
 
-        const next = this.app.input.gamepads.find((other: any) => other !== pad && other.connected) || null;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const next = app.input.gamepads.find(other => other !== pad && other.connected) || null;
         this.setActivePad(next);
     }
 
-    private setActivePad(pad): void {
+    private setActivePad(pad: Gamepad | null): void {
         for (const binding of this.padBindings) {
             binding.unbind();
         }
@@ -116,8 +121,7 @@ class GamepadScene extends Scene {
         }
     }
 
-    private createStatus(): Sprite {
-        const { width, height } = this.app.canvas;
+    private createStatus(width: number, height: number): Sprite {
         const status = this.buttons.getFrameSprite('status');
 
         status.setAnchor(0.5);
@@ -127,20 +131,19 @@ class GamepadScene extends Scene {
         return status;
     }
 
-    private createGamepad(): Container {
+    private createGamepad(width: number, height: number): Container {
         const container = new Container();
 
-        container.addChild(this.createDPadField());
-        container.addChild(this.createFaceButtons());
-        container.addChild(this.createShoulderButtons());
-        container.addChild(this.createMenuButtons());
-        container.addChild(this.createJoysticks());
+        container.addChild(this.createDPadField(width, height));
+        container.addChild(this.createFaceButtons(width, height));
+        container.addChild(this.createShoulderButtons(width, height));
+        container.addChild(this.createMenuButtons(width, height));
+        container.addChild(this.createJoysticks(width, height));
 
         return container;
     }
 
-    private createDPadField(): Container {
-        const { width, height } = this.app.canvas;
+    private createDPadField(width: number, height: number): Container {
         const mappedButtons = this.mappingButtons;
         const container = new Container();
         const dPad = this.buttons.getFrameSprite('dpad');
@@ -174,8 +177,7 @@ class GamepadScene extends Scene {
         return container;
     }
 
-    private createFaceButtons(): Container {
-        const { width, height } = this.app.canvas;
+    private createFaceButtons(width: number, height: number): Container {
         const mappedButtons = this.mappingButtons;
         const container = new Container();
         const buttonTop = this.buttons.getFrameSprite('FaceTop');
@@ -211,8 +213,7 @@ class GamepadScene extends Scene {
         return container;
     }
 
-    private createShoulderButtons(): Container {
-        const { width, height } = this.app.canvas;
+    private createShoulderButtons(width: number, height: number): Container {
         const mappedButtons = this.mappingButtons;
         const container = new Container();
         const leftButton = this.buttons.getFrameSprite('ShoulderLeftBottom');
@@ -244,8 +245,7 @@ class GamepadScene extends Scene {
         return container;
     }
 
-    private createMenuButtons(): Container {
-        const { width, height } = this.app.canvas;
+    private createMenuButtons(width: number, height: number): Container {
         const mappedButtons = this.mappingButtons;
         const container = new Container();
         const selectButton = this.buttons.getFrameSprite('Select');
@@ -266,8 +266,7 @@ class GamepadScene extends Scene {
         return container;
     }
 
-    private createJoysticks(): Container {
-        const { width, height } = this.app.canvas;
+    private createJoysticks(width: number, height: number): Container {
         const mappedButtons = this.mappingButtons;
         const mappingFunctions = this.mappingFunctions;
         const container = new Container();

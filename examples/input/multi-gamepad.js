@@ -24,8 +24,11 @@ class MultiGamepadScene extends Scene {
     connectPrompt;
     hud;
     init() {
-        const { width, height } = this.app.canvas;
-        this.players = this.app.input.gamepads.map((pad, index) => {
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
+        this.players = app.input.gamepads.map((pad, index) => {
             const sprite = new Sprite(this.loader.get('image/ship-a.png'))
                 .setAnchor(0.5)
                 .setScale(0.6)
@@ -40,9 +43,9 @@ class MultiGamepadScene extends Scene {
         });
         // Track controller presence with the engine's connect/disconnect signals
         // and prompt with an on-screen Text while none is attached.
-        this.hasPad = this.app.input.gamepads.some(pad => pad.connected);
-        this.app.input.onGamepadConnected.add(() => (this.hasPad = true));
-        this.app.input.onGamepadDisconnected.add(() => (this.hasPad = this.app.input.gamepads.some(pad => pad.connected)));
+        this.hasPad = app.input.gamepads.some(pad => pad.connected);
+        app.input.onGamepadConnected.add(() => (this.hasPad = true));
+        app.input.onGamepadDisconnected.add(() => (this.hasPad = app.input.gamepads.some(pad => pad.connected)));
         this.connectPrompt = new Text('Connect one or more controllers to play', { fillColor: Color.white, fontSize: 24, align: 'center' })
             .setAnchor(0.5, 0.5)
             .setPosition(width / 2, height / 2);
@@ -53,8 +56,8 @@ class MultiGamepadScene extends Scene {
             hint: 'Up to four pads, one coloured ship each.',
         });
         this.refreshHud();
-        this.app.input.onGamepadConnected.add(() => this.refreshHud());
-        this.app.input.onGamepadDisconnected.add(() => this.refreshHud());
+        app.input.onGamepadConnected.add(() => this.refreshHud());
+        app.input.onGamepadDisconnected.add(() => this.refreshHud());
     }
     refreshHud() {
         const lines = this.players.map((player, index) => {

@@ -1,4 +1,4 @@
-import { Application, Color, Mesh, Scene } from '@codexo/exojs';
+import { Application, Color, Mesh, type RenderingContext, Scene, type Time } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -60,7 +60,9 @@ class MeshDeformedGridScene extends Scene {
     private time = 0;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         const grid = buildGrid();
 
         this.restVertices = grid.vertices.slice();
@@ -73,7 +75,7 @@ class MeshDeformedGridScene extends Scene {
         this.mesh.setPosition((width / 2) | 0, (height / 2) | 0);
     }
 
-    override update(delta): void {
+    override update(delta: Time): void {
         this.time += delta.seconds;
         const verts = this.mesh.vertices;
         const rest = this.restVertices;
@@ -89,7 +91,7 @@ class MeshDeformedGridScene extends Scene {
         this.mesh.recomputeLocalBounds();
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         context.render(this.mesh);
     }

@@ -1,4 +1,4 @@
-import { Application, Color, Keyboard, RenderBackendType, Scene, Sprite, View, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
+import { Application, Color, Keyboard, RenderBackendType, type RenderingContext, Scene, Sprite, type Time, View, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -63,7 +63,9 @@ class InfiniteGridScene extends Scene {
     private filter!: WebGl2ShaderFilter | WebGpuShaderFilter;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         this.view = new View(0, 0, width, height);
         this.sprite = new Sprite(this.loader.get('image/uv-grid-256.png'));
@@ -88,14 +90,14 @@ class InfiniteGridScene extends Scene {
         this.inputs.onStop(Keyboard.E, () => { if (this.move.zoom > 0) this.move.zoom = 0; });
     }
 
-    override update(delta): void {
+    override update(delta: Time): void {
         this.view.move(this.move.x * 340 * delta.seconds, this.move.y * 340 * delta.seconds);
         this.view.setZoom(Math.max(0.2, this.view.zoomLevel + this.move.zoom * delta.seconds));
         this.filter.uniforms.uCenter = [this.view.center.x, this.view.center.y];
         this.filter.uniforms.uViewSize = [this.view.width, this.view.height];
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         context.render(this.sprite);
     }

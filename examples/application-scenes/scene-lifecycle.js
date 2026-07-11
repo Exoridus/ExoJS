@@ -32,7 +32,10 @@ class LifecycleScene extends Scene {
     timer;
     text;
     async init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         // This scene is procedural — nothing to fetch — but a real scene would
         // resolve its assets here before touching the scene graph, e.g.:
         //   const texture = this.loader.get('ship.png');

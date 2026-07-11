@@ -18,14 +18,17 @@ class TweenBasicsScene extends Scene {
     forward;
     backward;
     init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         const left = width * 0.1;
         const right = width * 0.9;
         this.sprite = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(left, height / 2);
         this.text = new Text('Tween running', { fillColor: Color.white, fontSize: 18 });
         this.text.setPosition(20, 20);
-        this.forward = this.app.tweens.create(this.sprite.position).to({ x: right }, 1.2);
-        this.backward = this.app.tweens.create(this.sprite.position).to({ x: left }, 1.2);
+        this.forward = app.tweens.create(this.sprite.position).to({ x: right }, 1.2);
+        this.backward = app.tweens.create(this.sprite.position).to({ x: left }, 1.2);
         this.forward
             .onComplete(() => {
             this.text.text = 'Completed -> reverse';

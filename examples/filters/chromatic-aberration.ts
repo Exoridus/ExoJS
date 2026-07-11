@@ -1,4 +1,4 @@
-import { Application, Color, RenderBackendType, Scene, Sprite, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
+import { Application, Color, RenderBackendType, type RenderingContext, Scene, Sprite, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -43,7 +43,9 @@ class ChromaticAberrationScene extends Scene {
     private panel!: ReturnType<typeof mountControlPanel>;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         this.filter =
             app.backend.backendType === RenderBackendType.WebGpu
@@ -88,7 +90,7 @@ class ChromaticAberrationScene extends Scene {
         return this.intensity === 0 ? 'Intensity: 0% (no split — original)' : `Intensity: ${pct}%  (uOffset ${offset})`;
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         context.render(this.sprite);
     }

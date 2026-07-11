@@ -1,4 +1,4 @@
-import { Application, Color, Graphics, Scene, Sprite, Text, Texture } from '@codexo/exojs';
+import { Application, Color, Graphics, type RenderingContext, Scene, Sprite, Text, Texture } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -24,7 +24,9 @@ class TextureLoaderScene extends Scene {
     private progress = { loaded: 0, total: 3 };
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         // Seamless get() returns placeholder handles immediately; each pops in
         // (loadState → 'ready') as its fetch completes, polled in update().
@@ -53,7 +55,7 @@ class TextureLoaderScene extends Scene {
         this.progress.loaded = this.textures.filter(texture => texture.loadState === 'ready').length;
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         const { loaded, total } = this.progress;
         this.bar.clear();

@@ -1,4 +1,4 @@
-import { Application, CallbackRenderPass, Color, Graphics, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite } from '@codexo/exojs';
+import { Application, CallbackRenderPass, Color, Graphics, type RenderingContext, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite, type Time } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -24,7 +24,9 @@ class MinimapWithMaskScene extends Scene {
     private time = 0;
 
     override init(): void {
-        const { width } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width } = app.canvas;
 
         // Park the round minimap in the top-right corner of the 16:9 canvas.
         const miniSize = 260;
@@ -67,12 +69,14 @@ class MinimapWithMaskScene extends Scene {
             .addPass(new RenderNodePass(this.frame));
     }
 
-    override update(delta): void {
+    override update(delta: Time): void {
         this.time += delta.seconds;
     }
 
-    private drawWorld(backend): void {
-        const { width, height } = this.app.canvas;
+    private drawWorld(backend: RenderingContext['backend']): void {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         const marginX = 80;
         const marginY = 60;
         const right = width - marginX;
@@ -94,7 +98,7 @@ class MinimapWithMaskScene extends Scene {
         this.player.render(backend);
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         this.pipeline.execute(context);
     }
 

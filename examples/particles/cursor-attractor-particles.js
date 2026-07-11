@@ -22,7 +22,10 @@ class CursorAttractorParticlesScene extends Scene {
     mode = 'attract';
     hud;
     init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         this.system = new ParticleSystem(this.loader.get(assets.demo.textures.particleLight), { capacity: 32000 });
         this.system.setPosition(width / 2, height / 2);
         this.system.addSpawnModule(new RateSpawn({
@@ -41,7 +44,7 @@ class CursorAttractorParticlesScene extends Scene {
         this.system.addUpdateModule(this.attractor);
         this.system.addUpdateModule(this.repeller);
         this.system.addUpdateModule(new AlphaFadeOverLifetime());
-        this.app.input.onPointerMove.add(pointer => {
+        app.input.onPointerMove.add(pointer => {
             const localX = pointer.x - this.system.position.x;
             const localY = pointer.y - this.system.position.y;
             this.attractor.x = localX;
@@ -65,7 +68,7 @@ class CursorAttractorParticlesScene extends Scene {
         });
         // A pointer button also flips the mode, so the demo is usable without
         // the slider panel; keep the toggle UI in sync when that happens.
-        this.app.input.onPointerDown.add(() => {
+        app.input.onPointerDown.add(() => {
             const next = this.mode === 'attract' ? 'repel' : 'attract';
             this.setMode(next);
             toggle.set(next === 'repel');

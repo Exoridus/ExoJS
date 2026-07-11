@@ -1,4 +1,4 @@
-import { Application, Asset, BlendModes, Color, ScaleModes, Scene, Sprite } from '@codexo/exojs';
+import { Application, Asset, BlendModes, Color, type RenderingContext, ScaleModes, Scene, Sprite, type Time } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -55,7 +55,9 @@ class BlendmodesScene extends Scene {
     // return value is intentionally unused. The subsequent 2-argument `get()`
     // calls for the same sources are unaffected and stay seamless.
     override async init(): Promise<void> {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         const samplerOptions = { scaleMode: ScaleModes.Nearest };
         await this.loader.load(Asset.kind('texture', ALPHA_RINGS, { samplerOptions }));
@@ -93,7 +95,7 @@ class BlendmodesScene extends Scene {
             onChange: index => this.setIndex(index),
         });
 
-        this.app.input.onPointerDown.add(() => this.setIndex((this.index + 1) % BLEND_MODES.length));
+        app.input.onPointerDown.add(() => this.setIndex((this.index + 1) % BLEND_MODES.length));
 
         // Apply the initial mode (Normal) without skipping it.
         this.applyBlendMode();
@@ -113,8 +115,10 @@ class BlendmodesScene extends Scene {
         this.hud.setStatus(`${name}  (${this.index + 1}/${BLEND_MODES.length})`);
     }
 
-    override update(delta): void {
-        const { width, height } = this.app.canvas;
+    override update(delta: Time): void {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         const offset = (Math.cos(this.ticker * 1.4) * 0.5 + 0.5) * (width * 0.22);
 
         this.left.setPosition(width / 2 - offset, height / 2);
@@ -123,7 +127,7 @@ class BlendmodesScene extends Scene {
         this.ticker += delta.seconds;
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         context.render(this.background);
         context.render(this.left);

@@ -1,4 +1,4 @@
-import { Application, Color, Container, Rectangle, Scene, Sprite, Texture } from '@codexo/exojs';
+import { Application, Color, Container, Rectangle, type RenderingContext, Scene, Sprite, Texture, type Time } from '@codexo/exojs';
 
 const GRID_COLUMNS = 50;
 const GRID_ROWS = 22;
@@ -25,7 +25,9 @@ class MultiTextureStressScene extends Scene {
     private textureInfos!: TextureInfo[];
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         this.sprites = [];
         this.spriteLayer = new Container();
@@ -68,8 +70,10 @@ class MultiTextureStressScene extends Scene {
         }
     }
 
-    override update(delta): void {
-        const time = this.app.activeTime.seconds;
+    override update(delta: Time): void {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const time = app.activeTime.seconds;
 
         this.spriteLayer.rotation = Math.sin(time * 0.45) * 5;
 
@@ -84,7 +88,7 @@ class MultiTextureStressScene extends Scene {
         }
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         context.render(this.spriteLayer);
     }

@@ -1,4 +1,4 @@
-import { Application, CallbackRenderPass, Color, Graphics, RenderNodePass, RenderPipeline, Scene, Sprite } from '@codexo/exojs';
+import { Application, CallbackRenderPass, Color, Graphics, type RenderingContext, RenderNodePass, RenderPipeline, Scene, Sprite, type Time } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -21,7 +21,9 @@ class CustomRenderPassScene extends Scene {
     private angle = 0;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         this.back = new Sprite(this.loader.get('image/ship-a.png'))
             .setAnchor(0.5)
@@ -41,7 +43,7 @@ class CustomRenderPassScene extends Scene {
             .addPass(new RenderNodePass(this.back, { clear: Color.black }))
             .addPass(
                 new CallbackRenderPass((context) => {
-                    const { width: w, height: h } = this.app.canvas;
+                    const { width: w, height: h } = app.canvas;
                     this.between.clear();
                     this.between.lineWidth = 10;
                     this.between.lineColor = new Color(130, 240, 170);
@@ -52,11 +54,11 @@ class CustomRenderPassScene extends Scene {
             .addPass(new RenderNodePass(this.front));
     }
 
-    override update(delta): void {
+    override update(delta: Time): void {
         this.angle += delta.seconds * 2.2;
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         this.pipeline.execute(context);
     }
 }

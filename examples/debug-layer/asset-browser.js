@@ -143,11 +143,14 @@ class AssetBrowserScene extends Scene {
     loadedCats = new Set();
     loadingCats = new Set();
     async init() {
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         this.assetLoader = this.loader;
         await this.ensureCategory(this.cat);
-        this.app.input.onPointerTap.add(p => this.onTap(p.x, p.y));
-        this.app.input.onPointerMove.add(p => this.onMove(p.x, p.y));
-        this.app.input.onMouseWheel.add(v => this.onWheel(v.y));
+        app.input.onPointerTap.add(p => this.onTap(p.x, p.y));
+        app.input.onPointerMove.add(p => this.onMove(p.x, p.y));
+        app.input.onMouseWheel.add(v => this.onWheel(v.y));
         this.selectFirstInCategory();
     }
     /** Load a category's assets (and build its preview objects) exactly once. */
@@ -390,6 +393,9 @@ class AssetBrowserScene extends Scene {
         return null;
     }
     toggleAudio() {
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         if (!this.key)
             return;
         const map = this.currentPlayingMap();
@@ -408,7 +414,7 @@ class AssetBrowserScene extends Scene {
         else {
             // New asset: stop the previous preview and start this one.
             this.previewVoice?.stop();
-            this.previewVoice = this.app.audio.play(stream);
+            this.previewVoice = app.audio.play(stream);
             this.previewKey = this.key;
         }
     }
@@ -960,7 +966,7 @@ class AssetBrowserScene extends Scene {
         const sprite = this.tilesetSprites.get(this.key ?? '');
         if (!sprite)
             return;
-        const entry = assets.demo.tilesets[this.key ?? ''];
+        const entry = assets.demo.tilesets[(this.key ?? '')];
         const { cx, cy, maxW, maxH } = this.previewCenter();
         this.fitSprite(sprite, maxW, maxH - 30, cx, cy - 15);
         context.render(sprite);
@@ -983,7 +989,7 @@ class AssetBrowserScene extends Scene {
             `License: ${data.license ?? 'CC0'}`,
             `Packs: ${packs.length}`,
             '',
-            ...packs.slice(0, 14).map((p) => `  ${p.slug}  (${Object.values(p.fileCountByExtension ?? {}).reduce((a, b) => a + b, 0)} files)`),
+            ...packs.slice(0, 14).map(p => `  ${p.slug}  (${Object.values(p.fileCountByExtension ?? {}).reduce((a, b) => a + b, 0)} files)`),
         ];
         this.txtMeta.text = lines.join('\n');
         this.txtMeta.setPosition(PREVIEW_X + 30, PREVIEW_Y + 60);

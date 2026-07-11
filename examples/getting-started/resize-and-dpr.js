@@ -45,7 +45,10 @@ class ResizeScene extends Scene {
     }
     // #region guide:layout
     layout() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         const dpr = Math.max(1, window.devicePixelRatio || 1);
         this.sprite.setPosition(width / 2, height / 2);
         this.info.setPosition(width / 2, 12);

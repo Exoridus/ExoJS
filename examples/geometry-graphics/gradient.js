@@ -16,8 +16,11 @@ class GradientScene extends Scene {
     orbGradient;
     orb;
     init() {
-        const centerX = this.app.width / 2;
-        const centerY = this.app.height / 2;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const centerX = app.width / 2;
+        const centerY = app.height / 2;
         this.backgroundGradient = new LinearGradient([
             { offset: 0, color: new Color(255, 90, 40, 1) },
             { offset: 0.45, color: new Color(255, 210, 70, 1) },
@@ -34,9 +37,12 @@ class GradientScene extends Scene {
         this.orb.setOrigin(0.5).setPosition(centerX, centerY);
     }
     update(delta) {
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         this.background.rotate(delta.seconds * 8);
         this.orb.rotate(-delta.seconds * 30);
-        this.orb.setScale(1 + Math.sin(this.app.activeTime.seconds * 2) * 0.07);
+        this.orb.setScale(1 + Math.sin(app.activeTime.seconds * 2) * 0.07);
     }
     draw(context) {
         context.backend.clear();

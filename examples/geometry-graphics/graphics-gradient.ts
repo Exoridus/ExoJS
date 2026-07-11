@@ -1,4 +1,4 @@
-import { Application, Color, Container, Graphics, LinearGradient, RadialGradient, Scene } from '@codexo/exojs';
+import { Application, Color, Container, Graphics, LinearGradient, RadialGradient, type RenderingContext, Scene, type Time } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -18,7 +18,9 @@ class GraphicsGradientScene extends Scene {
     private badge!: Graphics;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         this.sceneRoot = new Container();
         this.sceneRoot.setPosition(width / 2, height / 2);
@@ -69,13 +71,15 @@ class GraphicsGradientScene extends Scene {
         this.sceneRoot.addChild(this.panel, this.orb, this.ring, this.badge);
     }
 
-    override update(delta): void {
+    override update(delta: Time): void {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         this.sceneRoot.rotate(delta.seconds * 8);
         this.badge.rotate(delta.seconds * 60);
-        this.orb.setScale(1 + Math.sin(this.app.activeTime.seconds * 2) * 0.06);
+        this.orb.setScale(1 + Math.sin(app.activeTime.seconds * 2) * 0.06);
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         context.render(this.sceneRoot);
     }

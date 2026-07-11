@@ -1,4 +1,4 @@
-import { Application, Color, LutFilter, Scene, Sprite, Texture } from '@codexo/exojs';
+import { Application, Color, LutFilter, type RenderingContext, Scene, Sprite, Texture, type Time } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -44,7 +44,9 @@ class PaletteCyclingScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         this.palette = LutFilter.fromImage(buildPaletteCanvas(0));
         this.filter = new LutFilter({ mode: '1d' }).setLut(this.palette);
@@ -60,12 +62,12 @@ class PaletteCyclingScene extends Scene {
         });
     }
 
-    override update(delta): void {
+    override update(delta: Time): void {
         this.offset = (this.offset + delta.seconds * 80) % PALETTE_SIZE;
         this.palette.source = buildPaletteCanvas(Math.floor(this.offset));
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         context.render(this.sprite);
     }

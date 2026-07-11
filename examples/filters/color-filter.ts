@@ -1,4 +1,4 @@
-import { Application, Color, ColorFilter, RenderBackendType, Scene, Sprite, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
+import { Application, Color, ColorFilter, RenderBackendType, type RenderingContext, Scene, Sprite, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -59,7 +59,9 @@ class ColorFilterScene extends Scene {
     private cycle!: ReturnType<ReturnType<typeof mountControlPanel>['addCycle']>;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         this.sprite = new Sprite(this.loader.get(HUE_RAMP)).setAnchor(0.5).setScale(4).setPosition(width / 2, height / 2);
 
@@ -105,7 +107,7 @@ class ColorFilterScene extends Scene {
         return `Preset: ${PRESETS[this.index]}  (${this.index + 1}/${PRESETS.length})`;
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         context.render(this.sprite);
     }

@@ -34,7 +34,10 @@ class KeyboardScene extends Scene {
     right;
     hud;
     init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         this.square = new Graphics();
         this.position = { x: width / 2, y: height / 2 };
         // Per-frame polling source: one binding per direction, each listening to
@@ -61,7 +64,10 @@ class KeyboardScene extends Scene {
         });
     }
     update(delta) {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         const speed = 280 * delta.seconds;
         const moveX = (this.right.active ? 1 : 0) - (this.left.active ? 1 : 0);
         const moveY = (this.down.active ? 1 : 0) - (this.up.active ? 1 : 0);

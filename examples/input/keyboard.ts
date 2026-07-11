@@ -1,4 +1,4 @@
-import { Application, Color, Graphics, Keyboard, Scene } from '@codexo/exojs';
+import { Application, Color, Graphics, Keyboard, type RenderingContext, Scene, type Time } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -36,7 +36,9 @@ class KeyboardScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         this.square = new Graphics();
         this.position = { x: width / 2, y: height / 2 };
@@ -67,8 +69,10 @@ class KeyboardScene extends Scene {
         });
     }
 
-    override update(delta): void {
-        const { width, height } = this.app.canvas;
+    override update(delta: Time): void {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         const speed = 280 * delta.seconds;
         const moveX = (this.right.active ? 1 : 0) - (this.left.active ? 1 : 0);
         const moveY = (this.down.active ? 1 : 0) - (this.up.active ? 1 : 0);
@@ -81,7 +85,7 @@ class KeyboardScene extends Scene {
         this.hud.setStatus(`Held: ${held.length ? held.join(' + ') : 'none'}`);
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         this.square.clear();
         this.square.fillColor = new Color(120, 200, 255);

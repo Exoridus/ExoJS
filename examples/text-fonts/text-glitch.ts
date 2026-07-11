@@ -1,4 +1,4 @@
-import { Application, Color, RenderBackendType, Scene, Text, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
+import { Application, Color, RenderBackendType, type RenderingContext, Scene, Text, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
 
 const app = new Application({
     canvas: {
@@ -46,7 +46,9 @@ class TextGlitchScene extends Scene {
     private filter!: WebGl2ShaderFilter | WebGpuShaderFilter;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         this.text = new Text('SIGNAL LOST', { fillColor: Color.white, fontSize: 100, align: 'center' });
         this.text.setAnchor(0.5, 0.5);
@@ -62,7 +64,7 @@ class TextGlitchScene extends Scene {
         this.filter.uniforms.uShift = (Math.random() - 0.5) * 0.01;
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         context.render(this.text);
     }

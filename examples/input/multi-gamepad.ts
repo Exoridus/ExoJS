@@ -1,4 +1,4 @@
-import { Application, Color, GamepadAxis, Scene, Sprite, Text } from '@codexo/exojs';
+import { Application, Color, GamepadAxis, type RenderingContext, Scene, Sprite, Text, type Time } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -33,9 +33,11 @@ class MultiGamepadScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
-        this.players = this.app.input.gamepads.map((pad, index) => {
+        this.players = app.input.gamepads.map((pad, index) => {
             const sprite = new Sprite(this.loader.get('image/ship-a.png'))
                 .setAnchor(0.5)
                 .setScale(0.6)
@@ -53,9 +55,9 @@ class MultiGamepadScene extends Scene {
 
         // Track controller presence with the engine's connect/disconnect signals
         // and prompt with an on-screen Text while none is attached.
-        this.hasPad = this.app.input.gamepads.some(pad => pad.connected);
-        this.app.input.onGamepadConnected.add(() => (this.hasPad = true));
-        this.app.input.onGamepadDisconnected.add(() => (this.hasPad = this.app.input.gamepads.some(pad => pad.connected)));
+        this.hasPad = app.input.gamepads.some(pad => pad.connected);
+        app.input.onGamepadConnected.add(() => (this.hasPad = true));
+        app.input.onGamepadDisconnected.add(() => (this.hasPad = app.input.gamepads.some(pad => pad.connected)));
         this.connectPrompt = new Text('Connect one or more controllers to play', { fillColor: Color.white, fontSize: 24, align: 'center' })
             .setAnchor(0.5, 0.5)
             .setPosition(width / 2, height / 2);
@@ -68,8 +70,8 @@ class MultiGamepadScene extends Scene {
         });
 
         this.refreshHud();
-        this.app.input.onGamepadConnected.add(() => this.refreshHud());
-        this.app.input.onGamepadDisconnected.add(() => this.refreshHud());
+        app.input.onGamepadConnected.add(() => this.refreshHud());
+        app.input.onGamepadDisconnected.add(() => this.refreshHud());
     }
 
     private refreshHud(): void {
@@ -82,7 +84,7 @@ class MultiGamepadScene extends Scene {
         this.hud.setStatus(lines.join(' · '));
     }
 
-    override update(delta): void {
+    override update(delta: Time): void {
         for (const player of this.players) {
             if (!player.pad.connected) {
                 continue;
@@ -92,7 +94,7 @@ class MultiGamepadScene extends Scene {
         }
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
 
         for (const player of this.players) {

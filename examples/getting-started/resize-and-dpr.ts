@@ -1,4 +1,4 @@
-import { Application, Color, Scene, Sprite, Text } from '@codexo/exojs';
+import { Application, Color, type RenderingContext, Scene, Sprite, Text } from '@codexo/exojs';
 
 // #region guide:app-setup
 const app = new Application({
@@ -47,7 +47,7 @@ class ResizeScene extends Scene {
         this.layout();
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         context.render(this.sprite);
         context.render(this.info);
@@ -55,7 +55,9 @@ class ResizeScene extends Scene {
 
     // #region guide:layout
     private layout(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         const dpr = Math.max(1, window.devicePixelRatio || 1);
 
         this.sprite.setPosition(width / 2, height / 2);

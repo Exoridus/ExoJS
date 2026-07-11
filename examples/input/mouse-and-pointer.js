@@ -30,25 +30,28 @@ class MouseAndPointerScene extends Scene {
     clicks = 0;
     hud;
     init() {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null)
+            throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
         this.pointer = { x: width / 2, y: height / 2 };
         this.previous = { x: width / 2, y: height / 2 };
         this.ship = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(width / 2, height / 2);
         this.ship.interactive = true;
         this.ship.draggable = true;
         this.crosshair = new Graphics();
-        this.app.input.onPointerMove.add(pointer => {
+        app.input.onPointerMove.add(pointer => {
             this.pointer.x = pointer.x;
             this.pointer.y = pointer.y;
             this.buttons = pointer.buttons;
         });
-        this.app.input.onPointerDown.add(pointer => {
+        app.input.onPointerDown.add(pointer => {
             this.buttons = pointer.buttons;
         });
-        this.app.input.onPointerUp.add(pointer => {
+        app.input.onPointerUp.add(pointer => {
             this.buttons = pointer.buttons;
         });
-        this.app.input.onPointerTap.add(() => {
+        app.input.onPointerTap.add(() => {
             this.clicks++;
         });
         this.hud = mountControls({

@@ -1,4 +1,4 @@
-import { Application, Color, Graphics, Scene, Sound, Text } from '@codexo/exojs';
+import { Application, Color, Graphics, type RenderingContext, Scene, Sound, Text, type Time } from '@codexo/exojs';
 import { DelayEffect, ReverbEffect } from '@codexo/exojs-audio-fx';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
@@ -30,7 +30,9 @@ class ReverbAndDelayScene extends Scene {
     private panel!: ReturnType<typeof mountControlPanel>;
 
     override init(): void {
-        const { width, height } = this.app.canvas;
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+        const { width, height } = app.canvas;
 
         // A large click pad centred on the canvas.
         this.pad = { x: width / 2 - 240, y: height * 0.36, w: 480, h: 160 };
@@ -118,11 +120,11 @@ class ReverbAndDelayScene extends Scene {
             },
         });
 
-        this.app.input.onPointerTap.add(() => {
+        app.input.onPointerTap.add(() => {
             // The pointer gesture also unlocks the AudioContext; firing while
             // still locked would be silent, so wait until audio is ready.
-            if (this.app.audio.locked) return;
-            this.app.audio.play(this.sound);
+            if (app.audio.locked) return;
+            app.audio.play(this.sound);
             this.flash = 1;
             this.triggers += 1;
             this.hud.setStatus(`Impacts triggered: ${this.triggers}`);
@@ -131,11 +133,13 @@ class ReverbAndDelayScene extends Scene {
         this.hud.setStatus('Click anywhere to trigger the impact');
     }
 
-    override update(delta): void {
+    override update(delta: Time): void {
         this.flash = Math.max(0, this.flash - delta.seconds * 2.2);
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
+        const app = this.app;
+        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         context.backend.clear();
         this.gfx.clear();
 
@@ -144,11 +148,11 @@ class ReverbAndDelayScene extends Scene {
         this.gfx.fillColor = new Color(lit, lit, Math.floor(60 + this.flash * 120));
         this.gfx.drawRectangle(this.pad.x, this.pad.y, this.pad.w, this.pad.h);
 
-        this.prompt.text = this.app.audio.locked ? 'Click or press a key to enable audio' : 'Click to play impact';
+        this.prompt.text = app.audio.locked ? 'Click or press a key to enable audio' : 'Click to play impact';
         context.render(this.gfx);
         context.render(this.prompt);
 
-        if (this.app.audio.locked) {
+        if (app.audio.locked) {
             context.render(this.tapPrompt);
         }
     }
