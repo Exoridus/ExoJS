@@ -30,7 +30,10 @@ uniform sampler2D u_texture13;
 uniform sampler2D u_texture14;
 uniform sampler2D u_texture15;
 
-in vec2 v_texcoord;
+// UVs need full precision on mobile GLES: the file-level lowp default would
+// quantise texture coordinates (visible as swimming/snapping texels on large
+// atlases). The color varying stays lowp — 8-bit output needs no more.
+in highp vec2 v_texcoord;
 in vec4 v_color;
 flat in uint v_textureSlot;
 

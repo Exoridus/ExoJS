@@ -3,7 +3,9 @@ precision lowp float;
 
 uniform sampler2D u_texture;
 
-in vec2 v_texcoord;
+// UVs need full precision on mobile GLES (the lowp default would quantise
+// them); color varyings stay lowp for 8-bit output.
+in highp vec2 v_texcoord;
 in vec4 v_color;
 in vec4 v_tint;
 
