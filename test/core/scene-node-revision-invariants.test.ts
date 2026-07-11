@@ -3,8 +3,16 @@ import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
 import { Filter } from '#rendering/filters/Filter';
+import { Mesh } from '#rendering/mesh/Mesh';
 import type { RenderNode } from '#rendering/RenderNode';
+import { RetainedContainer } from '#rendering/RetainedContainer';
+import { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
+import { Sprite } from '#rendering/sprite/Sprite';
+import type { Texture } from '#rendering/texture/Texture';
 import { BlendModes } from '#rendering/types';
+
+// Minimal fake texture (no GPU): enough for the visual-source mutators below.
+const makeTexture = (w = 64, h = 64): Texture => ({ width: w, height: h, flipY: false, updateSource: () => undefined }) as unknown as Texture;
 
 // Mirror the existing NoopFilter in test/rendering/render-plan.test.ts exactly
 // (check its constructor/apply signature there before finalizing this class).
@@ -56,8 +64,10 @@ const containerWithSizedChild = (): Container => {
 };
 
 // THE TABLE. One row per public member that changes visual output. Adding a
-// mutator to SceneNode/RenderNode/Drawable/Container without a row here is a
-// review error; a row whose bump assertion fails is an engine bug.
+// mutator to SceneNode/RenderNode/Drawable/Container — OR to a Drawable
+// SUBCLASS (Sprite/NineSliceSprite/Mesh/Text/…, see `subclassCases` below) —
+// without a row here is a review error; a row whose bump assertion fails is an
+// engine bug.
 const cases: readonly MutatorCase[] = [
   // SceneNode transform family — content-dirty.
   drawableCase('setPosition', 'content', n => n.setPosition(10, 20)),
@@ -122,8 +132,64 @@ const cases: readonly MutatorCase[] = [
   containerCase('height setter', 'content', n => (n.height = 128), containerWithSizedChild),
 ];
 
+// SUBCLASS mutator table (C1, expert review 2026-07-11). The base table above
+// only guards SceneNode/RenderNode/Drawable/Container; a Drawable subclass that
+// mutates a transform-relevant / visual-source field (texture, frame, geometry,
+// nine-slice metrics) routes through `invalidateCache`/`_markContentDirty` just
+// like a base mutator and must obey the SAME revision contract. Every row here
+// is content-dirty: these change WHAT is drawn, not WHICH draws are emitted.
+// RetainedContainer's deliberately-divergent transform mutator is asserted
+// separately below (it is the one subclass that reroutes away from content).
+const subclassCases: readonly MutatorCase[] = [
+  // Sprite visual-source family.
+  drawableCase(
+    'Sprite.setTexture',
+    'content',
+    n => (n as unknown as Sprite).setTexture(makeTexture(32, 16)),
+    () => new Sprite(null),
+  ),
+  drawableCase(
+    'Sprite.texture setter',
+    'content',
+    n => ((n as unknown as Sprite).texture = makeTexture(32, 16)),
+    () => new Sprite(null),
+  ),
+  drawableCase(
+    'Sprite.setTextureFrame',
+    'content',
+    n => (n as unknown as Sprite).setTextureFrame(new Rectangle(0, 0, 10, 10)),
+    () => new Sprite(makeTexture(64, 32)),
+  ),
+  // Mesh visual-source: swapping the texture.
+  drawableCase(
+    'Mesh.texture setter',
+    'content',
+    n => ((n as unknown as Mesh).texture = makeTexture(16, 16)),
+    () => new Mesh({ vertices: new Float32Array([0, 0, 16, 0, 8, 16]) }),
+  ),
+  // NineSliceSprite metric mutators — all re-tessellate the quad geometry.
+  drawableCase(
+    'NineSliceSprite.setSize',
+    'content',
+    n => (n as unknown as NineSliceSprite).setSize(50, 40),
+    () => new NineSliceSprite(makeTexture(64, 64), { slices: 10 }),
+  ),
+  drawableCase(
+    'NineSliceSprite.setBorder',
+    'content',
+    n => (n as unknown as NineSliceSprite).setBorder(12),
+    () => new NineSliceSprite(makeTexture(64, 64), { slices: 10 }),
+  ),
+  drawableCase(
+    'NineSliceSprite.setSlices',
+    'content',
+    n => (n as unknown as NineSliceSprite).setSlices(8),
+    () => new NineSliceSprite(makeTexture(64, 64), { slices: 10 }),
+  ),
+];
+
 describe('revision invariants: every public visual mutator bumps the right revision', () => {
-  for (const mutatorCase of cases) {
+  for (const mutatorCase of [...cases, ...subclassCases]) {
     test(`${mutatorCase.name} is ${mutatorCase.expects}-dirty and propagates to the parent`, () => {
       const parent = new Container();
       const node = mutatorCase.create();
@@ -198,5 +264,68 @@ describe('revision invariants: every public visual mutator bumps the right revis
     expect(node._structureRevision).toBe(before);
 
     node.destroy();
+  });
+});
+
+// C1: RetainedContainer is the one Drawable subclass whose transform-relevant
+// mutator deliberately DIVERGES from the base contract — an own-transform move
+// reroutes to the group-matrix version instead of content-dirtying the
+// retained fragment (spec §4.3). The base table cannot express this (it asserts
+// content propagation on every transform mutator), so the divergence is pinned
+// here explicitly. This is the reason the base-table rule must carry the "OR a
+// subclass" clause: a subclass author extending RetainedContainer, or adding a
+// new boundary subclass, must consciously choose one contract or the other.
+describe('revision invariants: RetainedContainer reroutes its OWN transform mutators (subclass exception)', () => {
+  test('own-transform mutators bump the group-matrix version, NOT content or structure', () => {
+    const group = new RetainedContainer();
+
+    group.addChild(new Drawable());
+
+    const contentBefore = group._contentRevision;
+    const structureBefore = group._structureRevision;
+    const versionBefore = group._groupMatrixVersion;
+
+    group.setPosition(10, 20);
+    group.setRotation(45);
+    group.setScale(2);
+    group.setSkew(5, 0);
+    group.setOrigin(1, 1);
+
+    expect(group._groupMatrixVersion).toBeGreaterThan(versionBefore);
+    expect(group._contentRevision).toBe(contentBefore);
+    expect(group._structureRevision).toBe(structureBefore);
+
+    group.destroy();
+  });
+
+  test("a mutation INSIDE the subtree still content-dirties the group (decoupling is scoped to the group's own transform)", () => {
+    const group = new RetainedContainer();
+    const leaf = new Drawable();
+
+    group.addChild(leaf);
+
+    const before = group._contentRevision;
+
+    leaf.setPosition(3, 3);
+
+    expect(group._contentRevision).toBeGreaterThan(before);
+
+    group.destroy();
+  });
+
+  test('a moving RetainedContainer does not content-dirty its ancestors', () => {
+    const root = new Container();
+    const group = new RetainedContainer();
+
+    root.addChild(group);
+    group.addChild(new Drawable());
+
+    const rootContentBefore = root._contentRevision;
+
+    group.setPosition(500, 500);
+
+    expect(root._contentRevision).toBe(rootContentBefore);
+
+    root.destroy();
   });
 });

@@ -74,6 +74,20 @@ const orientedCorners = [new Vector(), new Vector(), new Vector(), new Vector()]
 let dirtyWalkEpoch = 1;
 
 /**
+ * Sentinel `parentVersion` used by {@link SceneNode.getGlobalTransform} when
+ * NOTHING above this node contributes to its world matrix — the node is a
+ * root, or its parent is an engaged transform-group boundary the node does not
+ * escape (T3, expert review 2026-07-11). It is deliberately outside the range
+ * of every real `_globalTransformVersion` (which starts at 1 and only
+ * increments), so a boundary flip that later reads a real, still-unresolved
+ * parent version can never false-match a child that previously cached this
+ * sentinel — independent of the order in which the parent transform and the
+ * parent version are read. Do NOT change this to a value a real version can
+ * take (e.g. 0 once versions also started at 0), or the collision returns.
+ */
+const NO_PARENT_VERSION = 0;
+
+/**
  * Transform-bearing leaf in the scene-graph hierarchy. Carries position,
  * rotation, scale, skew, origin, and a 2-component {@link Vector} `anchor`
  * used to derive `origin` from the local bounds. Implements {@link Collidable}
@@ -159,8 +173,14 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
    * derived caches that also depend on the world transform (e.g. Sprite's quad
    * vertices/normals) can invalidate against it the same way {@link getBounds}
    * does via {@link _boundsBuiltAtVersion}.
+   *
+   * Starts at 1, never 0: {@link NO_PARENT_VERSION} reserves 0 as the
+   * no-parent-contribution sentinel, so a real version can never collide with
+   * it (T3). The initial value is otherwise irrelevant — the first
+   * {@link getGlobalTransform} recompute increments it, and every consumer
+   * compares against a `-1` "unset" of its own.
    */
-  protected _globalTransformVersion = 0;
+  protected _globalTransformVersion = 1;
   private _combinedParentVersion = -1;
   private _boundsBuiltAtVersion = -1;
   private _localBounds = new Rectangle();
@@ -511,7 +531,7 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
     const parent = this._parentNode;
     const boundary = parent !== null && parent._isTransformGroupBoundary && !this._escapesTransformGroup();
     const parentTransform = parent !== null && !boundary ? parent.getGlobalTransform() : null;
-    const parentVersion = parent !== null && !boundary ? parent._globalTransformVersion : 0;
+    const parentVersion = parent !== null && !boundary ? parent._globalTransformVersion : NO_PARENT_VERSION;
     const stale = this.flags.has(SceneNodeTransformFlags.GlobalTransform) || this._combinedParentVersion !== parentVersion;
 
     if (stale) {
