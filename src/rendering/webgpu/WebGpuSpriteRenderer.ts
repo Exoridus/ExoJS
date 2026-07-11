@@ -181,14 +181,18 @@ const indicesPerSprite = 6;
 const quadIndices = new Uint16Array([0, 1, 2, 0, 2, 3]);
 
 /**
- * Cached group(1) bind group for one ordered set of batch textures. `textures`
- * and `views` are the fully-resolved 8-slot arrays (fillers included); the
- * views are kept so a texture the backend recreated (resize / content-driven
- * GPU-texture rebuild) refreshes the entry instead of binding a stale view.
+ * Cached group(1) bind group for one ordered set of batch textures.
+ * `textures`, `views` and `samplers` are the fully-resolved 8-slot arrays
+ * (fillers included): the views detect a backend-recreated GPU texture
+ * (resize / content-driven rebuild), the samplers detect a sampler-only
+ * refresh — `_syncTexture` recreates the sampler on EVERY texture.version
+ * bump (setScaleMode / setWrapMode) while the view identity stays put, so a
+ * views-only check would silently keep serving the stale sampler.
  */
 interface TextureSetBindGroupEntry {
   readonly textures: ReadonlyArray<Texture | RenderTexture>;
   views: GPUTextureView[];
+  samplers: GPUSampler[];
   group: GPUBindGroup;
 }
 
@@ -914,18 +918,21 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
         continue;
       }
 
-      let viewsMatch = true;
+      let bindingsMatch = true;
 
       for (let i = 0; i < maxBatchTextures; i++) {
-        // In-bounds: both arrays are fixed at maxBatchTextures entries.
-        if (entry.views[i] !== resolvedBindings[i]!.view) {
-          viewsMatch = false;
+        // In-bounds: all arrays are fixed at maxBatchTextures entries. The
+        // sampler check is load-bearing: a texture.version bump (setScaleMode/
+        // setWrapMode) refreshes the sampler while the view identity stays put.
+        if (entry.views[i] !== resolvedBindings[i]!.view || entry.samplers[i] !== resolvedBindings[i]!.sampler) {
+          bindingsMatch = false;
           break;
         }
       }
 
-      if (!viewsMatch) {
+      if (!bindingsMatch) {
         entry.views = resolvedBindings.map(binding => binding.view);
+        entry.samplers = resolvedBindings.map(binding => binding.sampler);
         entry.group = this._buildTextureBindGroup(device, resolvedBindings);
       }
 
@@ -937,6 +944,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     entries.push({
       textures: resolvedTextures,
       views: resolvedBindings.map(binding => binding.view),
+      samplers: resolvedBindings.map(binding => binding.sampler),
       group,
     });
 
