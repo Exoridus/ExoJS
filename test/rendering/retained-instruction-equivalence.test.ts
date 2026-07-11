@@ -86,7 +86,12 @@ interface ModelCaptureFrame {
   readonly instructions: RetainedBatchInstruction[];
 }
 
-type ModelEvent = { type: 'flush'; batch: ModelBatch } | { type: 'replay'; payload: ModelPayload } | { type: 'transform'; active: boolean } | { type: 'beginCapture' } | { type: 'endCapture' };
+type ModelEvent =
+  | { type: 'flush'; batch: ModelBatch }
+  | { type: 'replay'; payload: ModelPayload }
+  | { type: 'transform'; active: boolean }
+  | { type: 'beginCapture' }
+  | { type: 'endCapture' };
 
 interface ByteBackendHarness {
   readonly backend: RenderBackend;
@@ -351,7 +356,8 @@ const groupSegmentBatches = (log: readonly ModelEvent[]): ModelBatch[] => {
   return batches;
 };
 
-const replayedPayloads = (log: readonly ModelEvent[]): ModelPayload[] => log.filter(event => event.type === 'replay').map(event => (event as { payload: ModelPayload }).payload);
+const replayedPayloads = (log: readonly ModelEvent[]): ModelPayload[] =>
+  log.filter(event => event.type === 'replay').map(event => (event as { payload: ModelPayload }).payload);
 
 /**
  * Normalize slow-path batches the way capture finalization does: rebase the
