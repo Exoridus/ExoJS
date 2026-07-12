@@ -115,6 +115,7 @@ export class RetainedContainer extends Container {
   private readonly _liveBoundsChildren: RenderNode[] = [];
   private _aggregateContentRevision = -1;
   private _aggregateStructureRevision = -1;
+  private _aggregateTransformRevision = -1;
 
   /**
    * World AABB of the group: children aggregate in group-local space, so
@@ -134,10 +135,18 @@ export class RetainedContainer extends Container {
 
     const world = this.getGlobalTransform();
 
-    if (this._aggregateContentRevision !== this._contentRevision || this._aggregateStructureRevision !== this._structureRevision) {
+    // Keyed on the transform channel too (Slice 4b): a descendant transform-only
+    // move changes its group-local rect but no longer stamps content (the 4b
+    // flip), so without the transform key the cached aggregate would go stale.
+    if (
+      this._aggregateContentRevision !== this._contentRevision ||
+      this._aggregateStructureRevision !== this._structureRevision ||
+      this._aggregateTransformRevision !== this._transformRevision
+    ) {
       this._rebuildGroupAggregate();
       this._aggregateContentRevision = this._contentRevision;
       this._aggregateStructureRevision = this._structureRevision;
+      this._aggregateTransformRevision = this._transformRevision;
     }
 
     this._bounds.reset().addRect(this._groupAggregate.getRect(), world);

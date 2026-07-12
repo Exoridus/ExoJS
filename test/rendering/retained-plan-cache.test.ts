@@ -39,34 +39,43 @@ const makeCommand = (drawable: Drawable, minX = 0): DrawCommand => ({
   maxY: 16,
 });
 
-const captureOne = (cache: RetainedPlanCache, drawable: Drawable, content: number, structure: number, view: number, backend: RenderBackend): void => {
+const captureOne = (
+  cache: RetainedPlanCache,
+  drawable: Drawable,
+  content: number,
+  structure: number,
+  transform: number,
+  view: number,
+  backend: RenderBackend,
+): void => {
   cache._beginCapture();
   cache._appendSlot(0, makeCommand(drawable));
-  cache._commitCapture(content, structure, view, backend);
+  cache._commitCapture(content, structure, transform, view, backend);
 };
 
 describe('RetainedPlanCache', () => {
   test('isClean is false before any capture', () => {
     const cache = new RetainedPlanCache();
 
-    expect(cache.isClean(1, 1, 1, fakeBackendA)).toBe(false);
+    expect(cache.isClean(1, 1, 1, 1, fakeBackendA)).toBe(false);
     expect(cache.slots).toEqual([]);
   });
 
-  test('isClean is true only when content, structure, view, and backend all match the last capture', () => {
+  test('isClean is true only when content, structure, transform, view, and backend all match the last capture', () => {
     const cache = new RetainedPlanCache();
     const drawable = new Drawable();
 
-    captureOne(cache, drawable, 5, 3, 7, fakeBackendA);
+    captureOne(cache, drawable, 5, 3, 2, 7, fakeBackendA);
 
-    expect(cache.isClean(5, 3, 7, fakeBackendA)).toBe(true);
+    expect(cache.isClean(5, 3, 2, 7, fakeBackendA)).toBe(true);
     expect(cache.slots).toHaveLength(1);
     expect(cache.slots[0]!.drawable).toBe(drawable);
 
-    expect(cache.isClean(6, 3, 7, fakeBackendA)).toBe(false); // content changed
-    expect(cache.isClean(5, 4, 7, fakeBackendA)).toBe(false); // structure changed
-    expect(cache.isClean(5, 3, 8, fakeBackendA)).toBe(false); // view moved
-    expect(cache.isClean(5, 3, 7, fakeBackendB)).toBe(false); // backend swapped
+    expect(cache.isClean(6, 3, 2, 7, fakeBackendA)).toBe(false); // content changed
+    expect(cache.isClean(5, 4, 2, 7, fakeBackendA)).toBe(false); // structure changed
+    expect(cache.isClean(5, 3, 9, 7, fakeBackendA)).toBe(false); // transform changed (Slice 4b)
+    expect(cache.isClean(5, 3, 2, 8, fakeBackendA)).toBe(false); // view moved
+    expect(cache.isClean(5, 3, 2, 7, fakeBackendB)).toBe(false); // backend swapped
 
     drawable.destroy();
   });
@@ -75,11 +84,11 @@ describe('RetainedPlanCache', () => {
     const cache = new RetainedPlanCache();
     const drawable = new Drawable();
 
-    captureOne(cache, drawable, 1, 1, 1, fakeBackendA);
+    captureOne(cache, drawable, 1, 1, 1, 1, fakeBackendA);
     cache._beginCapture();
     cache._appendSlot(0, makeCommand(drawable));
 
-    expect(cache.isClean(1, 1, 1, fakeBackendA)).toBe(false);
+    expect(cache.isClean(1, 1, 1, 1, fakeBackendA)).toBe(false);
 
     drawable.destroy();
   });
@@ -88,10 +97,10 @@ describe('RetainedPlanCache', () => {
     const cache = new RetainedPlanCache();
     const drawable = new Drawable();
 
-    captureOne(cache, drawable, 1, 1, 1, fakeBackendA);
+    captureOne(cache, drawable, 1, 1, 1, 1, fakeBackendA);
     cache.invalidate();
 
-    expect(cache.isClean(1, 1, 1, fakeBackendA)).toBe(false);
+    expect(cache.isClean(1, 1, 1, 1, fakeBackendA)).toBe(false);
     expect(cache.slots).toEqual([]);
 
     drawable.destroy();
@@ -101,7 +110,7 @@ describe('RetainedPlanCache', () => {
     const cache = new RetainedPlanCache();
     const drawable = new Drawable();
 
-    captureOne(cache, drawable, 1, 1, 1, fakeBackendA);
+    captureOne(cache, drawable, 1, 1, 1, 1, fakeBackendA);
 
     const slotBefore = cache.slots[0]!;
     const materialBefore = slotBefore.material;
@@ -110,7 +119,7 @@ describe('RetainedPlanCache', () => {
 
     cache._beginCapture();
     cache._appendSlot(3, makeCommand(drawable, 9));
-    cache._commitCapture(2, 1, 1, fakeBackendA);
+    cache._commitCapture(2, 1, 1, 1, fakeBackendA);
 
     expect(cache.slots[0]).toBe(slotBefore); // same pooled record...
     expect(cache.slots[0]!.material).toBe(materialBefore); // ...same pooled key object
