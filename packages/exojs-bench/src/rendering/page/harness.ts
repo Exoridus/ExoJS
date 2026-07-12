@@ -339,14 +339,28 @@ const attachProbes = (adapter: EngineAdapter, spec: CellSpec, canvas: HTMLCanvas
   const gl = canvas.getContext('webgl2');
 
   if (gl === null) {
-    // Every WebGL arm in this harness renders through a WebGL2 context — ExoJS,
-    // Pixi and Excalibur create one, and the Phaser arm supplies one explicitly
-    // via the `context` game-config option (see `adapters/phaser.ts`). So on the
-    // `'webgl2'` backend `getContext('webgl2')` returns the engine's live context
-    // and the structural probe attaches. A null here means the arm rendered
-    // through no WebGL2 context at all, which is a real bug (or a silent WebGL1
-    // fallback the adapter should have caught) — fail loudly rather than measure
-    // a backend nobody asked for.
+    // The arm rendered through a plain WebGL context on this canvas, not a WebGL2
+    // one. The Phaser arm is measured as a stock Phaser 4 app: Phaser 4's
+    // WebGLRenderer creates a `'webgl'` (WebGL1) context by default
+    // (`canvas.getContext('webgl')`, WebGLRenderer.js:709), and once a `'webgl'`
+    // context owns the element `getContext('webgl2')` returns null. Degrade
+    // gracefully — the same policy as the WebGPU no-device path: keep the CPU
+    // timing and the rAF frame delta, skip the WebGL2 structural probe (and its
+    // zero-draw self-check, which the non-null `structuralNote` suppresses), and
+    // DISCLOSE why in the cell note. Never fabricate counters, never throw away
+    // the whole run over an arm's WebGL version. Init has already succeeded by
+    // here, so a live context exists; only a canvas with no graphics context at
+    // all is a real bug worth failing.
+    const gl1 = canvas.getContext('webgl');
+
+    if (gl1 !== null) {
+      return {
+        probe: noopStructuralProbe,
+        gpuTimer: noopGpuTimer,
+        structuralNote: `structural counters skipped: engine='${spec.engine}' config='${spec.config}' rendered through a WebGL context (Phaser 4 renders WebGL1 via getContext('webgl'), WebGLRenderer.js:709), so the WebGL2 draw-call probe cannot attach — draw/bind/upload structure is omitted for this arm (CPU + rAF frame timing kept)`,
+      };
+    }
+
     throw new Error('A WebGL2 context is required on the harness canvas.');
   }
 

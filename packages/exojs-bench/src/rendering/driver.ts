@@ -117,11 +117,11 @@ const ADAPTER_CAPABILITIES: readonly EngineAdapter[] = [
   capabilityDescriptor('pixi', 'default', ['webgl2', 'webgpu']),
   // Phaser 4 and Excalibur are committed competitor arms (pinned exact
   // devDependencies). Both are WebGL2-only in this harness and never run WebGPU
-  // (Phaser 4 ships no WebGPU renderer; Excalibur 0.32 has none). Phaser 4's
-  // WebGL renderer requests a WebGL1 context by default, so the Phaser arm
-  // supplies a WebGL2 context explicitly via the `context` game-config option
-  // (see `adapters/phaser.ts` + the report Methodology) to honour the 'webgl2'
-  // backend contract; Excalibur 0.32 renders a real WebGL2 context natively.
+  // (Phaser 4 ships no WebGPU renderer; Excalibur 0.32 has none). Phaser 4 is
+  // measured as a stock app: its WebGLRenderer creates a WebGL1 context by
+  // default (`getContext('webgl')`), so it runs under the 'webgl2' REQUEST while
+  // rendering WebGL1 (disclosed by the harness's structural-probe degrade path
+  // and the report Methodology); Excalibur 0.32 renders a real WebGL2 context.
   // A missing (unlinked) competitor degrades gracefully: its per-cell dynamic
   // import fails in isolation (`runCellInPage` records that cell `unavailable`
   // and the run continues), and it is left out of Vite's pre-bundle set below.
