@@ -7,7 +7,7 @@
  * {@link WebGpuSpriteRenderer} and asserts the custom path (group 0 projection +
  * shared transform storage, group 1 base texture, group 2 user UBO) issues an
  * instanced draw without raising a GPU validation error, while keeping the
- * 36-byte instance buffer (transform fetched from storage by nodeIndex).
+ * 32-byte instance buffer (transform and tint fetched from storage by nodeIndex).
  *
  * Run via:  pnpm test:browser:webgpu
  */

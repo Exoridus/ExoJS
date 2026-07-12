@@ -143,15 +143,14 @@ ${textureBindings}
 
 ${samplerBindings}
 
-// Per-instance vertex layout (36 bytes per sprite). The four corners
+// Per-instance vertex layout (32 bytes per sprite). The four corners
 // of the quad are derived from @builtin(vertex_index) 0..3 inside the
-// vertex shader — there is no per-vertex stream. The world transform is
-// fetched from the shared transform storage buffer keyed by nodeIndex
+// vertex shader — there is no per-vertex stream. The world transform AND the
+// tint are fetched from the shared transform storage buffer keyed by nodeIndex
 // instead of being packed inline.
 struct VertexInput {
     @location(0) localBounds: vec4<f32>,        // left, top, right, bottom (local space)
     @location(3) uvBounds: vec4<f32>,           // uMin, vMin, uMax, vMax (CPU pre-swaps for flipY)
-    @location(4) color: vec4<f32>,              // RGBA tint
     @location(5) packedSlotFlags: u32,          // bits 0..7 = slot, bit 8 = premultiply
     @location(6) nodeIndex: u32,                // row into the shared transform storage buffer
 };
@@ -176,9 +175,11 @@ fn vertexMain(input: VertexInput, @builtin(vertex_index) vid: u32) -> VertexOutp
     let localX = select(input.localBounds.x, input.localBounds.z, cornerX == 1u);
     let localY = select(input.localBounds.y, input.localBounds.w, cornerY == 1u);
 
-    // Fetch this instance's world transform from the shared storage buffer,
-    // keyed by nodeIndex: m0 = (a, b, c, d), m1 = (tx, ty, 0, 0). (m2 carries the
-    // node tint, unused here — the sprite keeps its own per-instance color.)
+    // Fetch this instance's world transform and tint from the shared storage
+    // buffer, keyed by nodeIndex: m0 = (a, b, c, d), m1 = (tx, ty, 0, 0),
+    // m2 = tint (rgb 0..1, a). The node tint is this sprite's own tint, so
+    // reading it here unifies with the mesh path and drops the per-instance
+    // color stream.
     let slot = transforms[input.nodeIndex];
     let worldX = slot.m0.x * localX + slot.m0.y * localY + slot.m1.x;
     let worldY = slot.m0.z * localX + slot.m0.w * localY + slot.m1.y;
@@ -189,7 +190,7 @@ fn vertexMain(input: VertexInput, @builtin(vertex_index) vid: u32) -> VertexOutp
     let v = select(input.uvBounds.y, input.uvBounds.w, cornerY == 1u);
     output.texcoord = vec2<f32>(u, v);
 
-    output.color = vec4(input.color.rgb * input.color.a, input.color.a);
+    output.color = vec4(slot.m2.rgb * slot.m2.a, slot.m2.a);
     output.textureSlot = input.packedSlotFlags & 0xFFu;
     output.premultiplySample = (input.packedSlotFlags >> 8u) & 1u;
 
@@ -220,7 +221,7 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
 `;
 };
 
-const instanceStrideBytes = 36;
+const instanceStrideBytes = 32;
 const wordsPerInstance = instanceStrideBytes / Uint32Array.BYTES_PER_ELEMENT;
 const projectionByteLength = 128;
 const initialBatchCapacity = 32;
@@ -1071,16 +1072,15 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     u32[offset + 4] = uMin | (vMin << 16);
     u32[offset + 5] = uMax | (vMax << 16);
 
-    // color (u8x4 packed) at word 6 (offset 24)
-    u32[offset + 6] = sprite.tint.toRgba();
+    // packedSlotFlags (u32) at word 6 (offset 24). The tint is NOT packed here:
+    // the vertex shader reads it from the shared transform slot's texel 2 (m2),
+    // the same value the transform-storage upload wrote from this sprite's tint.
+    u32[offset + 6] = packedSlotFlags;
 
-    // packedSlotFlags (u32) at word 7 (offset 28)
-    u32[offset + 7] = packedSlotFlags;
-
-    // nodeIndex (u32) at word 8 (offset 32) — row into the shared transform buffer.
+    // nodeIndex (u32) at word 7 (offset 28) — row into the shared transform buffer.
     const node = nodeIndex >>> 0;
 
-    u32[offset + 8] = node;
+    u32[offset + 7] = node;
 
     if (node > this._maxNodeIndex) {
       this._maxNodeIndex = node;
@@ -1294,18 +1294,13 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
                 format: 'unorm16x4',
               },
               {
-                shaderLocation: 4,
-                offset: 24,
-                format: 'unorm8x4',
-              },
-              {
                 shaderLocation: 5,
-                offset: 28,
+                offset: 24,
                 format: 'uint32',
               },
               {
                 shaderLocation: 6,
-                offset: 32,
+                offset: 28,
                 format: 'uint32',
               },
             ],
@@ -1444,9 +1439,8 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
             attributes: [
               { shaderLocation: 0, offset: 0, format: 'float32x4' },
               { shaderLocation: 3, offset: 16, format: 'unorm16x4' },
-              { shaderLocation: 4, offset: 24, format: 'unorm8x4' },
-              { shaderLocation: 5, offset: 28, format: 'uint32' },
-              { shaderLocation: 6, offset: 32, format: 'uint32' },
+              { shaderLocation: 5, offset: 24, format: 'uint32' },
+              { shaderLocation: 6, offset: 28, format: 'uint32' },
             ],
           },
         ],

@@ -113,25 +113,25 @@ describe('WebGl2RetainedGroupResources: device resources (Task 6)', () => {
     const bundle = new WebGl2RetainedGroupResources();
 
     bundle._beginCapture();
-    bundle._appendInstanceWords(new Uint32Array(18).fill(3)); // two 9-word instances
+    bundle._appendInstanceWords(new Uint32Array(16).fill(3)); // two 8-word instances
     bundle._connectDevice(gl, accountant);
     bundle._uploadInstances();
 
     expect(bundle.instanceBuffer).not.toBeNull();
     expect(recorder.bufferReallocations).toBe(1);
-    expect(recorder.bufferUploadBytes).toBe(18 * 4);
-    expect(stats.gpuMemoryBytes).toBe(18 * 4);
+    expect(recorder.bufferUploadBytes).toBe(16 * 4);
+    expect(stats.gpuMemoryBytes).toBe(16 * 4);
 
     // Recapture with fewer words: in-place update, storage stays booked at the high-water mark.
     const buffer = bundle.instanceBuffer;
 
     bundle._beginCapture();
-    bundle._appendInstanceWords(new Uint32Array(9).fill(4));
+    bundle._appendInstanceWords(new Uint32Array(8).fill(4));
     bundle._uploadInstances();
 
     expect(bundle.instanceBuffer).toBe(buffer);
     expect(recorder.bufferSubUpdates).toBe(1);
-    expect(stats.gpuMemoryBytes).toBe(18 * 4);
+    expect(stats.gpuMemoryBytes).toBe(16 * 4);
 
     bundle.destroy();
 

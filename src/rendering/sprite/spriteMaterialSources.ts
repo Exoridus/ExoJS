@@ -12,8 +12,8 @@
  * projection binding exactly as the default sprite path does, so a custom
  * material keeps the single `drawArraysInstanced` / `drawIndexed` batch.
  *
- * Both paths (locations 0, 3, 4, 5, 6) fetch each instance's world transform
- * from the shared transform storage keyed by `a_nodeIndex` / `nodeIndex`: the
+ * Both paths (locations 0, 3, 5, 6) fetch each instance's world transform and
+ * tint from the shared transform storage keyed by `a_nodeIndex` / `nodeIndex`: the
  * WebGL2 path samples the `u_transforms` texture, the WGSL path reads the
  * `transforms` storage buffer (group(0) binding(1)).
  *
@@ -25,7 +25,8 @@
 
 /**
  * GLSL ES 3.00 vertex shader for the custom sprite-material path. Identical
- * corner expansion and attribute contract to the default sprite vertex shader.
+ * corner expansion and attribute contract to the default sprite vertex shader
+ * (tint read from the shared transform slot's texel 2, no per-instance color).
  * @internal
  */
 export const spriteVertexGlsl = `#version 300 es
@@ -37,7 +38,6 @@ precision highp int;
 // quad this invocation is computing.
 layout(location = 0) in vec4 a_localBounds;     // left, top, right, bottom (local space)
 layout(location = 3) in vec4 a_uvBounds;        // uMin, vMin, uMax, vMax (normalised, already flipY-swapped)
-layout(location = 4) in vec4 a_color;           // RGBA tint
 layout(location = 5) in uint a_textureSlot;
 layout(location = 6) in uint a_nodeIndex;       // row into the shared transform buffer
 
@@ -58,11 +58,13 @@ void main(void) {
     float localX = (cornerX == 0) ? a_localBounds.x : a_localBounds.z;
     float localY = (cornerY == 0) ? a_localBounds.y : a_localBounds.w;
 
-    // Fetch the per-instance world transform from the shared buffer (row =
-    // a_nodeIndex): texel 0 = (a, b, c, d), texel 1 = (tx, ty, 0, 0).
+    // Fetch the per-instance world transform and tint from the shared buffer
+    // (row = a_nodeIndex): texel 0 = (a, b, c, d), texel 1 = (tx, ty, 0, 0),
+    // texel 2 = tint (rgb 0..1, a).
     int row = int(a_nodeIndex);
     vec4 m0 = texelFetch(u_transforms, ivec2(0, row), 0);
     vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0);
+    vec4 m2 = texelFetch(u_transforms, ivec2(2, row), 0);
 
     float worldX = (m0.x * localX) + (m0.y * localY) + m1.x;
     float worldY = (m0.z * localX) + (m0.w * localY) + m1.y;
@@ -73,7 +75,7 @@ void main(void) {
     float v = (cornerY == 0) ? a_uvBounds.y : a_uvBounds.w;
     v_texcoord = vec2(u, v);
 
-    v_color = vec4(a_color.rgb * a_color.a, a_color.a);
+    v_color = vec4(m2.rgb * m2.a, m2.a);
     v_textureSlot = a_textureSlot;
 }
 `;
@@ -81,7 +83,7 @@ void main(void) {
 /**
  * WGSL vertex stage + shared bindings for the custom sprite-material path.
  * Prepend to a material's fragment WGSL: it declares the per-instance
- * `VertexInput` (locations 0, 3, 4, 5, 6), the `VertexOutput` a custom
+ * `VertexInput` (locations 0, 3, 5, 6), the `VertexOutput` a custom
  * `@fragment` consumes, the group(0) projection uniform + shared transform
  * storage buffer, the group(1) base texture and sampler (`u_texture` /
  * `u_sampler`), and the `vertexMain` entry point. The fragment author adds their
@@ -109,7 +111,6 @@ struct TransformSlot {
 struct VertexInput {
     @location(0) localBounds: vec4<f32>,
     @location(3) uvBounds: vec4<f32>,
-    @location(4) color: vec4<f32>,
     @location(5) textureSlot: u32,
     @location(6) nodeIndex: u32,
 };
@@ -130,9 +131,9 @@ fn vertexMain(input: VertexInput, @builtin(vertex_index) vid: u32) -> VertexOutp
     let localX = select(input.localBounds.x, input.localBounds.z, cornerX == 1u);
     let localY = select(input.localBounds.y, input.localBounds.w, cornerY == 1u);
 
-    // Fetch this instance's world transform from the shared storage buffer,
-    // keyed by nodeIndex: m0 = (a, b, c, d), m1 = (tx, ty, 0, 0). (m2 carries the
-    // node tint, unused here — the sprite keeps its own per-instance color.)
+    // Fetch this instance's world transform and tint from the shared storage
+    // buffer, keyed by nodeIndex: m0 = (a, b, c, d), m1 = (tx, ty, 0, 0),
+    // m2 = tint (rgb 0..1, a).
     let slot = transforms[input.nodeIndex];
     let worldX = slot.m0.x * localX + slot.m0.y * localY + slot.m1.x;
     let worldY = slot.m0.z * localX + slot.m0.w * localY + slot.m1.y;
@@ -143,7 +144,7 @@ fn vertexMain(input: VertexInput, @builtin(vertex_index) vid: u32) -> VertexOutp
     let v = select(input.uvBounds.y, input.uvBounds.w, cornerY == 1u);
     output.texcoord = vec2<f32>(u, v);
 
-    output.color = vec4<f32>(input.color.rgb * input.color.a, input.color.a);
+    output.color = vec4<f32>(slot.m2.rgb * slot.m2.a, slot.m2.a);
 
     return output;
 }
