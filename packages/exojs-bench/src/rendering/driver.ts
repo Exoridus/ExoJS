@@ -181,6 +181,21 @@ const realShaderPlugin = {
 };
 
 /**
+ * `__DEV__` value the engine graph is compiled with for the benchmark.
+ *
+ * MUST be `false`: the competitor arms are pre-bundled from their published npm
+ * dist (`optimizeDeps.include`), i.e. their PRODUCTION builds with dev-only
+ * guards already stripped. Measuring exojs source with `__DEV__=true` therefore
+ * pits an unshipped dev build (per-frame dev diagnostics — e.g.
+ * `RetainedGroupFragment._devHasDestroyedDrawable`, a full O(captured-drawables)
+ * scan every clean retained frame) against competitors' prod builds. That
+ * asymmetry inflated the exojs numbers by 20-30x on the static-heavy retained
+ * arm alone (2.3 ms vs the real ~0.1 ms prod floor). `false` compiles the same
+ * path a shipped exojs game runs, making the cross-arm comparison apples-to-apples.
+ */
+const ENGINE_DEV_BUILD = false;
+
+/**
  * Installs the compile-time build flags (`__DEV__`, `__VERSION__`,
  * `__REVISION__`) as real globals before any engine module evaluates. Vite's
  * `define` replaces literal references, but modules pre-bundled by esbuild's
@@ -194,7 +209,7 @@ const devGlobalsPlugin = (version: string) => ({
       {
         tag: 'script',
         injectTo: 'head-prepend',
-        children: `globalThis.__DEV__=true;globalThis.__VERSION__=${JSON.stringify(version)};globalThis.__REVISION__="baseline";`,
+        children: `globalThis.__DEV__=${String(ENGINE_DEV_BUILD)};globalThis.__VERSION__=${JSON.stringify(version)};globalThis.__REVISION__="baseline";`,
       },
     ];
   },
@@ -261,7 +276,7 @@ const startViteServer = async (version: string): Promise<ViteDevServer> => {
     // source still resolves to local `.ts` files via the `#*` alias and is never
     // pre-bundled.
     optimizeDeps: { noDiscovery: true, include: resolvableCompetitors() },
-    define: { __DEV__: 'true', __VERSION__: JSON.stringify(version), __REVISION__: JSON.stringify('baseline') },
+    define: { __DEV__: String(ENGINE_DEV_BUILD), __VERSION__: JSON.stringify(version), __REVISION__: JSON.stringify('baseline') },
     plugins: [realShaderPlugin, devGlobalsPlugin(version)],
   });
 
