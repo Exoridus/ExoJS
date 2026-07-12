@@ -339,23 +339,25 @@ const attachProbes = (adapter: EngineAdapter, spec: CellSpec, canvas: HTMLCanvas
   const gl = canvas.getContext('webgl2');
 
   if (gl === null) {
-    // The arm rendered through a non-WebGL2 context on this canvas. A WebGL1 arm
-    // (Phaser 3 has NO WebGL2 renderer) owns the canvas with a `'webgl'` context,
-    // and `getContext('webgl2')` returns null once a different context type owns
-    // the element. Degrade gracefully — the same policy as the WebGPU no-device
-    // path: keep the CPU timing and the rAF frame delta, skip the WebGL2
-    // structural probe (and its zero-draw self-check, which the non-null
-    // `structuralNote` suppresses), and DISCLOSE why in the cell note. Never
-    // fabricate counters, never throw away the whole run over an arm's WebGL
-    // version. Init has already succeeded by here, so a live context exists;
-    // only a canvas with no graphics context at all is a real bug worth failing.
+    // The arm rendered through a plain WebGL context on this canvas, not a WebGL2
+    // one. The Phaser arm is measured as a stock Phaser 4 app: Phaser 4's
+    // WebGLRenderer creates a `'webgl'` (WebGL1) context by default
+    // (`canvas.getContext('webgl')`, WebGLRenderer.js:709), and once a `'webgl'`
+    // context owns the element `getContext('webgl2')` returns null. Degrade
+    // gracefully — the same policy as the WebGPU no-device path: keep the CPU
+    // timing and the rAF frame delta, skip the WebGL2 structural probe (and its
+    // zero-draw self-check, which the non-null `structuralNote` suppresses), and
+    // DISCLOSE why in the cell note. Never fabricate counters, never throw away
+    // the whole run over an arm's WebGL version. Init has already succeeded by
+    // here, so a live context exists; only a canvas with no graphics context at
+    // all is a real bug worth failing.
     const gl1 = canvas.getContext('webgl');
 
     if (gl1 !== null) {
       return {
         probe: noopStructuralProbe,
         gpuTimer: noopGpuTimer,
-        structuralNote: `structural counters skipped: engine='${spec.engine}' config='${spec.config}' rendered through a WebGL1 context (no WebGL2 renderer), so the WebGL2 draw-call probe cannot attach — draw/bind/upload structure is omitted for this arm (CPU + rAF frame timing kept)`,
+        structuralNote: `structural counters skipped: engine='${spec.engine}' config='${spec.config}' rendered through a WebGL context (Phaser 4 renders WebGL1 via getContext('webgl'), WebGLRenderer.js:709), so the WebGL2 draw-call probe cannot attach — draw/bind/upload structure is omitted for this arm (CPU + rAF frame timing kept)`,
       };
     }
 

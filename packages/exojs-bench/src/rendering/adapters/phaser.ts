@@ -4,7 +4,7 @@ import { mutationSignature, selectMutationIndices } from '../../shared/mutation'
 import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
 
 /**
- * Phaser 3.90 arm of the rendering benchmark.
+ * Phaser 4.2 arm of the rendering benchmark.
  *
  * Builds the byte-for-byte same scene the ExoJS and Pixi arms build
  * (`adapters/exojs.ts`, `adapters/pixi.ts`) and mutates the identical leaf set
@@ -15,15 +15,26 @@ import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
  * cycling, overdraw stacking, top-left anchoring) is a faithful transcription of
  * the other arms so the comparison rests on the same neutral archetypes.
  *
- * IMPORTANT — WebGL VERSION DISCLOSURE. Phaser 3 has NO WebGL2 renderer: its
- * WebGLRenderer requests a `'webgl'` (WebGL1) context. This arm therefore runs
- * under the harness's `'webgl2'` backend REQUEST but renders through WebGL1. The
- * CPU-time metric (the primary comparison) is measured identically across arms,
- * but the harness's WebGL2 draw-call structural probe cannot attach to a WebGL1
- * context, so this arm reports NO structural counters — disclosed per cell by the
- * harness (see `page/harness.ts::attachProbes`) and in the report Methodology.
- * Phaser does not ship WebGPU (the 3.x WebGPU renderer is experimental and not
- * wired here), so this arm does not support the `'webgpu'` backend.
+ * WEBGL VERSION DISCLOSURE — EMPIRICAL, and the reason this arm is measured as it
+ * is. Phaser 4 "Caladan" is often described as a from-scratch WebGL2 renderer;
+ * against the installed 4.2.1 source it is NOT. Its `WebGLRenderer.init` requests
+ * a `'webgl'` (WebGL**1**) context by default (`canvas.getContext('webgl')`,
+ * `WebGLRenderer.js:709`), its shaders are GLSL ES 1.00 (`attribute`/`varying`;
+ * no `#version 300 es` anywhere in the dist), and it polyfills the WebGL2-core
+ * features it needs (instanced arrays, VAO) from WebGL1 extensions — its renderer
+ * is an evolution of the Phaser 3.85+ WebGL path, not a WebGL2 rewrite.
+ *
+ * By deliberate decision this arm renders through Phaser's OWN default context
+ * (WebGL, i.e. WebGL1) — exactly as a stock Phaser 4 app would — rather than
+ * injecting a WebGL2 context to force backend parity. That keeps the arm honest:
+ * its CPU-time column is measured identically to the other arms and IS cross-arm
+ * comparable, but its GPU/structural columns are NOT WebGL2-backend-comparable.
+ * The harness's WebGL2 draw-call structural probe cannot attach to a WebGL
+ * (WebGL1) context, so this arm reports NO structural counters — disclosed per
+ * cell by the harness (`page/harness.ts::attachProbes`) and in the report
+ * Methodology; the counts are omitted, never faked. Phaser 4 ships NO WebGPU
+ * renderer (`Phaser.AUTO/CANVAS/WEBGL/HEADLESS` only), so this arm supports the
+ * `'webgl2'` backend request only and never runs `'webgpu'`.
  *
  * The harness owns frame cadence, so Phaser's own `requestAnimationFrame` game
  * loop (`TimeStep`) is halted right after boot (`game.loop.stop()`), and one
@@ -93,20 +104,23 @@ export const createPhaserAdapter = (): EngineAdapter => {
     config: 'default',
 
     supports(target: Backend): boolean {
-      // Phaser 3 renders WebGL1 only; it runs under the harness 'webgl2' request
-      // (disclosed) and does not ship a wired WebGPU renderer.
+      // Phaser 4 renders WebGL (WebGL1) via its default context and ships no
+      // WebGPU renderer; it runs under the harness 'webgl2' request (disclosed)
+      // and never the 'webgpu' backend.
       return target === 'webgl2';
     },
 
     async init(canvas: HTMLCanvasElement, target: Backend): Promise<void> {
       if (target !== 'webgl2') {
-        throw new Error(`The phaser adapter only runs under the harness 'webgl2' backend request (Phaser 3 renders WebGL1); got '${target}'.`);
+        throw new Error(`The phaser adapter only runs under the harness 'webgl2' backend request (Phaser 4 renders WebGL1); got '${target}'.`);
       }
 
       await new Promise<void>(resolve => {
         game = new Phaser.Game({
           // Force WebGL (never AUTO/Canvas): a Canvas fallback would silently
-          // measure a different renderer. Phaser's WebGLRenderer is WebGL1.
+          // measure a different renderer. Phaser 4's WebGLRenderer creates its
+          // own default `'webgl'` (WebGL1) context — no `context` is injected, so
+          // this measures a stock Phaser 4 app's renderer honestly.
           type: Phaser.WEBGL,
           canvas,
           width: VIEWPORT_WIDTH,
@@ -157,8 +171,8 @@ export const createPhaserAdapter = (): EngineAdapter => {
 
       // Nested-container spine of depth `nestingDepth`, exactly as the other arms
       // build it. Phaser Containers propagate their transform matrix down to
-      // children every frame (see ContainerWebGLRenderer), so a deeper archetype
-      // pays for deeper transform propagation identically.
+      // children every frame, so a deeper archetype pays for deeper transform
+      // propagation identically.
       //
       // No culling flag is set: Phaser has no per-node `.cullable` equivalent,
       // and its default `GameObject.willRender` checks only visibility/alpha

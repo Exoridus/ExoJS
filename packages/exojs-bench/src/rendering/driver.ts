@@ -115,9 +115,11 @@ const ADAPTER_CAPABILITIES: readonly EngineAdapter[] = [
   // local-only reference; its version + provenance are stamped into the report
   // header via `readLibraryProvenance`.
   capabilityDescriptor('pixi', 'default', ['webgl2', 'webgpu']),
-  // Phaser 3 and Excalibur are committed competitor arms (pinned exact
-  // devDependencies). Both are WebGL2-only in this harness and never run WebGPU:
-  // Phaser 3 has no WebGL2 renderer at all and runs under the 'webgl2' REQUEST
+  // Phaser 4 and Excalibur are committed competitor arms (pinned exact
+  // devDependencies). Both are WebGL2-only in this harness and never run WebGPU
+  // (Phaser 4 ships no WebGPU renderer; Excalibur 0.32 has none). Phaser 4 is
+  // measured as a stock app: its WebGLRenderer creates a WebGL1 context by
+  // default (`getContext('webgl')`), so it runs under the 'webgl2' REQUEST while
   // rendering WebGL1 (disclosed by the harness's structural-probe degrade path
   // and the report Methodology); Excalibur 0.32 renders a real WebGL2 context.
   // A missing (unlinked) competitor degrades gracefully: its per-cell dynamic
