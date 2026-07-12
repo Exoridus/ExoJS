@@ -11,6 +11,7 @@ interface Manifest {
   version?: string;
   peerDependencies?: Record<string, string>;
   dependencies?: Record<string, string>;
+  devDependencies?: Record<string, string>;
 }
 
 const readManifest = (path: string): Manifest => JSON.parse(readFileSync(path, 'utf8')) as Manifest;
@@ -57,8 +58,16 @@ describe('release coherence', () => {
     });
   }
 
-  it('@codexo/exojs-tiled depends on @codexo/exojs-tilemap', () => {
-    const tiled = readManifest(resolve(packagesDir, 'exojs-tiled', 'package.json'));
-    expect(tiled.dependencies?.['@codexo/exojs-tilemap']).toBeDefined();
-  });
+  // exojs-tiled and exojs-ldtk both render tiles via exojs-tilemap's runtime
+  // classes, but consumers only get one copy of those classes if the host app
+  // supplies exojs-tilemap itself — hence a peerDependency (not a runtime
+  // `dependencies` entry) backed by a workspace:* devDependency for local dev/test.
+  for (const consumer of ['exojs-tiled', 'exojs-ldtk']) {
+    it(`@codexo/${consumer} declares @codexo/exojs-tilemap as a peerDependency`, () => {
+      const manifest = readManifest(resolve(packagesDir, consumer, 'package.json'));
+      expect(manifest.peerDependencies?.['@codexo/exojs-tilemap']).toBeDefined();
+      expect(manifest.devDependencies?.['@codexo/exojs-tilemap']).toBe('workspace:*');
+      expect(manifest.dependencies?.['@codexo/exojs-tilemap']).toBeUndefined();
+    });
+  }
 });
