@@ -100,18 +100,26 @@ describe('CompressorEffect', () => {
 
   describe('construction before the audio context is ready', () => {
     it('registers a deferred onAudioContextReady setup and _onAudioContextReady wires the node', async () => {
-      // The shared mock AudioContext is always 'running', so
-      // onAudioContextReady.add() synchronously creates the context and
-      // dispatches ready inside the constructor call itself — the deferred
-      // callback (and the constructor's else-branch registration) both
-      // execute before `new` returns. Using a fresh module registry via
-      // vi.resetModules() guarantees the internal audio-context singleton
-      // starts in its virgin (not-ready) state for this one test, regardless
-      // of what earlier tests in this file already did with getAudioContext().
+      // Using a fresh module registry via vi.resetModules() guarantees the
+      // internal audio-context singleton starts in its virgin (not-ready)
+      // state for this one test, regardless of what earlier tests in this
+      // file already did with getAudioContext(). With no AudioContext created
+      // yet, construction cannot set up the node synchronously — it registers
+      // `_onAudioContextReady` on the `onAudioContextReady` signal instead.
       vi.resetModules();
       const { CompressorEffect: FreshCompressorEffect } = await import('../../src/effects/CompressorEffect');
       const effect = new FreshCompressorEffect();
+      expect(() => effect.inputNode).toThrow('CompressorEffect not yet initialized.');
+
+      // Simulate the AudioContext becoming ready (e.g. after the first user
+      // gesture) by invoking the deferred hook directly with a fresh mock
+      // AudioContext — this is exactly what onAudioContextReady.dispatch()
+      // would call in production.
+      const ctx = new AudioContext();
+      (effect as unknown as { _onAudioContextReady: (ctx: AudioContext) => void })._onAudioContextReady(ctx);
+
       expect(effect.inputNode).toBeDefined();
+      expect(effect.inputNode).toBe(effect.outputNode);
       effect.destroy();
     });
   });

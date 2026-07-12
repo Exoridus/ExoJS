@@ -106,7 +106,12 @@ describe('RingModulatorEffect', () => {
   // -------------------------------------------------------------------------
 
   describe('inputNode and outputNode', () => {
+    // Calling getAudioContext() here ensures isAudioContextReady() returns true
+    // for all tests in this describe block and below, so the constructor calls
+    // _setupNodes() immediately rather than deferring via onAudioContextReady.
+
     it('are defined after construction', () => {
+      getAudioContext();
       const effect = new RingModulatorEffect();
       expect(effect.inputNode).toBeDefined();
       expect(effect.outputNode).toBeDefined();
@@ -114,6 +119,7 @@ describe('RingModulatorEffect', () => {
     });
 
     it('are different instances', () => {
+      getAudioContext();
       const effect = new RingModulatorEffect();
       expect(effect.inputNode).not.toBe(effect.outputNode);
       effect.destroy();
@@ -124,6 +130,28 @@ describe('RingModulatorEffect', () => {
       effect.destroy();
       expect(() => effect.inputNode).toThrow('RingModulatorEffect not yet initialized.');
       expect(() => effect.outputNode).toThrow('RingModulatorEffect not yet initialized.');
+    });
+  });
+
+  describe('construction before the audio context is ready', () => {
+    it('registers a deferred onAudioContextReady setup and _onAudioContextReady wires the nodes', async () => {
+      // A fresh module registry via vi.resetModules() guarantees the internal
+      // audio-context singleton starts in its virgin (not-ready) state, so
+      // construction defers node setup instead of creating it synchronously.
+      vi.resetModules();
+      const { RingModulatorEffect: FreshRingModulatorEffect } = await import('../../src/effects/RingModulatorEffect');
+      const effect = new FreshRingModulatorEffect();
+      expect(() => effect.inputNode).toThrow('RingModulatorEffect not yet initialized.');
+
+      // Simulate the AudioContext becoming ready by invoking the deferred
+      // hook directly with a fresh mock AudioContext.
+      const ctx = new AudioContext();
+      (effect as unknown as { _onAudioContextReady: (ctx: AudioContext) => void })._onAudioContextReady(ctx);
+
+      expect(effect.inputNode).toBeDefined();
+      expect(effect.outputNode).toBeDefined();
+      expect(effect.inputNode).not.toBe(effect.outputNode);
+      effect.destroy();
     });
   });
 
