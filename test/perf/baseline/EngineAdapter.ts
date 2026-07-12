@@ -85,6 +85,16 @@ export interface EngineAdapter {
   /** Release resources held by the current scene and engine instance. */
   teardown(): void;
   /**
+   * Order-sensitive signature of the mutation-index set the most recent
+   * {@link buildScene} selected (see `mutation.ts::mutationSignature`). The
+   * harness compares it against the canonical selection for the cell and fails
+   * loudly on any divergence, so the cross-arm comparison rests on an assertion
+   * rather than a manual contract (review B3). Optional: an arm that omits it is
+   * skipped with a warning, leaving its determinism unverified rather than
+   * blocking the run.
+   */
+  mutationSignature?(): string;
+  /**
    * The live WebGPU device when this adapter was initialised on the `'webgpu'`
    * backend, so the harness can attach a structural probe to it — unlike a
    * WebGL2 context (recoverable from the canvas via `getContext('webgl2')`),

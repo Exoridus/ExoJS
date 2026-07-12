@@ -8,8 +8,8 @@ import { Sprite } from '#rendering/sprite/Sprite';
 import { Texture } from '#rendering/texture/Texture';
 import type { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
-import { createRng } from '../archetypes';
 import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
+import { mutationSignature, selectMutationIndices } from '../mutation';
 
 /** Fixed design-space viewport the harness canvas renders (see `page/index.html`). */
 const VIEWPORT_WIDTH = 1280;
@@ -80,6 +80,8 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
   let root: Container | null = null;
   let textures: Texture[] = [];
   let mutableLeaves: MutableLeaf[] = [];
+  /** Leaf indices the most recent buildScene selected for mutation — the source of {@link EngineAdapter.mutationSignature}. */
+  let mutableIndices: number[] = [];
 
   return {
     engine: 'exojs',
@@ -152,7 +154,13 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
       const cellHeight = (VIEWPORT_HEIGHT - 2 * GRID_MARGIN) / rows;
       const overdraw = spec.id === 'overdraw';
 
-      const rng = createRng(seed);
+      // Canonical, shared mutation selection: draw one RNG value per leaf in
+      // index order and select when below `mutationFraction`. Using the shared
+      // `selectMutationIndices` (rather than re-inlining the draw here) is what
+      // makes the cross-arm fairness contract a single asserted code path (B3);
+      // `mutationSignature()` below reports the exact set the harness verifies.
+      const selectedIndices = selectMutationIndices(nodeCount, spec.mutationFraction, seed);
+      const selectedSet = new Set(selectedIndices);
       const leaves: MutableLeaf[] = [];
 
       for (let i = 0; i < nodeCount; i++) {
@@ -179,17 +187,18 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
         sprite.setPosition(x, y);
         spine[i % spine.length]!.addChild(sprite);
 
-        // Draw one RNG value per leaf, in index order, unconditionally — even
-        // when `mutationFraction` is 0 — so any adapter seeded the same way
-        // draws from the identical stream position and selects the exact same
-        // mutation set (see the adapters README's cross-arm fairness contract).
-        if (rng() < spec.mutationFraction) {
+        if (selectedSet.has(i)) {
           leaves.push({ sprite, baseX: x, baseY: y });
         }
       }
 
       root = sceneRoot;
       mutableLeaves = leaves;
+      mutableIndices = selectedIndices;
+    },
+
+    mutationSignature(): string {
+      return mutationSignature(mutableIndices);
     },
 
     mutate(frame: number): void {
@@ -245,6 +254,7 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
 
       textures = [];
       mutableLeaves = [];
+      mutableIndices = [];
 
       if (app !== null) {
         app.destroy();
