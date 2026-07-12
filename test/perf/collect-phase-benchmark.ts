@@ -626,9 +626,30 @@ const printReport = (report: ScenarioReport): void => {
   console.log(`    residual (builder bookkeeping / unattributed): est. ${fmtMs(residual)}ms of clean build`);
 };
 
+/**
+ * Noise floor for the static-vs-mixed build-phase delta (review S2). Below
+ * this magnitude a delta is not distinguishable from run-to-run measurement
+ * noise on this CPU-stub harness (single-process `performance.now()` samples,
+ * no median-of-runs). This was previously only a per-line `[<30% -- flag as
+ * possible noise]` suffix easy to miss when skimming stdout; it is now also
+ * collected into a single, impossible-to-miss advisory block at the end of
+ * the run (see the "NOISE ADVISORY" section below) so a sub-floor delta can
+ * never be quoted as a real change without also seeing the flag.
+ */
+const NOISE_FLOOR_PCT = 30;
+
 const run = (): void => {
-  console.log('ExoJS collect-path phase profile (CPU stub backend, no GPU)');
-  console.log(`iterations=${ITERATIONS} warmup=${WARMUP_FRAMES} mutatedFraction(mixed mode)=${MUTATED_FRACTION}`);
+  console.log('=============================================================');
+  console.log('ExoJS collect-path phase profile — CPU-STUB BACKEND, NO GPU (review S1/S3)');
+  console.log('MEASUREMENT ONLY: never a CI gate. This stub is NOT comparable to');
+  console.log('the real WebGL2/WebGPU backend, NOR to the other CPU-stub benches');
+  console.log('under test/bench/*.bench.ts — this one additionally wires a real');
+  console.log('TransformBuffer.write() via a bench-authored `_prepareRenderGroupUpload`');
+  console.log('hook the other stubs omit (review S1), so its numbers are internally');
+  console.log('consistent (exojs-vs-exojs across versions) but not cross-bench.');
+  console.log('Never cite an absolute ms figure from this file as "engine perf".');
+  console.log('=============================================================');
+  console.log(`iterations=${ITERATIONS} warmup=${WARMUP_FRAMES} mutatedFraction(mixed mode)=${MUTATED_FRACTION} noiseFloor=${NOISE_FLOOR_PCT}%`);
 
   const reports: ScenarioReport[] = [];
 
@@ -641,6 +662,9 @@ const run = (): void => {
   for (const report of reports) printReport(report);
 
   console.log('\n=== Static-vs-mixed delta (build phase, clean median) ===');
+
+  const subFloorDeltas: string[] = [];
+
   for (const nodeCount of NODE_COUNTS) {
     const staticReport = reports.find(r => r.nodeCount === nodeCount && r.mode === 'static')!;
     const mixedReport = reports.find(r => r.nodeCount === nodeCount && r.mode === 'mixed')!;
@@ -648,11 +672,25 @@ const run = (): void => {
     const mixedBuild = median(mixedReport.clean.build);
     const delta = mixedBuild - staticBuild;
     const deltaPct = staticBuild > 0 ? (delta / staticBuild) * 100 : 0;
+    const belowFloor = Math.abs(deltaPct) < NOISE_FLOOR_PCT;
+    const line = `nodes=${nodeCount}: static=${fmtMs(staticBuild)}ms mixed=${fmtMs(mixedBuild)}ms delta=${fmtMs(delta)}ms (${deltaPct.toFixed(1)}%)`;
 
-    console.log(
-      `  nodes=${nodeCount}: static=${fmtMs(staticBuild)}ms mixed=${fmtMs(mixedBuild)}ms delta=${fmtMs(delta)}ms (${deltaPct.toFixed(1)}%)` +
-        (Math.abs(deltaPct) < 30 ? '  [<30% -- flag as possible noise]' : ''),
-    );
+    console.log(`  ${line}${belowFloor ? `  [<${NOISE_FLOOR_PCT}% -- flag as possible noise]` : ''}`);
+
+    if (belowFloor) {
+      subFloorDeltas.push(line);
+    }
+  }
+
+  // S2 — fold the noise-floor flag into a summary block, not just a per-line
+  // suffix: a reader skimming only the bottom of stdout still sees which
+  // deltas are sub-floor and must not be quoted as real changes.
+  if (subFloorDeltas.length > 0) {
+    console.log(`\n!!! NOISE ADVISORY: ${subFloorDeltas.length} delta(s) below the ${NOISE_FLOOR_PCT}% noise floor — do NOT quote these as real changes !!!`);
+
+    for (const line of subFloorDeltas) {
+      console.log(`  - ${line}`);
+    }
   }
 };
 

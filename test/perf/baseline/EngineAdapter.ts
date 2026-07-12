@@ -34,6 +34,13 @@ export interface CellSpec {
   readonly nodeCount: number;
   /** Number of frames timed for this cell, per {@link timedFramesFor}. */
   readonly timedFrames: number;
+  /**
+   * Number of discarded warmup frames run before timing starts, per
+   * {@link warmupFramesFor} (review B7: scales up with node count so the
+   * necessarily-short timed window at large N is not diluted by residual
+   * shader-compile/texture-upload/JIT settling cost).
+   */
+  readonly warmupFrames: number;
 }
 
 /** Draw-call and state-change counters gathered for a single cell. */

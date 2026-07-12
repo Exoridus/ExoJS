@@ -1,5 +1,5 @@
 import { createExoJsAdapter } from './adapters/exojs';
-import { ARCHETYPES, buildMatrix, createRng, timedFramesFor } from './archetypes';
+import { ARCHETYPES, buildMatrix, createRng, timedFramesFor, warmupFramesFor } from './archetypes';
 import type { Backend, EngineAdapter } from './EngineAdapter';
 
 describe('createRng', () => {
@@ -32,6 +32,24 @@ describe('timedFramesFor', () => {
     expect(timedFramesFor(5_000)).toBe(90);
     expect(timedFramesFor(25_000)).toBe(60);
     expect(timedFramesFor(100_000)).toBe(30);
+  });
+});
+
+describe('warmupFramesFor', () => {
+  test('scales the warmup-frame count UP as node count grows (review B7)', () => {
+    expect(warmupFramesFor(1_000)).toBe(10);
+    expect(warmupFramesFor(5_000)).toBe(10);
+    expect(warmupFramesFor(25_000)).toBe(25);
+    expect(warmupFramesFor(100_000)).toBe(40);
+  });
+
+  test('is monotonically non-decreasing across the sweep', () => {
+    const counts = [1_000, 5_000, 25_000, 100_000];
+    const warmups = counts.map(warmupFramesFor);
+
+    for (let i = 1; i < warmups.length; i++) {
+      expect(warmups[i]!).toBeGreaterThanOrEqual(warmups[i - 1]!);
+    }
   });
 });
 
@@ -81,6 +99,16 @@ describe('buildMatrix', () => {
     const big = cells.find(c => c.nodeCount === 100_000)!;
 
     expect(big.timedFrames).toBe(timedFramesFor(100_000));
+  });
+
+  test('assigns each cell the warmup-frame count for its node count (review B7)', () => {
+    const adapter = fakeAdapter('exojs', 'current', ['webgl2']);
+    const cells = buildMatrix([adapter], ['webgl2']);
+    const big = cells.find(c => c.nodeCount === 100_000)!;
+    const small = cells.find(c => c.nodeCount === 1_000)!;
+
+    expect(big.warmupFrames).toBe(warmupFramesFor(100_000));
+    expect(small.warmupFrames).toBe(warmupFramesFor(1_000));
   });
 });
 

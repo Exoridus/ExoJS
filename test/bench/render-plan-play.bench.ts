@@ -1,3 +1,7 @@
+// CPU-STUB backend, no GPU submission — MEASUREMENT ONLY, never a CI gate.
+// Not comparable to the real WebGL2/WebGPU backend, nor to the GPU-baseline
+// suite (`test/perf/baseline/`, `pnpm perf:baseline`) — see review S3/B1d.
+// Sub-30% deltas between runs are noise, not signal.
 import { bench, describe } from 'vitest';
 
 import { Container } from '../../src/rendering/Container';

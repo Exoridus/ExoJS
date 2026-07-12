@@ -1,4 +1,4 @@
-import { createCpuTimer, median, percentile } from './timing';
+import { createCpuTimer, median, percentile, shouldAbort } from './timing';
 
 describe('median', () => {
   test('odd length returns the middle value', () => {
@@ -31,6 +31,28 @@ describe('percentile', () => {
 
   test('p100 returns the maximum', () => {
     expect(percentile([1, 5, 3], 100)).toBe(5);
+  });
+});
+
+describe('shouldAbort', () => {
+  test('never aborts before `window` samples exist, even on a catastrophic first frame', () => {
+    expect(shouldAbort([1000], 200, 3)).toBe(false);
+    expect(shouldAbort([1000, 1000], 200, 3)).toBe(false);
+  });
+
+  test('does not abort on a single spike among otherwise-fast frames (review B9/C2)', () => {
+    // Trailing window of 3: [5, 5, 1000] has median 5 -- one GC pause does not trip it.
+    expect(shouldAbort([5, 5, 1000], 200, 3)).toBe(false);
+  });
+
+  test('aborts once the trailing-window median exceeds budget (sustained slowdown)', () => {
+    expect(shouldAbort([5, 300, 300], 200, 3)).toBe(true);
+    expect(shouldAbort([300, 300, 300], 200, 3)).toBe(true);
+  });
+
+  test('only looks at the trailing `window` samples, not the whole history', () => {
+    // Old slow frames fall out of the window once enough fast ones follow.
+    expect(shouldAbort([1000, 1000, 1000, 5, 5, 5], 200, 3)).toBe(false);
   });
 });
 

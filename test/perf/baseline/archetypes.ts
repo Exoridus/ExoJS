@@ -13,6 +13,13 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
   { id: 'static-heavy', nodeCounts: SCALING_COUNTS, nestingDepth: 4, textureCount: 1, mutationFraction: 0, cullingEnabled: true },
   { id: 'dynamic-heavy', nodeCounts: SCALING_COUNTS, nestingDepth: 4, textureCount: 1, mutationFraction: 0.075, cullingEnabled: true },
   { id: 'deep-hierarchy', nodeCounts: SCALING_COUNTS, nestingDepth: 16, textureCount: 1, mutationFraction: 0.01, cullingEnabled: true },
+  // Sprites are stretched to the full viewport by the exojs adapter (see the
+  // `overdraw` branch in `adapters/exojs.ts::buildScene`) so stacking
+  // nodeCount of them is genuine fill-bound overdraw, not 8x8px noise (review
+  // B6: the archetype was previously "dead" — negligible fill, never
+  // analyzed). NOTE: this changes the benchmark definition — results measured
+  // before this fix (8x8px stacked sprites) are not comparable on this
+  // archetype.
   { id: 'overdraw', nodeCounts: GPU_BOUND_COUNTS, nestingDepth: 2, textureCount: 1, mutationFraction: 0, cullingEnabled: false },
   // 24 textures: must exceed BOTH the exojs WebGL2 sprite batcher's 16 slots
   // (raised from 8 in the F9 follow-up) and typical reference batchers'
@@ -50,6 +57,23 @@ export const timedFramesFor = (nodeCount: number): number => {
   return 120;
 };
 
+/**
+ * Warmup-frame count for a given node count. Scales UP as node count grows —
+ * the inverse of {@link timedFramesFor}, which scales DOWN so wall-clock stays
+ * bounded. Review B7: at the largest node counts the timed window is
+ * necessarily short (30 frames at 100k), so any warmup shortfall (residual
+ * shader-compile/texture-upload/JIT settling bleeding into the first timed
+ * frames) eats a much larger fraction of that short window's confidence than
+ * it would at 1k/120 frames. More warmup at large N buys back that confidence
+ * without touching the timed-frame budget the report already labels honestly.
+ */
+export const warmupFramesFor = (nodeCount: number): number => {
+  if (nodeCount >= 100_000) return 40;
+  if (nodeCount >= 25_000) return 25;
+
+  return 10;
+};
+
 /** Cross-product of adapters x backends x archetypes x node counts, capability-gated. */
 export const buildMatrix = (adapters: readonly EngineAdapter[], backends: readonly Backend[]): CellSpec[] => {
   const cells: CellSpec[] = [];
@@ -67,6 +91,7 @@ export const buildMatrix = (adapters: readonly EngineAdapter[], backends: readon
             archetype: archetype.id,
             nodeCount,
             timedFrames: timedFramesFor(nodeCount),
+            warmupFrames: warmupFramesFor(nodeCount),
           });
         }
       }

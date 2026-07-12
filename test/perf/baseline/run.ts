@@ -46,6 +46,7 @@ const main = async (): Promise<void> => {
   const backendArg = args.get('backend');
   const archetypeArg = args.get('archetype');
   const nodesArg = args.get('nodes');
+  const framesArg = args.get('frames');
   const outDir = resolve(args.get('out') ?? DEFAULT_OUT_DIR);
 
   const backends: readonly Backend[] = backendArg ? (backendArg.split(',').map(value => value.trim()) as Backend[]) : DEFAULT_BACKENDS;
@@ -66,17 +67,41 @@ const main = async (): Promise<void> => {
     filter.nodeCount = nodeCount;
   }
 
-  const isSubset = backendArg !== undefined || archetypeArg !== undefined || nodesArg !== undefined;
+  // `--frames` (review B7 / S5's "thin sampling" ask): overrides EVERY cell's
+  // timed-frame count regardless of node count, so a smoke/spot-check run can
+  // finish in seconds without editing `timedFramesFor` in source. This is
+  // strictly a convenience knob for fast iteration — like `timedFramesOverride`
+  // itself (see driver.ts), it must never be used for a reportable run: it
+  // flattens the per-node-count frame budgets the report's `timedFrames`
+  // column exists to make honest, so any run using it is forced into the
+  // existing SUBSET RUN path below.
+  let timedFramesOverride: number | undefined;
+
+  if (framesArg !== undefined) {
+    const frames = Number.parseInt(framesArg, 10);
+
+    if (Number.isNaN(frames) || frames < 1) {
+      throw new Error(`--frames must be a positive integer (got '${framesArg}').`);
+    }
+
+    timedFramesOverride = frames;
+  }
+
+  const isSubset = backendArg !== undefined || archetypeArg !== undefined || nodesArg !== undefined || timedFramesOverride !== undefined;
 
   if (isSubset) {
     console.warn('SUBSET RUN — not a reportable comparison (see the same-session rule).');
   }
 
   console.log(
-    `Running baseline matrix: backends=[${backends.join(', ')}]${archetypeArg ? `, archetype=${archetypeArg}` : ''}${nodesArg ? `, nodes=${nodesArg}` : ''}`,
+    `Running baseline matrix: backends=[${backends.join(', ')}]${archetypeArg ? `, archetype=${archetypeArg}` : ''}${nodesArg ? `, nodes=${nodesArg}` : ''}${timedFramesOverride !== undefined ? `, frames=${timedFramesOverride} (OVERRIDE — thin sampling, not reportable)` : ''}`,
   );
 
-  const data = await runMatrix({ backends, filter: isSubset ? filter : undefined });
+  const data = await runMatrix({
+    backends,
+    ...(isSubset && { filter }),
+    ...(timedFramesOverride !== undefined && { timedFramesOverride }),
+  });
 
   // Provenance up front, loudly — a green run on a software rasterizer is worthless.
   console.log('\n=== Provenance ===');

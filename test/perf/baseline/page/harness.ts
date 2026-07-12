@@ -2,15 +2,29 @@ import { createExoJsAdapter } from '../adapters/exojs';
 import { ARCHETYPES } from '../archetypes';
 import type { CellResult, CellSpec, EngineAdapter, StructuralCounters } from '../EngineAdapter';
 import { attachWebGl2Probe, attachWebGpuProbe, type StructuralProbe } from '../metrics/structural';
-import { createCpuTimer, median, percentile } from '../metrics/timing';
+import { createCpuTimer, median, percentile, shouldAbort } from '../metrics/timing';
 import { mutationSignature, selectMutationIndices } from '../mutation';
 
 /** Fixed RNG seed shared by every cell so both benchmark arms select the same mutation set. */
 const SEED = 0xc0ffee;
-/** Discarded frames run before measuring, to warm shader compiles, texture uploads and JIT. */
-const WARMUP_FRAMES = 10;
-/** A single timed frame slower than this aborts the cell — a runaway node count, not a datapoint. */
+/**
+ * A timed frame slower than this is a candidate abort — a runaway node count,
+ * not a datapoint. Warmup-frame count is per-cell (see `spec.warmupFrames`,
+ * {@link warmupFramesFor}); it scales up with node count (review B7).
+ */
 const FRAME_BUDGET_MS = 200;
+/**
+ * Number of trailing timed samples the abort check looks at (review B9).
+ * Aborting on a SINGLE slow frame lets one GC pause or OS scheduling blip
+ * mistake an otherwise-valid cell for a runaway one — the exact failure that
+ * produced the `13.4x` WebGPU headline from an `n=1` aborted cell (review C2:
+ * `results.md:98`, median==p95 because only one frame ever ran). Requiring the
+ * MEDIAN of the last `ABORT_WINDOW` frames to exceed the budget means a lone
+ * spike cannot trip the abort — only a sustained slowdown can — and guarantees
+ * any cell that DOES abort reports a median over at least `ABORT_WINDOW`
+ * samples, never a bogus single-frame "median".
+ */
+const ABORT_WINDOW = 3;
 
 /**
  * Reduce accumulated structural totals to per-frame figures. Draw/bind/upload
@@ -323,7 +337,7 @@ export const runCell = async (adapter: EngineAdapter, spec: CellSpec, canvas: HT
       );
     }
 
-    for (let frame = 0; frame < WARMUP_FRAMES; frame++) {
+    for (let frame = 0; frame < spec.warmupFrames; frame++) {
       adapter.mutate(frame);
       adapter.renderFrame();
     }
@@ -358,11 +372,11 @@ export const runCell = async (adapter: EngineAdapter, spec: CellSpec, canvas: HT
           timer.end();
           gpuTimer.endFrame();
 
-          const lastCpuMs = timer.samples[timer.samples.length - 1]!;
-
           frame++;
 
-          if (lastCpuMs > FRAME_BUDGET_MS) {
+          // B9 — abort on a sustained slowdown, not a single spike (see
+          // `shouldAbort`'s doc comment for the full rationale).
+          if (shouldAbort(timer.samples, FRAME_BUDGET_MS, ABORT_WINDOW)) {
             exceeded = true;
             resolve();
             return;
@@ -409,7 +423,9 @@ export const runCell = async (adapter: EngineAdapter, spec: CellSpec, canvas: HT
     const frameMsP95 = frameSamplesMs.length > 0 ? percentile(frameSamplesMs, 95) : null;
 
     const notes = [
-      exceeded ? `a timed frame exceeded ${FRAME_BUDGET_MS}ms; cell aborted after ${measuredFrames} frame(s)` : unevenNote,
+      exceeded
+        ? `the trailing ${ABORT_WINDOW}-frame median exceeded ${FRAME_BUDGET_MS}ms; cell aborted after ${measuredFrames} frame(s) — median/p95 below rest on ${measuredFrames} sample(s), not a single-frame artifact`
+        : unevenNote,
       gpuUsable ? gpuTimer.note : NO_GPU_TIMER_NOTE,
     ].filter((value): value is string => value !== null);
     const note = notes.length > 0 ? notes.join('; ') : null;
