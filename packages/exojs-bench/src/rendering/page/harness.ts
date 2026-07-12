@@ -1,9 +1,40 @@
+import { mutationSignature, selectMutationIndices } from '../../shared/mutation';
+import { createCpuTimer, median, percentile, shouldAbort } from '../../shared/timing';
 import { createExoJsAdapter } from '../adapters/exojs';
 import { ARCHETYPES } from '../archetypes';
 import type { CellResult, CellSpec, EngineAdapter, StructuralCounters } from '../EngineAdapter';
-import { attachWebGl2Probe, attachWebGpuProbe, type StructuralProbe } from '../metrics/structural';
-import { createCpuTimer, median, percentile, shouldAbort } from '../metrics/timing';
-import { mutationSignature, selectMutationIndices } from '../mutation';
+import { attachWebGl2Probe, attachWebGpuProbe, type StructuralProbe } from '../structural';
+
+/** Design-space viewport of the per-cell harness canvas (mirrors the adapters' VIEWPORT_*). */
+const STAGE_WIDTH = 1280;
+const STAGE_HEIGHT = 720;
+
+/**
+ * Replace `#stage` with a pristine canvas for the cell about to run and return
+ * it.
+ *
+ * Each cell gets its OWN canvas rather than reusing one shared element. Some
+ * engines own their canvas/context lifecycle and do not reliably re-initialise
+ * on a canvas whose context a previous cell created and then destroyed —
+ * Pixi.js, for instance, HANGS on its second `Application.init` against a reused
+ * canvas. A fresh element per cell fully isolates cells (and arms) from each
+ * other: every `init` starts from a clean context, exactly as a standalone run
+ * of that engine would. The old canvas is removed first so at most one live GPU
+ * context exists at a time (staying well under the browser's context cap), and
+ * the id stays `stage` so the driver's provenance read still finds it.
+ */
+const freshStageCanvas = (): HTMLCanvasElement => {
+  document.getElementById('stage')?.remove();
+
+  const canvas = document.createElement('canvas');
+
+  canvas.id = 'stage';
+  canvas.width = STAGE_WIDTH;
+  canvas.height = STAGE_HEIGHT;
+  document.body.appendChild(canvas);
+
+  return canvas;
+};
 
 /** Fixed RNG seed shared by every cell so both benchmark arms select the same mutation set. */
 const SEED = 0xc0ffee;
@@ -74,6 +105,21 @@ interface GpuFrameTimer {
   /** Drain/await pending samples and return every elapsed-time sample (ms) gathered. */
   collect(): Promise<number[]>;
 }
+
+/**
+ * Structural probe used when no graphics handle can be wrapped (a WebGPU arm
+ * that exposes no `GPUDevice`). Counts nothing; the cell keeps its timing but
+ * reports zeroed structural counters with a note, rather than crashing the run.
+ */
+const noopStructuralProbe: StructuralProbe = {
+  counters: { drawCalls: 0, textureBinds: 0, bufferUploads: 0 },
+  reset(): void {
+    /* nothing wrapped */
+  },
+  detach(): void {
+    /* nothing wrapped */
+  },
+};
 
 /** GPU timer used when no timer extension/feature is available: contributes nothing, never fabricates a number. */
 const noopGpuTimer: GpuFrameTimer = {
@@ -267,15 +313,27 @@ const createWebGpuGpuTimer = (device: GPUDevice): GpuFrameTimer => {
  * submit-to-done wall clock (see {@link createWebGpuGpuTimer}) — a de-vsynced
  * measure of GPU work that replaces the old vsync-bound rAF delta (review B1).
  */
-const attachProbes = (adapter: EngineAdapter, spec: CellSpec, canvas: HTMLCanvasElement): { probe: StructuralProbe; gpuTimer: GpuFrameTimer } => {
+const attachProbes = (adapter: EngineAdapter, spec: CellSpec, canvas: HTMLCanvasElement): { probe: StructuralProbe; gpuTimer: GpuFrameTimer; structuralNote: string | null } => {
   if (spec.backend === 'webgpu') {
     const device = adapter.gpuDevice?.() ?? null;
 
+    // A WebGPU arm should expose its GPUDevice via `gpuDevice()` so the
+    // structural probe (and the submit→done GPU timer) can attach. When it does
+    // not — some third-party renderers do not surface the device — DEGRADE
+    // GRACEFULLY rather than aborting the whole run (the failure mode that lost
+    // every completed cell): keep the CPU timing and the rAF-delta frame time,
+    // but skip the structural counters and the zero-draw self-check for this
+    // cell, recording why in the note. Our own arms and the Pixi arm DO expose
+    // the device, so this path is a safety net, not the norm.
     if (device === null) {
-      throw new Error('The webgpu backend did not expose a GPUDevice for probe attachment.');
+      return {
+        probe: noopStructuralProbe,
+        gpuTimer: noopGpuTimer,
+        structuralNote: `structural counters skipped: engine='${spec.engine}' config='${spec.config}' exposed no GPUDevice on webgpu (timing kept)`,
+      };
     }
 
-    return { probe: attachWebGpuProbe(device), gpuTimer: createWebGpuGpuTimer(device) };
+    return { probe: attachWebGpuProbe(device), gpuTimer: createWebGpuGpuTimer(device), structuralNote: null };
   }
 
   const gl = canvas.getContext('webgl2');
@@ -284,7 +342,7 @@ const attachProbes = (adapter: EngineAdapter, spec: CellSpec, canvas: HTMLCanvas
     throw new Error('A WebGL2 context is required on the harness canvas.');
   }
 
-  return { probe: attachWebGl2Probe(gl), gpuTimer: createWebGl2GpuTimer(gl) };
+  return { probe: attachWebGl2Probe(gl), gpuTimer: createWebGl2GpuTimer(gl), structuralNote: null };
 };
 
 /**
@@ -310,7 +368,7 @@ export const runCell = async (adapter: EngineAdapter, spec: CellSpec, canvas: HT
 
   await adapter.init(canvas, spec.backend);
 
-  const { probe, gpuTimer } = attachProbes(adapter, spec, canvas);
+  const { probe, gpuTimer, structuralNote } = attachProbes(adapter, spec, canvas);
   const timer = createCpuTimer();
 
   try {
@@ -408,7 +466,7 @@ export const runCell = async (adapter: EngineAdapter, spec: CellSpec, canvas: HT
     // (Pre-wrapping the WebGL2 context BEFORE init was rejected: creating the
     // context early would freeze the attributes the engine sets on its first
     // getContext — e.g. antialias — changing what is measured.)
-    if (spec.nodeCount > 0 && probe.counters.drawCalls === 0) {
+    if (structuralNote === null && spec.nodeCount > 0 && probe.counters.drawCalls === 0) {
       throw new Error(
         `Structural probe recorded 0 draw calls for a non-empty ${spec.backend} scene (engine='${spec.engine}' config='${spec.config}' archetype='${spec.archetype}' n=${spec.nodeCount}); the probe wrappers were bypassed — counts are untrustworthy.`,
       );
@@ -426,6 +484,7 @@ export const runCell = async (adapter: EngineAdapter, spec: CellSpec, canvas: HT
       exceeded
         ? `the trailing ${ABORT_WINDOW}-frame median exceeded ${FRAME_BUDGET_MS}ms; cell aborted after ${measuredFrames} frame(s) — median/p95 below rest on ${measuredFrames} sample(s), not a single-frame artifact`
         : unevenNote,
+      structuralNote,
       gpuUsable ? gpuTimer.note : NO_GPU_TIMER_NOTE,
     ].filter((value): value is string => value !== null);
     const note = notes.length > 0 ? notes.join('; ') : null;
@@ -450,97 +509,64 @@ export const runCell = async (adapter: EngineAdapter, spec: CellSpec, canvas: HT
 const adapterKey = (engine: string, config: string): string => `${engine} ${config}`;
 
 /**
- * Discover the optional, untracked reference adapter — the additive second arm.
+ * Lazily construct the engine arm for one `(engine, config)` pair, caching each
+ * instance so repeated `__runBaselineCell` calls reuse it across the backend's
+ * cells (the adapter is stateless between cells — every cell's `runCell` fully
+ * `init`s and `teardown`s it).
  *
- * `import.meta.glob` with a literal pattern is expanded by Vite at transform
- * time: when `adapters/reference.local.ts` is absent the map is empty and NOTHING
- * is imported, so the committed benchmark builds and runs as ExoJS-only with no
- * failed import and no other engine named anywhere. This is why discovery lives
- * here in the page (where the adapter lifecycle actually runs and where Vite
- * resolves the glob) rather than in the Node driver. When the file is present its
- * `createReferenceAdapters()` contributes one or two arms (e.g. an `immediate`
- * and a `retained` config); a load failure degrades to ExoJS-only rather than
- * aborting the run.
+ * The Pixi arm is imported dynamically ON FIRST USE so an ExoJS-only run never
+ * pays to load Pixi into the page. Pixi is now a committed, official arm (pinned
+ * exact devDependency), so it is imported by a static specifier rather than the
+ * old gitignored `reference.local.ts` runtime-glob discovery, which is retired.
  */
-const loadReferenceAdapters = async (): Promise<EngineAdapter[]> => {
-  const modules = import.meta.glob('../adapters/reference.local.ts') as Record<string, () => Promise<{ createReferenceAdapters?: () => EngineAdapter[] }>>;
-  const load = Object.values(modules)[0];
+const adapterCache = new Map<string, EngineAdapter>();
 
-  if (load === undefined) {
-    console.warn('[baseline] No reference adapter present — running ExoJS arms only. See test/perf/baseline/adapters/README.md');
+const resolveAdapter = async (engine: string, config: string): Promise<EngineAdapter> => {
+  const key = adapterKey(engine, config);
+  const cached = adapterCache.get(key);
 
-    return [];
+  if (cached !== undefined) {
+    return cached;
   }
 
-  try {
-    const module = await load();
+  let adapter: EngineAdapter;
 
-    return module.createReferenceAdapters?.() ?? [];
-  } catch (error) {
-    console.warn(`[baseline] reference adapter present but failed to load; running ExoJS arms only: ${error instanceof Error ? error.message : String(error)}`);
+  if (engine === 'exojs') {
+    adapter = createExoJsAdapter(undefined, config === 'retained' ? 'retained' : 'current');
+  } else if (engine === 'pixi') {
+    const { createPixiAdapter } = await import('../adapters/pixi');
 
-    return [];
+    adapter = createPixiAdapter();
+  } else {
+    throw new Error(`No adapter registered for engine='${engine}' config='${config}'.`);
   }
+
+  adapterCache.set(key, adapter);
+
+  return adapter;
 };
 
 /**
- * Run a whole matrix of cells on the page's canvas, in order, returning one
- * {@link CellResult} per cell run. Installed on `globalThis` so the out-of-page
- * driver can invoke it via `page.evaluate`.
+ * Measure ONE matrix cell on the page's canvas and return its result. Installed
+ * on `globalThis` so the out-of-page driver invokes it via `page.evaluate`, once
+ * per cell.
  *
- * The driver hands over the ExoJS cell list for a single backend. Each discovered
- * reference arm re-runs those IDENTICAL cells (same archetype, node count,
- * backend and timed-frame budget), appended after the ExoJS cells, so the arms
- * are compared on exactly the same work in the same browser session. With no
- * reference adapter installed this is a plain ExoJS-only pass.
+ * Driving one cell per call (rather than a whole backend's list in a single
+ * evaluate) is the crash-isolation half of the incremental-checkpoint hardening:
+ * the Node driver persists each returned result immediately and, if a cell
+ * throws, records only that cell as unavailable instead of losing the backend's
+ * completed cells. All calls share this one page, so the same-session timing
+ * discipline is preserved across the backend's cells.
  */
-const runBaselineMatrix = async (cells: CellSpec[]): Promise<CellResult[]> => {
-  const canvas = document.getElementById('stage');
+const runBaselineCell = async (cell: CellSpec): Promise<CellResult> => {
+  const canvas = freshStageCanvas();
+  const adapter = await resolveAdapter(cell.engine, cell.config);
 
-  if (!(canvas instanceof HTMLCanvasElement)) {
-    throw new Error('The harness canvas #stage was not found.');
-  }
-
-  const adapters = new Map<string, EngineAdapter>();
-  const exojs = createExoJsAdapter();
-  const exojsRetained = createExoJsAdapter(undefined, 'retained');
-
-  adapters.set(adapterKey(exojs.engine, exojs.config), exojs);
-  adapters.set(adapterKey(exojsRetained.engine, exojsRetained.config), exojsRetained);
-
-  const referenceAdapters = await loadReferenceAdapters();
-
-  for (const adapter of referenceAdapters) {
-    adapters.set(adapterKey(adapter.engine, adapter.config), adapter);
-  }
-
-  const referenceCells: CellSpec[] = [];
-
-  for (const adapter of referenceAdapters) {
-    for (const cell of cells) {
-      if (adapter.supports(cell.backend)) {
-        referenceCells.push({ ...cell, engine: adapter.engine, config: adapter.config });
-      }
-    }
-  }
-
-  const results: CellResult[] = [];
-
-  for (const cell of [...cells, ...referenceCells]) {
-    const adapter = adapters.get(adapterKey(cell.engine, cell.config));
-
-    if (adapter === undefined) {
-      throw new Error(`No adapter registered for engine='${cell.engine}' config='${cell.config}'.`);
-    }
-
-    results.push(await runCell(adapter, cell, canvas));
-  }
-
-  return results;
+  return runCell(adapter, cell, canvas);
 };
 
 declare global {
-  var __runBaselineMatrix: ((cells: CellSpec[]) => Promise<CellResult[]>) | undefined;
+  var __runBaselineCell: ((cell: CellSpec) => Promise<CellResult>) | undefined;
 }
 
-globalThis.__runBaselineMatrix = runBaselineMatrix;
+globalThis.__runBaselineCell = runBaselineCell;

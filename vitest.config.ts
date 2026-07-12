@@ -185,6 +185,22 @@ export default defineConfig({
         esbuild: { jsx: 'automatic', jsxImportSource: 'react' },
       },
 
+      // ── exojs-bench — cross-library benchmark harness unit tests ─────────
+      // The benchmark package's pure unit tests (timing, mutation-determinism,
+      // structural probes, archetype matrix). Its `#*` engine-source imports are
+      // aliased to `<repo>/src` here — the package deliberately defines no
+      // `imports` map (Node forbids a `../`-escaping target), mirroring the Vite
+      // alias the driver installs at runtime (see rendering/driver.ts). The
+      // browser-driving smoke test self-skips without a real GPU. Deliberately
+      // NOT added to the default `test`/`test:coverage` gate: per the bench
+      // methodology (CI tiering), competitor arms must never red a contributor
+      // PR — run it on demand via `pnpm --filter @codexo/exojs-bench test`.
+      createJsdomTestProject({
+        name: 'exojs-bench',
+        alias: [...aliasConfig, { find: /^#(.*)$/, replacement: `${fileURLToPath(new URL('./src', import.meta.url))}/$1` }],
+        include: ['packages/exojs-bench/test/**/*.test.ts'],
+      }),
+
       // ── rendering-perf — Node renderer benchmark harness (real shaders) ──
       // Runs the real WebGL2 renderers against a recording fake GL context for
       // deterministic, GPU-free structural metrics. Uses the real-shader loader

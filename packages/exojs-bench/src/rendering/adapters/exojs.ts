@@ -8,8 +8,8 @@ import { Sprite } from '#rendering/sprite/Sprite';
 import { Texture } from '#rendering/texture/Texture';
 import type { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
+import { mutationSignature, selectMutationIndices } from '../../shared/mutation';
 import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
-import { mutationSignature, selectMutationIndices } from '../mutation';
 
 /** Fixed design-space viewport the harness canvas renders (see `page/index.html`). */
 const VIEWPORT_WIDTH = 1280;

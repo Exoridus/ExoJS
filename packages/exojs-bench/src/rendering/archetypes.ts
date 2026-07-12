@@ -1,4 +1,10 @@
+import { createRng } from '../shared/rng';
 import type { ArchetypeSpec, Backend, CellSpec, EngineAdapter } from './EngineAdapter';
+
+// Re-exported from `shared/` so existing importers (e.g. the archetype tests and
+// `shared/mutation.ts`'s canonical selection) keep a single RNG implementation
+// while the definition lives in the domain-agnostic layer.
+export { createRng };
 
 const SCALING_COUNTS = [1_000, 5_000, 25_000, 100_000] as const;
 const GPU_BOUND_COUNTS = [1_000, 5_000, 25_000] as const;
@@ -28,21 +34,6 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
   // 2026-07-11 (textureCount 16) are not comparable on this archetype.
   { id: 'batch-breaking', nodeCounts: GPU_BOUND_COUNTS, nestingDepth: 2, textureCount: 24, mutationFraction: 0, cullingEnabled: true },
 ];
-
-/** mulberry32 — small, fast, deterministic. Same seed => same stream. */
-export const createRng = (seed: number): (() => number) => {
-  let state = seed >>> 0;
-
-  return () => {
-    state = (state + 0x6d2b79f5) >>> 0;
-
-    let t = Math.imul(state ^ (state >>> 15), 1 | state);
-
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-};
 
 /**
  * Timed-frame count shrinks as node count grows so a cell's wall-clock stays

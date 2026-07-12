@@ -496,6 +496,64 @@ export default defineConfig([
     },
   },
 
+  // @codexo/exojs-bench is an internal benchmark TOOL — a Node CLI plus an
+  // in-browser rendering harness — not a shipped library. It legitimately
+  // monkeypatches live graphics contexts and casts through `unknown` to
+  // instrument arbitrary engines, and it was linted under the relaxed `test/**`
+  // profile at its former `test/perf/baseline/` location. Preserve that profile
+  // after the move to `packages/exojs-bench/src`: disable the strict type-aware
+  // rules the generic `packages/exojs-*/src` block turns on, and grant the
+  // node+browser globals the mixed driver/harness runtime needs. (Its `test/**`
+  // files are already covered by the extension-test blocks below.)
+  {
+    files: ['packages/exojs-bench/src/**/*.ts'],
+    ...tseslint.configs.disableTypeChecked,
+  },
+  {
+    files: ['packages/exojs-bench/src/**/*.ts'],
+    languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'module',
+      parserOptions: {
+        projectService: false,
+      },
+      globals: {
+        ...globals.browser,
+        ...globals.node,
+        ...globals.es2024,
+      },
+    },
+    plugins: {
+      'simple-import-sort': simpleImportSort,
+      'unused-imports': unusedImports,
+    },
+    rules: {
+      'simple-import-sort/imports': 'error',
+      'simple-import-sort/exports': 'error',
+      'unused-imports/no-unused-imports': 'error',
+      '@typescript-eslint/consistent-type-imports': [
+        'error',
+        {
+          prefer: 'type-imports',
+          fixStyle: 'inline-type-imports',
+          disallowTypeAnnotations: false,
+        },
+      ],
+      '@typescript-eslint/array-type': ['error', { default: 'array-simple' }],
+      // Match the relaxed `test/**` profile the harness was authored under: it
+      // legitimately casts through `unknown` to instrument foreign engines,
+      // drives an inherently branchy CLI, and asserts on bounds-guaranteed array
+      // accesses. These are the src-strict-only rules that never applied at its
+      // former `test/perf/baseline/` home.
+      complexity: 'off',
+      '@typescript-eslint/explicit-function-return-type': 'off',
+      '@typescript-eslint/consistent-type-assertions': 'off',
+      '@typescript-eslint/no-non-null-assertion': 'off',
+      'no-console': 'off',
+      'max-lines': 'off',
+    },
+  },
+
   // Extension package tests — disable type-aware rules (package tsconfigs
   // exclude test/), then apply relaxed structural rules matching the core test
   // policy. Excludes create-exo-app (standalone scaffolding CLI, no ESLint

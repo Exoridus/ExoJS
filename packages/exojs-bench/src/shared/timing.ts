@@ -13,7 +13,9 @@ export const median = (samples: readonly number[]): number => {
   const sorted = sortedCopy(samples);
   const mid = Math.floor(sorted.length / 2);
 
-  return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+  // The empty-array guard above makes every index here in-bounds; the `!`
+  // assertions satisfy `noUncheckedIndexedAccess` without a runtime branch.
+  return sorted.length % 2 === 0 ? (sorted[mid - 1]! + sorted[mid]!) / 2 : sorted[mid]!;
 };
 
 /**
@@ -30,7 +32,9 @@ export const percentile = (samples: readonly number[], p: number): number => {
   const rank = Math.ceil((p / 100) * sorted.length) - 1;
   const index = Math.min(Math.max(rank, 0), sorted.length - 1);
 
-  return sorted[index];
+  // `index` is clamped to [0, length-1] and the array is non-empty (guarded
+  // above), so the access is in-bounds; `!` satisfies noUncheckedIndexedAccess.
+  return sorted[index]!;
 };
 
 /**

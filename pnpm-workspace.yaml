@@ -1,6 +1,7 @@
 packages:
   - site
   - packages/exojs-config
+  - packages/exojs-bench
   - packages/exojs-particles
   - packages/exojs-tilemap
   - packages/exojs-tiled

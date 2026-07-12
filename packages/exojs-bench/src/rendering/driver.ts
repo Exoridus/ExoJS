@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -42,7 +42,12 @@ interface ViteDevServer {
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PAGE_DIR = resolve(HERE, 'page');
-const REPO_ROOT = resolve(HERE, '..', '..', '..');
+// This file now lives at `packages/exojs-bench/src/rendering/driver.ts`, so the
+// repository root is four levels up (rendering → src → exojs-bench → packages →
+// root), not three as it was under the old `test/perf/baseline/` location.
+const REPO_ROOT = resolve(HERE, '..', '..', '..', '..');
+/** The engine's TypeScript source root the harness benchmarks (`<repo>/src`). */
+const ENGINE_SRC = resolve(REPO_ROOT, 'src');
 
 /** Chromium flag set for the WebGL2 browser. Pinning the device scale factor keeps `devicePixelRatio` at 1 so canvas backing size is deterministic. NO `--use-angle=swiftshader`: that would force a software rasterizer and make every timing worthless. */
 const LAUNCH_FLAGS: readonly string[] = ['--force-device-scale-factor=1'];
@@ -69,6 +74,71 @@ const readEngineVersion = (): string => {
 };
 
 /**
+ * Provenance for one committed competitor library arm: the exact installed
+ * version and where it was resolved from. Stamped into every report header so a
+ * "ExoJS vs Pixi" statement is auditable — a reader can see precisely which
+ * Pixi build produced the numbers and reproduce it.
+ */
+export interface LibraryProvenance {
+  /** npm package name, e.g. `pixi.js`. */
+  readonly name: string;
+  /** Exact installed version (from the resolved package manifest). */
+  readonly version: string;
+  /** Absolute path the manifest was resolved from — the reproducibility receipt. */
+  readonly resolvedFrom: string;
+}
+
+/**
+ * Read the installed version of each committed competitor library arm.
+ *
+ * The versions are pinned to an EXACT version in `@codexo/exojs-bench`'s
+ * devDependencies (no `^`/`~`), so the number read here is the number that was
+ * benchmarked. Resolution walks up from the package's main entry to its
+ * `package.json` (some packages do not expose `./package.json` in `exports`, so
+ * a direct `require.resolve('pixi.js/package.json')` can fail). A library that
+ * cannot be resolved is recorded as `not-installed` rather than throwing — an
+ * exojs-only run must not need the competitor deps present.
+ */
+const readLibraryProvenance = (): LibraryProvenance[] => {
+  const nodeRequire = createRequire(import.meta.url);
+  const libraries = ['pixi.js'];
+  const provenance: LibraryProvenance[] = [];
+
+  for (const name of libraries) {
+    try {
+      let manifestPath: string;
+
+      try {
+        manifestPath = nodeRequire.resolve(`${name}/package.json`);
+      } catch {
+        // Package hides ./package.json behind exports: walk up from the entry.
+        let dir = dirname(nodeRequire.resolve(name));
+
+        while (!existsSync(resolve(dir, 'package.json'))) {
+          const parent = dirname(dir);
+
+          if (parent === dir) {
+            throw new Error(`could not locate package.json for '${name}'`);
+          }
+
+          dir = parent;
+        }
+
+        manifestPath = resolve(dir, 'package.json');
+      }
+
+      const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as { version?: string };
+
+      provenance.push({ name, version: manifest.version ?? 'unknown', resolvedFrom: manifestPath });
+    } catch {
+      provenance.push({ name, version: 'not-installed', resolvedFrom: '' });
+    }
+  }
+
+  return provenance;
+};
+
+/**
  * Adapter capability descriptors known to the driver. Only `engine`, `config`
  * and `supports` are consulted by {@link buildMatrix}; the lifecycle methods run
  * inside the harness page (see `page/harness.ts`), never in this Node process, so
@@ -92,6 +162,12 @@ const capabilityDescriptor = (engine: string, config: string, backends: readonly
 const ADAPTER_CAPABILITIES: readonly EngineAdapter[] = [
   capabilityDescriptor('exojs', 'current', ['webgl2', 'webgpu']),
   capabilityDescriptor('exojs', 'retained', ['webgl2', 'webgpu']),
+  // Pixi.js v8 is the direct renderer benchmark and the only other 2D library
+  // that ships WebGPU, so it runs on both backends. It is now a first-class,
+  // committed arm (pinned exact devDependency) rather than the old gitignored
+  // local-only reference; its version + provenance are stamped into the report
+  // header via `readLibraryProvenance`.
+  capabilityDescriptor('pixi', 'default', ['webgl2', 'webgpu']),
 ];
 
 /**
@@ -176,14 +252,33 @@ const startViteServer = async (version: string): Promise<ViteDevServer> => {
     // The COOP/COEP/CORP headers make the page `crossOriginIsolated`, restoring
     // high-resolution `performance.now()` for the CPU timer (see the constant).
     server: { host: '127.0.0.1', fs: { allow: [REPO_ROOT] }, headers: { ...CROSS_ORIGIN_ISOLATION_HEADERS } },
-    // Activate the `@codexo/source` condition so `#*` resolves to ./src/*.ts.
-    resolve: { conditions: srcConditions },
+    // Resolve the engine's `#*` subpath imports to its TypeScript source.
+    //
+    // Under the OLD location (`test/perf/baseline/`, inside the repo-root
+    // package) the harness's `#core/*` imports resolved through the ROOT
+    // package.json `imports` map with the `@codexo/source` condition. Now that
+    // the harness is its own package, the nearest package.json to the adapter
+    // files is `@codexo/exojs-bench`'s — which deliberately does NOT redefine
+    // `#*` (Node forbids an `imports` target escaping the package with `../`).
+    // A single alias maps every `#…` specifier straight to `<repo>/src/…`,
+    // reproducing the root map's pure `#* → ./src/*` wildcard exactly. Engine
+    // modules imported through it still resolve their OWN internal `#*` imports
+    // via the root package.json map + `@codexo/source` condition below, so the
+    // engine graph is measured exactly as it ships. `.vert`/`.frag` specifiers
+    // carry their extension and are handled by `realShaderPlugin`'s transform.
+    resolve: { alias: [{ find: /^#(.*)$/, replacement: `${ENGINE_SRC}/$1` }], conditions: srcConditions },
     ssr: { resolve: { conditions: srcConditions } },
-    // Skip the dep scanner: it runs esbuild over the import graph, which would
-    // choke on `.vert`/`.frag` imports the real-shader plugin only handles in
-    // the transform pass. Engine source resolves to local files, not deps, so
-    // nothing needs pre-bundling.
-    optimizeDeps: { noDiscovery: true, include: [] },
+    // `noDiscovery` keeps the automatic dep scanner OFF — it runs esbuild over
+    // the whole import graph, which would choke on the engine's `.vert`/`.frag`
+    // imports the real-shader plugin only handles in the transform pass. But the
+    // Pixi arm is a real npm dependency whose transitive deps include CommonJS
+    // modules (e.g. `eventemitter3`); without pre-bundling, the browser's native
+    // ESM loader rejects `import EventEmitter from 'eventemitter3'` ("does not
+    // provide an export named 'default'"). Explicitly `include` pixi.js so
+    // esbuild pre-bundles it and its CJS deps with interop, WITHOUT scanning the
+    // engine graph. Engine source still resolves to local `.ts` files via the
+    // `#*` alias and is never pre-bundled.
+    optimizeDeps: { noDiscovery: true, include: ['pixi.js'] },
     define: { __DEV__: 'true', __VERSION__: JSON.stringify(version), __REVISION__: JSON.stringify('baseline') },
     plugins: [realShaderPlugin, devGlobalsPlugin(version)],
   });
@@ -324,23 +419,54 @@ const applyFilter = (cells: readonly CellSpec[], filter: Partial<CellSpec>): Cel
 };
 
 /**
- * Runs one backend's full cell list in a single browser session, returning that
- * backend's provenance stamp plus one result per cell.
+ * Callback invoked the instant a cell finishes measuring, BEFORE the run
+ * continues to the next cell. The CLI wires this to the incremental checkpoint
+ * writer (`shared/checkpoint.ts`) so a later crash never discards finished work.
+ */
+export type CellResultSink = (result: CellResult) => void;
+
+/**
+ * Run one cell in the page and return its result, degrading a thrown cell to an
+ * `unavailable` result instead of letting it reject.
  *
- * The whole per-backend matrix runs in ONE page/session: cross-session timing
- * comparison is invalid (JIT warmth, GPU clock state and allocator state all
- * differ between sessions), so `__runBaselineMatrix` is invoked exactly once
- * with the backend's full cell list. For WebGPU the adapter identity is read
- * first; a null or software adapter emits every cell as `unavailable` rather
- * than measuring a software rasterizer.
+ * This is the crash-isolation half of the hardening: the harness used to run a
+ * whole backend's cells inside a SINGLE `page.evaluate`, so one late cell that
+ * threw (observed: the Pixi-WebGPU device probe) rejected the entire evaluate
+ * and discarded every already-measured cell in that backend. Driving one cell
+ * per `page.evaluate` — all in the SAME page, so the same-session timing
+ * discipline is untouched — means a failing cell costs only itself: it becomes
+ * an `unavailable` datapoint carrying the error, and the run continues.
+ */
+const runCellInPage = async (page: import('playwright').Page, spec: CellSpec): Promise<CellResult> => {
+  try {
+    return await page.evaluate(cell => globalThis.__runBaselineCell!(cell), spec);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+
+    return unavailableCell(spec, `cell errored (isolated; run continued): ${message}`);
+  }
+};
+
+/**
+ * Runs one backend's full cell list in a single browser session, invoking
+ * `onCellResult` after EACH cell so the caller can checkpoint it, and returning
+ * that backend's provenance stamp plus the collected results.
+ *
+ * The whole per-backend matrix still runs in ONE page/session: cross-session
+ * timing comparison is invalid (JIT warmth, GPU clock state and allocator state
+ * all differ between sessions), so every cell is driven through the same page
+ * via repeated `__runBaselineCell` calls rather than reloading between cells.
+ * For WebGPU the adapter identity is read first; a null or software adapter
+ * emits every cell as `unavailable` rather than measuring a software rasterizer.
  */
 const runBackend = async (options: {
   baseUrl: string;
   backend: Backend;
   cells: CellSpec[];
   engineVersion: string;
+  onCellResult: CellResultSink;
 }): Promise<{ provenance: Provenance; results: CellResult[] }> => {
-  const { baseUrl, backend, cells, engineVersion } = options;
+  const { baseUrl, backend, cells, engineVersion, onCellResult } = options;
   const flags = backend === 'webgpu' ? WEBGPU_LAUNCH_FLAGS : LAUNCH_FLAGS;
   const browser = await chromium.launch({ channel: 'chromium', headless: true, args: [...flags] });
 
@@ -348,9 +474,14 @@ const runBackend = async (options: {
     const page = await browser.newPage();
 
     await page.goto(baseUrl, { waitUntil: 'load' });
-    await page.waitForFunction(() => typeof globalThis.__runBaselineMatrix === 'function');
+    await page.waitForFunction(() => typeof globalThis.__runBaselineCell === 'function');
 
     const timestamp = new Date().toISOString();
+    const results: CellResult[] = [];
+    const collect = (result: CellResult): void => {
+      results.push(result);
+      onCellResult(result);
+    };
 
     if (backend === 'webgpu') {
       const identity = await readWebGpuAdapter(page);
@@ -370,21 +501,40 @@ const runBackend = async (options: {
       };
 
       if (!identity.usable) {
-        return { provenance, results: cells.map(cell => unavailableCell(cell, identity.note)) };
+        for (const cell of cells) {
+          collect(unavailableCell(cell, identity.note));
+        }
+
+        return { provenance, results };
       }
 
-      const results = await page.evaluate(cellList => globalThis.__runBaselineMatrix!(cellList), cells);
+      for (const cell of cells) {
+        collect(await runCellInPage(page, cell));
+      }
 
       return { provenance, results };
     }
 
-    // Run the cells FIRST, then read the renderer string: the engine's own
-    // `init()` (inside `__runBaselineMatrix`) creates `#stage`'s real WebGL2
-    // context on the first cell, and `readRendererInPage` reads that SAME
-    // context (review B8) rather than a throwaway one — see its doc comment
-    // for why this ordering is load-bearing, not incidental.
-    const results = await page.evaluate(cellList => globalThis.__runBaselineMatrix!(cellList), cells);
-    const renderer = await readRendererInPage(page);
+    // Read the WebGL2 renderer string from `#stage`'s OWN context (review B8),
+    // captured the moment the FIRST successful cell has created it — NOT after
+    // the whole backend has run. The arms share one `#stage` canvas/context, and
+    // a competitor arm (Pixi runs last) tears down by LOSING that context on
+    // `destroy`; reading at the end would then see `no-webgl2-context` and lose
+    // the real adapter identity + software-rasterizer honesty bit. The first arm
+    // is always ExoJS, whose `init` creates the very context every later cell
+    // reuses, so this reads the exact context the measured cells ran on.
+    let renderer = 'no-webgl2-context';
+
+    for (const cell of cells) {
+      const result = await runCellInPage(page, cell);
+
+      collect(result);
+
+      if (renderer === 'no-webgl2-context' && result.status === 'ok') {
+        renderer = await readRendererInPage(page);
+      }
+    }
+
     const provenance: Provenance = {
       adapter: renderer,
       backend,
@@ -401,6 +551,16 @@ const runBackend = async (options: {
   }
 };
 
+/** Full outcome of a matrix run: per-backend provenance, competitor-library provenance, and every cell result. */
+export interface MatrixOutcome {
+  /** One provenance stamp per backend exercised. */
+  readonly provenance: Provenance[];
+  /** Version + resolution provenance for each committed competitor library arm. */
+  readonly libraries: LibraryProvenance[];
+  /** One result per matrix cell, in completion order. */
+  readonly results: CellResult[];
+}
+
 /**
  * Runs the whole baseline matrix end-to-end against the real GPU.
  *
@@ -411,6 +571,9 @@ const runBackend = async (options: {
  * on the same machine in one invocation, with a provenance block recorded per
  * backend. Requested backend order is preserved so the report lists WebGL2
  * first.
+ *
+ * `onCellResult` (optional) fires after every cell so the caller can persist it
+ * immediately; the returned {@link MatrixOutcome} is the same set aggregated.
  */
 export const runMatrix = async (options: {
   backends: readonly Backend[];
@@ -422,8 +585,11 @@ export const runMatrix = async (options: {
    * per-node-count frame budgets recorded in the report).
    */
   timedFramesOverride?: number;
-}): Promise<{ provenance: Provenance[]; results: CellResult[] }> => {
+  /** Invoked once per completed cell, in order, for incremental checkpointing. */
+  onCellResult?: CellResultSink;
+}): Promise<MatrixOutcome> => {
   const engineVersion = readEngineVersion();
+  const libraries = readLibraryProvenance();
   const allCells = buildMatrix(ADAPTER_CAPABILITIES, options.backends);
   const filtered = options.filter ? applyFilter(allCells, options.filter) : allCells;
   const cells = options.timedFramesOverride === undefined ? filtered : filtered.map(cell => ({ ...cell, timedFrames: options.timedFramesOverride! }));
@@ -432,6 +598,7 @@ export const runMatrix = async (options: {
     throw new Error('The baseline matrix is empty: no adapter supports the requested backends/filter.');
   }
 
+  const onCellResult: CellResultSink = options.onCellResult ?? ((): void => undefined);
   const server = await startViteServer(engineVersion);
 
   try {
@@ -451,13 +618,13 @@ export const runMatrix = async (options: {
         continue;
       }
 
-      const outcome = await runBackend({ baseUrl, backend, cells: backendCells, engineVersion });
+      const outcome = await runBackend({ baseUrl, backend, cells: backendCells, engineVersion, onCellResult });
 
       provenance.push(outcome.provenance);
       results.push(...outcome.results);
     }
 
-    return { provenance, results };
+    return { provenance, libraries, results };
   } finally {
     await server.close();
   }

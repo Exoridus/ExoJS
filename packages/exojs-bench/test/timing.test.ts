@@ -1,4 +1,4 @@
-import { createCpuTimer, median, percentile, shouldAbort } from './timing';
+import { createCpuTimer, median, percentile, shouldAbort } from '../src/shared/timing';
 
 describe('median', () => {
   test('odd length returns the middle value', () => {

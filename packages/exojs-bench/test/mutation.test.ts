@@ -1,4 +1,4 @@
-import { mutationSignature, selectMutationIndices } from './mutation';
+import { mutationSignature, selectMutationIndices } from '../src/shared/mutation';
 
 /** Seed the harness pins for every cell (see `page/harness.ts`). */
 const SEED = 0xc0ffee;
