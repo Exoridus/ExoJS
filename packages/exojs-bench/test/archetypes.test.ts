@@ -1,6 +1,6 @@
-import { createExoJsAdapter } from './adapters/exojs';
-import { ARCHETYPES, buildMatrix, createRng, timedFramesFor, warmupFramesFor } from './archetypes';
-import type { Backend, EngineAdapter } from './EngineAdapter';
+import { createExoJsAdapter } from '../src/rendering/adapters/exojs';
+import { ARCHETYPES, buildMatrix, createRng, timedFramesFor, warmupFramesFor } from '../src/rendering/archetypes';
+import type { Backend, EngineAdapter } from '../src/rendering/EngineAdapter';
 
 describe('createRng', () => {
   test('is deterministic for a given seed', () => {

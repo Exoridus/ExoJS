@@ -13,8 +13,8 @@
 // check on a GPU-less lane (the jsdom `exojs` project runs in `pnpm test`, which
 // has no real GPU). On a real-GPU dev box it runs and passes.
 
-import { runMatrix } from './driver';
-import type { CellResult } from './EngineAdapter';
+import { runMatrix } from '../src/rendering/driver';
+import type { CellResult } from '../src/rendering/EngineAdapter';
 
 /** One tiny WebGL2 cell measured end-to-end, or the reason it could not be. */
 interface SmokeOutcome {

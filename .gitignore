@@ -11,8 +11,8 @@ pnpm-debug.log*
 *.tgz
 test/perf/results/*.json
 test/perf/results/*.md
-test/perf/baseline/adapters/reference.local.ts
 .workspace/output/baseline/
+packages/exojs-bench/.workspace/
 
 # Local scratch / ad-hoc debug artifacts (probe scripts, screenshot montages).
 codexo-probe*

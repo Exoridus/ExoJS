@@ -1,4 +1,4 @@
-import { createRng } from './archetypes';
+import { createRng } from './rng';
 
 /**
  * Canonical per-frame mutation SELECTION for a scene cell: the ordered list of

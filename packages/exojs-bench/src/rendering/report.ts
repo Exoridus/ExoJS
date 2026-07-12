@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import type { Provenance } from './driver';
+import type { LibraryProvenance, Provenance } from './driver';
 import type { CellResult } from './EngineAdapter';
 
 /** Node count at or above which a full-frame time is beyond any interactive budget. */
@@ -14,6 +14,8 @@ const UNTRUSTED_MARK = 'UNTRUSTED (software rasterizer)';
 export interface ReportData {
   /** One provenance stamp per backend exercised. */
   readonly provenance: readonly Provenance[];
+  /** Version + resolution provenance for each committed competitor library arm. */
+  readonly libraries: readonly LibraryProvenance[];
   /** One result per matrix cell. */
   readonly results: readonly CellResult[];
 }
@@ -100,6 +102,26 @@ const toMarkdown = (data: ReportData): string => {
   const lines: string[] = [];
 
   lines.push('# Baseline Benchmark Results', '');
+
+  // Competitor-library provenance first: any "ExoJS vs X" number is only
+  // auditable if the reader can see the exact library version it was measured
+  // against and where it resolved from. Versions are pinned exact in
+  // `@codexo/exojs-bench`'s devDependencies, so this is the reproducibility
+  // receipt, not a moving target.
+  lines.push('## Library arms', '');
+
+  if (data.libraries.length === 0) {
+    lines.push('- (none — ExoJS-only run)', '');
+  } else {
+    for (const library of data.libraries) {
+      const provenance = library.resolvedFrom.length > 0 ? library.resolvedFrom : 'not resolved';
+
+      lines.push(`- \`${library.name}\` @ **${library.version}** (resolved from: ${provenance})`);
+    }
+
+    lines.push('');
+  }
+
   lines.push('## Provenance', '');
 
   for (const entry of data.provenance) {

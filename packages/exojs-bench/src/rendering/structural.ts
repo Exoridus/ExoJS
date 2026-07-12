@@ -1,4 +1,4 @@
-import type { StructuralCounters } from '../EngineAdapter';
+import type { StructuralCounters } from './EngineAdapter';
 
 /** Live handle on the structural counters gathered from a wrapped graphics context. */
 export interface StructuralProbe {

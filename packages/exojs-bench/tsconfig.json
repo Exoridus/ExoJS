@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "_comment": "The engine is benchmarked through its internal `#*` subpath imports. Node forbids an `imports` target escaping this package with `../`, and the harness's `#*` imports only run in the browser page (resolved by the driver's Vite alias, see rendering/driver.ts) — never in the Node CLI. The `paths` map below reproduces the root package.json's `#* -> ./src/*` wildcard so the type-checker resolves engine source from `<repo>/src`.",
+  "extends": "@codexo/exojs-config/typescript/test.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "customConditions": ["@codexo/source"],
+    "types": ["vitest/globals", "node", "@webgpu/types"],
+    "paths": {
+      "#*": ["../../src/*"]
+    }
+  },
+  "include": ["src/**/*", "test/**/*", "../../src/typings.d.ts"],
+  "exclude": ["dist", "node_modules"]
+}

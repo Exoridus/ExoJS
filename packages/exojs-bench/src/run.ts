@@ -1,7 +1,13 @@
 import { resolve } from 'node:path';
 
-import { runMatrix } from './driver';
-import type { ArchetypeId, Backend, CellSpec } from './EngineAdapter';
+import type { ArchetypeId, Backend, CellResult, CellSpec } from './rendering';
+import { runMatrix, writeReport } from './rendering';
+import { parseArgs } from './shared/args';
+import { createCheckpointWriter } from './shared/checkpoint';
+
+/** Domains this CLI can drive. Rendering is the first; `physics` etc. can be added as sibling barrels. */
+const DOMAINS = ['rendering'] as const;
+type Domain = (typeof DOMAINS)[number];
 
 /** Default output directory for the generated report artifacts (gitignored). */
 const DEFAULT_OUT_DIR = '.workspace/output/baseline/';
@@ -9,40 +15,21 @@ const DEFAULT_OUT_DIR = '.workspace/output/baseline/';
 /** Backends run when `--backend` is not given. `buildMatrix` gates each to the adapters that support it. */
 const DEFAULT_BACKENDS: readonly Backend[] = ['webgl2', 'webgpu'];
 
-/** Parses `--key=value` / `--key value` CLI flags into a map. */
-const parseArgs = (argv: readonly string[]): Map<string, string> => {
-  const args = new Map<string, string>();
-
-  for (let i = 0; i < argv.length; i++) {
-    const token = argv[i];
-
-    if (token?.startsWith('--') !== true) {
-      continue;
-    }
-
-    const body = token.slice(2);
-    const equals = body.indexOf('=');
-
-    if (equals >= 0) {
-      args.set(body.slice(0, equals), body.slice(equals + 1));
-    } else {
-      const next = argv[i + 1];
-
-      if (next !== undefined && !next.startsWith('--')) {
-        args.set(body, next);
-        i++;
-      } else {
-        args.set(body, 'true');
-      }
-    }
+/** Parse and validate the `--domain` selector (defaults to `rendering`). */
+const resolveDomain = (raw: string | undefined): Domain => {
+  if (raw === undefined) {
+    return 'rendering';
   }
 
-  return args;
+  if ((DOMAINS as readonly string[]).includes(raw)) {
+    return raw as Domain;
+  }
+
+  throw new Error(`--domain must be one of [${DOMAINS.join(', ')}] (got '${raw}').`);
 };
 
-const main = async (): Promise<void> => {
-  const args = parseArgs(process.argv.slice(2));
-
+/** Run the rendering benchmark domain end-to-end and write its report artifacts. */
+const runRenderingDomain = async (args: Map<string, string>): Promise<void> => {
   const backendArg = args.get('backend');
   const archetypeArg = args.get('archetype');
   const nodesArg = args.get('nodes');
@@ -51,7 +38,10 @@ const main = async (): Promise<void> => {
 
   const backends: readonly Backend[] = backendArg ? (backendArg.split(',').map(value => value.trim()) as Backend[]) : DEFAULT_BACKENDS;
 
-  const filter: Partial<CellSpec> = {};
+  // Mutable filter (CellSpec's fields are readonly; a Partial keeps that, so
+  // build the filter through a writable shape and hand it to runMatrix as the
+  // Partial<CellSpec> it accepts).
+  const filter: { -readonly [K in keyof CellSpec]?: CellSpec[K] } = {};
 
   if (archetypeArg !== undefined) {
     filter.archetype = archetypeArg as ArchetypeId;
@@ -94,14 +84,30 @@ const main = async (): Promise<void> => {
   }
 
   console.log(
-    `Running baseline matrix: backends=[${backends.join(', ')}]${archetypeArg ? `, archetype=${archetypeArg}` : ''}${nodesArg ? `, nodes=${nodesArg}` : ''}${timedFramesOverride !== undefined ? `, frames=${timedFramesOverride} (OVERRIDE — thin sampling, not reportable)` : ''}`,
+    `Running rendering benchmark: backends=[${backends.join(', ')}]${archetypeArg ? `, archetype=${archetypeArg}` : ''}${nodesArg ? `, nodes=${nodesArg}` : ''}${timedFramesOverride !== undefined ? `, frames=${timedFramesOverride} (OVERRIDE — thin sampling, not reportable)` : ''}`,
   );
+
+  // Incremental, crash-safe checkpoint: each cell is persisted the instant it
+  // lands (see shared/checkpoint.ts), so a later cell crash — the Pixi-WebGPU
+  // probe was the observed one — can never discard the cells already measured.
+  const checkpoint = createCheckpointWriter<CellResult>(outDir);
 
   const data = await runMatrix({
     backends,
     ...(isSubset && { filter }),
     ...(timedFramesOverride !== undefined && { timedFramesOverride }),
+    onCellResult: result => checkpoint.append(result),
   });
+
+  console.log(`\nPer-cell checkpoints written incrementally to ${checkpoint.jsonlPath}`);
+
+  // Library arm provenance up front: a "vs Pixi" number is only auditable if the
+  // exact library version is on the record.
+  console.log('\n=== Library arms ===');
+
+  for (const library of data.libraries) {
+    console.log(`  ${library.name} @ ${library.version}${library.resolvedFrom.length > 0 ? ` (from ${library.resolvedFrom})` : ''}`);
+  }
 
   // Provenance up front, loudly — a green run on a software rasterizer is worthless.
   console.log('\n=== Provenance ===');
@@ -116,20 +122,29 @@ const main = async (): Promise<void> => {
     console.warn('\n!!! SOFTWARE RASTERIZER DETECTED — timings are UNTRUSTED. Fix the launch flags before trusting any number. !!!');
   }
 
-  const { writeReport } = await import('./report');
-
   writeReport(data, outDir);
 
-  // Structural sanity summary: per-frame draw calls per archetype/node count.
+  // Structural sanity summary: per-frame draw calls per arm/archetype/node count.
   console.log('\n=== Per-frame draw calls (structural sanity) ===');
 
   for (const result of data.results) {
     console.log(
-      `  ${result.spec.archetype.padEnd(15)} n=${String(result.spec.nodeCount).padStart(7)} drawCalls=${String(result.structural.drawCalls).padStart(8)} cpuMsMedian=${result.cpuMsMedian.toFixed(3)}`,
+      `  ${result.spec.engine.padEnd(6)} ${result.spec.config.padEnd(9)} ${result.spec.backend.padEnd(6)} ${result.spec.archetype.padEnd(15)} n=${String(result.spec.nodeCount).padStart(7)} drawCalls=${String(result.structural.drawCalls).padStart(8)} cpuMsMedian=${result.cpuMsMedian.toFixed(3)} status=${result.status}`,
     );
   }
 
   console.log(`\nReport written to ${outDir} (results.json, results.csv, results.md)`);
+};
+
+const main = async (): Promise<void> => {
+  const args = parseArgs(process.argv.slice(2));
+  const domain = resolveDomain(args.get('domain'));
+
+  switch (domain) {
+    case 'rendering':
+      await runRenderingDomain(args);
+      break;
+  }
 };
 
 main().catch((error: unknown) => {

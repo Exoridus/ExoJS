@@ -1,4 +1,4 @@
-import { attachWebGl2Probe, attachWebGpuProbe } from './structural';
+import { attachWebGl2Probe, attachWebGpuProbe } from '../src/rendering/structural';
 
 const makeFakeGl = () => {
   const calls: string[] = [];
