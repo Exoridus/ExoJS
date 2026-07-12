@@ -916,9 +916,25 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
     return this._nodeRevision.structure;
   }
 
+  /**
+   * @internal — aggregate transform-dirty stamp (Slice 4a) for this node's
+   * subtree: own-transform mutations (position/rotation/scale/skew/origin) at
+   * or below. Orthogonal to {@link _contentRevision} — a content change does
+   * not bump it and it does not bump content. Read by {@link RetainedContainer}
+   * to detect a transform-only descendant move (patch rows) vs. a content
+   * change (re-collect). Reading it advances the dirty-walk epoch — same
+   * side-effecting-getter caution as {@link _contentRevision}.
+   */
+  public get _transformRevision(): number {
+    dirtyWalkEpoch++;
+
+    return this._nodeRevision.transform;
+  }
+
   /** Dirty-walk epoch stamps for the F10 early-out — see {@link _markContentDirty}. */
   private _contentWalkEpoch = 0;
   private _structureWalkEpoch = 0;
+  private _transformWalkEpoch = 0;
 
   /**
    * @internal — mark this node's content dirty and propagate the stamp up to
@@ -984,15 +1000,42 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
   }
 
   /**
+   * @internal — mark this node's transform dirty (Slice 4a) and propagate the
+   * stamp up to the root, exactly like {@link _markContentDirty} but on the
+   * orthogonal transform channel (its own walk epoch, keyed independently so a
+   * transform walk and a content walk never block each other). Consumed by
+   * {@link RetainedContainer} to spot a transform-only descendant move.
+   */
+  protected _markTransformDirty(): void {
+    const revision = nextNodeRevision();
+    const epoch = dirtyWalkEpoch;
+
+    this._nodeRevision.touchTransform(revision);
+    this._transformWalkEpoch = epoch;
+
+    let ancestor = this._parentNode;
+
+    while (ancestor !== null && ancestor._transformWalkEpoch !== epoch) {
+      ancestor._nodeRevision.touchTransform(revision);
+      ancestor._transformWalkEpoch = epoch;
+      ancestor = ancestor.parent;
+    }
+  }
+
+  /**
    * Tail of every own-transform mutation path (position/rotation/scale/origin/
-   * skew). Default: cascade bounds and stamp content-dirty — exactly the
-   * pre-Slice-2 behavior. {@link RetainedContainer} overrides this to bump its
+   * skew). Default: cascade bounds, stamp content-dirty, AND stamp the Slice-4a
+   * transform channel. The transform stamp is ADDITIVE here — content still
+   * bumps, so behaviour is identical to pre-Slice-4a; Slice 4b drops the content
+   * co-bump once {@link RetainedContainer} patches transform rows from the
+   * transform channel. {@link RetainedContainer} overrides this to bump its
    * group-matrix version instead of invalidating its retained fragment (§4.3).
    * @internal
    */
   protected _markOwnTransformDirty(): void {
     this._invalidateBoundsCascade();
     this._markContentDirty();
+    this._markTransformDirty();
   }
 
   private _setPositionDirty(): void {

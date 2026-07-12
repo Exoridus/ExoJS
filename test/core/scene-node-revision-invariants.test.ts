@@ -329,3 +329,82 @@ describe('revision invariants: RetainedContainer reroutes its OWN transform muta
     root.destroy();
   });
 });
+
+// Slice 4a: the transform-revision channel. Own-transform mutations bump a
+// dedicated `_transformRevision` (propagated to ancestors like content) IN
+// ADDITION to today's content bump — the split is purely additive here, so
+// behaviour is unchanged (fragments still invalidate on a descendant move via
+// the content bump). Slice 4b consumes this channel to patch transform rows
+// and drops the content co-bump. Representative transform mutators only; the
+// full mutator surface is guarded by the content/structure table above.
+describe('revision invariants: transform-revision channel (Slice 4a)', () => {
+  const transformMutators: ReadonlyArray<readonly [string, (n: Drawable) => void]> = [
+    ['setPosition', n => n.setPosition(10, 20)],
+    ['setRotation', n => n.setRotation(45)],
+    ['setScale', n => n.setScale(2, 2)],
+    ['setSkew', n => n.setSkew(10, 0)],
+    ['setOrigin', n => n.setOrigin(4, 4)],
+    ['move', n => n.move(1, 1)],
+    ['rotate', n => n.rotate(5)],
+  ];
+
+  for (const [name, mutate] of transformMutators) {
+    test(`${name} bumps _transformRevision on the node and propagates to the parent`, () => {
+      const parent = new Container();
+      const node = new Drawable();
+
+      parent.addChild(node);
+
+      const nodeTransformBefore = node._transformRevision;
+      const parentTransformBefore = parent._transformRevision;
+      const nodeContentBefore = node._contentRevision;
+
+      mutate(node);
+
+      expect(node._transformRevision).toBeGreaterThan(nodeTransformBefore);
+      expect(parent._transformRevision).toBeGreaterThan(parentTransformBefore);
+      // Behaviour-neutral in 4a: the content channel still bumps too.
+      expect(node._contentRevision).toBeGreaterThan(nodeContentBefore);
+
+      parent.destroy();
+    });
+  }
+
+  test('a content-only mutation (setTint) does NOT bump _transformRevision', () => {
+    const parent = new Container();
+    const node = new Drawable();
+
+    parent.addChild(node);
+
+    const nodeTransformBefore = node._transformRevision;
+    const parentTransformBefore = parent._transformRevision;
+    const nodeContentBefore = node._contentRevision;
+
+    node.setTint(new Color(10, 20, 30));
+
+    expect(node._contentRevision).toBeGreaterThan(nodeContentBefore);
+    expect(node._transformRevision).toBe(nodeTransformBefore);
+    expect(parent._transformRevision).toBe(parentTransformBefore);
+
+    parent.destroy();
+  });
+
+  test('a transform mutation does not touch an unrelated sibling subtree', () => {
+    const root = new Container();
+    const parent = new Container();
+    const sibling = new Container();
+    const node = new Drawable();
+
+    root.addChild(parent);
+    root.addChild(sibling);
+    parent.addChild(node);
+
+    const siblingTransformBefore = sibling._transformRevision;
+
+    node.setPosition(7, 7);
+
+    expect(sibling._transformRevision).toBe(siblingTransformBefore);
+
+    root.destroy();
+  });
+});
