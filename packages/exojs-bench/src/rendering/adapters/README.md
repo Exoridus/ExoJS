@@ -78,7 +78,13 @@ comparison is meaningless. `exojs.ts` follows these rules and any new adapter
 
 1. **Same node set.** Build exactly `nodeCount` leaves for the archetype, laid
    out and nested as `spec` describes (`nestingDepth`, `textureCount`,
-   `cullingEnabled`, the `overdraw` stacking).
+   `cullingEnabled`, the `overdraw` stacking). `cullingEnabled` is currently
+   `false` on every archetype (review C4): ExoJS's `.cullable` drives a real
+   per-node bounds check in the render walk, but Pixi's `.cullable` is inert
+   unless the app registers `CullerPlugin` — an identically-set flag does NOT
+   cost the same on both arms. A new adapter that wants culling on must give
+   Pixi (or whichever arm is inert) an equivalent culling mechanism first, or
+   the comparison is asymmetric again.
 2. **Same mutation selection.** Use `selectMutationIndices(nodeCount,
    spec.mutationFraction, seed)` (from `../../shared/mutation.ts`) — the shared,
    canonical selection — to pick the leaves you mutate, and expose the result

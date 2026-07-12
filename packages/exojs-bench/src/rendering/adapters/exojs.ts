@@ -136,6 +136,11 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
 
       const sceneRoot = createSpineContainer();
 
+      // `spec.cullingEnabled` is `false` for every archetype (see
+      // `archetypes.ts` and `EngineAdapter.ts::cullingEnabled` for the review
+      // C4 fairness rationale): the exojs render walk pays a real per-node
+      // cost for this flag that the Pixi arm's identically-set flag does not,
+      // so it stays off here to keep the arms cull-symmetric.
       sceneRoot.cullable = spec.cullingEnabled;
 
       const spine: Container[] = [sceneRoot];
