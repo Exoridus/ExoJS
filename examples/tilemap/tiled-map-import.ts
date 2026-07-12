@@ -1,4 +1,4 @@
-import { Application, Asset, Color, Graphics, Scene } from '@codexo/exojs';
+import { Application, Asset, Color, Graphics, type RenderingContext, Scene } from '@codexo/exojs';
 import { tiledExtension, TileMapNode } from '@codexo/exojs-tiled';
 import { ObjectKind, type ObjectQuery, type TileMapObject } from '@codexo/exojs-tilemap';
 import { mountControlPanel, mountControls } from '@examples/runtime';
@@ -123,7 +123,7 @@ class TiledMapImportScene extends Scene {
         this.hud.setStatus(`${FILTERS[this.filterIndex]!.label}: ${matches.length} match(es) — ${names}`);
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         context.render(this.mapNode);
         context.render(this.overlay);

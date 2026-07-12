@@ -1,4 +1,4 @@
-import { Application, Asset, Color, Container, Graphics, Scene, Text } from '@codexo/exojs';
+import { Application, Asset, Color, Container, Graphics, type RenderingContext, Scene, Text } from '@codexo/exojs';
 import { getLdtkIntGridValueAt, LdtkMap, ldtkExtension } from '@codexo/exojs-ldtk';
 import { TileMapNode } from '@codexo/exojs-tilemap';
 import { mountControlPanel, mountControls } from '@examples/runtime';
@@ -151,7 +151,7 @@ class LdtkWorldImportScene extends Scene {
         return labels;
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         context.render(this.content);
     }
