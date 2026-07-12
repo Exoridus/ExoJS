@@ -1,4 +1,4 @@
-import { Application, Asset, Color, Container, Keyboard, type PixelSnapMode, Rectangle, Scene, Sprite, Spritesheet, type SpritesheetData, TextureRegion, View } from '@codexo/exojs';
+import { Application, Asset, Color, Container, Keyboard, type PixelSnapMode, Rectangle, type RenderingContext, Scene, Sprite, Spritesheet, type SpritesheetData, TextureRegion, type Time, View } from '@codexo/exojs';
 import { TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, tilemapExtension, TileSet, type TileMapView } from '@codexo/exojs-tilemap';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
@@ -105,7 +105,7 @@ class TileChunksAndBandsScene extends Scene {
         this.worldRoot.addChild(this.mapView.band('ground'), actorLayer, this.mapView.band('canopy'));
 
         // ── Camera: follows the explorer, clamped to the map bounds ───────
-        const { width, height } = this.app.canvas;
+        const { width, height } = app.canvas;
 
         this.camera = new View(this.explorer.x, this.explorer.y, width, height);
         this.camera.follow(this.explorer, { lerp: 0.12 });
@@ -168,7 +168,7 @@ class TileChunksAndBandsScene extends Scene {
         });
     }
 
-    override update(delta): void {
+    override update(delta: Time): void {
         if (this.moveX !== 0 || this.moveY !== 0) {
             const length = Math.hypot(this.moveX, this.moveY) || 1;
 
@@ -178,7 +178,7 @@ class TileChunksAndBandsScene extends Scene {
         }
     }
 
-    override draw(context): void {
+    override draw(context: RenderingContext): void {
         context.backend.clear();
         context.render(this.worldRoot, { view: this.camera });
     }
