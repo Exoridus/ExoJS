@@ -40,14 +40,13 @@
     "test": "vitest run --root ../.. --project=exojs-ldtk"
   },
   "peerDependencies": {
-    "@codexo/exojs": "0.15.x"
-  },
-  "dependencies": {
-    "@codexo/exojs-tilemap": "workspace:*"
+    "@codexo/exojs": "0.15.x",
+    "@codexo/exojs-tilemap": "0.15.x"
   },
   "devDependencies": {
     "@codexo/exojs": "workspace:*",
-    "@codexo/exojs-config": "workspace:*"
+    "@codexo/exojs-config": "workspace:*",
+    "@codexo/exojs-tilemap": "workspace:*"
   },
   "license": "MIT",
   "publishConfig": {
