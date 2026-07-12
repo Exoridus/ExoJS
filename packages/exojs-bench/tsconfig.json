@@ -1,13 +1,18 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
-  "_comment": "The engine is benchmarked through its internal `#*` subpath imports. Node forbids an `imports` target escaping this package with `../`, and the harness's `#*` imports only run in the browser page (resolved by the driver's Vite alias, see rendering/driver.ts) — never in the Node CLI. The `paths` map below reproduces the root package.json's `#* -> ./src/*` wildcard so the type-checker resolves engine source from `<repo>/src`.",
+  "_comment": "The rendering domain benchmarks the engine through its internal `#*` subpath imports (resolved in the browser page by the driver's Vite alias, never in the Node CLI); the `#* -> ../../src/*` path reproduces the root package.json wildcard for the type-checker. The physics domain instead imports the `@codexo/exojs-physics` package (which itself imports the `@codexo/exojs` barrel), and neither exposes a `@codexo/source` export condition, so those specifiers are mapped to source here — mirroring the runtime aliasing in scripts/glsl-loader.mjs and vitest.config.ts's aliasConfig.",
   "extends": "@codexo/exojs-config/typescript/test.json",
   "compilerOptions": {
     "noEmit": true,
     "customConditions": ["@codexo/source"],
     "types": ["vitest/globals", "node", "@webgpu/types"],
     "paths": {
-      "#*": ["../../src/*"]
+      "#*": ["../../src/*"],
+      "@codexo/exojs-physics": ["../exojs-physics/src/index.ts"],
+      "@codexo/exojs": ["../../src/index.ts"],
+      "@codexo/exojs/extensions": ["../../src/extensions/index.ts"],
+      "@codexo/exojs/renderer-sdk": ["../../src/renderer-sdk.ts"],
+      "@codexo/exojs/debug": ["../../src/debug/index.ts"]
     }
   },
   "include": ["src/**/*", "test/**/*", "../../src/typings.d.ts"],

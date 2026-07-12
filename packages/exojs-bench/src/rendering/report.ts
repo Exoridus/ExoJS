@@ -1,7 +1,6 @@
-import { mkdirSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
-
-import type { LibraryProvenance, Provenance } from './driver';
+import type { LibraryProvenance } from '../shared/provenance';
+import { csvField, formatCount as count, formatMs as ms, writeReportArtifacts } from '../shared/report';
+import type { Provenance } from './driver';
 import type { CellResult } from './EngineAdapter';
 
 /** Node count at or above which a full-frame time is beyond any interactive budget. */
@@ -19,12 +18,6 @@ export interface ReportData {
   /** One result per matrix cell. */
   readonly results: readonly CellResult[];
 }
-
-/** Formats a millisecond figure to three decimals, or `n/a` when unavailable. */
-const ms = (value: number | null): string => (value === null ? 'n/a' : value.toFixed(3));
-
-/** Formats a structural counter: integers stay integers, uneven per-frame totals keep two decimals. */
-const count = (value: number): string => (Number.isInteger(value) ? String(value) : value.toFixed(2));
 
 /** True when any provenance stamp reports a software rasterizer. */
 const isSoftware = (data: ReportData): boolean => data.provenance.some(entry => entry.software);
@@ -56,9 +49,6 @@ const CSV_HEADER = [
   'status',
   'note',
 ] as const;
-
-/** Escapes a CSV field, quoting when it holds a comma, quote or newline. */
-const csvField = (value: string): string => (/[",\n]/.test(value) ? `"${value.replaceAll('"', '""')}"` : value);
 
 const toCsvRow = (result: CellResult): string => {
   const { spec, structural } = result;
@@ -217,8 +207,9 @@ const toMarkdown = (data: ReportData): string => {
  * - `results.md` — provenance block plus a human-readable table.
  */
 export const writeReport = (data: ReportData, outDir: string): void => {
-  mkdirSync(outDir, { recursive: true });
-  writeFileSync(join(outDir, 'results.json'), `${JSON.stringify(data, null, 2)}\n`);
-  writeFileSync(join(outDir, 'results.csv'), `${toCsv(data)}\n`);
-  writeFileSync(join(outDir, 'results.md'), toMarkdown(data));
+  writeReportArtifacts(outDir, {
+    json: `${JSON.stringify(data, null, 2)}\n`,
+    csv: `${toCsv(data)}\n`,
+    md: toMarkdown(data),
+  });
 };
