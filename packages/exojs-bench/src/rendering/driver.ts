@@ -76,8 +76,14 @@ const readEngineVersion = (): string => {
   return manifest.version ?? '0.0.0';
 };
 
-/** Competitor library arms whose installed version + resolution are stamped into every report header. */
-const LIBRARY_ARMS = ['pixi.js'] as const;
+/**
+ * Competitor library arms whose installed version + resolution are stamped into
+ * every report header (via the shared {@link readLibraryProvenance}) and, when
+ * resolvable, pre-bundled by Vite (see {@link resolvableCompetitors}). Pinned
+ * exact in `@codexo/exojs-bench`'s devDependencies, so an "ExoJS vs X" number is
+ * auditable against a reproducible build.
+ */
+const LIBRARY_ARMS = ['pixi.js', 'phaser', 'excalibur'] as const;
 
 /**
  * Adapter capability descriptors known to the driver. Only `engine`, `config`
@@ -109,7 +115,38 @@ const ADAPTER_CAPABILITIES: readonly EngineAdapter[] = [
   // local-only reference; its version + provenance are stamped into the report
   // header via `readLibraryProvenance`.
   capabilityDescriptor('pixi', 'default', ['webgl2', 'webgpu']),
+  // Phaser 3 and Excalibur are committed competitor arms (pinned exact
+  // devDependencies). Both are WebGL2-only in this harness and never run WebGPU:
+  // Phaser 3 has no WebGL2 renderer at all and runs under the 'webgl2' REQUEST
+  // rendering WebGL1 (disclosed by the harness's structural-probe degrade path
+  // and the report Methodology); Excalibur 0.32 renders a real WebGL2 context.
+  // A missing (unlinked) competitor degrades gracefully: its per-cell dynamic
+  // import fails in isolation (`runCellInPage` records that cell `unavailable`
+  // and the run continues), and it is left out of Vite's pre-bundle set below.
+  capabilityDescriptor('phaser', 'default', ['webgl2']),
+  capabilityDescriptor('excalibur', 'default', ['webgl2']),
 ];
+
+/**
+ * The subset of {@link LIBRARY_ARMS} actually resolvable from this package, so
+ * Vite's `optimizeDeps.include` only pre-bundles competitors that are present. A
+ * competitor left unlinked (no `bench:setup`) is simply omitted rather than
+ * crashing esbuild's optimizer at server startup — an ExoJS-only run then needs
+ * none of the competitor deps present.
+ */
+const resolvableCompetitors = (): string[] => {
+  const nodeRequire = createRequire(import.meta.url);
+
+  return LIBRARY_ARMS.filter(name => {
+    try {
+      nodeRequire.resolve(name);
+
+      return true;
+    } catch {
+      return false;
+    }
+  });
+};
 
 /**
  * Load Vite through the copy vitest already depends on. Vite is not a direct
@@ -212,14 +249,16 @@ const startViteServer = async (version: string): Promise<ViteDevServer> => {
     // `noDiscovery` keeps the automatic dep scanner OFF — it runs esbuild over
     // the whole import graph, which would choke on the engine's `.vert`/`.frag`
     // imports the real-shader plugin only handles in the transform pass. But the
-    // Pixi arm is a real npm dependency whose transitive deps include CommonJS
-    // modules (e.g. `eventemitter3`); without pre-bundling, the browser's native
-    // ESM loader rejects `import EventEmitter from 'eventemitter3'` ("does not
-    // provide an export named 'default'"). Explicitly `include` pixi.js so
-    // esbuild pre-bundles it and its CJS deps with interop, WITHOUT scanning the
-    // engine graph. Engine source still resolves to local `.ts` files via the
-    // `#*` alias and is never pre-bundled.
-    optimizeDeps: { noDiscovery: true, include: ['pixi.js'] },
+    // competitor arms are real npm dependencies whose bundles/transitive deps
+    // include CommonJS modules (e.g. Pixi's `eventemitter3`); without
+    // pre-bundling, the browser's native ESM loader rejects them ("does not
+    // provide an export named 'default'"). Explicitly `include` each RESOLVABLE
+    // competitor so esbuild pre-bundles it and its CJS deps with interop, WITHOUT
+    // scanning the engine graph. A competitor that is not linked is omitted here
+    // (see `resolvableCompetitors`) rather than crashing the optimizer. Engine
+    // source still resolves to local `.ts` files via the `#*` alias and is never
+    // pre-bundled.
+    optimizeDeps: { noDiscovery: true, include: resolvableCompetitors() },
     define: { __DEV__: 'true', __VERSION__: JSON.stringify(version), __REVISION__: JSON.stringify('baseline') },
     plugins: [realShaderPlugin, devGlobalsPlugin(version)],
   });

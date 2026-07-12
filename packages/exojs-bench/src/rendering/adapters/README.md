@@ -11,10 +11,21 @@ drives identically. The committed arms are:
   2D library that ships WebGPU. An **official, committed arm**: `pixi.js` is a
   pinned exact devDependency (no `^`/`~`) of `@codexo/exojs-bench`, and its
   version + resolution path are stamped into every report header.
+- **`phaser.ts`** — Phaser 3.90, WebGL2-only in this harness (it runs under the
+  `webgl2` backend request but Phaser 3 has **no WebGL2 renderer**, so it renders
+  **WebGL1** — disclosed in every Phaser cell's `note` and the report
+  Methodology). The WebGL2 structural probe cannot attach to a WebGL1 context, so
+  the Phaser arm reports no draw-call counters (omitted, never faked); its CPU
+  time is measured identically to the other arms. Committed pinned devDependency.
+- **`excalibur.ts`** — Excalibur 0.32, a real WebGL2 arm (structural probe + GPU
+  timer attach exactly as for the ExoJS/Pixi WebGL2 arms). Committed pinned
+  devDependency.
 
 Arms are registered in `../page/harness.ts` (`resolveAdapter`) and included in
-the driver's cell matrix (`../driver.ts` `ADAPTER_CAPABILITIES`). The Pixi module
-is imported lazily on first use so an ExoJS-only run never loads it.
+the driver's cell matrix (`../driver.ts` `ADAPTER_CAPABILITIES`), with each
+competitor's version stamped into the report header via `readLibraryProvenance`.
+Each competitor module is imported lazily on first use, so an ExoJS-only run
+never loads one and a competitor left unlinked fails only its own cells.
 
 > The former gitignored `reference.local.ts` slot (a local-only, never-committed
 > reference arm) has been **retired**: the comparison is now openly reproducible
