@@ -11,12 +11,17 @@ drives identically. The committed arms are:
   2D library that ships WebGPU. An **official, committed arm**: `pixi.js` is a
   pinned exact devDependency (no `^`/`~`) of `@codexo/exojs-bench`, and its
   version + resolution path are stamped into every report header.
-- **`phaser.ts`** — Phaser 3.90, WebGL2-only in this harness (it runs under the
-  `webgl2` backend request but Phaser 3 has **no WebGL2 renderer**, so it renders
-  **WebGL1** — disclosed in every Phaser cell's `note` and the report
-  Methodology). The WebGL2 structural probe cannot attach to a WebGL1 context, so
-  the Phaser arm reports no draw-call counters (omitted, never faked); its CPU
-  time is measured identically to the other arms. Committed pinned devDependency.
+- **`phaser.ts`** — Phaser 4.2, WebGL2-only in this harness (Phaser 4 ships no
+  WebGPU renderer). Phaser 4's `WebGLRenderer` requests a WebGL**1** context by
+  default (GLSL ES 1.00 shaders, extension-polyfilled instancing/VAO — it is an
+  evolution of the Phaser 3.85+ renderer, **not** a from-scratch WebGL2 one), so
+  this arm supplies a WebGL2 context explicitly via the documented `context`
+  game-config option to honour the `webgl2` backend contract. The context is
+  genuinely WebGL2, so the structural probe attaches and the Phaser arm reports
+  **real** draw-call counters like every other WebGL2 arm (none faked). Caveat
+  (disclosed in the report Methodology): this is not Phaser's default context — a
+  stock Phaser 4 app renders WebGL1; only the context type differs from Phaser's
+  normal path. Committed pinned devDependency.
 - **`excalibur.ts`** — Excalibur 0.32, a real WebGL2 arm (structural probe + GPU
   timer attach exactly as for the ExoJS/Pixi WebGL2 arms). Committed pinned
   devDependency.
