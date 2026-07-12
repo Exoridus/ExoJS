@@ -10,6 +10,23 @@ import type { PhysicsAdapter, PhysicsCellResult, PhysicsCellSpec } from './Physi
 const NATIVE_PHYSICS_PACKAGE = '@codexo/exojs-physics';
 
 /**
+ * Per-arm methodology disclosure, keyed by the arm's `engine` label. Each arm is
+ * measured at its OWN engine defaults for solver iterations, contact model and
+ * sleeping — those differences are the legitimate quantity the native-vs-adapter
+ * comparison surfaces, so they are stated per arm rather than silently smoothed
+ * (spec §4 fairness). Only the disclosures for arms actually present in a run are
+ * stamped into that run's provenance caveats.
+ */
+const ARM_DISCLOSURES: Readonly<Record<string, string>> = {
+  'exojs-physics':
+    'exojs-physics arm: TGS-Soft solver, 4 sub-steps per fixed step, sleeping ON by default (resting bodies deactivate). Contact count = solid contacts in the world contact graph.',
+  'matter-js':
+    "matter-js arm: constraint solver at matter defaults (6 position / 4 velocity / 2 constraint iterations), sleeping OFF by default (a settled stack keeps paying full solve cost); matter's default per-step air drag (frictionAir) is zeroed so all arms integrate the same pure-gravity field; gravity (px/s²) and perturbation velocity (px/s) are mapped into matter's px-per-step unit model. Contact count = active colliding pairs (engine.pairs.collisionActive), a pair-level proxy, not identical in semantics to the exojs solid-contact count.",
+  rapier:
+    'rapier arm: TGS-Soft solver at rapier defaults (4 solver / 1 internal PGS iterations), auto-sleeping ON; default lengthUnit=1 is fed a px-scale world (tuned for ~1-unit objects), exactly what attaching rapier with pixel coordinates yields. Contact count = collider pairs with a solid narrow-phase manifold (numContacts > 0), deduped.',
+};
+
+/**
  * Catastrophic-regression step budget (ms). The physics domain is CPU-bound and
  * fast; a cell whose last-window median blows past this is a runaway (a
  * pathological body count or an accidental O(n²) regression), so it aborts to
@@ -141,14 +158,21 @@ const runCell = (adapter: PhysicsAdapter, spec: PhysicsCellSpec): PhysicsCellRes
  */
 export const runPhysicsMatrix = (options: {
   adapters?: readonly PhysicsAdapter[];
+  /**
+   * npm package names whose installed versions are recorded in the report header
+   * (one per arm). Defaults to the native physics package alone; the CLI passes
+   * the competitor package names for whichever adapter arms actually resolved, so
+   * a run never claims a version for an arm it did not include.
+   */
+  libraries?: readonly string[];
   filter?: Partial<PhysicsCellSpec>;
   /** Forces every selected cell's timed-step count to this value (smoke/spot-check knob; never a reportable run). */
   timedStepsOverride?: number;
   onCellResult?: PhysicsCellResultSink;
 } = {}): PhysicsMatrixOutcome => {
   const adapters = options.adapters ?? [createExoJsPhysicsAdapter()];
-  const libraries = readLibraryProvenance([NATIVE_PHYSICS_PACKAGE]);
-  const engineVersion = libraries[0]?.version ?? 'unknown';
+  const libraries = readLibraryProvenance(options.libraries ?? [NATIVE_PHYSICS_PACKAGE]);
+  const engineVersion = libraries.find(library => library.name === NATIVE_PHYSICS_PACKAGE)?.version ?? libraries[0]?.version ?? 'unknown';
 
   const allCells = buildPhysicsMatrix(adapters);
   const filtered = options.filter ? applyFilter(allCells, options.filter) : allCells;
@@ -176,15 +200,21 @@ export const runPhysicsMatrix = (options: {
     onCellResult(result);
   }
 
+  // Disclosures only for the arms actually present, in matrix order, de-duplicated.
+  const armEngines = [...new Set(adapters.map(adapter => adapter.engine))];
+  const armCaveats = armEngines.map(engine => ARM_DISCLOSURES[engine]).filter((caveat): caveat is string => caveat !== undefined);
+
   const provenance: PhysicsProvenance = {
     timestamp: new Date().toISOString(),
     engineVersion,
     host: readHostInfo(),
     fixedDelta: STEP_DELTA,
     caveats: [
-      'Step time is CPU wall-clock per world.step() over the timed window (median/p95), measured in one Node process (same-run discipline).',
-      'Single native arm (exojs-physics); matter.js / rapier adapter arms are a separate follow-on and are NOT included here.',
+      'Step time is CPU wall-clock per step() over the timed window (median/p95), measured in one Node process (same-run discipline).',
       'Scenes are warmed to steady state before timing; the per-cell warmupSteps/timedSteps counts are recorded for honesty.',
+      'All arms build the byte-identical scene (bodies, positions, shapes, sizes, static/dynamic split, gravity, perturbed-body set) from the shared deterministic RNG, and the perturbed-body selection is asserted equal across arms before each cell is timed.',
+      'Each arm runs at its own engine defaults for solver iterations, contact model and sleeping — those engine differences are the measured quantity in a native-vs-adapter comparison, disclosed per arm below.',
+      ...armCaveats,
     ],
   };
 

@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 // `./physics` is imported for TYPES only here (erased at runtime); its module
 // graph — the `@codexo/exojs-physics` source arm — is loaded lazily via a
 // dynamic `import()` inside `runPhysicsDomain`, so a rendering run never pays for it.
-import type { PhysicsCellResult, PhysicsCellSpec } from './physics';
+import type { PhysicsAdapter, PhysicsCellResult, PhysicsCellSpec } from './physics';
 import type { ArchetypeId, Backend, CellResult, CellSpec } from './rendering';
 import { runMatrix, writeReport } from './rendering';
 import { parseArgs } from './shared/args';
@@ -156,7 +156,7 @@ const runRenderingDomain = async (args: Map<string, string>): Promise<void> => {
  * step count for a fast spot-check (never a reportable run).
  */
 const runPhysicsDomain = async (args: Map<string, string>): Promise<void> => {
-  const { runPhysicsMatrix, writePhysicsReport } = await import('./physics');
+  const { createExoJsPhysicsAdapter, createMatterJsAdapter, createRapierAdapter, runPhysicsMatrix, writePhysicsReport } = await import('./physics');
 
   const archetypeArg = args.get('archetype');
   const bodiesArg = args.get('bodies');
@@ -205,11 +205,36 @@ const runPhysicsDomain = async (args: Map<string, string>): Promise<void> => {
     `Running physics benchmark: ${archetypeArg ? `archetype=${archetypeArg}` : 'all archetypes'}${bodiesArg ? `, bodies=${bodiesArg}` : ''}${timedStepsOverride !== undefined ? `, frames=${timedStepsOverride} (OVERRIDE — thin sampling, not reportable)` : ''}`,
   );
 
+  // Resolve the arms: the native exojs-physics arm is always present; the matter
+  // and rapier competitor arms are loaded lazily and degrade to a skipped arm
+  // (resolver returns null) when their library was never linked via bench:setup,
+  // so a checkout without the competitor deps still runs the native domain.
+  const adapters: PhysicsAdapter[] = [createExoJsPhysicsAdapter()];
+  const libraries: string[] = ['@codexo/exojs-physics'];
+
+  const matter = await createMatterJsAdapter();
+
+  if (matter !== null) {
+    adapters.push(matter);
+    libraries.push('matter-js');
+  }
+
+  const rapier = await createRapierAdapter();
+
+  if (rapier !== null) {
+    adapters.push(rapier);
+    libraries.push('@dimforge/rapier2d-compat');
+  }
+
+  console.log(`Arms: ${adapters.map(adapter => adapter.engine).join(', ')}`);
+
   // Incremental, crash-safe checkpoint: each cell is persisted the instant it
   // lands, reusing the same shared writer the rendering domain uses.
   const checkpoint = createCheckpointWriter<PhysicsCellResult>(outDir);
 
   const data = runPhysicsMatrix({
+    adapters,
+    libraries,
     ...(isSubset && { filter }),
     ...(timedStepsOverride !== undefined && { timedStepsOverride }),
     onCellResult: result => checkpoint.append(result),
