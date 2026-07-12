@@ -144,6 +144,27 @@ const devGlobalsPlugin = (version: string) => ({
   },
 });
 
+/**
+ * Response headers that place the harness page in a cross-origin-isolated
+ * context. `crossOriginIsolated === true` lifts the browser's Spectre-mitigation
+ * clamp on `performance.now()` (~100µs in a non-isolated context) back to high
+ * resolution (~5µs), so the CPU timer can actually resolve the small per-frame
+ * costs the low-node-count cells sit on instead of quantising them to the timer
+ * floor. It also unlocks `SharedArrayBuffer`. Isolation requires BOTH:
+ *   - COOP `same-origin` — severs the opener relationship.
+ *   - COEP `require-corp` — every subresource must opt in via CORP/CORS.
+ * Every resource the harness loads (the page, `harness.ts`, engine source,
+ * shaders) is served by this same Vite origin, so it is same-origin and passes
+ * the COEP check without a CORP header; textures are generated in-page from a
+ * canvas, never fetched. `CORP: same-origin` is set defensively so any
+ * same-origin subresource is unambiguously embeddable.
+ */
+const CROSS_ORIGIN_ISOLATION_HEADERS: Readonly<Record<string, string>> = {
+  'Cross-Origin-Opener-Policy': 'same-origin',
+  'Cross-Origin-Embedder-Policy': 'require-corp',
+  'Cross-Origin-Resource-Policy': 'same-origin',
+};
+
 /** Starts a programmatic Vite dev server rooted at the harness page. */
 const startViteServer = async (version: string): Promise<ViteDevServer> => {
   const vite = await loadVite();
@@ -152,7 +173,9 @@ const startViteServer = async (version: string): Promise<ViteDevServer> => {
     root: PAGE_DIR,
     logLevel: 'warn',
     // Allow the harness (under page/) to import engine source above its root.
-    server: { host: '127.0.0.1', fs: { allow: [REPO_ROOT] } },
+    // The COOP/COEP/CORP headers make the page `crossOriginIsolated`, restoring
+    // high-resolution `performance.now()` for the CPU timer (see the constant).
+    server: { host: '127.0.0.1', fs: { allow: [REPO_ROOT] }, headers: { ...CROSS_ORIGIN_ISOLATION_HEADERS } },
     // Activate the `@codexo/source` condition so `#*` resolves to ./src/*.ts.
     resolve: { conditions: srcConditions },
     ssr: { resolve: { conditions: srcConditions } },
