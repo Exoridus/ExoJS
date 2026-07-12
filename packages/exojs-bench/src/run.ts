@@ -1,16 +1,23 @@
 import { resolve } from 'node:path';
 
+// `./physics` is imported for TYPES only here (erased at runtime); its module
+// graph — the `@codexo/exojs-physics` source arm — is loaded lazily via a
+// dynamic `import()` inside `runPhysicsDomain`, so a rendering run never pays for it.
+import type { PhysicsCellResult, PhysicsCellSpec } from './physics';
 import type { ArchetypeId, Backend, CellResult, CellSpec } from './rendering';
 import { runMatrix, writeReport } from './rendering';
 import { parseArgs } from './shared/args';
 import { createCheckpointWriter } from './shared/checkpoint';
 
-/** Domains this CLI can drive. Rendering is the first; `physics` etc. can be added as sibling barrels. */
-const DOMAINS = ['rendering'] as const;
+/** Domains this CLI can drive. Each has its own archetypes + arms; the shared layer (timing, provenance, checkpoint, report skeleton) is reused across both. */
+const DOMAINS = ['rendering', 'physics'] as const;
 type Domain = (typeof DOMAINS)[number];
 
-/** Default output directory for the generated report artifacts (gitignored). */
+/** Default output directory for the rendering report artifacts (gitignored). */
 const DEFAULT_OUT_DIR = '.workspace/output/baseline/';
+
+/** Default output directory for the physics report artifacts (gitignored). */
+const DEFAULT_PHYSICS_OUT_DIR = '.workspace/output/physics/';
 
 /** Backends run when `--backend` is not given. `buildMatrix` gates each to the adapters that support it. */
 const DEFAULT_BACKENDS: readonly Backend[] = ['webgl2', 'webgpu'];
@@ -136,6 +143,102 @@ const runRenderingDomain = async (args: Map<string, string>): Promise<void> => {
   console.log(`\nReport written to ${outDir} (results.json, results.csv, results.md)`);
 };
 
+/**
+ * Run the physics benchmark domain end-to-end and write its report artifacts.
+ *
+ * Physics is CPU-only: no browser, no GPU. The whole matrix runs in THIS Node
+ * process as a straight loop over `world.step`, so the domain module is imported
+ * dynamically (only when selected) — a rendering run never loads the physics
+ * arm's `@codexo/exojs-physics` source graph, and vice versa.
+ *
+ * Flags mirror the rendering domain: `--archetype` and `--bodies` filter the
+ * matrix (the `--bodies` node-sweep analogue), `--frames` overrides the timed-
+ * step count for a fast spot-check (never a reportable run).
+ */
+const runPhysicsDomain = async (args: Map<string, string>): Promise<void> => {
+  const { runPhysicsMatrix, writePhysicsReport } = await import('./physics');
+
+  const archetypeArg = args.get('archetype');
+  const bodiesArg = args.get('bodies');
+  const framesArg = args.get('frames');
+  const outDir = resolve(args.get('out') ?? DEFAULT_PHYSICS_OUT_DIR);
+
+  const filter: { -readonly [K in keyof PhysicsCellSpec]?: PhysicsCellSpec[K] } = {};
+
+  if (archetypeArg !== undefined) {
+    filter.archetype = archetypeArg as PhysicsCellSpec['archetype'];
+  }
+
+  if (bodiesArg !== undefined) {
+    const bodyCount = Number.parseInt(bodiesArg, 10);
+
+    if (Number.isNaN(bodyCount)) {
+      throw new Error(`--bodies must be an integer (got '${bodiesArg}').`);
+    }
+
+    filter.bodyCount = bodyCount;
+  }
+
+  // `--frames`: override every selected cell's timed-step count (like the
+  // rendering domain's flag). A convenience knob for fast iteration only — it
+  // flattens the per-body-count step budgets the report's `timedSteps` column
+  // exists to make honest, so any run using it is a non-reportable SUBSET RUN.
+  let timedStepsOverride: number | undefined;
+
+  if (framesArg !== undefined) {
+    const frames = Number.parseInt(framesArg, 10);
+
+    if (Number.isNaN(frames) || frames < 1) {
+      throw new Error(`--frames must be a positive integer (got '${framesArg}').`);
+    }
+
+    timedStepsOverride = frames;
+  }
+
+  const isSubset = archetypeArg !== undefined || bodiesArg !== undefined || timedStepsOverride !== undefined;
+
+  if (isSubset) {
+    console.warn('SUBSET RUN — not a reportable comparison (see the same-run rule).');
+  }
+
+  console.log(
+    `Running physics benchmark: ${archetypeArg ? `archetype=${archetypeArg}` : 'all archetypes'}${bodiesArg ? `, bodies=${bodiesArg}` : ''}${timedStepsOverride !== undefined ? `, frames=${timedStepsOverride} (OVERRIDE — thin sampling, not reportable)` : ''}`,
+  );
+
+  // Incremental, crash-safe checkpoint: each cell is persisted the instant it
+  // lands, reusing the same shared writer the rendering domain uses.
+  const checkpoint = createCheckpointWriter<PhysicsCellResult>(outDir);
+
+  const data = runPhysicsMatrix({
+    ...(isSubset && { filter }),
+    ...(timedStepsOverride !== undefined && { timedStepsOverride }),
+    onCellResult: result => checkpoint.append(result),
+  });
+
+  console.log(`\nPer-cell checkpoints written incrementally to ${checkpoint.jsonlPath}`);
+
+  console.log('\n=== Arms ===');
+
+  for (const library of data.libraries) {
+    console.log(`  ${library.name} @ ${library.version}${library.resolvedFrom.length > 0 ? ` (from ${library.resolvedFrom})` : ''}`);
+  }
+
+  console.log('\n=== Provenance ===');
+  console.log(`  node=${data.provenance.host.node} cpu="${data.provenance.host.cpu}" (${String(data.provenance.host.cpuCount)} logical) os=${data.provenance.host.os} engine=${data.provenance.engineVersion} fixedDelta=${String(data.provenance.fixedDelta)}`);
+
+  writePhysicsReport(data, outDir);
+
+  console.log('\n=== Per-step time (median) + structural ===');
+
+  for (const result of data.results) {
+    console.log(
+      `  ${result.spec.engine.padEnd(14)} ${result.spec.config.padEnd(7)} ${result.spec.archetype.padEnd(20)} n=${String(result.spec.bodyCount).padStart(6)} bodies=${String(result.structural.bodyCount).padStart(6)} contacts=${String(result.structural.contactCount).padStart(6)} stepMsMedian=${result.stepMsMedian.toFixed(4)} stepMsP95=${result.stepMsP95.toFixed(4)} status=${result.status}`,
+    );
+  }
+
+  console.log(`\nReport written to ${outDir} (results.json, results.csv, results.md)`);
+};
+
 const main = async (): Promise<void> => {
   const args = parseArgs(process.argv.slice(2));
   const domain = resolveDomain(args.get('domain'));
@@ -143,6 +246,9 @@ const main = async (): Promise<void> => {
   switch (domain) {
     case 'rendering':
       await runRenderingDomain(args);
+      break;
+    case 'physics':
+      await runPhysicsDomain(args);
       break;
   }
 };
