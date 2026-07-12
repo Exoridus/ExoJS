@@ -1,10 +1,11 @@
 {
   "name": "@codexo/exojs-bench",
   "version": "0.0.0",
-  "description": "Private, reproducible cross-library rendering benchmark harness for ExoJS. Not published; run with `pnpm --filter @codexo/exojs-bench bench`.",
+  "description": "Private, reproducible cross-library rendering benchmark harness for ExoJS. Not published; run `pnpm --filter @codexo/exojs-bench bench:setup` once to pull the competitor libraries (kept out of the workspace install -- see competitors/package.json), then `pnpm --filter @codexo/exojs-bench bench`.",
   "private": true,
   "type": "module",
   "scripts": {
+    "bench:setup": "pnpm install --dir competitors --ignore-workspace && node competitors/link.mjs",
     "bench": "tsx src/run.ts",
     "perf:baseline": "tsx src/run.ts",
     "typecheck": "tsc --noEmit",
@@ -16,7 +17,6 @@
     "@codexo/exojs-config": "workspace:*",
     "@types/node": "^25.6.0",
     "@webgpu/types": "^0.1.69",
-    "pixi.js": "8.19.0",
     "playwright": "^1.50.0",
     "tsx": "^4.21.0",
     "vitest": "^4.1.7"

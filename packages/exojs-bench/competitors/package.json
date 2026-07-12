@@ -1,0 +1,9 @@
+{
+  "name": "exojs-bench-competitors",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Pinned exact-version competitor libraries for @codexo/exojs-bench (Pixi, and future Phaser/Excalibur/matter/rapier arms). Deliberately NOT a pnpm-workspace.yaml member: a plain root `pnpm install` never resolves or downloads anything here, so a normal contributor pays zero weight for competitor libraries. Only `pnpm --filter @codexo/exojs-bench bench:setup` installs this folder (via `pnpm install --ignore-workspace`, so a supply-chain review of a version bump should also sanity-check its release age by hand -- `--ignore-workspace` means the root pnpm-workspace.yaml's minimumReleaseAge gate does not apply here) and links the results into ../node_modules so the adapters' plain `import 'pixi.js'` (etc.) resolve unmodified.",
+  "dependencies": {
+    "pixi.js": "8.19.0"
+  }
+}
