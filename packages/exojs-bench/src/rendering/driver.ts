@@ -430,16 +430,68 @@ const runCellInPage = async (page: import('playwright').Page, spec: CellSpec): P
 };
 
 /**
- * Runs one backend's full cell list in a single browser session, invoking
- * `onCellResult` after EACH cell so the caller can checkpoint it, and returning
- * that backend's provenance stamp plus the collected results.
+ * Node-side wall-clock cap on a single cell. The in-page harness bounds warmup
+ * and the timed loop, but those guards only fire BETWEEN frames — they cannot
+ * interrupt a frame that never returns. A weak arm can accumulate GPU-driver
+ * state across its cells until one heavy cell stalls the driver mid-frame
+ * (observed: Excalibur wedging on 25k full-viewport overdraw / batch-breaking),
+ * freezing the page with no in-page recovery possible. This cap lets the DRIVER
+ * abandon such a cell as `unavailable` and relaunch the browser, so one
+ * pathological cell can never hang the whole matrix. Set far above the heaviest
+ * TRUSTED cell (~15-25s with the in-page warmup cap + timed abort), so it only
+ * ever trips on a genuine wedge.
+ */
+const CELL_TIMEOUT_MS = 60_000;
+
+/** Sentinel returned by {@link runCellOrWedge} when a cell exceeds {@link CELL_TIMEOUT_MS}. */
+const CELL_WEDGED = Symbol('cell-wedged');
+
+/**
+ * Run one cell, resolving to {@link CELL_WEDGED} if it does not finish within
+ * {@link CELL_TIMEOUT_MS} — the page is then presumed frozen and its browser must
+ * be relaunched. The still-pending evaluate is left to reject when the browser
+ * closes; its rejection is swallowed so it never surfaces as an unhandled
+ * rejection (`runCellInPage` already never rejects on a normal cell error).
+ */
+const runCellOrWedge = async (page: import('playwright').Page, spec: CellSpec): Promise<CellResult | typeof CELL_WEDGED> => {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<typeof CELL_WEDGED>(resolvePromise => {
+    timer = setTimeout(() => resolvePromise(CELL_WEDGED), CELL_TIMEOUT_MS);
+  });
+
+  const run = runCellInPage(page, spec).then(result => {
+    if (timer !== undefined) {
+      clearTimeout(timer);
+    }
+
+    return result;
+  });
+
+  // Swallow the abandoned evaluate's eventual rejection (the browser close after a
+  // wedge rejects it) so it never surfaces as an unhandled rejection.
+  run.catch(() => {
+    /* intentionally ignored */
+  });
+
+  return Promise.race([run, timeout]);
+};
+
+/**
+ * Runs one backend's cell list, isolating each arm in its OWN browser session and
+ * each cell behind a wall-clock timeout. Invokes `onCellResult` after EACH cell so
+ * the caller can checkpoint it, and returns the backend's provenance plus results.
  *
- * The whole per-backend matrix still runs in ONE page/session: cross-session
- * timing comparison is invalid (JIT warmth, GPU clock state and allocator state
- * all differ between sessions), so every cell is driven through the same page
- * via repeated `__runBaselineCell` calls rather than reloading between cells.
- * For WebGPU the adapter identity is read first; a null or software adapter
- * emits every cell as `unavailable` rather than measuring a software rasterizer.
+ * Isolation model (why not one shared session): timing is measured PER CELL — each
+ * cell fully `init`s and `teardown`s its arm — so a shared session buys only warm
+ * JIT/prebundle, not comparability, while it lets one arm's leaked GPU/driver state
+ * wedge a LATER arm's (or its own later) cell. Each arm therefore gets a fresh
+ * browser (Vite prebundle is server-side, so relaunch is cheap), and any cell that
+ * WEDGES (`CELL_TIMEOUT_MS`) is abandoned as `unavailable` with the browser
+ * relaunched for the arm's remaining cells. The matrix always completes; a
+ * pathological arm loses only its wedging cells, each disclosed in the report.
+ *
+ * For WebGPU the adapter identity is read once; a null or software adapter emits
+ * every cell as `unavailable` rather than measuring a software rasterizer.
  */
 const runBackend = async (options: {
   baseUrl: string;
@@ -450,87 +502,125 @@ const runBackend = async (options: {
 }): Promise<{ provenance: Provenance; results: CellResult[] }> => {
   const { baseUrl, backend, cells, engineVersion, onCellResult } = options;
   const flags = backend === 'webgpu' ? WEBGPU_LAUNCH_FLAGS : LAUNCH_FLAGS;
-  const browser = await chromium.launch({ channel: 'chromium', headless: true, args: [...flags] });
 
-  try {
-    const page = await browser.newPage();
+  // Group cells by arm (engine|config) in first-seen order so each arm runs in its
+  // own browser session, isolated from every other arm's accumulated state.
+  const armOrder: string[] = [];
+  const armGroups = new Map<string, CellSpec[]>();
 
-    await page.goto(baseUrl, { waitUntil: 'load' });
-    await page.waitForFunction(() => typeof globalThis.__runBaselineCell === 'function');
+  for (const cell of cells) {
+    const key = `${cell.engine}|${cell.config}`;
+    const group = armGroups.get(key);
 
-    const timestamp = new Date().toISOString();
-    const results: CellResult[] = [];
-    const collect = (result: CellResult): void => {
-      results.push(result);
-      onCellResult(result);
-    };
+    if (group === undefined) {
+      armGroups.set(key, [cell]);
+      armOrder.push(key);
+    } else {
+      group.push(cell);
+    }
+  }
 
-    if (backend === 'webgpu') {
-      const identity = await readWebGpuAdapter(page);
-      const provenance: Provenance = {
-        adapter: identity.adapter,
-        backend,
-        flags,
-        headless: true,
-        engineVersion,
-        timestamp,
-        // Kept false even for a software adapter: those cells are emitted
-        // `unavailable` (no timings), so nothing here is an untrusted number, and
-        // flipping the shared honesty bit would wrongly taint the WebGL2 timings
-        // in the same report. The software identity is preserved in `adapter` and
-        // each cell's note instead.
-        software: false,
-      };
+  const timestamp = new Date().toISOString();
+  const results: CellResult[] = [];
+  const collect = (result: CellResult): void => {
+    results.push(result);
+    onCellResult(result);
+  };
 
-      if (!identity.usable) {
-        for (const cell of cells) {
-          collect(unavailableCell(cell, identity.note));
+  // WebGL2 renderer string, captured from `#stage`'s OWN context (review B8) the
+  // moment the FIRST ok cell has created it. `null` until then; a run with no ok
+  // cell keeps the `no-webgl2-context` provenance below. WebGPU adapter identity is
+  // read once and reused across every arm's session (same GPU, same flags).
+  let renderer: string | null = null;
+  let webgpuIdentity: WebGpuIdentity | null = null;
+
+  for (const key of armOrder) {
+    let remaining = armGroups.get(key)!;
+
+    // One browser per pass; a mid-arm wedge breaks out, closes it, and the outer
+    // loop relaunches a fresh one for whatever cells are left.
+    while (remaining.length > 0) {
+      const browser = await chromium.launch({ channel: 'chromium', headless: true, args: [...flags] });
+      let relaunch = false;
+
+      try {
+        const page = await browser.newPage();
+
+        await page.goto(baseUrl, { waitUntil: 'load' });
+        await page.waitForFunction(() => typeof globalThis.__runBaselineCell === 'function');
+
+        if (backend === 'webgpu') {
+          webgpuIdentity ??= await readWebGpuAdapter(page);
+
+          if (!webgpuIdentity.usable) {
+            for (const cell of remaining) {
+              collect(unavailableCell(cell, webgpuIdentity.note));
+            }
+
+            remaining = [];
+          }
         }
 
-        return { provenance, results };
+        while (remaining.length > 0) {
+          const cell = remaining[0]!;
+          const outcome = await runCellOrWedge(page, cell);
+
+          if (outcome === CELL_WEDGED) {
+            collect(
+              unavailableCell(
+                cell,
+                `cell wedged the browser (no result after ${CELL_TIMEOUT_MS}ms — a mid-frame GPU-driver stall the in-page guards cannot interrupt); isolated as unavailable, browser relaunched for the arm's remaining cells`,
+              ),
+            );
+            remaining = remaining.slice(1);
+            relaunch = true;
+            break;
+          }
+
+          collect(outcome);
+
+          if (backend === 'webgl2' && renderer === null && outcome.status === 'ok') {
+            renderer = await readRendererInPage(page);
+          }
+
+          remaining = remaining.slice(1);
+        }
+      } finally {
+        await browser.close();
       }
 
-      for (const cell of cells) {
-        collect(await runCellInPage(page, cell));
+      if (!relaunch) {
+        break;
       }
-
-      return { provenance, results };
     }
-
-    // Read the WebGL2 renderer string from `#stage`'s OWN context (review B8),
-    // captured the moment the FIRST successful cell has created it — NOT after
-    // the whole backend has run. The arms share one `#stage` canvas/context, and
-    // a competitor arm (Pixi runs last) tears down by LOSING that context on
-    // `destroy`; reading at the end would then see `no-webgl2-context` and lose
-    // the real adapter identity + software-rasterizer honesty bit. The first arm
-    // is always ExoJS, whose `init` creates the very context every later cell
-    // reuses, so this reads the exact context the measured cells ran on.
-    let renderer = 'no-webgl2-context';
-
-    for (const cell of cells) {
-      const result = await runCellInPage(page, cell);
-
-      collect(result);
-
-      if (renderer === 'no-webgl2-context' && result.status === 'ok') {
-        renderer = await readRendererInPage(page);
-      }
-    }
-
-    const provenance: Provenance = {
-      adapter: renderer,
-      backend,
-      flags,
-      headless: true,
-      engineVersion,
-      timestamp,
-      software: isSoftwareRenderer(renderer),
-    };
-
-    return { provenance, results };
-  } finally {
-    await browser.close();
   }
+
+  const provenance: Provenance =
+    backend === 'webgpu'
+      ? {
+          adapter: webgpuIdentity?.adapter ?? 'no-webgpu-adapter',
+          backend,
+          flags,
+          headless: true,
+          engineVersion,
+          timestamp,
+          // False even for a software adapter: those cells are emitted `unavailable`
+          // (no timings), so nothing here is an untrusted number, and flipping the
+          // honesty bit would wrongly taint the WebGL2 timings. The software identity
+          // is preserved in `adapter` and each cell's note instead.
+          software: false,
+        }
+      : {
+          adapter: renderer ?? 'no-webgl2-context',
+          backend,
+          flags,
+          headless: true,
+          engineVersion,
+          timestamp,
+          software: renderer !== null && isSoftwareRenderer(renderer),
+        };
+
+  return { provenance, results };
 };
 
 /** Full outcome of a matrix run: per-backend provenance, competitor-library provenance, and every cell result. */

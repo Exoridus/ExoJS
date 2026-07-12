@@ -24,7 +24,30 @@ const STAGE_HEIGHT = 720;
  * the id stays `stage` so the driver's provenance read still finds it.
  */
 const freshStageCanvas = (): HTMLCanvasElement => {
-  document.getElementById('stage')?.remove();
+  const previous = document.getElementById('stage');
+
+  // Removing the canvas element does NOT free its WebGL context — that waits on
+  // GC, which is non-deterministic. Across the ~90-cell WebGL2 matrix the orphaned
+  // contexts pile up past the browser's live-context cap (~16) and a later cell's
+  // init/renderFrame wedges indefinitely (the observed cell-87 freeze: the excalibur
+  // arm's `engine.dispose()` drops references but never loses the GL context, so
+  // each excalibur cell leaked one). Force-lose the PREVIOUS cell's context here —
+  // one cell after it ran, so the driver's post-first-ok-cell provenance read
+  // (`readRendererInPage`) still finds a live context — which deterministically
+  // frees that context's GPU resources regardless of what the arm's teardown did.
+  // webgl2 and webgl1 (Phaser renders WebGL1) are both handled; a webgpu cell has
+  // no webgl context here and is skipped.
+  if (previous instanceof HTMLCanvasElement) {
+    // `getContext('webgl2')` returns the existing context when one is present
+    // (it never creates a second); falling back to `'webgl'` covers Phaser's
+    // WebGL1 canvas. A webgpu (or context-less) canvas yields null on both and is
+    // left untouched.
+    const gl = previous.getContext('webgl2') ?? previous.getContext('webgl');
+
+    gl?.getExtension('WEBGL_lose_context')?.loseContext();
+  }
+
+  previous?.remove();
 
   const canvas = document.createElement('canvas');
 
@@ -56,6 +79,35 @@ const FRAME_BUDGET_MS = 200;
  * samples, never a bogus single-frame "median".
  */
 const ABORT_WINDOW = 3;
+/**
+ * Wall-clock cap on the synchronous warmup phase (ms). Warmup runs
+ * `spec.warmupFrames` — scaled UP with node count (review B7) — to settle
+ * shader-compile / texture-upload / JIT before timing, but that frame COUNT
+ * assumes cheap frames. A pathological cell (a weak arm under 25k full-viewport
+ * overdraw renders multi-second frames) turned a 25-frame warmup into a 10+
+ * minute stall with no bound: the timed loop has `shouldAbort`, warmup had
+ * nothing. Cap warmup by TIME instead — an engine is fully warm within a few
+ * frames, and once cumulative warmup passes this budget the cell is either
+ * already deep into cheap frames (so it hit `warmupFrames` first and this never
+ * bound) or rendering multi-second frames (so it will abort in the timed phase —
+ * more warmup is wasted work). Set well above the worst TRUSTED warmup
+ * (`warmupFrames` × `FRAME_BUDGET_MS` ≈ 8s at the abort edge), so a cell that
+ * produces a trusted timing never has its warmup truncated; only catastrophic
+ * cells are cut short — to a single frame, since one such frame alone blows the
+ * budget.
+ */
+const WARMUP_BUDGET_MS = 10_000;
+/**
+ * Single-frame hard-abort threshold for the timed loop (10× `FRAME_BUDGET_MS`).
+ * `shouldAbort`'s median-of-last-`ABORT_WINDOW` rule deliberately never aborts on
+ * ONE slow frame (review B9: a lone GC/scheduler spike must not fake a runaway).
+ * But a frame at 10× the budget is not a spike — no realistic blip turns a
+ * sub-200ms cell into a 2s frame — it is a catastrophically slow cell that WILL
+ * abort regardless. Aborting after the first such frame, rather than waiting for
+ * three, cuts a weak arm's heaviest cells from minutes to seconds with the SAME
+ * `exceeded` verdict; the B9 median rule still governs every borderline case.
+ */
+const HARD_FRAME_BUDGET_MS = FRAME_BUDGET_MS * 10;
 
 /**
  * Reduce accumulated structural totals to per-frame figures. Draw/bind/upload
@@ -417,15 +469,29 @@ export const runCell = async (adapter: EngineAdapter, spec: CellSpec, canvas: HT
       );
     }
 
+    // Warmup is bounded by BOTH frame count and wall-clock (see WARMUP_BUDGET_MS):
+    // a pathologically slow cell stops warming after its first frame instead of
+    // grinding through every warmupFrame, while a normal cell hits its full frame
+    // budget long before the deadline.
+    const warmupDeadline = performance.now() + WARMUP_BUDGET_MS;
+
     for (let frame = 0; frame < spec.warmupFrames; frame++) {
       adapter.mutate(frame);
       adapter.renderFrame();
+
+      if (performance.now() >= warmupDeadline) {
+        break;
+      }
     }
 
     probe.reset();
 
     const rafDeltasMs: number[] = [];
     let exceeded = false;
+    // Set to the human-readable reason the moment the cell aborts, so the two
+    // abort paths (single-frame hard cap vs. sustained-median) each explain
+    // themselves precisely instead of the note being reconstructed after the fact.
+    let abortNote: string | null = null;
 
     await new Promise<void>((resolve, reject) => {
       let frame = 0;
@@ -454,10 +520,24 @@ export const runCell = async (adapter: EngineAdapter, spec: CellSpec, canvas: HT
 
           frame++;
 
+          const lastMs = timer.samples[timer.samples.length - 1]!;
+
+          // Hard single-frame abort: a frame at 10x budget is catastrophic, not a
+          // spike, so abort now rather than waiting for the ABORT_WINDOW median
+          // (see HARD_FRAME_BUDGET_MS). Keeps a weak arm's heaviest cells to a
+          // single timed frame.
+          if (lastMs > HARD_FRAME_BUDGET_MS) {
+            exceeded = true;
+            abortNote = `a single timed frame took ${lastMs.toFixed(1)}ms (> ${HARD_FRAME_BUDGET_MS}ms hard cap, ${HARD_FRAME_BUDGET_MS / FRAME_BUDGET_MS}x the ${FRAME_BUDGET_MS}ms budget); cell aborted after ${frame} frame(s) — median/p95 below rest on ${frame} sample(s)`;
+            resolve();
+            return;
+          }
+
           // B9 — abort on a sustained slowdown, not a single spike (see
           // `shouldAbort`'s doc comment for the full rationale).
           if (shouldAbort(timer.samples, FRAME_BUDGET_MS, ABORT_WINDOW)) {
             exceeded = true;
+            abortNote = `the trailing ${ABORT_WINDOW}-frame median exceeded ${FRAME_BUDGET_MS}ms; cell aborted after ${frame} frame(s) — median/p95 below rest on ${frame} sample(s), not a single-frame artifact`;
             resolve();
             return;
           }
@@ -503,9 +583,7 @@ export const runCell = async (adapter: EngineAdapter, spec: CellSpec, canvas: HT
     const frameMsP95 = frameSamplesMs.length > 0 ? percentile(frameSamplesMs, 95) : null;
 
     const notes = [
-      exceeded
-        ? `the trailing ${ABORT_WINDOW}-frame median exceeded ${FRAME_BUDGET_MS}ms; cell aborted after ${measuredFrames} frame(s) — median/p95 below rest on ${measuredFrames} sample(s), not a single-frame artifact`
-        : unevenNote,
+      exceeded ? abortNote : unevenNote,
       structuralNote,
       gpuUsable ? gpuTimer.note : NO_GPU_TIMER_NOTE,
     ].filter((value): value is string => value !== null);
