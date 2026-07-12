@@ -41,6 +41,7 @@ const runRenderingDomain = async (args: Map<string, string>): Promise<void> => {
   const archetypeArg = args.get('archetype');
   const nodesArg = args.get('nodes');
   const framesArg = args.get('frames');
+  const engineArg = args.get('engine');
   const outDir = resolve(args.get('out') ?? DEFAULT_OUT_DIR);
 
   const backends: readonly Backend[] = backendArg ? (backendArg.split(',').map(value => value.trim()) as Backend[]) : DEFAULT_BACKENDS;
@@ -52,6 +53,10 @@ const runRenderingDomain = async (args: Map<string, string>): Promise<void> => {
 
   if (archetypeArg !== undefined) {
     filter.archetype = archetypeArg as ArchetypeId;
+  }
+
+  if (engineArg !== undefined) {
+    filter.engine = engineArg;
   }
 
   if (nodesArg !== undefined) {
@@ -84,14 +89,14 @@ const runRenderingDomain = async (args: Map<string, string>): Promise<void> => {
     timedFramesOverride = frames;
   }
 
-  const isSubset = backendArg !== undefined || archetypeArg !== undefined || nodesArg !== undefined || timedFramesOverride !== undefined;
+  const isSubset = backendArg !== undefined || archetypeArg !== undefined || nodesArg !== undefined || engineArg !== undefined || timedFramesOverride !== undefined;
 
   if (isSubset) {
     console.warn('SUBSET RUN — not a reportable comparison (see the same-session rule).');
   }
 
   console.log(
-    `Running rendering benchmark: backends=[${backends.join(', ')}]${archetypeArg ? `, archetype=${archetypeArg}` : ''}${nodesArg ? `, nodes=${nodesArg}` : ''}${timedFramesOverride !== undefined ? `, frames=${timedFramesOverride} (OVERRIDE — thin sampling, not reportable)` : ''}`,
+    `Running rendering benchmark: backends=[${backends.join(', ')}]${engineArg ? `, engine=${engineArg}` : ''}${archetypeArg ? `, archetype=${archetypeArg}` : ''}${nodesArg ? `, nodes=${nodesArg}` : ''}${timedFramesOverride !== undefined ? `, frames=${timedFramesOverride} (OVERRIDE — thin sampling, not reportable)` : ''}`,
   );
 
   // Incremental, crash-safe checkpoint: each cell is persisted the instant it
