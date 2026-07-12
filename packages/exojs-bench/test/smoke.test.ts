@@ -74,9 +74,10 @@ describe('baseline harness smoke', () => {
     expect(result.structural.drawCalls).toBeGreaterThan(0);
 
     // Deterministic structural gate: this fixed 1k static-heavy scene issues
-    // exactly ONE draw call per frame (one texture, one batch, culling on but
-    // everything on-screen). Structural counters are noise-free, so a change in
-    // this number for the fixed scene is a real regression, not timing drift.
+    // exactly ONE draw call per frame (one texture, one batch; culling is
+    // disabled cross-arm per review C4, see `archetypes.ts`). Structural
+    // counters are noise-free, so a change in this number for the fixed scene
+    // is a real regression, not timing drift.
     expect(result.structural.drawCalls).toBe(1);
 
     // A real per-frame CPU time was measured. No timing THRESHOLD is asserted.

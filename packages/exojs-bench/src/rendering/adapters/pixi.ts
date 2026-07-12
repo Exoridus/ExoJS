@@ -151,6 +151,13 @@ export const createPixiAdapter = (): EngineAdapter => {
       // propagation identically for a fair per-node cost.
       const sceneRoot = new Container();
 
+      // `spec.cullingEnabled` is `false` for every archetype (review C4
+      // fairness fix, see `archetypes.ts`): setting `.cullable` here is a
+      // no-op anyway because this arm never registers `CullerPlugin` (nor
+      // calls `Culler.shared.cull(...)`) — the flag is inert data on Pixi
+      // unless one of those is wired up. Kept in sync with the ExoJS arm's
+      // flag purely so both scenes stay a byte-for-byte transcription of
+      // each other, not because it does anything on this side.
       sceneRoot.cullable = spec.cullingEnabled;
 
       const spine: Container[] = [sceneRoot];

@@ -16,7 +16,22 @@ export interface ArchetypeSpec {
   readonly textureCount: number;
   /** Fraction of nodes mutated per frame, in 0..1. */
   readonly mutationFraction: number;
-  /** Whether frustum/off-screen culling is enabled for this archetype. */
+  /**
+   * Whether frustum/off-screen culling is enabled for this archetype (drives
+   * `.cullable` on every spine container and leaf sprite in both adapters).
+   * Currently `false` for every archetype in `archetypes.ts` (review C4
+   * fairness fix): every archetype keeps its sprites on-screen, so a cull
+   * check can only ever be a no-op there, and the two engines do NOT pay the
+   * same cost for an identically-set flag. ExoJS's `cullable` drives a real
+   * per-node bounds+intersection check in the render walk
+   * (`SceneNode.inView`); Pixi's `cullable` is inert unless the app registers
+   * `CullerPlugin` (or `Culler.shared.cull(...)` is called explicitly), which
+   * `adapters/pixi.ts` does not do. Leaving this `true` therefore adds
+   * cull-walk overhead to the ExoJS arm with no matching cost on the Pixi arm.
+   * If a future archetype needs genuine off-screen content, either give Pixi
+   * an equivalent `CullerPlugin` registration before flipping this back to
+   * `true`, or disclose the asymmetry explicitly in the report.
+   */
   readonly cullingEnabled: boolean;
 }
 

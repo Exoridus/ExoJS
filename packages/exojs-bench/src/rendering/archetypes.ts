@@ -15,10 +15,26 @@ const GPU_BOUND_COUNTS = [1_000, 5_000, 25_000] as const;
  * at 25k: a 100k measurement there would be dominated by overdraw and state
  * changes and would say nothing about node scaling.
  */
+// Fairness (review C4): `cullingEnabled` is `false` on every archetype below.
+// Every archetype keeps its sprites fully on-screen (`GRID_MARGIN` in the
+// adapters), so a viewport cull check never actually removes a node here —
+// it can only ever be a no-op. Left on, it was pure asymmetric overhead: the
+// exojs adapter's `cullable` flag drives a REAL per-node bounds+intersection
+// check in the render walk (`SceneNode.inView`, called from every
+// `RenderNode.build`), while Pixi's `cullable` flag is inert data unless the
+// app registers `CullerPlugin` (or something calls `Culler.shared.cull(...)`
+// explicitly) — neither adapter does, so the Pixi arm paid nothing for the
+// identically-set flag. That inflated ExoJS's per-node cost in every
+// cross-arm comparison for a check that never changed the visible set.
+// Disabling it on both arms makes them do the same visible-set work; see
+// `EngineAdapter.ts`'s `cullingEnabled` doc and the report's Methodology
+// section for the full disclosure. Re-enabling it for a future archetype that
+// genuinely has off-screen content requires giving Pixi an equivalent
+// `CullerPlugin` registration first, or the asymmetry returns.
 export const ARCHETYPES: readonly ArchetypeSpec[] = [
-  { id: 'static-heavy', nodeCounts: SCALING_COUNTS, nestingDepth: 4, textureCount: 1, mutationFraction: 0, cullingEnabled: true },
-  { id: 'dynamic-heavy', nodeCounts: SCALING_COUNTS, nestingDepth: 4, textureCount: 1, mutationFraction: 0.075, cullingEnabled: true },
-  { id: 'deep-hierarchy', nodeCounts: SCALING_COUNTS, nestingDepth: 16, textureCount: 1, mutationFraction: 0.01, cullingEnabled: true },
+  { id: 'static-heavy', nodeCounts: SCALING_COUNTS, nestingDepth: 4, textureCount: 1, mutationFraction: 0, cullingEnabled: false },
+  { id: 'dynamic-heavy', nodeCounts: SCALING_COUNTS, nestingDepth: 4, textureCount: 1, mutationFraction: 0.075, cullingEnabled: false },
+  { id: 'deep-hierarchy', nodeCounts: SCALING_COUNTS, nestingDepth: 16, textureCount: 1, mutationFraction: 0.01, cullingEnabled: false },
   // Sprites are stretched to the full viewport by the exojs adapter (see the
   // `overdraw` branch in `adapters/exojs.ts::buildScene`) so stacking
   // nodeCount of them is genuine fill-bound overdraw, not 8x8px noise (review
@@ -32,7 +48,7 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
   // 16-texture ceiling, or the archetype stops breaking batches entirely.
   // NOTE: this changes the benchmark definition — results measured before
   // 2026-07-11 (textureCount 16) are not comparable on this archetype.
-  { id: 'batch-breaking', nodeCounts: GPU_BOUND_COUNTS, nestingDepth: 2, textureCount: 24, mutationFraction: 0, cullingEnabled: true },
+  { id: 'batch-breaking', nodeCounts: GPU_BOUND_COUNTS, nestingDepth: 2, textureCount: 24, mutationFraction: 0, cullingEnabled: false },
 ];
 
 /**
