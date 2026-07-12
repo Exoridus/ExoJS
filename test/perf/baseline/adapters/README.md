@@ -62,6 +62,12 @@ Every arm implements (full JSDoc in `../EngineAdapter.ts`):
 - `gpuDevice?(): GPUDevice | null` — optional; return the live `GPUDevice` when
   initialised on `'webgpu'` so the harness can attach its structural probe (a
   WebGL2 context is instead recovered from the canvas). Return `null` otherwise.
+- `mutationSignature?(): string` — optional but **strongly recommended**; return
+  `mutationSignature(selectedIndices)` (from `../mutation.ts`) for the set your
+  most recent `buildScene` selected. The harness asserts it against the canonical
+  selection and **fails the run loudly** if it diverges, so the cross-arm
+  comparison rests on a check rather than this prose (review B3). An arm that
+  omits it runs, but prints a warning that its determinism is unverified.
 
 ### Two configs (the tier-gap axis)
 
@@ -88,14 +94,16 @@ any reference adapter **must** follow them identically:
 1. **Same node set.** Build exactly `nodeCount` leaves for the archetype, laid
    out and nested as `spec` describes (`nestingDepth`, `textureCount`,
    `cullingEnabled`, the `overdraw` stacking).
-2. **Same mutation selection.** Seed a fresh RNG with
-   `createRng(seed)` (from `../archetypes`) and draw **exactly one** `rng()`
-   value **per leaf, in ascending leaf index order**, selecting the leaf for
-   mutation when `rng() < spec.mutationFraction`. Draw the value for _every_
-   leaf even when `mutationFraction` is `0`-effectively-skipped — the point is
-   that both arms, seeded the same way and drawing in the same order, select the
-   byte-for-byte identical set of node indices. Do not batch, reorder, or draw
-   more than one value per leaf.
+2. **Same mutation selection.** Use `selectMutationIndices(nodeCount,
+spec.mutationFraction, seed)` (from `../mutation.ts`) — the shared, canonical
+   selection — to pick the leaves you mutate, and expose the result through
+   `mutationSignature()` (see the contract list above). The helper seeds a fresh
+   `createRng(seed)` and draws **exactly one** `rng()` value **per leaf, in
+   ascending index order**, selecting the leaf when `rng() < mutationFraction`
+   (drawing for _every_ leaf even when the fraction is `0`). Both arms, sharing
+   this one code path, therefore select the byte-for-byte identical index set,
+   and the harness verifies it. Do not re-implement the draw loop, batch,
+   reorder, or draw more than one value per leaf.
 3. **Same per-frame work.** `mutate(frame)` must disturb only that selected set,
    with a displacement small enough to never cross the viewport edge (so culling
    never changes the visible set mid-run).

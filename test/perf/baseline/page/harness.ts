@@ -3,6 +3,7 @@ import { ARCHETYPES } from '../archetypes';
 import type { CellResult, CellSpec, EngineAdapter, StructuralCounters } from '../EngineAdapter';
 import { attachWebGl2Probe, attachWebGpuProbe, type StructuralProbe } from '../metrics/structural';
 import { createCpuTimer, median, percentile } from '../metrics/timing';
+import { mutationSignature, selectMutationIndices } from '../mutation';
 
 /** Fixed RNG seed shared by every cell so both benchmark arms select the same mutation set. */
 const SEED = 0xc0ffee;
@@ -37,30 +38,40 @@ const perFrameStructural = (totals: StructuralCounters, frames: number): { struc
 const NO_GPU_TIMER_NOTE = 'frame time from rAF delta; no GPU timer';
 
 /**
+ * Note recorded on a WebGPU cell whose frame time comes from the queue's
+ * submit-to-done wall clock rather than the rAF present cadence. This value is
+ * de-vsynced GPU work, not a hardware timestamp — see {@link createWebGpuGpuTimer}.
+ */
+const WEBGPU_SUBMIT_TIMER_NOTE = 'frame time from queue.onSubmittedWorkDone (submit→done wall-clock; de-vsynced GPU work, not a hardware timestamp)';
+
+/**
  * Per-frame GPU-time source. `available` is false for the inert fallback used
  * when no GPU timer exists; callers then fall back to the rAF-delta wall clock.
  */
 interface GpuFrameTimer {
   /** Whether a real GPU timer is wired (vs. the inert fallback). */
   readonly available: boolean;
+  /** Caveat to attach to the cell when THIS timer's samples are the reported frame time, or null when the source needs none. */
+  readonly note: string | null;
   /** Open a GPU-time query bracketing the current frame's GPU commands. */
   beginFrame(): void;
   /** Close the current frame's GPU-time query. */
   endFrame(): void;
-  /** Drain resolved queries and return every elapsed-time sample (ms) gathered. */
-  collect(): number[];
+  /** Drain/await pending samples and return every elapsed-time sample (ms) gathered. */
+  collect(): Promise<number[]>;
 }
 
 /** GPU timer used when no timer extension/feature is available: contributes nothing, never fabricates a number. */
 const noopGpuTimer: GpuFrameTimer = {
   available: false,
+  note: null,
   beginFrame(): void {
     /* no GPU timer wired */
   },
   endFrame(): void {
     /* no GPU timer wired */
   },
-  collect(): number[] {
+  async collect(): Promise<number[]> {
     return [];
   },
 };
@@ -128,6 +139,8 @@ const createWebGl2GpuTimer = (gl: WebGL2RenderingContext): GpuFrameTimer => {
 
   return {
     available: true,
+    // A real hardware GPU-time query: canonical GPU frame time, no caveat needed.
+    note: null,
     beginFrame(): void {
       if (failed) {
         return;
@@ -161,7 +174,7 @@ const createWebGl2GpuTimer = (gl: WebGL2RenderingContext): GpuFrameTimer => {
         failed = true;
       }
     },
-    collect(): number[] {
+    async collect(): Promise<number[]> {
       // Results are near-certainly resolved once every timed frame has run;
       // spin-drain with a hard cap so a stuck query can never hang the harness.
       for (let spins = 0; pending.length > 0 && spins < 10_000; spins++) {
@@ -174,12 +187,71 @@ const createWebGl2GpuTimer = (gl: WebGL2RenderingContext): GpuFrameTimer => {
 };
 
 /**
- * Attach the structural probe (and, on WebGL2, a GPU timer) for a cell. The
- * WebGL2 context is recoverable from the canvas — `getContext('webgl2')` returns
- * the same object the engine created — but the WebGPU device is not, so it comes
- * from the adapter. WebGPU has no externally-wireable GPU timer: `timestamp-query`
- * needs `timestampWrites` injected into the backend's own render-pass
- * descriptors, out of the harness's reach, so its frame time is the rAF delta.
+ * WebGPU per-frame GPU timer that de-vsyncs the frame-time measurement.
+ *
+ * WebGPU exposes no externally-wireable hardware timestamp: `timestamp-query`
+ * would need `timestampWrites` injected into the backend's own render-pass
+ * descriptors, out of the harness's reach. The historical fallback — the delta
+ * between consecutive `requestAnimationFrame` callbacks — measures the DISPLAY
+ * PRESENT cadence, not GPU work: with a canvas swapchain the browser paces rAF to
+ * the refresh interval, so every small cell pins to the vsync quantum (e.g. 6.9ms
+ * at 144Hz) regardless of how little the GPU actually did. That column is
+ * therefore vsync cadence dressed up as GPU time (review B1).
+ *
+ * Instead, each frame this timer records the wall-clock interval from just AFTER
+ * the frame's command buffer was submitted (endFrame runs right after
+ * `renderFrame`, which calls `queue.submit` synchronously) until the device
+ * queue signals that submitted work is complete, via `queue.onSubmittedWorkDone`.
+ * That promise resolves on QUEUE COMPLETION, independent of the swapchain present
+ * that gates rAF, so the sample reflects the frame's actual GPU execution time
+ * rather than the vsync interval. Because the harness paces frames from rAF, the
+ * GPU has drained the previous frame before the next submit, so each frame's
+ * submit→done delta is that frame's own work (not a cumulative queue backlog).
+ *
+ * Caveats, documented honestly on the cell via {@link WEBGPU_SUBMIT_TIMER_NOTE}:
+ * this is a CPU-observed wall clock, not a hardware timestamp — it carries the
+ * fixed latency of the completion callback and is subject to the same
+ * `performance.now()` resolution clamp as the CPU timer (100µs until the page is
+ * served cross-origin-isolated). It is nonetheless a true measure of per-frame
+ * work rather than presentation cadence.
+ */
+const createWebGpuGpuTimer = (device: GPUDevice): GpuFrameTimer => {
+  const pending: Array<Promise<void>> = [];
+  const samplesMs: number[] = [];
+
+  return {
+    available: true,
+    note: WEBGPU_SUBMIT_TIMER_NOTE,
+    beginFrame(): void {
+      // The measurement bracket opens at endFrame (post-submit); nothing to do
+      // here. Kept for interface symmetry with the WebGL2 query timer.
+    },
+    endFrame(): void {
+      // renderFrame has already recorded AND submitted this frame's work.
+      const submittedAt = performance.now();
+
+      pending.push(
+        device.queue.onSubmittedWorkDone().then(() => {
+          samplesMs.push(performance.now() - submittedAt);
+        }),
+      );
+    },
+    async collect(): Promise<number[]> {
+      await Promise.all(pending);
+
+      return samplesMs;
+    },
+  };
+};
+
+/**
+ * Attach the structural probe and a per-frame GPU timer for a cell. The WebGL2
+ * context is recoverable from the canvas — `getContext('webgl2')` returns the
+ * same object the engine created — but the WebGPU device is not, so it comes from
+ * the adapter. WebGL2 uses a hardware `EXT_disjoint_timer_query_webgl2` timer when
+ * present; WebGPU has no externally-wireable hardware timestamp, so it uses the
+ * submit-to-done wall clock (see {@link createWebGpuGpuTimer}) — a de-vsynced
+ * measure of GPU work that replaces the old vsync-bound rAF delta (review B1).
  */
 const attachProbes = (adapter: EngineAdapter, spec: CellSpec, canvas: HTMLCanvasElement): { probe: StructuralProbe; gpuTimer: GpuFrameTimer } => {
   if (spec.backend === 'webgpu') {
@@ -189,7 +261,7 @@ const attachProbes = (adapter: EngineAdapter, spec: CellSpec, canvas: HTMLCanvas
       throw new Error('The webgpu backend did not expose a GPUDevice for probe attachment.');
     }
 
-    return { probe: attachWebGpuProbe(device), gpuTimer: noopGpuTimer };
+    return { probe: attachWebGpuProbe(device), gpuTimer: createWebGpuGpuTimer(device) };
   }
 
   const gl = canvas.getContext('webgl2');
@@ -207,12 +279,13 @@ const attachProbes = (adapter: EngineAdapter, spec: CellSpec, canvas: HTMLCanvas
  * then run the cell's timed frames FROM `requestAnimationFrame` while sampling
  * per-frame CPU time, full-frame wall-clock and draw-call structure.
  *
- * Frame wall-clock is the delta between consecutive rAF callbacks. Where a GPU
- * timer resolved real samples they take precedence; otherwise the rAF delta is
- * reported with {@link NO_GPU_TIMER_NOTE} — a GPU number is never fabricated.
- * The CPU timer still brackets exactly `mutate` + `renderFrame` (the primary
- * metric); the GPU-query bracket sits outside it so the restructuring does not
- * change what CPU time measures.
+ * Frame time prefers a real GPU timer: the WebGL2 hardware query, or the WebGPU
+ * submit-to-done wall clock (de-vsynced GPU work; review B1). Only when no GPU
+ * timer resolved samples does it fall back to the rAF delta, reported with
+ * {@link NO_GPU_TIMER_NOTE} — a GPU number is never fabricated. The CPU timer
+ * still brackets exactly `mutate` + `renderFrame` (the primary metric); the GPU
+ * bracket sits outside it so the restructuring does not change what CPU time
+ * measures.
  */
 export const runCell = async (adapter: EngineAdapter, spec: CellSpec, canvas: HTMLCanvasElement): Promise<CellResult> => {
   const archetype = ARCHETYPES.find(candidate => candidate.id === spec.archetype);
@@ -228,6 +301,27 @@ export const runCell = async (adapter: EngineAdapter, spec: CellSpec, canvas: HT
 
   try {
     adapter.buildScene(archetype, spec.nodeCount, SEED);
+
+    // B3 — cross-arm mutation determinism. The comparison across arms is valid
+    // only if every arm wobbles the IDENTICAL leaf set for a given (archetype,
+    // nodeCount, seed). Rather than compare arms pairwise (fragile), assert each
+    // arm against the CANONICAL selection derived from the neutral archetype spec
+    // — which transitively guarantees all arms agree. An arm that draws its RNG
+    // differently (the exact failure the fairness contract warns about) fails
+    // loudly HERE instead of silently producing an incomparable result. Arms that
+    // do not report a signature (optional method) are skipped with a warning.
+    const expectedSignature = mutationSignature(selectMutationIndices(spec.nodeCount, archetype.mutationFraction, SEED));
+    const actualSignature = adapter.mutationSignature?.();
+
+    if (actualSignature === undefined) {
+      console.warn(
+        `[baseline] arm engine='${spec.engine}' config='${spec.config}' reports no mutation signature; cross-arm determinism is UNVERIFIED for this arm (see EngineAdapter.mutationSignature).`,
+      );
+    } else if (actualSignature !== expectedSignature) {
+      throw new Error(
+        `Cross-arm mutation determinism violated: engine='${spec.engine}' config='${spec.config}' selected a different wobble set than the canonical seed=0x${SEED.toString(16)} selection for archetype='${spec.archetype}' n=${spec.nodeCount} (expected ${expectedSignature}, got ${actualSignature}). Arms are not comparable.`,
+      );
+    }
 
     for (let frame = 0; frame < WARMUP_FRAMES; frame++) {
       adapter.mutate(frame);
@@ -289,9 +383,26 @@ export const runCell = async (adapter: EngineAdapter, spec: CellSpec, canvas: HT
     });
 
     const measuredFrames = timer.samples.length;
+
+    // B4 — structural-probe self-check. The probe monkeypatches the live graphics
+    // context AFTER engine init (the device/context does not exist earlier), so an
+    // engine that cached its draw/bind method references at init would bypass the
+    // wrappers and silently report zero — an undercount masquerading as truth.
+    // Every archetype places drawable, on-screen sprites, so a non-empty cell MUST
+    // issue at least one draw; a zero here means the probe was bypassed, not that
+    // the scene drew nothing. Fail loudly rather than report the undercount.
+    // (Pre-wrapping the WebGL2 context BEFORE init was rejected: creating the
+    // context early would freeze the attributes the engine sets on its first
+    // getContext — e.g. antialias — changing what is measured.)
+    if (spec.nodeCount > 0 && probe.counters.drawCalls === 0) {
+      throw new Error(
+        `Structural probe recorded 0 draw calls for a non-empty ${spec.backend} scene (engine='${spec.engine}' config='${spec.config}' archetype='${spec.archetype}' n=${spec.nodeCount}); the probe wrappers were bypassed — counts are untrustworthy.`,
+      );
+    }
+
     const { structural, note: unevenNote } = perFrameStructural(probe.counters, measuredFrames);
 
-    const gpuSamplesMs = gpuTimer.collect();
+    const gpuSamplesMs = await gpuTimer.collect();
     const gpuUsable = gpuTimer.available && gpuSamplesMs.length > 0;
     const frameSamplesMs = gpuUsable ? gpuSamplesMs : rafDeltasMs;
     const frameMsMedian = frameSamplesMs.length > 0 ? median(frameSamplesMs) : null;
@@ -299,7 +410,7 @@ export const runCell = async (adapter: EngineAdapter, spec: CellSpec, canvas: HT
 
     const notes = [
       exceeded ? `a timed frame exceeded ${FRAME_BUDGET_MS}ms; cell aborted after ${measuredFrames} frame(s)` : unevenNote,
-      gpuUsable ? null : NO_GPU_TIMER_NOTE,
+      gpuUsable ? gpuTimer.note : NO_GPU_TIMER_NOTE,
     ].filter((value): value is string => value !== null);
     const note = notes.length > 0 ? notes.join('; ') : null;
 
