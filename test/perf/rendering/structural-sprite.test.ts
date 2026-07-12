@@ -27,7 +27,7 @@ const withHarness = (fn: (harness: WebGl2Harness) => void): void => {
 };
 
 describe('structural — Sprite', () => {
-  it('1000 sprites / 1 texture → one draw, 1000 instances, 36 bytes each', () => {
+  it('1000 sprites / 1 texture → one draw, 1000 instances, 32 bytes each', () => {
     withHarness(harness => {
       const { root } = buildSpriteScene({ count: 1000, textures: makeTextures(1) });
       const m = measureSteadyFrame(harness, root, 2);
@@ -36,7 +36,7 @@ describe('structural — Sprite', () => {
       expect(m.batches).toBe(1);
       expect(m.instances).toBe(1000);
       expect(m.visibleNodes).toBe(1000);
-      expect(m.uploadedBufferBytes).toBe(1000 * 36);
+      expect(m.uploadedBufferBytes).toBe(1000 * 32);
 
       root.destroy();
     });

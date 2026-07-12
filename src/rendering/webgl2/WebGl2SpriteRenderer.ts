@@ -26,23 +26,22 @@ import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './
  * the quad each invocation is computing. All per-sprite data lives in a
  * single per-instance buffer (divisor = 1).
  *
- * Per-instance layout (36 bytes per sprite, 5 attributes):
+ * Per-instance layout (32 bytes per sprite, 4 attributes):
  * ```
  *   localBounds    f32x4       (offset  0, 16 bytes)  — left, top, right, bottom
  *   uvBounds       u16x4 norm  (offset 16,  8 bytes)  — uMin, vMin, uMax, vMax
- *   color          u8x4  norm  (offset 24,  4 bytes)  — RGBA tint
- *   textureSlot    u32         (offset 28,  4 bytes)  — multi-texture slot
- *   nodeIndex      u32         (offset 32,  4 bytes)  — row into the shared TransformBuffer
+ *   textureSlot    u32         (offset 24,  4 bytes)  — multi-texture slot
+ *   nodeIndex      u32         (offset 28,  4 bytes)  — row into the shared TransformBuffer
  * ```
  *
- * The per-instance world transform no longer lives in this buffer: it is
- * fetched in the vertex shader from the shared {@link TransformBuffer}
+ * Neither the per-instance world transform nor the tint live in this buffer:
+ * both are fetched in the vertex shader from the shared {@link TransformBuffer}
  * texture (`u_transforms`) keyed by `a_nodeIndex`, exactly like the mesh
- * renderer. The render-group upload boundary (PR #44) already packs every
- * draw command's transform into that buffer at its stable `nodeIndex`, so the
- * sprite just reads it back instead of re-packing 24 bytes of affine rows per
- * instance. vs. the previous per-vertex layout (80 bytes per quad), the
- * vertex shader still expands one instance into four corners on the GPU.
+ * renderer (transform = texels 0/1, tint = texel 2). The render-group upload
+ * boundary already packs every draw command's transform AND tint into that
+ * buffer at its stable `nodeIndex`, so the sprite reads both back instead of
+ * duplicating a per-instance color stream. The vertex shader still expands one
+ * instance into four corners on the GPU.
  *
  * # Default vs custom-material path
  *
@@ -70,7 +69,7 @@ const transformTextureUnit = 16;
 // Deliberately decoupled from maxBatchTextures — bumping the default-path
 // batch capacity must not silently widen what materials may request.
 const maxCustomTextureSlots = 8;
-const instanceStrideBytes = 36;
+const instanceStrideBytes = 32;
 const wordsPerInstance = instanceStrideBytes / Uint32Array.BYTES_PER_ELEMENT;
 
 interface SpriteRendererConnection {
@@ -302,7 +301,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
   }
 
   // ── Retained-batch record/replay (Track B Slice 3, Tasks 6/7) ────────────
-  // The bundle stores raw instance bytes; this renderer owns the 36-byte
+  // The bundle stores raw instance bytes; this renderer owns the 32-byte
   // layout, so the layout-aware finalize steps (node-index scan/rebase, VAO
   // attribute wiring) and the replay dispatch live here.
 
@@ -313,7 +312,8 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
 
     for (let i = 0; i < payload.instanceCount; i++) {
       // In-bounds: the payload's word range was appended to the bundle store.
-      const node = words[start + i * wordsPerInstance + 8]!;
+      // nodeIndex is the last word of the 32-byte (8-word) instance layout.
+      const node = words[start + i * wordsPerInstance + 7]!;
 
       if (node < range.min) {
         range.min = node;
@@ -331,7 +331,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     const start = payload.byteOffset / Uint32Array.BYTES_PER_ELEMENT;
 
     for (let i = 0; i < payload.instanceCount; i++) {
-      const index = start + i * wordsPerInstance + 8;
+      const index = start + i * wordsPerInstance + 7;
 
       // In-bounds: see the scan above.
       words[index] = (words[index]! - base) >>> 0;
@@ -359,9 +359,8 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     vao
       .addAttribute(buffer, this._shader.getAttribute('a_localBounds'), gl.FLOAT, false, instanceStrideBytes, base + 0, false, 1)
       .addAttribute(buffer, this._shader.getAttribute('a_uvBounds'), gl.UNSIGNED_SHORT, true, instanceStrideBytes, base + 16, false, 1)
-      .addAttribute(buffer, this._shader.getAttribute('a_color'), gl.UNSIGNED_BYTE, true, instanceStrideBytes, base + 24, false, 1)
-      .addAttribute(buffer, this._shader.getAttribute('a_textureSlot'), gl.UNSIGNED_INT, false, instanceStrideBytes, base + 28, true, 1)
-      .addAttribute(buffer, this._shader.getAttribute('a_nodeIndex'), gl.UNSIGNED_INT, false, instanceStrideBytes, base + 32, true, 1);
+      .addAttribute(buffer, this._shader.getAttribute('a_textureSlot'), gl.UNSIGNED_INT, false, instanceStrideBytes, base + 24, true, 1)
+      .addAttribute(buffer, this._shader.getAttribute('a_nodeIndex'), gl.UNSIGNED_INT, false, instanceStrideBytes, base + 28, true, 1);
   }
 
   /**
@@ -437,9 +436,8 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     this._vao = new WebGl2VertexArrayObject(RenderingPrimitives.TriangleStrip)
       .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_localBounds'), gl.FLOAT, false, instanceStrideBytes, 0, false, 1)
       .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_uvBounds'), gl.UNSIGNED_SHORT, true, instanceStrideBytes, 16, false, 1)
-      .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_color'), gl.UNSIGNED_BYTE, true, instanceStrideBytes, 24, false, 1)
-      .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_textureSlot'), gl.UNSIGNED_INT, false, instanceStrideBytes, 28, true, 1)
-      .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_nodeIndex'), gl.UNSIGNED_INT, false, instanceStrideBytes, 32, true, 1)
+      .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_textureSlot'), gl.UNSIGNED_INT, false, instanceStrideBytes, 24, true, 1)
+      .addAttribute(this._instanceBuffer, this._shader.getAttribute('a_nodeIndex'), gl.UNSIGNED_INT, false, instanceStrideBytes, 28, true, 1)
       .connect(this._createVaoRuntime(this._connection));
 
     // Pin the per-slot sampler uniforms to texture units 0..N-1. Strict on
@@ -575,16 +573,15 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     u32[offset + 4] = uMin | (vMin << 16);
     u32[offset + 5] = uMax | (vMax << 16);
 
-    // color (u8x4 packed) at word 6
-    u32[offset + 6] = sprite.tint.toRgba();
+    // textureSlot (u32) at word 6. The tint is NOT packed here: the vertex
+    // shader reads it from the shared transform slot's texel 2 (same value the
+    // transform-buffer upload boundary wrote from this sprite's tint).
+    u32[offset + 6] = slot;
 
-    // textureSlot (u32) at word 7
-    u32[offset + 7] = slot;
-
-    // nodeIndex (u32) at word 8 — row into the shared transform buffer.
+    // nodeIndex (u32) at word 7 — row into the shared transform buffer.
     const node = nodeIndex >>> 0;
 
-    u32[offset + 8] = node;
+    u32[offset + 7] = node;
 
     if (node > this._maxNodeIndex) {
       this._maxNodeIndex = node;

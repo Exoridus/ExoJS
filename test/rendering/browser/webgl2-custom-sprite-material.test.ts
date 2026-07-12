@@ -14,8 +14,9 @@ import { wireCoreRenderers } from './_coreRenderers';
 // The browser project rewrites `.vert`/`.frag` imports to empty strings, so the
 // default engine shaders the backend compiles on connect must be mocked with
 // valid sources. The sprite vertex mock keeps the REAL pinned attribute
-// locations (0..5) so the renderer's shared VAO matches the custom material's
-// `spriteVertexGlsl` (which is also location-pinned). The custom path compiles
+// locations (0, 3, 5, 6; tint read from transform texel 2) so the renderer's
+// shared VAO matches the custom material's `spriteVertexGlsl` (which is also
+// location-pinned). The custom path compiles
 // the real `spriteVertexGlsl` constant — that module is not a `.vert` import and
 // is therefore NOT mocked.
 const shaderSources = vi.hoisted(() => ({
@@ -24,7 +25,6 @@ precision highp float;
 precision highp int;
 layout(location = 0) in vec4 a_localBounds;
 layout(location = 3) in vec4 a_uvBounds;
-layout(location = 4) in vec4 a_color;
 layout(location = 5) in uint a_textureSlot;
 layout(location = 6) in uint a_nodeIndex;
 uniform mat3 u_projection;
@@ -41,13 +41,14 @@ void main() {
   int row = int(a_nodeIndex);
   vec4 m0 = texelFetch(u_transforms, ivec2(0, row), 0);
   vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0);
+  vec4 m2 = texelFetch(u_transforms, ivec2(2, row), 0);
   float worldX = (m0.x * localX) + (m0.y * localY) + m1.x;
   float worldY = (m0.z * localX) + (m0.w * localY) + m1.y;
   gl_Position = vec4((u_projection * vec3(worldX, worldY, 1.0)).xy, 0.0, 1.0);
   float u = (cornerX == 0) ? a_uvBounds.x : a_uvBounds.z;
   float v = (cornerY == 0) ? a_uvBounds.y : a_uvBounds.w;
   v_texcoord = vec2(u, v);
-  v_color = vec4(a_color.rgb * a_color.a, a_color.a);
+  v_color = vec4(m2.rgb * m2.a, m2.a);
   v_textureSlot = a_textureSlot;
 }`,
 

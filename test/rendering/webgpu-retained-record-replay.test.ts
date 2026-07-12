@@ -390,12 +390,13 @@ describe('WebGPU retained record/replay: fallback ladder + B-06 submit collapse'
 
       expect(instanceWrites).toHaveLength(1);
 
-      // Two 36-byte instances; word 8 of each is the (rebased) node index.
+      // Two 32-byte instances (8 words each); the last word of each is the
+      // (rebased) node index — tint is read from the shared transform slot.
       const words = new Uint32Array(instanceWrites[0]!.bytes.buffer, instanceWrites[0]!.bytes.byteOffset, instanceWrites[0]!.bytes.byteLength / 4);
 
-      expect(words).toHaveLength(18);
-      expect(words[8]).toBe(0);
-      expect(words[17]).toBe(1);
+      expect(words).toHaveLength(16);
+      expect(words[7]).toBe(0);
+      expect(words[15]).toBe(1);
 
       // The group-owned transform copy covers exactly the group's 2 rows.
       const transformWrites = environment.writes().filter(write => write.label === retainedTransformLabel);

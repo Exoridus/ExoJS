@@ -1276,13 +1276,13 @@ export class WebGpuBackend implements RenderBackend {
 
     bytes.set(new Uint8Array(instanceData, 0, byteLength));
 
-    // Scan the frame-global node indices (word 8 of each 9-word instance) so
+    // Scan the frame-global node indices (word 7 of each 8-word instance) so
     // capture end can rebase them group-local and copy the row range once.
     const words = new Uint32Array(bytes.buffer);
     let minNodeIndex = 0xffffffff;
     let maxNodeIndex = 0;
 
-    for (let i = 8; i < words.length; i += 9) {
+    for (let i = 7; i < words.length; i += 8) {
       // In-bounds: i < words.length via the loop guard.
       const nodeIndex = words[i]!;
 
@@ -1393,12 +1393,12 @@ export class WebGpuBackend implements RenderBackend {
     bundle.ensureCapacity(device, frame.totalBytes, transformBytes);
 
     for (const batch of staged) {
-      // Rebase word 8 (nodeIndex) of every 9-word instance to group-local
+      // Rebase word 7 (nodeIndex) of every 8-word instance to group-local
       // indices — the cached bytes become immune to frame-local index shifts
       // (S3-D4) and address the group-owned row copy below.
       const words = new Uint32Array(batch.bytes.buffer, batch.bytes.byteOffset, batch.bytes.byteLength / Uint32Array.BYTES_PER_ELEMENT);
 
-      for (let i = 8; i < words.length; i += 9) {
+      for (let i = 7; i < words.length; i += 8) {
         // In-bounds: i < words.length via the loop guard.
         words[i] = words[i]! - base;
       }

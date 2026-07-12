@@ -7,7 +7,6 @@ precision highp int;
 // quad this invocation is computing.
 layout(location = 0) in vec4 a_localBounds;     // left, top, right, bottom (local space)
 layout(location = 3) in vec4 a_uvBounds;        // uMin, vMin, uMax, vMax (normalised, already flipY-swapped)
-layout(location = 4) in vec4 a_color;           // RGBA tint
 layout(location = 5) in uint a_textureSlot;
 layout(location = 6) in uint a_nodeIndex;       // row into the shared transform buffer
 
@@ -29,13 +28,16 @@ void main(void) {
     float localX = (cornerX == 0) ? a_localBounds.x : a_localBounds.z;
     float localY = (cornerY == 0) ? a_localBounds.y : a_localBounds.w;
 
-    // Fetch the world transform for this instance from the shared buffer,
-    // keyed by a_nodeIndex. Row layout: texel 0 = (a, b, c, d),
-    // texel 1 = (tx, ty, 0, 0). (texel 2 carries tint, unused here — the
-    // sprite keeps its own per-instance a_color.)
+    // Fetch the world transform and tint for this instance from the shared
+    // buffer, keyed by a_nodeIndex. Row layout: texel 0 = (a, b, c, d),
+    // texel 1 = (tx, ty, 0, 0), texel 2 = tint (rgb in 0..1, a). The node tint
+    // is the sprite's own tint (written at the transform-buffer upload
+    // boundary), so reading it here unifies with the mesh path and removes the
+    // redundant per-instance a_color stream.
     int row = int(a_nodeIndex);
     vec4 m0 = texelFetch(u_transforms, ivec2(0, row), 0); // a, b, c, d
     vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0); // tx, ty, 0, 0
+    vec4 m2 = texelFetch(u_transforms, ivec2(2, row), 0); // tint (rgb 0..1, a)
 
     // world = M * (localX, localY, 1)
     float worldX = (m0.x * localX) + (m0.y * localY) + m1.x;
@@ -49,6 +51,6 @@ void main(void) {
     float v = (cornerY == 0) ? a_uvBounds.y : a_uvBounds.w;
     v_texcoord = vec2(u, v);
 
-    v_color = vec4(a_color.rgb * a_color.a, a_color.a);
+    v_color = vec4(m2.rgb * m2.a, m2.a);
     v_textureSlot = a_textureSlot;
 }

@@ -122,7 +122,7 @@ describe('WebGL2 retained instruction set: record + splice ladder (Tasks 6/7)', 
       expect(f4.batches).toBe(2);
       expect(f4.instances).toBe(4);
       expect(f4.visibleNodes).toBe(4); // stats parity: replay bumps submittedNodes from the descriptor
-      expect(f4.uploadedBufferBytes).toBe(36); // ONLY the live outside sprite
+      expect(f4.uploadedBufferBytes).toBe(32); // ONLY the live outside sprite
       expect(f4.transformUploads).toBe(0);
       expect(f4.bufferUploads).toBe(1);
 
@@ -140,11 +140,11 @@ describe('WebGL2 retained instruction set: record + splice ladder (Tasks 6/7)', 
       const bundle = bundleOf(group);
       const words = bundle.instanceWords;
 
-      // 3 instances of 9 words each; word 8 is the node index. The outside
+      // 3 instances of 8 words each; word 7 is the node index. The outside
       // sprite occupied shared row 0, so the group's rows started at 1+ —
       // after the rebase they MUST read 0..2.
-      expect(bundle.usedWords).toBe(3 * 9);
-      expect([words[0 * 9 + 8], words[1 * 9 + 8], words[2 * 9 + 8]]).toEqual([0, 1, 2]);
+      expect(bundle.usedWords).toBe(3 * 8);
+      expect([words[0 * 8 + 7], words[1 * 8 + 7], words[2 * 8 + 7]]).toEqual([0, 1, 2]);
 
       // The group-owned transform store holds the GROUP-RELATIVE transforms
       // (getGlobalTransform stops at the boundary): translation = the child's
@@ -186,7 +186,7 @@ describe('WebGL2 retained instruction set: record + splice ladder (Tasks 6/7)', 
       expect(beginSpy).not.toHaveBeenCalled();
       expect(replaySpy).toHaveBeenCalledTimes(2);
       expect(moved.instances).toBe(4);
-      expect(moved.uploadedBufferBytes).toBe(36); // still only the live outside sprite
+      expect(moved.uploadedBufferBytes).toBe(32); // still only the live outside sprite
 
       root.destroy();
     });

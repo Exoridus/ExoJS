@@ -41,7 +41,7 @@ void main() {
   vec3 clip = u_projection * vec3(world, 1.0);
   gl_Position = vec4(clip.xy, 0.0, 1.0);
   v_uv = uv;
-  v_color = a_color;
+  v_color = texelFetch(u_transforms, ivec2(2, int(a_nodeIndex)), 0);
   v_textureSlot = a_textureSlot;
 }`,
   meshVertexSource: `#version 300 es

@@ -73,7 +73,7 @@ void main() {
   vec2 world = vec2(m0.x * local.x + m0.y * local.y + m1.x, m0.z * local.x + m0.w * local.y + m1.y);
   vec3 clip = u_projection * u_group * vec3(world, 1.0);
   gl_Position = vec4(clip.xy, 0.0, 1.0);
-  v_uv = uv; v_color = a_color; v_textureSlot = a_textureSlot;
+  v_uv = uv; v_color = texelFetch(u_transforms, ivec2(2, int(a_nodeIndex)), 0); v_textureSlot = a_textureSlot;
 }`,
 
   // Real production mesh.vert (canonical TransformSlot column order + u_group).
