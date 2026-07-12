@@ -13,10 +13,16 @@
 #                 never published until the same checks CI runs have all
 #                 passed locally.
 #
+# Also, on branch pushes only: a path-gated `@codexo/exojs-bench` typecheck
+# (see the block below verify:quick — it is intentionally NOT part of
+# verify:quick/CI; see packages/exojs-bench/README.md for why).
+#
 # Refs being pushed are read from stdin in the format:
 #   <local_ref> <local_sha> <remote_ref> <remote_sha>
 is_tag_push=0
 is_branch_push=0
+push_head_sha=""
+push_base_sha=""
 null_sha="0000000000000000000000000000000000000000"
 
 while read local_ref local_sha remote_ref remote_sha; do
@@ -24,7 +30,15 @@ while read local_ref local_sha remote_ref remote_sha; do
     [ "$local_sha" = "$null_sha" ] && continue
     case "$remote_ref" in
         refs/tags/*) is_tag_push=1 ;;
-        *)           is_branch_push=1 ;;
+        *)
+            is_branch_push=1
+            # Only the last pushed branch ref wins when a push carries several
+            # refs at once — same simplification the pre-existing boolean
+            # flags above already make; a multi-branch push is a rare edge
+            # case and this hook is a convenience, not a hard gate.
+            push_head_sha="$local_sha"
+            [ "$remote_sha" != "$null_sha" ] && push_base_sha="$remote_sha"
+            ;;
     esac
 done
 
@@ -34,4 +48,44 @@ if [ "$is_tag_push" = "1" ]; then
 elif [ "$is_branch_push" = "1" ]; then
     echo "[pre-push] running verify:quick (static CI-parity gates)"
     npm run verify:quick || exit 1
+fi
+
+# Path-gated bench typecheck. @codexo/exojs-bench is deliberately kept out of
+# verify:quick / CI: its competitor devDependencies (pixi/phaser/excalibur/
+# matter/rapier) only resolve via `bench:setup`'s `pnpm install --dir
+# competitors --ignore-workspace`, which bypasses pnpm-workspace.yaml's
+# minimumReleaseAge supply-chain gate — installing that inside the shared-CI
+# trust boundary is exactly what we don't want. So this hook is the only
+# automated backstop, and it stays cheap for everyone else:
+#   - fires ONLY when the pushed commits touch packages/exojs-bench/** (zero
+#     cost otherwise — no diff, no pnpm call);
+#   - only runs the actual typecheck when the competitor deps are already
+#     linked locally (never forces the ~235MB bench:setup install on push —
+#     that would punish a push just because the optional deps aren't there
+#     yet, so it prints a warning and skips instead of failing).
+# Residual gap (see packages/exojs-bench/README.md): an engine API change
+# under src/ that breaks the bench adapters' types, without ALSO touching
+# packages/exojs-bench/**, is not caught here.
+if [ "$is_branch_push" = "1" ] && [ -n "$push_head_sha" ]; then
+    if [ -z "$push_base_sha" ]; then
+        # New branch / no remote tracking ref yet — fall back to the
+        # merge-base with origin/main so the check still has a diff range.
+        push_base_sha=$(git merge-base "$push_head_sha" origin/main 2>/dev/null || true)
+    fi
+
+    bench_changed=""
+    if [ -n "$push_base_sha" ]; then
+        bench_changed=$(git diff --name-only "$push_base_sha" "$push_head_sha" -- packages/exojs-bench 2>/dev/null)
+    fi
+
+    if [ -n "$bench_changed" ]; then
+        if [ -e packages/exojs-bench/node_modules/pixi.js ]; then
+            echo "[pre-push] packages/exojs-bench changed — running bench typecheck"
+            pnpm --filter @codexo/exojs-bench typecheck || exit 1
+        else
+            echo "[pre-push] WARNING: packages/exojs-bench changed but its competitor deps aren't linked locally."
+            echo "[pre-push] Run 'pnpm --filter @codexo/exojs-bench bench:setup' (or 'pnpm typecheck:bench') to type-check it, then push again."
+            echo "[pre-push] Skipping bench typecheck for this push (not blocking)."
+        fi
+    fi
 fi
