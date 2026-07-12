@@ -1,3 +1,5 @@
+import type { BaseCellResult } from '../shared/result';
+
 /** Rendering backend under test. */
 export type Backend = 'webgl2' | 'webgpu';
 
@@ -68,10 +70,12 @@ export interface StructuralCounters {
   bufferUploads: number;
 }
 
-/** Measured outcome for a single matrix cell. */
-export interface CellResult {
-  /** The cell this result belongs to. */
-  readonly spec: CellSpec;
+/**
+ * Measured outcome for a single matrix cell. Extends the domain-agnostic
+ * {@link BaseCellResult} (spec/status/note) with the rendering-specific timing
+ * fields (per-frame CPU + full-frame GPU medians/p95) and structural counters.
+ */
+export interface CellResult extends BaseCellResult<CellSpec> {
   /** Median per-frame CPU time in milliseconds. */
   readonly cpuMsMedian: number;
   /** 95th-percentile per-frame CPU time in milliseconds. */
@@ -82,10 +86,6 @@ export interface CellResult {
   readonly frameMsP95: number | null;
   /** Structural draw-call counters gathered while measuring this cell. */
   readonly structural: StructuralCounters;
-  /** Whether the cell completed normally, exceeded a budget, or could not be measured. */
-  readonly status: 'ok' | 'exceeded' | 'unavailable';
-  /** Optional free-text note explaining a non-`'ok'` status. */
-  readonly note?: string;
 }
 
 /** Neutral contract an engine arm implements so the harness can drive it identically across arms. */

@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -6,17 +6,24 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { srcConditions } from '@codexo/exojs-config/vitest';
 import { chromium } from 'playwright';
 
+import type { BaseProvenance, LibraryProvenance } from '../shared/provenance';
+import { readLibraryProvenance } from '../shared/provenance';
 import { buildMatrix } from './archetypes';
 import type { Backend, CellResult, CellSpec, EngineAdapter } from './EngineAdapter';
+
+// Re-exported so `rendering/index.ts` and the CLI keep importing `LibraryProvenance`
+// from the rendering barrel unchanged while the definition lives in `shared/`.
+export type { LibraryProvenance } from '../shared/provenance';
 
 /**
  * Provenance stamped onto every baseline run. Without it a wall-clock number is
  * meaningless: the same matrix on a real GPU and on a software rasterizer
- * produce numbers that look comparable but are not. `software` is the honesty
- * bit — when true, {@link '../report'.writeReport} marks every timing column
- * untrusted.
+ * produce numbers that look comparable but are not. Extends the shared
+ * {@link BaseProvenance} (timestamp + engine version) with the rendering-
+ * specific GPU fields. `software` is the honesty bit — when true,
+ * {@link '../report'.writeReport} marks every timing column untrusted.
  */
-export interface Provenance {
+export interface Provenance extends BaseProvenance {
   /** GPU/adapter identity string (`WEBGL_debug_renderer_info` unmasked renderer). */
   readonly adapter: string;
   /** Rendering backend this provenance describes. */
@@ -25,10 +32,6 @@ export interface Provenance {
   readonly flags: readonly string[];
   /** Whether Chromium ran headless. */
   readonly headless: boolean;
-  /** ExoJS package version under test. */
-  readonly engineVersion: string;
-  /** ISO-8601 timestamp of the run. */
-  readonly timestamp: string;
   /** True when the adapter is a software rasterizer — timings are then untrusted. */
   readonly software: boolean;
 }
@@ -73,70 +76,8 @@ const readEngineVersion = (): string => {
   return manifest.version ?? '0.0.0';
 };
 
-/**
- * Provenance for one committed competitor library arm: the exact installed
- * version and where it was resolved from. Stamped into every report header so a
- * "ExoJS vs Pixi" statement is auditable — a reader can see precisely which
- * Pixi build produced the numbers and reproduce it.
- */
-export interface LibraryProvenance {
-  /** npm package name, e.g. `pixi.js`. */
-  readonly name: string;
-  /** Exact installed version (from the resolved package manifest). */
-  readonly version: string;
-  /** Absolute path the manifest was resolved from — the reproducibility receipt. */
-  readonly resolvedFrom: string;
-}
-
-/**
- * Read the installed version of each committed competitor library arm.
- *
- * The versions are pinned to an EXACT version in `@codexo/exojs-bench`'s
- * devDependencies (no `^`/`~`), so the number read here is the number that was
- * benchmarked. Resolution walks up from the package's main entry to its
- * `package.json` (some packages do not expose `./package.json` in `exports`, so
- * a direct `require.resolve('pixi.js/package.json')` can fail). A library that
- * cannot be resolved is recorded as `not-installed` rather than throwing — an
- * exojs-only run must not need the competitor deps present.
- */
-const readLibraryProvenance = (): LibraryProvenance[] => {
-  const nodeRequire = createRequire(import.meta.url);
-  const libraries = ['pixi.js'];
-  const provenance: LibraryProvenance[] = [];
-
-  for (const name of libraries) {
-    try {
-      let manifestPath: string;
-
-      try {
-        manifestPath = nodeRequire.resolve(`${name}/package.json`);
-      } catch {
-        // Package hides ./package.json behind exports: walk up from the entry.
-        let dir = dirname(nodeRequire.resolve(name));
-
-        while (!existsSync(resolve(dir, 'package.json'))) {
-          const parent = dirname(dir);
-
-          if (parent === dir) {
-            throw new Error(`could not locate package.json for '${name}'`);
-          }
-
-          dir = parent;
-        }
-
-        manifestPath = resolve(dir, 'package.json');
-      }
-
-      const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as { version?: string };
-
-      provenance.push({ name, version: manifest.version ?? 'unknown', resolvedFrom: manifestPath });
-    } catch {
-      provenance.push({ name, version: 'not-installed', resolvedFrom: '' });
-    }
-  }
-
-  return provenance;
-};
+/** Competitor library arms whose installed version + resolution are stamped into every report header. */
+const LIBRARY_ARMS = ['pixi.js'] as const;
 
 /**
  * Adapter capability descriptors known to the driver. Only `engine`, `config`
@@ -589,7 +530,7 @@ export const runMatrix = async (options: {
   onCellResult?: CellResultSink;
 }): Promise<MatrixOutcome> => {
   const engineVersion = readEngineVersion();
-  const libraries = readLibraryProvenance();
+  const libraries = readLibraryProvenance(LIBRARY_ARMS);
   const allCells = buildMatrix(ADAPTER_CAPABILITIES, options.backends);
   const filtered = options.filter ? applyFilter(allCells, options.filter) : allCells;
   const cells = options.timedFramesOverride === undefined ? filtered : filtered.map(cell => ({ ...cell, timedFrames: options.timedFramesOverride! }));
