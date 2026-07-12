@@ -339,6 +339,26 @@ const attachProbes = (adapter: EngineAdapter, spec: CellSpec, canvas: HTMLCanvas
   const gl = canvas.getContext('webgl2');
 
   if (gl === null) {
+    // The arm rendered through a non-WebGL2 context on this canvas. A WebGL1 arm
+    // (Phaser 3 has NO WebGL2 renderer) owns the canvas with a `'webgl'` context,
+    // and `getContext('webgl2')` returns null once a different context type owns
+    // the element. Degrade gracefully — the same policy as the WebGPU no-device
+    // path: keep the CPU timing and the rAF frame delta, skip the WebGL2
+    // structural probe (and its zero-draw self-check, which the non-null
+    // `structuralNote` suppresses), and DISCLOSE why in the cell note. Never
+    // fabricate counters, never throw away the whole run over an arm's WebGL
+    // version. Init has already succeeded by here, so a live context exists;
+    // only a canvas with no graphics context at all is a real bug worth failing.
+    const gl1 = canvas.getContext('webgl');
+
+    if (gl1 !== null) {
+      return {
+        probe: noopStructuralProbe,
+        gpuTimer: noopGpuTimer,
+        structuralNote: `structural counters skipped: engine='${spec.engine}' config='${spec.config}' rendered through a WebGL1 context (no WebGL2 renderer), so the WebGL2 draw-call probe cannot attach — draw/bind/upload structure is omitted for this arm (CPU + rAF frame timing kept)`,
+      };
+    }
+
     throw new Error('A WebGL2 context is required on the harness canvas.');
   }
 
@@ -514,10 +534,13 @@ const adapterKey = (engine: string, config: string): string => `${engine} ${conf
  * cells (the adapter is stateless between cells — every cell's `runCell` fully
  * `init`s and `teardown`s it).
  *
- * The Pixi arm is imported dynamically ON FIRST USE so an ExoJS-only run never
- * pays to load Pixi into the page. Pixi is now a committed, official arm (pinned
- * exact devDependency), so it is imported by a static specifier rather than the
- * old gitignored `reference.local.ts` runtime-glob discovery, which is retired.
+ * Each competitor arm (Pixi, Phaser, Excalibur) is imported dynamically ON FIRST
+ * USE so an ExoJS-only run never pays to load a competitor into the page, and a
+ * competitor that is not linked fails only its own cells (the import rejects, the
+ * driver records that cell `unavailable` and continues) rather than the whole
+ * run. Each is a committed, official arm (pinned exact devDependency), imported
+ * by a static specifier rather than the old gitignored `reference.local.ts`
+ * runtime-glob discovery, which is retired.
  */
 const adapterCache = new Map<string, EngineAdapter>();
 
@@ -537,6 +560,14 @@ const resolveAdapter = async (engine: string, config: string): Promise<EngineAda
     const { createPixiAdapter } = await import('../adapters/pixi');
 
     adapter = createPixiAdapter();
+  } else if (engine === 'phaser') {
+    const { createPhaserAdapter } = await import('../adapters/phaser');
+
+    adapter = createPhaserAdapter();
+  } else if (engine === 'excalibur') {
+    const { createExcaliburAdapter } = await import('../adapters/excalibur');
+
+    adapter = createExcaliburAdapter();
   } else {
     throw new Error(`No adapter registered for engine='${engine}' config='${config}'.`);
   }
