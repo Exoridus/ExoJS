@@ -179,10 +179,25 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
 
         sprite.cullable = spec.cullingEnabled;
 
-        // `overdraw` stacks every sprite at the centre to force fill-bound
-        // behaviour; every other archetype lays them out on a grid.
-        const x = overdraw ? VIEWPORT_WIDTH / 2 : GRID_MARGIN + (i % columns) * cellWidth + cellWidth / 2;
-        const y = overdraw ? VIEWPORT_HEIGHT / 2 : GRID_MARGIN + Math.floor(i / columns) * cellHeight + cellHeight / 2;
+        // `overdraw` stacks nodeCount full-viewport quads at the origin to
+        // force genuine fill-bound behaviour; every other archetype lays
+        // sprites out on a grid at their native (SPRITE_SIZE) size.
+        //
+        // Review B6: previously every archetype (including `overdraw`) used
+        // the native SPRITE_SIZE (8x8px), so nodeCount stacked sprites covered
+        // ~64px^2 of overlap — negligible fill (25k x 64px ~= 1.6M writes),
+        // never analyzed, and contributing no fill-rate signal. Stretching to
+        // the full viewport (anchor defaults to (0,0)/top-left, so the quad is
+        // positioned at the origin rather than centred, to actually cover the
+        // visible area rather than half of it) makes nodeCount the real fill
+        // multiplier: nodeCount x VIEWPORT_WIDTH x VIEWPORT_HEIGHT overdraw.
+        if (overdraw) {
+          sprite.width = VIEWPORT_WIDTH;
+          sprite.height = VIEWPORT_HEIGHT;
+        }
+
+        const x = overdraw ? 0 : GRID_MARGIN + (i % columns) * cellWidth + cellWidth / 2;
+        const y = overdraw ? 0 : GRID_MARGIN + Math.floor(i / columns) * cellHeight + cellHeight / 2;
 
         sprite.setPosition(x, y);
         spine[i % spine.length]!.addChild(sprite);

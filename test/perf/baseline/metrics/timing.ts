@@ -33,6 +33,27 @@ export const percentile = (samples: readonly number[], p: number): number => {
   return sorted[index];
 };
 
+/**
+ * Whether a cell should abort given its timed samples SO FAR (review B9).
+ *
+ * Aborting on a SINGLE slow frame lets one GC pause or scheduler blip mistake
+ * an otherwise-valid cell for a runaway one — the exact failure that produced
+ * a `13.4x` headline number from a cell that ran exactly one frame before
+ * aborting (median == p95, no distribution). Instead this looks at the MEDIAN
+ * of the last `window` samples: a lone spike among otherwise-fast frames
+ * cannot push that median over budget, only a SUSTAINED slowdown can. Returns
+ * `false` (never aborts) until at least `window` samples exist, which also
+ * guarantees any cell that DOES abort reports a median backed by at least
+ * `window` samples, never a single-frame artifact.
+ */
+export const shouldAbort = (samples: readonly number[], budgetMs: number, window: number): boolean => {
+  if (samples.length < window) {
+    return false;
+  }
+
+  return median(samples.slice(-window)) > budgetMs;
+};
+
 /** Records one elapsed-time sample per matched `begin`/`end` call pair. */
 export interface FrameTimer {
   /** Marks the start of a frame using the timer's clock. */

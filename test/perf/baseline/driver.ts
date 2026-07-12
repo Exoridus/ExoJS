@@ -193,10 +193,31 @@ const startViteServer = async (version: string): Promise<ViteDevServer> => {
   return server;
 };
 
-/** In-page snippet: read the unmasked WebGL2 renderer string for provenance. */
+/**
+ * In-page snippet: read the unmasked WebGL2 renderer string for provenance
+ * FROM THE STAGE CANVAS'S OWN CONTEXT — the same `#stage` element and context
+ * the just-run matrix cells actually measured.
+ *
+ * Review B8: this used to `document.createElement('canvas').getContext('webgl2')`
+ * on a fresh, detached, never-attached canvas. Chrome can (rarely) hand out a
+ * different GPU adapter per canvas/context (e.g. multi-GPU laptops), so a
+ * throwaway canvas's renderer string is not guaranteed to be the adapter that
+ * actually rendered the measured cells. Reading `#stage`'s context instead
+ * closes that gap — but only AFTER the matrix has run at least one cell: this
+ * function must not be called before the engine's own `init()` has created
+ * `#stage`'s WebGL2 context, because `HTMLCanvasElement.getContext` freezes
+ * context-creation attributes (antialias, stencil, …) on the FIRST call and
+ * ignores the attribute dictionary on every subsequent call — calling it here
+ * before the engine's own `getContext('webgl2', { ...options, stencil: true })`
+ * (see `WebGl2Backend.ts`) would silently give the engine a mismatched
+ * context. `runBackend` therefore calls this only after
+ * `__runBaselineMatrix` has returned, guaranteeing `#stage` already has the
+ * real, correctly-attributed context.
+ */
 const readRendererInPage = async (page: import('playwright').Page): Promise<string> =>
   page.evaluate(() => {
-    const gl = document.createElement('canvas').getContext('webgl2');
+    const canvas = document.getElementById('stage');
+    const gl = canvas instanceof HTMLCanvasElement ? canvas.getContext('webgl2') : null;
 
     if (gl === null) {
       return 'no-webgl2-context';
@@ -357,6 +378,12 @@ const runBackend = async (options: {
       return { provenance, results };
     }
 
+    // Run the cells FIRST, then read the renderer string: the engine's own
+    // `init()` (inside `__runBaselineMatrix`) creates `#stage`'s real WebGL2
+    // context on the first cell, and `readRendererInPage` reads that SAME
+    // context (review B8) rather than a throwaway one — see its doc comment
+    // for why this ordering is load-bearing, not incidental.
+    const results = await page.evaluate(cellList => globalThis.__runBaselineMatrix!(cellList), cells);
     const renderer = await readRendererInPage(page);
     const provenance: Provenance = {
       adapter: renderer,
@@ -367,7 +394,6 @@ const runBackend = async (options: {
       timestamp,
       software: isSoftwareRenderer(renderer),
     };
-    const results = await page.evaluate(cellList => globalThis.__runBaselineMatrix!(cellList), cells);
 
     return { provenance, results };
   } finally {
