@@ -1,4 +1,5 @@
-﻿import { AudioBus } from '#audio/AudioBus';
+﻿import { getAudioContext } from '#audio/audio-context';
+import { AudioBus } from '#audio/AudioBus';
 import { AudioManager } from '#audio/AudioManager';
 import { Signal } from '#core/Signal';
 
@@ -244,11 +245,13 @@ describe('AudioManager', () => {
   });
 
   test('onUnlock fires (once, async) for an AudioManager built while the shared AudioContext is already running', async () => {
-    // Our global test AudioContext mock starts 'running' immediately, so this
-    // mirrors "an AudioManager constructed after the context has already
-    // unlocked" — e.g. a second Application in the same process. The one-shot
-    // module-global ready signal has already fired by then, so the manager
-    // dispatches its own unlock on a microtask instead.
+    // Our global test AudioContext mock starts 'running' immediately. Creating
+    // the shared context explicitly first (as an earlier gesture / explicit
+    // getAudioContext would) mirrors "an AudioManager constructed after the
+    // context has already unlocked" — e.g. a second Application in the same
+    // process. The one-shot module-global ready signal has already fired by
+    // then, so the manager dispatches its own unlock on a microtask instead.
+    getAudioContext();
     const mixer = new AudioManager();
     expect(mixer.locked).toBe(false);
 

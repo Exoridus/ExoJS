@@ -25,9 +25,9 @@ const setupPannerSpy = () => {
         maxDistance: 10000,
         refDistance: 1,
         rolloffFactor: 1,
-        positionX: { setValueAtTime: vi.fn() },
-        positionY: { setValueAtTime: vi.fn() },
-        positionZ: { setValueAtTime: vi.fn() },
+        positionX: { setValueAtTime: vi.fn(), setTargetAtTime: vi.fn(), cancelScheduledValues: vi.fn() },
+        positionY: { setValueAtTime: vi.fn(), setTargetAtTime: vi.fn(), cancelScheduledValues: vi.fn() },
+        positionZ: { setValueAtTime: vi.fn(), setTargetAtTime: vi.fn(), cancelScheduledValues: vi.fn() },
       }) as unknown as PannerNode,
   );
   return { restore: () => spy.mockRestore() };

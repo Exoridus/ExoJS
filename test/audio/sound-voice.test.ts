@@ -62,10 +62,22 @@ interface MockPanner {
   maxDistance: number;
   refDistance: number;
   rolloffFactor: number;
-  positionX: { setValueAtTime: MockInstance };
-  positionY: { setValueAtTime: MockInstance };
-  positionZ: { setValueAtTime: MockInstance };
+  positionX: SpatialParamMock;
+  positionY: SpatialParamMock;
+  positionZ: SpatialParamMock;
 }
+
+interface SpatialParamMock {
+  setValueAtTime: MockInstance;
+  setTargetAtTime: MockInstance;
+  cancelScheduledValues: MockInstance;
+}
+
+const makeSpatialParamMock = (): SpatialParamMock => ({
+  setValueAtTime: vi.fn(),
+  setTargetAtTime: vi.fn(),
+  cancelScheduledValues: vi.fn(),
+});
 
 const setupPannerSpy = (): { panners: MockPanner[]; restore: () => void } => {
   const ctx = getAudioContext() as AudioContext & { createPanner: () => PannerNode };
@@ -79,9 +91,9 @@ const setupPannerSpy = (): { panners: MockPanner[]; restore: () => void } => {
       maxDistance: 10000,
       refDistance: 1,
       rolloffFactor: 1,
-      positionX: { setValueAtTime: vi.fn() },
-      positionY: { setValueAtTime: vi.fn() },
-      positionZ: { setValueAtTime: vi.fn() },
+      positionX: makeSpatialParamMock(),
+      positionY: makeSpatialParamMock(),
+      positionZ: makeSpatialParamMock(),
     };
     panners.push(panner);
     return panner as unknown as PannerNode;

@@ -158,6 +158,37 @@ describe('AudioListener', () => {
     listener.destroy();
   });
 
+  // AU4: listener position writes go through the smoothing layer — first write
+  // snaps, an ordinary move ramps (setTargetAtTime, no zipper), and a stationary
+  // listener is not re-written each frame (epsilon-skip).
+  test('_tick() snaps the first position, ramps a move, and skips a stationary listener (AU4)', () => {
+    const listener = new AudioListener();
+    const l = getListenerMock() as unknown as {
+      positionX: { setValueAtTime: MockInstance; setTargetAtTime: MockInstance; cancelScheduledValues: MockInstance };
+    };
+
+    // First tick: snap into place with setValueAtTime, never a ramp.
+    listener.target = { x: 100, y: 0 };
+    listener._tick();
+    expect(l.positionX.setValueAtTime).toHaveBeenCalledWith(100, expect.any(Number));
+    expect(l.positionX.setTargetAtTime).not.toHaveBeenCalled();
+
+    // Move a little: ramp toward the target with setTargetAtTime.
+    l.positionX.setValueAtTime.mockClear();
+    listener.target = { x: 130, y: 0 };
+    listener._tick();
+    expect(l.positionX.setTargetAtTime).toHaveBeenCalledWith(130, expect.any(Number), expect.any(Number));
+    expect(l.positionX.setValueAtTime).not.toHaveBeenCalled();
+
+    // Stationary: no further scheduling.
+    l.positionX.setTargetAtTime.mockClear();
+    listener._tick();
+    expect(l.positionX.setTargetAtTime).not.toHaveBeenCalled();
+    expect(l.positionX.setValueAtTime).not.toHaveBeenCalled();
+
+    listener.destroy();
+  });
+
   // 7. Setup writes orientation (forward = -Z, up = +Y)
   test('construction sets up 2D orientation: forward (0,0,-1) and up (0,1,0)', () => {
     // The _setup method is called synchronously when AudioContext is running.

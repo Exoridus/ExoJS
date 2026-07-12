@@ -9,6 +9,7 @@ import { AudioListener } from './AudioListener';
 import type { SpatialVoice } from './BaseVoice';
 import { InputVoice } from './InputVoice';
 import type { Playable, PlayOptions, Voice } from './Playable';
+import { createSpatialSmoothingSettings, type SpatialSmoothingSettings } from './spatial-smoothing';
 
 /**
  * Per-{@link Application} owner of the audio mix: three pre-configured
@@ -30,6 +31,14 @@ export class AudioManager implements System {
   public readonly sound: AudioBus;
   public readonly listener: AudioListener;
   /**
+   * Tunable smoothing applied to per-frame panner/listener position updates,
+   * shared by the {@link AudioListener} and every spatial voice. Adjust
+   * `smoothing` (the `setTargetAtTime` time constant) or `teleportThreshold`
+   * (the snap-instead-of-ramp jump distance) to trade responsiveness against
+   * zipper-noise suppression (AU4). Reachable as `app.audio.spatial`.
+   */
+  public readonly spatial: SpatialSmoothingSettings = createSpatialSmoothingSettings();
+  /**
    * Fires once when the AudioContext transitions to "running" — i.e. the first
    * user gesture unlocks audio under the browser's autoplay policy. Check
    * {@link AudioManager.locked} for the current state; sounds played while
@@ -45,7 +54,7 @@ export class AudioManager implements System {
     this.master = new AudioBus('master', { parent: null });
     this.music = new AudioBus('music', { parent: this.master });
     this.sound = new AudioBus('sound', { parent: this.master });
-    this.listener = new AudioListener();
+    this.listener = new AudioListener(this.spatial);
 
     // Built-ins are also lookup-able via getBus.
     this._registered.set('master', this.master);

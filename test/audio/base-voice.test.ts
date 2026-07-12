@@ -105,9 +105,9 @@ interface MockPanner {
   maxDistance: number;
   refDistance: number;
   rolloffFactor: number;
-  positionX: { setValueAtTime: MockInstance };
-  positionY: { setValueAtTime: MockInstance };
-  positionZ: { setValueAtTime: MockInstance };
+  positionX: { setValueAtTime: MockInstance; setTargetAtTime: MockInstance; cancelScheduledValues: MockInstance };
+  positionY: { setValueAtTime: MockInstance; setTargetAtTime: MockInstance; cancelScheduledValues: MockInstance };
+  positionZ: { setValueAtTime: MockInstance; setTargetAtTime: MockInstance; cancelScheduledValues: MockInstance };
 }
 
 const setupPannerSpy = (): { panners: MockPanner[]; restore: () => void } => {
@@ -122,9 +122,9 @@ const setupPannerSpy = (): { panners: MockPanner[]; restore: () => void } => {
       maxDistance: 10000,
       refDistance: 1,
       rolloffFactor: 1,
-      positionX: { setValueAtTime: vi.fn() },
-      positionY: { setValueAtTime: vi.fn() },
-      positionZ: { setValueAtTime: vi.fn() },
+      positionX: { setValueAtTime: vi.fn(), setTargetAtTime: vi.fn(), cancelScheduledValues: vi.fn() },
+      positionY: { setValueAtTime: vi.fn(), setTargetAtTime: vi.fn(), cancelScheduledValues: vi.fn() },
+      positionZ: { setValueAtTime: vi.fn(), setTargetAtTime: vi.fn(), cancelScheduledValues: vi.fn() },
     };
     panners.push(panner);
     return panner as unknown as PannerNode;
@@ -555,6 +555,39 @@ describe('BaseVoice — deferred bus connect while the bus is not yet set up', (
 
     output.restore();
     factory.restore();
+    sound.destroy();
+  });
+
+  // AU3: many short voices played before the first user gesture must not pile
+  // deferred-reconnect closures onto the global unlock signal, and a voice that
+  // ends before unlock must drop its pending reconnect from the bus.
+  test('pre-unlock voices queue their deferred reconnect on the bus (not the global signal), and drop it on stop() (AU3)', () => {
+    const factory = setupSourceSpy();
+    const manager = new AudioManager();
+    const ctx = getAudioContext();
+
+    const originalState = ctx.state;
+    ctx.state = 'suspended';
+    const bus = new AudioBus('deferred-accumulation', { parent: null });
+
+    const pendingCount = (): number => (bus as unknown as { _pendingSetup: unknown[] | null })._pendingSetup?.length ?? 0;
+    const signalCountBefore = onAudioContextReady.count;
+
+    const sound = new Sound(createAudioBufferStub());
+    const voices = [manager.play(sound, { bus }), manager.play(sound, { bus }), manager.play(sound, { bus })];
+
+    // Each voice queued exactly one reconnect on the BUS; the global unlock
+    // signal did not grow per voice (only the bus's own subscription lives there).
+    expect(pendingCount()).toBe(3);
+    expect(onAudioContextReady.count).toBe(signalCountBefore);
+
+    // Ending the voices before unlock unsubscribes their queued reconnects.
+    for (const voice of voices) voice.stop();
+    expect(pendingCount()).toBe(0);
+
+    ctx.state = originalState;
+    factory.restore();
+    bus.destroy();
     sound.destroy();
   });
 });

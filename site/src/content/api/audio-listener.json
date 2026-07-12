@@ -31,7 +31,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(): AudioListener",
+          "signature": "new(settings: SpatialSmoothingSettings): AudioListener",
           "signatureTokens": [
             {
               "text": "new",
@@ -40,6 +40,18 @@
             {
               "text": "(",
               "kind": "punctuation"
+            },
+            {
+              "text": "settings",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SpatialSmoothingSettings",
+              "kind": "type"
             },
             {
               "text": ")",
@@ -54,7 +66,13 @@
               "kind": "type"
             }
           ],
-          "params": [],
+          "params": [
+            {
+              "name": "settings",
+              "type": "SpatialSmoothingSettings",
+              "optional": false
+            }
+          ],
           "returnType": "AudioListener",
           "description": ""
         }

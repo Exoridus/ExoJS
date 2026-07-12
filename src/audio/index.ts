@@ -19,5 +19,6 @@ export { HighpassFilter, LowpassFilter } from './filters';
 export type { Loopable, Pausable, Playable, PlayOptions, RatePitched, Seekable, Spatializable, Voice } from './Playable';
 export type { AudioSpriteClip, DistanceModel, SoundOptions, SoundPlayOptions } from './Sound';
 export { Sound, SoundPoolStrategy } from './Sound';
+export type { SpatialSmoothingSettings } from './spatial-smoothing';
 export { WorkletEffect } from './WorkletEffect';
 export { registerAudioWorkletProcessor } from '#audio/worklet/registerWorklet';

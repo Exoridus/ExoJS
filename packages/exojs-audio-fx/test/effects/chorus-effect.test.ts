@@ -82,7 +82,12 @@ describe('ChorusEffect', () => {
   });
 
   describe('inputNode and outputNode', () => {
+    // Calling getAudioContext() here ensures isAudioContextReady() returns true
+    // for all tests in this describe block and below, so the constructor calls
+    // _setupNodes() immediately rather than deferring via onAudioContextReady.
+
     it('inputNode and outputNode are defined after construction', () => {
+      getAudioContext();
       const filter = new ChorusEffect();
       expect(filter.inputNode).toBeDefined();
       expect(filter.outputNode).toBeDefined();
@@ -90,7 +95,30 @@ describe('ChorusEffect', () => {
     });
 
     it('inputNode and outputNode are different instances', () => {
+      getAudioContext();
       const filter = new ChorusEffect();
+      expect(filter.inputNode).not.toBe(filter.outputNode);
+      filter.destroy();
+    });
+  });
+
+  describe('construction before the audio context is ready', () => {
+    it('registers a deferred onAudioContextReady setup and _onAudioContextReady wires the nodes', async () => {
+      // A fresh module registry via vi.resetModules() guarantees the internal
+      // audio-context singleton starts in its virgin (not-ready) state, so
+      // construction defers node setup instead of creating it synchronously.
+      vi.resetModules();
+      const { ChorusEffect: FreshChorusEffect } = await import('../../src/effects/ChorusEffect');
+      const filter = new FreshChorusEffect();
+      expect(() => filter.inputNode).toThrow('ChorusEffect not yet initialized.');
+
+      // Simulate the AudioContext becoming ready by invoking the deferred
+      // hook directly with a fresh mock AudioContext.
+      const ctx = new AudioContext();
+      (filter as unknown as { _onAudioContextReady: (ctx: AudioContext) => void })._onAudioContextReady(ctx);
+
+      expect(filter.inputNode).toBeDefined();
+      expect(filter.outputNode).toBeDefined();
       expect(filter.inputNode).not.toBe(filter.outputNode);
       filter.destroy();
     });

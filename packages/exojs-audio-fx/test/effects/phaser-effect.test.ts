@@ -243,7 +243,12 @@ describe('PhaserEffect', () => {
   // -------------------------------------------------------------------------
 
   describe('inputNode and outputNode', () => {
+    // Calling getAudioContext() here ensures isAudioContextReady() returns true
+    // for all tests in this describe block and below, so the constructor calls
+    // _setupNodes() immediately rather than deferring via onAudioContextReady.
+
     it('inputNode and outputNode are defined after construction', () => {
+      getAudioContext();
       const effect = new PhaserEffect();
       expect(effect.inputNode).toBeDefined();
       expect(effect.outputNode).toBeDefined();
@@ -251,6 +256,7 @@ describe('PhaserEffect', () => {
     });
 
     it('inputNode and outputNode are different instances', () => {
+      getAudioContext();
       const effect = new PhaserEffect();
       expect(effect.inputNode).not.toBe(effect.outputNode);
       effect.destroy();
@@ -266,6 +272,28 @@ describe('PhaserEffect', () => {
       const effect = new PhaserEffect();
       effect.destroy();
       expect(() => effect.outputNode).toThrow('PhaserEffect not yet initialized.');
+    });
+  });
+
+  describe('construction before the audio context is ready', () => {
+    it('registers a deferred onAudioContextReady setup and _onAudioContextReady wires the nodes', async () => {
+      // A fresh module registry via vi.resetModules() guarantees the internal
+      // audio-context singleton starts in its virgin (not-ready) state, so
+      // construction defers node setup instead of creating it synchronously.
+      vi.resetModules();
+      const { PhaserEffect: FreshPhaserEffect } = await import('../../src/effects/PhaserEffect');
+      const effect = new FreshPhaserEffect();
+      expect(() => effect.inputNode).toThrow('PhaserEffect not yet initialized.');
+
+      // Simulate the AudioContext becoming ready by invoking the deferred
+      // hook directly with a fresh mock AudioContext.
+      const ctx = new AudioContext();
+      (effect as unknown as { _onAudioContextReady: (ctx: AudioContext) => void })._onAudioContextReady(ctx);
+
+      expect(effect.inputNode).toBeDefined();
+      expect(effect.outputNode).toBeDefined();
+      expect(effect.inputNode).not.toBe(effect.outputNode);
+      effect.destroy();
     });
   });
 

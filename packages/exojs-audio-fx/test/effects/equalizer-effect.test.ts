@@ -21,10 +21,22 @@ const makeBiquadFilterNode = (ctx: AudioContext, filterType: BiquadFilterType) =
 describe('EqualizerEffect', () => {
   describe('deferred setup before AudioContext exists', () => {
     it('registers a deferred onAudioContextReady setup when constructed before any AudioContext exists', async () => {
+      // A fresh module registry via vi.resetModules() guarantees the internal
+      // audio-context singleton starts in its virgin (not-ready) state, so
+      // construction defers node setup instead of creating it synchronously.
       vi.resetModules();
       const { EqualizerEffect: FreshEqualizerEffect } = await import('../../src/effects/EqualizerEffect');
       const effect = new FreshEqualizerEffect();
+      expect(() => effect.inputNode).toThrow('EqualizerEffect not yet initialized.');
+
+      // Simulate the AudioContext becoming ready by invoking the deferred
+      // hook directly with a fresh mock AudioContext.
+      const ctx = new AudioContext();
+      (effect as unknown as { _onAudioContextReady: (ctx: AudioContext) => void })._onAudioContextReady(ctx);
+
       expect(effect.inputNode).toBeDefined();
+      expect(effect.outputNode).toBeDefined();
+      expect(effect.inputNode).not.toBe(effect.outputNode);
       effect.destroy();
     });
   });
