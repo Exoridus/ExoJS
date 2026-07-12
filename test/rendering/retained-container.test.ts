@@ -1490,3 +1490,73 @@ describe('RetainedContainer: deep-barrier escape scoped to the offending sub-bra
     backend.destroy();
   });
 });
+
+describe('RetainedContainer: destroyed-child eviction (P3f)', () => {
+  test('a child destroy()ed without removeChild is evicted from the replay next frame and warns once', () => {
+    const backend = createTestBackend();
+    const warnSpy = vi.spyOn(logger, 'warn');
+    const root = new Container();
+    const group = new RetainedContainer();
+    const leafA = new LeafDrawable('a');
+    const leafB = new LeafDrawable('b');
+
+    group.name = 'decor';
+    group.addChild(leafA);
+    group.addChild(leafB);
+    root.addChild(group);
+
+    // Frame 1: full collect + capture (both children present).
+    expect(collectDraws(root, backend).map(d => (d.drawable as LeafDrawable).id)).toEqual(['a', 'b']);
+
+    // The footgun: destroy WITHOUT removeChild — the child stays attached, so
+    // no revision bump and the fragment is still "clean".
+    leafA.destroy();
+
+    // Frame 2: the retained fragment must NOT replay the destroyed drawable.
+    const frame2 = collectDraws(root, backend).map(d => (d.drawable as LeafDrawable).id);
+    expect(frame2).toEqual(['b']);
+    expect(frame2).not.toContain('a');
+
+    // Frame 3: still evicted, and no per-frame warning storm.
+    const frame3 = collectDraws(root, backend).map(d => (d.drawable as LeafDrawable).id);
+    expect(frame3).toEqual(['b']);
+
+    const destroyedWarnings = warnSpy.mock.calls.filter(call => String(call[0]).includes('destroy'));
+
+    expect(destroyedWarnings).toHaveLength(1);
+    expect(String(destroyedWarnings[0]![0])).toContain('decor');
+
+    warnSpy.mockRestore();
+    root.destroy();
+    backend.destroy();
+  });
+
+  test('a destroyed drawable nested in a plain sub-container is also evicted', () => {
+    const backend = createTestBackend();
+    const root = new Container();
+    const group = new RetainedContainer();
+    const mid = new Container();
+    const leafA = new LeafDrawable('a');
+    const leafB = new LeafDrawable('b');
+
+    mid.addChild(leafA);
+    group.addChild(mid);
+    group.addChild(leafB);
+    root.addChild(group);
+
+    expect(
+      collectDraws(root, backend)
+        .map(d => (d.drawable as LeafDrawable).id)
+        .sort(),
+    ).toEqual(['a', 'b']);
+
+    leafA.destroy();
+
+    const frame2 = collectDraws(root, backend).map(d => (d.drawable as LeafDrawable).id);
+
+    expect(frame2).toEqual(['b']);
+
+    root.destroy();
+    backend.destroy();
+  });
+});

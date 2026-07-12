@@ -189,6 +189,7 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
   private _zIndex = 0;
   private _cullable = true;
   private _cullArea: Rectangle | null = null;
+  private _isDestroyed = false;
   /** Lazily-built oriented bounding box (the local bounds under the global transform) for rotated-node SAT. */
   private _orientedBounds: Polygon | null = null;
 
@@ -270,6 +271,17 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
 
   public set parent(parent: Container | null) {
     this._parentNode = parent;
+  }
+
+  /**
+   * `true` once {@link destroy} has run on this node. A destroyed node has
+   * released its pooled resources (transform/bounds), renders nothing, and
+   * must not be reused or re-attached. The render plan skips a destroyed node
+   * and — for a {@link RetainedContainer} — evicts it from any cached fragment
+   * so a child destroyed without `removeChild` cannot be replayed stale.
+   */
+  public get destroyed(): boolean {
+    return this._isDestroyed;
   }
 
   public get visible(): boolean {
@@ -780,6 +792,7 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
   }
 
   public destroy(): void {
+    this._isDestroyed = true;
     this._transform.destroy();
     this._position.destroy();
     this._scale.destroy();

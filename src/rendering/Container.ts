@@ -269,9 +269,19 @@ export class Container extends RenderNode {
     const viewUpdateId = builder.view.updateId;
 
     if (this._retainedPlan !== null && this._retainedPlan.isClean(this._contentRevision, this._structureRevision, viewUpdateId, builder.backend)) {
-      this._replayRetainedChildren(builder);
+      if (__DEV__ && this._retainedPlan._devHasDestroyedDrawable()) {
+        // P3f: a direct drawable child was destroy()ed but left attached, so
+        // no revision bumped and the slot cache still looks clean. Drop the
+        // stale capture (releasing the strong refs) and fall through to a full
+        // collect, which skips the destroyed child (RenderNode._collect dev
+        // guard) and recaptures without it. Silent here — the loud diagnostic
+        // is owned by the nearest RetainedContainer (P3f).
+        this._retainedPlan.invalidate();
+      } else {
+        this._replayRetainedChildren(builder);
 
-      return;
+        return;
+      }
     }
 
     this._collectAndCaptureChildren(builder, viewUpdateId);

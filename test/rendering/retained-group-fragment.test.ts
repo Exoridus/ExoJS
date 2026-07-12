@@ -85,6 +85,34 @@ describe('RetainedGroupFragment', () => {
 
     drawable.destroy();
   });
+
+  test('_devHasDestroyedDrawable reports a destroyed captured drawable (P3f)', () => {
+    const fragment = new RetainedGroupFragment();
+    const drawable = new Drawable();
+
+    fragment.capture(1, 1, fakeBackendA, [makeScopeDrawEntry(drawable)]);
+
+    expect(fragment._devHasDestroyedDrawable()).toBe(false);
+
+    drawable.destroy();
+
+    expect(fragment._devHasDestroyedDrawable()).toBe(true);
+  });
+
+  test('invalidate() releases the pooled strong reference to drawables so they can GC (P3f)', () => {
+    const fragment = new RetainedGroupFragment();
+    const drawable = new Drawable();
+
+    fragment.capture(1, 1, fakeBackendA, [makeScopeDrawEntry(drawable)]);
+    drawable.destroy();
+
+    // Before the fix the grow-only draw pool still pins the destroyed drawable
+    // even after the entries array is emptied.
+    fragment.invalidate();
+
+    expect(fragment._devHasDestroyedDrawable()).toBe(false);
+    expect(fragment.entries).toEqual([]);
+  });
 });
 
 // File-local fake backend (repo convention keeps test harnesses file-local

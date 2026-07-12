@@ -63,6 +63,7 @@ export class RetainedContainer extends Container {
   private _devFragmentBuilds = 0;
   private _devFragmentInvalidations = 0;
   private _devRetentionWarned = false;
+  private _devDestroyedWarned = false;
 
   /**
    * The boundary is ALWAYS engaged (F13/R3 superseded the whole-group
@@ -186,7 +187,18 @@ export class RetainedContainer extends Container {
       return;
     }
 
-    if (this._fragment.isClean(this._contentRevision, this._structureRevision, builder.backend)) {
+    const fragmentClean = this._fragment.isClean(this._contentRevision, this._structureRevision, builder.backend);
+
+    if (fragmentClean && __DEV__ && this._fragment._devHasDestroyedDrawable()) {
+      // P3f: a descendant was destroy()ed but left attached, so no revision
+      // bumped and the capture still looks clean. Replaying it would splice a
+      // dead drawable for a whole frame and pin it against GC. Drop the capture
+      // (releasing the strong refs), warn once, and fall through to a full
+      // collect — which skips the destroyed child (RenderNode._collect dev
+      // guard) and recaptures a clean fragment.
+      this._fragment.invalidate();
+      this._warnReplayedDestroyed();
+    } else if (fragmentClean) {
       // Fast tier (Slice 3, S3-D2): a valid recorded instruction set splices
       // as an EMPTY scope — the player replays O(batches), the optimizer sees
       // nothing. Falls through the ladder: instruction replay -> entry replay
@@ -307,6 +319,27 @@ export class RetainedContainer extends Container {
 
   private _escapeCheckContent = -1;
   private _escapeCheckStructure = -1;
+
+  /**
+   * P3f dev diagnostic: warn ONCE when the retained fragment was found holding
+   * a child that was `destroy()`ed without `removeChild()` (so it stayed
+   * attached and the capture still looked clean). Dev builds only; the call
+   * site is `__DEV__`-guarded and stripped from production.
+   */
+  private _warnReplayedDestroyed(): void {
+    if (this._devDestroyedWarned) {
+      return;
+    }
+
+    this._devDestroyedWarned = true;
+    logger.warn(
+      `RetainedContainer${this.name ? ` '${this.name}'` : ''} held a child that was destroy()ed without ` +
+        'removeChild() — it stayed attached to the subtree, so no revision change dropped the retained fragment. ' +
+        'The stale capture has been evicted and the destroyed child skipped; detach children (removeChild) before ' +
+        'or instead of destroying them.',
+      { source: 'rendering' },
+    );
+  }
   private _deepBarrierWarned = false;
   /**
    * Direct children whose subtrees contain a deep barrier (F13/R3): they

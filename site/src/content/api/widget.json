@@ -6,11 +6,11 @@
   "subsystem": "ui",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 102,
+  "memberCount": 103,
   "counts": {
     "constructors": 1,
     "methods": 49,
-    "properties": 39,
+    "properties": 40,
     "events": 13
   },
   "sections": [
@@ -2796,6 +2796,27 @@
           "params": [],
           "returnType": null,
           "description": "Custom rectangle used for viewport cull intersection test. When set, replaces the default node bounds in cull checks. Set to null to restore default bounds-based culling."
+        },
+        {
+          "name": "destroyed",
+          "signature": "destroyed: boolean",
+          "signatureTokens": [
+            {
+              "text": "destroyed",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "true once destroy has run on this node. A destroyed node has released its pooled resources (transform/bounds), renders nothing, and must not be reused or re-attached. The render plan skips a destroyed node and — for a RetainedContainer — evicts it from any cached fragment so a child destroyed without removeChild cannot be replayed stale."
         },
         {
           "name": "enabled",

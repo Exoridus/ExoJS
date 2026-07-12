@@ -6,11 +6,11 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 117,
+  "memberCount": 118,
   "counts": {
     "constructors": 1,
     "methods": 50,
-    "properties": 51,
+    "properties": 52,
     "events": 15
   },
   "sections": [
@@ -2909,6 +2909,27 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "destroyed",
+          "signature": "destroyed: boolean",
+          "signatureTokens": [
+            {
+              "text": "destroyed",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "true once destroy has run on this node. A destroyed node has released its pooled resources (transform/bounds), renders nothing, and must not be reused or re-attached. The render plan skips a destroyed node and — for a RetainedContainer — evicts it from any cached fragment so a child destroyed without removeChild cannot be replayed stale."
         },
         {
           "name": "duration",

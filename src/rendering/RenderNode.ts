@@ -374,6 +374,15 @@ export abstract class RenderNode extends SceneNode {
 
   /** @internal */
   public _collect(builder: RenderPlanBuilder, seq?: number): void {
+    if (__DEV__ && this.destroyed) {
+      // A node destroy()ed but left attached to the tree (the documented
+      // footgun) has released its pooled transform/bounds; collecting it would
+      // read freed state and re-pin it. Skip it — the diagnostic is emitted
+      // once by the nearest RetainedContainer (P3f); the plain path degrades
+      // silently to "renders nothing", which is the correct result.
+      return;
+    }
+
     if (!this.visible) {
       return;
     }
