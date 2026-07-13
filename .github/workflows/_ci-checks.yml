@@ -106,6 +106,18 @@ jobs:
       - name: Typecheck guides
         run: pnpm typecheck:guides
 
+      # #319: the local `verify:quick` pre-push hook also typechecks examples
+      # (strict config, #298) and the standalone type-tests project — CI had
+      # been silently skipping both, so strict-mode example errors merged via
+      # automerge on green required CI and then blocked every contributor's
+      # next `git push` locally. Keep this job's set 1:1 with verify:quick
+      # (test/ci/required-typecheck-lane.test.ts locks the four commands in).
+      - name: Typecheck examples
+        run: pnpm typecheck:examples
+
+      - name: Typecheck type-tests
+        run: pnpm typecheck:type-tests
+
       # Root `pnpm typecheck` only covers src/**; the extension packages own a
       # separate tsconfig each, so typecheck them explicitly.
       - name: Typecheck extension packages
