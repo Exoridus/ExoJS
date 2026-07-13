@@ -6,16 +6,7 @@ import type { LdtkData, LdtkLevel, LdtkTilesetDef } from './LdtkData';
 import { getLdtkLevelEntries } from './ldtkLevelEntries';
 import type { LdtkMap } from './LdtkMap';
 import { ldtkToTileMap } from './ldtkToTileMap';
-
-// ── URL resolution ────────────────────────────────────────────────────────────
-
-/**
- * Resolve a tileset-relative path against the base `.ldtk` URL.
- * Mirrors the approach used by the Tiled adapter.
- */
-function resolveLdtkUrl(relPath: string, baseUrl: string): string {
-  return new URL(relPath, baseUrl).href;
-}
+import { resolveLdtkUrl } from './url';
 
 // ── Tileset loading ───────────────────────────────────────────────────────────
 
@@ -29,7 +20,8 @@ async function loadLdtkTileset(
   ldtkSource: string,
   context: AssetLoaderContext,
 ): Promise<TileSet | null> {
-  if (!def.relPath) return null;
+  // No atlas image (null or empty relPath): skip — tiles cannot render.
+  if (def.relPath === null || def.relPath === '') return null;
 
   const imageUrl = resolveLdtkUrl(def.relPath, ldtkSource);
   const texture = await context.loader.load(Asset.kind('texture', imageUrl));
@@ -85,7 +77,10 @@ async function loadExternalLevel(
   ldtkSource: string,
   context: AssetLoaderContext,
 ): Promise<LdtkLevel> {
-  if (level.layerInstances !== null || !level.externalRelPath) return level;
+  // Already-inlined level, or no external file to fetch: return as-is.
+  if (level.layerInstances !== null || level.externalRelPath === undefined || level.externalRelPath === '') {
+    return level;
+  }
 
   const externalUrl = resolveLdtkUrl(level.externalRelPath, ldtkSource);
   // Typed without deep validation (fetchJson<T> is an unvalidated assertion,

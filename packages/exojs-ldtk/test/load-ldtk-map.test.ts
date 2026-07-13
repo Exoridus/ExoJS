@@ -534,11 +534,11 @@ describe('loadLdtkMap — atlas too small for any tile', () => {
   });
 });
 
-describe('loadLdtkMap — URL resolution is absolute-base-only (characterization)', () => {
-  // resolveLdtkUrl uses `new URL(relPath, baseUrl)` directly, which throws when
-  // the base URL is relative. Unlike the Tiled adapter, LDtk does NOT tolerate a
-  // relative .ldtk source when a tileset carries a relPath. See report note.
-  const fixture: LdtkData = {
+describe('loadLdtkMap — relative-source URL resolution (#316)', () => {
+  // resolveLdtkUrl now mirrors the Tiled adapter: a tileset relPath resolves
+  // against a RELATIVE .ldtk source without throwing, collapsing ../ / ./ and
+  // staying relative in the result.
+  const makeFixture = (relPath: string): LdtkData => ({
     jsonVersion: '1.5.3',
     defaultGridSize: 16,
     defs: {
@@ -546,7 +546,7 @@ describe('loadLdtkMap — URL resolution is absolute-base-only (characterization
         {
           uid: 1,
           identifier: 'Atlas',
-          relPath: 'tiles.png',
+          relPath,
           tileGridSize: 16,
           pxWid: 64,
           pxHei: 64,
@@ -555,11 +555,31 @@ describe('loadLdtkMap — URL resolution is absolute-base-only (characterization
       layers: [],
     },
     levels: [],
-  };
+  });
 
-  it('rejects when the source is a relative URL and a tileset has a relPath', async () => {
-    const { context } = makeContext({ 'world.ldtk': fixture });
-    await expect(loadLdtkMap('world.ldtk', context)).rejects.toThrow(/Invalid URL/);
+  it('resolves a tileset relPath against a relative .ldtk source instead of throwing', async () => {
+    const { context, loaderLoad } = makeContext({ 'maps/world.ldtk': makeFixture('tiles.png') });
+
+    await expect(loadLdtkMap('maps/world.ldtk', context)).resolves.toBeDefined();
+
+    // The texture is requested at the source-relative path, still relative.
+    expect(loaderLoad).toHaveBeenCalledWith(Asset.kind('texture', 'maps/tiles.png'));
+  });
+
+  it('collapses ../ segments in a relPath against a relative source', async () => {
+    const { context, loaderLoad } = makeContext({ 'maps/world.ldtk': makeFixture('../art/tiles.png') });
+
+    await loadLdtkMap('maps/world.ldtk', context);
+
+    expect(loaderLoad).toHaveBeenCalledWith(Asset.kind('texture', 'art/tiles.png'));
+  });
+
+  it('still resolves against an absolute source (unchanged behaviour)', async () => {
+    const { context, loaderLoad } = makeContext({ 'https://example.com/maps/world.ldtk': makeFixture('tiles.png') });
+
+    await loadLdtkMap('https://example.com/maps/world.ldtk', context);
+
+    expect(loaderLoad).toHaveBeenCalledWith(Asset.kind('texture', 'https://example.com/maps/tiles.png'));
   });
 });
 
