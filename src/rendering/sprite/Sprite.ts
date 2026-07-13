@@ -115,7 +115,12 @@ export class Sprite extends Drawable {
   }
 
   public set width(value: number) {
-    this.scale.x = value / this._textureFrame.width;
+    // A not-yet-loaded texture has a 0-wide frame; dividing by it would poison
+    // scale with NaN (and, being NaN, never recover). Keep the current scale
+    // until real dimensions arrive — the load self-heal (#309) resets the frame.
+    if (this._textureFrame.width !== 0) {
+      this.scale.x = value / this._textureFrame.width;
+    }
   }
 
   public get height(): number {
@@ -123,7 +128,9 @@ export class Sprite extends Drawable {
   }
 
   public set height(value: number) {
-    this.scale.y = value / this._textureFrame.height;
+    if (this._textureFrame.height !== 0) {
+      this.scale.y = value / this._textureFrame.height;
+    }
   }
 
   /**
@@ -244,12 +251,41 @@ export class Sprite extends Drawable {
 
       if (texture !== null) {
         this.resetTextureFrame();
+        this._scheduleTextureLoadHeal(texture);
       }
 
       this.invalidateCache();
     }
 
     return this;
+  }
+
+  /**
+   * A deferred texture handle starts 0×0 until its payload loads, so the frame
+   * reset above snapped to a 0×0 frame. Re-reset once it becomes ready so the
+   * sprite picks up the real dimensions (#309). Guarded against a texture swap
+   * or destroy between now and the resolution, and against RenderTextures /
+   * already-ready textures (no `loaded` promise to wait on).
+   */
+  private _scheduleTextureLoadHeal(texture: Texture | RenderTexture): void {
+    if (!('ready' in texture) || texture.ready || !('loaded' in texture)) {
+      return;
+    }
+
+    void this._healOnTextureLoad(texture);
+  }
+
+  private async _healOnTextureLoad(texture: Texture): Promise<void> {
+    try {
+      await texture.loaded;
+    } catch {
+      return; // failed load shows Texture.missing; nothing to heal
+    }
+
+    // Guard against a texture swap or destroy between scheduling and resolution.
+    if (this._texture === texture && !this.destroyed) {
+      this.resetTextureFrame();
+    }
   }
 
   /** Signal the GPU backend that the underlying texture source has changed and reset the frame to full dimensions. */
