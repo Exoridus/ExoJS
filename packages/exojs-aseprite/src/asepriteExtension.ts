@@ -1,4 +1,4 @@
-import type { AssetBinding, Extension } from '@codexo/exojs/extensions';
+import type { Extension } from '@codexo/exojs/extensions';
 
 import { asepriteBinding } from './asepriteBinding';
 
@@ -15,7 +15,5 @@ import { asepriteBinding } from './asepriteBinding';
  */
 export const asepriteExtension: Extension = Object.freeze({
   id: '@codexo/exojs-aseprite',
-  // Localized erasure cast: typed binding (Options=undefined) meets the
-  // untyped Extension.assets contract here. Runtime behavior is unaffected.
-  assets: [asepriteBinding] as unknown as AssetBinding[],
+  assets: [asepriteBinding],
 });
