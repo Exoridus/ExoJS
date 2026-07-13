@@ -92,7 +92,7 @@ export class Container extends RenderNode {
       return this;
     }
 
-    // #310: attaching an already-destroyed node is otherwise silent — it renders
+    // Attaching an already-destroyed node is otherwise silent — it renders
     // nothing (the collect dev-guard skips it) or replays freed state. Warn once
     // in dev at the attach site, the earliest clear use-after-destroy signal.
     if (__DEV__ && child.destroyed) {

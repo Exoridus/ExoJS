@@ -65,7 +65,7 @@ describe('Assets.from bare-string inference', () => {
   });
 });
 
-describe('Assets dev-mode typo guard (#311)', () => {
+describe('Assets dev-mode typo guard', () => {
   let entries: string[];
   let removeSink: () => void;
 

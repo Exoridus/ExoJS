@@ -325,7 +325,7 @@ export class Texture {
     return this;
   }
 
-  /** `true` once {@link destroy} has run — a destroyed texture must not be bound (#310). */
+  /** `true` once {@link destroy} has run — a destroyed texture must not be bound. */
   public get destroyed(): boolean {
     return this._isDestroyed;
   }

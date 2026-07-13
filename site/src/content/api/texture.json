@@ -693,7 +693,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "true once destroy has run — a destroyed texture must not be bound (#310)."
+          "description": "true once destroy has run — a destroyed texture must not be bound."
         },
         {
           "name": "error",
