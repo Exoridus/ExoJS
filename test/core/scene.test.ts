@@ -138,4 +138,38 @@ describe('Scene', () => {
     expect(backendDraw).toHaveBeenCalledWith(worldSprite);
     expect(backendDraw).not.toHaveBeenCalledWith(uiSprite);
   });
+
+  // #313: Scene.app is a throwing non-null accessor (like Scene.inputs/tweens/
+  // loader), not `Application | null` — the framework guarantees attachment
+  // before any lifecycle hook, so scene code never needs a null guard.
+  describe('app accessor (#313)', () => {
+    const fakeApp = { id: 'app' } as unknown as import('#core/Application').Application;
+
+    test('throws when accessed before the scene is attached', () => {
+      const scene = new Scene();
+
+      expect(() => scene.app).toThrow(/unavailable before the scene is attached to an Application/);
+    });
+
+    test('returns the Application once attached', () => {
+      const scene = new Scene();
+
+      scene.app = fakeApp;
+
+      expect(scene.app).toBe(fakeApp);
+    });
+
+    test('attached reflects lifecycle without throwing (the legitimate null check)', () => {
+      const scene = new Scene();
+
+      expect(scene.attached).toBe(false);
+
+      scene.app = fakeApp;
+      expect(scene.attached).toBe(true);
+
+      scene.app = null;
+      expect(scene.attached).toBe(false);
+      expect(() => scene.app).toThrow();
+    });
+  });
 });

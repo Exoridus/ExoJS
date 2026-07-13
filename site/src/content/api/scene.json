@@ -6,11 +6,11 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 23,
+  "memberCount": 24,
   "counts": {
     "constructors": 1,
     "methods": 12,
-    "properties": 8,
+    "properties": 9,
     "events": 2
   },
   "sections": [
@@ -690,7 +690,7 @@
         },
         {
           "name": "app",
-          "signature": "app: Application | null",
+          "signature": "app: Application",
           "signatureTokens": [
             {
               "text": "app",
@@ -703,19 +703,32 @@
             {
               "text": "Application",
               "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The Application this scene is attached to. The framework attaches a scene before any lifecycle hook (init/update/draw) runs, so scene code can read this.app inside those hooks without a null guard — consistent with Scene.inputs/Scene.tweens/Scene.loader. Throws if accessed before the scene is attached (e.g. in a constructor). Use Scene.attached for the rare \"is it attached yet?\" check that must not throw."
+        },
+        {
+          "name": "attached",
+          "signature": "attached: boolean",
+          "signatureTokens": [
+            {
+              "text": "attached",
+              "kind": "name"
             },
             {
-              "text": " | ",
+              "text": ": ",
               "kind": "punctuation"
             },
             {
-              "text": "null",
+              "text": "boolean",
               "kind": "keyword"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "true once the scene is attached to an Application — a non-throwing lifecycle probe (see Scene.app)."
         },
         {
           "name": "inputs",

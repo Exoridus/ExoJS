@@ -32,19 +32,19 @@ class SceneInputs implements Destroyable {
   public constructor(private readonly _scene: Scene) {}
 
   public onStart(channel: InputChannel | readonly InputChannel[], callback: (value: number) => void, options?: InputBindingOptions): InputBinding {
-    return this._track(this._scene.app!.input.onStart(channel, callback, options));
+    return this._track(this._scene.app.input.onStart(channel, callback, options));
   }
 
   public onActive(channel: InputChannel | readonly InputChannel[], callback: (value: number) => void, options?: InputBindingOptions): InputBinding {
-    return this._track(this._scene.app!.input.onActive(channel, callback, options));
+    return this._track(this._scene.app.input.onActive(channel, callback, options));
   }
 
   public onStop(channel: InputChannel | readonly InputChannel[], callback: (value: number) => void, options?: InputBindingOptions): InputBinding {
-    return this._track(this._scene.app!.input.onStop(channel, callback, options));
+    return this._track(this._scene.app.input.onStop(channel, callback, options));
   }
 
   public onTrigger(channel: InputChannel | readonly InputChannel[], callback: (value: number) => void, options?: InputBindingOptions): InputBinding {
-    return this._track(this._scene.app!.input.onTrigger(channel, callback, options));
+    return this._track(this._scene.app.input.onTrigger(channel, callback, options));
   }
 
   public destroy(): void {
@@ -72,14 +72,14 @@ class SceneTweens implements Destroyable {
   public constructor(private readonly _scene: Scene) {}
 
   public create<T extends object>(target: T): Tween<T> {
-    const tween = this._scene.app!.tweens.create(target);
+    const tween = this._scene.app.tweens.create(target);
     this._tweens.add(tween);
 
     return tween;
   }
 
   public add(tween: Tween): this {
-    this._scene.app!.tweens.add(tween);
+    this._scene.app.tweens.add(tween);
     this._tweens.add(tween);
 
     return this;
@@ -107,7 +107,7 @@ class SceneLoader implements Destroyable {
   public constructor(private readonly _scene: Scene) {}
 
   private get _loader(): Loader {
-    return this._scene.app!.loader;
+    return this._scene.app.loader;
   }
 
   public get<S extends string>(path: LoadByPath<S> extends Texture | Sound ? S : never, options?: unknown): LoadByPath<S>;
@@ -184,12 +184,31 @@ export class Scene {
   private _systems: SystemRegistry | null = null;
   private readonly _disposal = new DisposalScope();
 
-  public get app(): Application | null {
+  /**
+   * The {@link Application} this scene is attached to. The framework attaches a
+   * scene before any lifecycle hook (`init`/`update`/`draw`) runs, so scene code
+   * can read `this.app` inside those hooks without a null guard — consistent
+   * with {@link Scene.inputs}/{@link Scene.tweens}/{@link Scene.loader}.
+   *
+   * Throws if accessed before the scene is attached (e.g. in a constructor). Use
+   * {@link Scene.attached} for the rare "is it attached yet?" check that must not
+   * throw.
+   */
+  public get app(): Application {
+    if (this._app === null) {
+      throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+    }
+
     return this._app;
   }
 
   public set app(app: Application | null) {
     this._app = app;
+  }
+
+  /** `true` once the scene is attached to an {@link Application} — a non-throwing lifecycle probe (see {@link Scene.app}). */
+  public get attached(): boolean {
+    return this._app !== null;
   }
 
   /**
