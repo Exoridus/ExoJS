@@ -1,4 +1,5 @@
 import { invariant } from '#core/dev';
+import { logger } from '#core/logging';
 import type { Stage } from '#core/Stage';
 import { removeArrayItems } from '#core/utils';
 import { RenderEntryKind } from '#rendering/plan/RenderCommand';
@@ -89,6 +90,16 @@ export class Container extends RenderNode {
 
     if (child === this) {
       return this;
+    }
+
+    // #310: attaching an already-destroyed node is otherwise silent — it renders
+    // nothing (the collect dev-guard skips it) or replays freed state. Warn once
+    // in dev at the attach site, the earliest clear use-after-destroy signal.
+    if (__DEV__ && child.destroyed) {
+      logger.warn(
+        'Container.addChild(): the child has already been destroy()ed — using a destroyed node is a no-op at best and stale state at worst. Create a fresh node instead of re-adding a destroyed one.',
+        { source: 'rendering', once: 'container:add-destroyed-child' },
+      );
     }
 
     // Reject reparenting an ancestor of this container as a child: it would

@@ -88,6 +88,7 @@ export class Texture {
   private _version = 0;
   private _source: TextureSource = null;
   private _size: Size = new Size(0, 0);
+  private _isDestroyed = false;
   private readonly _destroyListeners: Set<() => void> = new Set<() => void>();
   /** @internal — load lifecycle, driven by the Loader's seamless pipeline. */
   public readonly _loadState = new LoadState<Texture>();
@@ -324,6 +325,11 @@ export class Texture {
     return this;
   }
 
+  /** `true` once {@link destroy} has run — a destroyed texture must not be bound (#310). */
+  public get destroyed(): boolean {
+    return this._isDestroyed;
+  }
+
   public destroy(): void {
     for (const listener of [...this._destroyListeners]) {
       listener();
@@ -332,6 +338,7 @@ export class Texture {
     this._destroyListeners.clear();
     this._size.destroy();
     this._source = null;
+    this._isDestroyed = true;
   }
 
   private _touch(): void {
