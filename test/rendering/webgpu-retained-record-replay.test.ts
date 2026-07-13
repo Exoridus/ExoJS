@@ -466,6 +466,73 @@ describe('WebGPU retained record/replay: fallback ladder + B-06 submit collapse'
     }
   });
 
+  test('a child move patches ONE transform row in place (O(k)) — no re-record, no generation bump (Slice 4c, WebGL2 parity)', async () => {
+    const environment = createMockWebGpuEnvironment();
+
+    try {
+      const backend = await createBackend(environment);
+      const texture = createCanvasTexture();
+      const { root, groups } = buildGroupScene(texture, 1);
+      const group = groups[0]!;
+      const mover = group.children[0] as Sprite;
+
+      renderFrame(backend, root); // F1: capture
+      renderFrame(backend, root); // F2: record
+      renderFrame(backend, root); // F3: replay (bundle finalized, rows stored)
+
+      const recordedSet = fragmentOf(group).instructions;
+      const bundle = recordedSet?.ownedBundle as WebGpuRetainedGroupBundle;
+
+      expect(recordedSet?.hasRecording).toBe(true);
+      expect(bundle).toBeInstanceOf(WebGpuRetainedGroupBundle);
+      // The rebase base is now exposed (undefined before 4c → plan fell back).
+      expect(bundle.transformRowBase).toBeTypeOf('number');
+
+      const generation = bundle.generation;
+      const mark = environment.writes().length;
+      const drawsBefore = environment.draws().length;
+      const submitsBefore = environment.submitCount();
+
+      // Move a DIRECT CHILD (not the group). The recorded instance bytes still
+      // reference its row by index, so the fast path patches that one row in
+      // place instead of dropping the recording and re-recording (the pre-4c
+      // WebGPU behaviour: entry-replay + re-record).
+      mover.setPosition(4, 4);
+      renderFrame(backend, root);
+
+      // No re-record: the instance buffer is untouched.
+      expect(countLabel(environment.writes(), retainedInstanceLabel, mark)).toBe(0);
+      // The group matrix did not change, so its UBO is not rewritten either.
+      expect(countLabel(environment.writes(), retainedUniformLabel, mark)).toBe(0);
+
+      // Exactly one 48-byte transform sub-range write (a single TransformSlot),
+      // aligned to a slot boundary — the headline O(k) property vs. the O(rows)
+      // full-range re-upload of a recapture.
+      const patchWrites = environment
+        .writes()
+        .slice(mark)
+        .filter(write => write.label === retainedTransformLabel);
+
+      expect(patchWrites).toHaveLength(1);
+      expect(patchWrites[0]!.bytes.byteLength).toBe(48);
+      expect(patchWrites[0]!.bufferOffset % 48).toBe(0);
+      expect(patchWrites[0]!.bufferOffset).toBeLessThan(2 * 48);
+
+      // Recording stayed valid (no generation bump) and still replays in one submit.
+      expect(bundle.generation).toBe(generation);
+      expect(fragmentOf(group).instructions).toBe(recordedSet);
+      expect(fragmentOf(group).instructions?.hasRecording).toBe(true);
+      expect(environment.submitCount() - submitsBefore).toBe(1);
+      expect(environment.draws().slice(drawsBefore)).toEqual([{ instanceCount: 2 }]);
+
+      root.destroy();
+      texture.destroy();
+      backend.destroy();
+    } finally {
+      environment.restore();
+    }
+  });
+
   test('grow-only bundle: a same-size recapture keeps the generation, growth bumps it, replay resumes after both', async () => {
     const environment = createMockWebGpuEnvironment();
 
@@ -487,10 +554,12 @@ describe('WebGPU retained record/replay: fallback ladder + B-06 submit collapse'
 
       renderFrame(backend, root); // F3: replay
 
-      // Same-shaped recapture (child move): buffers are reused in place.
+      // Child move: as of Slice 4c this fast-patches the row in place rather
+      // than recapturing — either way the bundle is reused and its generation
+      // stays put (a patch never bumps it, a same-size recapture reuses buffers).
       mover.setPosition(4, 4);
-      renderFrame(backend, root); // dirty collect
-      renderFrame(backend, root); // re-record into the SAME buffers
+      renderFrame(backend, root); // patch (reconcile) + replay
+      renderFrame(backend, root); // static replay
 
       expect(fragmentOf(group).instructions?.ownedBundle).toBe(bundle);
       expect((bundle as WebGpuRetainedGroupBundle).generation).toBe(initialGeneration);
@@ -636,9 +705,10 @@ describe('WebGpuRetainedGroupBundle: resource lifecycle', () => {
     }
   });
 
-  const createFakeDevice = (): { device: GPUDevice; created: string[]; destroyed: string[] } => {
+  const createFakeDevice = (): { device: GPUDevice; created: string[]; destroyed: string[]; writes: CapturedWrite[] } => {
     const created: string[] = [];
     const destroyed: string[] = [];
+    const writes: CapturedWrite[] = [];
     const device = {
       createBuffer: (descriptor: GPUBufferDescriptor): GPUBuffer => {
         created.push(descriptor.label ?? '');
@@ -651,9 +721,14 @@ describe('WebGpuRetainedGroupBundle: resource lifecycle', () => {
         } as unknown as GPUBuffer;
       },
       createBindGroup: () => ({}) as GPUBindGroup,
+      queue: {
+        writeBuffer: (buffer: LabeledBuffer, bufferOffset: number, data: ArrayBuffer | ArrayBufferView, dataOffset?: number, size?: number): void => {
+          writes.push({ label: buffer.label, bufferOffset, bytes: captureWriteBytes(data, dataOffset, size) });
+        },
+      },
     } as unknown as GPUDevice;
 
-    return { device, created, destroyed };
+    return { device, created, destroyed, writes };
   };
 
   test('device loss invalidates: buffers dropped without destroy, generation bumped, accounting freed', () => {
@@ -724,5 +799,83 @@ describe('WebGpuRetainedGroupBundle: resource lifecycle', () => {
 
     expect(created.length).toBe(createdAfterFirst + 1);
     expect(bundle.generation).toBe(generation + 1);
+  });
+
+  test('transformRowBase defaults to 0 before any capture is finalized (Slice 4c)', () => {
+    const stats = createRenderStats();
+    const accountant = new GpuResourceAccountant(stats);
+    const bundle = new WebGpuRetainedGroupBundle(accountant, () => {});
+
+    expect(bundle.transformRowBase).toBe(0);
+  });
+
+  test('patch writes one 48-byte slot at localRow*48 and does NOT bump the generation (Slice 4c)', () => {
+    const stats = createRenderStats();
+    const accountant = new GpuResourceAccountant(stats);
+    const bundle = new WebGpuRetainedGroupBundle(accountant, () => {});
+    const { device, writes } = createFakeDevice();
+
+    // Finalize a 3-row transform range rebased from shared row 5.
+    bundle.ensureCapacity(device, 256, 3 * 48);
+    bundle._recordTransformRowRange(device, 5, 3);
+
+    expect(bundle.transformRowBase).toBe(5);
+
+    const generation = bundle.generation;
+    const mark = writes.length;
+    const floats = new Float32Array(12);
+
+    floats[4] = 42; // tx
+
+    bundle._patchTransformRow!(1, floats);
+
+    const patchWrites = writes.slice(mark).filter(write => write.label === 'sprite:retained-transform-buffer');
+
+    expect(patchWrites).toHaveLength(1);
+    expect(patchWrites[0]!.bufferOffset).toBe(48); // localRow 1 * 48
+    expect(patchWrites[0]!.bytes.byteLength).toBe(48);
+    expect(new Float32Array(patchWrites[0]!.bytes.buffer)[4]).toBe(42);
+    // A patch keeps the recorded instance bytes valid: never bump.
+    expect(bundle.generation).toBe(generation);
+  });
+
+  test('patch ignores out-of-range rows and no-ops before a range is recorded (Slice 4c)', () => {
+    const stats = createRenderStats();
+    const accountant = new GpuResourceAccountant(stats);
+    const bundle = new WebGpuRetainedGroupBundle(accountant, () => {});
+    const { device, writes } = createFakeDevice();
+
+    // Before any range is recorded: row count is 0 → every patch is a no-op.
+    bundle._patchTransformRow!(0, new Float32Array(12));
+
+    expect(writes).toHaveLength(0);
+
+    bundle.ensureCapacity(device, 256, 2 * 48);
+    bundle._recordTransformRowRange(device, 0, 2);
+
+    const mark = writes.length;
+
+    bundle._patchTransformRow!(2, new Float32Array(12)); // == rowCount, out of range
+    bundle._patchTransformRow!(-1, new Float32Array(12));
+
+    expect(writes.slice(mark)).toHaveLength(0);
+  });
+
+  test('device loss clears the patch range so a stale patch cannot write a dead buffer (Slice 4c)', () => {
+    const stats = createRenderStats();
+    const accountant = new GpuResourceAccountant(stats);
+    const bundle = new WebGpuRetainedGroupBundle(accountant, () => {});
+    const { device, writes } = createFakeDevice();
+
+    bundle.ensureCapacity(device, 256, 2 * 48);
+    bundle._recordTransformRowRange(device, 0, 2);
+    bundle.invalidateDeviceState(false);
+
+    const mark = writes.length;
+
+    bundle._patchTransformRow!(0, new Float32Array(12));
+
+    expect(bundle.transformRowBase).toBe(0);
+    expect(writes.slice(mark)).toHaveLength(0);
   });
 });
