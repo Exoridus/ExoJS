@@ -1,6 +1,7 @@
 import '#resources/coreAssetBindings';
 
 import { Sound } from '#audio/Sound';
+import { logger } from '#core/logging';
 import { Texture } from '#rendering/texture/Texture';
 import { Asset } from '#resources/Asset';
 import { _readMeta } from '#resources/assetMeta';
@@ -61,5 +62,88 @@ describe('Assets.from bare-string inference', () => {
   });
   it('still accepts explicit configs (existing form) unchanged', () => {
     expect(Assets.from({ ship: { kind: 'texture', source: 's.png' } }).ship).toBeInstanceOf(Texture);
+  });
+});
+
+describe('Assets dev-mode typo guard (#311)', () => {
+  let entries: string[];
+  let removeSink: () => void;
+
+  beforeEach(() => {
+    logger._resetOnce();
+    entries = [];
+    removeSink = logger.addSink(e => entries.push(e.message));
+  });
+
+  afterEach(() => removeSink());
+
+  const missingKeyCount = (): number => entries.filter(m => m.includes('is not a defined catalog key')).length;
+
+  test('warns once when an unknown string key is read (typo)', () => {
+    const bag = Assets.from({ logo: 'sprites/logo.png' });
+
+    void (bag as any).logoo;
+    void (bag as any).logoo;
+
+    expect(missingKeyCount()).toBe(1); // once, despite two reads
+  });
+
+  test('still returns undefined for the unknown key (behavior unchanged)', () => {
+    const bag = Assets.from({ logo: 'sprites/logo.png' });
+
+    expect((bag as any).logoo).toBeUndefined();
+  });
+
+  test('does not warn for a real catalog key or `entries`', () => {
+    const bag = Assets.from({ logo: 'sprites/logo.png' });
+
+    void bag.logo;
+    void bag.entries;
+
+    expect(missingKeyCount()).toBe(0);
+  });
+
+  test('does not warn for inherited Object.prototype members', () => {
+    const bag = Assets.from({ logo: 'sprites/logo.png' });
+
+    void bag.toString;
+    void bag.constructor;
+    void bag.hasOwnProperty;
+
+    expect(missingKeyCount()).toBe(0);
+  });
+
+  test('does not warn for `then` or `toJSON` duck-typing probes', () => {
+    const bag = Assets.from({ logo: 'sprites/logo.png' });
+
+    void (bag as any).then;
+    void (bag as any).toJSON;
+
+    expect(missingKeyCount()).toBe(0);
+  });
+
+  test('does not warn for a Symbol key', () => {
+    const bag = Assets.from({ logo: 'sprites/logo.png' });
+
+    void (bag as any)[Symbol.iterator];
+
+    expect(missingKeyCount()).toBe(0);
+  });
+
+  test('dedups per catalog instance, not globally: a second, unrelated catalog missing the same key name still warns', () => {
+    const first = Assets.from({ logo: 'sprites/logo.png' });
+    const second = Assets.from({ hero: 'sprites/hero.png' });
+
+    void (first as any).icon;
+    void (second as any).icon; // same missing key name, but a DIFFERENT catalog
+
+    expect(missingKeyCount()).toBe(2);
+  });
+
+  test('preserves the Assets/AssetsImpl instanceof contract and real .entries access through the Proxy', () => {
+    const bag = Assets.from({ logo: 'sprites/logo.png' });
+
+    expect(bag).toBeInstanceOf(Assets);
+    expect(bag.entries).toEqual({ logo: bag.logo });
   });
 });
