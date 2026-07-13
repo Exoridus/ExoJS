@@ -224,9 +224,12 @@ jobs:
         with:
           files: ./coverage/lcov.info
           flags: unit
-          # Loud on purpose: the upload failed silently for months (empty token
-          # in the reusable workflow) and nobody noticed.
-          fail_ci_if_error: true
+          # Loud on purpose when a token is present (the upload failed silently
+          # for months and nobody noticed), but non-fatal when it is absent:
+          # Dependabot / fork PRs run without repository secrets, so a strict
+          # upload would fail Required CI on a green test run (only the codecov
+          # step fails: "Token required because branch is protected").
+          fail_ci_if_error: ${{ secrets.CODECOV_TOKEN != '' }}
           token: ${{ secrets.CODECOV_TOKEN }}
           slug: Exoridus/ExoJS
 
@@ -300,7 +303,9 @@ jobs:
         with:
           files: ./coverage/lcov.info
           flags: browser
-          fail_ci_if_error: true
+          # Non-fatal without a token (Dependabot / fork PRs) — see the unit
+          # coverage upload above for the rationale.
+          fail_ci_if_error: ${{ secrets.CODECOV_TOKEN != '' }}
           token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Upload test results to Codecov
