@@ -65,6 +65,16 @@ export function _normalizeEntry(value: CatalogEntry): AnyAssetConfig {
  */
 const ASSETS_DEV_PROXY_DUCK_TYPING_KEYS = new Set(['then', 'toJSON']);
 
+/**
+ * Per-instance counter for the dev typo guard's warn-once key (below). Two
+ * unrelated catalogs missing the SAME key name must each get their own
+ * diagnostic — a global dedup key would silently swallow the second
+ * catalog's warning after the first one fires, defeating the point of the
+ * guard (adversarial review, 2026-07-13: opus and fable both independently
+ * flagged this).
+ */
+let assetsDevProxyInstanceCounter = 0;
+
 /** @internal */
 export class AssetsImpl<M extends Record<string, CatalogEntry>> {
   public readonly entries: InferAssetsEntries<M>;
@@ -103,14 +113,18 @@ export class AssetsImpl<M extends Record<string, CatalogEntry>> {
     // is otherwise a silent `undefined` — warn once per key in dev instead.
     // __DEV__-gated: zero cost and no Proxy indirection in production.
     if (__DEV__) {
+      const instanceId = assetsDevProxyInstanceCounter++;
+
       return new Proxy(this, {
         get(target, key, receiver) {
           const value = Reflect.get(target, key, receiver);
 
           if (typeof key === 'string' && !ASSETS_DEV_PROXY_DUCK_TYPING_KEYS.has(key) && !Reflect.has(target, key)) {
-            logger.warn(`Assets: "${key}" is not a defined catalog key. Defined keys: ${Object.keys(target).join(', ')}.`, {
+            const definedKeys = Object.keys(target).filter(k => k !== 'entries');
+
+            logger.warn(`Assets: "${key}" is not a defined catalog key. Defined keys: ${definedKeys.join(', ')}.`, {
               source: 'Assets',
-              once: `assets:missing-key:${key}`,
+              once: `assets:missing-key:${instanceId}:${key}`,
             });
           }
 

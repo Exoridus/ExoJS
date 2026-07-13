@@ -129,4 +129,21 @@ describe('Assets dev-mode typo guard (#311)', () => {
 
     expect(missingKeyCount()).toBe(0);
   });
+
+  test('dedups per catalog instance, not globally: a second, unrelated catalog missing the same key name still warns', () => {
+    const first = Assets.from({ logo: 'sprites/logo.png' });
+    const second = Assets.from({ hero: 'sprites/hero.png' });
+
+    void (first as any).icon;
+    void (second as any).icon; // same missing key name, but a DIFFERENT catalog
+
+    expect(missingKeyCount()).toBe(2);
+  });
+
+  test('preserves the Assets/AssetsImpl instanceof contract and real .entries access through the Proxy', () => {
+    const bag = Assets.from({ logo: 'sprites/logo.png' });
+
+    expect(bag).toBeInstanceOf(Assets);
+    expect(bag.entries).toEqual({ logo: bag.logo });
+  });
 });
