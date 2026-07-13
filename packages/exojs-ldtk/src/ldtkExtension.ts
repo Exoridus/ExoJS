@@ -1,4 +1,4 @@
-import type { AssetBinding, Extension } from '@codexo/exojs/extensions';
+import type { Extension } from '@codexo/exojs/extensions';
 import { tilemapExtension } from '@codexo/exojs-tilemap';
 
 import { ldtkMapBinding } from './ldtkBinding';
@@ -21,7 +21,5 @@ import { ldtkMapBinding } from './ldtkBinding';
 export const ldtkExtension: Extension = Object.freeze({
   id: '@codexo/exojs-ldtk',
   dependencies: [tilemapExtension],
-  // Localized erasure cast: typed binding meets the untyped Extension.assets
-  // contract here. Runtime behaviour is unaffected.
-  assets: [ldtkMapBinding] as unknown as AssetBinding[],
+  assets: [ldtkMapBinding],
 });
