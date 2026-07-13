@@ -106,6 +106,17 @@ jobs:
       - name: Typecheck guides
         run: pnpm typecheck:guides
 
+      # Keep this job's typecheck set 1:1 with the local verify:quick pre-push
+      # hook, which also typechecks examples (strict config) and the
+      # standalone type-tests project — a required-CI gate weaker than the
+      # local hook lets a class of error merge that then blocks every
+      # contributor's next push.
+      - name: Typecheck examples
+        run: pnpm typecheck:examples
+
+      - name: Typecheck type-tests
+        run: pnpm typecheck:type-tests
+
       # Root `pnpm typecheck` only covers src/**; the extension packages own a
       # separate tsconfig each, so typecheck them explicitly.
       - name: Typecheck extension packages
