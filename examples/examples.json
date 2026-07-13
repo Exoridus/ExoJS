@@ -76,6 +76,7 @@
                 "pause"
             ],
             "capabilities": [
+                "pointer",
                 "keyboard"
             ],
             "level": "intro"
@@ -1404,9 +1405,6 @@
                 "animation",
                 "audio"
             ],
-            "capabilities": [
-                "audio"
-            ],
             "level": "intro"
         },
         {
@@ -1422,8 +1420,7 @@
                 "audio"
             ],
             "capabilities": [
-                "pointer",
-                "audio"
+                "pointer"
             ],
             "level": "intermediate"
         },
@@ -1469,6 +1466,7 @@
                 "scene"
             ],
             "capabilities": [
+                "pointer",
                 "keyboard"
             ],
             "level": "intermediate"
@@ -1732,7 +1730,10 @@
                 "sprite",
                 "rendering"
             ],
-            "level": "intermediate"
+            "level": "intermediate",
+            "capabilities": [
+                "audio"
+            ]
         },
         {
             "slug": "video-drawable",
@@ -1746,7 +1747,9 @@
                 "rendering"
             ],
             "capabilities": [
-                "pointer"
+                "pointer",
+                "keyboard",
+                "audio"
             ],
             "level": "advanced"
         }
