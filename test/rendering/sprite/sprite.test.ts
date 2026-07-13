@@ -91,6 +91,38 @@ describe('Sprite', () => {
     });
   });
 
+  // #310: binding a destroyed texture is otherwise silent — warn once (dev) at
+  // the assignment site. Asserted via a sink (honours the logger's `once` dedup).
+  describe('destroyed-texture guard (#310)', () => {
+    const destroyedTexture = (): Texture => ({ width: 16, height: 16, flipY: false, destroyed: true, updateSource: () => undefined }) as unknown as Texture;
+
+    let entries: string[];
+    let removeSink: () => void;
+
+    beforeEach(() => {
+      logger._resetOnce();
+      entries = [];
+      removeSink = logger.addSink(e => entries.push(e.message));
+    });
+
+    afterEach(() => removeSink());
+
+    const destroyedCount = (): number => entries.filter(m => m.includes('destroyed')).length;
+
+    test('warns once when a destroyed texture is assigned', () => {
+      new Sprite(null).setTexture(destroyedTexture());
+      new Sprite(null).setTexture(destroyedTexture());
+
+      expect(destroyedCount()).toBe(1); // once, despite two destroyed assignments
+    });
+
+    test('does not warn for a live texture', () => {
+      new Sprite(makeTexture(16, 16));
+
+      expect(destroyedCount()).toBe(0);
+    });
+  });
+
   describe('updateTexture', () => {
     test('is a no-op when no texture is assigned', () => {
       const sprite = new Sprite(null);

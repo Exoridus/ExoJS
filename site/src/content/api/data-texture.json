@@ -6,11 +6,11 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 36,
+  "memberCount": 37,
   "counts": {
     "constructors": 1,
     "methods": 12,
-    "properties": 23,
+    "properties": 24,
     "events": 0
   },
   "sections": [
@@ -873,6 +873,27 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "destroyed",
+          "signature": "destroyed: boolean",
+          "signatureTokens": [
+            {
+              "text": "destroyed",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "true once destroy has run — a destroyed texture must not be bound (#310)."
         },
         {
           "name": "error",

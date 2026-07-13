@@ -246,6 +246,15 @@ export class Sprite extends Drawable {
    * Call {@link updateTexture} explicitly when you mutate the source.
    */
   public setTexture(texture: Texture | RenderTexture | null): this {
+    // #310: binding a destroyed texture is otherwise silent (it samples freed
+    // GPU state or renders nothing). Warn once in dev at the assignment site.
+    if (__DEV__ && texture !== null && 'destroyed' in texture && texture.destroyed) {
+      logger.warn(
+        'Sprite.setTexture(): the texture has already been destroy()ed — a destroyed texture samples freed state or renders nothing. Assign a live texture instead.',
+        { source: 'Sprite', once: 'sprite:set-destroyed-texture' },
+      );
+    }
+
     if (this._texture !== texture) {
       this._texture = texture;
 
