@@ -268,10 +268,7 @@ export class Container extends RenderNode {
 
     const viewUpdateId = builder.view.updateId;
 
-    if (
-      this._retainedPlan !== null &&
-      this._retainedPlan.isClean(this._contentRevision, this._structureRevision, this._transformRevision, viewUpdateId, builder.backend)
-    ) {
+    if (this._retainedPlan?.isClean(this._contentRevision, this._structureRevision, this._transformRevision, viewUpdateId, builder.backend)) {
       if (__DEV__ && this._retainedPlan._devHasDestroyedDrawable()) {
         // P3f: a direct drawable child was destroy()ed but left attached, so
         // no revision bumped and the slot cache still looks clean. Drop the
@@ -307,7 +304,7 @@ export class Container extends RenderNode {
     for (let index = 0; index < this._children.length; index++) {
       const slot = slots[slotIndex];
 
-      if (slot !== undefined && slot.childIndex === index) {
+      if (slot?.childIndex === index) {
         builder._replayRetainedDraw(slot);
         slotIndex++;
       } else {

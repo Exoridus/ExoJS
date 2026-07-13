@@ -820,14 +820,22 @@ export class Application {
    * frame loop, and the backend already deduplicates them.
    */
   private _handleAsyncRenderError(error: RenderError): void {
-    this._reportError(error, false);
+    // The backend already logged this at its first occurrence (and dedupes
+    // repeats), so the shared pipeline must NOT log it a second time (#306).
+    this._reportError(error, false, true);
   }
 
-  /** Shared error-pipeline steps: log, ring buffer, `onError`, dev banner. */
-  private _reportError(error: Error, fatal: boolean): void {
+  /**
+   * Shared error-pipeline steps: log, ring buffer, `onError`, dev banner.
+   * `alreadyLogged` skips the console log for errors the backend logged at
+   * source (async render errors) so they are not double-logged (#306).
+   */
+  private _reportError(error: Error, fatal: boolean, alreadyLogged = false): void {
     const isRenderError = error instanceof RenderError;
 
-    logger.error(error.message, { source: isRenderError ? 'rendering' : 'core', error });
+    if (!alreadyLogged) {
+      logger.error(error.message, { source: isRenderError ? 'rendering' : 'core', error });
+    }
 
     this._recentErrors.push({
       time: Date.now(),
