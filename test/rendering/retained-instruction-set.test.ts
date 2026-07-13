@@ -911,7 +911,9 @@ describe('collect switch: fallback ladder end-to-end (Task 5)', () => {
 
     playFrame(root, backend); // F3: splice
 
-    leaf.setPosition(9, 9);
+    // Slice 4b: a transform move would be row-patched (set stays valid); a
+    // genuine content change is what invalidates the recording + fragment.
+    leaf.invalidateContent();
 
     // F4: dirty -> full collect; the stale recording is gone, nothing replays.
     events.length = 0;
@@ -1007,9 +1009,10 @@ describe('collect switch: fallback ladder end-to-end (Task 5)', () => {
     // F1: everything dirty -> captures, no arming.
     playFrame(root, backend);
 
-    // F2: outer dirty (mutated direct child), inner clean -> inner arms and
-    // records its own set during the outer's full collect.
-    dynamic.setPosition(1, 0);
+    // F2: outer dirty (mutated direct child, content-dirty — Slice 4b: a move
+    // would patch instead), inner clean -> inner arms and records its own set
+    // during the outer's full collect.
+    dynamic.invalidateContent();
     playFrame(root, backend);
 
     expect(innerFragment.instructions?.hasRecording).toBe(true);
@@ -1018,7 +1021,7 @@ describe('collect switch: fallback ladder end-to-end (Task 5)', () => {
 
     // F3: outer dirty again (thrash-suppressed), inner clean + valid set ->
     // inner SPLICES its instructions while the outer collects normally.
-    dynamic.setPosition(2, 0);
+    dynamic.invalidateContent();
     events.length = 0;
     playFrame(root, backend);
 
@@ -1075,9 +1078,9 @@ describe('collect switch: fallback ladder end-to-end (Task 5)', () => {
 
     // Same cadence as above up to the outer capture holding the spliced set.
     playFrame(root, backend); // F1
-    dynamic.setPosition(1, 0);
+    dynamic.invalidateContent(); // content-dirty keeps the OUTER dirty (Slice 4b: a move would patch)
     playFrame(root, backend); // F2: inner records
-    dynamic.setPosition(2, 0);
+    dynamic.invalidateContent();
     playFrame(root, backend); // F3: inner splices, outer suppressed
     playFrame(root, backend); // F4: outer recovery capture (inner record carries the set)
 

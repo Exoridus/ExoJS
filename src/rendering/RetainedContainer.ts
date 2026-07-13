@@ -5,7 +5,17 @@ import type { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RetainedGroupFragment } from '#rendering/plan/RetainedGroupFragment';
 
 import { Container } from './Container';
+import type { Drawable } from './Drawable';
+import type { RetainedGroupBundle } from './plan/RetainedInstructionSet';
 import type { RenderNode } from './RenderNode';
+
+/**
+ * Reused scratch for one patched transform row (12 floats = 3 rgba32f texels,
+ * the {@link TransformBuffer} layout: a,b,c,d, tx,ty,0,0, r,g,b,a). Filled and
+ * consumed synchronously inside a single patch call, so one module-level buffer
+ * is safe and allocation-free under churn.
+ */
+const patchRowScratch = new Float32Array(12);
 
 /** Observation window for the S2-D1 retention diagnostic, in fragment builds (~frames). */
 const retainedDiagnosticWindow = 120;
@@ -98,6 +108,17 @@ export class RetainedContainer extends Container {
     this._invalidateBoundsFlags();
   }
 
+  /**
+   * Slice 4b seam: a descendant's own transform moved. Queue its row on the
+   * fragment; {@link _collectContent} patches the queued rows in place on a
+   * content/structure-clean frame instead of re-collecting. The group's OWN
+   * move does not route here — {@link _markOwnTransformDirty} above handles it
+   * as a one-matrix group move.
+   */
+  public override _enqueueDirtyTransformRow(node: RenderNode): void {
+    this._fragment.enqueueDirtyTransformRow(node);
+  }
+
   // ── F12: group-local bounds aggregate cache ─────────────────────────────
   // The group-local child aggregate only changes when the SUBTREE changes,
   // which the content/structure revisions already key exactly — a group move
@@ -115,6 +136,7 @@ export class RetainedContainer extends Container {
   private readonly _liveBoundsChildren: RenderNode[] = [];
   private _aggregateContentRevision = -1;
   private _aggregateStructureRevision = -1;
+  private _aggregateTransformRevision = -1;
 
   /**
    * World AABB of the group: children aggregate in group-local space, so
@@ -134,10 +156,18 @@ export class RetainedContainer extends Container {
 
     const world = this.getGlobalTransform();
 
-    if (this._aggregateContentRevision !== this._contentRevision || this._aggregateStructureRevision !== this._structureRevision) {
+    // Keyed on the transform channel too (Slice 4b): a descendant transform-only
+    // move changes its group-local rect but no longer stamps content (the 4b
+    // flip), so without the transform key the cached aggregate would go stale.
+    if (
+      this._aggregateContentRevision !== this._contentRevision ||
+      this._aggregateStructureRevision !== this._structureRevision ||
+      this._aggregateTransformRevision !== this._transformRevision
+    ) {
       this._rebuildGroupAggregate();
       this._aggregateContentRevision = this._contentRevision;
       this._aggregateStructureRevision = this._structureRevision;
+      this._aggregateTransformRevision = this._transformRevision;
     }
 
     this._bounds.reset().addRect(this._groupAggregate.getRect(), world);
@@ -199,6 +229,15 @@ export class RetainedContainer extends Container {
       this._fragment.invalidate();
       this._warnReplayedDestroyed();
     } else if (fragmentClean) {
+      // Slice 4b: a content/structure-clean frame may still carry transform-only
+      // descendant moves (the flip: an own-transform move no longer content-
+      // dirties). The recorded instruction set's baked transform rows are stale
+      // for those nodes — patch the changed rows in place (O(k)), or drop the
+      // recording so entry replay re-reads live transforms this frame.
+      if (this._fragment.hasDirtyTransformRows()) {
+        this._reconcileTransformRows();
+      }
+
       // Fast tier (Slice 3, S3-D2): a valid recorded instruction set splices
       // as an EMPTY scope — the player replays O(batches), the optimizer sees
       // nothing. Falls through the ladder: instruction replay -> entry replay
@@ -256,6 +295,85 @@ export class RetainedContainer extends Container {
     if (!suppressCapture) {
       this._fragment.capture(this._contentRevision, this._structureRevision, builder.backend, builder._peekCurrentScopeEntries());
     }
+  }
+
+  /**
+   * Slice 4b: reconcile the queued transform-only moves against the recorded
+   * instruction set before replay. On the recorded tier the transforms are
+   * baked into the group-owned store, so each moved DIRECT drawable child's row
+   * is patched in place (O(k) rows + one sub-range upload). Any ineligible move
+   * (nested below a sub-container, pixel-snapped, or not a recorded direct draw)
+   * drops the recording, so this frame entry-replays with live transforms and
+   * re-records — correct, O(entries), the rare fallback. On the entry-replay
+   * tier there is nothing to reconcile (transforms are re-read live); the queue
+   * is simply drained.
+   */
+  private _reconcileTransformRows(): void {
+    const set = this._fragment.instructions;
+    const bundle = set?.ownedBundle ?? null;
+
+    if (set === null || !set.hasRecording || bundle === null || typeof bundle._patchTransformRow !== 'function' || bundle.transformRowBase === undefined) {
+      this._fragment.clearDirtyTransformRows();
+
+      return;
+    }
+
+    const base = bundle.transformRowBase;
+
+    for (const node of this._fragment.dirtyTransformRows) {
+      if (!this._patchTransformRow(node, bundle, base)) {
+        // Ineligible: drop the baked recording. `_markCurrentScopeRetained`
+        // will now fail its validity check, so the group falls to entry replay
+        // (live transforms) and re-records this frame.
+        set.invalidate();
+        break;
+      }
+    }
+
+    this._fragment.clearDirtyTransformRows();
+  }
+
+  /**
+   * Patch one moved node's group-local transform row, or return `false` when it
+   * is not fast-patch-eligible (spec §3 eligibility). Eligible: a direct
+   * drawable child, non-snapped, present in the recorded row map. The
+   * group-local matrix is `getGlobalTransform()` composed to this boundary — the
+   * exact value the recorder wrote (S3-D4).
+   */
+  private _patchTransformRow(node: RenderNode, bundle: RetainedGroupBundle, base: number): boolean {
+    if (node.parent !== this) {
+      return false;
+    }
+
+    const drawable = node as unknown as Drawable;
+    const nodeIndex = this._fragment.directDrawNodeIndex(drawable);
+
+    // Snapped nodes are excluded from recording (their instance words are
+    // view-dependent), so a recorded direct child is never snapped — but guard
+    // belt-and-braces: an ineligible node drops to the re-record fallback.
+    if (nodeIndex === undefined || drawable.pixelSnapMode !== 'none') {
+      return false;
+    }
+
+    const matrix = node.getGlobalTransform();
+    const tint = drawable.tint;
+
+    patchRowScratch[0] = matrix.a;
+    patchRowScratch[1] = matrix.b;
+    patchRowScratch[2] = matrix.c;
+    patchRowScratch[3] = matrix.d;
+    patchRowScratch[4] = matrix.x;
+    patchRowScratch[5] = matrix.y;
+    patchRowScratch[6] = 0;
+    patchRowScratch[7] = 0;
+    patchRowScratch[8] = tint.r / 255;
+    patchRowScratch[9] = tint.g / 255;
+    patchRowScratch[10] = tint.b / 255;
+    patchRowScratch[11] = tint.a;
+
+    bundle._patchTransformRow!(nodeIndex - base, patchRowScratch);
+
+    return true;
   }
 
   /**

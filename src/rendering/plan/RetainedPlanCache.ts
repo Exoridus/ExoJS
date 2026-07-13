@@ -84,6 +84,7 @@ export class RetainedPlanCache {
   private _poolCursor = 0;
   private _contentRevision = -1;
   private _structureRevision = -1;
+  private _transformRevision = -1;
   private _viewUpdateId = -1;
   private _backend: RenderBackend | null = null;
   private _hasCapture = false;
@@ -92,11 +93,21 @@ export class RetainedPlanCache {
     return this._slots;
   }
 
-  public isClean(contentRevision: number, structureRevision: number, viewUpdateId: number, backend: RenderBackend): boolean {
+  /**
+   * Keyed on transform-revision too (Slice 4b): the cached slots hold each
+   * child's screen-space AABB (`minX..maxY`), so a plain-container child move
+   * must re-collect. Own-transform mutations no longer stamp the content channel
+   * (Slice 4b dropped that co-bump), so without this the skip would replay a
+   * stale extent. Unlike a {@link RetainedContainer} — which patches its rows in
+   * place — the plain-container skip has no per-slot patch path and simply
+   * re-collects, exactly as it did when transform still content-dirtied.
+   */
+  public isClean(contentRevision: number, structureRevision: number, transformRevision: number, viewUpdateId: number, backend: RenderBackend): boolean {
     return (
       this._hasCapture &&
       this._contentRevision === contentRevision &&
       this._structureRevision === structureRevision &&
+      this._transformRevision === transformRevision &&
       this._viewUpdateId === viewUpdateId &&
       this._backend === backend
     );
@@ -133,9 +144,10 @@ export class RetainedPlanCache {
   }
 
   /** Key the capture; only after this does {@link isClean} consider it. */
-  public _commitCapture(contentRevision: number, structureRevision: number, viewUpdateId: number, backend: RenderBackend): void {
+  public _commitCapture(contentRevision: number, structureRevision: number, transformRevision: number, viewUpdateId: number, backend: RenderBackend): void {
     this._contentRevision = contentRevision;
     this._structureRevision = structureRevision;
+    this._transformRevision = transformRevision;
     this._viewUpdateId = viewUpdateId;
     this._backend = backend;
     this._hasCapture = true;

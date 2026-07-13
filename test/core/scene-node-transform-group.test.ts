@@ -115,18 +115,25 @@ describe('own-transform dirty seam (_markOwnTransformDirty)', () => {
     node.destroy();
   });
 
-  test("the default seam keeps today's behavior: setPosition is content-dirty and bounds-cascading", () => {
+  test('the default seam (Slice 4b): setPosition is transform-dirty and bounds-cascading, NOT content-dirty', () => {
     const parent = new Container();
     const node = new Drawable();
 
+    node.getLocalBounds().set(0, 0, 16, 16);
     parent.addChild(node);
     parent.getBounds(); // settle bounds flags
 
-    const before = node._contentRevision;
+    const contentBefore = node._contentRevision;
+    const transformBefore = node._transformRevision;
 
     node.setPosition(10, 10);
 
-    expect(node._contentRevision).toBeGreaterThan(before);
+    // The flip: a transform move no longer content-dirties (so a retained
+    // fragment stays valid), but it does stamp the transform channel and
+    // cascade the bounds flag — the parent's world bounds pick up the move.
+    expect(node._contentRevision).toBe(contentBefore);
+    expect(node._transformRevision).toBeGreaterThan(transformBefore);
+    expect(node.getBounds().x).toBe(10); // world bounds recomputed after the move
 
     parent.destroy();
   });

@@ -125,6 +125,7 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
   private _transformFloats: Float32Array | null = null;
   private _transformRowCapacity = 0;
   private _transformRowCount = 0;
+  private _transformRowBase = 0;
   private _transformTexture: DataTexture<'rgba32f'> | null = null;
 
   // Device-side resources, created lazily at the first capture finalize.
@@ -165,6 +166,16 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
   /** Transform rows stored by the current/last capture. */
   public get transformRowCount(): number {
     return this._transformRowCount;
+  }
+
+  /**
+   * The shared-buffer row the stored rows were rebased from (`range.min` at
+   * capture end, S3-D4). A group-local row is `sharedNodeIndex - base`, so the
+   * Slice-4b fast patch maps a moved node's captured node index back to the
+   * group-owned store without re-recording.
+   */
+  public get transformRowBase(): number {
+    return this._transformRowBase;
   }
 
   /**
@@ -229,6 +240,24 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
     this._transformFloats!.set(source.subarray(firstRow * transformFloatsPerRow, (firstRow + rowCount) * transformFloatsPerRow), 0);
     this._transformTexture.commitRect(0, 0, 3, rowCount);
     this._transformRowCount = rowCount;
+    this._transformRowBase = firstRow;
+  }
+
+  /**
+   * Slice 4b fast patch: overwrite one group-local transform row in place with
+   * `floats` (12 = 3 rgba32f texels, the {@link TransformBuffer} row layout)
+   * and mark ONLY that row's sub-range for upload. Deliberately does NOT bump
+   * the generation — the recorded instance bytes reference this row by index
+   * and stay valid; only the transform behind the index moved. Out-of-range
+   * rows are ignored (a stale queue entry after a recapture shrank the store).
+   */
+  public _patchTransformRow(localRow: number, floats: Float32Array): void {
+    if (this._transformTexture === null || this._transformFloats === null || localRow < 0 || localRow >= this._transformRowCount) {
+      return;
+    }
+
+    this._transformFloats.set(floats.subarray(0, transformFloatsPerRow), localRow * transformFloatsPerRow);
+    this._transformTexture.commitRect(0, localRow, 3, 1);
   }
 
   /** Attach the GL context + accountant the device resources are created against. */

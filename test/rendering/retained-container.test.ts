@@ -24,6 +24,65 @@ class LeafDrawable extends Drawable {
   }
 }
 
+const fragmentOf = (group: RetainedContainer): RetainedGroupFragment => (group as unknown as { _fragment: RetainedGroupFragment })._fragment;
+
+describe('RetainedContainer: Slice 4b transform-row seam', () => {
+  test('a direct child move enqueues that node on the group fragment', () => {
+    const group = new RetainedContainer();
+    const child = new LeafDrawable('a');
+
+    group.addChild(child);
+    fragmentOf(group).clearDirtyTransformRows(); // drop the add-time churn
+
+    child.setPosition(40, 40);
+
+    expect([...fragmentOf(group).dirtyTransformRows]).toEqual([child]);
+
+    group.destroy();
+  });
+
+  test('a move nested below a plain sub-container still enqueues on the enclosing group', () => {
+    const group = new RetainedContainer();
+    const inner = new Container();
+    const child = new LeafDrawable('deep');
+
+    inner.addChild(child);
+    group.addChild(inner);
+    fragmentOf(group).clearDirtyTransformRows();
+
+    child.setPosition(5, 5);
+
+    expect(fragmentOf(group).dirtyTransformRows.has(child)).toBe(true);
+
+    group.destroy();
+  });
+
+  test("the group's OWN move does not enqueue a row (it is a one-matrix group move)", () => {
+    const group = new RetainedContainer();
+    const child = new LeafDrawable('a');
+
+    group.addChild(child);
+    fragmentOf(group).clearDirtyTransformRows();
+
+    group.setPosition(100, 100);
+
+    expect(fragmentOf(group).hasDirtyTransformRows()).toBe(false);
+
+    group.destroy();
+  });
+
+  test('moving a node outside any group is a no-op (no enclosing boundary)', () => {
+    const root = new Container();
+    const child = new LeafDrawable('free');
+
+    root.addChild(child);
+
+    expect(() => child.setPosition(3, 3)).not.toThrow();
+
+    root.destroy();
+  });
+});
+
 // File-local fake backend (repo convention keeps test harnesses file-local
 // rather than importing them across test files).
 const createTestBackend = (): RenderBackend => {
@@ -196,7 +255,7 @@ describe('RetainedContainer: revision decoupling (spec 4.3)', () => {
     root.destroy();
   });
 
-  test('mutations INSIDE the subtree still content-dirty the container (existing D7 propagation)', () => {
+  test('a CONTENT mutation INSIDE the subtree still content-dirties the container (D7 propagation)', () => {
     const group = new RetainedContainer();
     const leaf = new Drawable();
 
@@ -204,9 +263,28 @@ describe('RetainedContainer: revision decoupling (spec 4.3)', () => {
 
     const before = group._contentRevision;
 
-    leaf.setPosition(3, 3);
+    // Slice 4b: a transform move no longer content-dirties the group (it patches
+    // the row); a genuine content change (tint) still propagates content up.
+    leaf.setTint(new Color(9, 9, 9));
 
     expect(group._contentRevision).toBeGreaterThan(before);
+
+    group.destroy();
+  });
+
+  test('a transform-only mutation INSIDE the subtree does NOT content-dirty the container (Slice 4b flip)', () => {
+    const group = new RetainedContainer();
+    const leaf = new Drawable();
+
+    group.addChild(leaf);
+
+    const contentBefore = group._contentRevision;
+    const transformBefore = group._transformRevision;
+
+    leaf.setPosition(3, 3);
+
+    expect(group._contentRevision).toBe(contentBefore);
+    expect(group._transformRevision).toBeGreaterThan(transformBefore);
 
     group.destroy();
   });
@@ -487,7 +565,8 @@ describe('RetainedContainer: pooled fragment snapshot (Slice 3, F11a)', () => {
     gatherRecords(entriesBefore, recordsBefore);
     expect(recordsBefore.length).toBeGreaterThan(0);
 
-    leafA.setPosition(7, 7); // content-dirty -> recapture on next collect
+    leafA.setTint(new Color(7, 7, 7)); // content-dirty -> recapture on next collect
+    leafA.setPosition(7, 7); // the move rides along so the fresh bounds are observable
 
     const frame2 = collectDraws(root, backend); // frame 2: full collect + pooled recapture
 
@@ -619,7 +698,7 @@ describe('RetainedContainer: invalidation gates and view independence', () => {
     backend.destroy();
   });
 
-  test('a child mutation inside the group forces one full re-collect, then retains again', () => {
+  test('a CONTENT child mutation inside the group forces one full re-collect, then retains again', () => {
     const backend = createTestBackend();
     const root = new Container();
     const group = new RetainedContainer();
@@ -629,14 +708,17 @@ describe('RetainedContainer: invalidation gates and view independence', () => {
     root.addChild(group);
 
     collectDraws(root, backend);
-    leaf.setPosition(7, 7);
-
-    const draws = collectDraws(root, backend);
-
-    expect(draws[0]!.minX).toBe(7); // fresh bounds, not the stale capture
+    // Slice 4b: a transform move would be patched, not re-collected — use a
+    // genuine content change (tint) to force the invalidate -> re-collect rung.
+    leaf.setTint(new Color(200, 0, 0));
 
     const materialSpy = vi.spyOn(leaf, '_getOrComputeMaterialKey');
 
+    collectDraws(root, backend); // dirty frame: full re-collect recomputes the material key
+
+    expect(materialSpy).toHaveBeenCalled();
+
+    materialSpy.mockClear();
     collectDraws(root, backend);
 
     expect(materialSpy).not.toHaveBeenCalled(); // re-retained
@@ -922,7 +1004,9 @@ describe('RetainedContainer: capture suppression under thrash (Slice 3, F11b)', 
     root.addChild(group);
 
     for (let frame = 0; frame < 120; frame++) {
-      leaf.setPosition(frame, 0);
+      // Slice 4b: a move is patched, not invalidating — thrash the CONTENT
+      // channel (a per-frame distinct tint) to exercise the suppression path.
+      leaf.setTint(new Color((frame % 200) + 1, 0, 0));
       collectDraws(root, backend);
     }
 
@@ -947,6 +1031,9 @@ describe('RetainedContainer: capture suppression under thrash (Slice 3, F11b)', 
     root.addChild(group);
 
     for (let frame = 0; frame < 10; frame++) {
+      // Content thrash (tint) keeps every frame dirty; the move rides along so
+      // the fresh-data check can still assert the current position.
+      leaf.setTint(new Color((frame % 200) + 1, 0, 0));
       leaf.setPosition(frame, 0);
 
       const draws = collectDraws(root, backend);
@@ -971,6 +1058,7 @@ describe('RetainedContainer: capture suppression under thrash (Slice 3, F11b)', 
     root.addChild(group);
 
     for (let frame = 0; frame < 8; frame++) {
+      leaf.setTint(new Color((frame % 200) + 1, 0, 0)); // content thrash
       leaf.setPosition(frame, 0);
       collectDraws(root, backend); // thrash: suppression active from frame 3 on
     }
@@ -1016,10 +1104,10 @@ describe('RetainedContainer: capture suppression under thrash (Slice 3, F11b)', 
     // because the previous capture WAS replayed at least once.
     collectDraws(root, backend); // capture 1
     collectDraws(root, backend); // splice
-    leaf.setPosition(5, 5);
+    leaf.setTint(new Color(5, 5, 5)); // single content mutation between replays
     collectDraws(root, backend); // capture 2
     collectDraws(root, backend); // splice
-    leaf.setPosition(9, 9);
+    leaf.setTint(new Color(9, 9, 9));
     collectDraws(root, backend); // capture 3
 
     expect(captureSpy).toHaveBeenCalledTimes(3);
@@ -1051,7 +1139,7 @@ describe('RetainedContainer: dev diagnostic for pathological invalidation (S2-D1
     // 121 collects, each preceded by a child mutation -> every build after
     // the first is an invalidation of an existing capture.
     for (let frame = 0; frame <= 120; frame++) {
-      leaf.setPosition(frame, 0);
+      leaf.setTint(new Color((frame % 200) + 1, 0, 0)); // per-frame content invalidation
       collectDraws(root, backend);
     }
 
@@ -1062,7 +1150,7 @@ describe('RetainedContainer: dev diagnostic for pathological invalidation (S2-D1
 
     // Keep mutating far past the window: still exactly one warning.
     for (let frame = 0; frame < 130; frame++) {
-      leaf.setPosition(frame, 1);
+      leaf.setTint(new Color((frame % 200) + 1, 1, 0));
       collectDraws(root, backend);
     }
 
@@ -1085,7 +1173,7 @@ describe('RetainedContainer: dev diagnostic for pathological invalidation (S2-D1
 
     for (let frame = 0; frame < 300; frame++) {
       if (frame % 10 === 0) {
-        leaf.setPosition(frame, 0); // 10% invalidation rate
+        leaf.setTint(new Color((frame % 200) + 1, 0, 0)); // 10% content invalidation rate
       }
 
       collectDraws(root, backend);

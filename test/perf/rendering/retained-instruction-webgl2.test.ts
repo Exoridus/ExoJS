@@ -206,7 +206,11 @@ describe('WebGL2 retained instruction set: record + splice ladder (Tasks 6/7)', 
       const beginSpy = vi.spyOn(harness.backend, '_beginRetainedCapture');
       const replaySpy = vi.spyOn(harness.backend, '_replayRetainedBatch');
 
-      // Mutation: the dirty frame is a plain collect — no replay, no capture.
+      // Content mutation (Slice 4b: a bare move would be row-patched instead —
+      // exercised by the fast-patch gate below): content-dirty wins, so the
+      // dirty frame is a plain collect — no replay, no capture. The move rides
+      // along so the re-recorded row still carries fresh position data.
+      inside[1]!.invalidateContent();
       inside[1]!.setPosition(80, 80);
 
       const dirty = measureFrame(harness, root);
@@ -399,6 +403,111 @@ describe('WebGL2 retained instruction set: record + splice ladder (Tasks 6/7)', 
       expect(set.isValidFor(backend)).toBe(false);
 
       snapped.destroy();
+    });
+  });
+});
+
+describe('WebGL2 retained instruction set: Slice 4b fast transform-row patch', () => {
+  it('a transform-only direct-child move patches the row in place: replay continues, NO re-record, only the moved row uploads', () => {
+    withHarness(harness => {
+      const { root, group, inside } = buildScene();
+
+      measureFrame(harness, root); // F1 capture
+      measureFrame(harness, root); // F2 record
+      measureFrame(harness, root); // F3 splice
+
+      const beginSpy = vi.spyOn(harness.backend, '_beginRetainedCapture');
+      const replaySpy = vi.spyOn(harness.backend, '_replayRetainedBatch');
+
+      // A pure transform move: content/structure stay clean (the flip), so the
+      // group keeps its recording and patches just this child's row.
+      inside[1]!.setPosition(80, 80);
+
+      const patched = measureFrame(harness, root);
+
+      expect(beginSpy).not.toHaveBeenCalled(); // NO re-record: the recording survives
+      expect(replaySpy).toHaveBeenCalledTimes(1); // still splicing the instruction set
+      expect(patched.instances).toBe(4);
+      expect(patched.uploadedBufferBytes).toBe(32); // only the live outside sprite — group instance bytes untouched
+      expect(patched.transformUploads).toBeGreaterThan(0); // the moved row uploaded
+
+      // The patched group-local row (inside[1] -> local row 1) carries the new
+      // position; its neighbours are untouched (O(k) sub-range, not a re-pack).
+      const rows = bundleOf(group).transformTexture!.buffer;
+
+      expect([rows[1 * 12 + 4], rows[1 * 12 + 5]]).toEqual([80, 80]);
+      expect(rows[0 * 12 + 4]).toBe(10); // inside[0] unchanged
+      expect(rows[2 * 12 + 4]).toBe(110); // inside[2] unchanged
+
+      // And the fast tier keeps splicing on the next frame with no re-record.
+      const steady = measureFrame(harness, root);
+
+      expect(beginSpy).not.toHaveBeenCalled();
+      expect(replaySpy).toHaveBeenCalledTimes(2);
+      expect(steady.instances).toBe(4);
+
+      root.destroy();
+    });
+  });
+
+  it('after a transform-only child move, group.getBounds() reflects the new world AABB (4a bounds re-wiring)', () => {
+    withHarness(harness => {
+      const { root, group, inside } = buildScene();
+
+      measureFrame(harness, root); // F1
+      measureFrame(harness, root); // F2
+      measureFrame(harness, root); // F3
+
+      const before = group.getBounds();
+      const beforeMaxX = before.x + before.width;
+
+      // Move a child far to the +x/+y: the group's world AABB must grow to cover
+      // it even though the move never content-dirtied the fragment.
+      inside[2]!.setPosition(900, 900);
+      measureFrame(harness, root);
+
+      const after = group.getBounds();
+
+      expect(after.x + after.width).toBeGreaterThan(beforeMaxX);
+      // group at (200,200) + child local (900,900) -> world corner ~1100.
+      expect(after.x + after.width).toBeGreaterThanOrEqual(1100);
+
+      root.destroy();
+    });
+  });
+
+  it('an INELIGIBLE move (nested below a plain sub-container) drops off the fast tier and re-records — never a bare patch', () => {
+    withHarness(harness => {
+      const [textureA] = makeTextures(1);
+      const root = new Container();
+      const outside = new Sprite(textureA!);
+      const group = new RetainedContainer();
+      const inner = new Container();
+      const nested = new Sprite(textureA!);
+
+      outside.setPosition(600, 300);
+      root.addChild(outside);
+      nested.setPosition(10, 10);
+      inner.addChild(nested);
+      group.addChild(inner);
+      group.setPosition(200, 200);
+      root.addChild(group);
+
+      measureFrame(harness, root); // F1 capture
+      measureFrame(harness, root); // F2 record
+      measureFrame(harness, root); // F3 splice
+
+      const beginSpy = vi.spyOn(harness.backend, '_beginRetainedCapture');
+
+      // The nested sprite is NOT a direct child of the group, so its row is not
+      // in the direct-draw map: the fast patch bails and drops the recording,
+      // which entry-replays live transforms and re-records the same frame.
+      nested.setPosition(90, 90);
+      measureFrame(harness, root);
+
+      expect(beginSpy).toHaveBeenCalledTimes(1); // re-recorded, not bare-patched
+
+      root.destroy();
     });
   });
 });

@@ -98,6 +98,72 @@ describe('WebGl2RetainedGroupResources: CPU-side capture store (Task 6)', () => 
   });
 });
 
+describe('WebGl2RetainedGroupResources: in-place transform-row patch (Slice 4b)', () => {
+  test('_storeTransformRows records the rebase base; patch overwrites one row and marks only its sub-range dirty', () => {
+    const bundle = new WebGl2RetainedGroupResources();
+    const shared = new Float32Array(8 * 12);
+
+    shared[2 * 12 + 4] = 10; // row 2 -> local 0: tx
+    shared[3 * 12 + 4] = 60; // row 3 -> local 1: tx
+
+    bundle._beginCapture();
+    bundle._storeTransformRows(shared, 2, 2);
+
+    // The rebase base (range.min) is retained so a later patch can map a
+    // shared/captured node index back to its group-local row.
+    expect(bundle.transformRowBase).toBe(2);
+
+    // Drain the store-time full-region dirty flag (the first bind consumes it).
+    bundle.transformTexture!._consumeDirtyRegion();
+
+    const patched = new Float32Array(12);
+
+    patched[4] = 80; // new tx for the moved child
+
+    bundle._patchTransformRow(1, patched);
+
+    // The CPU store reflects the new row without touching its neighbour.
+    expect(bundle.transformTexture!.buffer[1 * 12 + 4]).toBe(80);
+    expect(bundle.transformTexture!.buffer[0 * 12 + 4]).toBe(10);
+
+    // Only row 1 is marked for upload — the headline O(k) sub-range property.
+    const region = bundle.transformTexture!._consumeDirtyRegion();
+
+    expect(region).not.toBeNull();
+    expect({ x: region!.x, y: region!.y, width: region!.width, height: region!.height }).toEqual({ x: 0, y: 1, width: 3, height: 1 });
+  });
+
+  test('a patch does NOT bump the generation (recorded instance bytes stay valid)', () => {
+    const bundle = new WebGl2RetainedGroupResources();
+
+    bundle._beginCapture();
+    bundle._storeTransformRows(new Float32Array(4 * 12), 0, 4);
+
+    const generation = bundle.generation;
+
+    bundle._patchTransformRow(2, new Float32Array(12));
+
+    expect(bundle.generation).toBe(generation);
+  });
+
+  test('patching multiple rows unions their sub-range for a single upload', () => {
+    const bundle = new WebGl2RetainedGroupResources();
+
+    bundle._beginCapture();
+    bundle._storeTransformRows(new Float32Array(8 * 12), 0, 8);
+    bundle.transformTexture!._consumeDirtyRegion();
+
+    bundle._patchTransformRow(2, new Float32Array(12));
+    bundle._patchTransformRow(5, new Float32Array(12));
+
+    const region = bundle.transformTexture!._consumeDirtyRegion();
+
+    expect({ y: region!.y, height: region!.height }).toEqual({ y: 2, height: 4 }); // rows 2..5
+
+    bundle.destroy();
+  });
+});
+
 describe('WebGl2RetainedGroupResources: device resources (Task 6)', () => {
   const createDevice = () => {
     const recorder = new GlRecorder();
