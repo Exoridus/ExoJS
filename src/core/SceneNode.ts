@@ -74,6 +74,34 @@ const orientedCorners = [new Vector(), new Vector(), new Vector(), new Vector()]
 let dirtyWalkEpoch = 1;
 
 /**
+ * Process-wide count of live transform-group boundaries ({@link RetainedContainer}).
+ * The Slice-4b transform-move seam ({@link SceneNode._notifyEnclosingRetainedGroup})
+ * walks to the nearest boundary on EVERY own-transform mutation; when no boundary
+ * exists anywhere (the common case — most scenes use no RetainedContainer) that
+ * walk would run to the root for nothing. Gating on this count makes the seam O(1)
+ * for boundary-free scenes. Maintained by RetainedContainer's construct/destroy via
+ * {@link registerTransformGroupBoundary}/{@link unregisterTransformGroupBoundary}.
+ *
+ * Invariant: this must never UNDER-count (a missed enqueue is a stale-render bug),
+ * so it counts from construction — a boundary that is constructed but never attached
+ * only makes the seam over-walk (correctness-safe), and a skipped destroy keeps the
+ * count high (also safe).
+ */
+let transformGroupBoundaryCount = 0;
+
+/** @internal — a transform-group boundary was created; arm the Slice-4b move seam. */
+export const registerTransformGroupBoundary = (): void => {
+  transformGroupBoundaryCount++;
+};
+
+/** @internal — a transform-group boundary was destroyed; disarm if it was the last. */
+export const unregisterTransformGroupBoundary = (): void => {
+  if (transformGroupBoundaryCount > 0) {
+    transformGroupBoundaryCount--;
+  }
+};
+
+/**
  * Sentinel `parentVersion` used by {@link SceneNode.getGlobalTransform} when
  * NOTHING above this node contributes to its world matrix — the node is a
  * root, or its parent is an engaged transform-group boundary the node does not
@@ -946,6 +974,16 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
   private _transformWalkEpoch = 0;
 
   /**
+   * @internal — Slice-4b dirty-transform-row dedup stamp: the enclosing group's
+   * dirty-row epoch at the last time this node was enqueued. Compared against
+   * that group's current epoch to skip a second push in the same collect cycle
+   * (see {@link RetainedGroupFragment.enqueueDirtyTransformRow}). The epoch is a
+   * globally unique monotonic value, so a stale stamp can never falsely match a
+   * different cycle — a false dedup would drop a move (stale render).
+   */
+  public _dirtyRowStamp = 0;
+
+  /**
    * @internal — mark this node's content dirty and propagate the stamp up to
    * the root. The walk deliberately runs THROUGH transform-group boundaries
    * (nested retained snapshots key on ancestor revisions — plan decision D7
@@ -1058,11 +1096,16 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
   /**
    * Walk to the nearest enclosing transform-group boundary and hand it this
    * node so it can fast-patch the row (Slice 4b). Stops at the FIRST boundary —
-   * that group owns this node's group-local transform row. Cheap: the walk ends
-   * at the group, not the root, and enqueue is a no-op for a non-retained
-   * boundary. Runs on every own-transform mutation, so it must not allocate.
+   * that group owns this node's group-local transform row. Runs on every
+   * own-transform mutation, so it must not allocate — and short-circuits when
+   * no boundary exists anywhere (the common case), turning the walk into a
+   * single count check for boundary-free scenes.
    */
   private _notifyEnclosingRetainedGroup(): void {
+    if (transformGroupBoundaryCount === 0) {
+      return;
+    }
+
     let ancestor: Container | null = this._parentNode;
 
     while (ancestor !== null) {

@@ -1,6 +1,7 @@
 import { Bounds } from '#core/Bounds';
 import { logger } from '#core/logging';
 import { nextNodeRevision } from '#core/NodeRevision';
+import { registerTransformGroupBoundary, unregisterTransformGroupBoundary } from '#core/SceneNode';
 import type { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RetainedGroupFragment } from '#rendering/plan/RetainedGroupFragment';
 
@@ -8,14 +9,15 @@ import { Container } from './Container';
 import type { Drawable } from './Drawable';
 import type { RetainedGroupBundle } from './plan/RetainedInstructionSet';
 import type { RenderNode } from './RenderNode';
+import { packTransformRow, TRANSFORM_FLOATS_PER_ROW } from './TransformBuffer';
 
 /**
- * Reused scratch for one patched transform row (12 floats = 3 rgba32f texels,
- * the {@link TransformBuffer} layout: a,b,c,d, tx,ty,0,0, r,g,b,a). Filled and
- * consumed synchronously inside a single patch call, so one module-level buffer
- * is safe and allocation-free under churn.
+ * Reused scratch for one patched transform row (3 rgba32f texels, the
+ * {@link TransformBuffer} layout). Filled and consumed synchronously inside a
+ * single patch call, so one module-level buffer is safe and allocation-free
+ * under churn.
  */
-const patchRowScratch = new Float32Array(12);
+const patchRowScratch = new Float32Array(TRANSFORM_FLOATS_PER_ROW);
 
 /** Observation window for the S2-D1 retention diagnostic, in fragment builds (~frames). */
 const retainedDiagnosticWindow = 120;
@@ -74,6 +76,14 @@ export class RetainedContainer extends Container {
   private _devFragmentInvalidations = 0;
   private _devRetentionWarned = false;
   private _devDestroyedWarned = false;
+
+  public constructor() {
+    super();
+    // Arm the Slice-4b transform-move seam: while at least one boundary is live,
+    // own-transform mutations walk to their enclosing group (see SceneNode's
+    // transformGroupBoundaryCount). Balanced by destroy().
+    registerTransformGroupBoundary();
+  }
 
   /**
    * The boundary is ALWAYS engaged (F13/R3 superseded the whole-group
@@ -370,22 +380,7 @@ export class RetainedContainer extends Container {
       return false;
     }
 
-    const matrix = node.getGlobalTransform();
-    const tint = drawable.tint;
-
-    patchRowScratch[0] = matrix.a;
-    patchRowScratch[1] = matrix.b;
-    patchRowScratch[2] = matrix.c;
-    patchRowScratch[3] = matrix.d;
-    patchRowScratch[4] = matrix.x;
-    patchRowScratch[5] = matrix.y;
-    patchRowScratch[6] = 0;
-    patchRowScratch[7] = 0;
-    patchRowScratch[8] = tint.r / 255;
-    patchRowScratch[9] = tint.g / 255;
-    patchRowScratch[10] = tint.b / 255;
-    patchRowScratch[11] = tint.a;
-
+    packTransformRow(patchRowScratch, 0, node.getGlobalTransform(), drawable.tint);
     bundle._patchTransformRow!(nodeIndex - base, patchRowScratch);
 
     return true;
@@ -404,6 +399,12 @@ export class RetainedContainer extends Container {
    * and drops the fragment), or destroy the whole group at once.
    */
   public override destroy(): void {
+    // Balance the constructor's boundary registration exactly once (destroy may
+    // be called more than once; `destroyed` flips only on the first super call).
+    if (!this.destroyed) {
+      unregisterTransformGroupBoundary();
+    }
+
     // dispose(): invalidates AND releases the retained GPU bundle (Slice 3, S3-D3).
     this._fragment.dispose();
     this._groupAggregate.destroy();
