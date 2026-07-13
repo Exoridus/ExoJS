@@ -31,20 +31,28 @@ export interface RetainedGroupBundle {
   /** Monotonic resource generation; a mismatch invalidates referencing sets. */
   readonly generation: number;
   /**
-   * The shared frame-buffer row the stored transform rows were rebased from
-   * (Slice 4b). A group-local row is `capturedNodeIndex - transformRowBase`.
-   * Absent on backends that do not implement in-place transform patching.
+   * Slice 4b/4c fast in-place transform-row patch capability, bundled as one
+   * object rather than two independent optionals: `rowBase` and `patchRow`
+   * only ever make sense together, so a caller that finds one is guaranteed
+   * the other — no combined "has base but no patch fn" state is representable.
+   * Absent on backends that do not implement in-place transform patching —
+   * the caller then falls back to entry replay (re-reads live transforms) or
+   * a re-record.
    */
-  readonly transformRowBase?: number;
-  /**
-   * Slice 4b fast patch: overwrite one group-local transform row in place with
-   * `floats` (12 = 3 rgba32f texels, the `TransformBuffer` row layout) and mark
-   * only its sub-range for upload, WITHOUT bumping the generation (the recorded
-   * instance bytes reference the row by index and stay valid). Absent on
-   * backends without patch support — the caller then falls back to entry replay
-   * (which re-reads live transforms) or a re-record.
-   */
-  _patchTransformRow?(localRow: number, floats: Float32Array): void;
+  readonly transformPatch?: {
+    /**
+     * The shared frame-buffer row the stored transform rows were rebased from
+     * (Slice 4b). A group-local row is `capturedNodeIndex - rowBase`.
+     */
+    readonly rowBase: number;
+    /**
+     * Overwrite one group-local transform row in place with `floats` (12 = 3
+     * rgba32f texels, the `TransformBuffer` row layout) and mark only its
+     * sub-range for upload, WITHOUT bumping the generation (the recorded
+     * instance bytes reference the row by index and stay valid).
+     */
+    patchRow(localRow: number, floats: Float32Array): void;
+  };
   /** Release the bundle's GPU resources (container destroy / disengage). */
   destroy?(): void;
 }

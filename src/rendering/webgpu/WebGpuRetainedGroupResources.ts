@@ -144,9 +144,25 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
   /** The open pass this bundle's replayed draws were last recorded into. */
   public drawsInPass: WebGpuActiveRenderPass | null = null;
 
+  /**
+   * Built once at construction (not per-frame): a getter/method pair closing
+   * over `this` so the {@link transformPatch} capability object is a stable
+   * reference — the reconcile hot path reads it every clean frame with
+   * pending moves and must not allocate.
+   */
+  private readonly _transformPatch: NonNullable<RetainedGroupBundle['transformPatch']>;
+
   public constructor(accountant: GpuResourceAccountant, onRelease: (bundle: WebGpuRetainedGroupBundle) => void) {
     this._accountant = accountant;
     this._onRelease = onRelease;
+
+    // Arrow functions close over the constructor's own `this` (the instance),
+    // so `rowBase` reads live state without aliasing `this` to a local.
+    this._transformPatch = Object.defineProperty(
+      { patchRow: (localRow: number, floats: Float32Array): void => this._patchTransformRow(localRow, floats) },
+      'rowBase',
+      { enumerable: true, get: (): number => this._transformRowBase },
+    ) as NonNullable<RetainedGroupBundle['transformPatch']>;
   }
 
   /** Monotonic resource generation (see {@link RetainedGroupBundle}). */
@@ -170,6 +186,11 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
    */
   public get transformRowBase(): number {
     return this._transformRowBase;
+  }
+
+  /** {@link RetainedGroupBundle.transformPatch} — this backend always supports it. */
+  public get transformPatch(): NonNullable<RetainedGroupBundle['transformPatch']> {
+    return this._transformPatch;
   }
 
   public get uniformBuffer(): GPUBuffer | null {

@@ -166,18 +166,26 @@ export class RetainedContainer extends Container {
 
     const world = this.getGlobalTransform();
 
+    // Read each side-effecting revision getter once (not once per comparison
+    // AND once per assignment): every read bumps the shared dirty-walk epoch
+    // (SceneNode._contentRevision et al.), so a Local avoids doubling this
+    // call's contribution to that walk.
+    const contentRevision = this._contentRevision;
+    const structureRevision = this._structureRevision;
+    const transformRevision = this._transformRevision;
+
     // Keyed on the transform channel too (Slice 4b): a descendant transform-only
     // move changes its group-local rect but no longer stamps content (the 4b
     // flip), so without the transform key the cached aggregate would go stale.
     if (
-      this._aggregateContentRevision !== this._contentRevision ||
-      this._aggregateStructureRevision !== this._structureRevision ||
-      this._aggregateTransformRevision !== this._transformRevision
+      this._aggregateContentRevision !== contentRevision ||
+      this._aggregateStructureRevision !== structureRevision ||
+      this._aggregateTransformRevision !== transformRevision
     ) {
       this._rebuildGroupAggregate();
-      this._aggregateContentRevision = this._contentRevision;
-      this._aggregateStructureRevision = this._structureRevision;
-      this._aggregateTransformRevision = this._transformRevision;
+      this._aggregateContentRevision = contentRevision;
+      this._aggregateStructureRevision = structureRevision;
+      this._aggregateTransformRevision = transformRevision;
     }
 
     this._bounds.reset().addRect(this._groupAggregate.getRect(), world);
@@ -298,6 +306,16 @@ export class RetainedContainer extends Container {
       this._children[index]!._collect(builder, index);
     }
 
+    // This full collect just read every child's transform live, so any rows
+    // queued before this frame are subsumed — moot whether or not a capture
+    // actually runs below. Without this, a thrash-suppressed frame (F11b)
+    // skips `capture()` (the queue's other drain site) and the queue keeps
+    // strong-referencing moved nodes — including ones removed meanwhile —
+    // until suppression ends.
+    if (this._fragment.hasDirtyTransformRows()) {
+      this._fragment.clearDirtyTransformRows();
+    }
+
     if (__DEV__) {
       this._trackRetention(invalidated);
     }
@@ -321,8 +339,12 @@ export class RetainedContainer extends Container {
   private _reconcileTransformRows(): void {
     const set = this._fragment.instructions;
     const bundle = set?.ownedBundle ?? null;
+    // Narrowed here, once: `patch` is the live capability object for the rest
+    // of this method AND whatever it hands off to — no callee needs its own
+    // non-null assertion to reuse a guard this scope already proved.
+    const patch = bundle?.transformPatch;
 
-    if (set === null || !set.hasRecording || bundle === null || typeof bundle._patchTransformRow !== 'function' || bundle.transformRowBase === undefined) {
+    if (set === null || !set.hasRecording || bundle === null || patch === undefined) {
       // The set holds a recording whose baked transform rows we cannot patch
       // (a backend without row-patch support — e.g. WebGPU before slice 4c),
       // yet a transform-only move must still take effect. Drop the recording so
@@ -339,14 +361,14 @@ export class RetainedContainer extends Container {
     }
 
     // The group-local row origin is the fragment's CAPTURE-frame (F1) minimum
-    // draw index — NOT `bundle.transformRowBase` (the record-frame F2 rebase
-    // base). The two frames can start the group at different absolute rows, and
-    // the store rows are group-local, so only the F1 subtree base maps a
-    // captured index to its store row (see directDrawBaseNodeIndex).
+    // draw index — NOT `patch.rowBase` (the record-frame F2 rebase base). The
+    // two frames can start the group at different absolute rows, and the store
+    // rows are group-local, so only the F1 subtree base maps a captured index
+    // to its store row (see directDrawBaseNodeIndex).
     const base = this._fragment.directDrawBaseNodeIndex();
 
     for (const node of this._fragment.dirtyTransformRows) {
-      if (!this._patchTransformRow(node, bundle, base)) {
+      if (!this._tryPatchTransformRow(node, patch, base)) {
         // Ineligible: drop the baked recording. `_markCurrentScopeRetained`
         // will now fail its validity check, so the group falls to entry replay
         // (live transforms) and re-records this frame.
@@ -364,8 +386,12 @@ export class RetainedContainer extends Container {
    * drawable child, non-snapped, present in the recorded row map. The
    * group-local matrix is `getGlobalTransform()` composed to this boundary — the
    * exact value the recorder wrote (S3-D4).
+   *
+   * Named distinctly from the {@link RetainedGroupBundle.transformPatch}
+   * `patchRow` it calls (`this` vs. `patch` was the same name on two
+   * different things — a rename-target footgun, not just a style nit).
    */
-  private _patchTransformRow(node: RenderNode, bundle: RetainedGroupBundle, base: number): boolean {
+  private _tryPatchTransformRow(node: RenderNode, patch: NonNullable<RetainedGroupBundle['transformPatch']>, base: number): boolean {
     if (node.parent !== this) {
       return false;
     }
@@ -381,7 +407,7 @@ export class RetainedContainer extends Container {
     }
 
     packTransformRow(patchRowScratch, 0, node.getGlobalTransform(), drawable.tint);
-    bundle._patchTransformRow!(nodeIndex - base, patchRowScratch);
+    patch.patchRow(nodeIndex - base, patchRowScratch);
 
     return true;
   }

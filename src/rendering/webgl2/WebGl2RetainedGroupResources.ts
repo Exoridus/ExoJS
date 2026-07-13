@@ -137,7 +137,23 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
 
   private _destroyed = false;
 
-  public constructor(private readonly _onDestroyed: ((bundle: WebGl2RetainedGroupResources) => void) | null = null) {}
+  /**
+   * Built once at construction (not per-frame): a getter/method pair closing
+   * over `this` so the {@link transformPatch} capability object is a stable
+   * reference — the reconcile hot path reads it every clean frame with
+   * pending moves and must not allocate.
+   */
+  private readonly _transformPatch: NonNullable<RetainedGroupBundle['transformPatch']>;
+
+  public constructor(private readonly _onDestroyed: ((bundle: WebGl2RetainedGroupResources) => void) | null = null) {
+    // Arrow functions close over the constructor's own `this` (the instance),
+    // so `rowBase` reads live state without aliasing `this` to a local.
+    this._transformPatch = Object.defineProperty(
+      { patchRow: (localRow: number, floats: Float32Array): void => this._patchTransformRow(localRow, floats) },
+      'rowBase',
+      { enumerable: true, get: (): number => this._transformRowBase },
+    ) as NonNullable<RetainedGroupBundle['transformPatch']>;
+  }
 
   /** Monotonic resource generation (see {@link RetainedGroupBundle.generation}). */
   public get generation(): number {
@@ -177,6 +193,11 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
    */
   public get transformRowBase(): number {
     return this._transformRowBase;
+  }
+
+  /** {@link RetainedGroupBundle.transformPatch} — this backend always supports it. */
+  public get transformPatch(): NonNullable<RetainedGroupBundle['transformPatch']> {
+    return this._transformPatch;
   }
 
   /**
