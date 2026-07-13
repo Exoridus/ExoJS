@@ -630,7 +630,7 @@ async function fetchTypingsManifest(relativePath: string): Promise<ReadonlyArray
 
 function configureLanguageDefaults(): void {
     const tsApi = (monaco.languages as unknown as { typescript: MonacoTypeScriptApi }).typescript;
-    const compilerOptions = {
+    const sharedCompilerOptions = {
         allowJs: true,
         allowNonTsExtensions: true,
         allowSyntheticDefaultImports: true,
@@ -639,12 +639,25 @@ function configureLanguageDefaults(): void {
         module: tsApi.ModuleKind.ESNext,
         moduleResolution: tsApi.ModuleResolutionKind.NodeJs,
         noEmit: true,
-        noImplicitAny: false,
-        noImplicitThis: false,
-        strict: false,
         target: tsApi.ScriptTarget.ES2020,
         baseUrl: 'file:///',
         paths: { '@/*': ['node_modules/@codexo/exojs/dist/esm/*'] },
+    };
+    // TS examples are strict-clean at the source of truth (tsconfig.examples.json,
+    // enforced by `pnpm typecheck:examples`) — mirror that here so editing one in
+    // the Playground surfaces the same errors CI would.
+    const tsCompilerOptions = {
+        ...sharedCompilerOptions,
+        strict: true,
+    };
+    // JS mode is a deliberate low-friction path for writing/pasting plain JS with
+    // no TypeScript background — checkJs (above) still catches real type errors;
+    // only "add an annotation" strict-mode noise is suppressed.
+    const jsCompilerOptions = {
+        ...sharedCompilerOptions,
+        noImplicitAny: false,
+        noImplicitThis: false,
+        strict: false,
     };
     const diagnosticsOptions = {
         noSemanticValidation: false,
@@ -654,8 +667,8 @@ function configureLanguageDefaults(): void {
 
     tsApi.javascriptDefaults.setEagerModelSync(true);
     tsApi.typescriptDefaults.setEagerModelSync(true);
-    tsApi.javascriptDefaults.setCompilerOptions(compilerOptions);
-    tsApi.typescriptDefaults.setCompilerOptions(compilerOptions);
+    tsApi.javascriptDefaults.setCompilerOptions(jsCompilerOptions);
+    tsApi.typescriptDefaults.setCompilerOptions(tsCompilerOptions);
     tsApi.javascriptDefaults.setDiagnosticsOptions(diagnosticsOptions);
     tsApi.typescriptDefaults.setDiagnosticsOptions(diagnosticsOptions);
 
