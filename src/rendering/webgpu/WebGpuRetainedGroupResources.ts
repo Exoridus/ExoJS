@@ -117,6 +117,13 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
   private _instanceCapacity = 0;
   private _transformBuffer: GPUBuffer | null = null;
   private _transformCapacity = 0;
+  // Slice 4c in-place patch state: the shared-buffer row the stored rows were
+  // rebased from, how many rows the store currently holds (bounds guard), and
+  // the device whose queue the sub-range write goes through. All set at capture
+  // finalize; cleared on device loss so a late patch cannot touch a dead buffer.
+  private _transformRowBase = 0;
+  private _transformRowCount = 0;
+  private _patchDevice: GPUDevice | null = null;
   private _uniformBuffer: GPUBuffer | null = null;
   private _bindGroup: GPUBindGroup | null = null;
   private _bindGroupLayout: GPUBindGroupLayout | null = null;
@@ -153,6 +160,16 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
 
   public get transformBuffer(): GPUBuffer | null {
     return this._transformBuffer;
+  }
+
+  /**
+   * The shared frame-buffer row the stored transform rows were rebased from
+   * (Slice 4c, {@link RetainedGroupBundle.transformRowBase}). A group-local row
+   * is `capturedNodeIndex - transformRowBase`; the reconciler maps a moved
+   * node's captured index back to the group-owned storage without re-recording.
+   */
+  public get transformRowBase(): number {
+    return this._transformRowBase;
   }
 
   public get uniformBuffer(): GPUBuffer | null {
@@ -216,6 +233,45 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
   }
 
   /**
+   * Record the group-local transform range this capture just uploaded (Slice
+   * 4c): the shared-buffer rebase `base`, the `rowCount` now living in the
+   * storage buffer, and the `device` whose queue a later in-place patch writes
+   * through. Called by the backend right after it copies the rows into the
+   * group-owned storage buffer.
+   */
+  public _recordTransformRowRange(device: GPUDevice, base: number, rowCount: number): void {
+    this._patchDevice = device;
+    this._transformRowBase = base;
+    this._transformRowCount = rowCount;
+  }
+
+  /**
+   * Slice 4c fast patch: overwrite one group-local transform row in place with
+   * `floats` (12 = one `TransformSlot`, the {@link TransformBuffer} row layout)
+   * via a single `queue.writeBuffer` of that row's 48-byte sub-range. Mirrors
+   * {@link WebGl2RetainedGroupResources._patchTransformRow}: deliberately does
+   * NOT bump the generation — the recorded instance bytes reference this row by
+   * index and stay valid; only the transform behind the index moved.
+   *
+   * Out-of-range rows are ignored (a stale queue entry after a recapture shrank
+   * the store), as is any patch before a range is recorded or after device loss
+   * (`_transformBuffer`/`_patchDevice` null).
+   */
+  public _patchTransformRow(localRow: number, floats: Float32Array): void {
+    if (this._transformBuffer === null || this._patchDevice === null || localRow < 0 || localRow >= this._transformRowCount) {
+      return;
+    }
+
+    this._patchDevice.queue.writeBuffer(
+      this._transformBuffer,
+      localRow * retainedTransformSlotBytes,
+      floats.buffer,
+      floats.byteOffset,
+      retainedTransformSlotBytes,
+    );
+  }
+
+  /**
    * The bind group(0) pairing the group UBO with the group transform storage,
    * against the sprite renderer's existing uniform layout. Cached; rebuilt
    * when a buffer or the layout (device restore) changed identity.
@@ -256,6 +312,8 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
     this._uniformBuffer = null;
     this._instanceCapacity = 0;
     this._transformCapacity = 0;
+    this._transformRowCount = 0;
+    this._patchDevice = null;
     this._bindGroup = null;
     this._bindGroupLayout = null;
     this._generation++;

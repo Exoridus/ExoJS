@@ -1415,6 +1415,10 @@ export class WebGpuBackend implements RenderBackend {
 
     device.queue.writeBuffer(bundle.transformBuffer!, 0, transformData.buffer, transformData.byteOffset + base * retainedTransformSlotBytes, transformBytes);
     this._accountant.recordBufferUpload(frame.totalBytes + transformBytes);
+
+    // Slice 4c: record the rebase base + row count so a later child move can
+    // patch its one row in place (O(k)) instead of dropping the recording.
+    bundle._recordTransformRowRange(device, base, rowCount);
   }
 
   /**

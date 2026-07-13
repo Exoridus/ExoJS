@@ -501,4 +501,70 @@ describe('WebGPU renderer matrix: RetainedContainer cells', () => {
       backend.destroy();
     }
   });
+
+  // Slice 4c: once the recording is ARMED (needs a clean record frame + a
+  // replay frame first), a direct child move no longer drops the recording and
+  // re-records — it patches that one transform row in place via a single
+  // queue.writeBuffer sub-range. Cell 3 above moves the child before the
+  // recording exists (2 frames), so it records the moved position and never
+  // exercises the patch; this cell arms first, then moves. The node test
+  // (webgpu-retained-record-replay.test.ts) pins the O(k) write pattern against
+  // a mock device; here we prove the sub-range write renders correctly on a
+  // real adapter AND that the recording is kept (not re-recorded).
+  test('cell 9 — a child move AFTER the recording is armed patches the row in place, real GPU (Slice 4c)', async ctx => {
+    const backend = await setupBackend();
+    const texture = createSolidTexture('#ff0000', 16);
+    const root = new Container();
+    const group = new RetainedContainer();
+    const sprite = new Sprite(texture);
+
+    interface FragmentCarrier {
+      _fragment: { instructions: { hasRecording: boolean } | null };
+    }
+
+    const instructionsOf = (): { hasRecording: boolean } | null => (group as unknown as FragmentCarrier)._fragment.instructions;
+
+    try {
+      group.addChild(sprite);
+      root.addChild(group);
+
+      // Arm the fast tier: F1 capture → F2 record → F3 replay.
+      for (let frame = 0; frame < 3; frame++) {
+        if (!(await renderScene(ctx, backend, root))) {
+          return;
+        }
+      }
+
+      const armed = instructionsOf();
+
+      expect(armed?.hasRecording).toBe(true);
+
+      let readPixel = readCanvas(backend);
+
+      expectPixelNear(readPixel(8, 8), [255, 0, 0, 255]);
+
+      // Move the direct child: this routes through the in-place patch.
+      sprite.setPosition(24, 24);
+
+      if (!(await renderScene(ctx, backend, root))) {
+        return;
+      }
+
+      // The recording is the SAME object and still armed — a fallback would
+      // have dropped it and re-recorded.
+      expect(instructionsOf()).toBe(armed);
+      expect(instructionsOf()?.hasRecording).toBe(true);
+
+      // The patched transform row is live on the real adapter: the sprite is at
+      // its new position, the old one is cleared.
+      readPixel = readCanvas(backend);
+
+      expectPixelNear(readPixel(32, 32), [255, 0, 0, 255]);
+      expectPixelNear(readPixel(8, 8), [0, 0, 0, 255]);
+    } finally {
+      root.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
 });
