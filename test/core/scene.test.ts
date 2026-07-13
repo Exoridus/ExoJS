@@ -139,10 +139,10 @@ describe('Scene', () => {
     expect(backendDraw).not.toHaveBeenCalledWith(uiSprite);
   });
 
-  // #313: Scene.app is a throwing non-null accessor (like Scene.inputs/tweens/
+  // Scene.app is a throwing non-null accessor (like Scene.inputs/tweens/
   // loader), not `Application | null` — the framework guarantees attachment
   // before any lifecycle hook, so scene code never needs a null guard.
-  describe('app accessor (#313)', () => {
+  describe('app accessor', () => {
     const fakeApp = { id: 'app' } as unknown as import('#core/Application').Application;
 
     test('throws when accessed before the scene is attached', () => {

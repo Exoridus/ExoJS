@@ -53,7 +53,7 @@ export function _normalizeEntry(value: CatalogEntry): AnyAssetConfig {
 }
 
 // ---------------------------------------------------------------------------
-// Dev-mode typo guard (#311)
+// Dev-mode typo guard
 // ---------------------------------------------------------------------------
 
 /**
@@ -70,8 +70,7 @@ const ASSETS_DEV_PROXY_DUCK_TYPING_KEYS = new Set(['then', 'toJSON']);
  * unrelated catalogs missing the SAME key name must each get their own
  * diagnostic — a global dedup key would silently swallow the second
  * catalog's warning after the first one fires, defeating the point of the
- * guard (adversarial review, 2026-07-13: opus and fable both independently
- * flagged this).
+ * guard.
  */
 let assetsDevProxyInstanceCounter = 0;
 
@@ -109,7 +108,7 @@ export class AssetsImpl<M extends Record<string, CatalogEntry>> {
 
     this.entries = entries as InferAssetsEntries<M>;
 
-    // #311: a typo'd or dynamic catalog-key read (`bag.logoo`, `bag[computedKey]`)
+    // A typo'd or dynamic catalog-key read (`bag.logoo`, `bag[computedKey]`)
     // is otherwise a silent `undefined` — warn once per key in dev instead.
     // __DEV__-gated: zero cost and no Proxy indirection in production.
     if (__DEV__) {

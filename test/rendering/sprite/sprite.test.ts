@@ -91,9 +91,9 @@ describe('Sprite', () => {
     });
   });
 
-  // #310: binding a destroyed texture is otherwise silent — warn once (dev) at
+  // Binding a destroyed texture is otherwise silent — warn once (dev) at
   // the assignment site. Asserted via a sink (honours the logger's `once` dedup).
-  describe('destroyed-texture guard (#310)', () => {
+  describe('destroyed-texture guard', () => {
     const destroyedTexture = (): Texture => ({ width: 16, height: 16, flipY: false, destroyed: true, updateSource: () => undefined }) as unknown as Texture;
 
     let entries: string[];

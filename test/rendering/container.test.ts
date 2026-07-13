@@ -82,11 +82,11 @@ describe('Container', () => {
     expect(container.children).toEqual([third, first, second]);
   });
 
-  // #310: using a destroyed node is otherwise silent — warn once (dev only) at
+  // Using a destroyed node is otherwise silent — warn once (dev only) at
   // the attach site, the earliest clear signal of use-after-destroy. Asserted
   // through a sink (which honours the logger's `once` dedup), not a warn spy
   // (which would count calls before dedup).
-  describe('destroyed-child guard (#310)', () => {
+  describe('destroyed-child guard', () => {
     let entries: string[];
     let removeSink: () => void;
 
