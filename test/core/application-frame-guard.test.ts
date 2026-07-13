@@ -9,6 +9,7 @@
  */
 
 import { Application, ApplicationStatus } from '#core/Application';
+import { logger } from '#core/logging';
 import { Time } from '#core/Time';
 
 const overlaySpies = vi.hoisted(() => ({
@@ -326,6 +327,21 @@ describe('Application frame guard', () => {
       handler(new Error('another'));
       handler(new Error('yet another'));
       expect(app.status).toBe(ApplicationStatus.Running);
+    });
+
+    test('does NOT log an async render error a second time — the backend already logged it at source (#306)', () => {
+      const handler = (app.backend.onRenderError.add as unknown as MockInstance).mock.calls[0]![0] as (error: Error) => void;
+      const errorSpy = vi.spyOn(logger, 'error').mockImplementation(() => undefined);
+
+      try {
+        handler(new Error('uncaptured validation error'));
+
+        // The pipeline still records + dispatches, but must not re-log.
+        expect(errorSpy).not.toHaveBeenCalled();
+        expect(app.recentErrors).toHaveLength(1);
+      } finally {
+        errorSpy.mockRestore();
+      }
     });
   });
 });
