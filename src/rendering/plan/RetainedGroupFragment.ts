@@ -128,6 +128,10 @@ export class RetainedGroupFragment {
   // records (the direct drawable children — the only fast-patch-eligible ones).
   // Built on first lookup after a capture, dropped on the next capture.
   private _directRowMap: Map<Drawable, number> | null = null;
+  // The smallest nodeIndex among the top-level draw records — the group's own
+  // shared-buffer base at CAPTURE (F1) time. Group-local row = nodeIndex minus
+  // this. Computed with the row map; -1 when there are no direct draws.
+  private _directRowMinIndex = -1;
 
   // Slice 4b: nodes whose OWN transform moved since the last collect, pushed by
   // the SceneNode seam through the enclosing group. A Set bounds it to the
@@ -146,19 +150,49 @@ export class RetainedGroupFragment {
    * each capture.
    */
   public directDrawNodeIndex(drawable: Drawable): number | undefined {
-    if (this._directRowMap === null) {
-      const map = new Map<Drawable, number>();
+    this._ensureDirectRowMap();
 
-      for (const entry of this._entries) {
-        if (entry.kind === RenderEntryKind.Draw) {
-          map.set(entry.drawable, entry.nodeIndex);
-        }
-      }
+    return this._directRowMap!.get(drawable);
+  }
 
-      this._directRowMap = map;
+  /**
+   * The group's own shared-transform-buffer base at CAPTURE (F1): the smallest
+   * nodeIndex among the top-level draw records. A patched node's group-local
+   * store row is `directDrawNodeIndex(node) - directDrawBaseNodeIndex()`.
+   *
+   * This is deliberately the CAPTURE-frame min, NOT the bundle's record-frame
+   * rebase base (`transformRowBase`): the two frames can start the group at
+   * different absolute rows (a sibling before the group changing its row count
+   * between capture and record), and the group-local position of each child is
+   * a property of the unchanged subtree — captured here — not of the absolute
+   * base. Using the record-frame base offsets every patch by the delta.
+   */
+  public directDrawBaseNodeIndex(): number {
+    this._ensureDirectRowMap();
+
+    return this._directRowMinIndex;
+  }
+
+  private _ensureDirectRowMap(): void {
+    if (this._directRowMap !== null) {
+      return;
     }
 
-    return this._directRowMap.get(drawable);
+    const map = new Map<Drawable, number>();
+    let min = -1;
+
+    for (const entry of this._entries) {
+      if (entry.kind === RenderEntryKind.Draw) {
+        map.set(entry.drawable, entry.nodeIndex);
+
+        if (min === -1 || entry.nodeIndex < min) {
+          min = entry.nodeIndex;
+        }
+      }
+    }
+
+    this._directRowMap = map;
+    this._directRowMinIndex = min;
   }
 
   /** Slice 4b: record that `node`'s own transform moved (from the SceneNode seam). */
