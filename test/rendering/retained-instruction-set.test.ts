@@ -940,6 +940,49 @@ describe('collect switch: fallback ladder end-to-end (Task 5)', () => {
     backend.destroy();
   });
 
+  test('a transform-only child move on a backend WITHOUT row-patch support drops the recording (no stale splice) — CRITICAL-1 regression', () => {
+    // The fake bundle has no `_patchTransformRow` — the WebGPU shape (4c not
+    // built). A recorded group's baked transform rows cannot be patched, so a
+    // transform-only descendant move MUST drop the recording and fall to entry
+    // replay (live transforms), never keep splicing the stale rows.
+    const { backend, events } = createRecordingBackend();
+    const root = new Container();
+    const group = new RetainedContainer();
+    const leaf = new RecordableLeaf('a');
+
+    group.addChild(leaf);
+    root.addChild(group);
+
+    const fragment = (group as unknown as FragmentCarrier)._fragment;
+
+    playFrame(root, backend); // F1: capture
+    playFrame(root, backend); // F2: record
+    playFrame(root, backend); // F3: splice
+
+    expect(fragment.instructions!.hasRecording).toBe(true);
+
+    leaf.setPosition(37, 41); // transform-only move; bundle cannot patch rows
+
+    // F4: the stale recording must be dropped -> entry replay draws the moved
+    // leaf LIVE (flush), re-records this frame; crucially NO stale splice.
+    events.length = 0;
+    playFrame(root, backend);
+
+    expect(events.some(e => e.startsWith('replay:'))).toBe(false); // no stale splice
+    expect(events).toContain('flush:a'); // drew the moved leaf live
+    expect(events.filter(e => e === 'beginCapture')).toHaveLength(1); // re-recorded
+
+    // F5: the fresh recording splices again — the moved leaf is now baked in.
+    events.length = 0;
+    playFrame(root, backend);
+
+    expect(events.some(e => e.startsWith('replay:'))).toBe(true);
+    expect(events).not.toContain('beginCapture');
+
+    root.destroy();
+    backend.destroy();
+  });
+
   test('a non-recordable fragment (unflagged renderer) never arms recording — Slice-2 entry replay forever', () => {
     const { backend, events } = createRecordingBackend();
     const root = new Container();

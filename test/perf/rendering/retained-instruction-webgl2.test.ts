@@ -160,6 +160,45 @@ describe('WebGL2 retained instruction set: record + splice ladder (Tasks 6/7)', 
     });
   });
 
+  it('patches the correct store row when the group base shifts between capture and record (CRITICAL-2 regression)', () => {
+    withHarness(harness => {
+      const { root, outside, group, inside } = buildScene();
+
+      // F1 (capture): `outside` is visible and occupies shared row 0, so the
+      // group's children capture at rows 1,2,3 (groupBase = 1).
+      measureFrame(harness, root);
+
+      // Between capture and record, hide `outside`. This does NOT dirty the
+      // group (a sibling's structure change is off the group's subtree), so the
+      // group stays clean and records on F2 — but now its children start at row
+      // 0 (groupBase shifts 1 -> 0). The node->row map still holds the F1
+      // indices (1,2,3); the store is rebased to the F2 base (0). The patch must
+      // use the F1 subtree-local origin, not the F2 bundle base, or every
+      // patched row is off by the base delta.
+      outside.visible = false;
+
+      measureFrame(harness, root); // F2 record (shifted base)
+      measureFrame(harness, root); // F3 splice
+
+      const bundle = bundleOf(group);
+
+      // Sanity: with `outside` hidden the group owns exactly its 3 rows from 0.
+      expect(bundle.transformRowCount).toBe(3);
+
+      // Move the FIRST inside child; it must land in store row 0 (its group-
+      // local position), not row 1 (which the off-by-base bug would target).
+      measureFrame(harness, root, () => inside[0]!.setPosition(99, 99));
+
+      const rows = bundle.transformTexture!.buffer;
+
+      expect([rows[0 * 12 + 4], rows[0 * 12 + 5]]).toEqual([99, 99]); // moved child
+      expect([rows[1 * 12 + 4], rows[1 * 12 + 5]]).toEqual([60, 60]); // untouched
+      expect([rows[2 * 12 + 4], rows[2 * 12 + 5]]).toEqual([110, 110]); // untouched
+
+      root.destroy();
+    });
+  });
+
   it('camera pan and group move replay WITHOUT recapture (the Wave-4 win survives the fast tier)', () => {
     withHarness(harness => {
       const { root, group } = buildScene();

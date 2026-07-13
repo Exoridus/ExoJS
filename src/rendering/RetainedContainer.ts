@@ -313,12 +313,27 @@ export class RetainedContainer extends Container {
     const bundle = set?.ownedBundle ?? null;
 
     if (set === null || !set.hasRecording || bundle === null || typeof bundle._patchTransformRow !== 'function' || bundle.transformRowBase === undefined) {
+      // The set holds a recording whose baked transform rows we cannot patch
+      // (a backend without row-patch support — e.g. WebGPU before slice 4c),
+      // yet a transform-only move must still take effect. Drop the recording so
+      // `_markCurrentScopeRetained` fails validation and the group falls to
+      // entry replay (live transforms) + re-record this frame. Without this the
+      // group keeps splicing the stale rows and the moved node renders frozen.
+      if (set?.hasRecording) {
+        set.invalidate();
+      }
+
       this._fragment.clearDirtyTransformRows();
 
       return;
     }
 
-    const base = bundle.transformRowBase;
+    // The group-local row origin is the fragment's CAPTURE-frame (F1) minimum
+    // draw index — NOT `bundle.transformRowBase` (the record-frame F2 rebase
+    // base). The two frames can start the group at different absolute rows, and
+    // the store rows are group-local, so only the F1 subtree base maps a
+    // captured index to its store row (see directDrawBaseNodeIndex).
+    const base = this._fragment.directDrawBaseNodeIndex();
 
     for (const node of this._fragment.dirtyTransformRows) {
       if (!this._patchTransformRow(node, bundle, base)) {
