@@ -378,7 +378,7 @@ describe('WebGL2 renderer matrix: retained instruction-set replay cells', () => 
     }
   });
 
-  test('cell 4 — child mutation: fallback to full collect, recapture, then replay of the fresh recording', async () => {
+  test('cell 4 — transform-only child move: fast row-patch on a real GPU, no re-record, pixels track the move', async () => {
     const backend = await createBackend();
     const scene = buildScene();
 
@@ -390,28 +390,27 @@ describe('WebGL2 renderer matrix: retained instruction-set replay cells', () => 
       const beginSpy = vi.spyOn(backend, '_beginRetainedCapture');
       const replaySpy = vi.spyOn(backend, '_replayRetainedBatch');
 
-      // Mutate a child INSIDE the group: the set must never be served stale.
+      // Slice 4b: a pure transform move on a direct child stays content-clean,
+      // so the group keeps its recording and patches just this child's row in
+      // place. The pixel readback is the stale-render guard on a real GPU.
       scene.redSprite.setPosition(32, 0); // world (40,24)-(56,40)
       render(backend, scene.root);
 
-      expect(replaySpy).not.toHaveBeenCalled(); // dirty frame = plain collect
-      expectPixelNear(readPixel(backend, 44, 28), [255, 0, 0, 255]);
+      expect(beginSpy).not.toHaveBeenCalled(); // NO re-record: the recording is patched in place
+      expect(replaySpy).toHaveBeenCalled(); // still splicing the instruction set
+      expectPixelNear(readPixel(backend, 44, 28), [255, 0, 0, 255]); // patched to the NEW spot
       expectPixelNear(readPixel(backend, 12, 28), [0, 0, 0, 255]); // old spot cleared
 
-      // Recovery: entry replay + re-record...
+      // The fast tier keeps splicing the patched row, byte-stable, no re-record.
+      const patchedFrame = readCanvas(backend);
+
       render(backend, scene.root);
 
-      expect(beginSpy).toHaveBeenCalledTimes(1);
-
-      const recordFrame = readCanvas(backend);
-
-      // ...then the fresh recording splices, byte-identical again.
-      render(backend, scene.root);
-
-      expect(replaySpy).toHaveBeenCalled();
-      expect(readCanvas(backend)).toEqual(recordFrame);
+      expect(beginSpy).not.toHaveBeenCalled();
+      expect(replaySpy).toHaveBeenCalledTimes(2);
+      expect(readCanvas(backend)).toEqual(patchedFrame);
       expectPixelNear(readPixel(backend, 44, 28), [255, 0, 0, 255]);
-      expectPixelNear(readPixel(backend, 28, 44), [0, 255, 0, 255]);
+      expectPixelNear(readPixel(backend, 28, 44), [0, 255, 0, 255]); // green sibling untouched
     } finally {
       scene.destroy();
       backend.destroy();

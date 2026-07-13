@@ -17,6 +17,14 @@ import { isRetainedFragmentRecordable, RetainedInstructionSet } from './Retained
 export interface RetainedFragmentDraw {
   readonly kind: RenderEntryKind.Draw;
   drawable: Drawable;
+  /**
+   * The shared frame-buffer transform row this draw was captured on (Slice 4b).
+   * A group-local row is `nodeIndex - bundle.transformRowBase`; the fast patch
+   * maps a moved direct child back to its group-owned store row through it. The
+   * capture frame and the record frame are the same unchanged subtree, so the
+   * captured index equals the recorded one.
+   */
+  nodeIndex: number;
   seq: number;
   zIndex: number;
   /** Pooled key object, rewritten in place on recapture — never replaced. */
@@ -116,8 +124,61 @@ export class RetainedGroupFragment {
   private _recordable = false;
   private _recordableFor: RenderBackend | null = null;
 
+  // Slice 4b: lazy drawable -> captured shared-row map over the TOP-LEVEL draw
+  // records (the direct drawable children — the only fast-patch-eligible ones).
+  // Built on first lookup after a capture, dropped on the next capture.
+  private _directRowMap: Map<Drawable, number> | null = null;
+
+  // Slice 4b: nodes whose OWN transform moved since the last collect, pushed by
+  // the SceneNode seam through the enclosing group. A Set bounds it to the
+  // distinct moved nodes (O(children) worst case) and dedups repeated moves.
+  private readonly _dirtyTransformRows = new Set<RenderNode>();
+
   public get hasCapture(): boolean {
     return this._hasCapture;
+  }
+
+  /**
+   * The shared transform-buffer row a DIRECT drawable child was captured on
+   * (Slice 4b fast patch), or `undefined` when `drawable` is not a top-level
+   * captured draw (nested in a sub-container, or not in this group). Lazily
+   * builds a drawable→row map over the top-level draw records, rebuilt after
+   * each capture.
+   */
+  public directDrawNodeIndex(drawable: Drawable): number | undefined {
+    if (this._directRowMap === null) {
+      const map = new Map<Drawable, number>();
+
+      for (const entry of this._entries) {
+        if (entry.kind === RenderEntryKind.Draw) {
+          map.set(entry.drawable, entry.nodeIndex);
+        }
+      }
+
+      this._directRowMap = map;
+    }
+
+    return this._directRowMap.get(drawable);
+  }
+
+  /** Slice 4b: record that `node`'s own transform moved (from the SceneNode seam). */
+  public enqueueDirtyTransformRow(node: RenderNode): void {
+    this._dirtyTransformRows.add(node);
+  }
+
+  /** `true` when at least one transform-only move is queued for this frame. */
+  public hasDirtyTransformRows(): boolean {
+    return this._dirtyTransformRows.size > 0;
+  }
+
+  /** The queued moved nodes (insertion order, deduped). */
+  public get dirtyTransformRows(): ReadonlySet<RenderNode> {
+    return this._dirtyTransformRows;
+  }
+
+  /** Drop the queue — after patching them, or after a full re-collect subsumed them. */
+  public clearDirtyTransformRows(): void {
+    this._dirtyTransformRows.clear();
   }
 
   /** The group's instruction set, or `null` if recording was never armed. */
@@ -232,6 +293,10 @@ export class RetainedGroupFragment {
     this._groupCursor = 0;
     this._barrierCursor = 0;
     this._entries.length = 0;
+    this._directRowMap = null;
+    // A full (re)capture reads every child's current transform: any queued
+    // transform-only moves are subsumed and must not double-patch afterwards.
+    this._dirtyTransformRows.clear();
 
     this._snapshotInto(this._entries, entries);
 
@@ -251,6 +316,8 @@ export class RetainedGroupFragment {
     this._releaseDrawableRefs();
     this._hasCapture = false;
     this._entries.length = 0;
+    this._directRowMap = null;
+    this._dirtyTransformRows.clear();
     this._replayedSinceCapture = false;
     this._suppressed = false;
     this._wastedCaptures = 0;
@@ -305,6 +372,7 @@ export class RetainedGroupFragment {
         const record = this._acquireDraw();
 
         record.drawable = command.drawable;
+        record.nodeIndex = command.nodeIndex;
         record.seq = command.seq;
         record.zIndex = command.zIndex;
         copyMaterialKeyInto(record.material, command.material);
@@ -347,6 +415,7 @@ export class RetainedGroupFragment {
     const record: RetainedFragmentDraw = {
       kind: RenderEntryKind.Draw,
       drawable: undefined as unknown as Drawable,
+      nodeIndex: 0,
       seq: 0,
       zIndex: 0,
       material: { rendererId: 0, blendMode: BlendModes.Normal, textureId: -1, shaderId: -1, pipelineKey: 0, bindKey: 0 },

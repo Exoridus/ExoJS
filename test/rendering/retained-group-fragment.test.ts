@@ -16,14 +16,14 @@ const fakeBackendB = {} as RenderBackend;
 
 // A scope entry as the builder's current scope would hold it — the fragment
 // deep-copies it into its own pooled records at capture (Slice 3, F11a).
-const makeScopeDrawEntry = (drawable: Drawable): DrawScopeEntry => ({
+const makeScopeDrawEntry = (drawable: Drawable, nodeIndex = 0): DrawScopeEntry => ({
   kind: RenderEntryKind.Draw,
   seq: 0,
   zIndex: 0,
   command: {
     kind: RenderEntryKind.Draw,
     drawable,
-    nodeIndex: 0,
+    nodeIndex,
     seq: 0,
     zIndex: 0,
     material,
@@ -70,6 +70,59 @@ describe('RetainedGroupFragment', () => {
     expect(fragment.isClean(5, 3, fakeBackendB)).toBe(false); // backend swapped
 
     drawable.destroy();
+  });
+
+  test('captures each top-level draw nodeIndex and looks it up by drawable (Slice 4b row map)', () => {
+    const fragment = new RetainedGroupFragment();
+    const spriteA = new Drawable();
+    const spriteB = new Drawable();
+
+    // Two direct drawable children on shared rows 3 and 5 (a sibling occupied
+    // the earlier rows — the group's rows never start at 0).
+    fragment.capture(1, 1, fakeBackendA, [makeScopeDrawEntry(spriteA, 3), makeScopeDrawEntry(spriteB, 5)]);
+
+    expect((fragment.entries[0] as { nodeIndex: number }).nodeIndex).toBe(3);
+    expect(fragment.directDrawNodeIndex(spriteA)).toBe(3);
+    expect(fragment.directDrawNodeIndex(spriteB)).toBe(5);
+    expect(fragment.directDrawNodeIndex(new Drawable())).toBeUndefined();
+
+    spriteA.destroy();
+    spriteB.destroy();
+  });
+
+  test('directDrawNodeIndex rebuilds after a recapture (fresh row assignment)', () => {
+    const fragment = new RetainedGroupFragment();
+    const sprite = new Drawable();
+
+    fragment.capture(1, 1, fakeBackendA, [makeScopeDrawEntry(sprite, 4)]);
+    expect(fragment.directDrawNodeIndex(sprite)).toBe(4);
+
+    fragment.capture(2, 1, fakeBackendA, [makeScopeDrawEntry(sprite, 9)]);
+    expect(fragment.directDrawNodeIndex(sprite)).toBe(9);
+
+    sprite.destroy();
+  });
+
+  test('dirty-transform-row queue dedups moved nodes and clears (Slice 4b)', () => {
+    const fragment = new RetainedGroupFragment();
+    const a = new Drawable();
+    const b = new Drawable();
+
+    expect(fragment.hasDirtyTransformRows()).toBe(false);
+
+    fragment.enqueueDirtyTransformRow(a);
+    fragment.enqueueDirtyTransformRow(a); // same node twice — deduped
+    fragment.enqueueDirtyTransformRow(b);
+
+    expect(fragment.hasDirtyTransformRows()).toBe(true);
+    expect([...fragment.dirtyTransformRows]).toEqual([a, b]);
+
+    fragment.clearDirtyTransformRows();
+
+    expect(fragment.hasDirtyTransformRows()).toBe(false);
+
+    a.destroy();
+    b.destroy();
   });
 
   test('invalidate() clears the capture', () => {

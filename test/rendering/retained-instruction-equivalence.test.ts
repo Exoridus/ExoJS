@@ -600,9 +600,11 @@ describe('S3-D10 equivalence: instruction replay reproduces the slow-path batch 
     // Ladder to the fully-spliced state (see the collect-switch suite):
     // inner records first while outer thrashes, then outer records with the
     // inner batch verbatim.
-    dynamic.setPosition(1, 2);
+    // Slice 4b: a move on the direct child would be row-patched (outer stays
+    // clean), breaking the thrash cadence — content-dirty the outer instead.
+    dynamic.invalidateContent();
     playFrame(root, backend); // inner records
-    dynamic.setPosition(1, 3);
+    dynamic.invalidateContent();
     playFrame(root, backend); // inner splices, outer suppressed
 
     // F4: outer recovery capture — a genuine slow collect for d's FINAL

@@ -41,7 +41,7 @@ describe('NodeRevision', () => {
 });
 
 describe('SceneNode content/structure revision propagation', () => {
-  test('setPosition bumps content revision on the node and every ancestor up to root', () => {
+  test('setPosition bumps the TRANSFORM revision on the node and every ancestor up to root, NOT content (Slice 4b)', () => {
     const root = new Container();
     const mid = new Container();
     const leaf = new Drawable();
@@ -49,17 +49,21 @@ describe('SceneNode content/structure revision propagation', () => {
     root.addChild(mid);
     mid.addChild(leaf);
 
-    const rootBefore = root._contentRevision;
-    const midBefore = mid._contentRevision;
+    const rootContentBefore = root._contentRevision;
+    const midContentBefore = mid._contentRevision;
+    const rootTransformBefore = root._transformRevision;
+    const midTransformBefore = mid._transformRevision;
     const rootStructureBefore = root._structureRevision;
 
     leaf.setPosition(10, 20);
 
-    expect(leaf._contentRevision).toBeGreaterThan(0);
-    expect(mid._contentRevision).toBeGreaterThan(midBefore);
-    expect(root._contentRevision).toBeGreaterThan(rootBefore);
-    // A pure content change must never advance structure (the addChild calls
-    // above already stamped structure once each — setPosition must not add another).
+    // The flip: a transform move travels the transform channel to the root so a
+    // RetainedContainer ancestor can patch the row, and does NOT content-dirty.
+    expect(leaf._transformRevision).toBeGreaterThan(0);
+    expect(mid._transformRevision).toBeGreaterThan(midTransformBefore);
+    expect(root._transformRevision).toBeGreaterThan(rootTransformBefore);
+    expect(mid._contentRevision).toBe(midContentBefore);
+    expect(root._contentRevision).toBe(rootContentBefore);
     expect(root._structureRevision).toBe(rootStructureBefore);
 
     leaf.destroy();

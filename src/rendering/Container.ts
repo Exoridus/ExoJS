@@ -268,7 +268,10 @@ export class Container extends RenderNode {
 
     const viewUpdateId = builder.view.updateId;
 
-    if (this._retainedPlan !== null && this._retainedPlan.isClean(this._contentRevision, this._structureRevision, this._transformRevision, viewUpdateId, builder.backend)) {
+    if (
+      this._retainedPlan !== null &&
+      this._retainedPlan.isClean(this._contentRevision, this._structureRevision, this._transformRevision, viewUpdateId, builder.backend)
+    ) {
       if (__DEV__ && this._retainedPlan._devHasDestroyedDrawable()) {
         // P3f: a direct drawable child was destroy()ed but left attached, so
         // no revision bumped and the slot cache still looks clean. Drop the
@@ -364,7 +367,13 @@ export class Container extends RenderNode {
     // retain: a slot candidate this frame, or an already-live cache that must
     // be re-keyed so it cannot go stale-clean.
     if (sawSlotCandidate || this._retainedPlan !== null) {
-      (this._retainedPlan ??= new RetainedPlanCache())._commitCapture(this._contentRevision, this._structureRevision, this._transformRevision, viewUpdateId, builder.backend);
+      (this._retainedPlan ??= new RetainedPlanCache())._commitCapture(
+        this._contentRevision,
+        this._structureRevision,
+        this._transformRevision,
+        viewUpdateId,
+        builder.backend,
+      );
     }
   }
 

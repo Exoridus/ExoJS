@@ -22,7 +22,7 @@ class NoopFilter extends Filter {
   }
 }
 
-type DirtyKind = 'content' | 'structure';
+type DirtyKind = 'content' | 'structure' | 'transform';
 
 interface MutatorCase {
   readonly name: string;
@@ -69,36 +69,39 @@ const containerWithSizedChild = (): Container => {
 // without a row here is a review error; a row whose bump assertion fails is an
 // engine bug.
 const cases: readonly MutatorCase[] = [
-  // SceneNode transform family — content-dirty.
-  drawableCase('setPosition', 'content', n => n.setPosition(10, 20)),
+  // SceneNode transform family — transform-dirty ONLY (Slice 4b flip): an
+  // own-transform move stamps the transform channel, not content/structure, so
+  // an enclosing RetainedContainer patches the row instead of re-collecting.
+  drawableCase('setPosition', 'transform', n => n.setPosition(10, 20)),
   // A same-value assignment (cloning the current, default (0,0) position) is
   // correctly a no-op under the equality-guarded vector setter, so the clone
   // is mutated to a different value first to exercise a real change.
-  drawableCase('position setter', 'content', n => {
+  drawableCase('position setter', 'transform', n => {
     const next = n.position.clone();
 
     next.set(next.x + 10, next.y + 20);
     n.position = next;
   }),
-  drawableCase('x setter', 'content', n => (n.x = 5)),
-  drawableCase('y setter', 'content', n => (n.y = 5)),
-  drawableCase('setRotation', 'content', n => n.setRotation(45)),
-  drawableCase('rotation setter', 'content', n => (n.rotation = 45)),
-  drawableCase('setScale', 'content', n => n.setScale(2, 2)),
-  drawableCase('setOrigin', 'content', n => n.setOrigin(4, 4)),
+  drawableCase('x setter', 'transform', n => (n.x = 5)),
+  drawableCase('y setter', 'transform', n => (n.y = 5)),
+  drawableCase('setRotation', 'transform', n => n.setRotation(45)),
+  drawableCase('rotation setter', 'transform', n => (n.rotation = 45)),
+  drawableCase('setScale', 'transform', n => n.setScale(2, 2)),
+  drawableCase('setOrigin', 'transform', n => n.setOrigin(4, 4)),
   // setAnchor derives origin from local bounds (origin = boundsSize *
   // anchor), so it is a no-op against the default zero-size Drawable bounds.
   drawableCase(
     'setAnchor',
-    'content',
+    'transform',
     n => n.setAnchor(0.5, 0.5),
     () => withLocalBounds(new Drawable()),
   ),
-  drawableCase('setSkew', 'content', n => n.setSkew(10, 0)),
-  drawableCase('skewX setter', 'content', n => (n.skewX = 10)),
-  drawableCase('skewY setter', 'content', n => (n.skewY = 10)),
-  drawableCase('move', 'content', n => n.move(1, 1)),
-  drawableCase('rotate', 'content', n => n.rotate(5)),
+  drawableCase('setSkew', 'transform', n => n.setSkew(10, 0)),
+  drawableCase('skewX setter', 'transform', n => (n.skewX = 10)),
+  drawableCase('skewY setter', 'transform', n => (n.skewY = 10)),
+  drawableCase('move', 'transform', n => n.move(1, 1)),
+  drawableCase('rotate', 'transform', n => n.rotate(5)),
+  // zIndex is draw-order, not a spatial transform: still content-dirty.
   drawableCase('zIndex setter', 'content', n => (n.zIndex = 3)),
   // SceneNode cull family — structure-dirty (same class as `visible`: changes
   // WHICH draws a collect emits). These are two of the five audit gaps.
@@ -128,8 +131,10 @@ const cases: readonly MutatorCase[] = [
   // not inside `mutate`, or the structure-dirty assertion below would be
   // polluted by the addChild call rather than reflecting the width/height
   // setter alone.
-  containerCase('width setter', 'content', n => (n.width = 128), containerWithSizedChild),
-  containerCase('height setter', 'content', n => (n.height = 128), containerWithSizedChild),
+  // width/height set the container's SCALE to hit a target extent — a spatial
+  // transform, so transform-dirty after the Slice-4b flip (not content).
+  containerCase('width setter', 'transform', n => (n.width = 128), containerWithSizedChild),
+  containerCase('height setter', 'transform', n => (n.height = 128), containerWithSizedChild),
 ];
 
 // SUBCLASS mutator table (C1, expert review 2026-07-11). The base table above
@@ -198,13 +203,30 @@ describe('revision invariants: every public visual mutator bumps the right revis
 
       const nodeContentBefore = node._contentRevision;
       const nodeStructureBefore = node._structureRevision;
+      const nodeTransformBefore = node._transformRevision;
       const parentContentBefore = parent._contentRevision;
       const parentStructureBefore = parent._structureRevision;
+      const parentTransformBefore = parent._transformRevision;
 
       mutatorCase.mutate(node);
 
+      if (mutatorCase.expects === 'transform') {
+        // Slice 4b: an own-transform move travels the transform channel ONLY —
+        // it must NOT content- or structure-dirty (that decoupling is what lets
+        // a RetainedContainer patch the row instead of re-collecting).
+        expect(node._transformRevision).toBeGreaterThan(nodeTransformBefore);
+        expect(parent._transformRevision).toBeGreaterThan(parentTransformBefore);
+        expect(node._contentRevision).toBe(nodeContentBefore);
+        expect(parent._contentRevision).toBe(parentContentBefore);
+        expect(node._structureRevision).toBe(nodeStructureBefore);
+        expect(parent._structureRevision).toBe(parentStructureBefore);
+        parent.destroy();
+
+        return;
+      }
+
       // Structure implies content (NodeRevision.touchStructure), so content
-      // must advance for BOTH kinds.
+      // must advance for BOTH content and structure kinds.
       expect(node._contentRevision).toBeGreaterThan(nodeContentBefore);
       expect(parent._contentRevision).toBeGreaterThan(parentContentBefore);
 
@@ -298,7 +320,27 @@ describe('revision invariants: RetainedContainer reroutes its OWN transform muta
     group.destroy();
   });
 
-  test("a mutation INSIDE the subtree still content-dirties the group (decoupling is scoped to the group's own transform)", () => {
+  test('a transform-only mutation INSIDE the subtree transform-dirties the group but NOT its content (Slice 4b flip)', () => {
+    const group = new RetainedContainer();
+    const leaf = new Drawable();
+
+    group.addChild(leaf);
+
+    const contentBefore = group._contentRevision;
+    const transformBefore = group._transformRevision;
+
+    leaf.setPosition(3, 3);
+
+    // The decoupling is the whole point of 4b: the group keeps its recorded
+    // fragment (content unchanged) and learns of the move via the transform
+    // channel, which it consumes to patch the row.
+    expect(group._contentRevision).toBe(contentBefore);
+    expect(group._transformRevision).toBeGreaterThan(transformBefore);
+
+    group.destroy();
+  });
+
+  test('a genuine content mutation INSIDE the subtree still content-dirties the group', () => {
     const group = new RetainedContainer();
     const leaf = new Drawable();
 
@@ -306,7 +348,7 @@ describe('revision invariants: RetainedContainer reroutes its OWN transform muta
 
     const before = group._contentRevision;
 
-    leaf.setPosition(3, 3);
+    leaf.setTint(new Color(1, 2, 3));
 
     expect(group._contentRevision).toBeGreaterThan(before);
 
@@ -330,14 +372,13 @@ describe('revision invariants: RetainedContainer reroutes its OWN transform muta
   });
 });
 
-// Slice 4a: the transform-revision channel. Own-transform mutations bump a
-// dedicated `_transformRevision` (propagated to ancestors like content) IN
-// ADDITION to today's content bump — the split is purely additive here, so
-// behaviour is unchanged (fragments still invalidate on a descendant move via
-// the content bump). Slice 4b consumes this channel to patch transform rows
-// and drops the content co-bump. Representative transform mutators only; the
-// full mutator surface is guarded by the content/structure table above.
-describe('revision invariants: transform-revision channel (Slice 4a)', () => {
+// The transform-revision channel (Slice 4a groundwork, Slice 4b flip). An
+// own-transform mutation bumps a dedicated `_transformRevision` (propagated to
+// ancestors like content) and — since the 4b flip — NOT the content channel, so
+// a descendant move no longer invalidates a retained fragment; the group patches
+// the moved node's transform row in place instead. Representative transform
+// mutators only; the full mutator surface is guarded by the table above.
+describe('revision invariants: transform-revision channel (Slice 4a/4b)', () => {
   const transformMutators: ReadonlyArray<readonly [string, (n: Drawable) => void]> = [
     ['setPosition', n => n.setPosition(10, 20)],
     ['setRotation', n => n.setRotation(45)],
@@ -363,8 +404,9 @@ describe('revision invariants: transform-revision channel (Slice 4a)', () => {
 
       expect(node._transformRevision).toBeGreaterThan(nodeTransformBefore);
       expect(parent._transformRevision).toBeGreaterThan(parentTransformBefore);
-      // Behaviour-neutral in 4a: the content channel still bumps too.
-      expect(node._contentRevision).toBeGreaterThan(nodeContentBefore);
+      // Slice 4b: the content channel is now decoupled — a transform move does
+      // NOT bump content (that is what keeps a retained fragment valid).
+      expect(node._contentRevision).toBe(nodeContentBefore);
 
       parent.destroy();
     });

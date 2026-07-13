@@ -526,6 +526,15 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
   }
 
   /**
+   * @internal — Slice 4b seam: the nearest enclosing retained transform group
+   * is notified when a descendant's OWN transform moves, so it can patch that
+   * node's group-owned transform row in place (O(1)) instead of re-collecting
+   * the whole subtree. No-op on a plain node; {@link RetainedContainer}
+   * overrides it to enqueue the row on its fragment.
+   */
+  public _enqueueDirtyTransformRow(_node: RenderNode): void {}
+
+  /**
    * Whether this node opts back OUT of a parent transform-group boundary and
    * resolves world-space transforms. Overridden by RenderNode for
    * barrier-effect nodes (filters/mask/clip/cacheAsBitmap), whose effect
@@ -1024,18 +1033,47 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
 
   /**
    * Tail of every own-transform mutation path (position/rotation/scale/origin/
-   * skew). Default: cascade bounds, stamp content-dirty, AND stamp the Slice-4a
-   * transform channel. The transform stamp is ADDITIVE here — content still
-   * bumps, so behaviour is identical to pre-Slice-4a; Slice 4b drops the content
-   * co-bump once {@link RetainedContainer} patches transform rows from the
-   * transform channel. {@link RetainedContainer} overrides this to bump its
-   * group-matrix version instead of invalidating its retained fragment (§4.3).
+   * skew). Cascades bounds (flag-based, revision-independent) and stamps ONLY
+   * the transform channel — NOT content (the Slice-4b flip): an own-transform
+   * move no longer invalidates a retained fragment, so an enclosing
+   * {@link RetainedContainer} keeps its recorded instruction set and patches
+   * just this node's transform row in place ({@link _notifyEnclosingRetainedGroup}).
+   * Content-dirty is now reserved for genuine content changes (tint/blend/
+   * geometry/texture). {@link RetainedContainer} overrides this to bump its
+   * group-matrix version for its OWN move instead (§4.3).
    * @internal
    */
   protected _markOwnTransformDirty(): void {
-    this._invalidateBoundsCascade();
-    this._markContentDirty();
+    // Flag-only bounds cascade (NOT _invalidateBoundsCascade): the Slice-4b flip
+    // means a transform move must refresh ancestor world bounds for culling/
+    // getBounds WITHOUT content-dirtying — the content stamp would invalidate the
+    // retained fragment and defeat the row patch. Consumers that needed the old
+    // content bump on a move (the Wave-3 plain-container static skip) now key on
+    // the transform channel instead (slice 4b part 1).
+    this._invalidateBoundsFlags();
     this._markTransformDirty();
+    this._notifyEnclosingRetainedGroup();
+  }
+
+  /**
+   * Walk to the nearest enclosing transform-group boundary and hand it this
+   * node so it can fast-patch the row (Slice 4b). Stops at the FIRST boundary —
+   * that group owns this node's group-local transform row. Cheap: the walk ends
+   * at the group, not the root, and enqueue is a no-op for a non-retained
+   * boundary. Runs on every own-transform mutation, so it must not allocate.
+   */
+  private _notifyEnclosingRetainedGroup(): void {
+    let ancestor: Container | null = this._parentNode;
+
+    while (ancestor !== null) {
+      if (ancestor._isTransformGroupBoundary) {
+        ancestor._enqueueDirtyTransformRow(this as unknown as RenderNode);
+
+        return;
+      }
+
+      ancestor = ancestor.parent;
+    }
   }
 
   private _setPositionDirty(): void {
