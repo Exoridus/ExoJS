@@ -7,13 +7,9 @@ import { describe, expect, it } from 'vitest';
  * Locks the required GitHub CI `Typecheck` job (`.github/workflows/_ci-checks.yml`)
  * to run the SAME typecheck set as the local `verify:quick` pre-push hook
  * (`package.json`'s `typecheck && typecheck:guides && typecheck:examples &&
- * typecheck:type-tests && typecheck:packages`). #319: the two gates had
- * drifted — CI skipped `typecheck:examples`, so 5 strict-mode example errors
- * (introduced by #298's `strict: true`) merged via automerge on green
- * required CI, then blocked every contributor's local `git push` (the
- * pre-push hook still ran `typecheck:examples`). `typecheck:type-tests` has
- * the identical gap (present in verify:quick, absent from CI) despite not
- * being named in #319's title.
+ * typecheck:type-tests && typecheck:packages`). If the two gates drift, a
+ * class of error the local hook would have caught can merge on green
+ * required CI and then block every contributor's next local push instead.
  */
 
 const workflowPath = resolve(import.meta.dirname!, '../../.github/workflows/_ci-checks.yml');
@@ -32,7 +28,7 @@ function extractJobBlock(source: string, jobName: string): string {
   return nextJobMatch ? rest.slice(0, nextJobMatch.index) : rest;
 }
 
-describe('CI required Typecheck job matches the local verify:quick typecheck set (#319)', () => {
+describe('CI required Typecheck job matches the local verify:quick typecheck set', () => {
   const source = readFileSync(workflowPath, 'utf8');
   const typecheckJob = extractJobBlock(source, 'typecheck');
 
@@ -44,11 +40,11 @@ describe('CI required Typecheck job matches the local verify:quick typecheck set
     expect(typecheckJob).toContain('pnpm typecheck:guides');
   });
 
-  it('runs `pnpm typecheck:examples` — the strict examples config #319 found CI was skipping', () => {
+  it('runs `pnpm typecheck:examples` (strict examples config)', () => {
     expect(typecheckJob).toContain('pnpm typecheck:examples');
   });
 
-  it('runs `pnpm typecheck:type-tests` — same drift class as typecheck:examples, also gated locally by verify:quick', () => {
+  it('runs `pnpm typecheck:type-tests`', () => {
     expect(typecheckJob).toContain('pnpm typecheck:type-tests');
   });
 });
