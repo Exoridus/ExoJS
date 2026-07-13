@@ -35,6 +35,62 @@ describe('Sprite', () => {
     });
   });
 
+  describe('not-yet-loaded texture (#309)', () => {
+    // A deferred texture handle (loader.get(...)) starts 0x0 until its payload
+    // arrives. Constructing a Sprite from one must not divide size by a zero
+    // frame and poison scale with NaN, and the sprite must pick up the real
+    // dimensions once the load resolves.
+    const makeDeferredTexture = () => {
+      let resolve!: () => void;
+      const loaded = new Promise<Texture>(res => {
+        resolve = () => res(texture);
+      });
+      const texture = {
+        width: 0,
+        height: 0,
+        flipY: false,
+        ready: false,
+        loaded,
+        updateSource: () => undefined,
+      } as unknown as Texture;
+
+      return {
+        texture,
+        finishLoad: (w: number, h: number) => {
+          (texture as unknown as { width: number; height: number; ready: boolean }).width = w;
+          (texture as unknown as { width: number; height: number; ready: boolean }).height = h;
+          (texture as unknown as { width: number; height: number; ready: boolean }).ready = true;
+          resolve();
+        },
+      };
+    };
+
+    test('constructing from a 0x0 texture keeps a finite (identity) scale — no NaN', () => {
+      const sprite = new Sprite(makeTexture(0, 0));
+
+      expect(Number.isNaN(sprite.scale.x)).toBe(false);
+      expect(Number.isNaN(sprite.scale.y)).toBe(false);
+      expect(sprite.scale.x).toBe(1);
+      expect(sprite.scale.y).toBe(1);
+    });
+
+    test('self-heals the frame + size when the deferred texture finishes loading', async () => {
+      const { texture, finishLoad } = makeDeferredTexture();
+      const sprite = new Sprite(texture);
+
+      expect(sprite.textureFrame.width).toBe(0);
+
+      finishLoad(40, 20);
+      await texture.loaded;
+      await Promise.resolve(); // flush the .then microtask
+
+      expect(sprite.textureFrame.width).toBe(40);
+      expect(sprite.textureFrame.height).toBe(20);
+      expect(Number.isNaN(sprite.scale.x)).toBe(false);
+      expect(sprite.width).toBe(40);
+    });
+  });
+
   describe('updateTexture', () => {
     test('is a no-op when no texture is assigned', () => {
       const sprite = new Sprite(null);
