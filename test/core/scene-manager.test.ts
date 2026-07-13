@@ -115,7 +115,7 @@ describe('SceneManager', () => {
     expect(manager.currentScene).toBeNull();
     expect(unload).toHaveBeenCalledTimes(1);
     expect(destroySpy).toHaveBeenCalledTimes(1);
-    expect(scene.app).toBeNull();
+    expect(scene.attached).toBe(false);
     expect(changeSpy).not.toHaveBeenCalled();
   });
 
@@ -140,7 +140,7 @@ describe('SceneManager', () => {
     expect(load).toHaveBeenCalledTimes(1);
     expect(unload).toHaveBeenCalledTimes(1);
     expect(destroySpy).toHaveBeenCalledTimes(1);
-    expect(scene.app).toBeNull();
+    expect(scene.attached).toBe(false);
     expect(changeSpy).not.toHaveBeenCalled();
   });
 
@@ -159,7 +159,7 @@ describe('SceneManager', () => {
     await expect(manager.setScene(scene)).rejects.toThrow('Failed to initialize scene: init failed. Cleanup also failed: cleanup failed.');
     expect(manager.currentScene).toBeNull();
     expect(destroySpy).toHaveBeenCalledTimes(1);
-    expect(scene.app).toBeNull();
+    expect(scene.attached).toBe(false);
   });
 
   test('does not leak unhandled rejections when destroy() unload fails', async () => {
