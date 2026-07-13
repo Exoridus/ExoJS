@@ -3,12 +3,13 @@ import type { RetainedGroupBundle } from '#rendering/plan/RetainedInstructionSet
 import { DataTexture } from '#rendering/texture/DataTexture';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
+import { TRANSFORM_FLOATS_PER_ROW } from '#rendering/TransformBuffer';
 import { type BlendModes, BufferTypes, BufferUsage, RenderingPrimitives } from '#rendering/types';
 
 import { WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from './WebGl2RenderBuffer';
 import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './WebGl2VertexArrayObject';
 
-const transformFloatsPerRow = 12;
+const transformFloatsPerRow = TRANSFORM_FLOATS_PER_ROW;
 const initialInstanceWordCapacity = 256;
 const initialTransformRowCapacity = 16;
 

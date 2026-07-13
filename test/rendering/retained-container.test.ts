@@ -52,7 +52,7 @@ describe('RetainedContainer: Slice 4b transform-row seam', () => {
 
     child.setPosition(5, 5);
 
-    expect(fragmentOf(group).dirtyTransformRows.has(child)).toBe(true);
+    expect(fragmentOf(group).dirtyTransformRows.includes(child)).toBe(true);
 
     group.destroy();
   });
@@ -80,6 +80,27 @@ describe('RetainedContainer: Slice 4b transform-row seam', () => {
     expect(() => child.setPosition(3, 3)).not.toThrow();
 
     root.destroy();
+  });
+
+  test('the move seam re-arms across a group destroy (boundary-count balance)', () => {
+    // With no live boundary the seam short-circuits; a child under a group must
+    // still enqueue after another group elsewhere has been destroyed (the global
+    // count must balance construct/destroy exactly, never leaving it stuck at 0).
+    const throwaway = new RetainedContainer();
+
+    throwaway.destroy();
+
+    const group = new RetainedContainer();
+    const child = new LeafDrawable('a');
+
+    group.addChild(child);
+    fragmentOf(group).clearDirtyTransformRows();
+
+    child.setPosition(7, 7);
+
+    expect(fragmentOf(group).dirtyTransformRows.includes(child)).toBe(true);
+
+    group.destroy();
   });
 });
 

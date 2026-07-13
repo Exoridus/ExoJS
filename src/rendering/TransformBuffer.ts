@@ -1,13 +1,43 @@
 import type { Color } from '#core/Color';
 import type { Matrix } from '#math/Matrix';
 
-const floatsPerSlot = 12;
+/**
+ * Floats per transform+tint row (3 rgba32f texels): the single source of truth
+ * for the layout shared by {@link TransformBuffer}, the retained group transform
+ * store, and the Slice-4b in-place row patch.
+ */
+export const TRANSFORM_FLOATS_PER_ROW = 12;
+
+const floatsPerSlot = TRANSFORM_FLOATS_PER_ROW;
 const initialCapacity = 16;
 const hashPrime = 0x01000193;
 const hashOffset = 0x811c9dc5;
 
 const hashFloatScratch = new Float32Array(1);
 const hashUintScratch = new Uint32Array(hashFloatScratch.buffer);
+
+/**
+ * Write one transform+tint row into `target` at `offset` in the canonical layout
+ * (a,b,c,d, tx,ty,0,0, r/255,g/255,b/255,a). The single packer shared by
+ * {@link TransformBuffer.write} and the Slice-4b row patch, so the frame buffer
+ * and a patched retained row stay bit-identical by construction — a layout change
+ * lands in exactly one place.
+ * @internal
+ */
+export const packTransformRow = (target: Float32Array, offset: number, transform: Matrix, tint: Color): void => {
+  target[offset + 0] = transform.a;
+  target[offset + 1] = transform.b;
+  target[offset + 2] = transform.c;
+  target[offset + 3] = transform.d;
+  target[offset + 4] = transform.x;
+  target[offset + 5] = transform.y;
+  target[offset + 6] = 0;
+  target[offset + 7] = 0;
+  target[offset + 8] = tint.r / 255;
+  target[offset + 9] = tint.g / 255;
+  target[offset + 10] = tint.b / 255;
+  target[offset + 11] = tint.a;
+};
 
 /** @internal */
 export interface TransformBufferFrameSnapshot {
@@ -179,20 +209,8 @@ export class TransformBuffer {
     this._ensureCapacity(slot + 1);
 
     const offset = slot * floatsPerSlot;
-    const data = this._data;
 
-    data[offset + 0] = transform.a;
-    data[offset + 1] = transform.b;
-    data[offset + 2] = transform.c;
-    data[offset + 3] = transform.d;
-    data[offset + 4] = transform.x;
-    data[offset + 5] = transform.y;
-    data[offset + 6] = 0;
-    data[offset + 7] = 0;
-    data[offset + 8] = tint.r / 255;
-    data[offset + 9] = tint.g / 255;
-    data[offset + 10] = tint.b / 255;
-    data[offset + 11] = tint.a;
+    packTransformRow(this._data, offset, transform, tint);
 
     if (slot >= this._count) {
       this._count = slot + 1;
@@ -209,6 +227,8 @@ export class TransformBuffer {
     }
 
     this._frameHash = this._mix(this._frameHash, slot);
+
+    const data = this._data;
 
     for (let i = 0; i < floatsPerSlot; i++) {
       // In-bounds: offset..offset+floatsPerSlot-1 is the just-written slot.

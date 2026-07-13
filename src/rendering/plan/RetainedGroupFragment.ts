@@ -72,6 +72,15 @@ export interface RetainedFragmentBarrier {
 export type RetainedFragmentEntry = RetainedFragmentDraw | RetainedFragmentGroup | RetainedFragmentBarrier;
 
 /**
+ * Process-wide monotonic epoch for the Slice-4b dirty-transform-row dedup
+ * (see {@link RetainedGroupFragment}). Each fragment reset claims a fresh value,
+ * so a node's dedup stamp from any earlier cycle — this fragment's or another's
+ * — can never equal a fragment's current epoch, making a false dedup (a dropped
+ * move → stale render) impossible.
+ */
+let nextDirtyRowEpoch = 1;
+
+/**
  * Whole-command-range fragment cache for one {@link RetainedContainer}
  * (Track B Slice 2, spec §4.2). Keyed on the subtree's aggregate
  * content/structure revision and the backend identity — deliberately NOT on
@@ -134,9 +143,13 @@ export class RetainedGroupFragment {
   private _directRowMinIndex = -1;
 
   // Slice 4b: nodes whose OWN transform moved since the last collect, pushed by
-  // the SceneNode seam through the enclosing group. A Set bounds it to the
-  // distinct moved nodes (O(children) worst case) and dedups repeated moves.
-  private readonly _dirtyTransformRows = new Set<RenderNode>();
+  // the SceneNode seam through the enclosing group. A plain array (not a Set):
+  // `length = 0` on reset retains capacity, so the add-k/reset-per-frame churn
+  // cycle allocates nothing in steady state (unlike Set.clear). Dedup is O(1)
+  // via a per-node epoch stamp keyed on `_dirtyRowEpoch` — a globally unique
+  // value bumped on every reset, so a stale stamp never falsely dedups.
+  private readonly _dirtyTransformRows: RenderNode[] = [];
+  private _dirtyRowEpoch = nextDirtyRowEpoch++;
 
   public get hasCapture(): boolean {
     return this._hasCapture;
@@ -197,22 +210,31 @@ export class RetainedGroupFragment {
 
   /** Slice 4b: record that `node`'s own transform moved (from the SceneNode seam). */
   public enqueueDirtyTransformRow(node: RenderNode): void {
-    this._dirtyTransformRows.add(node);
+    // O(1) dedup: skip a repeat push in the same cycle without scanning.
+    if (node._dirtyRowStamp === this._dirtyRowEpoch) {
+      return;
+    }
+
+    node._dirtyRowStamp = this._dirtyRowEpoch;
+    this._dirtyTransformRows.push(node);
   }
 
   /** `true` when at least one transform-only move is queued for this frame. */
   public hasDirtyTransformRows(): boolean {
-    return this._dirtyTransformRows.size > 0;
+    return this._dirtyTransformRows.length > 0;
   }
 
   /** The queued moved nodes (insertion order, deduped). */
-  public get dirtyTransformRows(): ReadonlySet<RenderNode> {
+  public get dirtyTransformRows(): readonly RenderNode[] {
     return this._dirtyTransformRows;
   }
 
   /** Drop the queue — after patching them, or after a full re-collect subsumed them. */
   public clearDirtyTransformRows(): void {
-    this._dirtyTransformRows.clear();
+    // length = 0 retains the backing store (no realloc next frame); a fresh
+    // epoch invalidates every prior dedup stamp in O(1).
+    this._dirtyTransformRows.length = 0;
+    this._dirtyRowEpoch = nextDirtyRowEpoch++;
   }
 
   /** The group's instruction set, or `null` if recording was never armed. */
@@ -330,7 +352,7 @@ export class RetainedGroupFragment {
     this._directRowMap = null;
     // A full (re)capture reads every child's current transform: any queued
     // transform-only moves are subsumed and must not double-patch afterwards.
-    this._dirtyTransformRows.clear();
+    this.clearDirtyTransformRows();
 
     this._snapshotInto(this._entries, entries);
 
@@ -351,7 +373,7 @@ export class RetainedGroupFragment {
     this._hasCapture = false;
     this._entries.length = 0;
     this._directRowMap = null;
-    this._dirtyTransformRows.clear();
+    this.clearDirtyTransformRows();
     this._replayedSinceCapture = false;
     this._suppressed = false;
     this._wastedCaptures = 0;
