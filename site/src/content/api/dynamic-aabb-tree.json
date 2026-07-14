@@ -1,0 +1,1012 @@
+{
+  "title": "DynamicAabbTree",
+  "description": "Boundless, incrementally-updated bounding-volume hierarchy over fat AABBs (Box2D b2DynamicTree-style). Generic sibling of Quadtree: no world bounds, no max depth; leaves persist across updates and are only reinserted when their tight AABB escapes the stored fat AABB. Internals: an index-based node pool (a growable array of plain objects, mirroring the reuse-by-index idiom used elsewhere in the engine) with a free-list of freed slot indices for reuse. Insertion picks the sibling that minimises the surface-area-heuristic (SAH) cost of the resulting subtree; the ancestor chain is rebalanced on the way back to the root with AVL-style rotations on the height-imbalance factor — both exactly as in Box2D's `b2DynamicTree`. All public methods are allocation-free after the pool has grown to its working-set size.",
+  "symbol": "DynamicAabbTree",
+  "kind": "class",
+  "subsystem": "math",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 13,
+  "counts": {
+    "constructors": 1,
+    "methods": 10,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Boundless, incrementally-updated bounding-volume hierarchy over fat AABBs (Box2D b2DynamicTree-style). Generic sibling of Quadtree: no world bounds, no max depth; leaves persist across updates and are only reinserted when their tight AABB escapes the stored fat AABB.",
+        "Internals: an index-based node pool (a growable array of plain objects, mirroring the reuse-by-index idiom used elsewhere in the engine) with a free-list of freed slot indices for reuse. Insertion picks the sibling that minimises the surface-area-heuristic (SAH) cost of the resulting subtree; the ancestor chain is rebalanced on the way back to the root with AVL-style rotations on the height-imbalance factor — both exactly as in Box2D's `b2DynamicTree`. All public methods are allocation-free after the pool has grown to its working-set size."
+      ],
+      "importLine": "import { DynamicAabbTree } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(margin: number): DynamicAabbTree<T>",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "margin",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "DynamicAabbTree",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "margin",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "DynamicAabbTree<T>",
+          "description": "margin: fat-AABB extension (world units) applied on insert/update."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "clear",
+          "signature": "clear(): void",
+          "signatureTokens": [
+            {
+              "text": "clear",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Remove all leaves, keep pool capacity (bulk reset)."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Release pool + stacks entirely (mirrors Quadtree.destroy())."
+        },
+        {
+          "name": "fatAabbOf",
+          "signature": "fatAabbOf(proxy: number, out: AabbLike): AabbLike",
+          "signatureTokens": [
+            {
+              "text": "fatAabbOf",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "proxy",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "out",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AabbLike",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AabbLike",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "proxy",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "out",
+              "type": "AabbLike",
+              "optional": false
+            }
+          ],
+          "returnType": "AabbLike",
+          "description": "Copy the stored fat AABB into out (no allocation) and return it."
+        },
+        {
+          "name": "fatOverlaps",
+          "signature": "fatOverlaps(proxyA: number, proxyB: number): boolean",
+          "signatureTokens": [
+            {
+              "text": "fatOverlaps",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "proxyA",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "proxyB",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "proxyA",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "proxyB",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "true when the two proxies' stored fat AABBs overlap (pair-maintenance re-check)."
+        },
+        {
+          "name": "insert",
+          "signature": "insert(minX: number, minY: number, maxX: number, maxY: number, payload: T): number",
+          "signatureTokens": [
+            {
+              "text": "insert",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "minX",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "minY",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "maxX",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "maxY",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "payload",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "minX",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "minY",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "maxX",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "maxY",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "payload",
+              "type": "T",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": "Insert a leaf; returns its proxy id (stable until remove)."
+        },
+        {
+          "name": "payloadOf",
+          "signature": "payloadOf(proxy: number): T",
+          "signatureTokens": [
+            {
+              "text": "payloadOf",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "proxy",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "proxy",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "T",
+          "description": ""
+        },
+        {
+          "name": "query",
+          "signature": "query(minX: number, minY: number, maxX: number, maxY: number, callback: (payload: T, proxy: number) => void): void",
+          "signatureTokens": [
+            {
+              "text": "query",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "minX",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "minY",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "maxX",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "maxY",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "callback",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "payload",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "proxy",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "minX",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "minY",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "maxX",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "maxY",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "callback",
+              "type": "(payload: T, proxy: number) => void",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Invoke callback for every leaf whose fat AABB overlaps the query AABB. Allocation-free: traversal uses a persistent internal stack. Invocation ORDER is tree-shape-dependent — callers needing determinism must normalise their own output (physics does via its final id-sort). NOT re-entrant: because the traversal stack is a single persistent field shared across all calls on this instance, a callback must not call query/queryPoint again on the SAME tree instance. The nested call resets the shared stack and silently truncates the outer traversal, yielding an incomplete result set with no error thrown."
+        },
+        {
+          "name": "queryPoint",
+          "signature": "queryPoint(x: number, y: number, callback: (payload: T, proxy: number) => void): void",
+          "signatureTokens": [
+            {
+              "text": "queryPoint",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "callback",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "payload",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "proxy",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "x",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "callback",
+              "type": "(payload: T, proxy: number) => void",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Point query; thin wrapper over query with a zero-extent AABB. Shares query's non-reentrancy caveat: do not call query/queryPoint on the same tree instance from within a query/queryPoint callback."
+        },
+        {
+          "name": "remove",
+          "signature": "remove(proxy: number): void",
+          "signatureTokens": [
+            {
+              "text": "remove",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "proxy",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "proxy",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "update",
+          "signature": "update(proxy: number, minX: number, minY: number, maxX: number, maxY: number): boolean",
+          "signatureTokens": [
+            {
+              "text": "update",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "proxy",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "minX",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "minY",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "maxX",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "maxY",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "proxy",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "minX",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "minY",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "maxX",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "maxY",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Update a leaf's tight AABB. Returns false (and does nothing) while the tight AABB still fits the stored fat AABB; returns true when the leaf was removed and reinserted with a new fat AABB. The boolean is the sync phase's \"this leaf moved\" signal."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "height",
+          "signature": "height: number",
+          "signatureTokens": [
+            {
+              "text": "height",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "leafCount",
+          "signature": "leafCount: number",
+          "signatureTokens": [
+            {
+              "text": "leafCount",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/math/DynamicAabbTree.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/math/DynamicAabbTree.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/math/DynamicAabbTree.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/math/DynamicAabbTree.ts"
+}

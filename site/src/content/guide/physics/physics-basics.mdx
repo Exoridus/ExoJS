@@ -291,21 +291,16 @@ you never touch its position in `update`.
 ## Performance envelope: broad phase
 
 Collision detection's broad phase (which colliders are worth a precise test)
-is a stateless sort-and-sweep: every fixed step, it re-sorts **all** live
-colliders by their AABB's X position and sweeps once. That is exact (no missed
-overlaps) and deterministic, and it is cheap enough for typical scenes — a
-platformer level, a puzzle board, a few hundred physics props. It re-sorts
-from scratch every step rather than keeping a persistent structure, so it
-degrades as the live collider count grows into the thousands, and there is no
-built-in spatial hash or incremental broadphase for very high-N worlds (tens
-of thousands of simultaneously-live colliders). If you hit that ceiling,
-splitting a large world into several smaller `PhysicsWorld` instances (e.g.
-one per room, chunk or off-screen region) keeps each instance's live collider
-count low.
-
-<Callout type="info" title="No built-in spatial broadphase">
-There is currently no persistent/incremental broad phase (spatial hash, grid, or similar) in `@codexo/exojs-physics` — see the tracking issue "physics: spatial broadphase for high-N worlds (P4f)" for the follow-up.
-</Callout>
+is a **dynamic AABB tree** (Box2D-style): each collider's leaf carries a
+slightly enlarged ("fat") bounding box, and the tree is updated incrementally
+across steps rather than rebuilt from scratch. A collider whose motion stays
+inside its fat margin costs nothing to re-sync — only colliders that actually
+move enough to escape their margin trigger a tree update. There's still a
+cheap linear check over every live collider each step, but that dominant
+reinsertion cost tracks how much of the world is actually moving, not how
+large the world is, and sleeping bodies skip it entirely — scaling
+comfortably to tens of thousands of simultaneously-live colliders, including
+dense clusters that would degrade a sort-and-sweep broad phase.
 
 ## Where to go next
 

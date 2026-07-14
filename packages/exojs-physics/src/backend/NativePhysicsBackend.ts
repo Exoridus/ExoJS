@@ -1,22 +1,24 @@
-import type { BroadPhase, CandidatePair } from '../broadphase/BroadPhase';
-import { SweepAndPrune } from '../broadphase/SweepAndPrune';
+import { AabbTreeBroadPhase } from '../broadphase/AabbTreeBroadPhase';
+import type { CandidatePair } from '../broadphase/BroadPhase';
 import type { Collider } from '../Collider';
 import { ContactGraph } from '../ContactGraph';
+import type { SpatialIndex } from '../query/SpatialIndex';
 import { ContactSolver } from '../solver/ContactSolver';
 import type { PhysicsBackend } from './PhysicsBackend';
 
 /**
- * The native, dependency-free backend: a {@link BroadPhase} (sweep-and-prune in
- * the MVP, swappable for a dynamic AABB tree later) feeding the
- * {@link ContactGraph} that diffs touching pairs into events. The dynamics
- * solver plugs in here in a later phase without changing the frontend.
+ * The native, dependency-free backend: a dynamic-AABB-tree {@link AabbTreeBroadPhase}
+ * feeding the {@link ContactGraph} that diffs touching pairs into events. The
+ * dynamics solver plugs in here in a later phase without changing the frontend.
  */
 export class NativePhysicsBackend implements PhysicsBackend {
   public readonly contactGraph = new ContactGraph();
 
-  private readonly _broadPhase: BroadPhase = new SweepAndPrune();
+  private readonly _broadPhase = new AabbTreeBroadPhase();
   private readonly _solver = new ContactSolver();
   private readonly _pairs: CandidatePair[] = [];
+
+  public readonly spatialIndex: SpatialIndex = this._broadPhase;
 
   public get candidatePairs(): readonly CandidatePair[] {
     return this._pairs;
@@ -45,10 +47,12 @@ export class NativePhysicsBackend implements PhysicsBackend {
 
   public removeCollider(collider: Collider): void {
     this.contactGraph.removeCollider(collider);
+    this._broadPhase.removeCollider(collider);
   }
 
   public destroy(): void {
     this.contactGraph.clear();
     this._pairs.length = 0;
+    this._broadPhase.destroy();
   }
 }

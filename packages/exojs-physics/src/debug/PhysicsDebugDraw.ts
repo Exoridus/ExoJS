@@ -4,8 +4,8 @@ import type { DebugLayerViewMode } from '@codexo/exojs/debug';
 import { DebugLayer } from '@codexo/exojs/debug';
 import type { RenderBackend } from '@codexo/exojs/renderer-sdk';
 
+import { aabbOverlap } from '../Aabb';
 import type { CandidatePair } from '../broadphase/BroadPhase';
-import { SweepAndPrune } from '../broadphase/SweepAndPrune';
 import type { Collider } from '../Collider';
 import { Manifold } from '../collision/Manifold';
 import { collide } from '../collision/narrowphase';
@@ -58,7 +58,6 @@ export class PhysicsDebugDraw extends DebugLayer {
 
   private readonly _world: PhysicsWorld;
   private _graphics: Graphics | null = null;
-  private readonly _broadPhase = new SweepAndPrune();
   private readonly _manifold = new Manifold();
   private readonly _pairs: CandidatePair[] = [];
 
@@ -213,8 +212,39 @@ export class PhysicsDebugDraw extends DebugLayer {
     gfx.lineTo(x, y + size);
   }
 
+  /**
+   * Recomputes candidate pairs from scratch for the current frame via a plain
+   * brute-force AABB-overlap scan — deliberately NOT `AabbTreeBroadPhase`.
+   * That class relies on `Collider._treeProxy`, a field shared on the
+   * Collider object and valid only for whichever ONE broad phase currently
+   * owns it (the world's own `NativePhysicsBackend`); a second instance here
+   * would silently corrupt that ownership every time debug draw and a
+   * physics step interleave. Debug-only/opt-in (tree-shaken from production
+   * bundles), recomputed from scratch every visible frame regardless, so an
+   * O(n^2) scan is an appropriate, fully self-contained trade for
+   * correctness — it touches no state outside this method.
+   */
+  private _collectPairs(): void {
+    const colliders = this._world.colliders;
+    const pairs = this._pairs;
+
+    pairs.length = 0;
+
+    for (let i = 0; i < colliders.length; i++) {
+      const a = colliders[i]!;
+
+      for (let j = i + 1; j < colliders.length; j++) {
+        const b = colliders[j]!;
+
+        if (aabbOverlap(a.aabb, b.aabb)) {
+          pairs.push(a.id < b.id ? { a, b } : { a: b, b: a });
+        }
+      }
+    }
+  }
+
   private _renderBroadphase(gfx: Graphics): void {
-    this._broadPhase.computePairs(this._world.colliders, this._pairs);
+    this._collectPairs();
     gfx.lineColor = colorBroadphase;
 
     for (const pair of this._pairs) {
@@ -227,7 +257,7 @@ export class PhysicsDebugDraw extends DebugLayer {
   }
 
   private _renderContacts(gfx: Graphics): void {
-    this._broadPhase.computePairs(this._world.colliders, this._pairs);
+    this._collectPairs();
 
     for (const pair of this._pairs) {
       const a = pair.a;

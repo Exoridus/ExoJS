@@ -2,6 +2,7 @@
 
 exports[`root index type-level export inventory > all exported symbols with kind annotations match committed snapshot 1`] = `
 [
+  "AabbLike: interface",
   "AbstractAssetFactory: class",
   "AbstractText: class",
   "AnimatedSprite: class",
@@ -105,6 +106,7 @@ exports[`root index type-level export inventory > all exported symbols with kind
   "DrawContext: interface",
   "DrawGeometryOptions: interface",
   "Drawable: class",
+  "DynamicAabbTree: class",
   "Ease: class",
   "EasingFunction: type alias",
   "Ellipse: class",

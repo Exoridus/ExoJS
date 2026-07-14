@@ -49,6 +49,7 @@ exports[`root index export surface snapshot > sorted runtime export names match 
   "DataTexture",
   "DisposalScope",
   "Drawable",
+  "DynamicAabbTree",
   "Ease",
   "Ellipse",
   "Envelope",

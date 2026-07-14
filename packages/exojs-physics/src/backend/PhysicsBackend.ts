@@ -1,6 +1,7 @@
 import type { CandidatePair } from '../broadphase/BroadPhase';
 import type { Collider } from '../Collider';
 import type { ContactGraph } from '../ContactGraph';
+import type { SpatialIndex } from '../query/SpatialIndex';
 
 /**
  * Internal world-level backend seam. The frontend {@link PhysicsWorld} delegates
@@ -15,6 +16,8 @@ export interface PhysicsBackend {
   readonly contactGraph: ContactGraph;
   /** The latest broad-phase candidate pairs (read-only; for debug draw). */
   readonly candidatePairs: readonly CandidatePair[];
+  /** Accelerated AABB-overlap query, if this backend provides one (used by {@link QueryEngine} to narrow its scan). */
+  readonly spatialIndex?: SpatialIndex;
   /** Run one detection pass over `colliders`, refreshing the contact graph. Once per frame (TGS reuses the manifolds across sub-steps). */
   detect(colliders: readonly Collider[]): void;
   /** Build the per-frame contact constraints from the solid contacts. `h` is the sub-step duration; the soft factors derive from it plus `contactHertz`/`dampingRatio`. Call once per frame after {@link detect}. */
