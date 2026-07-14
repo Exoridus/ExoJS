@@ -46,7 +46,7 @@ export interface AabbLike {
  */
 export class DynamicAabbTree<T> {
   private readonly _margin: number;
-  private readonly _nodes: TreeNode<T>[] = [];
+  private readonly _nodes: Array<TreeNode<T>> = [];
   private readonly _freeIndices: number[] = [];
   private readonly _queryStack: number[] = [];
   private _root = NULL_NODE;
