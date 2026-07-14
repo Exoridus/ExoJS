@@ -1,0 +1,326 @@
+{
+  "title": "AssetHandler",
+  "description": "A loader-local instance produced by AssetBinding.create; owned and destroyed by the Loader. May hold state. Called once per `loader.load(...)` invocation. Sub-assets loaded via `context.loader.load(...)` are owned by the Loader's cache — NOT by this handler or the asset returned by `load`.",
+  "symbol": "AssetHandler",
+  "kind": "interface",
+  "subsystem": "extensions",
+  "importPath": "@codexo/exojs/extensions",
+  "tier": "advanced",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 0,
+    "methods": 4,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A loader-local instance produced by AssetBinding.create; owned and destroyed by the Loader. May hold state. Called once per `loader.load(...)` invocation. Sub-assets loaded via `context.loader.load(...)` are owned by the Loader's cache — NOT by this handler or the asset returned by `load`."
+      ],
+      "importLine": "import { AssetHandler } from '@codexo/exojs/extensions'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "createFromBytes",
+          "signature": "createFromBytes?(bytes: ArrayBuffer, options?: Options): Promise<Result>",
+          "signatureTokens": [
+            {
+              "text": "createFromBytes",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "bytes",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ArrayBuffer",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Options",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Result",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "bytes",
+              "type": "ArrayBuffer",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "Options",
+              "optional": true
+            }
+          ],
+          "returnType": "Promise<Result>",
+          "description": "Optionally produce the asset directly from in-memory bytes, bypassing the network and cache. This is what lets the type be packed into an asset container (Loader.loadContainer — one fetch yields N assets): the loader hands the handler the asset's slice instead of a URL. Implement it when the asset can be built from its raw bytes alone (the factory-backed core handlers do). Omit it when loading needs a URL fetch, sub-asset resolution, or anything bytes alone cannot supply — such types cannot be embedded in a container and raise a clear error if attempted."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy?(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "getIdentityKey",
+          "signature": "getIdentityKey?(request: AssetLoadRequest<Options>): string",
+          "signatureTokens": [
+            {
+              "text": "getIdentityKey",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "request",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetLoadRequest",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Options",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "request",
+              "type": "AssetLoadRequest<Options>",
+              "optional": false
+            }
+          ],
+          "returnType": "string",
+          "description": "Returns the deterministic identity key used for in-flight deduplication and loaded-resource reuse (and cache/resource-store identity where applicable). Include every option that **changes the produced resource** (format, locale, variant, color space, decoding mode, strictness when it affects output). Exclude control-only values that do not alter the resource (callbacks, AbortSignal, logger, request priority, timeout). Do **not** use JSON.stringify(request.options) — property-order instability, control-only field inclusion, and unbounded key size make it unsuitable. Explicitly select the identity-relevant fields instead. The Loader namespaces the key with the asset type, so the returned string may be type-local. Omit this hook to use the default (source-only) identity."
+        },
+        {
+          "name": "load",
+          "signature": "load(request: AssetLoadRequest<Options>, context: AssetLoaderContext): Promise<Result>",
+          "signatureTokens": [
+            {
+              "text": "load",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "request",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetLoadRequest",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Options",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "context",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetLoaderContext",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Result",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "request",
+              "type": "AssetLoadRequest<Options>",
+              "optional": false
+            },
+            {
+              "name": "context",
+              "type": "AssetLoaderContext",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<Result>",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/extensions/Extension.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/extensions/Extension.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/extensions/Extension.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/extensions/Extension.ts"
+}

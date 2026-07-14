@@ -1,0 +1,297 @@
+{
+  "title": "AssetBinding",
+  "description": "Binds an asset type and its lookup keys to a loader-local handler factory. `create(loader)` is called once per Loader at Application construction, producing an AssetHandler instance that the Loader owns for its entire lifetime. The handler may hold loader-local state (Workers, WASM modules, parsed caches). `Result` is the produced asset instance type (e.g. `TileMap`). `Options` is the typed options object, defaulting to `undefined` (no options). The runtime `type` field must be a constructor that produces `Result`; the handler returned by `create` must also produce `Result` — both relationships are enforced by TypeScript. Use `satisfies AssetBinding<MyAsset, MyLoadOptions>` on an object literal to get typed options in the handler and enforce the result type without repeating it.",
+  "symbol": "AssetBinding",
+  "kind": "interface",
+  "subsystem": "extensions",
+  "importPath": "@codexo/exojs/extensions",
+  "tier": "advanced",
+  "memberCount": 6,
+  "counts": {
+    "constructors": 0,
+    "methods": 1,
+    "properties": 5,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Binds an asset type and its lookup keys to a loader-local handler factory. `create(loader)` is called once per Loader at Application construction, producing an AssetHandler instance that the Loader owns for its entire lifetime. The handler may hold loader-local state (Workers, WASM modules, parsed caches).",
+        "`Result` is the produced asset instance type (e.g. `TileMap`). `Options` is the typed options object, defaulting to `undefined` (no options). The runtime `type` field must be a constructor that produces `Result`; the handler returned by `create` must also produce `Result` — both relationships are enforced by TypeScript.",
+        "Use `satisfies AssetBinding<MyAsset, MyLoadOptions>` on an object literal to get typed options in the handler and enforce the result type without repeating it."
+      ],
+      "importLine": "import { AssetBinding } from '@codexo/exojs/extensions'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "create",
+          "signature": "create(loader: Loader): AssetHandler<Result, Options>",
+          "signatureTokens": [
+            {
+              "text": "create",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "loader",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Loader",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetHandler",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Result",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Options",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "loader",
+              "type": "Loader",
+              "optional": false
+            }
+          ],
+          "returnType": "AssetHandler<Result, Options>",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "extensions",
+          "signature": "extensions?: readonly string[]",
+          "signatureTokens": [
+            {
+              "text": "extensions",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "kind",
+          "signature": "kind?: keyof AssetDefinitions",
+          "signatureTokens": [
+            {
+              "text": "kind",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "keyof AssetDefinitions",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The AssetDefinitions key this binding produces. When present, the binding was built by defineAsset, which registered the kind's placeholder strategy and suffix→kind inference GLOBALLY at import (so loader-free Assets.from resolves it). Purely informational on the binding itself — materializeAssetBindings does not consume it."
+        },
+        {
+          "name": "seamless",
+          "signature": "seamless?: SeamlessAdapter<Result>",
+          "signatureTokens": [
+            {
+              "text": "seamless",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SeamlessAdapter",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Result",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Optional seamless-handle adapter (asset-system v2), registered alongside the handler."
+        },
+        {
+          "name": "type",
+          "signature": "type: AssetConstructor<Result>",
+          "signatureTokens": [
+            {
+              "text": "type",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetConstructor",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Result",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "typeNames",
+          "signature": "typeNames?: readonly string[]",
+          "signatureTokens": [
+            {
+              "text": "typeNames",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Config-map type names that resolve to this handler, e.g. ['tiledMap']. Most bindings declare exactly one name; a binding may declare several when a single asset type is reachable under multiple aliases (e.g. ['vtt', 'srt']). Each name maps the config-map form { type: '<name>', source } to this handler."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/extensions/Extension.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/extensions/Extension.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/extensions/Extension.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/extensions/Extension.ts"
+}

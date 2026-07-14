@@ -1,0 +1,138 @@
+{
+  "title": "SerializerBinding",
+  "description": "Binds a SceneNode type to a NodeSerializer under a stable type name, so an extension's own node types participate in Scene.serialize/Scene.deserialize. Pure descriptor — the serializer is a stateless write/read pair, materialised into the scene serialization registry once at Application construction. `target` is the constructor serialize resolves via prototype walk; `typeName` is the tag written to JSON and the key deserialize resolves by. Mirrors the shape of RendererBinding/AssetBinding.",
+  "symbol": "SerializerBinding",
+  "kind": "interface",
+  "subsystem": "extensions",
+  "importPath": "@codexo/exojs/extensions",
+  "tier": "advanced",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Binds a SceneNode type to a NodeSerializer under a stable type name, so an extension's own node types participate in Scene.serialize/Scene.deserialize. Pure descriptor — the serializer is a stateless write/read pair, materialised into the scene serialization registry once at Application construction.",
+        "`target` is the constructor serialize resolves via prototype walk; `typeName` is the tag written to JSON and the key deserialize resolves by. Mirrors the shape of RendererBinding/AssetBinding."
+      ],
+      "importLine": "import { SerializerBinding } from '@codexo/exojs/extensions'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "serializer",
+          "signature": "serializer: NodeSerializer<T>",
+          "signatureTokens": [
+            {
+              "text": "serializer",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NodeSerializer",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "target",
+          "signature": "target: SceneNodeConstructor<T>",
+          "signatureTokens": [
+            {
+              "text": "target",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneNodeConstructor",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "typeName",
+          "signature": "typeName: string",
+          "signatureTokens": [
+            {
+              "text": "typeName",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/extensions/Extension.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/extensions/Extension.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/extensions/Extension.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/extensions/Extension.ts"
+}

@@ -3,8 +3,8 @@
   "description": "An ExoJS extension: an immutable descriptor that contributes renderer bindings, asset bindings and/or serializer bindings. Holds no Application, backend, GPU, or loader instances. Register via ExtensionRegistry.register (official packages do this as an import side effect), or pass explicitly via ApplicationOptions.extensions.",
   "symbol": "Extension",
   "kind": "interface",
-  "subsystem": "core",
-  "importPath": "@codexo/exojs",
+  "subsystem": "extensions",
+  "importPath": "@codexo/exojs/extensions",
   "tier": "advanced",
   "memberCount": 5,
   "counts": {
@@ -21,7 +21,7 @@
       "paragraphs": [
         "An ExoJS extension: an immutable descriptor that contributes renderer bindings, asset bindings and/or serializer bindings. Holds no Application, backend, GPU, or loader instances. Register via ExtensionRegistry.register (official packages do this as an import side effect), or pass explicitly via ApplicationOptions.extensions."
       ],
-      "importLine": "import { Extension } from '@codexo/exojs'",
+      "importLine": "import { Extension } from '@codexo/exojs/extensions'",
       "sourceLink": null
     },
     {
