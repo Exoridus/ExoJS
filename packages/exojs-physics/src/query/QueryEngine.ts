@@ -149,10 +149,9 @@ export class QueryEngine {
     const resolved = filter ? resolveFilter(filter) : null;
 
     let best: RayHit | null = null;
-
-    for (const collider of this._colliders) {
+    const consider = (collider: Collider): void => {
       if (resolved && !shouldCollide(resolved, collider.filter)) {
-        continue;
+        return;
       }
 
       const hit = rayCastCollider(collider, origin.x, origin.y, dx, dy, best ? best.distance : maxDistance);
@@ -160,6 +159,15 @@ export class QueryEngine {
       if (hit && (best === null || hit.distance < best.distance)) {
         best = hit;
       }
+    };
+
+    if (this._spatialIndex === undefined) {
+      for (const collider of this._colliders) {
+        consider(collider);
+      }
+    } else {
+      this._spatialIndex.sync(this._colliders);
+      this._spatialIndex.rayCast(origin.x, origin.y, dx, dy, maxDistance, consider);
     }
 
     return best;
@@ -178,10 +186,9 @@ export class QueryEngine {
     const resolved = filter ? resolveFilter(filter) : null;
     const result = out ?? [];
     result.length = 0;
-
-    for (const collider of this._colliders) {
+    const consider = (collider: Collider): void => {
       if (resolved && !shouldCollide(resolved, collider.filter)) {
-        continue;
+        return;
       }
 
       const hit = rayCastCollider(collider, origin.x, origin.y, dx, dy, maxDistance);
@@ -189,6 +196,15 @@ export class QueryEngine {
       if (hit) {
         result.push(hit);
       }
+    };
+
+    if (this._spatialIndex === undefined) {
+      for (const collider of this._colliders) {
+        consider(collider);
+      }
+    } else {
+      this._spatialIndex.sync(this._colliders);
+      this._spatialIndex.rayCast(origin.x, origin.y, dx, dy, maxDistance, consider);
     }
 
     result.sort((a, b) => a.distance - b.distance);

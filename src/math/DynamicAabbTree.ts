@@ -49,6 +49,7 @@ export class DynamicAabbTree<T> {
   private readonly _nodes: Array<TreeNode<T>> = [];
   private readonly _freeIndices: number[] = [];
   private readonly _queryStack: number[] = [];
+  private readonly _rayCastStack: number[] = [];
   private _root = NULL_NODE;
   private _leafCount = 0;
 
@@ -194,6 +195,47 @@ export class DynamicAabbTree<T> {
     this.query(x, y, x, y, callback);
   }
 
+  /**
+   * Invoke `callback` for every leaf whose fat AABB the ray from `originX,
+   * originY` along `dirX, dirY` crosses within `maxDistance` (pass `Infinity`
+   * for an unbounded ray). A dumb AABB-pruning primitive mirroring `query`:
+   * it slab-tests each subtree's fat AABB against the ray segment and skips
+   * whole subtrees the segment misses, but performs no exact shape math and
+   * imposes no nearest-first order — the caller runs its own narrow phase and
+   * decides nearest-vs-all. Invocation ORDER is tree-shape-dependent.
+   *
+   * NOT re-entrant with itself: the traversal uses a single persistent stack
+   * field, so a `callback` must not call `rayCast` again on the SAME tree
+   * instance (the nested call resets the shared stack and silently truncates
+   * the outer traversal). The stack is separate from `query`/`queryPoint`'s,
+   * so a `rayCast` from within a `query` callback (or the reverse) is safe.
+   */
+  public rayCast(originX: number, originY: number, dirX: number, dirY: number, maxDistance: number, callback: (payload: T, proxy: number) => void): void {
+    if (this._root === NULL_NODE) {
+      return;
+    }
+
+    const stack = this._rayCastStack;
+    stack.length = 0;
+    stack.push(this._root);
+
+    while (stack.length > 0) {
+      const index = stack.pop()!;
+      const node = this._nodes[index]!;
+
+      if (!raySegmentIntersectsAabb(originX, originY, dirX, dirY, maxDistance, node.minX, node.minY, node.maxX, node.maxY)) {
+        continue;
+      }
+
+      if (node.height === 0) {
+        callback(node.payload as T, index);
+      } else {
+        stack.push(node.child1);
+        stack.push(node.child2);
+      }
+    }
+  }
+
   /** Remove all leaves, keep pool capacity (bulk reset). */
   public clear(): void {
     const nodes = this._nodes;
@@ -217,6 +259,7 @@ export class DynamicAabbTree<T> {
     this._nodes.length = 0;
     this._freeIndices.length = 0;
     this._queryStack.length = 0;
+    this._rayCastStack.length = 0;
     this._root = NULL_NODE;
     this._leafCount = 0;
   }
@@ -574,6 +617,78 @@ export class DynamicAabbTree<T> {
 
 /** Half-perimeter (width + height) of an AABB — a cheap 2D surface-area-heuristic proxy. */
 const perimeter = (minX: number, minY: number, maxX: number, maxY: number): number => maxX - minX + (maxY - minY);
+
+/**
+ * `true` when the ray segment from `(ox, oy)` along `(dx, dy)`, clamped to
+ * `t in [0, maxDistance]`, intersects the AABB. Standard slab test: an axis
+ * with zero direction component intersects only if the origin already lies
+ * within that slab; otherwise the per-axis entry/exit fractions are folded
+ * into a running `[tmin, tmax]` overlap window (empty ⇒ miss). `maxDistance`
+ * may be `Infinity` for an unbounded ray. Boundary contacts count as hits
+ * (conservative: the tree must never prune away a true candidate).
+ */
+const raySegmentIntersectsAabb = (ox: number, oy: number, dx: number, dy: number, maxDistance: number, minX: number, minY: number, maxX: number, maxY: number): boolean => {
+  let tmin = 0;
+  let tmax = maxDistance;
+
+  if (dx === 0) {
+    if (ox < minX || ox > maxX) {
+      return false;
+    }
+  } else {
+    const inv = 1 / dx;
+    let t1 = (minX - ox) * inv;
+    let t2 = (maxX - ox) * inv;
+
+    if (t1 > t2) {
+      const tmp = t1;
+      t1 = t2;
+      t2 = tmp;
+    }
+
+    if (t1 > tmin) {
+      tmin = t1;
+    }
+
+    if (t2 < tmax) {
+      tmax = t2;
+    }
+
+    if (tmin > tmax) {
+      return false;
+    }
+  }
+
+  if (dy === 0) {
+    if (oy < minY || oy > maxY) {
+      return false;
+    }
+  } else {
+    const inv = 1 / dy;
+    let t1 = (minY - oy) * inv;
+    let t2 = (maxY - oy) * inv;
+
+    if (t1 > t2) {
+      const tmp = t1;
+      t1 = t2;
+      t2 = tmp;
+    }
+
+    if (t1 > tmin) {
+      tmin = t1;
+    }
+
+    if (t2 < tmax) {
+      tmax = t2;
+    }
+
+    if (tmin > tmax) {
+      return false;
+    }
+  }
+
+  return true;
+};
 
 /** SAH cost of inserting `leaf` under `child` (a candidate descent target during sibling search). */
 const childInsertionCost = <T>(child: TreeNode<T>, leaf: TreeNode<T>, inheritanceCost: number): number => {
