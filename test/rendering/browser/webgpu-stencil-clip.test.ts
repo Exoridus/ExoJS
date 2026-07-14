@@ -185,8 +185,8 @@ const setupBackend = async (logicalSize = canvasSize): Promise<WebGpuBackend> =>
 
   const backend = new WebGpuBackend(makeApp(canvas, logicalSize));
 
-  await backend.initialize();
   wireCoreRenderers(backend);
+  await backend.initialize();
 
   return backend;
 };

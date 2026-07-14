@@ -40,8 +40,8 @@ const setupBackend = async (): Promise<WebGpuBackend> => {
 
   const backend = new WebGpuBackend(makeApp(canvas));
 
-  await backend.initialize();
   wireTilemapRenderers(backend);
+  await backend.initialize();
 
   return backend;
 };

@@ -60,8 +60,8 @@ const setupBackend = async (): Promise<WebGpuBackend> => {
 
   const backend = new WebGpuBackend(makeApp(canvas));
 
-  await backend.initialize();
   wireCoreRenderers(backend);
+  await backend.initialize();
   // The particle renderer is not part of the core renderer bindings — the
   // `@codexo/exojs-particles` package materialises it itself via its
   // Extension descriptor. Browser tests construct a bare backend (bypassing
