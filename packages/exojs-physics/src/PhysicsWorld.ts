@@ -167,16 +167,11 @@ export interface AttachOptions {
  * - **{@link PhysicsWorldOptions.subStepCount}** — the default `4` is
  *   load-bearing for tall-stack stability; lowering it below `2` visibly
  *   degrades stacking, so do not reduce it for performance.
- * - **Broad phase is a stateless O(n log n) sort-and-sweep** (`SweepAndPrune`),
- *   re-sorting every live collider by X each fixed step — no persistent
- *   incremental structure or spatial hash. Fine up to the low thousands of
- *   colliders; a world with tens of thousands of simultaneously-live colliders
- *   will spend a growing share of the step re-sorting and scanning near
- *   misses. There is currently no built-in spatial broadphase for that
- *   regime — see the tracking issue "physics: spatial broadphase for high-N
- *   worlds (P4f)" if you need one; in the meantime, split very large worlds
- *   into several smaller `PhysicsWorld` instances (e.g. per room/chunk) to
- *   keep each one's live collider count low.
+ * - **Broad phase is a dynamic AABB tree** (`AabbTreeBroadPhase`), stateful
+ *   across fixed steps: a collider whose tight AABB stays inside its stored
+ *   fat AABB costs nothing to re-sync, and only colliders that actually move
+ *   outside their margin trigger a tree update and a local re-query for new
+ *   neighbours.
  */
 export class PhysicsWorld implements BodyOwner {
   /** Fires when two solid colliders begin touching. Argument is an immutable snapshot. */

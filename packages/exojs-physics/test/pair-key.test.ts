@@ -54,7 +54,7 @@ describe('ContactGraph pairKey (A4 16-bit overflow fix)', () => {
  * `CandidatePair[]` and does not itself re-validate the ordering, so this
  * white-box test constructs a graph directly and feeds it a deliberately
  * reversed pair to pin that the tie-break still resolves to the numerically
- * lower id — the defensive branch a SweepAndPrune-fed pair never reaches.
+ * lower id — the defensive branch a broad-phase-fed pair never reaches.
  */
 describe('ContactGraph.update sensor tie-break (both colliders are sensors)', () => {
   it('resolves the sensor to the lower-id collider even when the pair is passed in the opposite order', () => {
