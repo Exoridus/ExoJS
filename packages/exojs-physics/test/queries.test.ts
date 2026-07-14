@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { Collider } from '../src/Collider';
 import type { RayHit } from '../src/index';
 import { BoxShape, CircleShape, PhysicsWorld, PolygonShape } from '../src/index';
+import { QueryEngine } from '../src/query/QueryEngine';
 import { colliderAt } from './support';
 
 describe('queries', () => {
@@ -232,5 +233,39 @@ describe('queries', () => {
 
     expect(world.overlapShape(new BoxShape(4, 4), { x: 8, y: 0 }, undefined, Math.PI / 4)).toEqual([box]);
     expect(world.overlapShape(new BoxShape(4, 4), { x: 100, y: 0 }, undefined, Math.PI / 4)).toEqual([]);
+  });
+});
+
+describe('QueryEngine spatial-index narrowing parity', () => {
+  it('queryPoint/queryAabb/overlapShape return identical results whether or not the backend provides a SpatialIndex', () => {
+    const world = new PhysicsWorld(); // NativePhysicsBackend wires its AabbTreeBroadPhase as spatialIndex automatically
+    const unindexed = new QueryEngine(world.colliders); // no spatialIndex — forces the fallback linear scan
+
+    for (let i = 0; i < 30; i++) {
+      colliderAt(world, new BoxShape(10, 10), { x: (i % 6) * 12, y: Math.floor(i / 6) * 12 }, 0, 'dynamic');
+    }
+
+    const point = { x: 15, y: 15 };
+    const bounds = { minX: 0, minY: 0, maxX: 30, maxY: 30 };
+
+    // `PhysicsWorld` delegates query methods directly (no `.queries` sub-object) —
+    // see e.g. `world.queryPoint` at PhysicsWorld.ts:538, which forwards to its
+    // internal `_query: QueryEngine` (now constructed with the backend's
+    // `spatialIndex`, per Step 6 above).
+    const indexedPoint = world.queryPoint(point).map(c => c.id).sort((a, b) => a - b);
+    const linearPoint = unindexed.queryPoint(point).map(c => c.id).sort((a, b) => a - b);
+    expect(indexedPoint).toEqual(linearPoint);
+
+    const indexedAabb = world.queryAabb(bounds).map(c => c.id).sort((a, b) => a - b);
+    const linearAabb = unindexed.queryAabb(bounds).map(c => c.id).sort((a, b) => a - b);
+    expect(indexedAabb).toEqual(linearAabb);
+
+    const indexedShape = world.overlapShape(new BoxShape(20, 20), { x: 15, y: 15 }).map(c => c.id).sort((a, b) => a - b);
+    const linearShape = unindexed.overlapShape(new BoxShape(20, 20), { x: 15, y: 15 }).map(c => c.id).sort((a, b) => a - b);
+    expect(indexedShape).toEqual(linearShape);
+
+    expect(indexedPoint.length).toBeGreaterThan(0);
+    expect(indexedAabb.length).toBeGreaterThan(0);
+    expect(indexedShape.length).toBeGreaterThan(0); // sanity: the assertions above aren't vacuously true on empty results
   });
 });

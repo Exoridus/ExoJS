@@ -2,6 +2,7 @@ import { AabbTreeBroadPhase } from '../broadphase/AabbTreeBroadPhase';
 import type { CandidatePair } from '../broadphase/BroadPhase';
 import type { Collider } from '../Collider';
 import { ContactGraph } from '../ContactGraph';
+import type { SpatialIndex } from '../query/SpatialIndex';
 import { ContactSolver } from '../solver/ContactSolver';
 import type { PhysicsBackend } from './PhysicsBackend';
 
@@ -16,6 +17,8 @@ export class NativePhysicsBackend implements PhysicsBackend {
   private readonly _broadPhase = new AabbTreeBroadPhase();
   private readonly _solver = new ContactSolver();
   private readonly _pairs: CandidatePair[] = [];
+
+  public readonly spatialIndex: SpatialIndex = this._broadPhase;
 
   public get candidatePairs(): readonly CandidatePair[] {
     return this._pairs;

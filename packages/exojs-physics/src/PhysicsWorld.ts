@@ -253,7 +253,7 @@ export class PhysicsWorld implements BodyOwner {
     this.sleepLinearVelocity = options.sleepLinearVelocity ?? 5;
     this.sleepAngularVelocity = options.sleepAngularVelocity ?? 0.06;
     this.timeToSleep = options.timeToSleep ?? 0.5;
-    this._query = new QueryEngine(this._colliders);
+    this._query = new QueryEngine(this._colliders, this._backend.spatialIndex);
   }
 
   /** Live bodies (read-only view). */

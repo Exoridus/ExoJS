@@ -5,6 +5,7 @@ import type { Aabb } from '../Aabb';
 import { aabbOverlap } from '../Aabb';
 import type { Collider } from '../Collider';
 import { pairKey } from '../ContactGraph';
+import type { SpatialIndex } from '../query/SpatialIndex';
 import { sortInPlace } from '../sort';
 import type { BroadPhase, CandidatePair } from './BroadPhase';
 
@@ -53,7 +54,7 @@ const byPairId = (p: CandidatePair, q: CandidatePair): number => p.a.id - q.a.id
  * `_treeProxy` values and corrupt its tree. Use a plain brute-force scan for
  * such one-off, read-only needs instead.
  */
-export class AabbTreeBroadPhase implements BroadPhase {
+export class AabbTreeBroadPhase implements BroadPhase, SpatialIndex {
   private readonly _tree = new DynamicAabbTree<Collider>(AABB_MARGIN);
   private readonly _pairs = new Map<number, CandidatePair>();
   private readonly _scratchFatAabb: AabbLike = { minX: 0, minY: 0, maxX: 0, maxY: 0 };
@@ -93,9 +94,7 @@ export class AabbTreeBroadPhase implements BroadPhase {
   };
 
   public computePairs(colliders: readonly Collider[], out: CandidatePair[]): CandidatePair[] {
-    for (const collider of colliders) {
-      this._sync(collider);
-    }
+    this.sync(colliders);
 
     // eslint-disable-next-line unicorn/no-array-for-each -- allocation-free forEach over the Map (see ContactGraph's resetSeen/_removeIfUnseen for the same idiom); deleting the current entry during forEach is safe.
     this._pairs.forEach(this._dropIfStale);
@@ -107,6 +106,17 @@ export class AabbTreeBroadPhase implements BroadPhase {
     sortInPlace(out, byPairId);
 
     return out;
+  }
+
+  /**
+   * Insert every not-yet-tracked collider and reinsert every moved one (the
+   * `computePairs` phase-1 loop, extracted so {@link queryAabb} callers can
+   * force it independently of a full detection pass — see {@link SpatialIndex.sync}).
+   */
+  public sync(colliders: readonly Collider[]): void {
+    for (const collider of colliders) {
+      this._sync(collider);
+    }
   }
 
   /** Colliders whose AABB overlaps `aabb`. Writes into `out` (cleared first) and returns it. */

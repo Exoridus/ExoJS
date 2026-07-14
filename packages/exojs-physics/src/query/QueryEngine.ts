@@ -1,5 +1,5 @@
 import type { Aabb } from '../Aabb';
-import { aabbContainsPoint, aabbOverlap } from '../Aabb';
+import { aabbContainsPoint, aabbOverlap, createAabb } from '../Aabb';
 import type { Collider } from '../Collider';
 import type { CollisionProxy } from '../collision/CollisionProxy';
 import { testOverlap } from '../collision/narrowphase';
@@ -9,6 +9,7 @@ import type { PhysicsBody } from '../PhysicsBody';
 import type { AnyShape } from '../shapes/AnyShape';
 import type { VectorLike } from '../types';
 import { resolveFilter, shouldCollide } from '../types';
+import type { SpatialIndex } from './SpatialIndex';
 
 /** A category/mask/group filter applied to a query. Omitting it matches everything. */
 export type QueryFilter = Partial<{ category: number; mask: number; group: number }>;
@@ -34,17 +35,43 @@ export interface RayHit {
  */
 export class QueryEngine {
   private readonly _colliders: readonly Collider[];
+  private readonly _spatialIndex: SpatialIndex | undefined;
+  private readonly _scratchHits: Collider[] = [];
+  private readonly _scratchAabb: Aabb = createAabb();
 
-  public constructor(colliders: readonly Collider[]) {
+  public constructor(colliders: readonly Collider[], spatialIndex?: SpatialIndex) {
     this._colliders = colliders;
+    this._spatialIndex = spatialIndex;
+  }
+
+  /**
+   * Colliders to scan for a query over `bounds` — the spatial index's narrowed
+   * result if one is wired, else every live collider. `sync` is called first so
+   * colliders added/moved since the index's last detection pass (including
+   * before the world's very first `step()`) are still found.
+   */
+  private _candidatesFor(bounds: Aabb): readonly Collider[] {
+    if (this._spatialIndex === undefined) {
+      return this._colliders;
+    }
+
+    this._spatialIndex.sync(this._colliders);
+
+    return this._spatialIndex.queryAabb(bounds, this._scratchHits);
   }
 
   /** Colliders containing `point`. Allocates a fresh array. */
   public queryPoint(point: VectorLike, filter?: QueryFilter): Collider[] {
     const out: Collider[] = [];
     const resolved = filter ? resolveFilter(filter) : null;
+    const bounds = this._scratchAabb;
 
-    for (const collider of this._colliders) {
+    bounds.minX = point.x;
+    bounds.minY = point.y;
+    bounds.maxX = point.x;
+    bounds.maxY = point.y;
+
+    for (const collider of this._candidatesFor(bounds)) {
       if (resolved && !shouldCollide(resolved, collider.filter)) {
         continue;
       }
@@ -63,7 +90,7 @@ export class QueryEngine {
     result.length = 0;
     const resolved = filter ? resolveFilter(filter) : null;
 
-    for (const collider of this._colliders) {
+    for (const collider of this._candidatesFor(bounds)) {
       if (resolved && !shouldCollide(resolved, collider.filter)) {
         continue;
       }
@@ -80,7 +107,7 @@ export class QueryEngine {
   public forEachAabbHit(bounds: Aabb, filter: QueryFilter | undefined, callback: (collider: Collider) => void): void {
     const resolved = filter ? resolveFilter(filter) : null;
 
-    for (const collider of this._colliders) {
+    for (const collider of this._candidatesFor(bounds)) {
       if (resolved && !shouldCollide(resolved, collider.filter)) {
         continue;
       }
@@ -156,8 +183,9 @@ export class QueryEngine {
     const proxy = makeProxy(shape, position.x, position.y, angle);
     const out: Collider[] = [];
     const resolved = filter ? resolveFilter(filter) : null;
+    const bounds = proxyAabb(shape, proxy, this._scratchAabb);
 
-    for (const collider of this._colliders) {
+    for (const collider of this._candidatesFor(bounds)) {
       if (resolved && !shouldCollide(resolved, collider.filter)) {
         continue;
       }
@@ -335,4 +363,41 @@ const makeProxy = (shape: AnyShape, x: number, y: number, angle: number): Collis
   }
 
   return { shape, worldCenter: { x, y }, worldVertices, worldNormals };
+};
+
+/** Compute the world AABB of an already-built collision proxy (reuses its cached vertices/centre — no extra transform work). */
+const proxyAabb = (shape: AnyShape, proxy: CollisionProxy, out: Aabb): Aabb => {
+  if (shape.type === 'circle') {
+    const r = shape.radius;
+
+    out.minX = proxy.worldCenter.x - r;
+    out.minY = proxy.worldCenter.y - r;
+    out.maxX = proxy.worldCenter.x + r;
+    out.maxY = proxy.worldCenter.y + r;
+
+    return out;
+  }
+
+  const verts = proxy.worldVertices;
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+
+  for (let i = 0; i < verts.length; i += 2) {
+    const x = verts[i]!;
+    const y = verts[i + 1]!;
+
+    minX = x < minX ? x : minX;
+    minY = y < minY ? y : minY;
+    maxX = x > maxX ? x : maxX;
+    maxY = y > maxY ? y : maxY;
+  }
+
+  out.minX = minX;
+  out.minY = minY;
+  out.maxX = maxX;
+  out.maxY = maxY;
+
+  return out;
 };
