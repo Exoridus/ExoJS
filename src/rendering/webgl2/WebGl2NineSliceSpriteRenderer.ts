@@ -3,12 +3,13 @@ import type { NineSliceQuad } from '#rendering/sprite/nineSlice';
 import type { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
-import { type BlendModes, BufferTypes, BufferUsage, RenderingPrimitives } from '#rendering/types';
+import { BlendModes, BufferTypes, BufferUsage, RenderingPrimitives } from '#rendering/types';
 import type { View } from '#rendering/View';
 
 import { AbstractWebGl2Renderer } from './AbstractWebGl2Renderer';
 import type { WebGl2Backend } from './WebGl2Backend';
 import { WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from './WebGl2RenderBuffer';
+import type { WebGl2RetainedBatchPayload, WebGl2RetainedBatchReplayer, WebGl2RetainedNodeIndexRange } from './WebGl2RetainedGroupResources';
 import { createWebGl2ShaderProgram } from './WebGl2ShaderProgram';
 import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './WebGl2VertexArrayObject';
 
@@ -84,7 +85,19 @@ interface NineSliceRendererConnection {
 }
 
 /** Instanced renderer for {@link NineSliceSprite} using WebGL2. */
-export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSliceSprite> {
+export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSliceSprite> implements WebGl2RetainedBatchReplayer {
+  /**
+   * Retained-batch capability opt-in (Track B Slice 3, S3-D5.1): a nine-slice
+   * group's per-flush instanced batches (fixed 32-byte layout, node index at
+   * word 7 — the same seam as the sprite renderer) can be recorded into a
+   * group's instruction set and replayed from group-owned resources.
+   * Pixel-snapped draws are excluded by the collect-time recordability
+   * predicate (and belt-and-braces poisoning in {@link render}); nine-slice
+   * has no custom-material path to exclude.
+   * @internal
+   */
+  public readonly _supportsRetainedBatches = true;
+
   private readonly _shader: Shader;
   private readonly _batchSize: number;
   private readonly _instanceData: ArrayBuffer;
@@ -92,6 +105,12 @@ export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSl
   private readonly _instanceUint32: Uint32Array;
 
   private readonly _transformUnitScratch: Int32Array = new Int32Array([transformTextureUnit]);
+  // Pinned unit index for the single base texture sampler (unit 0), reused by
+  // the live flush and retained replay so both stay allocation-free.
+  private readonly _baseTextureUnitScratch: Int32Array = new Int32Array([0]);
+  // Reused single-slot texture list handed to the backend at record time; the
+  // nine-slice batch always binds exactly one base texture (slot 0).
+  private readonly _recordTextures: Array<Texture | RenderTexture | null> = [null];
 
   private _quadIndex = 0;
   private _maxNodeIndex = 0;
@@ -117,6 +136,17 @@ export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSl
 
   public render(sprite: NineSliceSprite): void {
     const backend = this.getBackend();
+
+    // Belt-and-braces for retained recording (S3-D5.3): the collect-time
+    // recordability predicate excludes pixel-snapped draws from ever arming a
+    // capture (snapped instance words are view-dependent). If one still arrives
+    // inside an active capture window, poison the recording so the resulting
+    // set can never validate — degrading to entry replay instead of wrong
+    // pixels. Nine-slice has no custom-material path to guard.
+    if (backend._isRetainedCapturing && sprite.pixelSnapMode !== 'none') {
+      backend._poisonRetainedCaptures();
+    }
+
     let quads: readonly NineSliceQuad[] = sprite.quads;
 
     if (sprite.pixelSnapMode === 'geometry') {
@@ -233,6 +263,50 @@ export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSl
       return;
     }
 
+    this._stageViewUniforms(backend);
+
+    if (this._currentTexture !== null) {
+      this._shader.getUniform('u_texture').setValue(this._baseTextureUnitScratch);
+    }
+
+    backend.bindTransformBufferTexture(transformTextureUnit, this._maxNodeIndex + 1);
+    this._shader.getUniform('u_transforms').setValue(this._transformUnitScratch);
+
+    this._shader.sync();
+    backend.bindVertexArrayObject(vao);
+    instanceBuffer.upload(this._instanceFloat32.subarray(0, this._quadIndex * wordsPerInstance));
+    vao.drawInstanced(4, 0, this._quadIndex, RenderingPrimitives.TriangleStrip);
+    backend.stats.batches++;
+    backend.stats.drawCalls++;
+
+    // Retained recording (Slice 3): while a capture window is open, hand the
+    // exact packed instance words of this flush to the backend — byte-identical
+    // to what just drew, no duplicated packing logic. The nine-slice batch
+    // always binds a single base texture (slot 0); a pixel-snapped draw already
+    // poisoned the capture in render().
+    if (backend._isRetainedCapturing && this._currentTexture !== null) {
+      this._recordTextures[0] = this._currentTexture;
+      backend._recordRetainedBatch(
+        this,
+        this._instanceUint32.subarray(0, this._quadIndex * wordsPerInstance),
+        this._quadIndex,
+        this._currentBlendMode ?? BlendModes.Normal,
+        this._recordTextures,
+        1,
+      );
+    }
+
+    this._quadIndex = 0;
+    this._maxNodeIndex = 0;
+  }
+
+  /**
+   * Stage `u_projection` (live view) and `u_group` (live composed group matrix)
+   * on the shader, guarded by the cached view/group stamps. Shared by the live
+   * flush path and retained-batch replay — replay resolves exactly the same
+   * live state a slow-path flush would (S3-D1).
+   */
+  private _stageViewUniforms(backend: WebGl2Backend): void {
     const view = backend.view;
 
     if (this._currentView !== view || this._currentViewId !== view.updateId) {
@@ -248,23 +322,122 @@ export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSl
 
       this._shader.getUniform('u_group').setValue(groupTransform !== null ? groupTransform.toArray(false) : identityGroupMat3);
     }
+  }
 
-    if (this._currentTexture !== null) {
-      this._shader.getUniform('u_texture').setValue(new Int32Array([0]));
+  // ── Retained-batch record/replay (Track B Slice 3) ───────────────────────
+  // The bundle stores raw instance bytes; this renderer owns the 32-byte
+  // layout (node index at word 7), so the layout-aware finalize steps
+  // (node-index scan/rebase, VAO attribute wiring) and the replay dispatch
+  // live here — mirroring WebGl2SpriteRenderer's seam, adapted to nine-slice's
+  // single-texture, per-instance-tint attribute set.
+
+  /** @internal See {@link WebGl2RetainedBatchReplayer._scanRetainedNodeIndexRange}. */
+  public _scanRetainedNodeIndexRange(payload: WebGl2RetainedBatchPayload, range: WebGl2RetainedNodeIndexRange): void {
+    const words = payload.bundle.instanceWords;
+    const start = payload.byteOffset / Uint32Array.BYTES_PER_ELEMENT;
+
+    for (let i = 0; i < payload.instanceCount; i++) {
+      // In-bounds: the payload's word range was appended to the bundle store.
+      // nodeIndex is the last word of the 32-byte (8-word) instance layout.
+      const node = words[start + i * wordsPerInstance + 7]!;
+
+      if (node < range.min) {
+        range.min = node;
+      }
+
+      if (node > range.max) {
+        range.max = node;
+      }
+    }
+  }
+
+  /** @internal See {@link WebGl2RetainedBatchReplayer._rebaseRetainedNodeIndices} (S3-D4: group-local indices). */
+  public _rebaseRetainedNodeIndices(payload: WebGl2RetainedBatchPayload, base: number): void {
+    const words = payload.bundle.instanceWords;
+    const start = payload.byteOffset / Uint32Array.BYTES_PER_ELEMENT;
+
+    for (let i = 0; i < payload.instanceCount; i++) {
+      const index = start + i * wordsPerInstance + 7;
+
+      // In-bounds: see the scan above.
+      words[index] = (words[index]! - base) >>> 0;
+    }
+  }
+
+  /**
+   * Point the batch VAO's per-instance attributes at the bundle's persistent
+   * instance buffer, based at the batch's byte offset (WebGL2 has no
+   * baseInstance, hence one small VAO per recorded batch). Same attribute
+   * set/locations as the live VAO in {@link onConnect}.
+   * @internal
+   */
+  public _configureRetainedVao(payload: WebGl2RetainedBatchPayload): void {
+    const gl = this.getBackend().context;
+    const buffer = payload.bundle.instanceBuffer;
+    const vao = payload.vao;
+
+    if (buffer === null || vao === null) {
+      throw new Error('WebGl2NineSliceSpriteRenderer: retained batch VAO configuration requires an uploaded bundle.');
     }
 
-    backend.bindTransformBufferTexture(transformTextureUnit, this._maxNodeIndex + 1);
+    const base = payload.byteOffset;
+
+    vao
+      .addAttribute(buffer, this._shader.getAttribute('a_quadBounds'), gl.FLOAT, false, instanceStrideBytes, base + 0, false, 1)
+      .addAttribute(buffer, this._shader.getAttribute('a_uvBounds'), gl.UNSIGNED_SHORT, true, instanceStrideBytes, base + 16, false, 1)
+      .addAttribute(buffer, this._shader.getAttribute('a_color'), gl.UNSIGNED_BYTE, true, instanceStrideBytes, base + 24, false, 1)
+      .addAttribute(buffer, this._shader.getAttribute('a_nodeIndex'), gl.UNSIGNED_INT, false, instanceStrideBytes, base + 28, true, 1);
+  }
+
+  /**
+   * Replay one recorded batch: all STATE is resolved live — blend mode via the
+   * backend's dedup, `u_projection`/`u_group` from the live view + composed
+   * group matrix (the camera-pan / group-move win), the single base texture
+   * bound to unit 0 by recorded slot order — and only the DATA is cached: the
+   * instance bytes in the bundle buffer (bound through the per-batch VAO) and
+   * the group-owned transform texture on the shared transform unit. The backend
+   * hook flushed any pending live batch before dispatching here and bumps the
+   * stats from the instruction descriptor.
+   * @internal
+   */
+  public _replayRetainedBatch(payload: WebGl2RetainedBatchPayload): void {
+    const backend = this.getBackendOrNull();
+    const vao = payload.vao;
+    const transformTexture = payload.bundle.transformTexture;
+
+    if (backend === null || vao === null || transformTexture === null) {
+      // Defensive: a bundle in this state never validates (generation), so a
+      // spliced replay cannot reach here; skip rather than crash mid-frame.
+      return;
+    }
+
+    // Keep this renderer's blend tracking in sync so the next live batch still
+    // detects its own blend changes correctly.
+    if (payload.blendMode !== this._currentBlendMode) {
+      this._currentBlendMode = payload.blendMode;
+    }
+
+    backend.setBlendMode(payload.blendMode);
+    this._stageViewUniforms(backend);
+
+    const textures = payload.textures;
+
+    for (let i = 0; i < textures.length; i++) {
+      // In-bounds: i < textures.length.
+      backend.bindTexture(textures[i]!, i);
+    }
+
+    this._shader.getUniform('u_texture').setValue(this._baseTextureUnitScratch);
+
+    // The group-owned transform store replaces the shared frame buffer on the
+    // SAME unit/sampler — zero GLSL changes (S3-D4). The next live flush
+    // re-binds the shared texture through bindTransformBufferTexture.
+    backend.bindTexture(transformTexture, transformTextureUnit);
     this._shader.getUniform('u_transforms').setValue(this._transformUnitScratch);
 
     this._shader.sync();
     backend.bindVertexArrayObject(vao);
-    instanceBuffer.upload(this._instanceFloat32.subarray(0, this._quadIndex * wordsPerInstance));
-    vao.drawInstanced(4, 0, this._quadIndex, RenderingPrimitives.TriangleStrip);
-    backend.stats.batches++;
-    backend.stats.drawCalls++;
-
-    this._quadIndex = 0;
-    this._maxNodeIndex = 0;
+    vao.drawInstanced(4, 0, payload.instanceCount, RenderingPrimitives.TriangleStrip);
   }
 
   protected onConnect(backend: WebGl2Backend): void {
