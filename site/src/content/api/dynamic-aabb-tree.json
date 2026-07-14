@@ -634,7 +634,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Invoke callback for every leaf whose fat AABB overlaps the query AABB. Allocation-free: traversal uses a persistent internal stack. Invocation ORDER is tree-shape-dependent — callers needing determinism must normalise their own output (physics does via its final id-sort)."
+          "description": "Invoke callback for every leaf whose fat AABB overlaps the query AABB. Allocation-free: traversal uses a persistent internal stack. Invocation ORDER is tree-shape-dependent — callers needing determinism must normalise their own output (physics does via its final id-sort). NOT re-entrant: because the traversal stack is a single persistent field shared across all calls on this instance, a callback must not call query/queryPoint again on the SAME tree instance. The nested call resets the shared stack and silently truncates the outer traversal, yielding an incomplete result set with no error thrown."
         },
         {
           "name": "queryPoint",
@@ -759,7 +759,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Point query; thin wrapper over query with a zero-extent AABB."
+          "description": "Point query; thin wrapper over query with a zero-extent AABB. Shares query's non-reentrancy caveat: do not call query/queryPoint on the same tree instance from within a query/queryPoint callback."
         },
         {
           "name": "remove",
