@@ -171,7 +171,12 @@ export interface AttachOptions {
  *   across fixed steps: a collider whose tight AABB stays inside its stored
  *   fat AABB costs nothing to re-sync, and only colliders that actually move
  *   outside their margin trigger a tree update and a local re-query for new
- *   neighbours.
+ *   neighbours. Combined with sleeping, a large mostly-resting world spends
+ *   near-zero broad-phase time. Scales to tens of thousands of
+ *   simultaneously-live colliders, including dense clusters that would
+ *   degrade a sort-and-sweep broad phase; very large or highly dynamic
+ *   worlds may still benefit from splitting into several smaller
+ *   `PhysicsWorld` instances (e.g. per room/chunk).
  */
 export class PhysicsWorld implements BodyOwner {
   /** Fires when two solid colliders begin touching. Argument is an immutable snapshot. */

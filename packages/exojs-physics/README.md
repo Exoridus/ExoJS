@@ -87,12 +87,11 @@ fixed sub-steps. See the "Stepping the world" section of the
 [physics guide](https://exoridus.github.io/ExoJS/en/guide/physics/physics-basics/)
 for the details and an interpolation note (`world.timeStepper.alpha`).
 
-**Broad-phase scale.** Collision detection uses a stateless `O(n log n)`
-sort-and-sweep over every live collider each fixed step — no persistent
-incremental structure or spatial hash. Fine up to the low thousands of
-colliders; very high-N worlds (tens of thousands) will spend a growing share
-of the step here. There is currently no built-in spatial broadphase for that
-regime.
+**Broad-phase scale.** Collision detection uses a dynamic AABB tree
+(Box2D-style), incrementally updated across steps: a collider whose AABB
+stays within its stored margin is never re-touched, so cost tracks how much
+actually moved rather than the total live collider count. Scales to tens of
+thousands of simultaneously-live colliders.
 
 This release contains **no dynamics solver**: bodies move only via
 `setTransform`. The narrow phase already produces full contact manifolds (normal,
