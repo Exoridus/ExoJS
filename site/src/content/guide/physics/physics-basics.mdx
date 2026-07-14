@@ -295,11 +295,12 @@ is a **dynamic AABB tree** (Box2D-style): each collider's leaf carries a
 slightly enlarged ("fat") bounding box, and the tree is updated incrementally
 across steps rather than rebuilt from scratch. A collider whose motion stays
 inside its fat margin costs nothing to re-sync — only colliders that actually
-move enough to escape their margin trigger a tree update. Combined with
-sleeping (a resting stack's leaves are never touched), broad-phase cost
-tracks how much of the world is actually moving, not how large the world is —
-scaling comfortably to tens of thousands of simultaneously-live colliders,
-including dense clusters that would degrade a sort-and-sweep broad phase.
+move enough to escape their margin trigger a tree update. There's still a
+cheap linear check over every live collider each step, but that dominant
+reinsertion cost tracks how much of the world is actually moving, not how
+large the world is, and sleeping bodies skip it entirely — scaling
+comfortably to tens of thousands of simultaneously-live colliders, including
+dense clusters that would degrade a sort-and-sweep broad phase.
 
 ## Where to go next
 

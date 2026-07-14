@@ -89,9 +89,10 @@ for the details and an interpolation note (`world.timeStepper.alpha`).
 
 **Broad-phase scale.** Collision detection uses a dynamic AABB tree
 (Box2D-style), incrementally updated across steps: a collider whose AABB
-stays within its stored margin is never re-touched, so cost tracks how much
-actually moved rather than the total live collider count. Scales to tens of
-thousands of simultaneously-live colliders.
+stays within its stored margin is never reinserted, so the dominant cost
+tracks how much actually moved rather than the total live collider count
+(there's still a cheap linear pass over all live colliders each step). Scales
+to tens of thousands of simultaneously-live colliders.
 
 This release contains **no dynamics solver**: bodies move only via
 `setTransform`. The narrow phase already produces full contact manifolds (normal,
