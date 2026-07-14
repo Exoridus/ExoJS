@@ -43,12 +43,22 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
   // before this fix (8x8px stacked sprites) are not comparable on this
   // archetype.
   { id: 'overdraw', nodeCounts: GPU_BOUND_COUNTS, nestingDepth: 2, textureCount: 1, mutationFraction: 0, cullingEnabled: false },
-  // 24 textures: must exceed BOTH the exojs WebGL2 sprite batcher's 16 slots
-  // (raised from 8 in the F9 follow-up) and typical reference batchers'
-  // 16-texture ceiling, or the archetype stops breaking batches entirely.
-  // NOTE: this changes the benchmark definition — results measured before
-  // 2026-07-11 (textureCount 16) are not comparable on this archetype.
-  { id: 'batch-breaking', nodeCounts: GPU_BOUND_COUNTS, nestingDepth: 2, textureCount: 24, mutationFraction: 0, cullingEnabled: false },
+  // 40 textures: must exceed EVERY sprite-batcher slot ceiling any granted
+  // backend/tier reaches, or the archetype silently stops breaking batches on
+  // the machines that don't. The binding ceiling is the WebGPU sprite batcher's
+  // top texture-slot tier (32, negotiated per device — 8/16/32), which is higher
+  // than the exojs WebGL2 batcher's fixed 16 slots and typical reference
+  // batchers' 16-texture ceiling. A count between 33 and the top tier would keep
+  // breaking batches on WebGL2 and lower WebGPU tiers while collapsing to a
+  // single batch on any 32-slot device — measuring a different code path there
+  // without anyone noticing. 40 stays above the top tier on every granted tier,
+  // so the archetype breaks batches everywhere and stays cross-machine
+  // comparable; the resolved tier is stamped into the report provenance so a
+  // future ceiling change is visible in the data rather than silently
+  // invalidating this archetype. NOTE: this changes the benchmark definition —
+  // results measured with a lower textureCount are not comparable on this
+  // archetype.
+  { id: 'batch-breaking', nodeCounts: GPU_BOUND_COUNTS, nestingDepth: 2, textureCount: 40, mutationFraction: 0, cullingEnabled: false },
 ];
 
 /**

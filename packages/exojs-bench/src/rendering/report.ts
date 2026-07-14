@@ -117,6 +117,16 @@ const toMarkdown = (data: ReportData): string => {
   for (const entry of data.provenance) {
     lines.push(`### ${entry.backend}`, '');
     lines.push(`- Adapter (GPU): ${entry.adapter}`);
+
+    // Sprite-batch slot tier (WebGPU only): the negotiated texture-slot ceiling
+    // (8/16/32) the sprite batcher resolved for this adapter. Recorded so a
+    // slot-sensitive archetype (e.g. `batch-breaking`) is auditable — a reader
+    // can see whether this run's tier is below the archetype's textureCount (so
+    // batches actually broke) or a future ceiling change lifted the tier past it.
+    if (entry.slotTier !== undefined) {
+      lines.push(`- Sprite-batch slot tier: ${entry.slotTier}`);
+    }
+
     lines.push(`- Flags: ${entry.flags.map(flag => `\`${flag}\``).join(' ')}`);
     lines.push(`- Headless: ${String(entry.headless)}`);
     lines.push(`- Engine version: ${entry.engineVersion}`);
