@@ -627,7 +627,17 @@ const perimeter = (minX: number, minY: number, maxX: number, maxY: number): numb
  * may be `Infinity` for an unbounded ray. Boundary contacts count as hits
  * (conservative: the tree must never prune away a true candidate).
  */
-const raySegmentIntersectsAabb = (ox: number, oy: number, dx: number, dy: number, maxDistance: number, minX: number, minY: number, maxX: number, maxY: number): boolean => {
+const raySegmentIntersectsAabb = (
+  ox: number,
+  oy: number,
+  dx: number,
+  dy: number,
+  maxDistance: number,
+  minX: number,
+  minY: number,
+  maxX: number,
+  maxY: number,
+): boolean => {
   let tmin = 0;
   let tmax = maxDistance;
 

@@ -497,7 +497,17 @@ const segmentsIntersect = (p1x: number, p1y: number, p2x: number, p2y: number, p
   );
 };
 
-const raySegmentHitsBox = (ox: number, oy: number, dx: number, dy: number, maxDistance: number, minX: number, minY: number, maxX: number, maxY: number): boolean => {
+const raySegmentHitsBox = (
+  ox: number,
+  oy: number,
+  dx: number,
+  dy: number,
+  maxDistance: number,
+  minX: number,
+  minY: number,
+  maxX: number,
+  maxY: number,
+): boolean => {
   const length = Number.isFinite(maxDistance) ? maxDistance : 4000; // covers the whole [-50,350] test region
   const ex = ox + dx * length;
   const ey = oy + dy * length;
