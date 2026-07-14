@@ -1,6 +1,6 @@
 {
   "title": "HitTestLayer",
-  "description": "Debug layer that draws outlines around interactive scene nodes. - Magenta: interactive but idle. - Yellow: currently hovered. - Cyan: pointer-captured (drag in progress). - Faint gray quadrant outlines when the spatial index is active (i.e. at least one interactive node is present in the scene). World-space.",
+  "description": "Debug layer that draws outlines around interactive scene nodes. - Magenta: interactive but idle. - Yellow: currently hovered. - Cyan: pointer-captured (drag in progress). - Faint gray spatial-index bounding volumes when the index is active (i.e. at least one interactive node is present in the scene). World-space.",
   "symbol": "HitTestLayer",
   "kind": "class",
   "subsystem": "debug",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Debug layer that draws outlines around interactive scene nodes. - Magenta: interactive but idle. - Yellow: currently hovered. - Cyan: pointer-captured (drag in progress). - Faint gray quadrant outlines when the spatial index is active (i.e. at least one interactive node is present in the scene). World-space."
+        "Debug layer that draws outlines around interactive scene nodes. - Magenta: interactive but idle. - Yellow: currently hovered. - Cyan: pointer-captured (drag in progress). - Faint gray spatial-index bounding volumes when the index is active (i.e. at least one interactive node is present in the scene). World-space."
       ],
       "importLine": "import { HitTestLayer } from '@codexo/exojs/debug'",
       "sourceLink": null
@@ -158,7 +158,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Walk the scene tree and draw color-coded outlines around interactive nodes (magenta = idle, yellow = hovered, cyan = pointer-captured). Also draws faint gray quadrant boundaries when the spatial index is active, helping diagnose partitioning behavior."
+          "description": "Walk the scene tree and draw color-coded outlines around interactive nodes (magenta = idle, yellow = hovered, cyan = pointer-captured). Also draws faint gray spatial-index bounding volumes when the index is active, helping diagnose the tree's grouping behavior."
         },
         {
           "name": "update",

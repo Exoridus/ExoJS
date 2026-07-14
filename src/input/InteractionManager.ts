@@ -4,11 +4,9 @@ import type { Signal } from '#core/Signal';
 import type { InteractionHooks, Stage } from '#core/Stage';
 import type { System } from '#core/System';
 import type { Time } from '#core/Time';
+import { DynamicAabbTree } from '#math/DynamicAabbTree';
 import { Matrix } from '#math/Matrix';
 import type { PointLike } from '#math/PointLike';
-import type { QuadtreeItem } from '#math/Quadtree';
-import { Quadtree } from '#math/Quadtree';
-import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
 import type { RenderNode } from '#rendering/RenderNode';
 
@@ -56,8 +54,8 @@ interface IndexedNode {
 /**
  * Routes pointer events from the {@link InputManager} to interactive
  * scene-graph nodes via DOM-style event bubbling. Maintains a persistent
- * quadtree spatial index of interactive {@link RenderNode}s for hit-testing
- * and updates it incrementally — nodes notify the manager via the
+ * dynamic-AABB-tree spatial index of interactive {@link RenderNode}s for
+ * hit-testing and updates it incrementally — nodes notify the manager via the
  * `_notify*` hooks when they enter/leave the scene, change interactivity,
  * or move (causing bounds to dirty).
  *
@@ -75,17 +73,25 @@ export class InteractionManager implements InteractionHooks, System {
   public readonly order = 200;
   private readonly _app: Application;
 
-  // Persistent quadtree — null when no interactive nodes are present.
-  private _quadtree: Quadtree<IndexedNode> | null = null;
+  // Persistent spatial index (dynamic AABB tree) — null when no interactive
+  // nodes are present.
+  private _tree: DynamicAabbTree<IndexedNode> | null = null;
+
+  // Fat-AABB margin (world units) for the tree. Zero: interactive nodes are
+  // arbitrary-scale UI/world objects with no fixed collider size to tune a
+  // margin against, and the index re-syncs only on explicit bounds
+  // invalidation (not a per-step scan), so the fat-AABB coherence win a margin
+  // would buy is negligible here — unlike the physics broad phase.
+  private static readonly _treeMargin = 0;
 
   // Interactive nodes ANCHORED to an engaged transform-group boundary
   // (RetainedContainer): their getBounds()/contains() operate in GROUP-LOCAL
   // space, so their world extent moves with the group without any bounds
   // invalidation reaching them. They are deliberately kept OUT of the
-  // world-space quadtree (whose bounds would go stale on every group move —
+  // world-space tree (whose bounds would go stale on every group move —
   // the camera-pan flagship case) and hit-tested by a linear scan through
   // `_containsWorldPoint`, which reads the live group matrix. Maps node ->
-  // insertion order (shared counter with the quadtree for z-tiebreaks).
+  // insertion order (shared counter with the tree for z-tiebreaks).
   private readonly _anchoredNodes = new Map<RenderNode, number>();
 
   // Scratch for inverting a group's world matrix during hit-testing.
@@ -97,13 +103,13 @@ export class InteractionManager implements InteractionHooks, System {
   // All currently-tracked interactive RenderNodes.
   private _interactiveNodes = new Set<RenderNode>();
 
-  // Nodes whose quadtree entry is stale (bounds changed since last insert).
+  // Nodes whose tree entry is stale (bounds changed since last insert).
   private _staleNodes = new Set<RenderNode>();
 
-  // Items stored in the quadtree, keyed by node for fast removal.
-  private _quadtreeItems = new Map<RenderNode, QuadtreeItem<IndexedNode>>();
+  // Tree proxy ids, keyed by node for O(1) removal/update.
+  private _proxies = new Map<RenderNode, number>();
 
-  // Quadtree-indexed (non-anchored) world-space interactive nodes grouped by the
+  // Tree-indexed (non-anchored) world-space interactive nodes grouped by the
   // nearest transform-group boundary they live under. Their world bounds follow
   // that group's own moves without any per-node bounds invalidation reaching
   // them, so a group move must mark exactly this set stale (see
@@ -117,18 +123,16 @@ export class InteractionManager implements InteractionHooks, System {
   private readonly _nodeBoundaryGroup = new Map<RenderNode, RenderNode>();
 
   // Running insertion-order counter used to break hit-test ties.
-  private _quadtreeOrderCounter = 0;
-
-  private readonly _quadtreeQueryBuffer: Array<QuadtreeItem<IndexedNode>> = [];
+  private _orderCounter = 0;
 
   /** This manager's service bundle, installed on a scene root via {@link attachRoot}. */
   private readonly _stage: Stage;
 
   /**
    * UI-layer interaction hooks: no-ops, so screen-fixed UI nodes are kept OUT
-   * of the world quadtree. The UI layer is hit-tested by a direct subtree walk
+   * of the world tree. The UI layer is hit-tested by a direct subtree walk
    * in screen space (see {@link _resolveHit}); per-node signal dispatch still
-   * works because it reads the lazy node signals, not the quadtree.
+   * works because it reads the lazy node signals, not the tree.
    */
   private readonly _uiInteraction: InteractionHooks = {
     _notifyNodeAdded: () => {},
@@ -240,15 +244,15 @@ export class InteractionManager implements InteractionHooks, System {
   }
 
   /**
-   * Returns the internal quadtree used for spatial hit-testing, or null when
-   * no interactive nodes are present. Used by {@link HitTestLayer} to render
-   * the quadtree partitioning during development. Not part of the stable
-   * public API — friend-class access only.
+   * Returns the internal dynamic-AABB-tree spatial index used for hit-testing,
+   * or null when no interactive nodes are present. Used by {@link HitTestLayer}
+   * to render the tree's bounding volumes during development. Not part of the
+   * stable public API — friend-class access only.
    *
    * @internal
    */
-  public _getDebugQuadtree(): Quadtree<{ node: RenderNode; order: number }> | null {
-    return this._quadtree;
+  public _getDebugQuadtree(): DynamicAabbTree<IndexedNode> | null {
+    return this._tree;
   }
 
   public destroy(): void {
@@ -265,15 +269,15 @@ export class InteractionManager implements InteractionHooks, System {
     this._captureStack.length = 0;
     this._interactiveNodes.clear();
     this._staleNodes.clear();
-    this._quadtreeItems.clear();
+    this._proxies.clear();
     this._anchoredNodes.clear();
     this._groupWorldDescendants.clear();
     this._nodeBoundaryGroup.clear();
     this._dirty = false;
 
-    if (this._quadtree !== null) {
-      this._quadtree.destroy();
-      this._quadtree = null;
+    if (this._tree !== null) {
+      this._tree.destroy();
+      this._tree = null;
     }
   }
 
@@ -329,7 +333,7 @@ export class InteractionManager implements InteractionHooks, System {
   /**
    * Bind a scene's UI layer to this manager. Installs the UI stage (no-op world
    * hooks, shared focus) so its nodes route focus here but stay out of the world
-   * quadtree; the layer is hit-tested by a direct walk in screen space.
+   * tree; the layer is hit-tested by a direct walk in screen space.
    * @internal
    */
   // eslint-disable-next-line @typescript-eslint/naming-convention -- UI is an acronym (cf. HTMLText)
@@ -391,7 +395,7 @@ export class InteractionManager implements InteractionHooks, System {
 
   /**
    * Called when a node's world transform / bounds are invalidated. If the
-   * node is currently tracked as interactive, mark it stale so its quadtree
+   * node is currently tracked as interactive, mark it stale so its tree
    * entry is refreshed on the next query.
    *
    * @internal
@@ -405,7 +409,7 @@ export class InteractionManager implements InteractionHooks, System {
   /**
    * Called when a transform-group boundary moves as a whole. Its anchored
    * descendants are hit-tested live and need nothing; its world-space (escaped,
-   * non-anchored) interactive descendants are indexed in the quadtree with
+   * non-anchored) interactive descendants are indexed in the tree with
    * bounds captured at insert time, so mark exactly those stale to force a
    * re-insert at their new world position before the next hit-test. O(1) when
    * the group has no such descendants (the common camera-pan case).
@@ -667,7 +671,7 @@ export class InteractionManager implements InteractionHooks, System {
   }
 
   private _hitTest(x: number, y: number): RenderNode | null {
-    if (this._quadtree !== null) {
+    if (this._tree !== null) {
       return this._hitTestIndexed(x, y);
     }
 
@@ -681,26 +685,21 @@ export class InteractionManager implements InteractionHooks, System {
   }
 
   private _hitTestIndexed(x: number, y: number): RenderNode | null {
-    const candidates = this._quadtreeQueryBuffer;
-
-    candidates.length = 0;
-    this._quadtree!.queryPoint(x, y, candidates);
-
     let bestOrder = -1;
     let bestNode: RenderNode | null = null;
 
-    for (const candidate of candidates) {
-      const indexed = candidate.payload;
-
-      // World-aware contains, not the raw group-local one: a node indexed in
-      // world space could have gained a boundary ancestor since insertion.
+    // Track the best (highest-order) hit directly in the query callback, so no
+    // intermediate candidate array is needed. World-aware contains, not the raw
+    // group-local one: a node indexed in world space could have gained a
+    // boundary ancestor since insertion.
+    this._tree!.queryPoint(x, y, indexed => {
       if (indexed.order > bestOrder && this._containsWorldPoint(indexed.node, x, y)) {
         bestOrder = indexed.order;
         bestNode = indexed.node;
       }
-    }
+    });
 
-    // Group-anchored nodes live outside the quadtree (see `_anchoredNodes`):
+    // Group-anchored nodes live outside the tree (see `_anchoredNodes`):
     // exact hit-test through the live group matrix, same z-tiebreak.
     for (const [node, order] of this._anchoredNodes) {
       if (order > bestOrder && this._containsWorldPoint(node, x, y)) {
@@ -775,7 +774,7 @@ export class InteractionManager implements InteractionHooks, System {
 
   /**
    * Register an interactive node: add it to the tracking set, create the
-   * quadtree if this is the first interactive node, and insert the node.
+   * tree if this is the first interactive node, and insert the node.
    */
   private _registerNode(node: RenderNode): void {
     if (this._interactiveNodes.has(node)) {
@@ -784,17 +783,17 @@ export class InteractionManager implements InteractionHooks, System {
 
     this._interactiveNodes.add(node);
 
-    // Lazy-init the quadtree on the first interactive node.
-    if (this._quadtree === null) {
-      this._quadtree = this._createQuadtree();
+    // Lazy-init the tree on the first interactive node.
+    if (this._tree === null) {
+      this._tree = new DynamicAabbTree<IndexedNode>(InteractionManager._treeMargin);
     }
 
     this._insertNode(node);
   }
 
   /**
-   * Unregister an interactive node: remove from the quadtree and tracking
-   * set. Dispose the quadtree when it becomes empty.
+   * Unregister an interactive node: remove from the tree and tracking
+   * set. Dispose the tree when it becomes empty.
    */
   private _unregisterNode(node: RenderNode): void {
     if (!this._interactiveNodes.has(node)) {
@@ -806,33 +805,33 @@ export class InteractionManager implements InteractionHooks, System {
     this._anchoredNodes.delete(node);
     this._clearGroupMembership(node);
 
-    const item = this._quadtreeItems.get(node);
+    const proxy = this._proxies.get(node);
 
-    if (item !== undefined && this._quadtree !== null) {
-      this._quadtree.remove(item);
+    if (proxy !== undefined && this._tree !== null) {
+      this._tree.remove(proxy);
     }
 
-    this._quadtreeItems.delete(node);
+    this._proxies.delete(node);
 
-    if (this._interactiveNodes.size === 0 && this._quadtree !== null) {
-      this._quadtree.destroy();
-      this._quadtree = null;
-      this._quadtreeOrderCounter = 0;
+    if (this._interactiveNodes.size === 0 && this._tree !== null) {
+      this._tree.destroy();
+      this._tree = null;
+      this._orderCounter = 0;
     }
   }
 
   /**
    * Index a single node: group-anchored nodes go to the linear side list
-   * (their group-local bounds are useless as world-space quadtree keys and
-   * would go stale on every group move), everything else into the quadtree.
+   * (their group-local bounds are useless as world-space tree keys and
+   * would go stale on every group move), everything else into the tree.
    */
-  private _insertNode(node: RenderNode, order: number = this._quadtreeOrderCounter++): void {
-    if (this._quadtree === null) {
+  private _insertNode(node: RenderNode, order: number = this._orderCounter++): void {
+    if (this._tree === null) {
       return;
     }
 
     // Drop any prior group filing (a re-index may re-bucket this node between the
-    // quadtree and the anchored side list, or under a different boundary).
+    // tree and the anchored side list, or under a different boundary).
     this._clearGroupMembership(node);
 
     if (node._resolveTransformGroupAnchor() !== null) {
@@ -846,13 +845,9 @@ export class InteractionManager implements InteractionHooks, System {
     }
 
     const bounds = node.getBounds();
-    const item: QuadtreeItem<IndexedNode> = {
-      bounds: new Rectangle(bounds.x, bounds.y, bounds.width, bounds.height),
-      payload: { node, order },
-    };
+    const proxy = this._tree.insert(bounds.left, bounds.top, bounds.right, bounds.bottom, { node, order });
 
-    this._quadtree.insert(item);
-    this._quadtreeItems.set(node, item);
+    this._proxies.set(node, proxy);
 
     // A world-space node living under a transform-group boundary is indexed with
     // world bounds that follow the group's own moves; file it so a group move
@@ -912,30 +907,47 @@ export class InteractionManager implements InteractionHooks, System {
   /**
    * Flush stale entries: drop each stale node's old index entry and re-index
    * it with fresh bounds AND a freshly resolved group anchor (a boundary
-   * engage/disengage flip re-buckets the node between the quadtree and the
+   * engage/disengage flip re-buckets the node between the tree and the
    * anchored side list here). Called at the start of update().
+   *
+   * Remove+reinsert rather than the tree's `update()`: `update()` only touches
+   * the tree, so it cannot re-bucket a node between the tree and the anchored
+   * side list on a boundary engage/disengage flip — which this flush must do —
+   * whereas remove+reinsert composes trivially with the anchor re-resolution in
+   * `_insertNode`. `update()`'s fat-AABB no-op fast path would still spare churn
+   * for a node flagged dirty without a real bounds change (bounds invalidation
+   * fires unconditionally), but at margin 0 a genuinely-moved node always
+   * escapes its equal-sized fat AABB, so that fast path is the minority case.
    */
   private _flushStaleEntries(): void {
-    if (this._quadtree === null || this._staleNodes.size === 0) {
+    if (this._tree === null || this._staleNodes.size === 0) {
       return;
     }
 
     for (const node of this._staleNodes) {
-      const oldItem = this._quadtreeItems.get(node);
-      const order = oldItem?.payload.order ?? this._anchoredNodes.get(node) ?? this._quadtreeOrderCounter++;
+      const proxy = this._proxies.get(node);
+      const order = this._orderFor(node, proxy);
 
-      if (oldItem !== undefined) {
-        this._quadtree.remove(oldItem);
-        oldItem.bounds.destroy();
+      if (proxy !== undefined) {
+        this._tree.remove(proxy);
       }
 
-      this._quadtreeItems.delete(node);
+      this._proxies.delete(node);
       this._anchoredNodes.delete(node);
 
       this._insertNode(node, order);
     }
 
     this._staleNodes.clear();
+  }
+
+  /** Insertion order to preserve on re-index: tree payload, else anchored, else fresh. */
+  private _orderFor(node: RenderNode, proxy: number | undefined): number {
+    if (proxy !== undefined && this._tree !== null) {
+      return this._tree.payloadOf(proxy).order;
+    }
+
+    return this._anchoredNodes.get(node) ?? this._orderCounter++;
   }
 
   /**
@@ -958,28 +970,6 @@ export class InteractionManager implements InteractionHooks, System {
         'Use getWorldTransform() for world-space queries against such nodes.',
       { source: 'input' },
     );
-  }
-
-  /** Build a fresh Quadtree sized to encompass the canvas + current scene root. */
-  private _createQuadtree(): Quadtree<IndexedNode> {
-    // Seed in design/world units (matching node bounds and the camera-converted
-    // pointer coordinates); unioned below with the scene root's world bounds.
-    const width = this._app.width || 800;
-    const height = this._app.height || 600;
-    const bounds = new Rectangle(0, 0, width, height);
-    const root = this._app.scene.currentScene?.root;
-
-    if (root) {
-      const rootBounds = root.getBounds();
-      const minX = Math.min(bounds.left, rootBounds.left);
-      const minY = Math.min(bounds.top, rootBounds.top);
-      const maxX = Math.max(bounds.right, rootBounds.right);
-      const maxY = Math.max(bounds.bottom, rootBounds.bottom);
-
-      bounds.set(minX, minY, maxX - minX, maxY - minY);
-    }
-
-    return new Quadtree<IndexedNode>(bounds);
   }
 
   /**
