@@ -34,7 +34,51 @@ export interface Provenance extends BaseProvenance {
   readonly headless: boolean;
   /** True when the adapter is a software rasterizer — timings are then untrusted. */
   readonly software: boolean;
+  /**
+   * Resolved WebGPU sprite-batch texture-slot tier for this run's adapter (8 /
+   * 16 / 32), or `undefined` for the WebGL2 backend (whose batcher uses a fixed
+   * 16-slot ceiling, not this negotiated tier). Slot-sensitive archetypes (e.g.
+   * `batch-breaking`) measure a different code path depending on this tier, so
+   * stamping it here makes a future ceiling change visible in the data instead
+   * of silently invalidating those archetypes across machines.
+   */
+  readonly slotTier?: number;
 }
+
+/**
+ * Sprite-batch texture-slot tiers the WebGPU renderer quantizes to. Mirrors the
+ * engine's `resolveSpriteBatchTextureSlots` (WebGpuSpriteRenderer): the batcher
+ * sizes its multi-texture bind group to
+ * `min(maxSampledTexturesPerShaderStage, maxSamplersPerShaderStage)` on the
+ * granted device, quantized DOWN to one of these tiers (capped at 32). Every
+ * conformant device reaches at least 16; adapters granting 32+ reach 32. Kept in
+ * sync with the engine by hand — this Node-side driver does not import engine
+ * source. Stamped into provenance so a slot-sensitive archetype's measured code
+ * path is auditable per run.
+ */
+const SPRITE_BATCH_SLOT_TIERS = [8, 16, 32] as const;
+
+/**
+ * Resolve the sprite-batch slot tier from an adapter's texture/sampler limits,
+ * or `null` when the limits are unavailable (a non-conformant adapter exposing
+ * no limits object — real devices always report them).
+ */
+const resolveSlotTier = (maxSampledTextures: number | null, maxSamplers: number | null): number | null => {
+  if (maxSampledTextures === null || maxSamplers === null) {
+    return null;
+  }
+
+  const available = Math.min(maxSampledTextures, maxSamplers);
+  let tier: number = SPRITE_BATCH_SLOT_TIERS[0];
+
+  for (const candidate of SPRITE_BATCH_SLOT_TIERS) {
+    if (available >= candidate) {
+      tier = candidate;
+    }
+  }
+
+  return tier;
+};
 
 /** Minimal surface of the programmatic Vite dev server the driver consumes. */
 interface ViteDevServer {
@@ -332,6 +376,8 @@ interface WebGpuIdentity {
   readonly usable: boolean;
   /** Explanation attached to each cell when the adapter is unusable. */
   readonly note: string;
+  /** Resolved sprite-batch slot tier for this adapter (8/16/32), or `null` when no adapter/limits were available. */
+  readonly slotTier: number | null;
 }
 
 /**
@@ -362,6 +408,10 @@ const readWebGpuAdapter = async (page: import('playwright').Page): Promise<WebGp
     }
 
     const info = adapter.info ?? ({} as GPUAdapterInfo);
+    // Adapter texture/sampler limits drive the sprite batcher's slot tier: the
+    // engine requests up to min(adapterLimit, 32) of each at device creation, so
+    // the granted device's tier is fully determined by these adapter limits.
+    const limits = (adapter as { limits?: GPUSupportedLimits }).limits;
 
     return {
       present: true as const,
@@ -370,17 +420,19 @@ const readWebGpuAdapter = async (page: import('playwright').Page): Promise<WebGp
       architecture: info.architecture ?? '',
       device: info.device ?? '',
       description: info.description ?? '',
+      maxSampledTextures: typeof limits?.maxSampledTexturesPerShaderStage === 'number' ? limits.maxSampledTexturesPerShaderStage : null,
+      maxSamplers: typeof limits?.maxSamplersPerShaderStage === 'number' ? limits.maxSamplersPerShaderStage : null,
     };
   });
 
   if (!probe.present) {
-    return { adapter: 'navigator.gpu is undefined', usable: false, note: 'WebGPU unavailable: navigator.gpu is undefined' };
+    return { adapter: 'navigator.gpu is undefined', usable: false, note: 'WebGPU unavailable: navigator.gpu is undefined', slotTier: null };
   }
 
   if (!probe.acquired) {
     const reason = probe.error.length > 0 ? `requestAdapter failed: ${probe.error}` : 'requestAdapter returned null';
 
-    return { adapter: `no-webgpu-adapter (${reason})`, usable: false, note: `WebGPU unavailable: ${reason}` };
+    return { adapter: `no-webgpu-adapter (${reason})`, usable: false, note: `WebGPU unavailable: ${reason}`, slotTier: null };
   }
 
   const identity = [probe.vendor, probe.architecture, probe.device, probe.description]
@@ -388,12 +440,13 @@ const readWebGpuAdapter = async (page: import('playwright').Page): Promise<WebGp
     .filter(part => part.length > 0)
     .join(' ');
   const adapter = identity.length > 0 ? identity : 'webgpu-adapter (info masked)';
+  const slotTier = resolveSlotTier(probe.maxSampledTextures, probe.maxSamplers);
 
   if (SOFTWARE_WEBGPU_PATTERN.test(adapter)) {
-    return { adapter, usable: false, note: `WebGPU software adapter refused: ${adapter}` };
+    return { adapter, usable: false, note: `WebGPU software adapter refused: ${adapter}`, slotTier };
   }
 
-  return { adapter, usable: true, note: '' };
+  return { adapter, usable: true, note: '', slotTier };
 };
 
 /** A cell that could not be measured: zeroed timings/structure, `unavailable` status, and an explanatory note. */
@@ -624,6 +677,10 @@ const runBackend = async (options: {
           // honesty bit would wrongly taint the WebGL2 timings. The software identity
           // is preserved in `adapter` and each cell's note instead.
           software: false,
+          // Resolved sprite-batch slot tier for this adapter, so a slot-sensitive
+          // archetype's measured code path is auditable per run. Omitted when no
+          // adapter/limits were available (the cells are then `unavailable` anyway).
+          ...(typeof webgpuIdentity?.slotTier === 'number' && { slotTier: webgpuIdentity.slotTier }),
         }
       : {
           adapter: renderer ?? 'no-webgl2-context',
