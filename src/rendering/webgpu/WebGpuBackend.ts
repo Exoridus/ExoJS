@@ -44,10 +44,12 @@ import { WebGpuPassCoordinator } from './WebGpuPassCoordinator';
 import {
   retainedTransformSlotBytes,
   type WebGpuRetainedBatchPayload,
+  type WebGpuRetainedBatchReplayer,
   WebGpuRetainedCaptureFrame,
   WebGpuRetainedGroupBundle,
+  type WebGpuRetainedNodeIndexRange,
 } from './WebGpuRetainedGroupResources';
-import { baseSpriteBatchTextureSlots, maxSpriteBatchTextureSlots, type WebGpuSpriteRenderer } from './WebGpuSpriteRenderer';
+import { baseSpriteBatchTextureSlots, maxSpriteBatchTextureSlots } from './WebGpuSpriteRenderer';
 import { WebGpuTransformStorage } from './WebGpuTransformStorage';
 
 interface ManagedWebGpuTextureState {
@@ -203,6 +205,10 @@ export class WebGpuBackend implements RenderBackend {
   private readonly _retainedCaptureFrames: WebGpuRetainedCaptureFrame[] = [];
   private readonly _retainedBundles = new Set<WebGpuRetainedGroupBundle>();
   private readonly _rejectedRetainedSets = new WeakSet<RetainedInstructionSet>();
+  // Reused across per-batch scans at record time (S3-D4) to avoid an
+  // allocation per flush; the renderer-agnostic counterpart of WebGL2's
+  // capture-end `_retainedIndexRange` (WebGPU scans per batch, not per capture).
+  private readonly _retainedBatchIndexRange: WebGpuRetainedNodeIndexRange = { min: 0, max: 0 };
   // Render-error surface (S3 diagnostics): dedupe keys for onRenderError, and
   // the bound uncapturederror listener (re-installed by _initialize after
   // device-loss recovery).
@@ -1161,7 +1167,8 @@ export class WebGpuBackend implements RenderBackend {
    * the OPEN pass (no end/submit at group boundaries on the cached path,
    * B-06). All state — pipeline, projection/group uniforms, texture bindings
    * — is resolved live; only the recorded data is reused. Dispatches to the
-   * sprite renderer that recorded the batch.
+   * renderer that recorded the batch (any {@link WebGpuRetainedBatchReplayer},
+   * not just the sprite renderer).
    * @internal
    */
   public _replayRetainedBatch(batch: RetainedBatchInstruction): void {
@@ -1179,7 +1186,7 @@ export class WebGpuBackend implements RenderBackend {
     // flush-time visibility decision (mask/scissor) can drop the batch.
     this._stats.submittedNodes += batch.instanceCount;
     this._setActiveRenderer(payload.renderer);
-    payload.renderer._replayRecordedSpriteBatch(payload);
+    payload.renderer._replayRetainedBatch(payload);
   }
 
   /**
@@ -1244,14 +1251,15 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   /**
-   * Stage one recorded sprite flush (called by the sprite renderer while a
-   * capture window is active): copies the packed instance bytes (owned by the
-   * INNERMOST capture's bundle, S3-D6), resolves the recorded texture views,
-   * and appends one shared instruction to every active set.
+   * Stage one recorded renderer flush (called by any capable renderer, e.g.
+   * the sprite renderer, while a capture window is active): copies the
+   * packed instance bytes (owned by the INNERMOST capture's bundle, S3-D6),
+   * resolves the recorded texture views, and appends one shared instruction
+   * to every active set.
    * @internal
    */
-  public _recordRetainedSpriteBatch(
-    renderer: WebGpuSpriteRenderer,
+  public _recordRetainedBatch(
+    replayer: WebGpuRetainedBatchReplayer,
     instanceData: ArrayBuffer,
     byteLength: number,
     instanceCount: number,
@@ -1276,24 +1284,14 @@ export class WebGpuBackend implements RenderBackend {
 
     bytes.set(new Uint8Array(instanceData, 0, byteLength));
 
-    // Scan the frame-global node indices (word 7 of each 8-word instance) so
-    // capture end can rebase them group-local and copy the row range once.
-    const words = new Uint32Array(bytes.buffer);
-    let minNodeIndex = 0xffffffff;
-    let maxNodeIndex = 0;
+    // Scan the frame-global node indices so capture end can rebase them
+    // group-local and copy the row range once. Layout-aware (word offset,
+    // stride) — delegated to the renderer that packed the bytes.
+    const range = this._retainedBatchIndexRange;
 
-    for (let i = 7; i < words.length; i += 8) {
-      // In-bounds: i < words.length via the loop guard.
-      const nodeIndex = words[i]!;
-
-      if (nodeIndex < minNodeIndex) {
-        minNodeIndex = nodeIndex;
-      }
-
-      if (nodeIndex > maxNodeIndex) {
-        maxNodeIndex = nodeIndex;
-      }
-    }
+    range.min = 0xffffffff;
+    range.max = 0;
+    replayer._scanRetainedNodeIndexRange(bytes, range);
 
     const textureList: Array<Texture | RenderTexture> = [];
     const recordedViews: GPUTextureView[] = [];
@@ -1312,7 +1310,7 @@ export class WebGpuBackend implements RenderBackend {
     }
 
     const payload: WebGpuRetainedBatchPayload = {
-      renderer,
+      renderer: replayer,
       bundle: owner.bundle,
       byteOffset: owner.totalBytes,
       instanceCount,
@@ -1332,7 +1330,7 @@ export class WebGpuBackend implements RenderBackend {
       payload,
     };
 
-    owner.staged.push({ bytes, byteOffset: owner.totalBytes, minNodeIndex, maxNodeIndex, instruction });
+    owner.staged.push({ bytes, byteOffset: owner.totalBytes, minNodeIndex: range.min, maxNodeIndex: range.max, instruction });
     owner.totalBytes += byteLength;
 
     for (const frame of frames) {
@@ -1393,15 +1391,14 @@ export class WebGpuBackend implements RenderBackend {
     bundle.ensureCapacity(device, frame.totalBytes, transformBytes);
 
     for (const batch of staged) {
-      // Rebase word 7 (nodeIndex) of every 8-word instance to group-local
-      // indices — the cached bytes become immune to frame-local index shifts
-      // (S3-D4) and address the group-owned row copy below.
-      const words = new Uint32Array(batch.bytes.buffer, batch.bytes.byteOffset, batch.bytes.byteLength / Uint32Array.BYTES_PER_ELEMENT);
+      // Rebase this batch's instance node indices to group-local indices —
+      // the cached bytes become immune to frame-local index shifts (S3-D4)
+      // and address the group-owned row copy below. Layout-aware — delegated
+      // to the renderer that packed the bytes (the payload was already
+      // created at record time, so its renderer is in hand here).
+      const payload = batch.instruction.payload as WebGpuRetainedBatchPayload;
 
-      for (let i = 7; i < words.length; i += 8) {
-        // In-bounds: i < words.length via the loop guard.
-        words[i] = words[i]! - base;
-      }
+      payload.renderer._rebaseRetainedNodeIndices(batch.bytes, base);
 
       device.queue.writeBuffer(bundle.instanceBuffer!, batch.byteOffset, batch.bytes.buffer, batch.bytes.byteOffset, batch.bytes.byteLength);
       stampRetainedBatchGeneration(batch.instruction);

@@ -2,13 +2,13 @@
 
 import type { GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
 import type { RetainedBatchInstruction, RetainedGroupBundle, RetainedInstructionSet } from '#rendering/plan/RetainedInstructionSet';
+import type { Renderer } from '#rendering/Renderer';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
 import type { BlendModes } from '#rendering/types';
 import type { View } from '#rendering/View';
 
 import type { WebGpuActiveRenderPass } from './WebGpuPassCoordinator';
-import type { WebGpuSpriteRenderer } from './WebGpuSpriteRenderer';
 
 /** Bytes of one transform slot (3 × vec4<f32>, matches the WGSL `TransformSlot`). */
 export const retainedTransformSlotBytes = 48;
@@ -17,16 +17,16 @@ export const retainedTransformSlotBytes = 48;
 export const retainedGroupUniformBytes = 128;
 
 /**
- * Backend-owned replay descriptor for one recorded sprite flush (Track B
+ * Backend-owned replay descriptor for one recorded renderer flush (Track B
  * Slice 3, S3-D1). Carried as the opaque `payload` of a
  * {@link RetainedBatchInstruction}; everything here is DATA — all state
  * (pipeline, projection/group uniforms, texture bindings) is resolved live at
- * replay by {@link WebGpuSpriteRenderer._replayRecordedSpriteBatch}.
+ * replay by the owning {@link WebGpuRetainedBatchReplayer._replayRetainedBatch}.
  * @internal
  */
 export interface WebGpuRetainedBatchPayload {
-  /** The sprite renderer that recorded (and replays) this batch. */
-  readonly renderer: WebGpuSpriteRenderer;
+  /** The renderer that recorded (and replays) this batch. */
+  readonly renderer: WebGpuRetainedBatchReplayer;
   /** The bundle whose group-owned buffers hold this batch's data. */
   readonly bundle: WebGpuRetainedGroupBundle;
   /** Byte offset of this batch's instances inside the bundle's instance buffer. */
@@ -43,6 +43,45 @@ export interface WebGpuRetainedBatchPayload {
    * a recapture, never a replay.
    */
   readonly recordedViews: readonly GPUTextureView[];
+}
+
+/**
+ * Mutable node-index range scratch used at record time (S3-D4), the WebGPU
+ * counterpart of `WebGl2RetainedNodeIndexRange`. Unlike WebGL2 (which scans
+ * the shared bundle store at capture END, once ranges over every batch are
+ * known), WebGPU scans each batch's freshly-packed bytes immediately at
+ * record time, per batch — so the range here is scoped to ONE batch, not the
+ * whole capture; the backend takes the min/max across all per-batch ranges to
+ * get the capture-wide rebase base.
+ * @internal
+ */
+export interface WebGpuRetainedNodeIndexRange {
+  min: number;
+  max: number;
+}
+
+/**
+ * Renderer-side contract for recorded-batch finalization and replay on WebGPU
+ * (the WebGPU counterpart of `WebGl2RetainedBatchReplayer`). The bundle/stage
+ * stores raw instance bytes; only the renderer that packed them knows the
+ * layout (where the node index lives, how many words per instance), so the
+ * backend delegates the layout-aware steps here per batch — mirroring the
+ * WebGL2 seam, adapted to WebGPU's byte-staging flow (record-time scan on
+ * freshly-packed bytes, finalize-time rebase on the staged copy, rather than
+ * WebGL2's capture-end scan/rebase against a live bundle store).
+ *
+ * Extends {@link Renderer} so the backend can drive replay through the same
+ * active-renderer bookkeeping (`_setActiveRenderer` calls `flush()` on
+ * renderer switch) it already uses for live playback.
+ * @internal
+ */
+export interface WebGpuRetainedBatchReplayer extends Renderer {
+  /** Widen `range` to cover every shared-transform row `bytes` (one batch's packed instances) references. */
+  _scanRetainedNodeIndexRange(bytes: Uint8Array, range: WebGpuRetainedNodeIndexRange): void;
+  /** Rewrite `bytes`' instance node indices in place to group-local (`index - base`). */
+  _rebaseRetainedNodeIndices(bytes: Uint8Array, base: number): void;
+  /** Replay the batch: live state (pipeline, uniforms, textures), cached data (bytes, transforms). */
+  _replayRetainedBatch(payload: WebGpuRetainedBatchPayload): void;
 }
 
 /** One sprite flush staged during a capture window, finalized at capture end. @internal */
