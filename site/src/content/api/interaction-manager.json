@@ -1,6 +1,6 @@
 {
   "title": "InteractionManager",
-  "description": "Routes pointer events from the InputManager to interactive scene-graph nodes via DOM-style event bubbling. Maintains a persistent quadtree spatial index of interactive RenderNodes for hit-testing and updates it incrementally — nodes notify the manager via the `_notify*` hooks when they enter/leave the scene, change interactivity, or move (causing bounds to dirty). Dispatches InteractionEvents of every type in InteractionEventType: `pointerdown` / `pointerup` / `pointermove` / `pointerover` / `pointerout` / `pointertap` / `dragstart` / `drag` / `dragend`. Drag events are derived from threshold-based pointer movement after a `pointerdown`. Constructed automatically by Application; you do not instantiate this class yourself.",
+  "description": "Routes pointer events from the InputManager to interactive scene-graph nodes via DOM-style event bubbling. Maintains a persistent dynamic-AABB-tree spatial index of interactive RenderNodes for hit-testing and updates it incrementally — nodes notify the manager via the `_notify*` hooks when they enter/leave the scene, change interactivity, or move (causing bounds to dirty). Dispatches InteractionEvents of every type in InteractionEventType: `pointerdown` / `pointerup` / `pointermove` / `pointerover` / `pointerout` / `pointertap` / `dragstart` / `drag` / `dragend`. Drag events are derived from threshold-based pointer movement after a `pointerdown`. Constructed automatically by Application; you do not instantiate this class yourself.",
   "symbol": "InteractionManager",
   "kind": "class",
   "subsystem": "input",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Routes pointer events from the InputManager to interactive scene-graph nodes via DOM-style event bubbling. Maintains a persistent quadtree spatial index of interactive RenderNodes for hit-testing and updates it incrementally — nodes notify the manager via the `_notify*` hooks when they enter/leave the scene, change interactivity, or move (causing bounds to dirty).",
+        "Routes pointer events from the InputManager to interactive scene-graph nodes via DOM-style event bubbling. Maintains a persistent dynamic-AABB-tree spatial index of interactive RenderNodes for hit-testing and updates it incrementally — nodes notify the manager via the `_notify*` hooks when they enter/leave the scene, change interactivity, or move (causing bounds to dirty).",
         "Dispatches InteractionEvents of every type in InteractionEventType: `pointerdown` / `pointerup` / `pointermove` / `pointerover` / `pointerout` / `pointertap` / `dragstart` / `drag` / `dragend`. Drag events are derived from threshold-based pointer movement after a `pointerdown`.",
         "Constructed automatically by Application; you do not instantiate this class yourself."
       ],
