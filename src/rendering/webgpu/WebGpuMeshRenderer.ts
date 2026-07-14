@@ -10,10 +10,19 @@ import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
 import { Texture as TextureClass } from '#rendering/texture/Texture';
 import { BlendModes } from '#rendering/types';
+import type { View } from '#rendering/View';
 
 import { AbstractWebGpuRenderer } from './AbstractWebGpuRenderer';
 import type { WebGpuBackend } from './WebGpuBackend';
 import { getWebGpuBlendState } from './WebGpuBlendState';
+import type { WebGpuActiveRenderPass } from './WebGpuPassCoordinator';
+import type {
+  WebGpuRetainedBatchPayload,
+  WebGpuRetainedBatchReplayer,
+  WebGpuRetainedGroupBundle,
+  WebGpuRetainedNodeIndexRange,
+  WebGpuRetainedRendererReplayState,
+} from './WebGpuRetainedGroupResources';
 import { stencilContentDepthStencilState } from './WebGpuStencilState';
 import {
   collectScalarUniforms,
@@ -244,7 +253,53 @@ interface CustomShaderResources {
 const meshUniformAlignment = 256;
 const maxCustomTextureSlots = 7; // user texture uniforms; group 2 binding 1..N
 
-export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
+/**
+ * Per-bundle mesh replay state (Track B Slice 3 mesh opt-in, option (a)). Parked
+ * on the group bundle's {@link WebGpuRetainedGroupBundle.rendererReplayState} so
+ * it shares the bundle's grow-only / explicitly-freed lifecycle. Holds the mesh
+ * group(0) `TransformUniforms` UBO (one dynamic-offset slot per recorded batch,
+ * because the per-batch premultiply flag differs) + its bind group, plus the
+ * same-frame double-replay hazard trackers as the bundle's own sprite UBO.
+ * @internal
+ */
+class MeshRetainedReplayState implements WebGpuRetainedRendererReplayState {
+  public uniformBuffer: GPUBuffer | null = null;
+  public uniformSlotCapacity = 0;
+  public bindGroup: GPUBindGroup | null = null;
+  public bindGroupUniform: GPUBuffer | null = null;
+  public bindGroupTransform: GPUBuffer | null = null;
+  // The (view, updateId) the currently-written slots were projected for; a
+  // change while this bundle's draws sit in the open pass is the RT+main
+  // double-replay hazard and ends the pass first (mirrors the sprite UBO guard).
+  public uboView: View | null = null;
+  public uboViewUpdateId = -1;
+  public drawsInPass: WebGpuActiveRenderPass | null = null;
+
+  public destroy(): void {
+    this.uniformBuffer?.destroy();
+    this.uniformBuffer = null;
+    this.uniformSlotCapacity = 0;
+    this.bindGroup = null;
+    this.bindGroupUniform = null;
+    this.bindGroupTransform = null;
+    this.uboView = null;
+    this.uboViewUpdateId = -1;
+    this.drawsInPass = null;
+  }
+}
+
+export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements WebGpuRetainedBatchReplayer {
+  /**
+   * Retained-batch opt-in (Track B Slice 3, S3-D5.1): the default static
+   * INSTANCED draw (runs of ≥2 same-geometry meshes) is a recordable
+   * flush-level batch. Single meshes take the CPU-baked default path (view
+   * baked into vertices — uncacheable) and custom-material meshes their own
+   * path; both poison any open capture so the group degrades to entry replay.
+   */
+  public readonly _supportsRetainedBatches = true;
+  /** Reusable single-slot texture list handed to the recorder (avoids a per-batch array). */
+  private readonly _retainedTextureScratch: [Texture | RenderTexture] = [TextureClass.white];
+
   private readonly _combinedTransform: Matrix = new Matrix();
   private readonly _drawCalls: MeshDrawCall[] = [];
   private readonly _pipelines = new Map<string, GPURenderPipeline>();
@@ -271,6 +326,14 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
   private _instancedNodeIndexBuffer: GPUBuffer | null = null;
   private _instancedNodeIndexBufferCapacity = 0;
   private _instancedNodeIndexData: Uint32Array = new Uint32Array(0);
+  // Per-frame write cursor into the shared node-index buffer (bytes). Multiple
+  // instanced batches in one flush go into ONE submit, so each MUST occupy a
+  // DISTINCT sub-range — writing them all at offset 0 aliases: the first
+  // batch's draw would read the last batch's node indices at submit time.
+  // Reset at the start of each flush; `_instancedNodeIndexByteOffset` holds the
+  // offset the most recent upload wrote at (for the draw + retained record).
+  private _instancedNodeIndexFrameBytes = 0;
+  private _instancedNodeIndexByteOffset = 0;
   private _instancedTransformBindGroup: GPUBindGroup | null = null;
   private _instancedTransformStorageBuffer: GPUBuffer | null = null;
   private _uniformAlignment = 256;
@@ -473,6 +536,12 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     const defaultDrawCalls = this._drawCallCount - this._totalCustomDraws();
     this._ensureUniformCapacity(defaultDrawCalls);
     this._ensureInstancedUniformCapacity(this._drawCallCount);
+    // Every instanced batch this frame gets a distinct node-index sub-range;
+    // size the buffer to the frame total upfront (an upper bound — not every
+    // draw is instanced) so no mid-loop realloc invalidates a written range,
+    // and reset the per-frame write cursor.
+    this._ensureInstancedNodeIndexCapacity(this._drawCallCount);
+    this._instancedNodeIndexFrameBytes = 0;
 
     // Phase 3: pack default-path vertex/index/uniform data.
     const defaultUniformBytes = defaultDrawCalls * this._uniformAlignment;
@@ -627,6 +696,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
           }
 
           const maxNodeIndex = this._uploadInstancedNodeIndices(i, batchLength);
+          const nodeIndexByteOffset = this._instancedNodeIndexByteOffset;
           const storage = backend.getTransformStorageBuffer(maxNodeIndex + 1);
 
           this._writeInstancedUniformSlot(instancedDrawCursor, backend, dc.premultiplySample);
@@ -645,12 +715,33 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
           }
 
           pass.setVertexBuffer(0, staticGeometry.vertexBuffer);
-          pass.setVertexBuffer(1, instanceNodeIndexBuffer);
+          pass.setVertexBuffer(1, instanceNodeIndexBuffer, nodeIndexByteOffset);
           pass.setIndexBuffer(staticGeometry.indexBuffer, 'uint16');
           pass.drawIndexed(staticGeometry.indexCount, batchLength);
 
           backend.stats.batches++;
           backend.stats.drawCalls++;
+
+          // Retained recording (mesh opt-in): hand this instanced flush's
+          // per-instance node-index stream + a reference to the SHARED,
+          // persistent geometry to the recorder. Geometry bytes are never
+          // copied into the group bundle — only the node-index words are
+          // group-owned. `staticGeometry` is structurally a
+          // WebGpuRetainedGeometryRef (vertexBuffer/indexBuffer/indexCount).
+          if (backend._retainedCaptureActive) {
+            this._retainedTextureScratch[0] = dc.texture;
+            backend._recordRetainedBatch(
+              this,
+              // Real ArrayBuffer: `_instancedNodeIndexData` is a plain Uint32Array.
+              this._instancedNodeIndexData.buffer as ArrayBuffer,
+              batchLength * Uint32Array.BYTES_PER_ELEMENT,
+              batchLength,
+              dc.blendMode,
+              this._retainedTextureScratch,
+              1,
+              staticGeometry,
+            );
+          }
 
           defaultDrawCursor += batchLength;
           instancedDrawCursor++;
@@ -659,6 +750,15 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
         }
 
         // ----- Default path -----
+        // A single (non-batched) mesh renders through the CPU-baked default
+        // pipeline (view * group folded into vertex positions), which is
+        // view-dependent and cannot be cached — poison any open capture so the
+        // group degrades to entry replay. Belt-and-braces (mirrors WebGL2's
+        // dynamic-single poison); the predicate admits material-less meshes.
+        if (backend._retainedCaptureActive) {
+          backend._poisonActiveRetainedCaptures();
+        }
+
         const needsPipeline = lastShader !== 'default' || dc.blendMode !== lastBlendMode || renderTargetFormat !== lastFormat;
 
         if (needsPipeline) {
@@ -684,6 +784,13 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
         defaultDrawCursor++;
       } else {
         // ----- Custom path -----
+        // Custom-material meshes re-upload user uniforms live at flush; the
+        // recordability predicate excludes them, but poison defensively so a
+        // capture that slipped through never replays a stale, uncaptured draw.
+        if (backend._retainedCaptureActive) {
+          backend._poisonActiveRetainedCaptures();
+        }
+
         const resources = this._customShaders.get(dc.customShader)!;
         const needsPipeline = lastShader !== dc.customShader || dc.blendMode !== lastBlendMode || renderTargetFormat !== lastFormat;
 
@@ -1083,6 +1190,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
   }
 
   private _uploadInstancedNodeIndices(startIndex: number, batchLength: number): number {
+    // The frame-total capacity is ensured once in flush(); this is a floor.
     this._ensureInstancedNodeIndexCapacity(batchLength);
 
     let maxNodeIndex = 0;
@@ -1098,13 +1206,20 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
       }
     }
 
+    // Write into this frame's next free sub-range so each batch's draw reads its
+    // OWN indices at submit time (the byte offset is 4-aligned: u32 elements).
+    const byteOffset = this._instancedNodeIndexFrameBytes;
+
     this._device!.queue.writeBuffer(
       this._instancedNodeIndexBuffer!,
-      0,
+      byteOffset,
       this._instancedNodeIndexData.buffer,
       this._instancedNodeIndexData.byteOffset,
       batchLength * Uint32Array.BYTES_PER_ELEMENT,
     );
+
+    this._instancedNodeIndexByteOffset = byteOffset;
+    this._instancedNodeIndexFrameBytes = byteOffset + batchLength * Uint32Array.BYTES_PER_ELEMENT;
 
     return maxNodeIndex;
   }
@@ -1179,6 +1294,213 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> {
     data[24] = premultiplySample ? 1 : 0;
 
     this._device!.queue.writeBuffer(this._instancedUniformBuffer!, slot * this._uniformAlignment, data.buffer, data.byteOffset, transformUniformByteLength);
+  }
+
+  // ── Retained-batch record/replay (Track B Slice 3, mesh opt-in) ──────────
+  // Mesh's recordable draw is an INDEXED instanced draw: shared per-Geometry
+  // vertex+index buffers (referenced via `payload.geometry`, never copied into
+  // the group bundle) plus a group-owned per-instance node-index stream (one
+  // u32/instance in the bundle instance buffer). The node index is the entire
+  // per-instance record, so scan/rebase walk the whole u32 stream.
+
+  /** @internal See {@link WebGpuRetainedBatchReplayer._scanRetainedNodeIndexRange}. */
+  public _scanRetainedNodeIndexRange(bytes: Uint8Array, range: WebGpuRetainedNodeIndexRange): void {
+    const words = new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / Uint32Array.BYTES_PER_ELEMENT);
+
+    for (let i = 0; i < words.length; i++) {
+      const node = words[i]!;
+
+      if (node < range.min) {
+        range.min = node;
+      }
+
+      if (node > range.max) {
+        range.max = node;
+      }
+    }
+  }
+
+  /** @internal See {@link WebGpuRetainedBatchReplayer._rebaseRetainedNodeIndices} (S3-D4: group-local indices). */
+  public _rebaseRetainedNodeIndices(bytes: Uint8Array, base: number): void {
+    const words = new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / Uint32Array.BYTES_PER_ELEMENT);
+
+    for (let i = 0; i < words.length; i++) {
+      words[i] = words[i]! - base;
+    }
+  }
+
+  /**
+   * Replay one recorded default-path mesh batch into the OPEN pass (B-06). All
+   * STATE is resolved live — the instanced pipeline, `TransformUniforms`
+   * (projection + group) from the live view/group, the per-batch premultiply
+   * flag, the texture — and only DATA is reused: the SHARED geometry
+   * (vertex + index buffers), the group-owned node-index stream (bundle vertex
+   * buffer 1 at `payload.byteOffset`), and the group-owned transform storage
+   * (bind group(0) binding 1). Drawn indexed (`drawIndexed`).
+   * @internal
+   */
+  public _replayRetainedBatch(payload: WebGpuRetainedBatchPayload): void {
+    const backend = this._backend;
+    const device = this._device;
+    const bundle = payload.bundle;
+    const geometry = payload.geometry;
+
+    if (
+      backend === null ||
+      device === null ||
+      geometry === null ||
+      geometry === undefined ||
+      !bundle.isReady ||
+      bundle.instanceBuffer === null ||
+      bundle.transformBuffer === null
+    ) {
+      // Defensive: such a bundle never validates (generation), so a spliced
+      // replay cannot reach here; skip rather than crash mid-frame.
+      return;
+    }
+
+    // Drain any pending live mesh draws first so replay draws follow them in
+    // order — the backend only flushes the OUTGOING renderer on a switch, so a
+    // mesh already active before the group would still hold pending draws.
+    this.flush();
+
+    // A fully-clipped scissor draws nothing (visibility is live per frame).
+    const scissor = backend.getScissorRect();
+
+    if (scissor !== null && (scissor.width <= 0 || scissor.height <= 0)) {
+      return;
+    }
+
+    const coordinator = backend._passCoordinator;
+    const state = this._getMeshReplayState(bundle);
+    const texture = payload.textures[0]!;
+    const slot = payload.batchIndexInBundle ?? 0;
+
+    // Size the group-owned UBO to cover this slot. Growth destroys the old
+    // buffer — if this bundle's earlier draws are already in the open pass they
+    // reference it, so end (submit) that pass first (rare: first replay frame /
+    // batch-count increase). Slots replay in ascending order, so once sized no
+    // further growth happens this frame.
+    this._ensureMeshReplayUniformCapacity(state, device, coordinator, slot + 1);
+
+    // Same-frame texture-mutation guard (S3-D7): resolving the texture binding
+    // may re-upload mutated content on the queue timeline before the deferred
+    // submit, retroactively changing draws already in the open pass. End it
+    // first so those draws keep their pre-mutation content.
+    let activePass = coordinator.activePass;
+
+    if (activePass !== null && state.drawsInPass === activePass && backend._textureUploadWouldMutate(texture)) {
+      coordinator.endPass();
+      state.drawsInPass = null;
+    }
+
+    // UBO write guard: rewriting this bundle's slots re-projects them. If the
+    // live view changed while this bundle's draws are already in the open pass
+    // (RenderTexture + main double replay under different views), end it first.
+    const view = backend.view;
+
+    if (state.uboView !== view || state.uboViewUpdateId !== view.updateId) {
+      activePass = coordinator.activePass;
+
+      if (activePass !== null && state.drawsInPass === activePass) {
+        coordinator.endPass();
+        state.drawsInPass = null;
+      }
+
+      state.uboView = view;
+      state.uboViewUpdateId = view.updateId;
+    }
+
+    // Write this batch's UBO slot: live projection + group + per-batch flag.
+    const data = this._instancedUniformScratch;
+
+    data.fill(0);
+    packAffineMat3Std140(view.getTransform(), data, 0);
+    packAffineMat3Std140(backend.renderGroupTransform ?? Matrix.identity, data, 12);
+    data[24] = backend.shouldPremultiplyTextureSample(texture) ? 1 : 0;
+    device.queue.writeBuffer(state.uniformBuffer!, slot * this._uniformAlignment, data.buffer, data.byteOffset, transformUniformByteLength);
+
+    const textureBindGroup = this._getTextureBindGroup(backend, texture);
+    const bindGroup = this._getMeshReplayBindGroup(state, device, bundle.transformBuffer);
+
+    const active = coordinator.acquirePass();
+    const pass = active.pass;
+
+    pass.setPipeline(this._getInstancedPipeline({ blendMode: payload.blendMode, format: backend.renderTargetFormat, stencil: coordinator.stencilActive }));
+    pass.setBindGroup(0, bindGroup, [slot * this._uniformAlignment]);
+    pass.setBindGroup(1, textureBindGroup);
+    pass.setVertexBuffer(0, geometry.vertexBuffer);
+    pass.setVertexBuffer(1, bundle.instanceBuffer, payload.byteOffset);
+    pass.setIndexBuffer(geometry.indexBuffer, 'uint16');
+    pass.drawIndexed(geometry.indexCount, payload.instanceCount);
+
+    state.drawsInPass = active;
+    backend.stats.batches++;
+    backend.stats.drawCalls++;
+  }
+
+  private _getMeshReplayState(bundle: WebGpuRetainedGroupBundle): MeshRetainedReplayState {
+    const existing = bundle.rendererReplayState;
+
+    if (existing instanceof MeshRetainedReplayState) {
+      return existing;
+    }
+
+    const state = new MeshRetainedReplayState();
+
+    bundle.rendererReplayState = state;
+
+    return state;
+  }
+
+  private _ensureMeshReplayUniformCapacity(
+    state: MeshRetainedReplayState,
+    device: GPUDevice,
+    coordinator: WebGpuBackend['_passCoordinator'],
+    slots: number,
+  ): void {
+    if (state.uniformBuffer !== null && state.uniformSlotCapacity >= slots) {
+      return;
+    }
+
+    // Draws already recorded into the open pass reference the buffer about to
+    // be destroyed; submit them before replacing it.
+    if (state.drawsInPass !== null && state.drawsInPass === coordinator.activePass) {
+      coordinator.endPass();
+      state.drawsInPass = null;
+    }
+
+    const capacitySlots = Math.max(slots, state.uniformSlotCapacity * 2 || 1);
+
+    state.uniformBuffer?.destroy();
+    state.uniformBuffer = device.createBuffer({
+      label: 'mesh:retained-uniform-buffer',
+      size: capacitySlots * this._uniformAlignment,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+    state.uniformSlotCapacity = capacitySlots;
+    // The UBO identity changed → the cached bind group is stale.
+    state.bindGroup = null;
+    state.bindGroupUniform = null;
+  }
+
+  private _getMeshReplayBindGroup(state: MeshRetainedReplayState, device: GPUDevice, transformBuffer: GPUBuffer): GPUBindGroup {
+    if (state.bindGroup !== null && state.bindGroupUniform === state.uniformBuffer && state.bindGroupTransform === transformBuffer) {
+      return state.bindGroup;
+    }
+
+    state.bindGroup = device.createBindGroup({
+      label: 'mesh:retained-transform-bind-group',
+      layout: this._instancedTransformBindGroupLayout!,
+      entries: [
+        { binding: 0, resource: { buffer: state.uniformBuffer!, size: transformUniformByteLength } },
+        { binding: 1, resource: { buffer: transformBuffer } },
+      ],
+    });
+    state.bindGroupUniform = state.uniformBuffer;
+    state.bindGroupTransform = transformBuffer;
+
+    return state.bindGroup;
   }
 
   private _getOrCreateInstancedTransformBindGroup(storageBuffer: GPUBuffer): GPUBindGroup {

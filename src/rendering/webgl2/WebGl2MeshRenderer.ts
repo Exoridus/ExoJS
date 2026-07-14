@@ -13,6 +13,7 @@ import fragmentSource from './glsl/mesh.frag';
 import vertexSource from './glsl/mesh.vert';
 import type { WebGl2Backend } from './WebGl2Backend';
 import { WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from './WebGl2RenderBuffer';
+import type { WebGl2RetainedBatchPayload, WebGl2RetainedBatchReplayer, WebGl2RetainedNodeIndexRange } from './WebGl2RetainedGroupResources';
 import { createWebGl2ShaderProgram } from './WebGl2ShaderProgram';
 import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './WebGl2VertexArrayObject';
 
@@ -63,7 +64,18 @@ interface StaticGeometryCacheEntry {
   indexCount: number;
 }
 
-export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> {
+export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements WebGl2RetainedBatchReplayer {
+  /**
+   * Retained-batch opt-in (Track B Slice 3, S3-D5.1): the default-path static
+   * instanced draw ({@link _drawStaticBatch}) is a flush-level batch the group
+   * recorder can capture and replay. Custom-material and dynamic-geometry
+   * meshes never take that path — they poison any open capture instead (see
+   * {@link _drawDynamicInstancedSingle}) so the group degrades to entry replay.
+   */
+  public readonly _supportsRetainedBatches = true;
+  /** Reusable single-slot texture list handed to the recorder (avoids a per-batch array). */
+  private readonly _retainedTextureScratch: [Texture | RenderTexture] = [Texture.white];
+
   private readonly _defaultShader: Shader = new Shader(vertexSource, fragmentSource);
   private readonly _customShaders = new Map<Material, Shader>();
   private readonly _compatibilityCache = new Map<Shader, boolean>();
@@ -341,6 +353,16 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> {
   }
 
   private _drawDynamicInstancedSingle(draw: PendingMeshDraw, backend: WebGl2Backend, connection: MeshRendererConnection): void {
+    // A dynamic-geometry (non-static) mesh cannot be recorded — its geometry
+    // is not the shared, persistent buffer a retained batch references. The
+    // recordability predicate (S3-D5) admits it (material === null, snap none),
+    // so poison any open capture: the group's set never validates and it stays
+    // on the correct entry-replay tier. Belt-and-braces, mirroring the sprite
+    // renderer's custom-material poison.
+    if (backend._isRetainedCapturing) {
+      backend._poisonRetainedCaptures();
+    }
+
     const nodeIndex = draw.command?.nodeIndex ?? 0;
 
     if (draw.command === null) {
@@ -415,6 +437,17 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> {
 
     backend.stats.batches++;
     backend.stats.drawCalls++;
+
+    // Retained recording (Track B Slice 3, mesh opt-in): while a capture window
+    // is open, hand this flush's per-instance node-index stream and a reference
+    // to the SHARED, persistent geometry to the backend. The geometry
+    // (vertex+index buffers) is NOT copied into the group bundle — only the
+    // node-index words are group-owned. `cacheEntry` is structurally a
+    // WebGl2RetainedGeometryRef (vertexBuffer/indexBuffer/indexCount).
+    if (backend._isRetainedCapturing) {
+      this._retainedTextureScratch[0] = first.texture;
+      backend._recordRetainedBatch(this, this._nodeIndexData.subarray(0, count), count, first.blendMode, this._retainedTextureScratch, 1, cacheEntry);
+    }
   }
 
   private _drawLegacyImmediate(draw: PendingMeshDraw, backend: WebGl2Backend, connection: MeshRendererConnection): void {
@@ -505,6 +538,134 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> {
     }
 
     shader.sync();
+  }
+
+  // ── Retained-batch record/replay (Track B Slice 3, mesh opt-in) ──────────
+  // Mesh's recordable draw is an INDEXED instanced draw: shared per-Geometry
+  // vertex+index buffers (referenced via `payload.geometry`, never copied into
+  // the group bundle) plus a group-owned per-instance node-index stream (one
+  // u32/instance in the bundle instance buffer). Only the node-index words are
+  // group-local, so the layout-aware scan/rebase read word 0 of each 1-word
+  // instance — the mesh counterpart of the sprite's word-7-of-8 layout.
+
+  /** @internal See {@link WebGl2RetainedBatchReplayer._scanRetainedNodeIndexRange}. */
+  public _scanRetainedNodeIndexRange(payload: WebGl2RetainedBatchPayload, range: WebGl2RetainedNodeIndexRange): void {
+    const words = payload.bundle.instanceWords;
+    const start = payload.byteOffset / Uint32Array.BYTES_PER_ELEMENT;
+
+    for (let i = 0; i < payload.instanceCount; i++) {
+      // In-bounds: the payload's node-index words were appended to the store.
+      const node = words[start + i]!;
+
+      if (node < range.min) {
+        range.min = node;
+      }
+
+      if (node > range.max) {
+        range.max = node;
+      }
+    }
+  }
+
+  /** @internal See {@link WebGl2RetainedBatchReplayer._rebaseRetainedNodeIndices} (S3-D4: group-local indices). */
+  public _rebaseRetainedNodeIndices(payload: WebGl2RetainedBatchPayload, base: number): void {
+    const words = payload.bundle.instanceWords;
+    const start = payload.byteOffset / Uint32Array.BYTES_PER_ELEMENT;
+
+    for (let i = 0; i < payload.instanceCount; i++) {
+      const index = start + i;
+
+      // In-bounds: see the scan above.
+      words[index] = (words[index]! - base) >>> 0;
+    }
+  }
+
+  /**
+   * Wire the batch VAO: per-vertex geometry attributes from the SHARED,
+   * persistent geometry buffers ({@link WebGl2RetainedBatchPayload.geometry}),
+   * that geometry's index buffer, and the per-instance node-index attribute
+   * from the group bundle's instance buffer based at `payload.byteOffset`
+   * (WebGL2 has no baseInstance). Same attribute set/locations as the live
+   * static-batch VAO in {@link _getOrCreateStaticGeometryVao}.
+   * @internal
+   */
+  public _configureRetainedVao(payload: WebGl2RetainedBatchPayload): void {
+    const gl = this.getBackend().context;
+    const geometry = payload.geometry;
+    const instanceBuffer = payload.bundle.instanceBuffer;
+    const vao = payload.vao;
+
+    if (geometry === null || geometry === undefined || instanceBuffer === null || vao === null) {
+      throw new Error('WebGl2MeshRenderer: retained batch VAO configuration requires geometry and an uploaded bundle.');
+    }
+
+    const shader = this._defaultShader;
+
+    vao
+      .addIndex(geometry.indexBuffer)
+      .addAttribute(geometry.vertexBuffer, shader.getAttribute('a_position'), gl.FLOAT, false, vertexStrideBytes, 0)
+      .addAttribute(geometry.vertexBuffer, shader.getAttribute('a_texcoord'), gl.FLOAT, false, vertexStrideBytes, 8)
+      .addAttribute(geometry.vertexBuffer, shader.getAttribute('a_color'), gl.UNSIGNED_BYTE, true, vertexStrideBytes, 16)
+      .addAttribute(instanceBuffer, shader.getAttribute('a_nodeIndex'), gl.UNSIGNED_INT, false, Uint32Array.BYTES_PER_ELEMENT, payload.byteOffset, true, 1);
+  }
+
+  /**
+   * Replay one recorded default-path mesh batch: all STATE is resolved live —
+   * blend mode, `u_projection` from the live view, `u_group` from the live
+   * composed group matrix (the camera-pan / group-move win), the texture — and
+   * only DATA is cached: the SHARED geometry (vertex+index buffers), the
+   * group-owned node-index stream (through the per-batch VAO), and the
+   * group-owned transform texture on the shared transform unit. Drawn indexed
+   * (`drawElementsInstanced`), unlike the sprite path's `drawArraysInstanced`.
+   * @internal
+   */
+  public _replayRetainedBatch(payload: WebGl2RetainedBatchPayload): void {
+    const backend = this.getBackendOrNull();
+    const vao = payload.vao;
+    const geometry = payload.geometry;
+    const transformTexture = payload.bundle.transformTexture;
+
+    if (backend === null || vao === null || geometry === null || geometry === undefined || transformTexture === null) {
+      // Defensive: a bundle in this state never validates (generation), so a
+      // spliced replay cannot reach here; skip rather than crash mid-frame.
+      return;
+    }
+
+    const shader = this._defaultShader;
+
+    // Keep this renderer's blend tracking in sync, then apply unconditionally
+    // (another renderer may have changed the GL blend state between batches).
+    if (payload.blendMode !== this._currentBlendMode) {
+      this._currentBlendMode = payload.blendMode;
+    }
+
+    backend.setBlendMode(payload.blendMode);
+
+    if (shader.uniforms.has('u_projection')) {
+      shader.getUniform('u_projection').setValue(backend.view.getTransform().toArray(false));
+    }
+
+    if (shader.uniforms.has('u_group')) {
+      const groupTransform = backend.renderGroupTransform;
+
+      shader.getUniform('u_group').setValue(groupTransform !== null ? groupTransform.toArray(false) : identityGroupMat3);
+    }
+
+    if (shader.uniforms.has('u_texture')) {
+      shader.getUniform('u_texture').setValue(this._textureUnitScratch);
+      // In-bounds: mesh batches record exactly one texture slot.
+      backend.bindTexture(payload.textures[0]!, 0);
+    }
+
+    backend.bindTexture(transformTexture, transformTextureUnit);
+
+    if (shader.uniforms.has('u_transforms')) {
+      shader.getUniform('u_transforms').setValue(this._transformUnitScratch);
+    }
+
+    shader.sync();
+    backend.bindVertexArrayObject(vao);
+    vao.drawInstanced(geometry.indexCount, 0, payload.instanceCount, RenderingPrimitives.Triangles);
   }
 
   private _canBatchStatic(draw: PendingMeshDraw): boolean {

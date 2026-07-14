@@ -13,6 +13,36 @@ import type { WebGpuActiveRenderPass } from './WebGpuPassCoordinator';
 /** Bytes of one transform slot (3 × vec4<f32>, matches the WGSL `TransformSlot`). */
 export const retainedTransformSlotBytes = 48;
 
+/**
+ * Reference to the renderer-owned, persistent, SHARED geometry an indexed
+ * retained batch draws (mesh opt-in). The vertex + index buffers live in the
+ * recording renderer's own long-lived cache (the mesh renderer's
+ * `_staticGeometryCache`, one buffer pair per `Geometry`, shared across
+ * frames/groups); the group bundle stores only the thin per-instance
+ * node-index stream, never the geometry bytes.
+ * @internal
+ */
+export interface WebGpuRetainedGeometryRef {
+  readonly vertexBuffer: GPUBuffer;
+  readonly indexBuffer: GPUBuffer;
+  readonly indexCount: number;
+}
+
+/**
+ * Auxiliary, renderer-owned GPU state a replayer may attach to a bundle
+ * (option (a) of the mesh generalization). Sprite/nine-slice/repeating leave
+ * it null and drive replay entirely from the bundle's own sprite-layout UBO;
+ * the mesh renderer parks its group(0) `TransformUniforms` UBO + bind group
+ * here so the bundle can dispose it on device loss / destroy — giving the
+ * mesh UBO the same grow-only, explicitly-freed lifecycle as the bundle's own
+ * buffers WITHOUT the bundle needing to know the mesh layout.
+ * @internal
+ */
+export interface WebGpuRetainedRendererReplayState {
+  /** Release any GPU buffers this state owns (called from the bundle). */
+  destroy(): void;
+}
+
 /** Bytes of the per-group uniform buffer (projection mat4 + group mat4, S3-D7). */
 export const retainedGroupUniformBytes = 128;
 
@@ -33,6 +63,21 @@ export interface WebGpuRetainedBatchPayload {
   readonly byteOffset: number;
   readonly instanceCount: number;
   readonly blendMode: BlendModes;
+  /**
+   * Shared, persistent geometry for an INDEXED batch (mesh opt-in): the
+   * renderer-owned vertex + index buffers this batch's node-index stream
+   * instances. `null`/absent for the self-contained instance-stream renderers
+   * (sprite / nine-slice / repeating), which bind the renderer's own quad
+   * index buffer and one vertex buffer.
+   */
+  readonly geometry?: WebGpuRetainedGeometryRef | null;
+  /**
+   * This batch's index within its OWNING bundle's recording (generic per-batch
+   * ordinal; `owner.staged.length` at record time). Indexed renderers use it as
+   * the group-owned uniform slot for their per-batch dynamic-offset UBO write;
+   * the self-contained instance-stream renderers ignore it.
+   */
+  readonly batchIndexInBundle?: number;
   /** Slot-ordered batch textures; bind group(1) is re-resolved live from these. */
   readonly textures: ReadonlyArray<Texture | RenderTexture>;
   /**
@@ -182,6 +227,13 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
   public uboViewUpdateId = -1;
   /** The open pass this bundle's replayed draws were last recorded into. */
   public drawsInPass: WebGpuActiveRenderPass | null = null;
+  /**
+   * Auxiliary replay state owned by an indexed-geometry replayer (mesh). Null
+   * for the sprite-layout renderers, which use this bundle's own UBO/bind
+   * group. Disposed on device loss / destroy so the renderer's group(0) UBO
+   * follows the bundle's lifecycle (S3-D3 grow-only, freed on teardown).
+   */
+  public rendererReplayState: WebGpuRetainedRendererReplayState | null = null;
 
   public constructor(accountant: GpuResourceAccountant, onRelease: (bundle: WebGpuRetainedGroupBundle) => void) {
     this._accountant = accountant;
@@ -360,6 +412,9 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
     this.uboView = null;
     this.uboViewUpdateId = -1;
     this.drawsInPass = null;
+    // The mesh replayer's group(0) UBO belonged to the dropped device state.
+    this.rendererReplayState?.destroy();
+    this.rendererReplayState = null;
 
     if (this._accountedBytes > 0) {
       this._accountant.free(this._accountedBytes);

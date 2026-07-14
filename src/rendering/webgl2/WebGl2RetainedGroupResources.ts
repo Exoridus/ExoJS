@@ -43,6 +43,24 @@ export interface WebGl2RecordedTextureState {
 }
 
 /**
+ * Reference to the renderer-owned, persistent, SHARED geometry an indexed
+ * retained batch draws (Track B Slice 3 mesh opt-in). The vertex + index
+ * buffers live in the recording renderer's own long-lived cache (the mesh
+ * renderer's `_staticGeometryCache`, uploaded once per `Geometry`, shared
+ * across frames/groups); the group bundle stores only the thin per-instance
+ * node-index stream, never the geometry bytes. Absent (`geometry` omitted /
+ * `null`) for the self-contained instance-stream renderers (sprite / nine-
+ * slice / repeating), whose batch VAO carries no index buffer and draws with
+ * `drawArraysInstanced` — the existing path, unchanged.
+ * @internal
+ */
+export interface WebGl2RetainedGeometryRef {
+  readonly vertexBuffer: WebGl2RenderBuffer;
+  readonly indexBuffer: WebGl2RenderBuffer;
+  readonly indexCount: number;
+}
+
+/**
  * Backend-side replay descriptor for one recorded sprite flush (S3-D1). This
  * is the opaque `payload` carried by a plan-level `RetainedBatchInstruction`:
  * everything the owning renderer needs to re-issue the batch from group-owned
@@ -65,6 +83,14 @@ export interface WebGl2RetainedBatchPayload {
   readonly instanceCount: number;
   /** Byte offset of this batch's instance data inside the bundle's instance buffer. */
   readonly byteOffset: number;
+  /**
+   * Shared, persistent geometry for an INDEXED batch (mesh opt-in): the
+   * renderer-owned vertex + index buffers this batch's node-index stream
+   * instances. `null`/absent for the self-contained instance-stream renderers
+   * (sprite / nine-slice / repeating), whose VAO carries no index buffer and
+   * replays with `drawArraysInstanced` over four strip vertices.
+   */
+  readonly geometry?: WebGl2RetainedGeometryRef | null;
   /**
    * Per-batch VAO with attribute pointers pre-based at {@link byteOffset}
    * (WebGL2 has no baseInstance). Assigned at capture end; `null` only for a
@@ -438,17 +464,31 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
             gl.vertexAttribDivisor(attribute.location, attribute.divisor);
           }
 
+          // Indexed batches (mesh opt-in) carry an index buffer; capturing its
+          // ELEMENT_ARRAY_BUFFER binding into this VAO is what lets replay use
+          // drawElementsInstanced. Sprite/nine-slice/repeating VAOs have no
+          // index buffer, so this is a no-op for them (drawArrays path).
+          vao.indexBuffer?.bind();
+
           appliedVersion = vao.version;
         }
       },
       unbind: (): void => {
         gl.bindVertexArray(null);
       },
-      draw: (_vao, size, start, type): void => {
-        gl.drawArrays(type, start, size);
+      draw: (vao, size, start, type): void => {
+        if (vao.indexBuffer !== null) {
+          gl.drawElements(type, size, gl.UNSIGNED_SHORT, start);
+        } else {
+          gl.drawArrays(type, start, size);
+        }
       },
-      drawInstanced: (_vao, count, start, instanceCount, type): void => {
-        gl.drawArraysInstanced(type, start, count, instanceCount);
+      drawInstanced: (vao, count, start, instanceCount, type): void => {
+        if (vao.indexBuffer !== null) {
+          gl.drawElementsInstanced(type, count, gl.UNSIGNED_SHORT, start, instanceCount);
+        } else {
+          gl.drawArraysInstanced(type, start, count, instanceCount);
+        }
       },
       destroy: (vao): void => {
         gl.deleteVertexArray(handle);

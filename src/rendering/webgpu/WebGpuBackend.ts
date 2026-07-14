@@ -46,6 +46,7 @@ import {
   type WebGpuRetainedBatchPayload,
   type WebGpuRetainedBatchReplayer,
   WebGpuRetainedCaptureFrame,
+  type WebGpuRetainedGeometryRef,
   WebGpuRetainedGroupBundle,
   type WebGpuRetainedNodeIndexRange,
 } from './WebGpuRetainedGroupResources';
@@ -1266,6 +1267,7 @@ export class WebGpuBackend implements RenderBackend {
     blendMode: BlendModes,
     textures: ReadonlyArray<Texture | RenderTexture | null>,
     slotCount: number,
+    geometry: WebGpuRetainedGeometryRef | null = null,
   ): void {
     const frames = this._retainedCaptureFrames;
 
@@ -1315,6 +1317,10 @@ export class WebGpuBackend implements RenderBackend {
       byteOffset: owner.totalBytes,
       instanceCount,
       blendMode,
+      geometry,
+      // This batch's ordinal within the owning bundle — the group-owned UBO
+      // slot an indexed replayer writes with dynamic offset (sprite ignores it).
+      batchIndexInBundle: owner.staged.length,
       textures: textureList,
       recordedViews,
     };
