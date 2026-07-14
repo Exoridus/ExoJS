@@ -299,6 +299,7 @@ export const EditorCode = forwardRef<EditorCodeHandle, EditorCodeProps>(function
 
     const importCode = (): void => {
         setShowMenu(false);
+        if (readOnly) return;
         fileInputRef.current?.click();
     };
 
@@ -323,11 +324,12 @@ export const EditorCode = forwardRef<EditorCodeHandle, EditorCodeProps>(function
                         className={cx(css(styles, 'auto-button'), autoRefresh && css(styles, 'auto-button--active'))}
                         type="button"
                         title="Auto-refresh the preview on every code change (800ms debounce)"
+                        disabled={readOnly}
                         onClick={() => setAutoRefresh(value => !value)}
                     >
                         auto-run
                     </button>
-                    <button className={css(styles, 'more-button')} data-action="refresh" type="button" title="Refresh preview (Ctrl+Enter)" onClick={() => void triggerRefresh()}>
+                    <button className={css(styles, 'more-button')} data-action="refresh" type="button" title="Refresh preview (Ctrl+Enter)" disabled={readOnly} onClick={() => void triggerRefresh()}>
                         <svg viewBox="0 0 16 16" width="1em" height="1em" style={{ display: 'block' }} fill="currentColor" aria-hidden="true">
                             <path fillRule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z" />
                             <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z" />
@@ -351,7 +353,7 @@ export const EditorCode = forwardRef<EditorCodeHandle, EditorCodeProps>(function
                             <button className={css(styles, 'menu-item')} role="menuitem" onClick={exportCode}>
                                 Export Code
                             </button>
-                            <button className={css(styles, 'menu-item')} role="menuitem" onClick={importCode}>
+                            <button className={css(styles, 'menu-item')} role="menuitem" disabled={readOnly} onClick={importCode}>
                                 Import Code
                             </button>
                             <button className={css(styles, 'menu-item')} role="menuitem" data-variant="danger" disabled={!canReset} onClick={resetCode}>
