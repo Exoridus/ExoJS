@@ -269,3 +269,29 @@ describe('QueryEngine spatial-index narrowing parity', () => {
     expect(indexedShape.length).toBeGreaterThan(0); // sanity: the assertions above aren't vacuously true on empty results
   });
 });
+
+describe('forEachAabbHit cross-method reentrancy', () => {
+  it('a queryPoint call from inside the callback does not truncate/corrupt the outer traversal', () => {
+    const world = new PhysicsWorld(); // wires AabbTreeBroadPhase as spatialIndex, so `_candidatesFor` narrows via SpatialIndex.queryAabb
+
+    // Five colliders inside the outer forEachAabbHit region.
+    const inBounds = Array.from({ length: 5 }, (_, i) => colliderAt(world, new BoxShape(10, 10), { x: i * 12, y: 0 }, 0, 'dynamic'));
+    // A collider far outside that region, targeted by the nested queryPoint call.
+    const far = colliderAt(world, new BoxShape(10, 10), { x: 1000, y: 1000 }, 0, 'dynamic');
+
+    const visited: Collider[] = [];
+    const nestedHits: Collider[] = [];
+
+    world.forEachAabbHit({ minX: -10, minY: -10, maxX: 60, maxY: 10 }, undefined, collider => {
+      visited.push(collider);
+      // Re-enters `_candidatesFor` for a DIFFERENT location on every iteration. Before the fix this
+      // refilled the SAME shared `_scratchHits` buffer the outer `for...of` was still iterating,
+      // silently truncating/corrupting the outer traversal.
+      nestedHits.push(...world.queryPoint({ x: 1000, y: 1000 }));
+    });
+
+    expect(visited.map(c => c.id).sort((a, b) => a - b)).toEqual(inBounds.map(c => c.id).sort((a, b) => a - b));
+    expect(nestedHits).toHaveLength(inBounds.length);
+    expect(nestedHits.every(c => c === far)).toBe(true);
+  });
+});
