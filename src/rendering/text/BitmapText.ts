@@ -263,7 +263,15 @@ export class BitmapText extends AbstractText {
   private _rebuild(): void {
     this._pageQuads = [];
     this._textBounds = { width: 0, height: 0 };
-    if (this._text.length === 0) return;
+    if (this._text.length === 0) {
+      // Empty transition: reset the extent and route through the content-dirty
+      // contract like the non-empty path below, so a BitmapText going empty
+      // does not leave a stale local bounds / un-dirtied revision behind for
+      // culling, hit-testing, or an instruction-set cache of prior geometry.
+      this.getLocalBounds().set(0, 0, 0, 0);
+      this._invalidateBoundsCascade();
+      return;
+    }
 
     // Derive a TextLayoutStyle from the BMFont descriptor + scale.
     // Setting fontSize = fontData.lineHeight * scale makes computedLineHeight

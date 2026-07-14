@@ -104,6 +104,19 @@ describe('BitmapText', () => {
     expect(text.pageQuads).toHaveLength(0);
   });
 
+  test('setting text to empty string resets the local bounds extent', () => {
+    const text = new BitmapText('AB', makeFont());
+    expect(text.getLocalBounds().width).toBeGreaterThan(0);
+    expect(text.getLocalBounds().height).toBeGreaterThan(0);
+
+    // Empty transition must reset the extent rather than leave the stale
+    // non-empty bounds behind (culling / hit-testing / retained aggregate).
+    text.text = '';
+
+    expect(text.getLocalBounds().width).toBe(0);
+    expect(text.getLocalBounds().height).toBe(0);
+  });
+
   test('text setter triggers rebuild', () => {
     const text = new BitmapText('A', makeFont());
     const first = text.pageQuads[0];

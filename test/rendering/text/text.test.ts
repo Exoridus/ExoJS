@@ -149,6 +149,20 @@ describe('Text', () => {
     expect(text.pageQuads).toHaveLength(0);
   });
 
+  test('setting text to empty string resets the local bounds extent', () => {
+    const text = new Text('Hello');
+    expect(text.getLocalBounds().width).toBeGreaterThan(0);
+    expect(text.getLocalBounds().height).toBeGreaterThan(0);
+
+    // Empty transition must reset the extent, not leave the stale non-empty
+    // bounds behind (which would corrupt culling / hit-testing / the retained
+    // group aggregate and keep any cached prior geometry live).
+    text.text = '';
+
+    expect(text.getLocalBounds().width).toBe(0);
+    expect(text.getLocalBounds().height).toBe(0);
+  });
+
   test('style getter returns the current TextStyle', () => {
     const style = new TextStyle({ fontSize: 20 });
     const text = new Text('Hi');
