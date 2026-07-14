@@ -1,4 +1,4 @@
-import { Application, Asset, Assets, AudioStream, Color, Graphics, type Loopable, type Pausable, type RatePitched, type RenderingContext, Scene, type Seekable, Text, type Voice } from '@codexo/exojs';
+import { Application, Asset, AudioStream, Color, Graphics, type Loopable, type Pausable, type RatePitched, type RenderingContext, Scene, type Seekable, Text, type Voice } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -32,9 +32,10 @@ class MusicLoopScene extends Scene {
 
         // A single streaming track — the browser's media pipeline loops it
         // seamlessly when `loop` is on, so no duplicate/silent track is needed.
-        // AudioStream has no seamless adapter — await it explicitly.
-        const { track } = await this.loader.load(Assets.from({ track: Asset.kind('music', assets.demo.audio.musicLoop) }));
-        this.music = track;
+        // AudioStream is a non-leaf resource kind (no seamless placeholder), so it
+        // is loaded directly through `Asset.kind('music', ...)` and awaited rather
+        // than adopted from an `Assets.from` catalog leaf.
+        this.music = await this.loader.load(Asset.kind('music', assets.demo.audio.musicLoop));
 
         // Core defers playback until the AudioContext unlocks on the first
         // gesture, then starts automatically — play() returns the Voice now,

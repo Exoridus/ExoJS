@@ -1,4 +1,4 @@
-import { Application, Asset, Assets, AudioStream, Color, type RenderingContext, Scene, Sprite, Text, type Time, Vector } from '@codexo/exojs';
+import { Application, Asset, AudioStream, Color, type RenderingContext, Scene, Sprite, Text, type Time, Vector } from '@codexo/exojs';
 import { BeatDetector } from '@codexo/exojs-audio-fx';
 import {
     AlphaFadeOverLifetime,
@@ -42,7 +42,7 @@ class BeatSyncPulseScene extends Scene {
         const { width, height } = app.canvas;
 
         // AudioStream has no seamless adapter — await it explicitly.
-        const { track } = await this.loader.load(Assets.from({ track: Asset.kind('music', 'audio/demo-loop-main.ogg') }));
+        const track = await this.loader.load(Asset.kind('music', 'audio/demo-loop-main.ogg'));
         this.music = track;
         this.sprite = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(width / 2, height / 2);
 

@@ -25,7 +25,7 @@ class BossIntroCinematicScene extends Scene {
     tapPrompt;
     width = 0;
     height = 0;
-    init() {
+    async init() {
         const app = this.app;
         if (app === null)
             throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
@@ -45,7 +45,10 @@ class BossIntroCinematicScene extends Scene {
             .setScale(0.4)
             .setPosition(width * 0.62, height / 2)
             .setTint(new Color(255, 130, 130));
-        this.music = this.loader.get(Asset.kind('music', assets.demo.music.loopMain));
+        // AudioStream is a non-leaf resource kind (no seamless placeholder), so it
+        // is loaded directly through `Asset.kind('music', ...)` and awaited rather
+        // than fetched synchronously via `get()`.
+        this.music = await this.loader.load(Asset.kind('music', assets.demo.music.loopMain));
         this.hud = mountControls({
             title: 'Boss Intro Cinematic',
             controls: [

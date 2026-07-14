@@ -1,5 +1,5 @@
 // Auto-generated from audio-buses.ts — edit the .ts source, not this file.
-import { Application, Asset, Assets, Color, Graphics, Scene, Text } from '@codexo/exojs';
+import { Application, Asset, Color, Graphics, Scene, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {
@@ -44,7 +44,7 @@ class AudioBusesScene extends Scene {
         this.rowY = rows.map((_, i) => height * 0.34 + i * 90);
         this.sfxButton = { x: width / 2 - 150, y: height * 0.74, w: 300, h: 36 };
         // AudioStream has no seamless adapter — await it explicitly.
-        const { music } = await this.loader.load(Assets.from({ music: Asset.kind('music', assets.demo.audio.musicLoop) }));
+        const music = await this.loader.load(Asset.kind('music', assets.demo.audio.musicLoop));
         this.music = music;
         // Path-only get() infers Sound from the .ogg extension — sidesteps a
         // compile-time overload ambiguity between Sound and the Json token form

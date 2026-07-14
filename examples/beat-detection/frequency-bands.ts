@@ -1,4 +1,4 @@
-import { Application, Asset, Assets, AudioStream, Color, Graphics, type RenderingContext, Scene, Text } from '@codexo/exojs';
+import { Application, Asset, AudioStream, Color, Graphics, type RenderingContext, Scene, Text } from '@codexo/exojs';
 import { AudioAnalyser } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 
@@ -49,7 +49,7 @@ class FrequencyBandsScene extends Scene {
         const app = this.app;
         if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         // AudioStream has no seamless adapter — await it explicitly.
-        const { track } = await this.loader.load(Assets.from({ track: Asset.kind('music', 'audio/demo-loop-main.ogg') }));
+        const track = await this.loader.load(Asset.kind('music', 'audio/demo-loop-main.ogg'));
         this.music = track;
 
         this.analyser = new AudioAnalyser({ fftSize: 2048, smoothingTimeConstant: 0.75 });
