@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
+import { type SweepHit, sweepProxies } from '../src/collision/sweep';
 import { BoxShape, CircleShape, PhysicsBody, PhysicsWorld } from '../src/index';
+import { colliderAt } from './support';
 
 /**
  * Continuous collision detection / bullet-mode.
@@ -400,5 +402,59 @@ describe('continuous collision (swept shape, not just the centre)', () => {
       world.step(FRAME);
     }
     expect(world._ccdSweepTests).toBeGreaterThan(0);
+  });
+});
+
+describe('swept SAT — exact tangency is not a blocking hit', () => {
+  /**
+   * The discrete narrow phase treats a separation of exactly 0 (touching, not
+   * overlapping) as no contact; the swept SAT must classify the same boundary
+   * configurations the same way, or a grazing bullet gets a spurious stop
+   * where the discrete phase sees no overlap.
+   */
+
+  const hit: SweepHit = { t: 0, normalX: 0, normalY: 0 };
+
+  it('a box sliding exactly along another box face (separation 0) reports no hit', () => {
+    const world = new PhysicsWorld();
+    const target = colliderAt(world, new BoxShape(10, 10), { x: 0, y: 0 }); // spans y ∈ [−5, 5]
+    // End pose spans y ∈ [5, 15]: its bottom face touches the target's top face
+    // exactly (separation 0 on the y axis, which has no relative motion) while
+    // the x intervals sweep across each other.
+    const moving = colliderAt(world, new BoxShape(10, 10), { x: 20, y: 10 });
+
+    expect(sweepProxies(moving, 40, 0, target, hit)).toBe(false);
+  });
+
+  it('the same slide with 1px of overlap is still a hit (face normal against the motion)', () => {
+    const world = new PhysicsWorld();
+    const target = colliderAt(world, new BoxShape(10, 10), { x: 0, y: 0 });
+    const moving = colliderAt(world, new BoxShape(10, 10), { x: 20, y: 9 }); // overlaps y ∈ [4, 5]
+
+    expect(sweepProxies(moving, 40, 0, target, hit)).toBe(true);
+    expect(hit.t).toBeCloseTo(0.25, 6); // moving x-span [−25, −15] → its leading face meets x = −5 at t = 0.25
+    expect(hit.normalX).toBeCloseTo(-1, 6);
+    expect(hit.normalY).toBeCloseTo(0, 6);
+  });
+
+  it('a diagonal corner-to-corner graze (zero-width overlap window) reports no hit', () => {
+    const world = new PhysicsWorld();
+    const target = colliderAt(world, new BoxShape(10, 10), { x: 0, y: 0 });
+    // Swept from (20, 0) to (0, 20): the moving box's bottom-left corner slides
+    // along the line x + y = 10 and touches the target's (5, 5) corner at
+    // exactly t = 0.5 — separation reaches 0 for one instant, never negative.
+    const moving = colliderAt(world, new BoxShape(10, 10), { x: 0, y: 20 });
+
+    expect(sweepProxies(moving, -20, 20, target, hit)).toBe(false);
+  });
+
+  it('the same diagonal path shifted 1px into the corner is still a hit', () => {
+    const world = new PhysicsWorld();
+    const target = colliderAt(world, new BoxShape(10, 10), { x: 0, y: 0 });
+    const moving = colliderAt(world, new BoxShape(10, 10), { x: 0, y: 19 }); // corner path clips (5, 5)
+
+    expect(sweepProxies(moving, -20, 20, target, hit)).toBe(true);
+    expect(hit.t).toBeGreaterThan(0);
+    expect(hit.t).toBeLessThanOrEqual(1);
   });
 });
