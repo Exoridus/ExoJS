@@ -345,8 +345,10 @@ const sweptSatAxes = (
     }
 
     if (dn > -eps && dn < eps) {
-      // No relative motion along this axis: separated here means never touching.
-      if (maxA < minB || maxB < minA) {
+      // No relative motion along this axis: separated — or exactly touching,
+      // which the discrete narrow phase already treats as no contact — here
+      // means never in contact.
+      if (maxA <= minB || maxB <= minA) {
         return false;
       }
 
@@ -370,8 +372,11 @@ const sweptSatAxes = (
       state.tLeave = exit;
     }
 
-    if (state.tEnter > state.tLeave) {
-      return false; // Separated on one axis before overlapping on another.
+    if (state.tEnter >= state.tLeave) {
+      // Separated on one axis before overlapping on another. Equality is an
+      // exact graze (separation touches 0 but never goes negative), which the
+      // discrete narrow phase classifies as no contact.
+      return false;
     }
   }
 
