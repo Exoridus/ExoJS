@@ -26,12 +26,25 @@ class LeafDrawable extends Drawable {
 
 const fragmentOf = (group: RetainedContainer): RetainedGroupFragment => (group as unknown as { _fragment: RetainedGroupFragment })._fragment;
 
+// F4: the enqueue seam is gated on a live committed recording (only the
+// recorded-instruction tier ever consumes a queued row), so tests that
+// exercise the enqueue MECHANICS (routing, dedup, re-arm) must arm one first
+// — otherwise every move is correctly skipped and there is nothing to observe.
+const armRecording = (group: RetainedContainer, backend: RenderBackend): void => {
+  const set = fragmentOf(group).instructionsForRecording();
+
+  set.beginRecording(backend);
+  set.commitRecording();
+};
+
 describe('RetainedContainer: Slice 4b transform-row seam', () => {
   test('a direct child move enqueues that node on the group fragment', () => {
+    const backend = createTestBackend();
     const group = new RetainedContainer();
     const child = new LeafDrawable('a');
 
     group.addChild(child);
+    armRecording(group, backend);
     fragmentOf(group).clearDirtyTransformRows(); // drop the add-time churn
 
     child.setPosition(40, 40);
@@ -39,15 +52,18 @@ describe('RetainedContainer: Slice 4b transform-row seam', () => {
     expect([...fragmentOf(group).dirtyTransformRows]).toEqual([child]);
 
     group.destroy();
+    backend.destroy();
   });
 
   test('a move nested below a plain sub-container still enqueues on the enclosing group', () => {
+    const backend = createTestBackend();
     const group = new RetainedContainer();
     const inner = new Container();
     const child = new LeafDrawable('deep');
 
     inner.addChild(child);
     group.addChild(inner);
+    armRecording(group, backend);
     fragmentOf(group).clearDirtyTransformRows();
 
     child.setPosition(5, 5);
@@ -55,13 +71,16 @@ describe('RetainedContainer: Slice 4b transform-row seam', () => {
     expect(fragmentOf(group).dirtyTransformRows.includes(child)).toBe(true);
 
     group.destroy();
+    backend.destroy();
   });
 
   test("the group's OWN move does not enqueue a row (it is a one-matrix group move)", () => {
+    const backend = createTestBackend();
     const group = new RetainedContainer();
     const child = new LeafDrawable('a');
 
     group.addChild(child);
+    armRecording(group, backend);
     fragmentOf(group).clearDirtyTransformRows();
 
     group.setPosition(100, 100);
@@ -69,6 +88,7 @@ describe('RetainedContainer: Slice 4b transform-row seam', () => {
     expect(fragmentOf(group).hasDirtyTransformRows()).toBe(false);
 
     group.destroy();
+    backend.destroy();
   });
 
   test('moving a node outside any group is a no-op (no enclosing boundary)', () => {
@@ -82,6 +102,75 @@ describe('RetainedContainer: Slice 4b transform-row seam', () => {
     root.destroy();
   });
 
+  test('a descendant move IS enqueued while the fragment holds a committed recording (F4: the gate never drops a consumable row)', () => {
+    // The recorded-instruction tier bakes each direct child's transform into the
+    // replayed instance bytes, so a transform-only move MUST be queued for
+    // reconcile (patched in place, or the recording dropped to entry replay).
+    const backend = createTestBackend();
+    const group = new RetainedContainer();
+    const child = new LeafDrawable('a');
+
+    group.addChild(child);
+
+    const fragment = fragmentOf(group);
+    const set = fragment.instructionsForRecording();
+
+    set.beginRecording(backend);
+    set.commitRecording();
+    fragmentOf(group).clearDirtyTransformRows(); // drop the add-time churn
+
+    child.setPosition(40, 40);
+
+    expect([...fragment.dirtyTransformRows]).toEqual([child]);
+
+    group.destroy();
+    backend.destroy();
+  });
+
+  test('a descendant move is NOT enqueued when no recording exists (F4: entry replay re-reads transforms live, so the queue would only be cleared unused)', () => {
+    // On the entry-replay tier the splice re-reads each node's live transform, so
+    // a queued row would be discarded untouched at the next reconcile. Gating the
+    // enqueue on a live recording spares that per-move walk + push for nothing.
+    const group = new RetainedContainer();
+    const child = new LeafDrawable('a');
+
+    group.addChild(child);
+    fragmentOf(group).clearDirtyTransformRows();
+
+    child.setPosition(40, 40);
+
+    expect(fragmentOf(group).hasDirtyTransformRows()).toBe(false);
+
+    group.destroy();
+  });
+
+  test('a descendant move stops enqueuing again once the recording is dropped (F4: signal tracks the tier live)', () => {
+    const backend = createTestBackend();
+    const group = new RetainedContainer();
+    const child = new LeafDrawable('a');
+
+    group.addChild(child);
+
+    const fragment = fragmentOf(group);
+    const set = fragment.instructionsForRecording();
+
+    set.beginRecording(backend);
+    set.commitRecording();
+    fragment.clearDirtyTransformRows();
+
+    child.setPosition(10, 10);
+    expect(fragment.hasDirtyTransformRows()).toBe(true); // recorded tier: enqueued
+
+    fragment.clearDirtyTransformRows();
+    set.invalidate(); // e.g. recapture dropped the recording -> back to entry replay
+
+    child.setPosition(20, 20);
+    expect(fragment.hasDirtyTransformRows()).toBe(false); // entry-replay tier: skipped
+
+    group.destroy();
+    backend.destroy();
+  });
+
   test('the move seam re-arms across a group destroy (boundary-count balance)', () => {
     // With no live boundary the seam short-circuits; a child under a group must
     // still enqueue after another group elsewhere has been destroyed (the global
@@ -90,10 +179,12 @@ describe('RetainedContainer: Slice 4b transform-row seam', () => {
 
     throwaway.destroy();
 
+    const backend = createTestBackend();
     const group = new RetainedContainer();
     const child = new LeafDrawable('a');
 
     group.addChild(child);
+    armRecording(group, backend);
     fragmentOf(group).clearDirtyTransformRows();
 
     child.setPosition(7, 7);
@@ -101,6 +192,7 @@ describe('RetainedContainer: Slice 4b transform-row seam', () => {
     expect(fragmentOf(group).dirtyTransformRows.includes(child)).toBe(true);
 
     group.destroy();
+    backend.destroy();
   });
 });
 
@@ -1038,6 +1130,42 @@ describe('RetainedContainer: capture suppression under thrash (Slice 3, F11b)', 
     expect(captureSpy).toHaveBeenCalledTimes(2);
 
     captureSpy.mockRestore();
+    root.destroy();
+    backend.destroy();
+  });
+
+  test('a descendant move during an ACTIVE suppression window is never queued (nitpick 5: no stale node reference can accumulate un-drained)', () => {
+    // Before F4 gated the enqueue on a live recording, a move during a
+    // continuing (already-suppressed) frame was queued unconditionally and
+    // only drained on the transition-into-suppression frame — a later move
+    // could sit in the queue, holding a strong node reference, until
+    // suppression eventually lifted. `capture()` unconditionally invalidates
+    // any recording, and suppression can only be entered after at least one
+    // capture, so `hasRecording` is provably false for the whole suppressed
+    // window — the F4 gate now prevents the enqueue from ever happening here
+    // in the first place.
+    const backend = createTestBackend();
+    const root = new Container();
+    const group = new RetainedContainer();
+    const leaf = new LeafDrawable('a');
+
+    group.addChild(leaf);
+    root.addChild(group);
+
+    for (let frame = 0; frame < 5; frame++) {
+      leaf.setTint(new Color((frame % 200) + 1, 0, 0)); // content thrash: every frame dirty, never replayed
+      collectDraws(root, backend);
+    }
+
+    const fragment = fragmentOf(group);
+
+    expect(fragment.captureSuppressed).toBe(true); // confirms the suppressed regime was reached
+    expect(fragment.instructions?.hasRecording).not.toBe(true);
+
+    leaf.setPosition(9, 9); // a move while still inside the suppressed window
+
+    expect(fragment.hasDirtyTransformRows()).toBe(false);
+
     root.destroy();
     backend.destroy();
   });
