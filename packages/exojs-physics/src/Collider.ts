@@ -65,6 +65,9 @@ export class Collider {
 
   private _destroyed = false;
 
+  /** @internal — proxy id in the physics world's broad-phase spatial tree; `-1` when not inserted. */
+  public _treeProxy = -1;
+
   public constructor(options: ColliderOptions) {
     const density = options.density ?? 1;
 
