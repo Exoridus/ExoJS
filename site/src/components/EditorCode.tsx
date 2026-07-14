@@ -201,6 +201,12 @@ export const EditorCode = forwardRef<EditorCodeHandle, EditorCodeProps>(function
         onDirty(false);
     }, [language, onUpdateCode, onDirty, readOnly]);
 
+    // `onMount` runs once, so the addCommand closures below would otherwise
+    // capture the initial (never-read-only) triggerRefresh forever; read this
+    // ref instead so they always see the current readOnly-guarded version.
+    const triggerRefreshRef = useRef(triggerRefresh);
+    triggerRefreshRef.current = triggerRefresh;
+
     useImperativeHandle(
         ref,
         () => ({
@@ -251,9 +257,9 @@ export const EditorCode = forwardRef<EditorCodeHandle, EditorCodeProps>(function
             }),
         );
 
-        editor.addCommand(monacoApi.KeyMod.CtrlCmd | monacoApi.KeyCode.Enter, () => void triggerRefresh());
+        editor.addCommand(monacoApi.KeyMod.CtrlCmd | monacoApi.KeyCode.Enter, () => void triggerRefreshRef.current());
         if (typeof monacoApi.KeyCode.KeyS === 'number') {
-            editor.addCommand(monacoApi.KeyMod.CtrlCmd | monacoApi.KeyCode.KeyS, () => void triggerRefresh());
+            editor.addCommand(monacoApi.KeyMod.CtrlCmd | monacoApi.KeyCode.KeyS, () => void triggerRefreshRef.current());
         }
 
         onCursorChange({ lineNumber: 1, column: 1, selectionLength: 0 });
