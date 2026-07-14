@@ -120,6 +120,19 @@ describe('AabbTreeBroadPhase', () => {
     expect(out.length).toBe(0);
   });
 
+  it('resets _treeProxy to -1 on every tracked collider when destroyed, so a later broad phase over the same colliders starts clean', () => {
+    const colliders = grid(4, 4, 8);
+    const broadPhase = new AabbTreeBroadPhase();
+    const out: CandidatePair[] = [];
+
+    broadPhase.computePairs(colliders, out);
+    expect(colliders.every((c) => c._treeProxy !== -1)).toBe(true);
+
+    broadPhase.destroy();
+
+    expect(colliders.every((c) => c._treeProxy === -1)).toBe(true);
+  });
+
   it('matches the brute-force oracle across many randomized, evolving configurations', () => {
     const rng = new Random(20260714);
     const world = new PhysicsWorld();

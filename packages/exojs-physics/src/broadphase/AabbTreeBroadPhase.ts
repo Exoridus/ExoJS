@@ -88,6 +88,10 @@ export class AabbTreeBroadPhase implements BroadPhase {
     this._queryTarget.push(payload);
   };
 
+  private readonly _resetTreeProxy = (payload: Collider): void => {
+    payload._treeProxy = -1;
+  };
+
   public computePairs(colliders: readonly Collider[], out: CandidatePair[]): CandidatePair[] {
     for (const collider of colliders) {
       this._sync(collider);
@@ -131,11 +135,13 @@ export class AabbTreeBroadPhase implements BroadPhase {
   }
 
   public destroy(): void {
-    // No need to reset `_treeProxy` on live colliders: this broad phase is the
-    // sole owner of every collider's tree membership (see the class doc), and it
-    // is torn down as part of `PhysicsWorld.destroy()`, which simultaneously
-    // marks the bodies/colliders destroyed and drops them — so no surviving
-    // owner can ever read a stale proxy afterward. The tree frees its own nodes.
+    // Reset `_treeProxy` on every still-tracked collider before tearing down the
+    // tree: the single-owner contract only guarantees at most one owner AT A
+    // TIME, so a collider handed to a later `AabbTreeBroadPhase` (sequential
+    // reuse, not concurrent dual-ownership) must not carry a stale non-`-1`
+    // proxy from this instance forward. `query` with infinite bounds visits
+    // every leaf currently in the tree, allocation-free.
+    this._tree.query(Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY, Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY, this._resetTreeProxy);
     this._tree.destroy();
     this._pairs.clear();
   }
