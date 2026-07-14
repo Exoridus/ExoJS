@@ -103,6 +103,19 @@ export class InteractionManager implements InteractionHooks, System {
   // Items stored in the quadtree, keyed by node for fast removal.
   private _quadtreeItems = new Map<RenderNode, QuadtreeItem<IndexedNode>>();
 
+  // Quadtree-indexed (non-anchored) world-space interactive nodes grouped by the
+  // nearest transform-group boundary they live under. Their world bounds follow
+  // that group's own moves without any per-node bounds invalidation reaching
+  // them, so a group move must mark exactly this set stale (see
+  // `_notifyTransformGroupMoved`). Anchored descendants are hit-tested live and
+  // are deliberately absent. Kept O(1) on the common case: a group with no such
+  // descendants has no entry.
+  private readonly _groupWorldDescendants = new Map<RenderNode, Set<RenderNode>>();
+
+  // Reverse index: a world-space indexed node -> the boundary group it is filed
+  // under in `_groupWorldDescendants` (for O(1) removal on re-index/unregister).
+  private readonly _nodeBoundaryGroup = new Map<RenderNode, RenderNode>();
+
   // Running insertion-order counter used to break hit-test ties.
   private _quadtreeOrderCounter = 0;
 
@@ -122,6 +135,7 @@ export class InteractionManager implements InteractionHooks, System {
     _notifyNodeRemoved: () => {},
     _notifyInteractiveChanged: () => {},
     _notifyBoundsInvalidated: () => {},
+    _notifyTransformGroupMoved: () => {},
   };
 
   /** Service bundle installed on a scene's UI layer; shares focus with the world stage. */
@@ -253,6 +267,8 @@ export class InteractionManager implements InteractionHooks, System {
     this._staleNodes.clear();
     this._quadtreeItems.clear();
     this._anchoredNodes.clear();
+    this._groupWorldDescendants.clear();
+    this._nodeBoundaryGroup.clear();
     this._dirty = false;
 
     if (this._quadtree !== null) {
@@ -382,6 +398,28 @@ export class InteractionManager implements InteractionHooks, System {
    */
   public _notifyBoundsInvalidated(node: RenderNode): void {
     if (this._interactiveNodes.has(node)) {
+      this._staleNodes.add(node);
+    }
+  }
+
+  /**
+   * Called when a transform-group boundary moves as a whole. Its anchored
+   * descendants are hit-tested live and need nothing; its world-space (escaped,
+   * non-anchored) interactive descendants are indexed in the quadtree with
+   * bounds captured at insert time, so mark exactly those stale to force a
+   * re-insert at their new world position before the next hit-test. O(1) when
+   * the group has no such descendants (the common camera-pan case).
+   *
+   * @internal
+   */
+  public _notifyTransformGroupMoved(group: RenderNode): void {
+    const descendants = this._groupWorldDescendants.get(group);
+
+    if (descendants === undefined) {
+      return;
+    }
+
+    for (const node of descendants) {
       this._staleNodes.add(node);
     }
   }
@@ -766,6 +804,7 @@ export class InteractionManager implements InteractionHooks, System {
     this._interactiveNodes.delete(node);
     this._staleNodes.delete(node);
     this._anchoredNodes.delete(node);
+    this._clearGroupMembership(node);
 
     const item = this._quadtreeItems.get(node);
 
@@ -792,6 +831,10 @@ export class InteractionManager implements InteractionHooks, System {
       return;
     }
 
+    // Drop any prior group filing (a re-index may re-bucket this node between the
+    // quadtree and the anchored side list, or under a different boundary).
+    this._clearGroupMembership(node);
+
     if (node._resolveTransformGroupAnchor() !== null) {
       this._anchoredNodes.set(node, order);
 
@@ -810,6 +853,60 @@ export class InteractionManager implements InteractionHooks, System {
 
     this._quadtree.insert(item);
     this._quadtreeItems.set(node, item);
+
+    // A world-space node living under a transform-group boundary is indexed with
+    // world bounds that follow the group's own moves; file it so a group move
+    // can mark it stale (see `_notifyTransformGroupMoved`). A node with no
+    // boundary ancestor moves only on its own bounds invalidation — no filing.
+    const group = this._nearestBoundaryAncestor(node);
+
+    if (group !== null) {
+      let descendants = this._groupWorldDescendants.get(group);
+
+      if (descendants === undefined) {
+        descendants = new Set<RenderNode>();
+        this._groupWorldDescendants.set(group, descendants);
+      }
+
+      descendants.add(node);
+      this._nodeBoundaryGroup.set(node, group);
+    }
+  }
+
+  /** Remove `node` from its transform-group filing, dropping the group entry when it empties. */
+  private _clearGroupMembership(node: RenderNode): void {
+    const group = this._nodeBoundaryGroup.get(node);
+
+    if (group === undefined) {
+      return;
+    }
+
+    this._nodeBoundaryGroup.delete(node);
+
+    const descendants = this._groupWorldDescendants.get(group);
+
+    if (descendants !== undefined) {
+      descendants.delete(node);
+
+      if (descendants.size === 0) {
+        this._groupWorldDescendants.delete(group);
+      }
+    }
+  }
+
+  /** Nearest ancestor that is an engaged transform-group boundary, or null. */
+  private _nearestBoundaryAncestor(node: RenderNode): RenderNode | null {
+    let ancestor: RenderNode | null = node.parent;
+
+    while (ancestor !== null) {
+      if (ancestor._isTransformGroupBoundary) {
+        return ancestor;
+      }
+
+      ancestor = ancestor.parent;
+    }
+
+    return null;
   }
 
   /**

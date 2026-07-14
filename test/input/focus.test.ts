@@ -17,6 +17,7 @@ const noopInteraction: InteractionHooks = {
   _notifyNodeRemoved() {},
   _notifyInteractiveChanged() {},
   _notifyBoundsInvalidated() {},
+  _notifyTransformGroupMoved() {},
 };
 
 /** Build a minimal Application mock wired to a real Scene root + a FocusManager. */

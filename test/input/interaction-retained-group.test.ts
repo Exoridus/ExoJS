@@ -6,6 +6,7 @@ import type { InputManager } from '#input/InputManager';
 import { InteractionManager } from '#input/InteractionManager';
 import type { Pointer } from '#input/Pointer';
 import { Vector } from '#math/Vector';
+import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
 import { RetainedContainer } from '#rendering/RetainedContainer';
 
@@ -296,6 +297,93 @@ describe('InteractionManager: hit-testing children of a translated RetainedConta
 
     expect(groupHandler).toHaveBeenCalledTimes(1);
     expect(worldHandler).not.toHaveBeenCalled();
+
+    im.destroy();
+    scene.root.destroy();
+  });
+
+  test('moving the group re-indexes a non-anchored (barrier-effect) world-space child so hits track it', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+
+    im.attachRoot(scene.root);
+
+    const group = new RetainedContainer();
+    const child = makeSprite();
+
+    // A barrier effect (cacheAsBitmap) pushes the child OUT of the transform
+    // group: it resolves world-space transforms and is therefore indexed in the
+    // world quadtree (not the anchored side list). Its quadtree bucket is keyed
+    // on its bounds at insertion time.
+    child.cacheAsBitmap = true;
+    group.addChild(child);
+    scene.addChild(group);
+    child.interactive = true;
+
+    const handler = vi.fn();
+
+    child.onPointerDown.add(handler);
+
+    // Identity group: the child's world rect is 0..50 — a click there hits.
+    signals.onPointerDown.dispatch(makePointer({ x: 25, y: 25 }));
+    im.update();
+    expect(handler).toHaveBeenCalledTimes(1);
+
+    handler.mockClear();
+
+    // Move the group. The child follows in world space (200..250 x 100..150),
+    // but its quadtree entry still buckets it at 0..50 unless the group move
+    // re-indexes it. A click at its NEW rendered position must hit.
+    group.setPosition(200, 100);
+
+    signals.onPointerDown.dispatch(makePointer({ x: 225, y: 125 }));
+    im.update();
+    expect(handler).toHaveBeenCalledTimes(1);
+
+    handler.mockClear();
+
+    // ...and a click at the child's OLD position must now miss.
+    signals.onPointerDown.dispatch(makePointer({ x: 25, y: 25 }));
+    im.update();
+    expect(handler).not.toHaveBeenCalled();
+
+    im.destroy();
+    scene.root.destroy();
+  });
+
+  test('moving the group re-indexes a non-anchored world-space DESCENDANT (grandchild under a barrier child)', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+
+    im.attachRoot(scene.root);
+
+    const group = new RetainedContainer();
+    const barrierChild = new Container();
+    const grandChild = makeSprite();
+
+    // The barrier child escapes the group, taking its whole subtree to world
+    // space with it — so the interactive grandchild is world-quadtree-indexed.
+    barrierChild.cacheAsBitmap = true;
+    barrierChild.addChild(grandChild);
+    group.addChild(barrierChild);
+    scene.addChild(group);
+    grandChild.interactive = true;
+
+    const handler = vi.fn();
+
+    grandChild.onPointerDown.add(handler);
+
+    signals.onPointerDown.dispatch(makePointer({ x: 25, y: 25 }));
+    im.update();
+    expect(handler).toHaveBeenCalledTimes(1);
+
+    handler.mockClear();
+
+    group.setPosition(200, 100);
+
+    signals.onPointerDown.dispatch(makePointer({ x: 225, y: 125 }));
+    im.update();
+    expect(handler).toHaveBeenCalledTimes(1);
 
     im.destroy();
     scene.root.destroy();

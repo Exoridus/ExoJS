@@ -116,6 +116,12 @@ export class RetainedContainer extends Container {
   protected override _markOwnTransformDirty(): void {
     this._groupVersion = nextNodeRevision();
     this._invalidateBoundsFlags();
+
+    // The whole group moved: anchored interactive descendants are hit-tested
+    // live, but world-space (escaped) ones are indexed in the world quadtree
+    // with bounds captured at insert time and must be re-indexed. The manager
+    // resolves exactly that set in O(1) (no-op when the group has none).
+    this._getStage()?.interaction._notifyTransformGroupMoved(this);
   }
 
   /**
