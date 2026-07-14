@@ -12,6 +12,14 @@ export interface InteractionHooks {
   _notifyNodeRemoved(node: RenderNode): void;
   _notifyInteractiveChanged(node: RenderNode, becameInteractive: boolean): void;
   _notifyBoundsInvalidated(node: RenderNode): void;
+  /**
+   * Called when a transform-group boundary ({@link RetainedContainer}) moves as
+   * a whole. Nodes anchored to the group are hit-tested live and need no action;
+   * this exists for the group's world-space (escaped, non-anchored) interactive
+   * descendants, which are indexed in the world quadtree with bounds captured at
+   * insert time and would otherwise go stale after the group move.
+   */
+  _notifyTransformGroupMoved(group: RenderNode): void;
 }
 
 /**

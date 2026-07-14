@@ -34,6 +34,7 @@ const makeStage = (pointerPos: { x: number; y: number } | null | undefined = nul
     _notifyNodeRemoved: vi.fn(),
     _notifyInteractiveChanged: vi.fn(),
     _notifyBoundsInvalidated: vi.fn(),
+    _notifyTransformGroupMoved: vi.fn(),
   };
   const focus: Stage['focus'] = {
     focused: null,

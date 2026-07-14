@@ -1537,6 +1537,7 @@ describe('RetainedContainer: deep-barrier escape scoped to the offending sub-bra
         _notifyNodeRemoved: () => {},
         _notifyInteractiveChanged: () => {},
         _notifyBoundsInvalidated: (node: unknown) => invalidated.push(node),
+        _notifyTransformGroupMoved: () => {},
       },
       focus: { _notifyNodeRemoved: () => {} },
       app: {},
