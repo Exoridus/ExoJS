@@ -44,6 +44,7 @@ import {
   type WebGl2RecordedTextureState,
   type WebGl2RetainedBatchPayload,
   type WebGl2RetainedBatchReplayer,
+  type WebGl2RetainedGeometryRef,
   WebGl2RetainedGroupResources,
   type WebGl2RetainedNodeIndexRange,
 } from './WebGl2RetainedGroupResources';
@@ -1219,6 +1220,7 @@ export class WebGl2Backend implements RenderBackend {
     blendMode: BlendModes,
     textures: ReadonlyArray<Texture | RenderTexture | null>,
     textureCount: number,
+    geometry: WebGl2RetainedGeometryRef | null = null,
   ): void {
     const captures = this._retainedCaptures;
 
@@ -1251,6 +1253,7 @@ export class WebGl2Backend implements RenderBackend {
       recordedTextureState,
       instanceCount,
       byteOffset,
+      geometry,
       vao: null,
     };
 
