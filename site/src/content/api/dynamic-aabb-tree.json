@@ -6,10 +6,10 @@
   "subsystem": "math",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 13,
+  "memberCount": 14,
   "counts": {
     "constructors": 1,
-    "methods": 10,
+    "methods": 11,
     "properties": 2,
     "events": 0
   },
@@ -760,6 +760,194 @@
           ],
           "returnType": "void",
           "description": "Point query; thin wrapper over query with a zero-extent AABB. Shares query's non-reentrancy caveat: do not call query/queryPoint on the same tree instance from within a query/queryPoint callback."
+        },
+        {
+          "name": "rayCast",
+          "signature": "rayCast(originX: number, originY: number, dirX: number, dirY: number, maxDistance: number, callback: (payload: T, proxy: number) => void): void",
+          "signatureTokens": [
+            {
+              "text": "rayCast",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "originX",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "originY",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "dirX",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "dirY",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "maxDistance",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "callback",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "payload",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "proxy",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "originX",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "originY",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "dirX",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "dirY",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "maxDistance",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "callback",
+              "type": "(payload: T, proxy: number) => void",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Invoke callback for every leaf whose fat AABB the ray from originX, originY along dirX, dirY crosses within maxDistance (pass Infinity for an unbounded ray). A dumb AABB-pruning primitive mirroring query: it slab-tests each subtree's fat AABB against the ray segment and skips whole subtrees the segment misses, but performs no exact shape math and imposes no nearest-first order — the caller runs its own narrow phase and decides nearest-vs-all. Invocation ORDER is tree-shape-dependent. NOT re-entrant with itself: the traversal uses a single persistent stack field, so a callback must not call rayCast again on the SAME tree instance (the nested call resets the shared stack and silently truncates the outer traversal). The stack is separate from query/queryPoint's, so a rayCast from within a query callback (or the reverse) is safe."
         },
         {
           "name": "remove",
