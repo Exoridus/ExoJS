@@ -15,6 +15,13 @@ import { AbstractWebGpuRenderer } from './AbstractWebGpuRenderer';
 import type { WebGpuBackend } from './WebGpuBackend';
 import { getWebGpuBlendState } from './WebGpuBlendState';
 import { WebGpuInstanceArena } from './WebGpuInstanceArena';
+import type { WebGpuActiveRenderPass } from './WebGpuPassCoordinator';
+import {
+  retainedGroupUniformBytes,
+  type WebGpuRetainedBatchPayload,
+  type WebGpuRetainedBatchReplayer,
+  type WebGpuRetainedNodeIndexRange,
+} from './WebGpuRetainedGroupResources';
 import { stencilContentDepthStencilState } from './WebGpuStencilState';
 
 // ---------------------------------------------------------------------------
@@ -149,7 +156,23 @@ function repeatModeToAddressMode(mode: RepeatMode): GPUAddressMode {
 }
 
 /** Instanced renderer for {@link RepeatingSprite} using WebGPU. */
-export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<RepeatingSprite> {
+export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<RepeatingSprite> implements WebGpuRetainedBatchReplayer {
+  /**
+   * Retained-batch capability opt-in (Track B Slice 3, S3-D5.1). Only the
+   * GEOMETRY path (TextureRegion source) is recorded: its 32-byte instance
+   * layout (node index at word 7 of the 8-word instance) matches the sprite
+   * renderer's batch shape exactly, so it records and replays through the
+   * same generalized seam. The SHADER path (bare Texture source) uses a
+   * distinct 40-byte stride AND a per-batch wrap-mode sampler that the
+   * generalized instruction payload carries no metadata for — a shader-path
+   * draw inside a capture window POISONS it instead, degrading the group to
+   * the (correct) entry-replay tier rather than replaying with the wrong
+   * sampler. Pixel-snapped draws are excluded for the same reason the sprite
+   * renderer excludes them (view-dependent instance words).
+   * @internal
+   */
+  public readonly _supportsRetainedBatches = true;
+
   private readonly _projData = new Float32Array(projectionByteLength / Float32Array.BYTES_PER_ELEMENT);
   // Projection-uniform skip state: a matching (view identity, view.updateId,
   // group-transform id) triple means the shared UBO already holds this flush's
@@ -210,6 +233,15 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
   private _currentPath: 'shader' | 'geometry' | null = null;
   // Reusable scratch for device-snapped bounds ('geometry' mode).
   private readonly _snapBounds = new Rectangle();
+
+  // Retained-batch record/replay scratch (Track B Slice 3). One-texture list
+  // reused for every geometry-path record call; the group matrix scratch and
+  // the open pass a replay last drew into mirror WebGpuSpriteRenderer's own
+  // (separate from the live-flush projection tracking above, so a replay
+  // never marks the live projection "already staged").
+  private readonly _recordTextureScratch: Array<Texture | RenderTexture | null> = [null];
+  private readonly _stagedReplayGroupData = new Float32Array(16);
+  private _lastReplayPass: WebGpuActiveRenderPass | null = null;
 
   protected onConnect(backend: WebGpuBackend): void {
     if (this._device) return;
@@ -302,6 +334,8 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     this._currentModeX = null;
     this._currentModeY = null;
     this._currentPath = null;
+    this._recordTextureScratch[0] = null;
+    this._lastReplayPass = null;
   }
 
   public render(sprite: RepeatingSprite): void {
@@ -316,6 +350,16 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     const blendMode = sprite.blendMode;
     const modeX = sprite.modeX;
     const modeY = sprite.modeY;
+
+    // Retained recording (Track B Slice 3): only the geometry path is
+    // replayable (see _supportsRetainedBatches). A shader-path or
+    // pixel-snapped draw inside an active capture window cannot be replayed
+    // from group-owned resources, so poison the window — the group falls
+    // back to entry replay (correct, never stale) instead of a replay that is
+    // either missing the wrap-mode sampler or holding view-dependent bytes.
+    if ((strategy === 'shader' || sprite.pixelSnapMode !== 'none') && backend._retainedCaptureActive) {
+      backend._poisonActiveRetainedCaptures();
+    }
 
     const hasData = this._shaderQuadCount > 0 || this._geoQuadCount > 0;
 
@@ -635,6 +679,168 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     pass.setIndexBuffer(this._indexBuffer, 'uint16');
     pass.drawIndexed(indicesPerInstance, this._geoQuadCount, 0, 0, 0);
 
+    backend.stats.batches++;
+    backend.stats.drawCalls++;
+
+    // Retained recording (Track B Slice 3): while a capture window is open,
+    // hand the exact packed geometry-path bytes of this flush to the backend —
+    // byte-identical to what just drew. A single base texture binds to group(1),
+    // so the recorded slot list is one entry. Shader-path batches never reach
+    // here (render() poisoned the window if one appeared).
+    if (backend._retainedCaptureActive && this._currentTexture !== null && this._currentBlendMode !== null) {
+      this._recordTextureScratch[0] = this._currentTexture;
+      backend._recordRetainedBatch(
+        this,
+        this._geoInstData,
+        this._geoQuadCount * geoStrideBytes,
+        this._geoQuadCount,
+        this._currentBlendMode,
+        this._recordTextureScratch,
+        1,
+      );
+    }
+  }
+
+  // ── Retained-batch record/replay (Track B Slice 3) ───────────────────────
+  // Only geometry-path batches ever reach here (see _supportsRetainedBatches).
+  // Their 32-byte (8-word) layout puts the node index at word 7 — the same
+  // position WebGpuSpriteRenderer uses — so scan/rebase mirror it exactly.
+
+  /** @internal See {@link WebGpuRetainedBatchReplayer._scanRetainedNodeIndexRange}. */
+  public _scanRetainedNodeIndexRange(bytes: Uint8Array, range: WebGpuRetainedNodeIndexRange): void {
+    const words = new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / Uint32Array.BYTES_PER_ELEMENT);
+
+    for (let i = 7; i < words.length; i += 8) {
+      // In-bounds: i < words.length via the loop guard.
+      const nodeIndex = words[i]!;
+
+      if (nodeIndex < range.min) {
+        range.min = nodeIndex;
+      }
+
+      if (nodeIndex > range.max) {
+        range.max = nodeIndex;
+      }
+    }
+  }
+
+  /** @internal See {@link WebGpuRetainedBatchReplayer._rebaseRetainedNodeIndices} (S3-D4: group-local indices). */
+  public _rebaseRetainedNodeIndices(bytes: Uint8Array, base: number): void {
+    const words = new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / Uint32Array.BYTES_PER_ELEMENT);
+
+    for (let i = 7; i < words.length; i += 8) {
+      // In-bounds: i < words.length via the loop guard.
+      words[i] = words[i]! - base;
+    }
+  }
+
+  /**
+   * Replay one recorded geometry-path batch from its group-owned bundle into
+   * the OPEN pass. All STATE is resolved live (pipeline via the existing
+   * `_getPipeline('geo', ...)` cache, texture bind group(1) via the existing
+   * texture-bind-group cache — resolving re-syncs dirty texture content, the
+   * group's 128-byte UBO written only when its content changed) and only DATA
+   * is cached (instance bytes, group transform storage). Mirrors
+   * {@link WebGpuSpriteRenderer._replayRecordedSpriteBatch}.
+   * @internal
+   */
+  public _replayRetainedBatch(payload: WebGpuRetainedBatchPayload): void {
+    const backend = this._backend;
+    const device = this._device;
+    const bundle = payload.bundle;
+
+    if (!backend || !device || this._indexBuffer === null || !bundle.isReady) {
+      return;
+    }
+
+    // Drain any pending live batch into the open pass first (defensive — the
+    // group boundary already flushed; flush() never ends the pass on the geo
+    // default path and guards its own shared-UBO hazards).
+    this.flush();
+
+    // Match the live path's visibility handling: a fully-clipped scissor
+    // draws nothing (the batch stays recorded; visibility is live per frame).
+    const scissor = backend.getScissorRect();
+
+    if (scissor !== null && (scissor.width <= 0 || scissor.height <= 0)) {
+      return;
+    }
+
+    const coordinator = backend._passCoordinator;
+    let activePass = coordinator.activePass;
+    const passHasDraws =
+      activePass !== null && ((this._instanceArena.cursor > 0 && this._instanceArena.tracksPass(activePass)) || this._lastReplayPass === activePass);
+
+    // Same-frame texture mutation guard: resolving the bindings below re-
+    // uploads mutated content on the queue timeline BEFORE the deferred
+    // submit, which would retroactively change draws already recorded into
+    // the open pass. End (submit) the pass first so they keep the
+    // pre-mutation content.
+    if (passHasDraws) {
+      for (const texture of payload.textures) {
+        if (backend._textureUploadWouldMutate(texture)) {
+          coordinator.endPass();
+          this._instanceArena.resetPass();
+          break;
+        }
+      }
+    }
+
+    // In-bounds: the geometry path records exactly one base texture (slot 0).
+    // Geometry path uses the backend's default (clamp) sampler — same as the
+    // live flush — so resolving through getTextureBinding reuses the live cache.
+    const texture = payload.textures[0]!;
+    const binding = backend.getTextureBinding(texture);
+    const textureBindGroup = this._getOrCreateTextureBindGroup(device, texture, binding.view, binding.sampler, 'repeating-sprite:texture-bind-group:geo');
+
+    // Group UBO: skip the write while (view, updateId, group bytes) match what
+    // the buffer holds; guard the double-replay aliasing case first.
+    const view = backend.view;
+    const scratch = this._stagedReplayGroupData;
+
+    packAffineMat4(backend.renderGroupTransform ?? Matrix.identity, scratch, 0);
+
+    let uboDirty = !bundle.uboWritten || bundle.uboView !== view || bundle.uboViewUpdateId !== view.updateId;
+
+    if (!uboDirty) {
+      for (let i = 0; i < 16; i++) {
+        if (scratch[i] !== bundle.uboData[16 + i]) {
+          uboDirty = true;
+          break;
+        }
+      }
+    }
+
+    if (uboDirty) {
+      activePass = coordinator.activePass;
+
+      if (activePass !== null && bundle.drawsInPass === activePass) {
+        // Rewriting the UBO would retroactively re-project this bundle's
+        // draws already recorded into the open pass: end it first.
+        coordinator.endPass();
+        this._instanceArena.resetPass();
+      }
+
+      packAffineMat4(view.getTransform(), bundle.uboData, 0);
+      bundle.uboData.set(scratch, 16);
+      bundle.uboView = view;
+      bundle.uboViewUpdateId = view.updateId;
+      bundle.uboWritten = true;
+      device.queue.writeBuffer(bundle.uniformBuffer!, 0, bundle.uboData.buffer, bundle.uboData.byteOffset, retainedGroupUniformBytes);
+    }
+
+    const active = coordinator.acquirePass();
+    const pass = active.pass;
+
+    pass.setPipeline(this._getPipeline('geo', payload.blendMode, backend.renderTargetFormat, coordinator.stencilActive));
+    pass.setBindGroup(0, bundle.getBindGroup(device, this._uniformBindGroupLayout!));
+    pass.setBindGroup(1, textureBindGroup);
+    pass.setVertexBuffer(0, bundle.instanceBuffer, payload.byteOffset);
+    pass.setIndexBuffer(this._indexBuffer, 'uint16');
+    pass.drawIndexed(indicesPerInstance, payload.instanceCount, 0, 0, 0);
+
+    bundle.drawsInPass = active;
+    this._lastReplayPass = active;
     backend.stats.batches++;
     backend.stats.drawCalls++;
   }
