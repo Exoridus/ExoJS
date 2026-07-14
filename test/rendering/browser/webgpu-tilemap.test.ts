@@ -39,8 +39,8 @@ const setupBackend = async (wire: (backend: WebGpuBackend) => void = wireTilemap
 
   const backend = new WebGpuBackend(makeApp(canvas));
 
-  await backend.initialize();
   wire(backend);
+  await backend.initialize();
 
   return backend;
 };

@@ -42,8 +42,8 @@ const setupBackend = async (): Promise<WebGpuBackend> => {
   canvas.height = 64;
 
   const backend = new WebGpuBackend(makeApp(canvas));
-  await backend.initialize();
   wireCoreRenderers(backend);
+  await backend.initialize();
 
   return backend;
 };
