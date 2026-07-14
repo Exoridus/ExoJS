@@ -60,6 +60,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     const [selectionLength, setSelectionLength] = useState(0);
     const [dirty, setDirty] = useState(false);
     const [diagnostics, setDiagnostics] = useState<ReadonlyArray<EditorDiagnostic>>([]);
+    const [viewMode, setViewMode] = useState<'source' | 'compiled'>('source');
     // Split (editor left, preview right) is the desktop default; the stored
     // preference is applied after mount so SSR and first client render match.
     // Below 1120px the CSS ignores the mode and always stacks.
@@ -100,6 +101,7 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
         setSourceLoadError(null);
         setPreviewErrors([]);
         setDiagnostics([]);
+        setViewMode('source');
         /* eslint-enable @eslint-react/set-state-in-effect */
 
         if (!activeExample || !selectedVersionId) return;
@@ -225,6 +227,21 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
     const languageLabel = activeExample?.language === 'typescript' ? 'TypeScript' : 'JavaScript';
     const editorLanguage = activeExample?.language === 'typescript' ? 'typescript' : 'javascript';
     const displayPath = getDisplayPath(activeExample);
+    // The toggle only makes sense for a TS example — a "compiled" view of
+    // freeform JS scratch code would just be the same text back.
+    const canToggleView = editorLanguage === 'typescript';
+    const isCompiledView = canToggleView && viewMode === 'compiled';
+    const displayedLanguage = isCompiledView ? 'javascript' : editorLanguage;
+    // executionCode only reads null before the very first successful compile —
+    // once set, it holds the last successful compile even while a newer edit is
+    // still emitting (see getExecutionCode's contract in EditorCode.tsx), so this
+    // placeholder is a first-paint-only case.
+    const displayedSourceCode = isCompiledView ? (executionCode ?? '// Compiling…') : sourceCode;
+    const displayedSourcePath = isCompiledView ? (activeExample?.path ?? null) : displayPath;
+
+    const toggleViewMode = (): void => {
+        setViewMode(mode => (mode === 'source' ? 'compiled' : 'source'));
+    };
 
     return (
         <section className={css(styles, 'root')} data-layout={layout}>
@@ -283,9 +300,10 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
                 <Suspense fallback={<LoadingSpinner centered />}>
                     <EditorCode
                         ref={codeEditorRef}
-                        sourceCode={sourceCode}
-                        sourcePath={displayPath}
-                        language={editorLanguage}
+                        sourceCode={displayedSourceCode}
+                        sourcePath={displayedSourcePath}
+                        language={displayedLanguage}
+                        readOnly={isCompiledView}
                         canReset={Boolean(originalSourceCode && sourceCode !== originalSourceCode)}
                         exampleTitle={activeExample?.title ?? 'Loading...'}
                         selectedVersionId={selectedVersionId}
@@ -296,7 +314,15 @@ export const Editor = forwardRef<EditorHandle, EditorProps>(function Editor(
                         onDirty={setDirty}
                     />
                 </Suspense>
-                <EditorStatusBar line={cursorLine} column={cursorColumn} selectionLength={selectionLength} dirty={dirty} language={languageLabel} />
+                <EditorStatusBar
+                    line={cursorLine}
+                    column={cursorColumn}
+                    selectionLength={selectionLength}
+                    dirty={dirty}
+                    language={languageLabel}
+                    viewMode={canToggleView ? viewMode : undefined}
+                    onToggleViewMode={canToggleView ? toggleViewMode : undefined}
+                />
             </section>
         </section>
     );

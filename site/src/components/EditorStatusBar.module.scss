@@ -61,3 +61,25 @@
         display: none;
     }
 }
+
+.chip--view-toggle {
+    appearance: none;
+    background: transparent;
+    border: 1px solid var(--line-soft);
+    border-radius: 999px;
+    padding: 0.05rem 0.5rem;
+    color: inherit;
+    font: inherit;
+    letter-spacing: inherit;
+    cursor: pointer;
+}
+
+.chip--view-toggle:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.chip--view-toggle:focus-visible {
+    outline: 2px solid var(--accent-line);
+    outline-offset: 2px;
+}
