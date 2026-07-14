@@ -48,6 +48,7 @@ export interface EditorCodeProps {
     canReset: boolean;
     exampleTitle: string;
     language: 'javascript' | 'typescript';
+    readOnly?: boolean;
     selectedVersionId: string;
     sourceCode: string | null;
     sourcePath: string | null;
@@ -111,6 +112,7 @@ export const EditorCode = forwardRef<EditorCodeHandle, EditorCodeProps>(function
         onDirty,
         onResetCode,
         onUpdateCode,
+        readOnly = false,
         selectedVersionId,
         sourceCode,
         sourcePath,
@@ -176,6 +178,9 @@ export const EditorCode = forwardRef<EditorCodeHandle, EditorCodeProps>(function
     );
 
     const triggerRefresh = useCallback(async (): Promise<void> => {
+        // A read-only buffer shows already-compiled JS, not new source — refreshing
+        // from it would feed that compiled text back into `sourceCode` upstream.
+        if (readOnly) return;
         const editor = editorRef.current;
         if (!editor) return;
         const code = editor.getValue();
@@ -194,7 +199,7 @@ export const EditorCode = forwardRef<EditorCodeHandle, EditorCodeProps>(function
         }
         onUpdateCode({ code, executionCode });
         onDirty(false);
-    }, [language, onUpdateCode, onDirty]);
+    }, [language, onUpdateCode, onDirty, readOnly]);
 
     useImperativeHandle(
         ref,
@@ -372,6 +377,7 @@ export const EditorCode = forwardRef<EditorCodeHandle, EditorCodeProps>(function
                             lineNumbersMinChars: 4,
                             minimap: { enabled: false },
                             overviewRulerLanes: 0,
+                            readOnly,
                             renderValidationDecorations: 'on',
                             scrollBeyondLastLine: false,
                             tabSize: 4,
