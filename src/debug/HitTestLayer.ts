@@ -12,14 +12,14 @@ import { DebugLayer } from './DebugLayer';
 const colorIdle = new Color(255, 0, 255, 0.6); // magenta
 const colorHovered = new Color(255, 255, 0, 0.9); // yellow
 const colorCaptured = new Color(0, 255, 255, 0.9); // cyan
-const colorQuadrant = new Color(128, 128, 128, 0.3); // faint gray
+const colorTreeBounds = new Color(128, 128, 128, 0.3); // faint gray
 
 /**
  * Debug layer that draws outlines around interactive scene nodes.
  * - Magenta: interactive but idle.
  * - Yellow: currently hovered.
  * - Cyan: pointer-captured (drag in progress).
- * - Faint gray quadrant outlines when the spatial index is active (i.e.
+ * - Faint gray spatial-index bounding volumes when the index is active (i.e.
  *   at least one interactive node is present in the scene).
  * World-space.
  */
@@ -43,8 +43,8 @@ export class HitTestLayer extends DebugLayer {
   /**
    * Walk the scene tree and draw color-coded outlines around interactive
    * nodes (magenta = idle, yellow = hovered, cyan = pointer-captured).
-   * Also draws faint gray quadrant boundaries when the spatial index is
-   * active, helping diagnose partitioning behavior.
+   * Also draws faint gray spatial-index bounding volumes when the index is
+   * active, helping diagnose the tree's grouping behavior.
    */
   public override render(backend: RenderBackend): void {
     const root = this._app.scene.currentScene?.root;
@@ -70,18 +70,20 @@ export class HitTestLayer extends DebugLayer {
     // Walk scene and draw outlines for interactive nodes.
     this._walkNode(root, gfx, hoveredNode, capturedNodes);
 
-    // Draw quadtree regions when the spatial index is active.
-    const quadtree = interaction._getDebugQuadtree();
+    // Draw the spatial index's bounding volumes when it is active. Every tree
+    // node (leaf + internal) is drawn, mirroring the old quadtree's per-node
+    // walk, so the BVH grouping is visible alongside the per-node outlines.
+    const tree = interaction._getDebugQuadtree();
 
-    if (quadtree !== null) {
-      gfx.lineColor = colorQuadrant;
+    if (tree !== null) {
+      gfx.lineColor = colorTreeBounds;
 
-      quadtree._walkBounds(rect => {
-        gfx.moveTo(rect.left, rect.top);
-        gfx.lineTo(rect.right, rect.top);
-        gfx.lineTo(rect.right, rect.bottom);
-        gfx.lineTo(rect.left, rect.bottom);
-        gfx.lineTo(rect.left, rect.top);
+      tree._walkBounds((minX, minY, maxX, maxY) => {
+        gfx.moveTo(minX, minY);
+        gfx.lineTo(maxX, minY);
+        gfx.lineTo(maxX, maxY);
+        gfx.lineTo(minX, maxY);
+        gfx.lineTo(minX, minY);
       });
     }
 

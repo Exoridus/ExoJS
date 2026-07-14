@@ -259,9 +259,9 @@ describe('HitTestLayer', () => {
   test('quadtree regions rendered when spatial index is active (quadtree non-null)', () => {
     const node = makeNode({ interactive: false, boundsW: 10, boundsH: 10 });
 
-    // Minimal quadtree stub with _walkBounds.
-    const walkBoundsSpy = vi.fn((_cb: (rect: unknown) => void) => {
-      _cb({ left: 0, top: 0, right: 100, bottom: 100 });
+    // Minimal spatial-index stub with the tree's 5-arg _walkBounds callback.
+    const walkBoundsSpy = vi.fn((_cb: (minX: number, minY: number, maxX: number, maxY: number, isLeaf: boolean) => void) => {
+      _cb(0, 0, 100, 100, true);
     });
     const interaction = makeInteraction({
       quadtree: { _walkBounds: walkBoundsSpy },
