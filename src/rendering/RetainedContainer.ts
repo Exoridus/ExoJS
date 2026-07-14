@@ -141,11 +141,15 @@ export class RetainedContainer extends Container {
    * as a one-matrix group move.
    *
    * Gated on a live committed recording (F4): only the recorded-instruction
-   * tier ever consumes a queued row — entry replay and the recording-less
-   * tiers (pre-4c WebGPU, an escaped-branch group) re-read every transform
-   * live and {@link _reconcileTransformRows} would just drain the queue
-   * unread on the next collect. Skipping the enqueue there is free: nothing
-   * else observes the queue between now and that drain.
+   * tier ever consumes a queued row. On every tier without one — entry
+   * replay, and a recording-less group (e.g. an escaped-branch group, whose
+   * `_fragment.dispose()` drops any recording) — transforms are re-read live
+   * and {@link _reconcileTransformRows} would just drain the queue unread on
+   * the next collect. Skipping the enqueue there is free: nothing else
+   * observes the queue between now and that drain. (A recording backend
+   * lacking patch support, e.g. pre-4c WebGPU, DOES still enqueue here —
+   * `hasRecording` is true — and {@link _reconcileTransformRows} is the one
+   * that drops the recording and falls back to entry replay.)
    */
   public override _enqueueDirtyTransformRow(node: RenderNode): void {
     if (this._fragment.instructions?.hasRecording !== true) {
