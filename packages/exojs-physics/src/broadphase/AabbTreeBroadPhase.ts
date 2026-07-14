@@ -128,6 +128,11 @@ export class AabbTreeBroadPhase implements BroadPhase, SpatialIndex {
     return out;
   }
 
+  /** Colliders whose AABB the ray could cross within `maxDistance`, via the tree's own ray-cast prune. */
+  public rayCast(originX: number, originY: number, dirX: number, dirY: number, maxDistance: number, callback: (collider: Collider) => void): void {
+    this._tree.rayCast(originX, originY, dirX, dirY, maxDistance, callback);
+  }
+
   /** Drop `collider`'s leaf and every pair referencing it. Called when a collider is destroyed. */
   public removeCollider(collider: Collider): void {
     if (collider._treeProxy === -1) {

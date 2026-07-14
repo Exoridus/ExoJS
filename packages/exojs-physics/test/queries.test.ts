@@ -1,3 +1,4 @@
+import { Random } from '@codexo/exojs';
 import { describe, expect, it } from 'vitest';
 
 import type { Collider } from '../src/Collider';
@@ -267,6 +268,69 @@ describe('QueryEngine spatial-index narrowing parity', () => {
     expect(indexedPoint.length).toBeGreaterThan(0);
     expect(indexedAabb.length).toBeGreaterThan(0);
     expect(indexedShape.length).toBeGreaterThan(0); // sanity: the assertions above aren't vacuously true on empty results
+  });
+
+  it('rayCast/rayCastAll return identical results whether or not the backend provides a SpatialIndex', () => {
+    const world = new PhysicsWorld();
+    const unindexed = new QueryEngine(world.colliders); // no spatialIndex — forces the fallback linear scan
+
+    for (let i = 0; i < 30; i++) {
+      colliderAt(world, new BoxShape(10, 10), { x: (i % 6) * 12, y: Math.floor(i / 6) * 12 }, 0, 'dynamic');
+    }
+
+    const origin = { x: -20, y: 15 };
+    const direction = { x: 1, y: 0 };
+
+    const indexedNearest = world.rayCast(origin, direction);
+    const linearNearest = unindexed.rayCast(origin, direction);
+    expect(indexedNearest).not.toBeNull();
+    expect((indexedNearest as RayHit).collider).toBe((linearNearest as RayHit).collider);
+    expect((indexedNearest as RayHit).distance).toBeCloseTo((linearNearest as RayHit).distance, 6);
+
+    const indexedAll = world.rayCastAll(origin, direction).map(h => h.collider.id).sort((a, b) => a - b);
+    const linearAll = unindexed.rayCastAll(origin, direction).map(h => h.collider.id).sort((a, b) => a - b);
+    expect(indexedAll).toEqual(linearAll);
+    expect(indexedAll.length).toBeGreaterThan(0); // sanity: not vacuously equal on empty results
+  });
+
+  it('matches the linear-scan oracle across many randomized rays and mixed-shape scenes', () => {
+    const rng = new Random(20260714);
+    const world = new PhysicsWorld();
+    const unindexed = new QueryEngine(world.colliders);
+
+    for (let i = 0; i < 80; i++) {
+      const size = [4, 8, 16, 30][Math.floor(rng.next(0, 4))]!;
+      const shape = rng.next() < 0.35 ? new CircleShape(size / 2) : new BoxShape(size, size);
+      colliderAt(world, shape, { x: rng.next(0, 300), y: rng.next(0, 300) }, 0, 'dynamic');
+    }
+
+    for (let trial = 0; trial < 150; trial++) {
+      const origin = { x: rng.next(-50, 350), y: rng.next(-50, 350) };
+      const direction = { x: rng.next(-1, 1), y: rng.next(-1, 1) };
+
+      if (Math.hypot(direction.x, direction.y) < 1e-6) {
+        continue; // skip a degenerate direction the API rejects
+      }
+
+      const maxDistance = rng.next() < 0.5 ? Infinity : rng.next(20, 500);
+
+      const indexedNearest = world.rayCast(origin, direction, undefined, maxDistance);
+      const linearNearest = unindexed.rayCast(origin, direction, undefined, maxDistance);
+
+      expect(indexedNearest === null).toBe(linearNearest === null);
+
+      if (indexedNearest && linearNearest) {
+        // Tree and linear visit candidates in different orders; a distance tie
+        // could pick a different collider, so compare the (equal) hit distance.
+        expect(indexedNearest.distance).toBeCloseTo(linearNearest.distance, 6);
+      }
+
+      const indexedAll = world.rayCastAll(origin, direction, undefined, undefined, maxDistance);
+      const linearAll = unindexed.rayCastAll(origin, direction, undefined, undefined, maxDistance);
+
+      expect(indexedAll.map(h => h.collider.id).sort((a, b) => a - b)).toEqual(linearAll.map(h => h.collider.id).sort((a, b) => a - b));
+      expect(indexedAll.map(h => Math.round(h.distance * 1e6)).sort((a, b) => a - b)).toEqual(linearAll.map(h => Math.round(h.distance * 1e6)).sort((a, b) => a - b));
+    }
   });
 });
 

@@ -21,4 +21,14 @@ export interface SpatialIndex {
   sync(colliders: readonly Collider[]): void;
   /** Colliders whose AABB overlaps `aabb`. Writes into `out` (cleared first) and returns it. */
   queryAabb(aabb: Readonly<Aabb>, out: Collider[]): Collider[];
+  /**
+   * Invoke `callback` for each collider whose AABB the ray from `originX,
+   * originY` along `dirX, dirY` could cross within `maxDistance` (`Infinity`
+   * for an unbounded ray). Narrows the candidate set for {@link QueryEngine}'s
+   * ray-cast the way {@link queryAabb} does for its overlap queries: the hit
+   * set is conservative (never misses a true intersection, may include AABB
+   * false positives), and {@link QueryEngine} applies the exact per-shape ray
+   * math to each candidate. Order is unspecified.
+   */
+  rayCast(originX: number, originY: number, dirX: number, dirY: number, maxDistance: number, callback: (collider: Collider) => void): void;
 }

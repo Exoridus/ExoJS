@@ -311,4 +311,216 @@ describe('DynamicAabbTree', () => {
       tree._validate();
     });
   });
+
+  describe('rayCast()', () => {
+    test('an empty tree yields no ray-cast hits', () => {
+      const tree = new DynamicAabbTree<string>();
+      const hits: string[] = [];
+
+      tree.rayCast(0, 0, 1, 0, Infinity, payload => hits.push(payload));
+
+      expect(hits).toEqual([]);
+    });
+
+    test('a ray crossing a leaf reports it; a ray missing it does not', () => {
+      const tree = new DynamicAabbTree<string>();
+      tree.insert(10, -5, 20, 5, 'a');
+
+      const hit: string[] = [];
+      tree.rayCast(0, 0, 1, 0, Infinity, payload => hit.push(payload));
+      expect(hit).toEqual(['a']);
+
+      const miss: string[] = [];
+      tree.rayCast(0, 100, 1, 0, Infinity, payload => miss.push(payload));
+      expect(miss).toEqual([]);
+    });
+
+    test('a ray grazing a leaf edge (tangent) still counts as a candidate', () => {
+      const tree = new DynamicAabbTree<string>();
+      tree.insert(10, 0, 20, 10, 'a'); // ray along y=0 grazes the box's bottom edge
+
+      const hits: string[] = [];
+      tree.rayCast(0, 0, 1, 0, Infinity, payload => hits.push(payload));
+
+      expect(hits).toEqual(['a']);
+    });
+
+    test('maxDistance clamps the segment: a leaf past the end is not visited', () => {
+      const tree = new DynamicAabbTree<string>();
+      tree.insert(100, -5, 110, 5, 'far');
+
+      const near: string[] = [];
+      tree.rayCast(0, 0, 1, 0, 50, payload => near.push(payload));
+      expect(near).toEqual([]);
+
+      const reached: string[] = [];
+      tree.rayCast(0, 0, 1, 0, 200, payload => reached.push(payload));
+      expect(reached).toEqual(['far']);
+    });
+
+    test('an axis-aligned ray with a zero direction component is handled by the slab test', () => {
+      const tree = new DynamicAabbTree<string>();
+      tree.insert(-5, 40, 5, 50, 'up'); // straight up along +y from the origin
+      tree.insert(40, -5, 50, 5, 'right'); // off the vertical ray
+
+      const hits: string[] = [];
+      tree.rayCast(0, 0, 0, 1, Infinity, payload => hits.push(payload));
+
+      expect(hits).toEqual(['up']);
+    });
+
+    test('a ray behind the origin (leaf entirely at negative t) is not visited', () => {
+      const tree = new DynamicAabbTree<string>();
+      tree.insert(-30, -5, -20, 5, 'behind');
+
+      const hits: string[] = [];
+      tree.rayCast(0, 0, 1, 0, Infinity, payload => hits.push(payload));
+
+      expect(hits).toEqual([]);
+    });
+
+    test('a ray reports only the leaves it crosses, not the 40 in a distant off-ray cluster', () => {
+      const tree = new DynamicAabbTree<number>(1);
+
+      // Three leaves strung along the +x ray at y=0.
+      tree.insert(10, -2, 12, 2, 0);
+      tree.insert(30, -2, 32, 2, 1);
+      tree.insert(50, -2, 52, 2, 2);
+
+      // A dense cluster far off the ray line — the ray must reach none of them.
+      for (let i = 0; i < 40; i++) {
+        tree.insert(1000 + i, 1000, 1002 + i, 1002, 100 + i);
+      }
+
+      const visited: number[] = [];
+      tree.rayCast(0, 0, 1, 0, Infinity, payload => visited.push(payload));
+
+      // Exactly the three on-ray leaves; the callback fires far fewer than
+      // leafCount times, so distant leaves are correctly excluded.
+      expect(visited.sort((a, b) => a - b)).toEqual([0, 1, 2]);
+      expect(tree.leafCount).toBe(43);
+    });
+
+    test('is decoupled from query(): a rayCast issued inside a query() callback does not truncate the outer traversal', () => {
+      const tree = new DynamicAabbTree<string>();
+      tree.insert(0, 0, 10, 10, 'a');
+      tree.insert(2, 2, 12, 12, 'b');
+      tree.insert(4, 4, 14, 14, 'c');
+
+      const outer: string[] = [];
+      const nested: string[] = [];
+
+      tree.query(-100, -100, 100, 100, payload => {
+        outer.push(payload);
+        // Nested rayCast on the SAME instance — uses a separate stack, so it must
+        // not corrupt the outer query's still-live traversal.
+        tree.rayCast(-100, 5, 1, 0, Infinity, p => nested.push(p));
+      });
+
+      expect(outer.sort()).toEqual(['a', 'b', 'c']);
+      expect(nested.length).toBeGreaterThan(0);
+    });
+
+    test('randomized: every leaf whose tight AABB the ray crosses is reported (zero false negatives)', () => {
+      const rng = new Random(20260714);
+      const tree = new DynamicAabbTree<number>(2);
+      const live = new Map<number, { minX: number; minY: number; maxX: number; maxY: number }>();
+
+      for (let id = 0; id < 200; id++) {
+        const x = rng.next(0, 300);
+        const y = rng.next(0, 300);
+        const w = rng.next(1, 25);
+        const h = rng.next(1, 25);
+        const box = { minX: x, minY: y, maxX: x + w, maxY: y + h };
+        tree.insert(box.minX, box.minY, box.maxX, box.maxY, id);
+        live.set(id, box);
+      }
+
+      for (let trial = 0; trial < 200; trial++) {
+        const ox = rng.next(-50, 350);
+        const oy = rng.next(-50, 350);
+        const dirX = rng.next(-1, 1);
+        const dirY = rng.next(-1, 1);
+        const len = Math.hypot(dirX, dirY) || 1;
+        const dx = dirX / len;
+        const dy = dirY / len;
+        const maxDistance = rng.next() < 0.5 ? Infinity : rng.next(10, 400);
+
+        const expected = new Set<number>();
+
+        for (const [id, box] of live) {
+          if (raySegmentHitsBox(ox, oy, dx, dy, maxDistance, box.minX, box.minY, box.maxX, box.maxY)) {
+            expected.add(id);
+          }
+        }
+
+        const actual = new Set<number>();
+        tree.rayCast(ox, oy, dx, dy, maxDistance, payload => actual.add(payload));
+
+        // Hits are over FAT AABBs (a superset of the tight boxes tracked here) —
+        // assert zero false negatives, not exact equality.
+        for (const id of expected) {
+          expect(actual.has(id)).toBe(true);
+        }
+      }
+    });
+  });
 });
+
+// Oracle for the tree's ray prune, deliberately using a DIFFERENT technique
+// (orientation-based segment/edge crossing) than the tree's own slab test, so a
+// shared conceptual flaw can't hide in both. Exact for a finite `maxDistance`;
+// for `Infinity` the ray is clamped to a segment long enough to reach the whole
+// test region — a farther box it would nonetheless cross is simply under-reported
+// (weakening the check, never over-reporting), which keeps `expected ⊆ actual`
+// sound: every box the oracle claims is one the ray truly enters.
+const orient = (ax: number, ay: number, bx: number, by: number, cx: number, cy: number): number => Math.sign((bx - ax) * (cy - ay) - (by - ay) * (cx - ax));
+
+const onSegment = (ax: number, ay: number, bx: number, by: number, px: number, py: number): boolean =>
+  Math.min(ax, bx) <= px && px <= Math.max(ax, bx) && Math.min(ay, by) <= py && py <= Math.max(ay, by);
+
+const segmentsIntersect = (p1x: number, p1y: number, p2x: number, p2y: number, p3x: number, p3y: number, p4x: number, p4y: number): boolean => {
+  const o1 = orient(p1x, p1y, p2x, p2y, p3x, p3y);
+  const o2 = orient(p1x, p1y, p2x, p2y, p4x, p4y);
+  const o3 = orient(p3x, p3y, p4x, p4y, p1x, p1y);
+  const o4 = orient(p3x, p3y, p4x, p4y, p2x, p2y);
+
+  if (o1 !== o2 && o3 !== o4) {
+    return true;
+  }
+
+  return (
+    (o1 === 0 && onSegment(p1x, p1y, p2x, p2y, p3x, p3y)) ||
+    (o2 === 0 && onSegment(p1x, p1y, p2x, p2y, p4x, p4y)) ||
+    (o3 === 0 && onSegment(p3x, p3y, p4x, p4y, p1x, p1y)) ||
+    (o4 === 0 && onSegment(p3x, p3y, p4x, p4y, p2x, p2y))
+  );
+};
+
+const raySegmentHitsBox = (
+  ox: number,
+  oy: number,
+  dx: number,
+  dy: number,
+  maxDistance: number,
+  minX: number,
+  minY: number,
+  maxX: number,
+  maxY: number,
+): boolean => {
+  const length = Number.isFinite(maxDistance) ? maxDistance : 4000; // covers the whole [-50,350] test region
+  const ex = ox + dx * length;
+  const ey = oy + dy * length;
+  const inside = (px: number, py: number): boolean => px >= minX && px <= maxX && py >= minY && py <= maxY;
+
+  if (inside(ox, oy) || inside(ex, ey)) {
+    return true;
+  }
+
+  return (
+    segmentsIntersect(ox, oy, ex, ey, minX, minY, maxX, minY) ||
+    segmentsIntersect(ox, oy, ex, ey, maxX, minY, maxX, maxY) ||
+    segmentsIntersect(ox, oy, ex, ey, maxX, maxY, minX, maxY) ||
+    segmentsIntersect(ox, oy, ex, ey, minX, maxY, minX, minY)
+  );
+};
