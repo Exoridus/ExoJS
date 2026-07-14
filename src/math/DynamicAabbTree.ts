@@ -152,6 +152,12 @@ export class DynamicAabbTree<T> {
    * Allocation-free: traversal uses a persistent internal stack. Invocation
    * ORDER is tree-shape-dependent — callers needing determinism must
    * normalise their own output (physics does via its final id-sort).
+   *
+   * NOT re-entrant: because the traversal stack is a single persistent field
+   * shared across all calls on this instance, a `callback` must not call
+   * `query`/`queryPoint` again on the SAME tree instance. The nested call
+   * resets the shared stack and silently truncates the outer traversal,
+   * yielding an incomplete result set with no error thrown.
    */
   public query(minX: number, minY: number, maxX: number, maxY: number, callback: (payload: T, proxy: number) => void): void {
     if (this._root === NULL_NODE) {
@@ -179,7 +185,11 @@ export class DynamicAabbTree<T> {
     }
   }
 
-  /** Point query; thin wrapper over `query` with a zero-extent AABB. */
+  /**
+   * Point query; thin wrapper over `query` with a zero-extent AABB. Shares
+   * `query`'s non-reentrancy caveat: do not call `query`/`queryPoint` on the
+   * same tree instance from within a `query`/`queryPoint` callback.
+   */
   public queryPoint(x: number, y: number, callback: (payload: T, proxy: number) => void): void {
     this.query(x, y, x, y, callback);
   }
@@ -188,17 +198,14 @@ export class DynamicAabbTree<T> {
   public clear(): void {
     const nodes = this._nodes;
 
-    this._freeIndices.length = 0;
-
+    // Free every still-live slot via `_freeNode`; already-free slots are left
+    // untouched because they are already on `_freeIndices` exactly once. The
+    // result is a fresh free-list holding every index once, with no duplicates
+    // or stale entries.
     for (let i = 0; i < nodes.length; i++) {
-      const node = nodes[i]!;
-
-      node.height = -1;
-      node.payload = null;
-      node.parent = NULL_NODE;
-      node.child1 = NULL_NODE;
-      node.child2 = NULL_NODE;
-      this._freeIndices.push(i);
+      if (nodes[i]!.height !== -1) {
+        this._freeNode(i);
+      }
     }
 
     this._root = NULL_NODE;
