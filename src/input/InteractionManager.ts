@@ -910,11 +910,14 @@ export class InteractionManager implements InteractionHooks, System {
    * engage/disengage flip re-buckets the node between the tree and the
    * anchored side list here). Called at the start of update().
    *
-   * Remove+reinsert rather than the tree's `update()`: with a zero margin a
-   * genuinely-moved node's tight AABB always escapes its (equal) stored fat
-   * AABB, so `update()` would remove+reinsert internally anyway — no gain —
-   * while plain remove+reinsert composes trivially with the anchor re-bucketing
-   * above (a node can flip between the tree and the anchored side list here).
+   * Remove+reinsert rather than the tree's `update()`: `update()` only touches
+   * the tree, so it cannot re-bucket a node between the tree and the anchored
+   * side list on a boundary engage/disengage flip — which this flush must do —
+   * whereas remove+reinsert composes trivially with the anchor re-resolution in
+   * `_insertNode`. `update()`'s fat-AABB no-op fast path would still spare churn
+   * for a node flagged dirty without a real bounds change (bounds invalidation
+   * fires unconditionally), but at margin 0 a genuinely-moved node always
+   * escapes its equal-sized fat AABB, so that fast path is the minority case.
    */
   private _flushStaleEntries(): void {
     if (this._tree === null || this._staleNodes.size === 0) {
