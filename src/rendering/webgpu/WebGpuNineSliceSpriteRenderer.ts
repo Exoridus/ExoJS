@@ -13,6 +13,13 @@ import { AbstractWebGpuRenderer } from './AbstractWebGpuRenderer';
 import type { WebGpuBackend } from './WebGpuBackend';
 import { getWebGpuBlendState } from './WebGpuBlendState';
 import { WebGpuInstanceArena } from './WebGpuInstanceArena';
+import type { WebGpuActiveRenderPass } from './WebGpuPassCoordinator';
+import {
+  retainedGroupUniformBytes,
+  type WebGpuRetainedBatchPayload,
+  type WebGpuRetainedBatchReplayer,
+  type WebGpuRetainedNodeIndexRange,
+} from './WebGpuRetainedGroupResources';
 import { stencilContentDepthStencilState } from './WebGpuStencilState';
 
 /** WGSL source for the nine-slice sprite pipeline. @internal */
@@ -92,7 +99,18 @@ const indicesPerInstance = 6;
 const quadIndices = new Uint16Array([0, 1, 2, 0, 2, 3]);
 
 /** Instanced renderer for {@link NineSliceSprite} using WebGPU. */
-export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSliceSprite> {
+export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSliceSprite> implements WebGpuRetainedBatchReplayer {
+  /**
+   * Retained-batch capability flag (Track B Slice 3, S3-D5.1): a nine-slice
+   * group's per-flush instanced batches (fixed 32-byte layout, node index at
+   * word 7 — the same seam as the sprite renderer) record and replay from
+   * group-owned resources. Pixel-snapped draws are excluded by the collect-time
+   * recordability predicate (and belt-and-braces poisoning in {@link render});
+   * nine-slice has no custom-material path to exclude.
+   * @internal
+   */
+  public readonly _supportsRetainedBatches = true;
+
   private readonly _projectionData = new Float32Array(projectionByteLength / Float32Array.BYTES_PER_ELEMENT);
   // Projection-uniform skip state: a matching (view identity, view.updateId,
   // group-transform id) triple means the shared UBO already holds this flush's
@@ -133,6 +151,16 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
   private _maxNodeIndex = 0;
   private _currentBlendMode: BlendModes | null = null;
   private _currentTexture: Texture | RenderTexture | null = null;
+
+  // ── Retained-batch replay state (Track B Slice 3, S3-D7) ─────────────────
+  // The open pass replayed retained batches were last recorded into — feeds
+  // the "does the open pass already hold draws?" checks alongside the arena.
+  private _lastReplayPass: WebGpuActiveRenderPass | null = null;
+  // Scratch for the packed group matrix compared at replay (see _replayRetainedBatch).
+  private readonly _stagedReplayGroupData = new Float32Array(16);
+  // Reused single-slot texture list handed to the backend at record time; the
+  // nine-slice batch always binds exactly one base texture (slot 0).
+  private readonly _recordTextures: Array<Texture | RenderTexture | null> = [null];
 
   protected onConnect(backend: WebGpuBackend): void {
     if (this._device) {
@@ -207,6 +235,7 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
     this._maxNodeIndex = 0;
     this._currentBlendMode = null;
     this._currentTexture = null;
+    this._lastReplayPass = null;
   }
 
   public render(sprite: NineSliceSprite): void {
@@ -214,6 +243,14 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
 
     if (backend === null) {
       return;
+    }
+
+    // Defensive (S3-D5.3): pixel-snapped instance words are view-dependent —
+    // the recordability predicate excludes them at collect time, so a snapped
+    // nine-slice inside a capture window means the stream cannot be replayed.
+    // Nine-slice has no custom-material path to guard.
+    if (sprite.pixelSnapMode !== 'none' && backend._retainedCaptureActive) {
+      backend._poisonActiveRetainedCaptures();
     }
 
     let quads: readonly NineSliceQuad[] = sprite.quads;
@@ -412,6 +449,26 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
       backend._passCoordinator.acquirePass();
     }
 
+    // Retained capture (Track B Slice 3): while a capture window is active,
+    // additionally stage this batch's exact packed bytes into the group-owned
+    // bundle — the recorded data IS the drawn data, byte-identical by
+    // construction. Recorded regardless of the live visibility decision above
+    // (mask/scissor), since visibility is re-evaluated live at replay. The
+    // nine-slice batch always binds a single base texture (slot 0); a
+    // pixel-snapped draw already poisoned the capture in render().
+    if (this._quadIndex > 0 && backend._retainedCaptureActive && this._currentBlendMode !== null && this._currentTexture !== null) {
+      this._recordTextures[0] = this._currentTexture;
+      backend._recordRetainedBatch(
+        this,
+        this._instanceData,
+        this._quadIndex * instanceStrideBytes,
+        this._quadIndex,
+        this._currentBlendMode,
+        this._recordTextures,
+        1,
+      );
+    }
+
     // Batch flushes no longer submit; the backend ends the pass at boundaries.
     this._quadIndex = 0;
     this._maxNodeIndex = 0;
@@ -439,6 +496,154 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
     });
 
     return this._transformBindGroup;
+  }
+
+  // ── Retained-batch record/replay (Track B Slice 3) ───────────────────────
+  // The bundle/stage stores raw instance bytes; this renderer owns the 32-byte
+  // (8-word) layout (node index at word 7), so the layout-aware finalize steps
+  // (node-index scan/rebase) and the replay dispatch live here — mirroring
+  // WebGpuSpriteRenderer's seam, adapted to nine-slice's single-texture path.
+
+  /** @internal See {@link WebGpuRetainedBatchReplayer._scanRetainedNodeIndexRange}. */
+  public _scanRetainedNodeIndexRange(bytes: Uint8Array, range: WebGpuRetainedNodeIndexRange): void {
+    const words = new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / Uint32Array.BYTES_PER_ELEMENT);
+
+    for (let i = 7; i < words.length; i += 8) {
+      // In-bounds: i < words.length via the loop guard. nodeIndex is the last
+      // word of the 32-byte (8-word) instance layout.
+      const nodeIndex = words[i]!;
+
+      if (nodeIndex < range.min) {
+        range.min = nodeIndex;
+      }
+
+      if (nodeIndex > range.max) {
+        range.max = nodeIndex;
+      }
+    }
+  }
+
+  /** @internal See {@link WebGpuRetainedBatchReplayer._rebaseRetainedNodeIndices} (S3-D4: group-local indices). */
+  public _rebaseRetainedNodeIndices(bytes: Uint8Array, base: number): void {
+    const words = new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / Uint32Array.BYTES_PER_ELEMENT);
+
+    for (let i = 7; i < words.length; i += 8) {
+      // In-bounds: i < words.length via the loop guard.
+      words[i] = words[i]! - base;
+    }
+  }
+
+  /**
+   * Replay one recorded batch from its group-owned bundle into the OPEN pass
+   * (Track B Slice 3, S3-D7). Reuses only recorded DATA (instance bytes,
+   * transform rows, texture, blend mode); every piece of STATE is resolved
+   * live — pipeline via the `_getPipeline` cache, the group(1) texture bind
+   * group via the live texture-set cache (resolving re-syncs dirty content),
+   * and the group's 128-byte UBO (projection from the live view + the live
+   * player-composed group matrix) written only when its content changed. The
+   * same-frame double-replay hazard (one group under two views while the open
+   * pass already holds this bundle's draws) ends the pass first. The shared
+   * per-flush projection UBO is never touched, so group boundaries on the
+   * cached path do not fragment the single-submit frame (B-06).
+   * @internal
+   */
+  public _replayRetainedBatch(payload: WebGpuRetainedBatchPayload): void {
+    const backend = this._backend;
+    const device = this._device;
+    const bundle = payload.bundle;
+
+    if (!backend || !device || this._indexBuffer === null || !bundle.isReady) {
+      return;
+    }
+
+    // Drain any pending live batch into the open pass first (defensive — the
+    // group boundary already flushed; flush() never ends the pass on the
+    // default path and guards its own shared-UBO hazards).
+    this.flush();
+
+    // Match the live path's visibility handling: a fully-clipped scissor draws
+    // nothing (the batch stays recorded; visibility is live per frame).
+    const scissor = backend.getScissorRect();
+
+    if (scissor !== null && (scissor.width <= 0 || scissor.height <= 0)) {
+      return;
+    }
+
+    const coordinator = backend._passCoordinator;
+    let activePass = coordinator.activePass;
+    const passHasDraws =
+      activePass !== null && ((this._instanceArena.cursor > 0 && this._instanceArena.tracksPass(activePass)) || this._lastReplayPass === activePass);
+
+    // Same-frame texture mutation guard (S3-D7): resolving the bindings below
+    // re-uploads mutated content on the queue timeline BEFORE the deferred
+    // submit, which would retroactively change draws already recorded into the
+    // open pass. End (submit) the pass first so they keep the pre-mutation
+    // content.
+    if (passHasDraws) {
+      for (const texture of payload.textures) {
+        if (backend._textureUploadWouldMutate(texture)) {
+          coordinator.endPass();
+          this._instanceArena.resetPass();
+          break;
+        }
+      }
+    }
+
+    // Resolve the single base texture LIVE through the texture bind-group cache
+    // (syncs dirty content, adopts refreshed views/samplers). The recorded
+    // batch always has exactly one texture (slot 0).
+    const textureBindGroup = this._getOrCreateTextureBindGroup(device, backend, payload.textures[0]!);
+
+    // Group UBO: skip the write while (view, updateId, group bytes) match what
+    // the buffer holds; guard the double-replay aliasing case first.
+    const view = backend.view;
+    const scratch = this._stagedReplayGroupData;
+
+    packAffineMat4(backend.renderGroupTransform ?? Matrix.identity, scratch, 0);
+
+    let uboDirty = !bundle.uboWritten || bundle.uboView !== view || bundle.uboViewUpdateId !== view.updateId;
+
+    if (!uboDirty) {
+      for (let i = 0; i < 16; i++) {
+        if (scratch[i] !== bundle.uboData[16 + i]) {
+          uboDirty = true;
+          break;
+        }
+      }
+    }
+
+    if (uboDirty) {
+      activePass = coordinator.activePass;
+
+      if (activePass !== null && bundle.drawsInPass === activePass) {
+        // Rewriting the UBO would retroactively re-project this bundle's draws
+        // already recorded into the open pass: end it first.
+        coordinator.endPass();
+        this._instanceArena.resetPass();
+      }
+
+      packAffineMat4(view.getTransform(), bundle.uboData, 0);
+      bundle.uboData.set(scratch, 16);
+      bundle.uboView = view;
+      bundle.uboViewUpdateId = view.updateId;
+      bundle.uboWritten = true;
+      device.queue.writeBuffer(bundle.uniformBuffer!, 0, bundle.uboData.buffer, bundle.uboData.byteOffset, retainedGroupUniformBytes);
+    }
+
+    const active = coordinator.acquirePass();
+    const pass = active.pass;
+
+    pass.setPipeline(this._getPipeline(payload.blendMode, backend.renderTargetFormat, coordinator.stencilActive));
+    pass.setBindGroup(0, bundle.getBindGroup(device, this._uniformBindGroupLayout!));
+    pass.setBindGroup(1, textureBindGroup);
+    pass.setVertexBuffer(0, bundle.instanceBuffer, payload.byteOffset);
+    pass.setIndexBuffer(this._indexBuffer, 'uint16');
+    pass.drawIndexed(indicesPerInstance, payload.instanceCount, 0, 0, 0);
+
+    bundle.drawsInPass = active;
+    this._lastReplayPass = active;
+    backend.stats.batches++;
+    backend.stats.drawCalls++;
   }
 
   /**
