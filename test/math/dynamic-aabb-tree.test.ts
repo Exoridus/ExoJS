@@ -379,7 +379,7 @@ describe('DynamicAabbTree', () => {
       expect(hits).toEqual([]);
     });
 
-    test('a ray through several leaves visits exactly the ones it crosses, skipping a distant cluster', () => {
+    test('a ray reports only the leaves it crosses, not the 40 in a distant off-ray cluster', () => {
       const tree = new DynamicAabbTree<number>(1);
 
       // Three leaves strung along the +x ray at y=0.
@@ -387,8 +387,7 @@ describe('DynamicAabbTree', () => {
       tree.insert(30, -2, 32, 2, 1);
       tree.insert(50, -2, 52, 2, 2);
 
-      // A dense cluster far off the ray line — forms deep subtrees the traversal
-      // must prune wholesale rather than descend into.
+      // A dense cluster far off the ray line — the ray must reach none of them.
       for (let i = 0; i < 40; i++) {
         tree.insert(1000 + i, 1000, 1002 + i, 1002, 100 + i);
       }
@@ -396,7 +395,10 @@ describe('DynamicAabbTree', () => {
       const visited: number[] = [];
       tree.rayCast(0, 0, 1, 0, Infinity, payload => visited.push(payload));
 
+      // Exactly the three on-ray leaves; the callback fires far fewer than
+      // leafCount times, so distant leaves are correctly excluded.
       expect(visited.sort((a, b) => a - b)).toEqual([0, 1, 2]);
+      expect(tree.leafCount).toBe(43);
     });
 
     test('is decoupled from query(): a rayCast issued inside a query() callback does not truncate the outer traversal', () => {
@@ -465,32 +467,50 @@ describe('DynamicAabbTree', () => {
   });
 });
 
-/** Independent brute-force slab test (oracle for the tree's own ray prune). */
-const raySegmentHitsBox = (ox: number, oy: number, dx: number, dy: number, maxDistance: number, minX: number, minY: number, maxX: number, maxY: number): boolean => {
-  let tmin = 0;
-  let tmax = maxDistance;
+// Oracle for the tree's ray prune, deliberately using a DIFFERENT technique
+// (orientation-based segment/edge crossing) than the tree's own slab test, so a
+// shared conceptual flaw can't hide in both. Exact for a finite `maxDistance`;
+// for `Infinity` the ray is clamped to a segment long enough to reach the whole
+// test region — a farther box it would nonetheless cross is simply under-reported
+// (weakening the check, never over-reporting), which keeps `expected ⊆ actual`
+// sound: every box the oracle claims is one the ray truly enters.
+const orient = (ax: number, ay: number, bx: number, by: number, cx: number, cy: number): number => Math.sign((bx - ax) * (cy - ay) - (by - ay) * (cx - ax));
 
-  for (const [o, d, lo, hi] of [
-    [ox, dx, minX, maxX],
-    [oy, dy, minY, maxY],
-  ] as const) {
-    if (d === 0) {
-      if (o < lo || o > hi) {
-        return false;
-      }
+const onSegment = (ax: number, ay: number, bx: number, by: number, px: number, py: number): boolean =>
+  Math.min(ax, bx) <= px && px <= Math.max(ax, bx) && Math.min(ay, by) <= py && py <= Math.max(ay, by);
 
-      continue;
-    }
+const segmentsIntersect = (p1x: number, p1y: number, p2x: number, p2y: number, p3x: number, p3y: number, p4x: number, p4y: number): boolean => {
+  const o1 = orient(p1x, p1y, p2x, p2y, p3x, p3y);
+  const o2 = orient(p1x, p1y, p2x, p2y, p4x, p4y);
+  const o3 = orient(p3x, p3y, p4x, p4y, p1x, p1y);
+  const o4 = orient(p3x, p3y, p4x, p4y, p2x, p2y);
 
-    const t1 = (lo - o) / d;
-    const t2 = (hi - o) / d;
-    tmin = Math.max(tmin, Math.min(t1, t2));
-    tmax = Math.min(tmax, Math.max(t1, t2));
-
-    if (tmin > tmax) {
-      return false;
-    }
+  if (o1 !== o2 && o3 !== o4) {
+    return true;
   }
 
-  return true;
+  return (
+    (o1 === 0 && onSegment(p1x, p1y, p2x, p2y, p3x, p3y)) ||
+    (o2 === 0 && onSegment(p1x, p1y, p2x, p2y, p4x, p4y)) ||
+    (o3 === 0 && onSegment(p3x, p3y, p4x, p4y, p1x, p1y)) ||
+    (o4 === 0 && onSegment(p3x, p3y, p4x, p4y, p2x, p2y))
+  );
+};
+
+const raySegmentHitsBox = (ox: number, oy: number, dx: number, dy: number, maxDistance: number, minX: number, minY: number, maxX: number, maxY: number): boolean => {
+  const length = Number.isFinite(maxDistance) ? maxDistance : 4000; // covers the whole [-50,350] test region
+  const ex = ox + dx * length;
+  const ey = oy + dy * length;
+  const inside = (px: number, py: number): boolean => px >= minX && px <= maxX && py >= minY && py <= maxY;
+
+  if (inside(ox, oy) || inside(ex, ey)) {
+    return true;
+  }
+
+  return (
+    segmentsIntersect(ox, oy, ex, ey, minX, minY, maxX, minY) ||
+    segmentsIntersect(ox, oy, ex, ey, maxX, minY, maxX, maxY) ||
+    segmentsIntersect(ox, oy, ex, ey, maxX, maxY, minX, maxY) ||
+    segmentsIntersect(ox, oy, ex, ey, minX, maxY, minX, minY)
+  );
 };
