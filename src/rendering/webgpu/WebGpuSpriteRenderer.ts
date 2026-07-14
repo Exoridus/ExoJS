@@ -16,7 +16,12 @@ import type { WebGpuBackend } from './WebGpuBackend';
 import { getWebGpuBlendState } from './WebGpuBlendState';
 import { WebGpuInstanceArena } from './WebGpuInstanceArena';
 import type { WebGpuActiveRenderPass } from './WebGpuPassCoordinator';
-import { retainedGroupUniformBytes, type WebGpuRetainedBatchPayload } from './WebGpuRetainedGroupResources';
+import {
+  retainedGroupUniformBytes,
+  type WebGpuRetainedBatchPayload,
+  type WebGpuRetainedBatchReplayer,
+  type WebGpuRetainedNodeIndexRange,
+} from './WebGpuRetainedGroupResources';
 import { stencilContentDepthStencilState } from './WebGpuStencilState';
 import {
   collectScalarUniforms,
@@ -276,7 +281,7 @@ interface CustomSpriteResources {
   baseTextureBindGroups: WeakMap<Texture | RenderTexture, { group: GPUBindGroup; view: GPUTextureView }>;
 }
 
-export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
+export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> implements WebGpuRetainedBatchReplayer {
   /** Retained-batch capability flag (Track B Slice 3, S3-D5.1): the default path records/replays flush-level batches. */
   public readonly _supportsRetainedBatches = true;
 
@@ -742,7 +747,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
       if (isCustom) {
         backend._poisonActiveRetainedCaptures();
       } else if (this._currentBlendMode !== null) {
-        backend._recordRetainedSpriteBatch(
+        backend._recordRetainedBatch(
           this,
           this._instanceData,
           this._instanceCount * instanceStrideBytes,
@@ -857,6 +862,42 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     return this._transformBindGroup;
   }
 
+  // ── Retained-batch record/replay (Track B Slice 3, Tasks 9/10) ────────────
+  // The bundle/stage stores raw instance bytes; this renderer owns the
+  // 32-byte (8-word) layout, so the layout-aware finalize steps (node-index
+  // scan/rebase) and the replay dispatch live here — the WebGPU counterpart
+  // of WebGl2SpriteRenderer's `_scanRetainedNodeIndexRange` /
+  // `_rebaseRetainedNodeIndices` / `_replayRetainedBatch`.
+
+  /** @internal See {@link WebGpuRetainedBatchReplayer._scanRetainedNodeIndexRange}. */
+  public _scanRetainedNodeIndexRange(bytes: Uint8Array, range: WebGpuRetainedNodeIndexRange): void {
+    const words = new Uint32Array(bytes.buffer);
+
+    for (let i = 7; i < words.length; i += 8) {
+      // In-bounds: i < words.length via the loop guard. nodeIndex is the last
+      // word of the 32-byte (8-word) instance layout.
+      const nodeIndex = words[i]!;
+
+      if (nodeIndex < range.min) {
+        range.min = nodeIndex;
+      }
+
+      if (nodeIndex > range.max) {
+        range.max = nodeIndex;
+      }
+    }
+  }
+
+  /** @internal See {@link WebGpuRetainedBatchReplayer._rebaseRetainedNodeIndices} (S3-D4: group-local indices). */
+  public _rebaseRetainedNodeIndices(bytes: Uint8Array, base: number): void {
+    const words = new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / Uint32Array.BYTES_PER_ELEMENT);
+
+    for (let i = 7; i < words.length; i += 8) {
+      // In-bounds: i < words.length via the loop guard.
+      words[i] = words[i]! - base;
+    }
+  }
+
   /**
    * Replay one recorded batch from its group-owned bundle into the OPEN pass
    * (Track B Slice 3, Task 10 / S3-D7). Reuses only recorded DATA (instance
@@ -878,7 +919,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
    * on the cached path do not fragment the single-submit frame (B-06).
    * @internal
    */
-  public _replayRecordedSpriteBatch(payload: WebGpuRetainedBatchPayload): void {
+  public _replayRetainedBatch(payload: WebGpuRetainedBatchPayload): void {
     const backend = this._backend;
     const device = this._device;
     const bundle = payload.bundle;
@@ -978,7 +1019,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> {
     backend.stats.drawCalls++;
   }
 
-  /** Scratch for the packed group matrix compared at replay (see `_replayRecordedSpriteBatch`). */
+  /** Scratch for the packed group matrix compared at replay (see `_replayRetainedBatch`). */
   private readonly _stagedReplayGroupData = new Float32Array(16);
 
   public destroy(): void {
