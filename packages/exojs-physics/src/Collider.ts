@@ -65,7 +65,14 @@ export class Collider {
 
   private _destroyed = false;
 
-  /** @internal — proxy id in the physics world's broad-phase spatial tree; `-1` when not inserted. */
+  /**
+   * @internal — proxy id in the physics world's broad-phase spatial tree; `-1`
+   * when not inserted. Like `PhysicsBody._islandIndex`/`_sleepTime`, this is a
+   * single-owner slot: exactly ONE `AabbTreeBroadPhase` may track this collider
+   * at a time (in production, the world's own broad phase for the collider's
+   * whole lifetime). A second broad phase over the same collider would clobber
+   * this value and corrupt the first's tree — never do that.
+   */
   public _treeProxy = -1;
 
   public constructor(options: ColliderOptions) {

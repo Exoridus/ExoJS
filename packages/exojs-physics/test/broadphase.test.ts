@@ -53,12 +53,19 @@ describe('AabbTreeBroadPhase', () => {
   });
 
   it('produces a deterministic, id-sorted candidate order regardless of input array order', () => {
-    const colliders = grid(6, 4, 7);
+    // Two independent collider sets with identical geometry and matching id
+    // sequences (each grid() builds its own PhysicsWorld, assigning ids from 1
+    // in the same row-major order). Feeding one broad phase the forward set and
+    // another the reversed set exercises different tree-build/insertion orders
+    // without any single collider being tracked by two broad phases at once
+    // (which would violate AabbTreeBroadPhase's single-owner _treeProxy contract).
+    const forward = grid(6, 4, 7);
+    const reversed = grid(6, 4, 7).reverse();
     const first: CandidatePair[] = [];
     const second: CandidatePair[] = [];
 
-    new AabbTreeBroadPhase().computePairs(colliders, first);
-    new AabbTreeBroadPhase().computePairs([...colliders].reverse(), second);
+    new AabbTreeBroadPhase().computePairs(forward, first);
+    new AabbTreeBroadPhase().computePairs(reversed, second);
 
     expect(first.map(key)).toEqual(second.map(key));
 

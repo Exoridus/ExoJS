@@ -41,16 +41,21 @@ const byPairId = (p: CandidatePair, q: CandidatePair): number => p.a.id - q.a.id
  * candidate set the caller sees is exact — the fat margin never leaks a false
  * positive downstream, and a fat-but-not-tight pair simply stays parked in the
  * set (costing one O(1) re-check per step) until the leaves separate.
+ *
+ * **Single-owner contract.** A collider's tree membership is tracked through its
+ * `Collider._treeProxy` field, which — like `PhysicsBody._islandIndex` /
+ * `_sleepTime` — is a single slot on the shared object. Exactly ONE
+ * `AabbTreeBroadPhase` instance may track a given collider at a time (in
+ * production that is the world's own `_broadPhase`, for the collider's whole
+ * lifetime until `removeCollider`). Do NOT stand up a second, throwaway
+ * `AabbTreeBroadPhase` over colliders another instance already owns (e.g. for
+ * debug visualization): the second instance would clobber the first's
+ * `_treeProxy` values and corrupt its tree. Use a plain brute-force scan for
+ * such one-off, read-only needs instead.
  */
 export class AabbTreeBroadPhase implements BroadPhase {
   private readonly _tree = new DynamicAabbTree<Collider>(AABB_MARGIN);
   private readonly _pairs = new Map<number, CandidatePair>();
-  // Colliders this broad phase has inserted into its own tree. `_treeProxy`
-  // lives on the shared Collider, so it cannot by itself distinguish "inserted
-  // by me" from "inserted by another broad-phase instance over the same
-  // collider" — this set does, so a foreign proxy left on a collider never
-  // drives an `update`/`remove` against a tree that does not own it.
-  private readonly _inserted = new Set<Collider>();
   private readonly _scratchFatAabb: AabbLike = { minX: 0, minY: 0, maxX: 0, maxY: 0 };
 
   private _syncingCollider: Collider | null = null;
@@ -111,13 +116,12 @@ export class AabbTreeBroadPhase implements BroadPhase {
 
   /** Drop `collider`'s leaf and every pair referencing it. Called when a collider is destroyed. */
   public removeCollider(collider: Collider): void {
-    if (!this._inserted.has(collider)) {
+    if (collider._treeProxy === -1) {
       return;
     }
 
     this._tree.remove(collider._treeProxy);
     collider._treeProxy = -1;
-    this._inserted.delete(collider);
 
     for (const [key, pair] of this._pairs) {
       if (pair.a === collider || pair.b === collider) {
@@ -127,21 +131,20 @@ export class AabbTreeBroadPhase implements BroadPhase {
   }
 
   public destroy(): void {
-    for (const collider of this._inserted) {
-      collider._treeProxy = -1;
-    }
-
+    // No need to reset `_treeProxy` on live colliders: this broad phase is the
+    // sole owner of every collider's tree membership (see the class doc), and it
+    // is torn down as part of `PhysicsWorld.destroy()`, which simultaneously
+    // marks the bodies/colliders destroyed and drops them — so no surviving
+    // owner can ever read a stale proxy afterward. The tree frees its own nodes.
     this._tree.destroy();
     this._pairs.clear();
-    this._inserted.clear();
   }
 
   private _sync(collider: Collider): void {
     const box = collider.aabb;
 
-    if (!this._inserted.has(collider)) {
+    if (collider._treeProxy === -1) {
       collider._treeProxy = this._tree.insert(box.minX, box.minY, box.maxX, box.maxY, collider);
-      this._inserted.add(collider);
       this._discoverNeighbors(collider);
 
       return;
