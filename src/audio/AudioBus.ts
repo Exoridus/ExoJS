@@ -20,6 +20,22 @@ interface AudioBusSetup {
 }
 
 /**
+ * Probe whether `effect` has finished creating its underlying node(s). Every
+ * built-in `AudioEffect` throws a descriptive error from `inputNode`/`outputNode`
+ * when accessed before its own (possibly deferred) setup has run — this reads
+ * that as a plain boolean instead of letting `_rebuildEffectChain` throw.
+ */
+function _isEffectReady(effect: AudioEffect): boolean {
+  try {
+    void effect.inputNode;
+    void effect.outputNode;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Hierarchical mixer node in the engine's audio routing graph. Each bus
  * owns three Web Audio nodes (input gain, optional effect chain, stereo
  * pan, output gain) and routes its output into its parent's input — the
@@ -295,9 +311,26 @@ export class AudioBus {
     };
   }
 
-  private _rebuildEffectChain(): void {
+  private _rebuildEffectChain(retried = false): void {
     if (!this._setup) return;
     const { inputNode, panNode } = this._setup;
+
+    // An effect attached via `addEffect()` before the shared AudioContext became
+    // ready may not have finished its OWN setup yet: `onAudioContextReady`
+    // dispatches to every registered listener in a single synchronous pass, and
+    // this bus's listener — typically registered early, e.g. at AudioManager
+    // construction — can run before an attached effect's listener (registered
+    // later, e.g. from a Scene's async `init()`). Touching that effect's
+    // `inputNode`/`outputNode` here would throw ("not yet initialized").
+    // Retrying once on a microtask is sufficient: by then every listener queued
+    // for that same dispatch pass — including the effect's own setup — has
+    // already run. An effect still not ready after the retry is a genuine
+    // caller error (e.g. a custom effect that never wires itself up) and is
+    // left to throw naturally instead of retrying forever.
+    if (!retried && this._effects.some(effect => !_isEffectReady(effect))) {
+      queueMicrotask(() => this._rebuildEffectChain(true));
+      return;
+    }
 
     // Disconnect current chain
     inputNode.disconnect();
