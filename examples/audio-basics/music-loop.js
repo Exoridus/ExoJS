@@ -1,5 +1,5 @@
 // Auto-generated from music-loop.ts — edit the .ts source, not this file.
-import { Application, Asset, Assets, Color, Graphics, Scene, Text } from '@codexo/exojs';
+import { Application, Asset, Color, Graphics, Scene, Text } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 const app = new Application({
     canvas: {
@@ -29,9 +29,10 @@ class MusicLoopScene extends Scene {
         this.bar = { x: width * 0.15, y: height * 0.5, w: width * 0.7, h: 28 };
         // A single streaming track — the browser's media pipeline loops it
         // seamlessly when `loop` is on, so no duplicate/silent track is needed.
-        // AudioStream has no seamless adapter — await it explicitly.
-        const { track } = await this.loader.load(Assets.from({ track: Asset.kind('music', assets.demo.audio.musicLoop) }));
-        this.music = track;
+        // AudioStream is a non-leaf resource kind (no seamless placeholder), so it
+        // is loaded directly through `Asset.kind('music', ...)` and awaited rather
+        // than adopted from an `Assets.from` catalog leaf.
+        this.music = await this.loader.load(Asset.kind('music', assets.demo.audio.musicLoop));
         // Core defers playback until the AudioContext unlocks on the first
         // gesture, then starts automatically — play() returns the Voice now,
         // and all live control (volume, rate, loop, seek) lives on it.

@@ -1,4 +1,4 @@
-import { Application, Asset, Assets, AudioStream, Color, Graphics, type RenderingContext, Scene, Text, type Time } from '@codexo/exojs';
+import { Application, Asset, AudioStream, Color, Graphics, type RenderingContext, Scene, Text, type Time } from '@codexo/exojs';
 import { BeatDetector } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 
@@ -36,7 +36,7 @@ class TempoTrackingScene extends Scene {
         const marginX = width * 0.08;
 
         // AudioStream has no seamless adapter — await it explicitly.
-        const { track } = await this.loader.load(Assets.from({ track: Asset.kind('music', 'audio/demo-loop-main.ogg') }));
+        const track = await this.loader.load(Asset.kind('music', 'audio/demo-loop-main.ogg'));
         this.music = track;
 
         this.detector = new BeatDetector();

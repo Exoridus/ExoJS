@@ -1,5 +1,5 @@
 // Auto-generated from beat-sync-pulse.ts — edit the .ts source, not this file.
-import { Application, Asset, Assets, Color, Scene, Sprite, Text, Vector } from '@codexo/exojs';
+import { Application, Asset, Color, Scene, Sprite, Text, Vector } from '@codexo/exojs';
 import { BeatDetector } from '@codexo/exojs-audio-fx';
 import { AlphaFadeOverLifetime, BurstSpawn, ConeDirection, Constant, particlesExtension, ParticleSystem, } from '@codexo/exojs-particles';
 import { mountControlPanel, mountControls } from '@examples/runtime';
@@ -33,7 +33,7 @@ class BeatSyncPulseScene extends Scene {
             throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const { width, height } = app.canvas;
         // AudioStream has no seamless adapter — await it explicitly.
-        const { track } = await this.loader.load(Assets.from({ track: Asset.kind('music', 'audio/demo-loop-main.ogg') }));
+        const track = await this.loader.load(Asset.kind('music', 'audio/demo-loop-main.ogg'));
         this.music = track;
         this.sprite = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(width / 2, height / 2);
         this.hud = mountControls({

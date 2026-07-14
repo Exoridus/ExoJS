@@ -1,4 +1,4 @@
-import { Application, Asset, Assets, Color, Keyboard, type RenderingContext, Scene, Sprite, Texture, type Time, Video } from '@codexo/exojs';
+import { Application, Asset, Color, Keyboard, type RenderingContext, Scene, Sprite, Texture, type Time, Video } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 // Every video in the asset catalog, switchable at runtime with the number
@@ -35,12 +35,12 @@ class VideoDrawableScene extends Scene {
         if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const { width, height } = app.canvas;
 
-        // Video has no seamless adapter (unlike Texture/Sound), so it is
-        // awaited via `load()` rather than fetched synchronously via `get()`.
-        const loaded = await this.loader.load(Assets.from({ [VIDEOS[0].name]: Asset.kind('video', VIDEOS[0].url) }));
+        // Video is a non-leaf resource kind (no seamless placeholder, unlike
+        // Texture/Sound), so it is loaded directly through `Asset.kind('video', ...)`
+        // and awaited rather than fetched synchronously via `get()`.
+        this.video = await this.loader.load(Asset.kind('video', VIDEOS[0].url));
         this.loadedVideos.add(VIDEOS[0].name);
 
-        this.video = loaded[VIDEOS[0].name];
         this.configureVideo();
 
         // A sprite composited on top of the live video texture — the same scene
@@ -92,11 +92,11 @@ class VideoDrawableScene extends Scene {
         this.switching = true;
         this.hud.setStatus(`Loading — ${entry.label}…`);
         try {
-            const loaded = await this.loader.load(Assets.from({ [entry.name]: Asset.kind('video', entry.url) }));
+            const loaded = await this.loader.load(Asset.kind('video', entry.url));
             this.loadedVideos.add(entry.name);
             this.video.pause();
             this.videoIdx = idx;
-            this.video = loaded[entry.name];
+            this.video = loaded;
             this.configureVideo();
             this.video.play();
             this.hud.setStatus(`Playing — ${entry.label}`);

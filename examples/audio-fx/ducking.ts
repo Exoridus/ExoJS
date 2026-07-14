@@ -1,4 +1,4 @@
-import { Application, Asset, Assets, AudioBus, AudioStream, Color, Graphics, type RenderingContext, Scene, Sound, Text } from '@codexo/exojs';
+import { Application, Asset, AudioBus, AudioStream, Color, Graphics, type RenderingContext, Scene, Sound, Text } from '@codexo/exojs';
 import { AudioAnalyser, DuckingEffect } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 
@@ -45,7 +45,7 @@ class DuckingScene extends Scene {
         this.voiceBarY = height * 0.55;
 
         // AudioStream has no seamless adapter — await it explicitly.
-        const { music } = await this.loader.load(Assets.from({ music: Asset.kind('music', assets.demo.audio.musicLoop) }));
+        const music = await this.loader.load(Asset.kind('music', assets.demo.audio.musicLoop));
         this.music = music;
         // Path-only get() infers Sound from the .ogg extension — sidesteps a
         // compile-time overload ambiguity between Sound and the Json token form

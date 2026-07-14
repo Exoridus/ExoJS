@@ -21,12 +21,15 @@ class VinylRecordScene extends Scene {
     rpm = 0;
     hud;
     tapPrompt;
-    init() {
+    async init() {
         const app = this.app;
         if (app === null)
             throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const { width, height } = app.canvas;
-        this.music = this.loader.get(Asset.kind('music', assets.demo.audio.musicLoop));
+        // AudioStream is a non-leaf resource kind (no seamless placeholder), so it
+        // is loaded directly through `Asset.kind('music', ...)` and awaited rather
+        // than fetched synchronously via `get()`.
+        this.music = await this.loader.load(Asset.kind('music', assets.demo.audio.musicLoop));
         this.analyser = new AudioAnalyser({ fftSize: 1024, source: app.audio.music });
         this.disc = new Graphics();
         this.bars = new Graphics();

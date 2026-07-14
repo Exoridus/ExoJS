@@ -1,4 +1,4 @@
-import { Application, Asset, Assets, AudioStream, Color, Graphics, type RenderingContext, Scene, Text } from '@codexo/exojs';
+import { Application, Asset, AudioStream, Color, Graphics, type RenderingContext, Scene, Text } from '@codexo/exojs';
 import { CompressorEffect } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 
@@ -59,7 +59,7 @@ class CompressorScene extends Scene {
         this.meterY = this.rowY[this.rowY.length - 1] + 100;
 
         // AudioStream has no seamless adapter — await it explicitly.
-        const { music } = await this.loader.load(Assets.from({ music: Asset.kind('music', 'audio/demo-loop-main.ogg') }));
+        const music = await this.loader.load(Asset.kind('music', 'audio/demo-loop-main.ogg'));
         this.music = music;
         this.filter = new CompressorEffect();
         app.audio.music.addEffect(this.filter);

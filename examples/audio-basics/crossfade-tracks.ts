@@ -1,4 +1,4 @@
-import { Application, Asset, Assets, AudioStream, Color, crossFade, Graphics, type RenderingContext, Scene, Text, type Voice } from '@codexo/exojs';
+import { Application, Asset, AudioStream, Color, crossFade, Graphics, type RenderingContext, Scene, Text, type Voice } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const app = new Application({
@@ -49,11 +49,13 @@ class CrossfadeTracksScene extends Scene {
         this.meterBX = width * 0.67 - METER_W / 2;
         this.meterBaseY = height * 0.82;
 
-        // AudioStream has no seamless adapter — await it explicitly. Both tracks
-        // loop; the crossfade only swaps which one is audible.
-        const tracks = await this.loader.load(Assets.from({ a: Asset.kind('music', assets.demo.audio.musicA), b: Asset.kind('music', assets.demo.audio.musicB) }));
-        this.trackA = tracks.a;
-        this.trackB = tracks.b;
+        // AudioStream is a non-leaf resource kind (no seamless placeholder), so each
+        // track is loaded directly through `Asset.kind('music', ...)` and awaited. Both
+        // tracks loop; the crossfade only swaps which one is audible.
+        [this.trackA, this.trackB] = await Promise.all([
+            this.loader.load(Asset.kind('music', assets.demo.audio.musicA)),
+            this.loader.load(Asset.kind('music', assets.demo.audio.musicB)),
+        ]);
 
         this.graphics = new Graphics();
         this.labelA = new Text('Track A', { fillColor: Color.white, fontSize: 22, align: 'center' })
