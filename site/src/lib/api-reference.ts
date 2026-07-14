@@ -2,7 +2,7 @@ import type { CollectionEntry } from 'astro:content';
 
 export type ApiEntry = CollectionEntry<'api'>;
 
-export const API_SUBSYSTEM_ORDER = ['core', 'rendering', 'ui', 'input', 'audio', 'animation', 'resources', 'math', 'debug', 'particles', 'tilemap', 'tiled', 'physics', 'aseprite', 'ldtk'] as const;
+export const API_SUBSYSTEM_ORDER = ['core', 'rendering', 'ui', 'input', 'audio', 'animation', 'resources', 'math', 'extensions', 'debug', 'particles', 'tilemap', 'tiled', 'physics', 'aseprite', 'ldtk'] as const;
 
 export type ApiSubsystem = (typeof API_SUBSYSTEM_ORDER)[number];
 
@@ -46,6 +46,10 @@ export const API_SUBSYSTEM_META: Record<ApiSubsystem, { label: string; descripti
     debug: {
         label: 'Debug / Tooling',
         description: 'Debug layers, overlays, and inspection helpers.',
+    },
+    extensions: {
+        label: 'Extensions',
+        description: 'The extension system: renderer/asset/serializer bindings and the extension registry.',
     },
     tilemap: {
         label: 'Tilemap (official extension)',

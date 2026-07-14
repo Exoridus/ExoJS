@@ -19,6 +19,7 @@ type Subsystem =
     | 'audio'
     | 'core'
     | 'debug'
+    | 'extensions'
     | 'input'
     | 'ldtk'
     | 'math'
@@ -38,6 +39,7 @@ const SUBSYSTEMS: ReadonlyArray<Subsystem> = [
     'audio',
     'core',
     'debug',
+    'extensions',
     'input',
     'ldtk',
     'math',
@@ -520,7 +522,9 @@ const renderReflectionBody = (reflection: any): ReflectionBody => {
 const entryPointTitle = (reflection: any): string => {
     const sourcePath = normalizePath(reflection.sources?.[0]?.fileName ?? '');
     const subsystem = guessSubsystem(sourcePath);
-    return subsystem === 'debug' ? '@codexo/exojs/debug' : '@codexo/exojs';
+    if (subsystem === 'debug') return '@codexo/exojs/debug';
+    if (subsystem === 'extensions') return '@codexo/exojs/extensions';
+    return '@codexo/exojs';
 };
 
 const ensureCleanOutput = (): void => {
@@ -791,8 +795,11 @@ const build = async (): Promise<void> => {
     ensureCleanOutput();
     const usedSlugs = new Set<string>();
 
-    // 1. Core (+ debug subpath).
-    const coreProject = await convertEntryPoints(['src/index.ts', 'src/debug/index.ts'], 'tsconfig.json');
+    // 1. Core (+ debug and extensions subpaths).
+    const coreProject = await convertEntryPoints(
+        ['src/index.ts', 'src/debug/index.ts', 'src/extensions/index.ts'],
+        'tsconfig.json',
+    );
     const coreNamespaces = new Map<string, any>(collectNamespaces(coreProject).map((ns: any) => [ns.name, ns]));
     let coreCount = 0;
     const coreDocumentable = collectSymbols(coreProject);

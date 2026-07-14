@@ -1,0 +1,265 @@
+{
+  "title": "ExtensionRegistry",
+  "description": "Process-wide static catalogue of Extension descriptors. Stores descriptors only — never Application, backend, GPU, or loader instances — and is read exactly once per Application (at construction). Not read in any hot path. Extension authors import from `@codexo/exojs/extensions`: import { ExtensionRegistry } from '@codexo/exojs/extensions';",
+  "symbol": "ExtensionRegistry",
+  "kind": "class",
+  "subsystem": "extensions",
+  "importPath": "@codexo/exojs/extensions",
+  "tier": "advanced",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 0,
+    "methods": 4,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Process-wide static catalogue of Extension descriptors. Stores descriptors only — never Application, backend, GPU, or loader instances — and is read exactly once per Application (at construction). Not read in any hot path.",
+        "Extension authors import from `@codexo/exojs/extensions`: import { ExtensionRegistry } from '@codexo/exojs/extensions';"
+      ],
+      "importLine": "import { ExtensionRegistry } from '@codexo/exojs/extensions'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "get",
+          "signature": "get(id: string): Readonly<Extension> | undefined",
+          "signatureTokens": [
+            {
+              "text": "get",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "id",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Extension",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "Readonly<Extension> | undefined",
+          "description": "Return the registered descriptor for id, or undefined if none is registered."
+        },
+        {
+          "name": "has",
+          "signature": "has(id: string): boolean",
+          "signatureTokens": [
+            {
+              "text": "has",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "id",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Report whether an extension with id is currently registered."
+        },
+        {
+          "name": "list",
+          "signature": "list(): readonly Readonly<Extension>[]",
+          "signatureTokens": [
+            {
+              "text": "list",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Extension",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": "readonly Readonly<Extension>[]",
+          "description": "List all registered descriptors in registration order. Returns a cached readonly view — no allocation on repeated calls while the registry is unchanged; the cache is invalidated only by a new register call."
+        },
+        {
+          "name": "register",
+          "signature": "register(extension: Extension): void",
+          "signatureTokens": [
+            {
+              "text": "register",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "extension",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Extension",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "extension",
+              "type": "Extension",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Register an extension descriptor. Idempotent for the *same object* under the same id (no-op). Throws if a *different* object is already registered under that id — this detects duplicate package installations."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/extensions/ExtensionRegistry.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/extensions/ExtensionRegistry.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/extensions/ExtensionRegistry.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/extensions/ExtensionRegistry.ts"
+}
