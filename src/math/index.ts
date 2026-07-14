@@ -6,6 +6,7 @@ export * from './CircleLike';
 // (intersects.*/resolve.*) from `./collision-detection`. Keep these distinct.
 export * from './Collision';
 export { Collision } from './collision-detection';
+export * from './DynamicAabbTree';
 export * from './Ellipse';
 export * from './EllipseLike';
 export * from './Flags';
