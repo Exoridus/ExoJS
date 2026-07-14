@@ -5,11 +5,12 @@ import { computeShaderTiling, type RepeatingSpriteQuad } from '#rendering/sprite
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { RepeatMode } from '#rendering/texture/repeat';
 import { Texture } from '#rendering/texture/Texture';
-import { type BlendModes, BufferTypes, BufferUsage, RenderingPrimitives, ScaleModes, WrapModes } from '#rendering/types';
+import { BlendModes, BufferTypes, BufferUsage, RenderingPrimitives, ScaleModes, WrapModes } from '#rendering/types';
 
 import { AbstractWebGl2Renderer } from './AbstractWebGl2Renderer';
 import type { WebGl2Backend } from './WebGl2Backend';
 import { WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from './WebGl2RenderBuffer';
+import type { WebGl2RetainedBatchPayload, WebGl2RetainedBatchReplayer, WebGl2RetainedNodeIndexRange } from './WebGl2RetainedGroupResources';
 import { createWebGl2ShaderProgram } from './WebGl2ShaderProgram';
 import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './WebGl2VertexArrayObject';
 
@@ -158,7 +159,27 @@ interface RendererConnection {
 }
 
 /** Instanced renderer for {@link RepeatingSprite} using WebGL2. Handles both shader and geometry paths internally. */
-export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<RepeatingSprite> {
+export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<RepeatingSprite> implements WebGl2RetainedBatchReplayer {
+  /**
+   * Retained-batch capability opt-in (Track B Slice 3, S3-D5.1). Only the
+   * GEOMETRY path (TextureRegion source) is recorded: its 32-byte instance
+   * layout matches the sprite/NineSlice batch shape (node index at word 7 of
+   * the 8-word instance), so it records and replays exactly like the sprite
+   * renderer — a mixed group of sprites and geometry-path repeating sprites
+   * shares one bundle and one group transform texture.
+   *
+   * The SHADER path (bare {@link Texture} source) uses a distinct 40-byte
+   * stride AND a per-batch wrap-mode sampler; the generalized instruction
+   * seam carries no per-batch metadata channel for the path discriminant or
+   * the wrap modes, so a shader-path draw inside a capture window POISONS it
+   * — the group degrades to the (correct) entry-replay tier, exactly as it
+   * did before this renderer opted in. Pixel-snapped draws are excluded for
+   * the same reason the sprite renderer excludes them (view-dependent
+   * instance words).
+   * @internal
+   */
+  public readonly _supportsRetainedBatches = true;
+
   private readonly _shaderPathShader: Shader;
   private readonly _geoPathShader: Shader;
   private readonly _batchSize: number;
@@ -193,10 +214,20 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
   private _connection: RendererConnection | null = null;
 
   private readonly _transformUnitScratch = new Int32Array([transformTextureUnit]);
+  private readonly _textureUnitScratch = new Int32Array([0]);
   private readonly _snapBounds = new Rectangle();
   private _currentView: unknown = null;
   private _currentViewId = -1;
   private _currentGroupTransformId = -1;
+
+  // Retained-replay reusable scratch + dedicated view/group uniform tracking
+  // for the geo shader — kept SEPARATE from the live-flush state above so a
+  // replay never marks the live projection "already staged" and leaves the
+  // shader-path program holding a stale projection.
+  private readonly _recordTextureScratch: Array<Texture | RenderTexture | null> = [null];
+  private _replayView: unknown = null;
+  private _replayViewId = -1;
+  private _replayGroupTransformId = -1;
 
   public constructor(batchSize: number) {
     super();
@@ -234,6 +265,15 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
     }
 
     const backend = this.getBackend();
+
+    // Retained recording (Track B Slice 3): only the geometry path is
+    // replayable. A shader-path or pixel-snapped draw inside an active capture
+    // cannot be replayed from group-owned resources, so poison the window —
+    // the group falls back to entry replay (correct, never stale) rather than
+    // replaying an incomplete or wrap-less instruction stream.
+    if (backend._isRetainedCapturing && (strategy === 'shader' || sprite.pixelSnapMode !== 'none')) {
+      backend._poisonRetainedCaptures();
+    }
 
     if (this._currentTexture !== texture) {
       this._currentTexture = texture;
@@ -480,7 +520,151 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
     backend.stats.batches++;
     backend.stats.drawCalls++;
 
+    // Retained recording (Track B Slice 3): while a capture window is open,
+    // hand the exact packed geometry-path words of this flush to the backend —
+    // byte-identical to what just drew. A single base texture binds to unit 0,
+    // so the recorded slot list is one entry. Shader-path batches are never
+    // recorded (render() poisoned the window if one appeared).
+    if (backend._isRetainedCapturing && this._currentTexture !== null) {
+      this._recordTextureScratch[0] = this._currentTexture;
+      backend._recordRetainedBatch(
+        this,
+        this._geoU32.subarray(0, this._geoQuadCount * geoWordsPerInstance),
+        this._geoQuadCount,
+        this._currentBlendMode ?? BlendModes.Normal,
+        this._recordTextureScratch,
+        1,
+      );
+    }
+
     this._geoQuadCount = 0;
+  }
+
+  // ── Retained-batch record/replay (Track B Slice 3) ───────────────────────
+  // Only geometry-path batches reach here (see _supportsRetainedBatches). Their
+  // 32-byte layout puts the node index at word 7 of the 8-word instance — the
+  // same position the sprite renderer uses — so scan/rebase mirror it exactly.
+
+  /** @internal See {@link WebGl2RetainedBatchReplayer._scanRetainedNodeIndexRange}. */
+  public _scanRetainedNodeIndexRange(payload: WebGl2RetainedBatchPayload, range: WebGl2RetainedNodeIndexRange): void {
+    const words = payload.bundle.instanceWords;
+    const start = payload.byteOffset / Uint32Array.BYTES_PER_ELEMENT;
+
+    for (let i = 0; i < payload.instanceCount; i++) {
+      // In-bounds: the payload's word range was appended to the bundle store.
+      const node = words[start + i * geoWordsPerInstance + 7]!;
+
+      if (node < range.min) {
+        range.min = node;
+      }
+
+      if (node > range.max) {
+        range.max = node;
+      }
+    }
+  }
+
+  /** @internal See {@link WebGl2RetainedBatchReplayer._rebaseRetainedNodeIndices} (S3-D4: group-local indices). */
+  public _rebaseRetainedNodeIndices(payload: WebGl2RetainedBatchPayload, base: number): void {
+    const words = payload.bundle.instanceWords;
+    const start = payload.byteOffset / Uint32Array.BYTES_PER_ELEMENT;
+
+    for (let i = 0; i < payload.instanceCount; i++) {
+      const index = start + i * geoWordsPerInstance + 7;
+
+      // In-bounds: see the scan above.
+      words[index] = (words[index]! - base) >>> 0;
+    }
+  }
+
+  /**
+   * Point the batch VAO's per-instance attributes at the bundle's persistent
+   * instance buffer for the geometry-path layout (same attributes/locations as
+   * the live `_geoVao` in {@link onConnect}), based at the batch's byte offset.
+   * @internal
+   */
+  public _configureRetainedVao(payload: WebGl2RetainedBatchPayload): void {
+    const gl = this.getBackend().context;
+    const buffer = payload.bundle.instanceBuffer;
+    const vao = payload.vao;
+
+    if (buffer === null || vao === null) {
+      throw new Error('WebGl2RepeatingSpriteRenderer: retained batch VAO configuration requires an uploaded bundle.');
+    }
+
+    const base = payload.byteOffset;
+
+    vao
+      .addAttribute(buffer, this._geoPathShader.getAttribute('a_quadBounds'), gl.FLOAT, false, geoStrideBytes, base + 0, false, 1)
+      .addAttribute(buffer, this._geoPathShader.getAttribute('a_uvBounds'), gl.UNSIGNED_SHORT, true, geoStrideBytes, base + 16, false, 1)
+      .addAttribute(buffer, this._geoPathShader.getAttribute('a_color'), gl.UNSIGNED_BYTE, true, geoStrideBytes, base + 24, false, 1)
+      .addAttribute(buffer, this._geoPathShader.getAttribute('a_nodeIndex'), gl.UNSIGNED_INT, false, geoStrideBytes, base + 28, true, 1);
+  }
+
+  /**
+   * Replay one recorded geometry-path batch: all STATE resolved live (blend,
+   * `u_projection` from the live view, `u_group` from the live composed group
+   * matrix, the single base texture on unit 0) and only DATA cached (instance
+   * bytes via the per-batch VAO, group-owned transform texture on the shared
+   * transform unit). Mirrors {@link WebGl2SpriteRenderer._replayRetainedBatch}.
+   * @internal
+   */
+  public _replayRetainedBatch(payload: WebGl2RetainedBatchPayload): void {
+    const backend = this.getBackendOrNull();
+    const vao = payload.vao;
+    const transformTexture = payload.bundle.transformTexture;
+
+    if (backend === null || vao === null || transformTexture === null) {
+      // Defensive: a bundle in this state never validates (generation), so a
+      // spliced replay cannot reach here; skip rather than crash mid-frame.
+      return;
+    }
+
+    if (payload.blendMode !== this._currentBlendMode) {
+      this._currentBlendMode = payload.blendMode;
+    }
+
+    backend.setBlendMode(payload.blendMode);
+    this._stageGeoReplayUniforms(backend);
+
+    // In-bounds: the geometry path records exactly one base texture (slot 0).
+    backend.bindTexture(payload.textures[0]!, 0);
+
+    // The group-owned transform texture replaces the shared frame buffer on the
+    // SAME unit/sampler — zero GLSL changes (S3-D4). The next live flush
+    // re-binds the shared texture via bindTransformBufferTexture.
+    backend.bindTexture(transformTexture, transformTextureUnit);
+
+    this._geoPathShader.getUniform('u_texture').setValue(this._textureUnitScratch);
+    this._geoPathShader.getUniform('u_transforms').setValue(this._transformUnitScratch);
+    this._geoPathShader.sync();
+
+    backend.bindVertexArrayObject(vao);
+    vao.drawInstanced(4, 0, payload.instanceCount, RenderingPrimitives.TriangleStrip);
+  }
+
+  /**
+   * Stage `u_projection` (live view) and `u_group` (live composed group matrix)
+   * on the geometry-path shader for a retained replay. Dedicated view/group
+   * tracking (not the live-flush stamps) so a replay never suppresses the live
+   * flush's own projection write to the shader-path program.
+   */
+  private _stageGeoReplayUniforms(backend: WebGl2Backend): void {
+    const view = backend.view;
+
+    if (this._replayView !== view || this._replayViewId !== view.updateId) {
+      this._replayView = view;
+      this._replayViewId = view.updateId;
+      this._geoPathShader.getUniform('u_projection').setValue(view.getTransform().toArray(false));
+    }
+
+    if (this._geoPathShader.uniforms.has('u_group') && this._replayGroupTransformId !== backend.renderGroupTransformId) {
+      this._replayGroupTransformId = backend.renderGroupTransformId;
+
+      const groupTransform = backend.renderGroupTransform;
+
+      this._geoPathShader.getUniform('u_group').setValue(groupTransform !== null ? groupTransform.toArray(false) : identityGroupMat3);
+    }
   }
 
   private _resetBatchState(): void {
@@ -576,6 +760,10 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
     this._currentView = null;
     this._currentViewId = -1;
     this._currentGroupTransformId = -1;
+    this._replayView = null;
+    this._replayViewId = -1;
+    this._replayGroupTransformId = -1;
+    this._recordTextureScratch[0] = null;
     this._resetBatchState();
   }
 
