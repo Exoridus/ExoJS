@@ -216,6 +216,13 @@ export class Text extends AbstractText {
     this._textBounds = { width: 0, height: 0 };
 
     if (this._text.length === 0) {
+      // Empty transition: reset the extent and route through the content-dirty
+      // contract, exactly like the non-empty path below. Without this a Text
+      // going empty keeps its old local bounds and bumps no revision, so
+      // culling / hit-testing / the retained group aggregate read a stale
+      // extent, and any instruction-set cache of the prior geometry stays live.
+      this.getLocalBounds().set(0, 0, 0, 0);
+      this._invalidateBoundsCascade();
       this._style.consumeDirty();
       return;
     }
@@ -227,6 +234,10 @@ export class Text extends AbstractText {
     const placements = layoutText(this._text, this._style, this._layout, atlas);
 
     if (placements.length === 0) {
+      // Same empty-transition contract as above: no glyphs placed, so reset the
+      // extent and content-dirty rather than leaving a stale non-empty bounds.
+      this.getLocalBounds().set(0, 0, 0, 0);
+      this._invalidateBoundsCascade();
       this._style.consumeDirty();
       return;
     }
