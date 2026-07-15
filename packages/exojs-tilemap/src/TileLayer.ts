@@ -8,6 +8,7 @@ import {
   unpackTile,
   validateInteger,
   validateNonNegativeInteger,
+  validatePairedDimensions,
   validatePositiveInteger,
 } from './types';
 import { tileToChunkCoord, tileToLocalInChunk } from './types';
@@ -106,13 +107,7 @@ function validateTileLayerOptions(options: TileLayerOptions): ResolvedTileLayerO
   if (!options.name || typeof options.name !== 'string') {
     throw new Error('TileLayer name must be a non-empty string.');
   }
-  if (options.width !== undefined || options.height !== undefined) {
-    if (options.width === undefined || options.height === undefined) {
-      throw new Error('TileLayer width and height must both be provided (bounded) or both omitted (unbounded).');
-    }
-    validatePositiveInteger(options.width, 'layer.width');
-    validatePositiveInteger(options.height, 'layer.height');
-  }
+  validatePairedDimensions(options.width, options.height, 'TileLayer', 'layer');
   validatePositiveInteger(options.tileWidth, 'layer.tileWidth');
   validatePositiveInteger(options.tileHeight, 'layer.tileHeight');
 

@@ -6,7 +6,7 @@ import type { TileMapViewOptions } from './TileMapView';
 import { TileMapView } from './TileMapView';
 import { type TileSet } from './TileSet';
 import type { ResolvedTile,TileProperties } from './types';
-import { validatePositiveInteger } from './types';
+import { validatePairedDimensions, validatePositiveInteger } from './types';
 
 /**
  * Options for constructing a {@link TileMap}.
@@ -124,13 +124,7 @@ export class TileMap {
    * @throws When dimensions or other options are invalid.
    */
   public constructor(options: TileMapOptions) {
-    if (options.width !== undefined || options.height !== undefined) {
-      if (options.width === undefined || options.height === undefined) {
-        throw new Error('TileMap width and height must both be provided (bounded) or both omitted (unbounded).');
-      }
-      validatePositiveInteger(options.width, 'map.width');
-      validatePositiveInteger(options.height, 'map.height');
-    }
+    validatePairedDimensions(options.width, options.height, 'TileMap', 'map');
     validatePositiveInteger(options.tileWidth, 'map.tileWidth');
     validatePositiveInteger(options.tileHeight, 'map.tileHeight');
 
