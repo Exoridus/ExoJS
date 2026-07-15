@@ -73,6 +73,9 @@ export {
 } from './types';
 // Per-tile animation driver (RPG-Maker-style): advances only animated cells.
 export { TileAnimator } from './TileAnimator';
+// Chunk streaming: loads/unloads TileLayer chunks from a View's position via a ChunkSource provider.
+export type { ChunkStreamerOptions } from './ChunkStreamer';
+export { ChunkStreamer } from './ChunkStreamer';
 // Wang autotiling: automatic tile selection based on neighbor bitmasks.
 export type { AutoTileOptions } from './autoTile';
 export { autoTile, refreshCell } from './autoTile';
