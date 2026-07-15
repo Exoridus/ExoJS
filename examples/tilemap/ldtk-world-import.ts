@@ -109,7 +109,7 @@ class LdtkWorldImportScene extends Scene {
         const overlay = new Graphics();
         const walls = level.layers.find(layer => layer.name === 'Walls');
 
-        if (!walls) {
+        if (!walls || walls.width === undefined || walls.height === undefined) {
             return overlay;
         }
 

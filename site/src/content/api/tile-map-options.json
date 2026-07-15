@@ -138,11 +138,15 @@
         },
         {
           "name": "height",
-          "signature": "height: number",
+          "signature": "height?: number",
           "signatureTokens": [
             {
               "text": "height",
               "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
             },
             {
               "text": ": ",
@@ -155,7 +159,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Map height in tiles."
+          "description": "Map height in tiles. Must be provided iff width is."
         },
         {
           "name": "imageLayers",
@@ -436,11 +440,15 @@
         },
         {
           "name": "width",
-          "signature": "width: number",
+          "signature": "width?: number",
           "signatureTokens": [
             {
               "text": "width",
               "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
             },
             {
               "text": ": ",
@@ -453,7 +461,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Map width in tiles."
+          "description": "Map width in tiles. Omit together with height for an unbounded map — layers you add are then free to be unbounded too (this option does not constrain per-layer dimensions either way)."
         }
       ],
       "paragraphs": [],

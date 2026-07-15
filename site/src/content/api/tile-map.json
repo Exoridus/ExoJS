@@ -6,11 +6,11 @@
   "subsystem": "tilemap",
   "importPath": "@codexo/exojs-tilemap",
   "tier": "advanced",
-  "memberCount": 40,
+  "memberCount": 41,
   "counts": {
     "constructors": 1,
     "methods": 20,
-    "properties": 19,
+    "properties": 20,
     "events": 0
   },
   "sections": [
@@ -1457,7 +1457,7 @@
         },
         {
           "name": "height",
-          "signature": "height: number",
+          "signature": "height: number | undefined",
           "signatureTokens": [
             {
               "text": "height",
@@ -1470,11 +1470,19 @@
             {
               "text": "number",
               "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Map height in tiles."
+          "description": "Map height in tiles, or undefined if unbounded."
         },
         {
           "name": "name",
@@ -1583,7 +1591,7 @@
         },
         {
           "name": "width",
-          "signature": "width: number",
+          "signature": "width: number | undefined",
           "signatureTokens": [
             {
               "text": "width",
@@ -1596,11 +1604,40 @@
             {
               "text": "number",
               "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Map width in tiles."
+          "description": "Map width in tiles, or undefined if unbounded."
+        },
+        {
+          "name": "bounded",
+          "signature": "bounded: boolean",
+          "signatureTokens": [
+            {
+              "text": "bounded",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "true if this map has a fixed width/height; false if unbounded."
         },
         {
           "name": "destroyed",
@@ -1736,7 +1773,7 @@
         },
         {
           "name": "pixelHeight",
-          "signature": "pixelHeight: number",
+          "signature": "pixelHeight: number | undefined",
           "signatureTokens": [
             {
               "text": "pixelHeight",
@@ -1749,15 +1786,23 @@
             {
               "text": "number",
               "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Pixel height."
+          "description": "Pixel height, or undefined if unbounded."
         },
         {
           "name": "pixelWidth",
-          "signature": "pixelWidth: number",
+          "signature": "pixelWidth: number | undefined",
           "signatureTokens": [
             {
               "text": "pixelWidth",
@@ -1770,11 +1815,19 @@
             {
               "text": "number",
               "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Pixel width."
+          "description": "Pixel width, or undefined if unbounded."
         },
         {
           "name": "revision",
