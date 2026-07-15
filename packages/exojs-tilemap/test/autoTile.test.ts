@@ -446,3 +446,73 @@ describe('refreshCell — incremental update', () => {
     expect(layer.revision).toBeGreaterThan(revBefore);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Test 6: unbounded layers
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe('autoTile + unbounded layers', () => {
+  it('autoTile() throws on an unbounded layer', () => {
+    const ts = makeTileset256();
+    const layer = new TileLayer({
+      id: 0,
+      name: 'layer',
+      tileHeight: 32,
+      tileWidth: 32,
+      tilesets: [ts],
+    });
+    const wangSet = new WangSet({ blobMap: identityBlobMap(), tilesetIndex: 0, type: 'blob' });
+
+    expect(() => autoTile(layer, wangSet)).toThrow(/bounded/);
+  });
+
+  it('refreshCell() works on an unbounded layer (no whole-layer sweep needed)', () => {
+    const ts = makeTileset256();
+    const layer = new TileLayer({
+      chunkHeight: 8,
+      chunkWidth: 8,
+      id: 0,
+      name: 'layer',
+      tileHeight: 32,
+      tileWidth: 32,
+      tilesets: [ts],
+    });
+    const wangSet = new WangSet({ blobMap: identityBlobMap(), tilesetIndex: 0, type: 'blob' });
+
+    setTile(layer, ts, 0, 0, wangSet.blobMap.get(0)!);
+    expect(() => refreshCell(layer, 0, 0, wangSet)).not.toThrow();
+  });
+
+  it('refreshCell() correctly treats negative coordinates as real (non-border) cells on an unbounded axis', () => {
+    // Regression test for the isInGroup border check: with w/h === undefined
+    // (unbounded), a coordinate of -1 must NOT be short-circuited as "off
+    // the grid" — unbounded layers accept any signed tile coordinate, so the
+    // neighbor at (-1, 0) must be read from the layer like any other cell.
+    const ts = makeTileset256();
+    const layer = new TileLayer({
+      chunkHeight: 8,
+      chunkWidth: 8,
+      id: 0,
+      name: 'layer',
+      tileHeight: 32,
+      tileWidth: 32,
+      tilesets: [ts],
+    });
+    const wangSet = new WangSet({ blobMap: identityBlobMap(), tilesetIndex: 0, type: 'edge' });
+
+    // Member tiles at (0,0) and its left (-1,0), right (1,0), bottom (0,1)
+    // neighbors; top (0,-1) left empty. With wrapBorder:false, a border cell
+    // returns `false`, so if (-1,0) were wrongly treated as border, its bit
+    // would be dropped from the mask.
+    setTile(layer, ts, 0, 0, 0);
+    setTile(layer, ts, -1, 0, 0);
+    setTile(layer, ts, 1, 0, 0);
+    setTile(layer, ts, 0, 1, 0);
+
+    refreshCell(layer, 0, 0, wangSet, { wrapBorder: false });
+
+    // Edge mask bits: Top=1, Right=2, Bottom=4, Left=8.
+    // top=false(empty), right=true, bottom=true, left=true → 2+4+8 = 14.
+    expect(layer.getTileAt(0, 0)?.localTileId).toBe(14);
+  });
+});

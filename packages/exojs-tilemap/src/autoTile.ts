@@ -151,12 +151,21 @@ function applyVariant(
  * combinations to 47 valid blob states).
  *
  * **Edge mode bitmask (bit positions):** Top=1, Right=2, Bottom=4, Left=8.
+ *
+ * @throws If `layer` is unbounded (no fixed width/height) — there is no
+ * "whole layer" to sweep. Use {@link refreshCell} to autotile an unbounded
+ * layer incrementally, one edited cell at a time.
  */
 export function autoTile(layer: TileLayer, wangSet: WangSet, options?: AutoTileOptions): void {
   const matchFn = options?.matchFn;
   const wrapBorder = options?.wrapBorder ?? true;
   const w = layer.width;
   const h = layer.height;
+  if (w === undefined || h === undefined) {
+    throw new Error(
+      'autoTile() requires a bounded layer (sweeps the whole layer) — use refreshCell() on an unbounded layer instead.',
+    );
+  }
 
   // ── Pass 1: snapshot ─────────────────────────────────────────────────
   // Capture each cell's (tilesetIndex, localTileId) before any writes so
@@ -244,7 +253,7 @@ export function refreshCell(
 
   // Live membership test (reads the current layer; variant-stable by default).
   const isInGroup = (nx: number, ny: number): boolean => {
-    if (nx < 0 || nx >= w || ny < 0 || ny >= h) return wrapBorder;
+    if ((w !== undefined && (nx < 0 || nx >= w)) || (h !== undefined && (ny < 0 || ny >= h))) return wrapBorder;
     const tile = layer.getTileAt(nx, ny);
     if (!tile) return false;
     const tsi = layer.tilesets.indexOf(tile.tileset);
