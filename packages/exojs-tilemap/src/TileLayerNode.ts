@@ -4,6 +4,7 @@ import type { PixelSnapMode, RenderPlanBuilder } from '@codexo/exojs/renderer-sd
 
 import { aggregateChildLocalBounds } from './nodeBounds';
 import { assertPixelSnapMode } from './pixelSnap';
+import type { ReadonlyTileChunk } from './TileChunk';
 import { TileChunkNode } from './TileChunkNode';
 import type { ChunkStructuralEvent, TileLayer } from './TileLayer';
 
@@ -74,21 +75,7 @@ export class TileLayerNode extends Container {
       return;
     }
 
-    const layer = this._layer;
-    const node = new TileChunkNode(
-      event.chunk,
-      layer.tilesets,
-      layer.tileWidth,
-      layer.tileHeight,
-      layer.chunkWidth,
-      layer.chunkHeight,
-    );
-
-    node.cullable = this._cullChunks;
-
-    if (this._pixelSnapMode !== 'none') {
-      node.pixelSnapMode = this._pixelSnapMode;
-    }
+    const node = this._createChunkNode(event.chunk);
 
     this._chunkNodes.push(node);
     this.addChild(node);
@@ -239,26 +226,39 @@ export class TileLayerNode extends Container {
         continue;
       }
 
-      const node = new TileChunkNode(
-        chunk,
-        layer.tilesets,
-        layer.tileWidth,
-        layer.tileHeight,
-        layer.chunkWidth,
-        layer.chunkHeight,
-      );
-
-      node.cullable = this._cullChunks;
-
-      if (this._pixelSnapMode !== 'none') {
-        node.pixelSnapMode = this._pixelSnapMode;
-      }
+      const node = this._createChunkNode(chunk);
 
       this._chunkNodes.push(node);
       this.addChild(node);
     }
 
     this._syncTint();
+  }
+
+  /**
+   * Construct one configured {@link TileChunkNode} for `chunk` — shared by
+   * the initial bulk build ({@link _buildChunkNodes}) and the incremental
+   * structural-listener handler, so a future constructor argument or
+   * per-node setting only needs to be added in one place.
+   */
+  private _createChunkNode(chunk: ReadonlyTileChunk): TileChunkNode {
+    const layer = this._layer;
+    const node = new TileChunkNode(
+      chunk,
+      layer.tilesets,
+      layer.tileWidth,
+      layer.tileHeight,
+      layer.chunkWidth,
+      layer.chunkHeight,
+    );
+
+    node.cullable = this._cullChunks;
+
+    if (this._pixelSnapMode !== 'none') {
+      node.pixelSnapMode = this._pixelSnapMode;
+    }
+
+    return node;
   }
 
   /**
