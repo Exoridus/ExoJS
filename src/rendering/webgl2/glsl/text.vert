@@ -1,28 +1,45 @@
 #version 300 es
 precision highp float;
 
-// a_position arrives already in WORLD space: the renderer applies each node's
-// world transform on the CPU while building the vertex buffer. This deliberately
-// avoids a vertex-stage texelFetch of the per-node data texture — on ANGLE/D3D11
-// a vertex texture fetch of the RGBA32F data texture returns garbage (RGB read as
-// 0) whenever an RGBA8 atlas is also bound, which collapsed all text glyphs to a
-// point and made colour/MSDF bitmap text invisible. The fragment still reads the
-// per-node style from the data texture (a fragment texture fetch is unaffected).
-layout(location = 0) in vec2  a_position;   // world-space quad corner
+// Mirrors WebGpuTextRenderer's WGSL vertex stage exactly: a_position arrives in
+// LOCAL space, and the world transform is read live from the per-node data
+// texture (same texture the fragment stage reads style from) via texelFetch,
+// keyed by a_nodeIndex — the same pattern Sprite/Mesh/NineSlice use for their
+// shared transform buffer, just against Text's own private node-data texture.
+layout(location = 0) in vec2  a_position;   // local-space quad corner
 layout(location = 1) in vec2  a_texcoord;
-layout(location = 2) in float a_nodeIndex;  // row into the per-node data texture (style lookup)
-layout(location = 3) in vec2  a_gradUV;     // normalised gradient UV (CPU-computed)
+layout(location = 2) in float a_nodeIndex;  // row into the per-node data texture (transform + style)
 
 uniform mat3 u_projection;
 uniform mat3 u_group;
+uniform sampler2D u_nodeData;
 
 flat out int  v_nodeIndex;
      out vec2 v_texcoord;
      out vec2 v_gradUV;
 
 void main(void) {
-    gl_Position = vec4((u_projection * u_group * vec3(a_position, 1.0)).xy, 0.0, 1.0);
+    int ni = int(a_nodeIndex);
+
+    // texel 0: (a, c, 0, tx) — mat3 column-major: col0 + translate.x
+    // texel 1: (b, d, 0, ty) — mat3 column-major: col1 + translate.y
+    // texel 9: (minX, minY, w, h) — text block bounds (local space, for gradient UV)
+    vec4 t0 = texelFetch(u_nodeData, ivec2(0, ni), 0);
+    vec4 t1 = texelFetch(u_nodeData, ivec2(1, ni), 0);
+    vec4 t9 = texelFetch(u_nodeData, ivec2(9, ni), 0);
+
+    mat3 xf = mat3(
+        t0.x, t0.y, 0.0,
+        t1.x, t1.y, 0.0,
+        t0.w, t1.w, 1.0
+    );
+
+    gl_Position = vec4((u_projection * u_group * xf * vec3(a_position, 1.0)).xy, 0.0, 1.0);
     v_texcoord  = a_texcoord;
-    v_nodeIndex = int(a_nodeIndex);
-    v_gradUV    = a_gradUV;
+    v_nodeIndex = ni;
+
+    vec2 bSize = t9.zw;
+    v_gradUV = (bSize.x > 0.0 && bSize.y > 0.0)
+        ? clamp((a_position - t9.xy) / bSize, 0.0, 1.0)
+        : vec2(0.0);
 }

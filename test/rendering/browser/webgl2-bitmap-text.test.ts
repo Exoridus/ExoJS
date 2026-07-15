@@ -134,10 +134,15 @@ layout(location = 0) in vec2 a_position;
 layout(location = 1) in vec2 a_texcoord;
 layout(location = 2) in float a_nodeIndex;
 uniform mat3 u_projection;
+uniform mat3 u_group;
+uniform sampler2D u_nodeData;
 out vec2 v_uv;
 void main() {
-  float ni = a_nodeIndex;
-  vec3 clip = u_projection * vec3(a_position + vec2(ni * 0.0), 1.0);
+  int ni = int(a_nodeIndex);
+  vec4 t0 = texelFetch(u_nodeData, ivec2(0, ni), 0);
+  vec4 t1 = texelFetch(u_nodeData, ivec2(1, ni), 0);
+  mat3 xf = mat3(t0.x, t0.y, 0.0, t1.x, t1.y, 0.0, t0.w, t1.w, 1.0);
+  vec3 clip = u_projection * u_group * xf * vec3(a_position, 1.0);
   gl_Position = vec4(clip.xy, 0.0, 1.0); v_uv = a_texcoord;
 }`,
 
