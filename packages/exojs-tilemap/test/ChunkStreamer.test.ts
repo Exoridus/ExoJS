@@ -354,3 +354,59 @@ describe('ChunkStreamer.update() — parallax-aware wanted range', () => {
     expect(layer.getChunk(topLeftChunk.cx - 2, topLeftChunk.cy - 2)).toBeUndefined();
   });
 });
+
+describe('ChunkStreamer.destroy()', () => {
+  it('evicts every chunk this instance loaded', () => {
+    const tileset = makeTileset();
+    const layer = makeUnboundedLayer(tileset);
+    const view = new View(0, 0, 64, 64);
+    const streamer = new ChunkStreamer(layer, makeAlwaysAvailableSource(), view);
+    streamer.update();
+    expect(streamer.residentCount).toBeGreaterThan(0);
+
+    streamer.destroy();
+
+    expect(streamer.residentCount).toBe(0);
+    expect([...layer.loadedChunks()]).toHaveLength(0);
+  });
+
+  it('does not evict chunks that predate the streamer or were adopted out-of-band', () => {
+    const tileset = makeTileset();
+    const layer = makeUnboundedLayer(tileset);
+    layer._adoptChunk(999, 999, { width: 4, height: 4, tiles: new Uint32Array(16) }); // hand-placed, out of streamer's range
+    const view = new View(0, 0, 64, 64);
+    const streamer = new ChunkStreamer(layer, makeAlwaysAvailableSource(), view);
+    streamer.update();
+
+    streamer.destroy();
+
+    expect(layer.getChunk(999, 999)).toBeDefined();
+  });
+
+  it('is idempotent', () => {
+    const tileset = makeTileset();
+    const layer = makeUnboundedLayer(tileset);
+    const view = new View(0, 0, 64, 64);
+    const streamer = new ChunkStreamer(layer, makeAlwaysAvailableSource(), view);
+    streamer.update();
+
+    streamer.destroy();
+    expect(() => streamer.destroy()).not.toThrow();
+    expect(streamer.residentCount).toBe(0);
+  });
+
+  it('update() after destroy() is a no-op', () => {
+    const tileset = makeTileset();
+    const layer = makeUnboundedLayer(tileset);
+    const view = new View(0, 0, 64, 64);
+    const streamer = new ChunkStreamer(layer, makeAlwaysAvailableSource(), view);
+    streamer.update();
+    streamer.destroy();
+
+    view.setCenter(1000, 1000);
+    streamer.update();
+
+    expect(streamer.residentCount).toBe(0);
+    expect([...layer.loadedChunks()]).toHaveLength(0);
+  });
+});

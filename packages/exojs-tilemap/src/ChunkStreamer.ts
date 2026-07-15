@@ -155,12 +155,19 @@ export class ChunkStreamer {
   }
 
   /**
-   * Stop responding to {@link update}. Idempotent. Does not evict any
-   * currently-resident chunk — see the follow-on eviction behavior added by
-   * the next task in this slice's implementation plan.
+   * Evict every chunk this instance has loaded and stop responding to
+   * {@link update}. Does not affect chunks predating attachment or
+   * installed by another source. Idempotent.
    */
   public destroy(): void {
+    if (this._destroyed) return;
     this._destroyed = true;
+
+    for (const { cx, cy } of this._resident.values()) {
+      this._layer._evictChunk(cx, cy);
+    }
+    this._resident.clear();
+    this._inFlight.clear();
   }
 
   private _computeCoreRange(): ChunkRange {
