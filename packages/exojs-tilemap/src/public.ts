@@ -66,10 +66,12 @@ export type {
   TileTransform,
 } from './types';
 export {
+  packTile,
   TILE_TRANSFORM_IDENTITY,
   TilePropertyKind,
   tileToChunkCoord,
   tileToLocalInChunk,
+  unpackTile,
 } from './types';
 // Per-tile animation driver (RPG-Maker-style): advances only animated cells.
 export { TileAnimator } from './TileAnimator';

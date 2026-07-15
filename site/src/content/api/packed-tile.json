@@ -1,6 +1,6 @@
 {
   "title": "PackedTile",
-  "description": "Opaque packed tile data stored in a TileChunk's compact array. 0 means \"empty cell\". Any non-zero value encodes localTileId, tilesetIndex, and flip bits according to the bit-layout constants below. A `PackedTile` is **not** a source-format GID — it is a fully resolved internal compact representation. Use packTile / unpackTile (package-internal) to convert between packed form and a ResolvedTile if writing adapters. In public APIs, prefer ResolvedTile or null for queries. `PackedTile` is exposed as `@advanced` so `ReadonlyTileChunk.getRawAt()` has a self-documenting return type.",
+  "description": "Opaque packed tile data stored in a TileChunk's compact array. 0 means \"empty cell\". Any non-zero value encodes localTileId, tilesetIndex, and flip bits according to the bit-layout constants below. A `PackedTile` is **not** a source-format GID — it is a fully resolved internal compact representation. Use packTile / unpackTile to convert between packed form and a ResolvedTile if writing adapters. In public APIs, prefer ResolvedTile or null for queries. `PackedTile` is exposed as `@advanced` so `ReadonlyTileChunk.getRawAt()` has a self-documenting return type.",
   "symbol": "PackedTile",
   "kind": "type",
   "subsystem": "tilemap",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Opaque packed tile data stored in a TileChunk's compact array. 0 means \"empty cell\". Any non-zero value encodes localTileId, tilesetIndex, and flip bits according to the bit-layout constants below.",
-        "A `PackedTile` is **not** a source-format GID — it is a fully resolved internal compact representation. Use packTile / unpackTile (package-internal) to convert between packed form and a ResolvedTile if writing adapters.",
+        "A `PackedTile` is **not** a source-format GID — it is a fully resolved internal compact representation. Use packTile / unpackTile to convert between packed form and a ResolvedTile if writing adapters.",
         "In public APIs, prefer ResolvedTile or null for queries. `PackedTile` is exposed as `@advanced` so `ReadonlyTileChunk.getRawAt()` has a self-documenting return type."
       ],
       "importLine": "import { PackedTile } from '@codexo/exojs-tilemap'",

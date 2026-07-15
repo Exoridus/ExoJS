@@ -6,10 +6,10 @@
   "subsystem": "tiled",
   "importPath": "@codexo/exojs-tiled",
   "tier": "stable",
-  "memberCount": 19,
+  "memberCount": 20,
   "counts": {
     "constructors": 1,
-    "methods": 4,
+    "methods": 5,
     "properties": 14,
     "events": 0
   },
@@ -266,6 +266,61 @@
           "description": "Returns the tileset that owns gid, or undefined if gid is 0 (the empty-cell sentinel) or is not covered by any tileset. Flip/rotation flag bits are masked off before the range lookup, so the raw GID values found in TiledTileLayer.data/chunks and TiledObject.gid can be passed directly."
         },
         {
+          "name": "getChunkSource",
+          "signature": "getChunkSource(layerId: number): ChunkSource | undefined",
+          "signatureTokens": [
+            {
+              "text": "getChunkSource",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "layerId",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ChunkSource",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "layerId",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "ChunkSource | undefined",
+          "description": "The ChunkSource built for the chunked tile layer with the given Tiled layer id, as a side effect of the most recent toTileMap call. Returns undefined if toTileMap() hasn't been called yet, if layerId doesn't name a tile layer, or if that layer is finite (data-based) rather than chunked (infinite-map chunks-based). Call toTileMap before calling this — it is what builds the providers this method reads from."
+        },
+        {
           "name": "getProperty",
           "signature": "getProperty(name: string): TiledPropertyData | undefined",
           "signatureTokens": [
@@ -347,7 +402,7 @@
           ],
           "params": [],
           "returnType": "TileMap",
-          "description": "Convert this parsed Tiled source model into a format-independent runtime TileMap from @codexo/exojs-tilemap. Only finite orthogonal maps with atlas tilesets are supported. A non-orthogonal or infinite map, or a collection-of-images tileset, throws TiledFormatError rather than silently producing wrong (misplaced) or empty geometry. Tile layers become renderable TileLayers, object groups become data-only ObjectLayers, and image layers become data-only ImageLayers; group layer children are flattened in document order. The returned TileMap does **not** own the tileset textures — they remain in the Loader cache. Destroying the returned map does not unload textures."
+          "description": "Convert this parsed Tiled source model into a format-independent runtime TileMap from @codexo/exojs-tilemap. Only orthogonal maps with atlas tilesets are supported. A non-orthogonal map, or a collection-of-images tileset, throws TiledFormatError rather than silently producing wrong (misplaced) or empty geometry. Tile layers become renderable TileLayers, object groups become data-only ObjectLayers, and image layers become data-only ImageLayers; group layer children are flattened in document order. An infinite: true (chunked) tile layer converts to an **unbounded** runtime TileLayer with no tiles populated eagerly — its data streams in on demand via the ChunkSource built for it, retrievable with getChunkSource after this call returns. The returned TileMap does **not** own the tileset textures — they remain in the Loader cache. Destroying the returned map does not unload textures."
         }
       ],
       "paragraphs": [],

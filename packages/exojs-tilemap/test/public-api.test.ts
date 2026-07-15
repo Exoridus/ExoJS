@@ -67,6 +67,16 @@ describe('public chunk boundary', () => {
     expect(_p).toBe(0);
   });
 
+  it('packTile/unpackTile are importable from the package barrel and round-trip', async () => {
+    const { packTile, unpackTile } = await import('../src/index');
+    const packed = packTile(2, 5, { flipX: true, flipY: false, diagonal: true });
+    expect(unpackTile(packed)).toEqual({
+      tilesetIndex: 2,
+      localTileId: 5,
+      transform: { flipX: true, flipY: false, diagonal: true },
+    });
+  });
+
   it('layer.getChunk returns ReadonlyTileChunk, not the mutable class', () => {
     const { layer, ref } = createTestLayer();
     layer.setTileAt(0, 0, ref);

@@ -1,8 +1,8 @@
 import { type Texture, TextureRegion } from '@codexo/exojs';
-import type { ObjectPoint, ResolvedTile, TextStyle, TileAnimationFrame, TileDefinition, TileMapObject, TileProperties, TilePropertyValue, TileTransform } from '@codexo/exojs-tilemap';
-import { ImageLayer, ObjectLayer, TileLayer, TileMap, TilePropertyKind, TileSet } from '@codexo/exojs-tilemap';
+import type { ChunkPayload, ChunkSource, ObjectPoint, ResolvedTile, TextStyle, TileAnimationFrame, TileDefinition, TileMapObject, TileProperties, TilePropertyValue, TileTransform } from '@codexo/exojs-tilemap';
+import { ImageLayer, ObjectLayer, packTile, TileLayer, TileMap, TilePropertyKind, TileSet } from '@codexo/exojs-tilemap';
 
-import type { TiledClassPropertyValueData, TiledMapData, TiledObjectData, TiledOrientation, TiledPropertyData, TiledRenderOrder, TiledTileData } from './data';
+import type { TiledChunkData, TiledClassPropertyValueData, TiledMapData, TiledObjectData, TiledOrientation, TiledPropertyData, TiledRenderOrder, TiledTileData } from './data';
 import {
   maskTiledGid,
   TILED_FLIPPED_DIAGONALLY_FLAG,
@@ -54,6 +54,7 @@ export class TiledMap {
   public readonly properties: readonly TiledPropertyData[];
 
   private readonly _imageTextures: ReadonlyMap<number, Texture>;
+  private readonly _chunkSources = new Map<number, ChunkSource>();
 
   public constructor(
     source: string,
@@ -113,32 +114,32 @@ export class TiledMap {
    * Convert this parsed Tiled source model into a format-independent runtime
    * {@link TileMap} from `@codexo/exojs-tilemap`.
    *
-   * Only finite orthogonal maps with atlas tilesets are supported. A
-   * non-orthogonal or infinite map, or a collection-of-images tileset, throws
-   * {@link TiledFormatError} rather than silently producing wrong (misplaced)
-   * or empty geometry. Tile layers become renderable `TileLayer`s, object
-   * groups become data-only `ObjectLayer`s, and image layers become data-only
-   * `ImageLayer`s; group layer children are flattened in document order.
+   * Only orthogonal maps with atlas tilesets are supported. A non-orthogonal
+   * map, or a collection-of-images tileset, throws {@link TiledFormatError}
+   * rather than silently producing wrong (misplaced) or empty geometry. Tile
+   * layers become renderable `TileLayer`s, object groups become data-only
+   * `ObjectLayer`s, and image layers become data-only `ImageLayer`s; group
+   * layer children are flattened in document order.
+   *
+   * An `infinite: true` (chunked) tile layer converts to an **unbounded**
+   * runtime `TileLayer` with no tiles populated eagerly — its data streams in
+   * on demand via the {@link ChunkSource} built for it, retrievable with
+   * {@link getChunkSource} after this call returns.
    *
    * The returned `TileMap` does **not** own the tileset textures — they remain
    * in the Loader cache. Destroying the returned map does not unload textures.
    */
   public toTileMap(): TileMap {
-    // The runtime TileMap is finite + orthogonal in this release. Reject maps
-    // we cannot convert faithfully rather than silently producing misplaced
-    // (isometric/staggered/hexagonal) or empty (infinite/chunked) geometry.
+    this._chunkSources.clear();
+
+    // Orthogonal-only in this release. Reject maps we cannot convert
+    // faithfully rather than silently producing misplaced (isometric/
+    // staggered/hexagonal) geometry.
     if (this.orientation !== 'orthogonal') {
       throw new TiledFormatError(
         this.source,
         'orientation',
         `toTileMap() supports only orthogonal maps in this release, got "${this.orientation}"`,
-      );
-    }
-    if (this.infinite) {
-      throw new TiledFormatError(
-        this.source,
-        'infinite',
-        'toTileMap() supports only finite maps in this release; infinite (chunked) maps are not yet convertible',
       );
     }
 
@@ -204,11 +205,11 @@ export class TiledMap {
         if (layer instanceof TiledGroupLayer) {
           convertLayers(layer.layers);
         } else if (layer instanceof TiledTileLayer) {
+          const chunked = layer.chunks !== undefined;
           const rLayer = new TileLayer({
             id: layer.id,
             name: layer.name,
-            width: layer.width,
-            height: layer.height,
+            ...(chunked ? {} : { width: layer.width, height: layer.height }),
             tilesets: runtimeTilesets,
             tileWidth: this.tileWidth,
             tileHeight: this.tileHeight,
@@ -223,6 +224,8 @@ export class TiledMap {
           });
           if (layer.data) {
             populateTileLayer(rLayer, layer.data, this.tilesets, indexToRuntime, layer.width);
+          } else if (chunked) {
+            this._chunkSources.set(layer.id, buildTiledChunkSource(layer, rLayer, this.tilesets, indexToRuntime, this.source));
           }
           runtimeLayers.push(rLayer);
         } else if (layer instanceof TiledObjectLayer) {
@@ -252,8 +255,10 @@ export class TiledMap {
 
     return new TileMap({
       name: this.source,
-      width: this.width,
-      height: this.height,
+      // Tiled always reports width/height as 0 at the map level for an
+      // infinite map (its extent is unbounded/streamed); omit both rather
+      // than passing 0, which TileMap's constructor rejects.
+      ...(this.infinite ? {} : { width: this.width, height: this.height }),
       tileWidth: this.tileWidth,
       tileHeight: this.tileHeight,
       tilesets: runtimeTilesets,
@@ -265,6 +270,21 @@ export class TiledMap {
       renderOrder: this.renderOrder ?? 'right-down',
       properties: convertProperties(this.properties),
     });
+  }
+
+  /**
+   * The {@link ChunkSource} built for the chunked tile layer with the given
+   * Tiled layer `id`, as a side effect of the most recent {@link toTileMap}
+   * call. Returns `undefined` if `toTileMap()` hasn't been called yet, if
+   * `layerId` doesn't name a tile layer, or if that layer is finite
+   * (`data`-based) rather than chunked (`infinite`-map `chunks`-based).
+   *
+   * Call {@link toTileMap} before calling this — it is what builds the
+   * providers this method reads from.
+   * @advanced
+   */
+  public getChunkSource(layerId: number): ChunkSource | undefined {
+    return this._chunkSources.get(layerId);
   }
 
   /**
@@ -334,6 +354,91 @@ function populateTileLayer(
     if (!tile) continue;
     layer.setTileAt(i % width, Math.floor(i / width), tile);
   }
+}
+
+/**
+ * Build a {@link ChunkSource} that lazily re-slices a chunked
+ * {@link TiledTileLayer}'s fixed-size on-disk chunks into `runtimeLayer`'s
+ * own chunk grid. Indexes `layer.chunks` once by on-disk coordinate;
+ * `getChunk` composes each request from the on-disk chunks it overlaps.
+ *
+ * @throws {TiledFormatError} if the layer's on-disk chunks don't all share
+ *         the same width/height (Tiled always emits a uniform size in
+ *         practice; this is a defensive guard against malformed input).
+ */
+function buildTiledChunkSource(
+  layer: TiledTileLayer,
+  runtimeLayer: TileLayer,
+  tiledTilesets: readonly TiledTileset[],
+  indexToRuntime: ReadonlyArray<TileSet | null>,
+  source: string,
+): ChunkSource {
+  const index = new Map<string, TiledChunkData>();
+  let onDiskWidth = 0;
+  let onDiskHeight = 0;
+  for (const chunk of layer.chunks ?? []) {
+    if (onDiskWidth === 0) {
+      onDiskWidth = chunk.width;
+      onDiskHeight = chunk.height;
+    } else if (chunk.width !== onDiskWidth || chunk.height !== onDiskHeight) {
+      throw new TiledFormatError(
+        source,
+        `layers/${layer.name}/chunks`,
+        `non-uniform infinite-map chunk size is not supported (expected ${onDiskWidth}x${onDiskHeight}, got ${chunk.width}x${chunk.height})`,
+      );
+    }
+    index.set(`${chunk.x},${chunk.y}`, chunk);
+  }
+
+  return {
+    getChunk(cx: number, cy: number): ChunkPayload | null {
+      if (onDiskWidth === 0) return null; // layer had no chunks at all
+
+      const chunkWidth = runtimeLayer.chunkWidth;
+      const chunkHeight = runtimeLayer.chunkHeight;
+      const qx0 = cx * chunkWidth;
+      const qy0 = cy * chunkHeight;
+      const qx1 = qx0 + chunkWidth - 1;
+      const qy1 = qy0 + chunkHeight - 1;
+
+      // Tiled always aligns chunk coordinates to the on-disk chunk size, so
+      // floor-dividing the query rect's corners by that size and stepping by
+      // it visits exactly the on-disk grid cells the query can overlap.
+      const gx0 = Math.floor(qx0 / onDiskWidth) * onDiskWidth;
+      const gx1 = Math.floor(qx1 / onDiskWidth) * onDiskWidth;
+      const gy0 = Math.floor(qy0 / onDiskHeight) * onDiskHeight;
+      const gy1 = Math.floor(qy1 / onDiskHeight) * onDiskHeight;
+
+      let out: Uint32Array | null = null;
+      for (let gy = gy0; gy <= gy1; gy += onDiskHeight) {
+        for (let gx = gx0; gx <= gx1; gx += onDiskWidth) {
+          const chunk = index.get(`${gx},${gy}`);
+          if (!chunk) continue;
+
+          const ix0 = Math.max(qx0, gx);
+          const ix1 = Math.min(qx1, gx + onDiskWidth - 1);
+          const iy0 = Math.max(qy0, gy);
+          const iy1 = Math.min(qy1, gy + onDiskHeight - 1);
+
+          for (let ty = iy0; ty <= iy1; ty++) {
+            for (let tx = ix0; tx <= ix1; tx++) {
+              const rawGid = chunk.data[(ty - gy) * onDiskWidth + (tx - gx)];
+              if (rawGid === undefined || rawGid === 0) continue; // sparse hole, or empty cell
+
+              const resolved = resolveGid(rawGid, tiledTilesets, indexToRuntime);
+              if (!resolved) continue; // empty cell, or tileset was skipped (no atlas image)
+
+              out ??= new Uint32Array(chunkWidth * chunkHeight);
+              const tilesetIndex = runtimeLayer.tilesets.indexOf(resolved.tileset);
+              out[(ty - qy0) * chunkWidth + (tx - qx0)] = packTile(tilesetIndex, resolved.localTileId, resolved.transform);
+            }
+          }
+        }
+      }
+
+      return out === null ? null : { width: chunkWidth, height: chunkHeight, tiles: out };
+    },
+  };
 }
 
 /** Convert a parsed `TiledObjectLayer` into a runtime data-only `ObjectLayer`. */

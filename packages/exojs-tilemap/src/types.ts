@@ -139,8 +139,8 @@ export function tileTransformLabel(t: TileTransform): string {
  *
  * A `PackedTile` is **not** a source-format GID — it is a fully resolved
  * internal compact representation. Use {@link packTile} / {@link unpackTile}
- * (package-internal) to convert between packed form and a {@link ResolvedTile}
- * if writing adapters.
+ * to convert between packed form and a {@link ResolvedTile} if writing
+ * adapters.
  *
  * In public APIs, prefer {@link ResolvedTile} or null for queries.
  * `PackedTile` is exposed as `@advanced` so `ReadonlyTileChunk.getRawAt()`
@@ -179,7 +179,11 @@ const TRANSFORM_DIAGONAL = 1 << 2;
  * cleanly represents an empty cell, while tile 0 from tileset 0 with identity
  * transform is stored as 1 (non-zero).
  * Returns 0 for an empty cell.
- * @internal
+ *
+ * Public so chunk-provider authors (e.g. a format adapter or procedural
+ * generator) can build a {@link ChunkPayload}'s `tiles` array without
+ * duplicating this encoding.
+ * @advanced
  */
 export function packTile(tilesetIndex: number, localTileId: number, transform: TileTransform): PackedTile {
   if (tilesetIndex < 0 || tilesetIndex > MAX_TILESET_INDEX) {
@@ -202,7 +206,7 @@ export function packTile(tilesetIndex: number, localTileId: number, transform: T
 /**
  * Decode a packed word into its components.
  * Returns null for an empty cell (packed === 0).
- * @internal
+ * @advanced
  */
 export function unpackTile(packed: PackedTile): {
   tilesetIndex: number;
