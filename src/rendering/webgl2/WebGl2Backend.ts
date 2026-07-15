@@ -1102,6 +1102,20 @@ export class WebGl2Backend implements RenderBackend {
   }
 
   /**
+   * The innermost open capture's group bundle, or `null` when no capture is
+   * open. A renderer that stores its own per-bundle replay state (Text) keys a
+   * "already recorded a batch into this window" guard on it, so a second flush
+   * into the same window poisons instead of overwriting the first batch's
+   * group-owned resources.
+   * @internal
+   */
+  public get _currentRetainedCaptureBundle(): WebGl2RetainedGroupResources | null {
+    const captures = this._retainedCaptures;
+
+    return captures.length > 0 ? captures[captures.length - 1]!.bundle : null;
+  }
+
+  /**
    * Playback hook (RenderPlanPlayer): a retained group scope starts
    * recording. The pending live batch is flushed first (contract: no batch
    * spans into the capture window), the set's group bundle is (re)used or
@@ -1176,15 +1190,19 @@ export class WebGl2Backend implements RenderBackend {
       payload.replayer._scanRetainedNodeIndexRange(payload, range);
     }
 
-    if (range.max < range.min) {
-      return;
+    // A group whose every recorded batch opts out of the shared transform
+    // buffer (Text bakes world positions into its own instance bytes and reads
+    // its style from a private per-node texture — `_consumesSharedTransform ===
+    // false`) leaves the range empty: there is nothing to rebase or store, but
+    // the instance bytes and per-batch VAOs still need finalizing below.
+    if (range.max >= range.min) {
+      for (const payload of frame.payloads) {
+        payload.replayer._rebaseRetainedNodeIndices(payload, range.min);
+      }
+
+      frame.bundle._storeTransformRows(this._transformBuffer.data, range.min, range.max - range.min + 1);
     }
 
-    for (const payload of frame.payloads) {
-      payload.replayer._rebaseRetainedNodeIndices(payload, range.min);
-    }
-
-    frame.bundle._storeTransformRows(this._transformBuffer.data, range.min, range.max - range.min + 1);
     frame.bundle._connectDevice(this._context, this._accountant);
     frame.bundle._uploadInstances();
 
@@ -1221,6 +1239,7 @@ export class WebGl2Backend implements RenderBackend {
     textures: ReadonlyArray<Texture | RenderTexture | null>,
     textureCount: number,
     geometry: WebGl2RetainedGeometryRef | null = null,
+    rendererData: unknown = null,
   ): void {
     const captures = this._retainedCaptures;
 
@@ -1254,6 +1273,7 @@ export class WebGl2Backend implements RenderBackend {
       instanceCount,
       byteOffset,
       geometry,
+      rendererData,
       vao: null,
     };
 
