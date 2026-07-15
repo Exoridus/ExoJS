@@ -1,6 +1,6 @@
 import { type Texture, TextureRegion } from '@codexo/exojs';
 import type { ChunkPayload, ChunkSource, ObjectPoint, ResolvedTile, TextStyle, TileAnimationFrame, TileDefinition, TileMapObject, TileProperties, TilePropertyValue, TileTransform } from '@codexo/exojs-tilemap';
-import { ImageLayer, ObjectLayer, packTile, TileLayer, TileMap, TilePropertyKind, TileSet } from '@codexo/exojs-tilemap';
+import { ImageLayer, ObjectLayer, TileLayer, TileMap, TilePropertyKind, TileSet } from '@codexo/exojs-tilemap';
 
 import type { TiledChunkData, TiledClassPropertyValueData, TiledMapData, TiledObjectData, TiledOrientation, TiledPropertyData, TiledRenderOrder, TiledTileData } from './data';
 import {
@@ -209,8 +209,7 @@ export class TiledMap {
           const rLayer = new TileLayer({
             id: layer.id,
             name: layer.name,
-            width: chunked ? undefined : layer.width,
-            height: chunked ? undefined : layer.height,
+            ...(chunked ? {} : { width: layer.width, height: layer.height }),
             tilesets: runtimeTilesets,
             tileWidth: this.tileWidth,
             tileHeight: this.tileHeight,
@@ -257,10 +256,9 @@ export class TiledMap {
     return new TileMap({
       name: this.source,
       // Tiled always reports width/height as 0 at the map level for an
-      // infinite map (its extent is unbounded/streamed); pass undefined for
-      // both rather than 0, which TileMap's constructor rejects.
-      width: this.infinite ? undefined : this.width,
-      height: this.infinite ? undefined : this.height,
+      // infinite map (its extent is unbounded/streamed); omit both rather
+      // than passing 0, which TileMap's constructor rejects.
+      ...(this.infinite ? {} : { width: this.width, height: this.height }),
       tileWidth: this.tileWidth,
       tileHeight: this.tileHeight,
       tilesets: runtimeTilesets,
@@ -370,16 +368,15 @@ function populateTileLayer(
  */
 function buildTiledChunkSource(
   layer: TiledTileLayer,
-  runtimeLayer: TileLayer,
-  tiledTilesets: readonly TiledTileset[],
-  indexToRuntime: ReadonlyArray<TileSet | null>,
+  _runtimeLayer: TileLayer,
+  _tiledTilesets: readonly TiledTileset[],
+  _indexToRuntime: ReadonlyArray<TileSet | null>,
   source: string,
 ): ChunkSource {
   const index = new Map<string, TiledChunkData>();
   let onDiskWidth = 0;
   let onDiskHeight = 0;
   for (const chunk of layer.chunks ?? []) {
-    if (!chunk) continue; // defensive: sparse-array hole, mirrors checkGidCoverage's handling
     if (onDiskWidth === 0) {
       onDiskWidth = chunk.width;
       onDiskHeight = chunk.height;
