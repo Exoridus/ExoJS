@@ -1,6 +1,6 @@
 import { type Texture, TextureRegion } from '@codexo/exojs';
 import type { ChunkPayload, ChunkSource, ObjectPoint, ResolvedTile, TextStyle, TileAnimationFrame, TileDefinition, TileMapObject, TileProperties, TilePropertyValue, TileTransform } from '@codexo/exojs-tilemap';
-import { ImageLayer, ObjectLayer, TileLayer, TileMap, TilePropertyKind, TileSet } from '@codexo/exojs-tilemap';
+import { ImageLayer, ObjectLayer, packTile, TileLayer, TileMap, TilePropertyKind, TileSet } from '@codexo/exojs-tilemap';
 
 import type { TiledChunkData, TiledClassPropertyValueData, TiledMapData, TiledObjectData, TiledOrientation, TiledPropertyData, TiledRenderOrder, TiledTileData } from './data';
 import {
@@ -368,9 +368,9 @@ function populateTileLayer(
  */
 function buildTiledChunkSource(
   layer: TiledTileLayer,
-  _runtimeLayer: TileLayer,
-  _tiledTilesets: readonly TiledTileset[],
-  _indexToRuntime: ReadonlyArray<TileSet | null>,
+  runtimeLayer: TileLayer,
+  tiledTilesets: readonly TiledTileset[],
+  indexToRuntime: ReadonlyArray<TileSet | null>,
   source: string,
 ): ChunkSource {
   const index = new Map<string, TiledChunkData>();
@@ -391,8 +391,52 @@ function buildTiledChunkSource(
   }
 
   return {
-    getChunk(_cx: number, _cy: number): ChunkPayload | null {
-      return null; // filled in by Task 3
+    getChunk(cx: number, cy: number): ChunkPayload | null {
+      if (onDiskWidth === 0) return null; // layer had no chunks at all
+
+      const chunkWidth = runtimeLayer.chunkWidth;
+      const chunkHeight = runtimeLayer.chunkHeight;
+      const qx0 = cx * chunkWidth;
+      const qy0 = cy * chunkHeight;
+      const qx1 = qx0 + chunkWidth - 1;
+      const qy1 = qy0 + chunkHeight - 1;
+
+      // Tiled always aligns chunk coordinates to the on-disk chunk size, so
+      // floor-dividing the query rect's corners by that size and stepping by
+      // it visits exactly the on-disk grid cells the query can overlap.
+      const gx0 = Math.floor(qx0 / onDiskWidth) * onDiskWidth;
+      const gx1 = Math.floor(qx1 / onDiskWidth) * onDiskWidth;
+      const gy0 = Math.floor(qy0 / onDiskHeight) * onDiskHeight;
+      const gy1 = Math.floor(qy1 / onDiskHeight) * onDiskHeight;
+
+      let out: Uint32Array | null = null;
+      for (let gy = gy0; gy <= gy1; gy += onDiskHeight) {
+        for (let gx = gx0; gx <= gx1; gx += onDiskWidth) {
+          const chunk = index.get(`${gx},${gy}`);
+          if (!chunk) continue;
+
+          const ix0 = Math.max(qx0, gx);
+          const ix1 = Math.min(qx1, gx + onDiskWidth - 1);
+          const iy0 = Math.max(qy0, gy);
+          const iy1 = Math.min(qy1, gy + onDiskHeight - 1);
+
+          for (let ty = iy0; ty <= iy1; ty++) {
+            for (let tx = ix0; tx <= ix1; tx++) {
+              const rawGid = chunk.data[(ty - gy) * onDiskWidth + (tx - gx)];
+              if (rawGid === undefined || rawGid === 0) continue; // sparse hole, or empty cell
+
+              const resolved = resolveGid(rawGid, tiledTilesets, indexToRuntime);
+              if (!resolved) continue; // empty cell, or tileset was skipped (no atlas image)
+
+              out ??= new Uint32Array(chunkWidth * chunkHeight);
+              const tilesetIndex = runtimeLayer.tilesets.indexOf(resolved.tileset);
+              out[(ty - qy0) * chunkWidth + (tx - qx0)] = packTile(tilesetIndex, resolved.localTileId, resolved.transform);
+            }
+          }
+        }
+      }
+
+      return out === null ? null : { width: chunkWidth, height: chunkHeight, tiles: out };
     },
   };
 }

@@ -407,6 +407,61 @@ describe('TiledMap.toTileMap() — infinite maps', () => {
     expect(() => map.toTileMap()).toThrow(TiledFormatError);
     expect(() => map.toTileMap()).toThrow(/non-uniform/);
   });
+
+  it('getChunk returns null when no on-disk chunk overlaps the query', async () => {
+    const { context } = makeInfiniteMapContext([{ x: 0, y: 0, width: 16, height: 16, data: new Array(256).fill(1) }]);
+    const map = await loadTiledMap('inf.tmj', context);
+    map.toTileMap();
+    const source = map.getChunkSource(1)!;
+
+    // Runtime chunk grid defaults to 32x32; on-disk chunk (0,0) covers tile
+    // rect [0,16)x[0,16), which is inside runtime chunk (0,0) (tile rect
+    // [0,32)x[0,32)). Runtime chunk (5,5) covers tile rect [160,192)x
+    // [160,192) — nowhere near the one on-disk chunk we authored.
+    expect(source.getChunk(5, 5)).toBeNull();
+  });
+
+  it('getChunk composes a payload from two adjacent on-disk chunks', async () => {
+    // Two 16x16 on-disk chunks side by side (x=0 and x=16) both fall inside
+    // runtime chunk (0,0)'s tile rect [0,32)x[0,32). Left chunk is gid 1
+    // (tileset-local id 0), right chunk is gid 2 (tileset-local id 1).
+    const { context } = makeInfiniteMapContext([
+      { x: 0, y: 0, width: 16, height: 16, data: new Array(256).fill(1) },
+      { x: 16, y: 0, width: 16, height: 16, data: new Array(256).fill(2) },
+    ]);
+    const map = await loadTiledMap('inf.tmj', context);
+    map.toTileMap();
+    const source = map.getChunkSource(1)!;
+
+    const payload = await source.getChunk(0, 0);
+    expect(payload).not.toBeNull();
+    expect(payload!.width).toBe(32);
+    expect(payload!.height).toBe(32);
+
+    const { unpackTile } = await import('@codexo/exojs-tilemap');
+    // (0,0): left on-disk chunk, gid 1 -> localTileId 0.
+    expect(unpackTile(payload!.tiles[0 * 32 + 0])).toMatchObject({ localTileId: 0 });
+    // (16,0): right on-disk chunk, gid 2 -> localTileId 1.
+    expect(unpackTile(payload!.tiles[0 * 32 + 16])).toMatchObject({ localTileId: 1 });
+    // (31,31): inside runtime chunk but outside both on-disk chunks (which
+    // only cover y in [0,16)) -> untouched, empty cell.
+    expect(payload!.tiles[31 * 32 + 31]).toBe(0);
+  });
+
+  it('getChunk resolves flip flags through the same path as populateTileLayer', async () => {
+    // 2147483649 = base gid 1 with the horizontal-flip flag (0x80000000) set —
+    // same literal convention as fixtures/orthogonal-rich.tmj's flip-combination row.
+    const { context } = makeInfiniteMapContext([
+      { x: 0, y: 0, width: 16, height: 16, data: [2147483649, ...new Array(255).fill(0)] },
+    ]);
+    const map = await loadTiledMap('inf.tmj', context);
+    map.toTileMap();
+    const source = map.getChunkSource(1)!;
+
+    const payload = await source.getChunk(0, 0);
+    const { unpackTile } = await import('@codexo/exojs-tilemap');
+    expect(unpackTile(payload!.tiles[0])).toMatchObject({ localTileId: 0, transform: { flipX: true, flipY: false, diagonal: false } });
+  });
 });
 
 describe('TiledMap.toTileMap() — object layers', () => {
