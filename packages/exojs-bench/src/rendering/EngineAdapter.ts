@@ -4,7 +4,7 @@ import type { BaseCellResult } from '../shared/result';
 export type Backend = 'webgl2' | 'webgpu';
 
 /** Identifier for one of the fixed set of scene archetypes exercised by the benchmark. */
-export type ArchetypeId = 'static-heavy' | 'dynamic-heavy' | 'deep-hierarchy' | 'overdraw' | 'batch-breaking';
+export type ArchetypeId = 'static-heavy' | 'dynamic-heavy' | 'deep-hierarchy' | 'overdraw' | 'batch-breaking' | 'split-screen';
 
 /** Structural definition of a scene archetype, independent of any engine or backend. */
 export interface ArchetypeSpec {
@@ -35,6 +35,18 @@ export interface ArchetypeSpec {
    * `true`, or disclose the asymmetry explicitly in the report.
    */
   readonly cullingEnabled: boolean;
+  /**
+   * Number of simultaneous `View`s the scene is rendered through per frame
+   * (the `split-screen` archetype). `undefined`/`1` means the ordinary
+   * single-view render every other archetype uses. Only the `exojs` adapter
+   * honours this field (it builds and renders through the extra `View`
+   * instances); a competitor arm without a comparable multi-viewport API
+   * renders its normal single-view scene instead, so `split-screen` is an
+   * ExoJS-internal structural probe, not a cross-arm wall-clock comparison —
+   * see `adapters/exojs.ts` and the archetype's doc comment in
+   * `archetypes.ts`.
+   */
+  readonly viewCount?: number;
 }
 
 /** One matrix cell: a single (engine, config, backend, archetype, node count) combination to measure. */

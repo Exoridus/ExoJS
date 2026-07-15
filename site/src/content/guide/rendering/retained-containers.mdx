@@ -99,6 +99,18 @@ If you mutate through a custom `Drawable` backed by externally mutable data (the
 The tier pays off only while the subtree holds still. If a child mutates on every frame, the fragment is dropped on every frame — you pay the full walk _plus_ the retention bookkeeping, and a reference build measured the retained path ~1.5× slower than immediate mode on fully-dynamic content. In a development build the engine watches for this and warns once if a group invalidates on effectively every frame. If you see that warning, split the moving children out into a sibling plain container and keep only the static remainder retained.
 </Callout>
 
+## From entries to recorded batches
+
+The whole-range splice described above is the fragment's first tier — call it **entry replay**. It already removes the walk, but the spliced entries are still individual draw entries that the backend processes one by one.
+
+On the first clean frame after a capture, each backend (WebGL2 and WebGPU alike, across every renderer — sprites, nine-slices, repeating sprites, meshes, tilemap chunks, and text) uses that entry replay as the source for a second, faster tier: it **records** a compact, backend-native instruction set — the batches it would submit to the GPU — instead of re-deriving them from entries every frame. Every subsequent clean frame **replays that recorded instruction set directly**: no entries, no per-drawable material-key resolution, just the already-batched GPU work reissued with the group's current matrix.
+
+That is what makes the cost **O(batches)** rather than O(nodes) in the group. It is also why rendering the same retained subtree through more than one [`View`](/ExoJS/en/api/view/) at once — split-screen, a minimap, picture-in-picture — stays cheap: each additional view replays the same recorded batches, it does not re-walk or re-collect the subtree per view. A single descendant transform move still patches just that node's row in place (see below) rather than dropping the whole recording; any structural change (add/remove/texture swap) drops the recording and the next clean frame re-records it from a fresh entry replay.
+
+<Callout type="hint" title="Measured, not assumed">
+On a real-GPU run (WebGL2 and WebGPU, both backends), a 100k-sprite retained `static-heavy` scene costs 0.215 ms (WebGL2) and 0.252 ms (WebGPU) per frame — the two backends within ~1.17× of each other, both near the CPU-timer floor. On `batch-breaking` (a scene deliberately designed to defeat sprite-batching with many distinct textures) at 25k retained nodes, WebGL2 costs 23.7 ms and WebGPU 4.6 ms — WebGPU is the faster backend on this workload. Both are the recorded-batch tier at work: cost tracks batch count, not node count.
+</Callout>
+
 ## Lifecycle and the in-place-destroy footgun
 
 Adding and removing children works exactly as on a plain container, and both correctly invalidate the fragment. Destroying is where the retained tier has a sharp edge.

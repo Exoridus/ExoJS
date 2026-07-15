@@ -6,6 +6,7 @@ import { RenderBackendType } from '#rendering/RenderBackendType';
 import { RetainedContainer } from '#rendering/RetainedContainer';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { Texture } from '#rendering/texture/Texture';
+import { View } from '#rendering/View';
 import type { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 import { mutationSignature, selectMutationIndices } from '../../shared/mutation';
@@ -56,6 +57,32 @@ const createDistinctTexture = (index: number, total: number): Texture => {
 };
 
 /**
+ * Build `count` `View`s tiled in a near-square screen grid (split-screen /
+ * multi-viewport), each showing the SAME full-viewport world rect — the
+ * `split-screen` archetype exercises N simultaneous replays of one retained
+ * scene, not N distinct camera framings, so the views deliberately overlap in
+ * world space and differ only in which screen fraction they write to.
+ */
+const buildViewGrid = (count: number): View[] => {
+  const columns = Math.max(1, Math.ceil(Math.sqrt(count)));
+  const rows = Math.max(1, Math.ceil(count / columns));
+  const cellFractionW = 1 / columns;
+  const cellFractionH = 1 / rows;
+  const grid: View[] = [];
+
+  for (let index = 0; index < count; index++) {
+    const column = index % columns;
+    const row = Math.floor(index / columns);
+    const view = new View(VIEWPORT_WIDTH / 2, VIEWPORT_HEIGHT / 2, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
+
+    view.setViewport(column * cellFractionW, row * cellFractionH, cellFractionW, cellFractionH);
+    grid.push(view);
+  }
+
+  return grid;
+};
+
+/**
  * ExoJS engine arm of the baseline benchmark.
  *
  * Drives the public {@link Application} API — the production path, which
@@ -82,6 +109,12 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
   let mutableLeaves: MutableLeaf[] = [];
   /** Leaf indices the most recent buildScene selected for mutation — the source of {@link EngineAdapter.mutationSignature}. */
   let mutableIndices: number[] = [];
+  /**
+   * The `split-screen` archetype's simultaneous `View`s (`spec.viewCount`,
+   * see `EngineAdapter.ts`). Empty for every other archetype, in which case
+   * `renderFrame` falls back to the ordinary single-view render.
+   */
+  let views: View[] = [];
 
   return {
     engine: 'exojs',
@@ -215,6 +248,16 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
       root = sceneRoot;
       mutableLeaves = leaves;
       mutableIndices = selectedIndices;
+
+      // `split-screen` archetype (see `ArchetypeSpec.viewCount`): render the
+      // same retained subtree through several simultaneous `View`s instead of
+      // the single default view. Every other archetype leaves `viewCount`
+      // unset and keeps the ordinary single-view path in `renderFrame`.
+      for (const view of views) {
+        view.destroy();
+      }
+
+      views = spec.viewCount !== undefined && spec.viewCount > 1 ? buildViewGrid(spec.viewCount) : [];
     },
 
     mutationSignature(): string {
@@ -255,10 +298,23 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
       const backend = app.backend;
 
       // Exactly the production render phase: reset the frame-scoped stats /
-      // transform buffer, clear, render the tree once, flush the batch.
+      // transform buffer, clear, render the tree once (or once per
+      // `split-screen` view — see `buildScene`/`views`), flush the batch.
       backend.resetStats();
       backend.clear();
-      app.rendering.render(root);
+
+      if (views.length > 0) {
+        // Multi-view replay: each additional view re-issues the retained
+        // group's ALREADY-RECORDED instruction set with its own view/viewport,
+        // not a fresh per-view scene walk — the property `split-screen` exists
+        // to exercise (see the retained-containers guide).
+        for (const view of views) {
+          app.rendering.render(root, { view });
+        }
+      } else {
+        app.rendering.render(root);
+      }
+
       backend.flush();
     },
 
@@ -272,9 +328,14 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
         texture.destroy();
       }
 
+      for (const view of views) {
+        view.destroy();
+      }
+
       textures = [];
       mutableLeaves = [];
       mutableIndices = [];
+      views = [];
 
       if (app !== null) {
         app.destroy();

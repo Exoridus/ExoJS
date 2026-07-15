@@ -398,7 +398,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
                 ],
                 prerequisites: ['runtime/scene-graph'],
                 examples: ['scene-graph/retained-container'],
-                apiLinks: ['retained-container', 'container', 'scene-node'],
+                apiLinks: ['retained-container', 'container', 'scene-node', 'view'],
             },
         ],
     },
