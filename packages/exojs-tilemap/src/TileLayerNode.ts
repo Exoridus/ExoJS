@@ -2,6 +2,7 @@ import type { Rectangle } from '@codexo/exojs';
 import { Container } from '@codexo/exojs';
 import type { PixelSnapMode, RenderPlanBuilder } from '@codexo/exojs/renderer-sdk';
 
+import { aggregateChildLocalBounds } from './nodeBounds';
 import { assertPixelSnapMode } from './pixelSnap';
 import { TileChunkNode } from './TileChunkNode';
 import type { TileLayer } from './TileLayer';
@@ -60,6 +61,10 @@ export class TileLayerNode extends Container {
 
     this.setPosition(layer.offsetX, layer.offsetY);
     this._buildChunkNodes();
+
+    if (!this._layer.bounded) {
+      this.cullable = false;
+    }
   }
 
   /** The runtime layer this node renders. */
@@ -130,7 +135,11 @@ export class TileLayerNode extends Container {
   public override getLocalBounds(): Rectangle {
     const bounds = super.getLocalBounds();
 
-    bounds.set(0, 0, this._layer.pixelWidth, this._layer.pixelHeight);
+    if (this._layer.bounded) {
+      bounds.set(0, 0, this._layer.pixelWidth!, this._layer.pixelHeight!);
+    } else if (this._chunkNodes.length > 0) {
+      aggregateChildLocalBounds(this._chunkNodes, bounds);
+    }
 
     return bounds;
   }

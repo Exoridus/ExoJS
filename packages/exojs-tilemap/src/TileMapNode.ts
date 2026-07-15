@@ -2,6 +2,7 @@ import type { Rectangle } from '@codexo/exojs';
 import { Container } from '@codexo/exojs';
 import type { PixelSnapMode } from '@codexo/exojs/renderer-sdk';
 
+import { aggregateChildLocalBounds } from './nodeBounds';
 import { assertPixelSnapMode } from './pixelSnap';
 import { TileLayerNode } from './TileLayerNode';
 import type { TileMap } from './TileMap';
@@ -119,7 +120,11 @@ export class TileMapNode extends Container {
   public override getLocalBounds(): Rectangle {
     const bounds = super.getLocalBounds();
 
-    bounds.set(0, 0, this._map.pixelWidth, this._map.pixelHeight);
+    if (this._map.bounded) {
+      bounds.set(0, 0, this._map.pixelWidth!, this._map.pixelHeight!);
+    } else if (this._layerNodes.length > 0) {
+      aggregateChildLocalBounds(this._layerNodes, bounds);
+    }
 
     return bounds;
   }
