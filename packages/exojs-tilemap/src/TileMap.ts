@@ -15,10 +15,14 @@ import { validatePositiveInteger } from './types';
 export interface TileMapOptions {
   /** Map name (for debugging). */
   readonly name?: string;
-  /** Map width in tiles. */
-  readonly width: number;
-  /** Map height in tiles. */
-  readonly height: number;
+  /**
+   * Map width in tiles. Omit together with {@link height} for an unbounded
+   * map — layers you add are then free to be unbounded too (this option
+   * does not constrain per-layer dimensions either way).
+   */
+  readonly width?: number;
+  /** Map height in tiles. Must be provided iff {@link width} is. */
+  readonly height?: number;
   /** Width of each tile in pixels. */
   readonly tileWidth: number;
   /** Height of each tile in pixels. */
@@ -69,20 +73,28 @@ export class TileMap {
   /** Map name (debug). */
   public readonly name: string;
 
-  /** Map width in tiles. */
-  public readonly width: number;
-  /** Map height in tiles. */
-  public readonly height: number;
+  /** Map width in tiles, or `undefined` if unbounded. */
+  public readonly width: number | undefined;
+  /** Map height in tiles, or `undefined` if unbounded. */
+  public readonly height: number | undefined;
 
   /** Tile width in pixels. */
   public readonly tileWidth: number;
   /** Tile height in pixels. */
   public readonly tileHeight: number;
 
-  /** Pixel width. */
-  public get pixelWidth(): number { return this.width * this.tileWidth; }
-  /** Pixel height. */
-  public get pixelHeight(): number { return this.height * this.tileHeight; }
+  /** Pixel width, or `undefined` if unbounded. */
+  public get pixelWidth(): number | undefined {
+    return this.width === undefined ? undefined : this.width * this.tileWidth;
+  }
+  /** Pixel height, or `undefined` if unbounded. */
+  public get pixelHeight(): number | undefined {
+    return this.height === undefined ? undefined : this.height * this.tileHeight;
+  }
+  /** `true` if this map has a fixed width/height; `false` if unbounded. */
+  public get bounded(): boolean {
+    return this.width !== undefined && this.height !== undefined;
+  }
 
   /** Default chunk width for layers. */
   public readonly chunkWidth: number;
@@ -112,8 +124,13 @@ export class TileMap {
    * @throws When dimensions or other options are invalid.
    */
   public constructor(options: TileMapOptions) {
-    validatePositiveInteger(options.width, 'map.width');
-    validatePositiveInteger(options.height, 'map.height');
+    if (options.width !== undefined || options.height !== undefined) {
+      if (options.width === undefined || options.height === undefined) {
+        throw new Error('TileMap width and height must both be provided (bounded) or both omitted (unbounded).');
+      }
+      validatePositiveInteger(options.width, 'map.width');
+      validatePositiveInteger(options.height, 'map.height');
+    }
     validatePositiveInteger(options.tileWidth, 'map.tileWidth');
     validatePositiveInteger(options.tileHeight, 'map.tileHeight');
 

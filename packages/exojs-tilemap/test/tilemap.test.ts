@@ -1661,6 +1661,35 @@ describe('TileMap', () => {
     map.setTileAt(1, 0, 0, ref);
     expect(map.revision).toBe(2); // unchanged — layer tracks cell revisions
   });
+
+  it('unbounded construction (width/height both omitted)', () => {
+    const map = new TileMap({
+      name: 'm', tileWidth: 16, tileHeight: 16,
+    });
+    expect(map.bounded).toBe(false);
+    expect(map.width).toBeUndefined();
+    expect(map.height).toBeUndefined();
+    expect(map.pixelWidth).toBeUndefined();
+    expect(map.pixelHeight).toBeUndefined();
+  });
+
+  it('bounded construction reports bounded=true', () => {
+    const map = new TileMap({
+      name: 'm', width: 10, height: 10, tileWidth: 16, tileHeight: 16,
+    });
+    expect(map.bounded).toBe(true);
+    expect(map.pixelWidth).toBe(160);
+    expect(map.pixelHeight).toBe(160);
+  });
+
+  it('rejects mixed width/height (one provided, one omitted)', () => {
+    expect(() => new TileMap({
+      name: 'm', width: 10, tileWidth: 16, tileHeight: 16,
+    } as never)).toThrow(/width and height must both be provided/);
+    expect(() => new TileMap({
+      name: 'm', height: 10, tileWidth: 16, tileHeight: 16,
+    } as never)).toThrow(/width and height must both be provided/);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════
