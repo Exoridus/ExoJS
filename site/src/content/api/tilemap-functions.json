@@ -208,7 +208,7 @@
             }
           ],
           "returnType": "number",
-          "description": "Encode a tileset-local tile reference and transform into a packed word. The localTileId is stored as (localTileId + 1) so that a packed value of 0 cleanly represents an empty cell, while tile 0 from tileset 0 with identity transform is stored as 1 (non-zero). Returns 0 for an empty cell. Public so chunk-provider authors (e.g. a format adapter or procedural generator) can build a import('./ChunkSource').ChunkPayload.tiles array without duplicating this encoding."
+          "description": "Encode a tileset-local tile reference and transform into a packed word. The localTileId is stored as (localTileId + 1) so that a packed value of 0 cleanly represents an empty cell, while tile 0 from tileset 0 with identity transform is stored as 1 (non-zero). Returns 0 for an empty cell. Public so chunk-provider authors (e.g. a format adapter or procedural generator) can build a ChunkPayload's tiles array without duplicating this encoding."
         },
         {
           "name": "refreshCell",

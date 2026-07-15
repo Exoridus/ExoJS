@@ -181,8 +181,8 @@ const TRANSFORM_DIAGONAL = 1 << 2;
  * Returns 0 for an empty cell.
  *
  * Public so chunk-provider authors (e.g. a format adapter or procedural
- * generator) can build a {@link import('./ChunkSource').ChunkPayload.tiles}
- * array without duplicating this encoding.
+ * generator) can build a {@link ChunkPayload}'s `tiles` array without
+ * duplicating this encoding.
  * @advanced
  */
 export function packTile(tilesetIndex: number, localTileId: number, transform: TileTransform): PackedTile {
