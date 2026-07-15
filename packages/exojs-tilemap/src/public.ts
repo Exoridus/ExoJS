@@ -28,7 +28,7 @@ export { ObjectKind, ObjectLayer } from './ObjectLayer';
 // The mutable TileChunk implementation is package-internal —
 // only the ReadonlyTileChunk interface is exported publicly.
 export type { ReadonlyTileChunk } from './TileChunk';
-export type { TileLayerOptions } from './TileLayer';
+export type { ChunkRange, TileLayerOptions } from './TileLayer';
 export { TileLayer } from './TileLayer';
 export type { TileMapOptions } from './TileMap';
 export { TileMap } from './TileMap';

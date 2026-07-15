@@ -337,3 +337,28 @@ export function validateInteger(value: number, label: string): void {
     throw new Error(`${label} must be a finite integer (got ${value}).`);
   }
 }
+
+/**
+ * Validate a `width`/`height` pair that must be provided together (bounded)
+ * or omitted together (unbounded) — shared by {@link import('./TileLayer').TileLayer}
+ * and {@link import('./TileMap').TileMap}. When both are provided, each is
+ * validated as a positive integer via {@link validatePositiveInteger}.
+ *
+ * @param entityName Used in the paired-presence error message (e.g. `"TileLayer"`).
+ * @param fieldPrefix Used as the field-name prefix passed to {@link validatePositiveInteger} (e.g. `"layer"` for `"layer.width"`).
+ * @throws If exactly one of `width`/`height` is provided, or either is not a positive integer.
+ */
+export function validatePairedDimensions(
+  width: number | undefined,
+  height: number | undefined,
+  entityName: string,
+  fieldPrefix: string,
+): void {
+  if (width !== undefined || height !== undefined) {
+    if (width === undefined || height === undefined) {
+      throw new Error(`${entityName} width and height must both be provided (bounded) or both omitted (unbounded).`);
+    }
+    validatePositiveInteger(width, `${fieldPrefix}.width`);
+    validatePositiveInteger(height, `${fieldPrefix}.height`);
+  }
+}

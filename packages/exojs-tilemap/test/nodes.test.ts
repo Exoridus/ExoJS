@@ -7,7 +7,7 @@ import { TileLayerNode } from '../src/TileLayerNode';
 import { TileMap } from '../src/TileMap';
 import { TileMapNode } from '../src/TileMapNode';
 import { TileSet } from '../src/TileSet';
-import { TILE_TRANSFORM_IDENTITY } from '../src/types';
+import { packTile, TILE_TRANSFORM_IDENTITY } from '../src/types';
 
 // ── helpers ────────────────────────────────────────────────────────────
 
@@ -385,5 +385,195 @@ describe('TileMapNode', () => {
 
     // The map is still fully usable.
     expect(map.getTileAt(1, 0, 0)).not.toBeNull();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+// Unbounded layer/map nodes
+// ═══════════════════════════════════════════════════════════════════════
+
+describe('unbounded layer/map nodes', () => {
+  it('TileLayerNode.getLocalBounds() falls back to children aggregate when unbounded, and is not cullable', () => {
+    const tileset = makeTileset();
+    const layer = new TileLayer({
+      id: 1, name: 'l',
+      tileWidth: 16, tileHeight: 16, tilesets: [tileset],
+      chunkWidth: 4, chunkHeight: 4,
+    });
+    layer._adoptChunk(2, 3, {
+      width: 4, height: 4,
+      tiles: new Uint32Array([packTile(0, 0, TILE_TRANSFORM_IDENTITY), ...new Array(15).fill(0)]),
+    });
+
+    const node = new TileLayerNode(layer);
+    node.refresh();
+
+    expect(node.cullable).toBe(false);
+    const bounds = node.getLocalBounds();
+    // Chunk (2,3) at 4x4 tiles of 16px starts at (2*4*16, 3*4*16) = (128, 192).
+    expect(bounds.x).toBe(128);
+    expect(bounds.y).toBe(192);
+    expect(bounds.width).toBe(64);
+    expect(bounds.height).toBe(64);
+    expect(Number.isFinite(bounds.x)).toBe(true);
+    expect(Number.isFinite(bounds.y)).toBe(true);
+  });
+
+  it('TileLayerNode.getLocalBounds() keeps the fixed-rect override when bounded', () => {
+    const tileset = makeTileset();
+    const layer = makeLayer(tileset, { width: 10, height: 10 });
+    const node = new TileLayerNode(layer);
+    expect(node.cullable).toBe(true);
+    const bounds = node.getLocalBounds();
+    expect(bounds.x).toBe(0);
+    expect(bounds.y).toBe(0);
+    expect(bounds.width).toBe(320);
+    expect(bounds.height).toBe(320);
+  });
+
+  it('TileMapNode.getLocalBounds() falls back to children aggregate when the map is unbounded', () => {
+    const tileset = makeTileset();
+    const layer = new TileLayer({
+      id: 1, name: 'l',
+      tileWidth: 16, tileHeight: 16, tilesets: [tileset],
+      chunkWidth: 4, chunkHeight: 4,
+    });
+    layer._adoptChunk(0, 0, {
+      width: 4, height: 4,
+      tiles: new Uint32Array([packTile(0, 0, TILE_TRANSFORM_IDENTITY), ...new Array(15).fill(0)]),
+    });
+    const map = new TileMap({
+      name: 'm', tileWidth: 16, tileHeight: 16,
+      layers: [layer],
+    });
+
+    const node = new TileMapNode(map);
+    const bounds = node.getLocalBounds();
+    expect(Number.isFinite(bounds.x)).toBe(true);
+    expect(Number.isFinite(bounds.y)).toBe(true);
+    expect(Number.isFinite(bounds.width)).toBe(true);
+    expect(Number.isFinite(bounds.height)).toBe(true);
+    // Single layer, single chunk (0,0) at 4x4 tiles of 16px → (0, 0, 64, 64).
+    expect(bounds.x).toBe(0);
+    expect(bounds.y).toBe(0);
+    expect(bounds.width).toBe(64);
+    expect(bounds.height).toBe(64);
+  });
+
+  it('TileMapNode is not cullable when the map is unbounded, and cullable when bounded', () => {
+    const tileset = makeTileset();
+    const unboundedLayer = new TileLayer({
+      id: 1, name: 'l',
+      tileWidth: 16, tileHeight: 16, tilesets: [tileset],
+    });
+    const unboundedMap = new TileMap({
+      name: 'm', tileWidth: 16, tileHeight: 16,
+      layers: [unboundedLayer],
+    });
+    expect(new TileMapNode(unboundedMap).cullable).toBe(false);
+
+    const boundedLayer = new TileLayer({
+      id: 1, name: 'l', width: 10, height: 10,
+      tileWidth: 16, tileHeight: 16, tilesets: [tileset],
+    });
+    const boundedMap = new TileMap({
+      name: 'm', width: 10, height: 10, tileWidth: 16, tileHeight: 16,
+      layers: [boundedLayer],
+    });
+    expect(new TileMapNode(boundedMap).cullable).toBe(true);
+  });
+
+  it('TileLayerNode.getLocalBounds() excludes chunk nodes hidden via visible = false', () => {
+    const tileset = makeTileset();
+    const layer = new TileLayer({
+      id: 1, name: 'l',
+      tileWidth: 16, tileHeight: 16, tilesets: [tileset],
+      chunkWidth: 4, chunkHeight: 4,
+    });
+    // Visible chunk at (0,0) → (0, 0, 64, 64).
+    layer._adoptChunk(0, 0, {
+      width: 4, height: 4,
+      tiles: new Uint32Array([packTile(0, 0, TILE_TRANSFORM_IDENTITY), ...new Array(15).fill(0)]),
+    });
+    // Far-away chunk at (10,10) that will be hidden; if it leaked into the
+    // aggregate, bounds would grow far past (0, 0, 64, 64).
+    layer._adoptChunk(10, 10, {
+      width: 4, height: 4,
+      tiles: new Uint32Array([packTile(0, 0, TILE_TRANSFORM_IDENTITY), ...new Array(15).fill(0)]),
+    });
+
+    const node = new TileLayerNode(layer);
+    node.refresh();
+
+    expect(node.chunkNodes).toHaveLength(2);
+    node.chunkNodes[1]!.visible = false;
+
+    const bounds = node.getLocalBounds();
+    expect(bounds.x).toBe(0);
+    expect(bounds.y).toBe(0);
+    expect(bounds.width).toBe(64);
+    expect(bounds.height).toBe(64);
+  });
+
+  it('TileMapNode.getLocalBounds() excludes layer nodes hidden via visible = false', () => {
+    const tileset = makeTileset();
+    const layerA = new TileLayer({
+      id: 1, name: 'a',
+      tileWidth: 16, tileHeight: 16, tilesets: [tileset],
+      chunkWidth: 4, chunkHeight: 4,
+    });
+    layerA._adoptChunk(0, 0, {
+      width: 4, height: 4,
+      tiles: new Uint32Array([packTile(0, 0, TILE_TRANSFORM_IDENTITY), ...new Array(15).fill(0)]),
+    });
+    const layerB = new TileLayer({
+      id: 2, name: 'b',
+      tileWidth: 16, tileHeight: 16, tilesets: [tileset],
+      chunkWidth: 4, chunkHeight: 4,
+    });
+    // Far-away chunk on a second layer that will be hidden entirely.
+    layerB._adoptChunk(10, 10, {
+      width: 4, height: 4,
+      tiles: new Uint32Array([packTile(0, 0, TILE_TRANSFORM_IDENTITY), ...new Array(15).fill(0)]),
+    });
+    const map = new TileMap({
+      name: 'm', tileWidth: 16, tileHeight: 16,
+      layers: [layerA, layerB],
+    });
+
+    const node = new TileMapNode(map);
+    expect(node.layerNodes).toHaveLength(2);
+    node.layerNodes[1]!.visible = false;
+
+    const bounds = node.getLocalBounds();
+    // Only layerA's chunk (0,0) contributes → (0, 0, 64, 64), matching the
+    // bounds as if layerB didn't exist at all.
+    expect(bounds.x).toBe(0);
+    expect(bounds.y).toBe(0);
+    expect(bounds.width).toBe(64);
+    expect(bounds.height).toBe(64);
+  });
+
+  it('TileLayerNode.getLocalBounds() aggregates a chunk at negative coordinates', () => {
+    const tileset = makeTileset();
+    const layer = new TileLayer({
+      id: 1, name: 'l',
+      tileWidth: 16, tileHeight: 16, tilesets: [tileset],
+      chunkWidth: 4, chunkHeight: 4,
+    });
+    layer._adoptChunk(-3, -2, {
+      width: 4, height: 4,
+      tiles: new Uint32Array([packTile(0, 0, TILE_TRANSFORM_IDENTITY), ...new Array(15).fill(0)]),
+    });
+
+    const node = new TileLayerNode(layer);
+    node.refresh();
+
+    const bounds = node.getLocalBounds();
+    // Chunk (-3,-2) at 4x4 tiles of 16px starts at (-3*4*16, -2*4*16) = (-192, -128).
+    expect(bounds.x).toBe(-192);
+    expect(bounds.y).toBe(-128);
+    expect(bounds.width).toBe(64);
+    expect(bounds.height).toBe(64);
   });
 });

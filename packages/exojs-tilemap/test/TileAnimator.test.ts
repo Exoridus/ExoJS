@@ -315,3 +315,19 @@ describe('TileAnimator', () => {
     expect(b.getTileAt(1, 1)?.localTileId).toBe(1);
   });
 });
+
+describe('TileAnimator + unbounded layers', () => {
+  it('scanning an unbounded layer finds zero animated cells (documented v1 limitation, not a crash)', () => {
+    const ts = makeTileset256();
+    const layer = new TileLayer({
+      id: 0, name: 'l',
+      tileWidth: 32, tileHeight: 32, tilesets: [ts],
+    });
+    layer._adoptChunk(0, 0, { width: 32, height: 32, tiles: new Uint32Array(1024) });
+
+    const animator = new TileAnimator(layer);
+
+    expect(animator.animatedCellCount).toBe(0);
+    expect(() => animator.update(1)).not.toThrow();
+  });
+});

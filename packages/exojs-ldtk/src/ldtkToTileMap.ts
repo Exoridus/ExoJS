@@ -351,7 +351,12 @@ export function getLdtkIntGridValueAt(
   x: number,
   y: number,
 ): LdtkIntGridValueDef | undefined {
-  if (!layer.inBounds(x, y)) return undefined;
+  // `inBounds()` is unconditionally true for an unbounded layer (it has no
+  // fixed grid to be out of), but the flat IntGrid CSV this function reads
+  // is inherently a bounded-grid concept — LDtk itself only ever produces
+  // bounded layers today, but `layer` is typed generically, so guard here
+  // rather than let `layer.width` narrow away from `number | undefined`.
+  if (!layer.inBounds(x, y) || layer.width === undefined) return undefined;
 
   const parsed = getParsedIntGridData(layer);
   if (!parsed) return undefined;

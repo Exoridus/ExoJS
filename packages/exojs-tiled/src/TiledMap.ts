@@ -222,7 +222,7 @@ export class TiledMap {
             tintColor: parseTiledColor(layer.tintColor),
           });
           if (layer.data) {
-            populateTileLayer(rLayer, layer.data, this.tilesets, indexToRuntime);
+            populateTileLayer(rLayer, layer.data, this.tilesets, indexToRuntime, layer.width);
           }
           runtimeLayers.push(rLayer);
         } else if (layer instanceof TiledObjectLayer) {
@@ -310,19 +310,29 @@ function resolveGid(
   };
 }
 
-/** Fill a `TileLayer` from a flat GID array decoded from a Tiled tile layer. */
+/**
+ * Fill a `TileLayer` from a flat GID array decoded from a Tiled tile layer.
+ *
+ * @param width The source Tiled layer's width in tiles — `toTileMap()` always
+ *              constructs `layer` as bounded with this same width, but that
+ *              fact isn't visible to the type checker from `layer` alone
+ *              (runtime `TileLayer.width` is `number | undefined` since it
+ *              also supports unbounded layers), so the caller's already-known
+ *              Tiled-source width is threaded through explicitly instead.
+ */
 function populateTileLayer(
   layer: TileLayer,
   gids: readonly number[],
   tiledTilesets: readonly TiledTileset[],
   indexToRuntime: ReadonlyArray<TileSet | null>,
+  width: number,
 ): void {
   for (let i = 0; i < gids.length; i++) {
     const gid = gids[i];
     if (gid === undefined) continue;
     const tile = resolveGid(gid, tiledTilesets, indexToRuntime);
     if (!tile) continue;
-    layer.setTileAt(i % layer.width, Math.floor(i / layer.width), tile);
+    layer.setTileAt(i % width, Math.floor(i / width), tile);
   }
 }
 

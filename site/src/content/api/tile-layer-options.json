@@ -105,11 +105,15 @@
         },
         {
           "name": "height",
-          "signature": "height: number",
+          "signature": "height?: number",
           "signatureTokens": [
             {
               "text": "height",
               "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
             },
             {
               "text": ": ",
@@ -122,7 +126,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Layer height in tiles."
+          "description": "Layer height in tiles. Must be provided iff width is."
         },
         {
           "name": "id",
@@ -451,11 +455,15 @@
         },
         {
           "name": "width",
-          "signature": "width: number",
+          "signature": "width?: number",
           "signatureTokens": [
             {
               "text": "width",
               "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
             },
             {
               "text": ": ",
@@ -468,7 +476,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Layer width in tiles."
+          "description": "Layer width in tiles. Omit together with height for an unbounded layer — chunk storage then accepts any signed chunk coordinate instead of being clamped to a fixed grid."
         }
       ],
       "paragraphs": [],

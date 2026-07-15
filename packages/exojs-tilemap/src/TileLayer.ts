@@ -8,6 +8,7 @@ import {
   unpackTile,
   validateInteger,
   validateNonNegativeInteger,
+  validatePairedDimensions,
   validatePositiveInteger,
 } from './types';
 import { tileToChunkCoord, tileToLocalInChunk } from './types';
@@ -21,10 +22,14 @@ export interface TileLayerOptions {
   readonly id: number;
   /** Display name (need not be unique). */
   readonly name: string;
-  /** Layer width in tiles. */
-  readonly width: number;
-  /** Layer height in tiles. */
-  readonly height: number;
+  /**
+   * Layer width in tiles. Omit together with {@link height} for an
+   * unbounded layer — chunk storage then accepts any signed chunk
+   * coordinate instead of being clamped to a fixed grid.
+   */
+  readonly width?: number;
+  /** Layer height in tiles. Must be provided iff {@link width} is. */
+  readonly height?: number;
   /** Chunk width in tiles (default 32). */
   readonly chunkWidth?: number;
   /** Chunk height in tiles (default 32). */
@@ -67,6 +72,18 @@ export interface TileLayerOptions {
 const DEFAULT_CHUNK_SIZE = 32;
 
 /**
+ * The inclusive range of chunk coordinates that intersect a bounded
+ * {@link TileLayer}. `null` for an unbounded layer (no range limit).
+ * @advanced
+ */
+export interface ChunkRange {
+  readonly minCx: number;
+  readonly minCy: number;
+  readonly maxCx: number;
+  readonly maxCy: number;
+}
+
+/**
  * Resolved, defaulted subset of {@link TileLayerOptions} produced by
  * {@link validateTileLayerOptions}.
  */
@@ -90,8 +107,7 @@ function validateTileLayerOptions(options: TileLayerOptions): ResolvedTileLayerO
   if (!options.name || typeof options.name !== 'string') {
     throw new Error('TileLayer name must be a non-empty string.');
   }
-  validatePositiveInteger(options.width, 'layer.width');
-  validatePositiveInteger(options.height, 'layer.height');
+  validatePairedDimensions(options.width, options.height, 'TileLayer', 'layer');
   validatePositiveInteger(options.tileWidth, 'layer.tileWidth');
   validatePositiveInteger(options.tileHeight, 'layer.tileHeight');
 
@@ -148,10 +164,10 @@ export class TileLayer {
   /** Display name (may not be unique). */
   public readonly name: string;
 
-  /** Width in tiles. */
-  public readonly width: number;
-  /** Height in tiles. */
-  public readonly height: number;
+  /** Width in tiles, or `undefined` if unbounded. */
+  public readonly width: number | undefined;
+  /** Height in tiles, or `undefined` if unbounded. */
+  public readonly height: number | undefined;
 
   /** Chunk width (tiles). */
   public readonly chunkWidth: number;
@@ -163,10 +179,19 @@ export class TileLayer {
   /** Tile height in pixels. */
   public readonly tileHeight: number;
 
-  /** Pixel width. */
-  public get pixelWidth(): number { return this.width * this.tileWidth; }
-  /** Pixel height. */
-  public get pixelHeight(): number { return this.height * this.tileHeight; }
+  /** `true` if this layer has a fixed width/height; `false` if unbounded. */
+  public get bounded(): boolean {
+    return this.width !== undefined && this.height !== undefined;
+  }
+
+  /** Pixel width, or `undefined` if unbounded. */
+  public get pixelWidth(): number | undefined {
+    return this.width === undefined ? undefined : this.width * this.tileWidth;
+  }
+  /** Pixel height, or `undefined` if unbounded. */
+  public get pixelHeight(): number | undefined {
+    return this.height === undefined ? undefined : this.height * this.tileHeight;
+  }
 
   /** Visibility flag (mutable). */
   public visible: boolean;
@@ -244,14 +269,20 @@ export class TileLayer {
 
   /**
    * Check whether a tile coordinate lies within the layer bounds.
+   * Always `true` for an unbounded layer.
    * @advanced
    */
   public inBounds(tx: number, ty: number): boolean {
+    if (this.width === undefined || this.height === undefined) return true;
     return tx >= 0 && tx < this.width && ty >= 0 && ty < this.height;
   }
 
-  /** Compute the range of chunk coordinates that intersect this layer. */
-  public chunkRange(): { minCx: number; minCy: number; maxCx: number; maxCy: number } {
+  /**
+   * Compute the range of chunk coordinates that intersect this layer, or
+   * `null` if the layer is unbounded (any signed chunk coordinate is valid).
+   */
+  public chunkRange(): ChunkRange | null {
+    if (this.width === undefined || this.height === undefined) return null;
     return {
       minCx: 0,
       minCy: 0,
@@ -277,7 +308,10 @@ export class TileLayer {
 
   /**
    * Get or create a chunk at the given coordinates.
-   * For finite layers, creation is only allowed within the valid chunk range.
+   * For a bounded layer, creation is only allowed within the valid chunk
+   * range and edge chunks are clamped to the layer's remaining size. For an
+   * unbounded layer, any signed chunk coordinate is accepted and every
+   * chunk is full-size ({@link chunkWidth} × {@link chunkHeight}).
    *
    * @internal Package-private: used by {@link setTileAt}, {@link fillRect},
    *           and future adapter ingest. External users should not allocate
@@ -289,21 +323,59 @@ export class TileLayer {
     let chunk = this._chunks.get(key);
     if (!chunk) {
       const range = this.chunkRange();
-      if (cx < range.minCx || cx > range.maxCx || cy < range.minCy || cy > range.maxCy) {
-        throw new Error(
-          `Chunk (${cx}, ${cy}) outside layer chunk range ` +
-          `[${range.minCx}..${range.maxCx}, ${range.minCy}..${range.maxCy}].`,
-        );
+      let cw = this.chunkWidth;
+      let ch = this.chunkHeight;
+      if (range !== null && this.width !== undefined && this.height !== undefined) {
+        if (cx < range.minCx || cx > range.maxCx || cy < range.minCy || cy > range.maxCy) {
+          throw new Error(
+            `Chunk (${cx}, ${cy}) outside layer chunk range ` +
+            `[${range.minCx}..${range.maxCx}, ${range.minCy}..${range.maxCy}].`,
+          );
+        }
+        // Compute the actual tile dimensions for this chunk (edge chunks may be smaller).
+        const startTx = cx * this.chunkWidth;
+        const startTy = cy * this.chunkHeight;
+        cw = Math.min(this.chunkWidth, this.width - startTx);
+        ch = Math.min(this.chunkHeight, this.height - startTy);
       }
-      // Compute the actual tile dimensions for this chunk (edge chunks may be smaller).
-      const startTx = cx * this.chunkWidth;
-      const startTy = cy * this.chunkHeight;
-      const cw = Math.min(this.chunkWidth, this.width - startTx);
-      const ch = Math.min(this.chunkHeight, this.height - startTy);
       chunk = new TileChunk(cx, cy, cw, ch);
       this._chunks.set(key, chunk);
     }
     return chunk;
+  }
+
+  /**
+   * Install a chunk-provider-supplied payload directly, bypassing per-tile
+   * `setTileAt` cost. Overwrites any existing chunk at `(cx, cy)`. Always
+   * bumps the layer revision (installing a chunk is always a structural
+   * change, even if the payload happens to be all-zero).
+   *
+   * Does not validate `(cx, cy)` against {@link chunkRange} — callers
+   * (chunk-streaming controllers) are trusted to request coordinates within
+   * whatever range they intend to manage.
+   *
+   * @internal Package-private: for future chunk-provider/streaming use.
+   */
+  public _adoptChunk(cx: number, cy: number, payload: { width: number; height: number; tiles: Uint32Array }): void {
+    this._checkDestroyed();
+    const chunk = new TileChunk(cx, cy, payload.width, payload.height, payload.tiles);
+    this._chunks.set(this._chunkKey(cx, cy), chunk);
+    this._revision++;
+  }
+
+  /**
+   * Evict a chunk from storage, freeing it for garbage collection. No-op if
+   * no chunk is loaded at `(cx, cy)`.
+   *
+   * @returns `true` if a chunk was found and removed, `false` otherwise.
+   * @internal Package-private: for future chunk-streaming eviction use.
+   */
+  public _evictChunk(cx: number, cy: number): boolean {
+    this._checkDestroyed();
+    const key = this._chunkKey(cx, cy);
+    if (!this._chunks.delete(key)) return false;
+    this._revision++;
+    return true;
   }
 
   /**
@@ -389,9 +461,10 @@ export class TileLayer {
     validateInteger(tx, 'tx');
     validateInteger(ty, 'ty');
     if (!this.inBounds(tx, ty)) {
-      throw new Error(
-        `setTileAt (${tx}, ${ty}) out of bounds [0..${this.width - 1}, 0..${this.height - 1}].`,
-      );
+      const boundsMsg = this.width !== undefined && this.height !== undefined
+        ? `[0..${this.width - 1}, 0..${this.height - 1}]`
+        : '[unbounded]';
+      throw new Error(`setTileAt (${tx}, ${ty}) out of bounds ${boundsMsg}.`);
     }
     const packed = this._validateTileRef(tile);
     const { cx, cy } = tileToChunkCoord(tx, ty, this.chunkWidth, this.chunkHeight);
@@ -413,9 +486,10 @@ export class TileLayer {
     validateInteger(tx, 'tx');
     validateInteger(ty, 'ty');
     if (!this.inBounds(tx, ty)) {
-      throw new Error(
-        `clearTileAt (${tx}, ${ty}) out of bounds [0..${this.width - 1}, 0..${this.height - 1}].`,
-      );
+      const boundsMsg = this.width !== undefined && this.height !== undefined
+        ? `[0..${this.width - 1}, 0..${this.height - 1}]`
+        : '[unbounded]';
+      throw new Error(`clearTileAt (${tx}, ${ty}) out of bounds ${boundsMsg}.`);
     }
     const { cx, cy } = tileToChunkCoord(tx, ty, this.chunkWidth, this.chunkHeight);
     const chunk = this._chunks.get(this._chunkKey(cx, cy));

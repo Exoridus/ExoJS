@@ -610,10 +610,44 @@ describe('TileLayer', () => {
       tileWidth: 16, tileHeight: 16, tilesets: [ts],
     });
     const range = layer.chunkRange();
-    expect(range.minCx).toBe(0);
-    expect(range.minCy).toBe(0);
-    expect(range.maxCx).toBe(3);
-    expect(range.maxCy).toBe(2);
+    expect(range).not.toBeNull();
+    expect(range!.minCx).toBe(0);
+    expect(range!.minCy).toBe(0);
+    expect(range!.maxCx).toBe(3);
+    expect(range!.maxCy).toBe(2);
+  });
+
+  it('unbounded layer.chunkRange() is null', () => {
+    const layer = new TileLayer({
+      id: 0, name: 'l',
+      tileWidth: 16, tileHeight: 16, tilesets: [ts],
+    });
+    expect(layer.chunkRange()).toBeNull();
+  });
+
+  it('unbounded layer._ensureChunk accepts any signed chunk coordinate, full chunk size', () => {
+    const layer = new TileLayer({
+      id: 0, name: 'l',
+      tileWidth: 16, tileHeight: 16, tilesets: [ts],
+      chunkWidth: 8, chunkHeight: 8,
+    });
+    const chunk = layer._ensureChunk(-1000, 2500);
+    expect(chunk.cx).toBe(-1000);
+    expect(chunk.cy).toBe(2500);
+    expect(chunk.width).toBe(8);
+    expect(chunk.height).toBe(8);
+  });
+
+  it('unbounded layer.setTileAt accepts negative and large tile coordinates', () => {
+    const layer = new TileLayer({
+      id: 0, name: 'l',
+      tileWidth: 16, tileHeight: 16, tilesets: [ts],
+    });
+    const ref = { tileset: ts, localTileId: 1, transform: TILE_TRANSFORM_IDENTITY };
+    layer.setTileAt(-500, 500, ref);
+    const tile = layer.getTileAt(-500, 500);
+    expect(tile).not.toBeNull();
+    expect(tile!.localTileId).toBe(1);
   });
 
   it('getChunk returns readonly view (ReadonlyTileChunk)', () => {
@@ -663,6 +697,71 @@ describe('TileLayer', () => {
     const edgeChunk = layer._ensureChunk(1, 0);
     expect(edgeChunk.width).toBe(8);
     expect(edgeChunk.height).toBe(32);
+  });
+
+  it('_adoptChunk installs a chunk-provider payload directly', () => {
+    const layer = new TileLayer({
+      id: 0, name: 'l',
+      tileWidth: 16, tileHeight: 16, tilesets: [ts],
+      chunkWidth: 2, chunkHeight: 2,
+    });
+    const tiles = new Uint32Array([
+      packTile(0, 1, TILE_TRANSFORM_IDENTITY), 0,
+      0, packTile(0, 2, TILE_TRANSFORM_IDENTITY),
+    ]);
+    const revisionBefore = layer.revision;
+    layer._adoptChunk(3, -3, { width: 2, height: 2, tiles });
+
+    expect(layer.revision).toBe(revisionBefore + 1);
+    const chunk = layer.getChunk(3, -3);
+    expect(chunk).toBeDefined();
+    expect(chunk!.cx).toBe(3);
+    expect(chunk!.cy).toBe(-3);
+    expect(chunk!.getRawAt(0, 0)).toBe(packTile(0, 1, TILE_TRANSFORM_IDENTITY));
+    expect(chunk!.getRawAt(1, 1)).toBe(packTile(0, 2, TILE_TRANSFORM_IDENTITY));
+  });
+
+  it('_adoptChunk overwrites an existing chunk at the same coordinate', () => {
+    const layer = new TileLayer({
+      id: 0, name: 'l',
+      tileWidth: 16, tileHeight: 16, tilesets: [ts],
+      chunkWidth: 2, chunkHeight: 2,
+    });
+    layer._adoptChunk(0, 0, { width: 2, height: 2, tiles: new Uint32Array(4) });
+    const firstChunk = layer.getChunk(0, 0);
+
+    layer._adoptChunk(0, 0, {
+      width: 2, height: 2,
+      tiles: new Uint32Array([packTile(0, 5, TILE_TRANSFORM_IDENTITY), 0, 0, 0]),
+    });
+    const secondChunk = layer.getChunk(0, 0);
+
+    expect(secondChunk).not.toBe(firstChunk);
+    expect(secondChunk!.getRawAt(0, 0)).toBe(packTile(0, 5, TILE_TRANSFORM_IDENTITY));
+  });
+
+  it('_evictChunk removes a loaded chunk and returns true', () => {
+    const layer = new TileLayer({
+      id: 0, name: 'l',
+      tileWidth: 16, tileHeight: 16, tilesets: [ts],
+      chunkWidth: 2, chunkHeight: 2,
+    });
+    layer._adoptChunk(1, 1, { width: 2, height: 2, tiles: new Uint32Array(4) });
+    const revisionBefore = layer.revision;
+
+    expect(layer._evictChunk(1, 1)).toBe(true);
+    expect(layer.getChunk(1, 1)).toBeUndefined();
+    expect(layer.revision).toBe(revisionBefore + 1);
+  });
+
+  it('_evictChunk on a not-loaded chunk is a no-op returning false', () => {
+    const layer = new TileLayer({
+      id: 0, name: 'l',
+      tileWidth: 16, tileHeight: 16, tilesets: [ts],
+    });
+    const revisionBefore = layer.revision;
+    expect(layer._evictChunk(9, 9)).toBe(false);
+    expect(layer.revision).toBe(revisionBefore);
   });
 
   it('getTileAt returns null for empty cell', () => {
@@ -1110,6 +1209,47 @@ describe('TileLayer', () => {
     expect(layer.parallaxX).toBe(0);
     expect(layer.parallaxY).toBe(0);
   });
+
+  it('unbounded construction (width/height both omitted)', () => {
+    const layer = new TileLayer({
+      id: 0, name: 'l',
+      tileWidth: 16, tileHeight: 16, tilesets: [ts],
+    });
+    expect(layer.bounded).toBe(false);
+    expect(layer.width).toBeUndefined();
+    expect(layer.height).toBeUndefined();
+    expect(layer.pixelWidth).toBeUndefined();
+    expect(layer.pixelHeight).toBeUndefined();
+  });
+
+  it('bounded construction reports bounded=true', () => {
+    const layer = new TileLayer({
+      id: 0, name: 'l', width: 10, height: 10,
+      tileWidth: 16, tileHeight: 16, tilesets: [ts],
+    });
+    expect(layer.bounded).toBe(true);
+  });
+
+  it('rejects mixed width/height (one provided, one omitted)', () => {
+    expect(() => new TileLayer({
+      id: 0, name: 'l', width: 10,
+      tileWidth: 16, tileHeight: 16, tilesets: [ts],
+    } as never)).toThrow(/width and height must both be provided/);
+    expect(() => new TileLayer({
+      id: 0, name: 'l', height: 10,
+      tileWidth: 16, tileHeight: 16, tilesets: [ts],
+    } as never)).toThrow(/width and height must both be provided/);
+  });
+
+  it('unbounded layer.inBounds() is always true', () => {
+    const layer = new TileLayer({
+      id: 0, name: 'l',
+      tileWidth: 16, tileHeight: 16, tilesets: [ts],
+    });
+    expect(layer.inBounds(0, 0)).toBe(true);
+    expect(layer.inBounds(-9999, 9999)).toBe(true);
+    expect(layer.inBounds(1_000_000, -1_000_000)).toBe(true);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -1520,6 +1660,35 @@ describe('TileMap', () => {
     const ref = { tileset: ts, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY };
     map.setTileAt(1, 0, 0, ref);
     expect(map.revision).toBe(2); // unchanged — layer tracks cell revisions
+  });
+
+  it('unbounded construction (width/height both omitted)', () => {
+    const map = new TileMap({
+      name: 'm', tileWidth: 16, tileHeight: 16,
+    });
+    expect(map.bounded).toBe(false);
+    expect(map.width).toBeUndefined();
+    expect(map.height).toBeUndefined();
+    expect(map.pixelWidth).toBeUndefined();
+    expect(map.pixelHeight).toBeUndefined();
+  });
+
+  it('bounded construction reports bounded=true', () => {
+    const map = new TileMap({
+      name: 'm', width: 10, height: 10, tileWidth: 16, tileHeight: 16,
+    });
+    expect(map.bounded).toBe(true);
+    expect(map.pixelWidth).toBe(160);
+    expect(map.pixelHeight).toBe(160);
+  });
+
+  it('rejects mixed width/height (one provided, one omitted)', () => {
+    expect(() => new TileMap({
+      name: 'm', width: 10, tileWidth: 16, tileHeight: 16,
+    } as never)).toThrow(/width and height must both be provided/);
+    expect(() => new TileMap({
+      name: 'm', height: 10, tileWidth: 16, tileHeight: 16,
+    } as never)).toThrow(/width and height must both be provided/);
   });
 });
 
