@@ -59,6 +59,16 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
   // results measured with a lower textureCount are not comparable on this
   // archetype.
   { id: 'batch-breaking', nodeCounts: GPU_BOUND_COUNTS, nestingDepth: 2, textureCount: 40, mutationFraction: 0, cullingEnabled: false },
+  // Otherwise identical to `static-heavy` (same nesting/texture/mutation
+  // shape), so the retained tier fully retains it — but rendered through 4
+  // simultaneous `View`s instead of 1 (split-screen / multi-viewport). Only
+  // the exojs adapter implements the extra views (see `viewCount` on
+  // `ArchetypeSpec` and `adapters/exojs.ts`); this archetype exists to prove
+  // an ExoJS-internal structural property (recorded-instruction replay costs
+  // O(batches) per view, not O(nodes) per view) and is NOT a cross-arm
+  // wall-clock comparison — a competitor arm renders it as an ordinary
+  // single-view static-heavy scene instead.
+  { id: 'split-screen', nodeCounts: SCALING_COUNTS, nestingDepth: 4, textureCount: 1, mutationFraction: 0, cullingEnabled: false, viewCount: 4 },
 ];
 
 /**
