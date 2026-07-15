@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { ImageLayer } from '../src/ImageLayer';
 import { ObjectLayer } from '../src/ObjectLayer';
 import { TileChunk } from '../src/TileChunk';
+import type { ChunkStructuralEvent } from '../src/TileLayer';
 import { TileLayer } from '../src/TileLayer';
 import { TileMap } from '../src/TileMap';
 import { TileSet } from '../src/TileSet';
@@ -762,6 +763,87 @@ describe('TileLayer', () => {
     const revisionBefore = layer.revision;
     expect(layer._evictChunk(9, 9)).toBe(false);
     expect(layer.revision).toBe(revisionBefore);
+  });
+
+  it('_addStructuralListener fires on _adoptChunk with the new chunk', () => {
+    const layer = new TileLayer({
+      id: 0, name: 'l',
+      tileWidth: 16, tileHeight: 16, tilesets: [ts],
+      chunkWidth: 2, chunkHeight: 2,
+    });
+    const events: ChunkStructuralEvent[] = [];
+    layer._addStructuralListener(e => events.push(e));
+
+    layer._adoptChunk(3, -3, { width: 2, height: 2, tiles: new Uint32Array(4) });
+
+    expect(events).toHaveLength(1);
+    expect(events[0]!.cx).toBe(3);
+    expect(events[0]!.cy).toBe(-3);
+    expect(events[0]!.chunk).not.toBeNull();
+    expect(events[0]!.chunk!.cx).toBe(3);
+  });
+
+  it('_addStructuralListener fires on _evictChunk with chunk: null', () => {
+    const layer = new TileLayer({
+      id: 0, name: 'l',
+      tileWidth: 16, tileHeight: 16, tilesets: [ts],
+      chunkWidth: 2, chunkHeight: 2,
+    });
+    layer._adoptChunk(1, 1, { width: 2, height: 2, tiles: new Uint32Array(4) });
+
+    const events: ChunkStructuralEvent[] = [];
+    layer._addStructuralListener(e => events.push(e));
+    layer._evictChunk(1, 1);
+
+    expect(events).toHaveLength(1);
+    expect(events[0]!.cx).toBe(1);
+    expect(events[0]!.cy).toBe(1);
+    expect(events[0]!.chunk).toBeNull();
+  });
+
+  it('_evictChunk on a not-loaded chunk does not fire the structural listener', () => {
+    const layer = new TileLayer({
+      id: 0, name: 'l',
+      tileWidth: 16, tileHeight: 16, tilesets: [ts],
+    });
+    const events: ChunkStructuralEvent[] = [];
+    layer._addStructuralListener(e => events.push(e));
+
+    expect(layer._evictChunk(9, 9)).toBe(false);
+    expect(events).toHaveLength(0);
+  });
+
+  it('_removeStructuralListener stops further notifications', () => {
+    const layer = new TileLayer({
+      id: 0, name: 'l',
+      tileWidth: 16, tileHeight: 16, tilesets: [ts],
+      chunkWidth: 2, chunkHeight: 2,
+    });
+    const events: ChunkStructuralEvent[] = [];
+    const listener = (e: ChunkStructuralEvent): void => { events.push(e); };
+    layer._addStructuralListener(listener);
+    layer._adoptChunk(0, 0, { width: 2, height: 2, tiles: new Uint32Array(4) });
+    layer._removeStructuralListener(listener);
+    layer._adoptChunk(1, 0, { width: 2, height: 2, tiles: new Uint32Array(4) });
+
+    expect(events).toHaveLength(1);
+  });
+
+  it('multiple structural listeners are all notified', () => {
+    const layer = new TileLayer({
+      id: 0, name: 'l',
+      tileWidth: 16, tileHeight: 16, tilesets: [ts],
+      chunkWidth: 2, chunkHeight: 2,
+    });
+    let countA = 0;
+    let countB = 0;
+    layer._addStructuralListener(() => { countA++; });
+    layer._addStructuralListener(() => { countB++; });
+
+    layer._adoptChunk(0, 0, { width: 2, height: 2, tiles: new Uint32Array(4) });
+
+    expect(countA).toBe(1);
+    expect(countB).toBe(1);
   });
 
   it('getTileAt returns null for empty cell', () => {

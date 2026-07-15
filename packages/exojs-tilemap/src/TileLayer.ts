@@ -84,6 +84,20 @@ export interface ChunkRange {
 }
 
 /**
+ * Fired via {@link TileLayer._addStructuralListener} whenever a chunk is
+ * installed ({@link TileLayer._adoptChunk}) or evicted
+ * ({@link TileLayer._evictChunk}) — structural changes only, not per-tile
+ * edits (see {@link import('./TileChunk').TileChunk._addDirtyListener} for
+ * those). `chunk` is `null` on eviction.
+ * @internal
+ */
+export interface ChunkStructuralEvent {
+  readonly cx: number;
+  readonly cy: number;
+  readonly chunk: ReadonlyTileChunk | null;
+}
+
+/**
  * Resolved, defaulted subset of {@link TileLayerOptions} produced by
  * {@link validateTileLayerOptions}.
  */
@@ -226,6 +240,9 @@ export class TileLayer {
   /** Chunk storage: chunkKey → mutable TileChunk (internal). */
   private readonly _chunks = new Map<string, TileChunk>();
 
+  /** Package-internal structural (adopt/evict) listeners. */
+  private _structuralListeners: Set<(event: ChunkStructuralEvent) => void> | null = null;
+
   /**
    * Monotonic layer revision counter.
    * Increments on every cell mutation that actually changes a stored value.
@@ -361,6 +378,7 @@ export class TileLayer {
     const chunk = new TileChunk(cx, cy, payload.width, payload.height, payload.tiles);
     this._chunks.set(this._chunkKey(cx, cy), chunk);
     this._revision++;
+    this._notifyStructural({ cx, cy, chunk });
   }
 
   /**
@@ -375,7 +393,36 @@ export class TileLayer {
     const key = this._chunkKey(cx, cy);
     if (!this._chunks.delete(key)) return false;
     this._revision++;
+    this._notifyStructural({ cx, cy, chunk: null });
     return true;
+  }
+
+  /**
+   * Register a callback invoked synchronously whenever a chunk is installed
+   * ({@link _adoptChunk}) or evicted ({@link _evictChunk}). Package-internal:
+   * {@link import('./TileLayerNode').TileLayerNode} subscribes to keep its
+   * chunk-node children in sync with chunk-provider-driven adopt/evict calls
+   * (e.g. from {@link import('./ChunkStreamer').ChunkStreamer}) without
+   * needing a full {@link import('./TileLayerNode').TileLayerNode.refresh}.
+   * @internal
+   */
+  public _addStructuralListener(listener: (event: ChunkStructuralEvent) => void): void {
+    (this._structuralListeners ??= new Set()).add(listener);
+  }
+
+  /**
+   * Unregister a listener added via {@link _addStructuralListener} (node destroy).
+   * @internal
+   */
+  public _removeStructuralListener(listener: (event: ChunkStructuralEvent) => void): void {
+    this._structuralListeners?.delete(listener);
+  }
+
+  private _notifyStructural(event: ChunkStructuralEvent): void {
+    if (this._structuralListeners === null) return;
+    for (const listener of this._structuralListeners) {
+      listener(event);
+    }
   }
 
   /**
