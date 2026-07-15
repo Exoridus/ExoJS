@@ -1,7 +1,17 @@
-import type { Texture, View, WebGl2Backend, WebGl2RenderBufferRuntime, WebGl2VertexArrayObjectRuntime } from '@codexo/exojs/renderer-sdk';
+import type {
+  RenderTexture,
+  Texture,
+  View,
+  WebGl2Backend,
+  WebGl2RenderBufferRuntime,
+  WebGl2RetainedBatchPayload,
+  WebGl2RetainedBatchReplayer,
+  WebGl2RetainedNodeIndexRange,
+  WebGl2VertexArrayObjectRuntime,
+} from '@codexo/exojs/renderer-sdk';
 import {
   AbstractWebGl2Renderer,
-  type BlendModes,
+  BlendModes,
   BufferTypes,
   BufferUsage,
   createWebGl2ShaderProgram,
@@ -20,6 +30,7 @@ import type { TileChunkNode } from '../TileChunkNode';
 const instanceStrideBytes = 32;
 const wordsPerInstance = instanceStrideBytes / Uint32Array.BYTES_PER_ELEMENT;
 const transformTextureUnit = 1;
+const identityGroupMat3 = new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]);
 
 // Tile word packing: transform-buffer row in the low 29 bits, diagonal flip in
 // bit 29. flipX/flipY are baked into the UV bounds at write time; the shader
@@ -39,6 +50,7 @@ layout(location = 2) in vec4 a_color;        // RGBA tint (layer opacity in alph
 layout(location = 3) in uint a_tileWord;     // transform row (bits 0..28) | diagonal (bit 29)
 
 uniform mat3 u_projection;
+uniform mat3 u_group;
 uniform sampler2D u_transforms;              // shared per-frame transform buffer (2 texels/row)
 
 out vec2 v_texcoord;
@@ -62,7 +74,7 @@ void main(void) {
     float worldX = (m0.x * localX) + (m0.y * localY) + m1.x;
     float worldY = (m0.z * localX) + (m0.w * localY) + m1.y;
 
-    gl_Position = vec4((u_projection * vec3(worldX, worldY, 1.0)).xy, 0.0, 1.0);
+    gl_Position = vec4((u_projection * u_group * vec3(worldX, worldY, 1.0)).xy, 0.0, 1.0);
 
     // Tile orientation: the diagonal flip transposes the corner-coordinate axes
     // before the UV corner is selected; flipX/flipY are already baked into the
@@ -107,7 +119,18 @@ interface TileRendererConnection {
  * orientation-neutral and never re-uploaded for a camera pan.
  * @internal
  */
-export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNode> {
+export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNode> implements WebGl2RetainedBatchReplayer {
+  /**
+   * Retained-batch capability opt-in (Track B): a tile chunk's per-flush
+   * instanced batches (fixed 32-byte layout, tile word at word 7) can be
+   * recorded into a group's instruction set and replayed from group-owned
+   * resources. Pixel-snapped draws are excluded by the collect-time
+   * recordability predicate (and belt-and-braces poisoning in {@link render});
+   * tile chunks have no custom-material path to exclude.
+   * @internal
+   */
+  public readonly _supportsRetainedBatches = true;
+
   private readonly _shader: Shader;
   private readonly _batchSize: number;
   private readonly _instanceData: ArrayBuffer;
@@ -115,6 +138,12 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
   private readonly _instanceUint32: Uint32Array;
 
   private readonly _transformUnitScratch: Int32Array = new Int32Array([transformTextureUnit]);
+  // Pinned unit index for the single tileset texture sampler (unit 0), reused
+  // by the live flush and retained replay so both stay allocation-free.
+  private readonly _baseTextureUnitScratch: Int32Array = new Int32Array([0]);
+  // Reused single-slot texture list handed to the backend at record time; a
+  // tile chunk batch always binds exactly one tileset texture (slot 0).
+  private readonly _recordTextures: Array<Texture | RenderTexture | null> = [null];
 
   private _quadIndex = 0;
   private _maxNodeIndex = 0;
@@ -122,6 +151,7 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
   private _currentTexture: Texture | null = null;
   private _currentView: View | null = null;
   private _currentViewId = -1;
+  private _currentGroupTransformId = -1;
 
   private _instanceBuffer: WebGl2RenderBuffer | null = null;
   private _vao: WebGl2VertexArrayObject | null = null;
@@ -145,6 +175,16 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
     }
 
     const backend = this.getBackend();
+
+    // Belt-and-braces for retained recording: the collect-time recordability
+    // predicate already excludes pixel-snapped draws from ever arming a
+    // capture. If one still arrives inside an active capture window, poison
+    // the recording so the resulting set can never validate — degrading to
+    // entry replay instead of wrong pixels.
+    if (backend._isRetainedCapturing && node.pixelSnapMode !== 'none') {
+      backend._poisonRetainedCaptures();
+    }
+
     const blendMode = node.blendMode;
     const tintRgba = node.tint.toRgba();
 
@@ -277,16 +317,10 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
       return;
     }
 
-    const view = backend.view;
-
-    if (this._currentView !== view || this._currentViewId !== view.updateId) {
-      this._currentView = view;
-      this._currentViewId = view.updateId;
-      this._shader.getUniform('u_projection').setValue(view.getTransform().toArray(false));
-    }
+    this._stageViewUniforms(backend);
 
     if (this._currentTexture !== null) {
-      this._shader.getUniform('u_texture').setValue(new Int32Array([0]));
+      this._shader.getUniform('u_texture').setValue(this._baseTextureUnitScratch);
     }
 
     backend.bindTransformBufferTexture(transformTextureUnit, this._maxNodeIndex + 1);
@@ -299,8 +333,179 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
     backend.stats.batches++;
     backend.stats.drawCalls++;
 
+    // Retained recording (Track B): while a capture window is open, hand the
+    // exact packed instance words of this flush to the backend — byte-
+    // identical to what just drew. A batch always binds a single tileset
+    // texture (slot 0); a pixel-snapped node already poisoned the capture in
+    // render().
+    if (backend._isRetainedCapturing && this._currentTexture !== null) {
+      this._recordTextures[0] = this._currentTexture;
+      backend._recordRetainedBatch(
+        this,
+        this._instanceUint32.subarray(0, this._quadIndex * wordsPerInstance),
+        this._quadIndex,
+        this._currentBlendMode ?? BlendModes.Normal,
+        this._recordTextures,
+        1,
+      );
+    }
+
     this._quadIndex = 0;
     this._maxNodeIndex = 0;
+  }
+
+  /**
+   * Stage `u_projection` (live view) and `u_group` (live composed group
+   * matrix) on the shader, guarded by cached view/group stamps. Shared by the
+   * live flush path and retained-batch replay — replay resolves exactly the
+   * same live state a slow-path flush would.
+   */
+  private _stageViewUniforms(backend: WebGl2Backend): void {
+    const view = backend.view;
+
+    if (this._currentView !== view || this._currentViewId !== view.updateId) {
+      this._currentView = view;
+      this._currentViewId = view.updateId;
+      this._shader.getUniform('u_projection').setValue(view.getTransform().toArray(false));
+    }
+
+    if (this._currentGroupTransformId !== backend.renderGroupTransformId) {
+      this._currentGroupTransformId = backend.renderGroupTransformId;
+
+      const groupTransform = backend.renderGroupTransform;
+
+      this._shader.getUniform('u_group').setValue(groupTransform !== null ? groupTransform.toArray(false) : identityGroupMat3);
+    }
+  }
+
+  // ── Retained-batch record/replay (Track B) ────────────────────────────────
+  // The bundle stores raw instance bytes; this renderer owns the 32-byte
+  // layout (tile word at word 7: transform row in bits 0..28, diagonal flip in
+  // bit 29), so the layout-aware finalize steps (node-index scan/rebase, VAO
+  // attribute wiring) and the replay dispatch live here — mirroring
+  // WebGl2NineSliceSpriteRenderer's seam.
+
+  /** @internal See {@link WebGl2RetainedBatchReplayer._scanRetainedNodeIndexRange}. */
+  public _scanRetainedNodeIndexRange(payload: WebGl2RetainedBatchPayload, range: WebGl2RetainedNodeIndexRange): void {
+    const words = payload.bundle.instanceWords;
+    const start = payload.byteOffset / Uint32Array.BYTES_PER_ELEMENT;
+
+    for (let i = 0; i < payload.instanceCount; i++) {
+      // In-bounds: the payload's word range was appended to the bundle store.
+      // The tile word is the last word of the 32-byte (8-word) instance
+      // layout; only the low 29 bits address the transform buffer row — the
+      // diagonal-flip flag (bit 29) is orientation, not a row index.
+      const row = words[start + i * wordsPerInstance + 7]! & TILE_ROW_MASK;
+
+      if (row < range.min) {
+        range.min = row;
+      }
+
+      if (row > range.max) {
+        range.max = row;
+      }
+    }
+  }
+
+  /** @internal See {@link WebGl2RetainedBatchReplayer._rebaseRetainedNodeIndices} (group-local indices). */
+  public _rebaseRetainedNodeIndices(payload: WebGl2RetainedBatchPayload, base: number): void {
+    const words = payload.bundle.instanceWords;
+    const start = payload.byteOffset / Uint32Array.BYTES_PER_ELEMENT;
+
+    for (let i = 0; i < payload.instanceCount; i++) {
+      const index = start + i * wordsPerInstance + 7;
+      // In-bounds: see the scan above. Rebase ONLY the row field; the
+      // diagonal-flip bit must survive untouched or tile orientation corrupts.
+      const word = words[index]!;
+      const diagonal = word & TILE_DIAGONAL_BIT;
+      const row = word & TILE_ROW_MASK;
+
+      words[index] = (diagonal | ((row - base) & TILE_ROW_MASK)) >>> 0;
+    }
+  }
+
+  /**
+   * Point the batch VAO's per-instance attributes at the bundle's persistent
+   * instance buffer, based at the batch's byte offset (WebGL2 has no
+   * baseInstance, hence one small VAO per recorded batch). Same attribute
+   * set/locations as the live VAO in {@link onConnect}.
+   * @internal
+   */
+  public _configureRetainedVao(payload: WebGl2RetainedBatchPayload): void {
+    const gl = this.getBackend().context;
+    const buffer = payload.bundle.instanceBuffer;
+    const vao = payload.vao;
+
+    if (buffer === null || vao === null) {
+      throw new Error('WebGl2TileChunkRenderer: retained batch VAO configuration requires an uploaded bundle.');
+    }
+
+    const base = payload.byteOffset;
+
+    vao
+      .addAttribute(buffer, this._shader.getAttribute('a_quadBounds'), gl.FLOAT, false, instanceStrideBytes, base + 0, false, 1)
+      .addAttribute(buffer, this._shader.getAttribute('a_uvBounds'), gl.UNSIGNED_SHORT, true, instanceStrideBytes, base + 16, false, 1)
+      .addAttribute(buffer, this._shader.getAttribute('a_color'), gl.UNSIGNED_BYTE, true, instanceStrideBytes, base + 24, false, 1)
+      .addAttribute(buffer, this._shader.getAttribute('a_tileWord'), gl.UNSIGNED_INT, false, instanceStrideBytes, base + 28, true, 1);
+  }
+
+  /**
+   * Replay one recorded batch: all STATE is resolved live — blend mode via
+   * the backend's dedup, `u_projection`/`u_group` from the live view + live
+   * composed group matrix (the camera-pan / group-move win), the single
+   * tileset texture bound to unit 0 by recorded slot order — and only the
+   * DATA is cached: the instance bytes in the bundle buffer (bound through
+   * the per-batch VAO) and the group-owned transform texture on the shared
+   * transform unit. The backend hook flushed any pending live batch before
+   * dispatching here and bumps the stats from the instruction descriptor.
+   * @internal
+   */
+  public _replayRetainedBatch(payload: WebGl2RetainedBatchPayload): void {
+    const backend = this.getBackendOrNull();
+    const vao = payload.vao;
+    const transformTexture = payload.bundle.transformTexture;
+
+    if (backend === null || vao === null || transformTexture === null) {
+      // Defensive: a bundle in this state never validates (generation), so a
+      // spliced replay cannot reach here; skip rather than crash mid-frame.
+      return;
+    }
+
+    if (payload.blendMode !== this._currentBlendMode) {
+      this._currentBlendMode = payload.blendMode;
+    }
+
+    backend.setBlendMode(payload.blendMode);
+    this._stageViewUniforms(backend);
+
+    const textures = payload.textures;
+
+    for (let i = 0; i < textures.length; i++) {
+      // In-bounds: i < textures.length.
+      backend.bindTexture(textures[i]!, i);
+    }
+
+    // Keep the live path's redundant-bind-skip cache coherent (a live
+    // TileChunkNode outside the group and the replayed batches inside it
+    // share this one renderer instance): unit 0 now actually holds this
+    // batch's texture, bypassing render()'s `_currentTexture` check, so the
+    // NEXT live draw must see the true bound texture or it wrongly skips its
+    // own bind and renders with this batch's leftover texture.
+    if (textures.length > 0) {
+      this._currentTexture = textures[0] as Texture;
+    }
+
+    this._shader.getUniform('u_texture').setValue(this._baseTextureUnitScratch);
+
+    // The group-owned transform store replaces the shared frame buffer on the
+    // SAME unit/sampler — zero GLSL changes. The next live flush re-binds the
+    // shared texture through bindTransformBufferTexture.
+    backend.bindTexture(transformTexture, transformTextureUnit);
+    this._shader.getUniform('u_transforms').setValue(this._transformUnitScratch);
+
+    this._shader.sync();
+    backend.bindVertexArrayObject(vao);
+    vao.drawInstanced(4, 0, payload.instanceCount, RenderingPrimitives.TriangleStrip);
   }
 
   protected onConnect(backend: WebGl2Backend): void {
@@ -332,6 +537,7 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
     this._currentTexture = null;
     this._currentView = null;
     this._currentViewId = -1;
+    this._currentGroupTransformId = -1;
     this._quadIndex = 0;
     this._maxNodeIndex = 0;
   }

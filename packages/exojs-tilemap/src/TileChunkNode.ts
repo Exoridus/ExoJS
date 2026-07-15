@@ -4,6 +4,7 @@ import { Drawable } from '@codexo/exojs/renderer-sdk';
 import type { ChunkPage } from './chunkGeometry';
 import { buildChunkPages } from './chunkGeometry';
 import type { ReadonlyTileChunk } from './TileChunk';
+import { TileChunk } from './TileChunk';
 import type { TileSet } from './TileSet';
 
 /**
@@ -37,6 +38,18 @@ export class TileChunkNode extends Drawable {
   private _builtRevision = -1;
 
   /**
+   * Bound once so `TileChunk._addDirtyListener`/`_removeDirtyListener` add and
+   * remove the SAME function reference. Pushes the chunk's revision bump onto
+   * this node's own content revision (see `TileChunk._dirtyListeners`) so a
+   * `RetainedContainer` ancestor — which skips walking a content-clean
+   * subtree entirely — observes the mutation and re-collects instead of
+   * replaying stale cached geometry.
+   */
+  private readonly _onChunkDirty = (): void => {
+    this.invalidateContent();
+  };
+
+  /**
    * @param chunk          The readonly chunk this node renders.
    * @param tilesets       The owning layer's tileset array.
    * @param tileWidth      Map/layer tile cell width in pixels.
@@ -68,6 +81,12 @@ export class TileChunkNode extends Drawable {
       chunk.cx * chunkWidthTiles * tileWidth,
       chunk.cy * chunkHeightTiles * tileHeight,
     );
+
+    // `loadedChunks()` always yields the concrete `TileChunk` behind the
+    // readonly view (see TileLayer); the guard is defensive only.
+    if (chunk instanceof TileChunk) {
+      chunk._addDirtyListener(this._onChunkDirty);
+    }
   }
 
   /** The signed chunk coordinates this node renders. */
@@ -107,6 +126,10 @@ export class TileChunkNode extends Drawable {
   }
 
   public override destroy(): void {
+    if (this._chunk instanceof TileChunk) {
+      this._chunk._removeDirtyListener(this._onChunkDirty);
+    }
+
     this._pages = [];
     this._builtRevision = -1;
 
