@@ -1,0 +1,155 @@
+{
+  "title": "ChunkSource",
+  "description": "Supplies chunk data for one import('./TileLayer').TileLayer on demand, keyed by signed chunk coordinates — the abstraction a import('./ChunkStreamer').ChunkStreamer drives to implement chunk streaming, and the seam a format adapter or a procedural generator implements. `getChunk` may return synchronously (e.g. slicing already-parsed source data) or a `Promise` (e.g. an expensive procedural-generation algorithm, plausibly off the main thread) — import('./ChunkStreamer').ChunkStreamer installs a synchronous result in the same tick it was requested, with zero pop-in. Returning `null` (synchronously or via a resolved `Promise`) means \"no data for this coordinate\" — e.g. outside a finite provider's authored extent, even though the layer itself may be unbounded.",
+  "symbol": "ChunkSource",
+  "kind": "interface",
+  "subsystem": "tilemap",
+  "importPath": "@codexo/exojs-tilemap",
+  "tier": "advanced",
+  "memberCount": 1,
+  "counts": {
+    "constructors": 0,
+    "methods": 1,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Supplies chunk data for one import('./TileLayer').TileLayer on demand, keyed by signed chunk coordinates — the abstraction a import('./ChunkStreamer').ChunkStreamer drives to implement chunk streaming, and the seam a format adapter or a procedural generator implements.",
+        "`getChunk` may return synchronously (e.g. slicing already-parsed source data) or a `Promise` (e.g. an expensive procedural-generation algorithm, plausibly off the main thread) — import('./ChunkStreamer').ChunkStreamer installs a synchronous result in the same tick it was requested, with zero pop-in. Returning `null` (synchronously or via a resolved `Promise`) means \"no data for this coordinate\" — e.g. outside a finite provider's authored extent, even though the layer itself may be unbounded."
+      ],
+      "importLine": "import { ChunkSource } from '@codexo/exojs-tilemap'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "getChunk",
+          "signature": "getChunk(cx: number, cy: number): ChunkPayload | Promise<ChunkPayload | null> | null",
+          "signatureTokens": [
+            {
+              "text": "getChunk",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "cx",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "cy",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ChunkPayload",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ChunkPayload",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "cx",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "cy",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "ChunkPayload | Promise<ChunkPayload | null> | null",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-tilemap/src/ChunkSource.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/ChunkSource.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-tilemap/src/ChunkSource.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/ChunkSource.ts"
+}
