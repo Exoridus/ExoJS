@@ -350,6 +350,40 @@ export class TileLayer {
   }
 
   /**
+   * Install a chunk-provider-supplied payload directly, bypassing per-tile
+   * `setTileAt` cost. Overwrites any existing chunk at `(cx, cy)`. Always
+   * bumps the layer revision (installing a chunk is always a structural
+   * change, even if the payload happens to be all-zero).
+   *
+   * Does not validate `(cx, cy)` against {@link chunkRange} — callers
+   * (chunk-streaming controllers) are trusted to request coordinates within
+   * whatever range they intend to manage.
+   *
+   * @internal Package-private: for future chunk-provider/streaming use.
+   */
+  public _adoptChunk(cx: number, cy: number, payload: { width: number; height: number; tiles: Uint32Array }): void {
+    this._checkDestroyed();
+    const chunk = new TileChunk(cx, cy, payload.width, payload.height, payload.tiles);
+    this._chunks.set(this._chunkKey(cx, cy), chunk);
+    this._revision++;
+  }
+
+  /**
+   * Evict a chunk from storage, freeing it for garbage collection. No-op if
+   * no chunk is loaded at `(cx, cy)`.
+   *
+   * @returns `true` if a chunk was found and removed, `false` otherwise.
+   * @internal Package-private: for future chunk-streaming eviction use.
+   */
+  public _evictChunk(cx: number, cy: number): boolean {
+    this._checkDestroyed();
+    const key = this._chunkKey(cx, cy);
+    if (!this._chunks.delete(key)) return false;
+    this._revision++;
+    return true;
+  }
+
+  /**
    * Iterate over all loaded chunks in deterministic (cy, cx) ascending order.
    * Returns readonly chunk views — callers cannot mutate storage.
    * @advanced

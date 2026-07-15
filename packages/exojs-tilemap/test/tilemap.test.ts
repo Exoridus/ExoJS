@@ -699,6 +699,71 @@ describe('TileLayer', () => {
     expect(edgeChunk.height).toBe(32);
   });
 
+  it('_adoptChunk installs a chunk-provider payload directly', () => {
+    const layer = new TileLayer({
+      id: 0, name: 'l',
+      tileWidth: 16, tileHeight: 16, tilesets: [ts],
+      chunkWidth: 2, chunkHeight: 2,
+    });
+    const tiles = new Uint32Array([
+      packTile(0, 1, TILE_TRANSFORM_IDENTITY), 0,
+      0, packTile(0, 2, TILE_TRANSFORM_IDENTITY),
+    ]);
+    const revisionBefore = layer.revision;
+    layer._adoptChunk(3, -3, { width: 2, height: 2, tiles });
+
+    expect(layer.revision).toBe(revisionBefore + 1);
+    const chunk = layer.getChunk(3, -3);
+    expect(chunk).toBeDefined();
+    expect(chunk!.cx).toBe(3);
+    expect(chunk!.cy).toBe(-3);
+    expect(chunk!.getRawAt(0, 0)).toBe(packTile(0, 1, TILE_TRANSFORM_IDENTITY));
+    expect(chunk!.getRawAt(1, 1)).toBe(packTile(0, 2, TILE_TRANSFORM_IDENTITY));
+  });
+
+  it('_adoptChunk overwrites an existing chunk at the same coordinate', () => {
+    const layer = new TileLayer({
+      id: 0, name: 'l',
+      tileWidth: 16, tileHeight: 16, tilesets: [ts],
+      chunkWidth: 2, chunkHeight: 2,
+    });
+    layer._adoptChunk(0, 0, { width: 2, height: 2, tiles: new Uint32Array(4) });
+    const firstChunk = layer.getChunk(0, 0);
+
+    layer._adoptChunk(0, 0, {
+      width: 2, height: 2,
+      tiles: new Uint32Array([packTile(0, 5, TILE_TRANSFORM_IDENTITY), 0, 0, 0]),
+    });
+    const secondChunk = layer.getChunk(0, 0);
+
+    expect(secondChunk).not.toBe(firstChunk);
+    expect(secondChunk!.getRawAt(0, 0)).toBe(packTile(0, 5, TILE_TRANSFORM_IDENTITY));
+  });
+
+  it('_evictChunk removes a loaded chunk and returns true', () => {
+    const layer = new TileLayer({
+      id: 0, name: 'l',
+      tileWidth: 16, tileHeight: 16, tilesets: [ts],
+      chunkWidth: 2, chunkHeight: 2,
+    });
+    layer._adoptChunk(1, 1, { width: 2, height: 2, tiles: new Uint32Array(4) });
+    const revisionBefore = layer.revision;
+
+    expect(layer._evictChunk(1, 1)).toBe(true);
+    expect(layer.getChunk(1, 1)).toBeUndefined();
+    expect(layer.revision).toBe(revisionBefore + 1);
+  });
+
+  it('_evictChunk on a not-loaded chunk is a no-op returning false', () => {
+    const layer = new TileLayer({
+      id: 0, name: 'l',
+      tileWidth: 16, tileHeight: 16, tilesets: [ts],
+    });
+    const revisionBefore = layer.revision;
+    expect(layer._evictChunk(9, 9)).toBe(false);
+    expect(layer.revision).toBe(revisionBefore);
+  });
+
   it('getTileAt returns null for empty cell', () => {
     const layer = new TileLayer({
       id: 0, name: 'l', width: 64, height: 64,
