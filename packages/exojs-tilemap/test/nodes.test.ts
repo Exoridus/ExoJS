@@ -460,6 +460,29 @@ describe('unbounded layer/map nodes', () => {
     expect(bounds.height).toBe(64);
   });
 
+  it('TileMapNode is not cullable when the map is unbounded, and cullable when bounded', () => {
+    const tileset = makeTileset();
+    const unboundedLayer = new TileLayer({
+      id: 1, name: 'l',
+      tileWidth: 16, tileHeight: 16, tilesets: [tileset],
+    });
+    const unboundedMap = new TileMap({
+      name: 'm', tileWidth: 16, tileHeight: 16,
+      layers: [unboundedLayer],
+    });
+    expect(new TileMapNode(unboundedMap).cullable).toBe(false);
+
+    const boundedLayer = new TileLayer({
+      id: 1, name: 'l', width: 10, height: 10,
+      tileWidth: 16, tileHeight: 16, tilesets: [tileset],
+    });
+    const boundedMap = new TileMap({
+      name: 'm', width: 10, height: 10, tileWidth: 16, tileHeight: 16,
+      layers: [boundedLayer],
+    });
+    expect(new TileMapNode(boundedMap).cullable).toBe(true);
+  });
+
   it('TileLayerNode.getLocalBounds() excludes chunk nodes hidden via visible = false', () => {
     const tileset = makeTileset();
     const layer = new TileLayer({

@@ -52,6 +52,10 @@ export class TileMapNode extends Container {
     this._cullChunks = options?.cullable ?? true;
 
     this._buildLayerNodes();
+
+    if (!this._map.bounded) {
+      this.cullable = false;
+    }
   }
 
   /** The runtime map this node renders. */
