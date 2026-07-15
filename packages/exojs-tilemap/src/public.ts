@@ -3,6 +3,8 @@
 
 export { tilemapExtension } from './tilemapExtension';
 export type { Extension } from '@codexo/exojs/extensions';
+// Chunk streaming: provider contract for chunk-streaming controllers (advanced).
+export type { ChunkPayload, ChunkSource } from './ChunkSource';
 // Image layers: data-only background/foreground images from Tiled image layers.
 export type { ImageLayerOptions } from './ImageLayer';
 export { ImageLayer } from './ImageLayer';

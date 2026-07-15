@@ -1,3 +1,4 @@
+import type { ChunkPayload } from './ChunkSource';
 import type { ReadonlyTileChunk } from './TileChunk';
 import { TileChunk } from './TileChunk';
 import type { TileSet } from './TileSet';
@@ -373,7 +374,7 @@ export class TileLayer {
    *
    * @internal Package-private: for future chunk-provider/streaming use.
    */
-  public _adoptChunk(cx: number, cy: number, payload: { width: number; height: number; tiles: Uint32Array }): void {
+  public _adoptChunk(cx: number, cy: number, payload: ChunkPayload): void {
     this._checkDestroyed();
     const chunk = new TileChunk(cx, cy, payload.width, payload.height, payload.tiles);
     this._chunks.set(this._chunkKey(cx, cy), chunk);
