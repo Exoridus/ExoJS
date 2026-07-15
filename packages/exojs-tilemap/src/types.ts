@@ -139,8 +139,8 @@ export function tileTransformLabel(t: TileTransform): string {
  *
  * A `PackedTile` is **not** a source-format GID — it is a fully resolved
  * internal compact representation. Use {@link packTile} / {@link unpackTile}
- * (package-internal) to convert between packed form and a {@link ResolvedTile}
- * if writing adapters.
+ * to convert between packed form and a {@link ResolvedTile} if writing
+ * adapters.
  *
  * In public APIs, prefer {@link ResolvedTile} or null for queries.
  * `PackedTile` is exposed as `@advanced` so `ReadonlyTileChunk.getRawAt()`
