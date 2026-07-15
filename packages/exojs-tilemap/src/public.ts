@@ -3,6 +3,8 @@
 
 export { tilemapExtension } from './tilemapExtension';
 export type { Extension } from '@codexo/exojs/extensions';
+// Chunk streaming: provider contract for chunk-streaming controllers (advanced).
+export type { ChunkPayload, ChunkSource } from './ChunkSource';
 // Image layers: data-only background/foreground images from Tiled image layers.
 export type { ImageLayerOptions } from './ImageLayer';
 export { ImageLayer } from './ImageLayer';
@@ -71,6 +73,9 @@ export {
 } from './types';
 // Per-tile animation driver (RPG-Maker-style): advances only animated cells.
 export { TileAnimator } from './TileAnimator';
+// Chunk streaming: loads/unloads TileLayer chunks from a View's position via a ChunkSource provider.
+export type { ChunkStreamerOptions } from './ChunkStreamer';
+export { ChunkStreamer } from './ChunkStreamer';
 // Wang autotiling: automatic tile selection based on neighbor bitmasks.
 export type { AutoTileOptions } from './autoTile';
 export { autoTile, refreshCell } from './autoTile';

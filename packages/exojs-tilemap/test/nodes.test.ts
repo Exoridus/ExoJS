@@ -577,3 +577,162 @@ describe('unbounded layer/map nodes', () => {
     expect(bounds.height).toBe(64);
   });
 });
+
+describe('TileLayerNode structural-listener reaction', () => {
+  it('adopting a new non-empty chunk adds exactly one TileChunkNode, without touching other chunk nodes', () => {
+    const tileset = makeTileset();
+    const layer = new TileLayer({
+      id: 1, name: 'l',
+      tileWidth: 16, tileHeight: 16, tilesets: [tileset],
+      chunkWidth: 4, chunkHeight: 4,
+    });
+    layer._adoptChunk(0, 0, {
+      width: 4, height: 4,
+      tiles: new Uint32Array([packTile(0, 0, TILE_TRANSFORM_IDENTITY), ...new Array(15).fill(0)]),
+    });
+
+    const node = new TileLayerNode(layer);
+    node.refresh();
+    expect(node.chunkNodes).toHaveLength(1);
+    const originalNode = node.chunkNodes[0];
+
+    layer._adoptChunk(5, 5, {
+      width: 4, height: 4,
+      tiles: new Uint32Array([packTile(0, 0, TILE_TRANSFORM_IDENTITY), ...new Array(15).fill(0)]),
+    });
+
+    expect(node.chunkNodes).toHaveLength(2);
+    expect(node.chunkNodes[0]).toBe(originalNode); // untouched, same object identity — no refresh happened
+    expect(node.chunkNodes[1]!.chunkX).toBe(5);
+    expect(node.chunkNodes[1]!.chunkY).toBe(5);
+  });
+
+  it('adopting an empty chunk does not add a TileChunkNode', () => {
+    const tileset = makeTileset();
+    const layer = new TileLayer({
+      id: 1, name: 'l',
+      tileWidth: 16, tileHeight: 16, tilesets: [tileset],
+      chunkWidth: 4, chunkHeight: 4,
+    });
+    const node = new TileLayerNode(layer);
+
+    layer._adoptChunk(0, 0, { width: 4, height: 4, tiles: new Uint32Array(16) }); // all-zero = empty
+
+    expect(node.chunkNodes).toHaveLength(0);
+  });
+
+  it('evicting a chunk removes and destroys its TileChunkNode', () => {
+    const tileset = makeTileset();
+    const layer = new TileLayer({
+      id: 1, name: 'l',
+      tileWidth: 16, tileHeight: 16, tilesets: [tileset],
+      chunkWidth: 4, chunkHeight: 4,
+    });
+    layer._adoptChunk(0, 0, {
+      width: 4, height: 4,
+      tiles: new Uint32Array([packTile(0, 0, TILE_TRANSFORM_IDENTITY), ...new Array(15).fill(0)]),
+    });
+    const node = new TileLayerNode(layer);
+    node.refresh();
+    expect(node.chunkNodes).toHaveLength(1);
+    const removedNode = node.chunkNodes[0]!;
+    const destroySpy = vi.spyOn(removedNode, 'destroy');
+
+    layer._evictChunk(0, 0);
+
+    expect(node.chunkNodes).toHaveLength(0);
+    expect(destroySpy).toHaveBeenCalledOnce();
+  });
+
+  it('evicting a coordinate with no chunk node is a no-op that does not affect other nodes', () => {
+    const tileset = makeTileset();
+    const layer = new TileLayer({
+      id: 1, name: 'l',
+      tileWidth: 16, tileHeight: 16, tilesets: [tileset],
+      chunkWidth: 4, chunkHeight: 4,
+    });
+    layer._adoptChunk(0, 0, {
+      width: 4, height: 4,
+      tiles: new Uint32Array([packTile(0, 0, TILE_TRANSFORM_IDENTITY), ...new Array(15).fill(0)]),
+    });
+    const node = new TileLayerNode(layer);
+    node.refresh();
+
+    layer._evictChunk(9, 9); // never had a node (empty chunk, never adopted)
+
+    expect(node.chunkNodes).toHaveLength(1);
+  });
+
+  it('re-adopting at an already-resident coordinate replaces the node with fresh content', () => {
+    const tileset = makeTileset();
+    const layer = new TileLayer({
+      id: 1, name: 'l',
+      tileWidth: 16, tileHeight: 16, tilesets: [tileset],
+      chunkWidth: 4, chunkHeight: 4,
+    });
+    layer._adoptChunk(0, 0, {
+      width: 4, height: 4,
+      tiles: new Uint32Array([packTile(0, 0, TILE_TRANSFORM_IDENTITY), ...new Array(15).fill(0)]),
+    });
+    const node = new TileLayerNode(layer);
+    node.refresh();
+    const staleNode = node.chunkNodes[0]!;
+
+    layer._adoptChunk(0, 0, {
+      width: 4, height: 4,
+      tiles: new Uint32Array([packTile(0, 1, TILE_TRANSFORM_IDENTITY), ...new Array(15).fill(0)]),
+    });
+
+    expect(node.chunkNodes).toHaveLength(1);
+    expect(node.chunkNodes[0]).not.toBe(staleNode);
+  });
+
+  it('a freshly-adopted chunk node gets the layer\'s current tint even when opacity/tint have not changed since the last full sync', () => {
+    const tileset = makeTileset();
+    const layer = new TileLayer({
+      id: 1, name: 'l',
+      tileWidth: 16, tileHeight: 16, tilesets: [tileset],
+      chunkWidth: 4, chunkHeight: 4,
+      opacity: 0.5,
+      tintColor: 0x00ff00,
+    });
+    layer._adoptChunk(0, 0, {
+      width: 4, height: 4,
+      tiles: new Uint32Array([packTile(0, 0, TILE_TRANSFORM_IDENTITY), ...new Array(15).fill(0)]),
+    });
+    const node = new TileLayerNode(layer);
+    node.refresh(); // establishes _syncedOpacity=0.5/_syncedTint=0x00ff00 via the initial build's _syncTint()
+
+    // Opacity/tint are unchanged since the initial sync — a naive `_syncTint()`
+    // call would short-circuit on its own change-detection guard and skip the
+    // newly-added node entirely.
+    layer._adoptChunk(1, 0, {
+      width: 4, height: 4,
+      tiles: new Uint32Array([packTile(0, 0, TILE_TRANSFORM_IDENTITY), ...new Array(15).fill(0)]),
+    });
+
+    const freshNode = node.chunkNodes.find(n => n.chunkX === 1 && n.chunkY === 0)!;
+    expect(freshNode.tint.r).toBe(0);
+    expect(freshNode.tint.g).toBe(255);
+    expect(freshNode.tint.b).toBe(0);
+    expect(freshNode.tint.a).toBe(0.5);
+  });
+
+  it('destroy() unsubscribes from the layer — further layer mutation does not affect the destroyed node', () => {
+    const tileset = makeTileset();
+    const layer = new TileLayer({
+      id: 1, name: 'l',
+      tileWidth: 16, tileHeight: 16, tilesets: [tileset],
+      chunkWidth: 4, chunkHeight: 4,
+    });
+    const node = new TileLayerNode(layer);
+    node.destroy();
+
+    layer._adoptChunk(0, 0, {
+      width: 4, height: 4,
+      tiles: new Uint32Array([packTile(0, 0, TILE_TRANSFORM_IDENTITY), ...new Array(15).fill(0)]),
+    });
+
+    expect(node.chunkNodes).toHaveLength(0);
+  });
+});
