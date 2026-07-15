@@ -1109,6 +1109,23 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   /**
+   * The innermost active capture window (S3-D6), or `null` when none is open.
+   * A fresh `WebGpuRetainedCaptureFrame` instance is created per capture-open
+   * call (even across re-records of the same bundle) and discarded at
+   * `_endRetainedCapture`, so its identity is a precise "this specific
+   * open/close cycle" token — lets a renderer that can record at most once per
+   * capture (e.g. Text, whose per-batch replay state isn't keyed for more)
+   * detect a second record attempt within the SAME window via a `WeakSet`,
+   * without needing bundle-level bookkeeping of its own.
+   * @internal
+   */
+  public get _currentRetainedCaptureFrame(): WebGpuRetainedCaptureFrame | null {
+    const frames = this._retainedCaptureFrames;
+
+    return frames.length > 0 ? frames[frames.length - 1]! : null;
+  }
+
+  /**
    * Playback hook: a retained group scope starts recording (contract in
    * RenderPlanPlayer). The pending batch is flushed first so no batch spans
    * into the capture window; the set's grow-only bundle is created (or reused
@@ -1268,6 +1285,7 @@ export class WebGpuBackend implements RenderBackend {
     textures: ReadonlyArray<Texture | RenderTexture | null>,
     slotCount: number,
     geometry: WebGpuRetainedGeometryRef | null = null,
+    rendererData: unknown = null,
   ): void {
     const frames = this._retainedCaptureFrames;
 
@@ -1323,6 +1341,7 @@ export class WebGpuBackend implements RenderBackend {
       batchIndexInBundle: owner.staged.length,
       textures: textureList,
       recordedViews,
+      rendererData,
     };
     // Generation is stamped at capture end (post-growth, official plan-layer
     // seam); the sentinel keeps the set invalid if finalization never runs
@@ -1377,8 +1396,26 @@ export class WebGpuBackend implements RenderBackend {
     const staged = frame.staged;
     let base = 0xffffffff;
     let maxNodeIndex = 0;
+    // A batch whose renderer opts out of the shared transform store
+    // (`_consumesSharedTransform === false`, e.g. Text — its per-instance
+    // "node index" addresses its OWN private data store, not a row in the
+    // shared TransformBuffer) leaves `_scanRetainedNodeIndexRange` a no-op, so
+    // its `minNodeIndex`/`maxNodeIndex` stay at the unset sentinel
+    // (`max < min`). Such batches must not contribute to the shared-range
+    // span below — merging their sentinel into `base`/`maxNodeIndex` would
+    // corrupt the span for every OTHER (shared-transform-consuming) renderer
+    // recorded into the same bundle, and a capture containing ONLY such
+    // batches would otherwise compute a negative `rowCount` and hand
+    // `writeBuffer` a garbage out-of-range copy below.
+    let hasSharedTransformRange = false;
 
     for (const batch of staged) {
+      if (batch.maxNodeIndex < batch.minNodeIndex) {
+        continue;
+      }
+
+      hasSharedTransformRange = true;
+
       if (batch.minNodeIndex < base) {
         base = batch.minNodeIndex;
       }
@@ -1388,7 +1425,7 @@ export class WebGpuBackend implements RenderBackend {
       }
     }
 
-    const rowCount = maxNodeIndex - base + 1;
+    const rowCount = hasSharedTransformRange ? maxNodeIndex - base + 1 : 0;
     const transformBytes = rowCount * retainedTransformSlotBytes;
 
     // Growth is safe against the open pass: a bundle can only be re-recorded
@@ -1401,7 +1438,9 @@ export class WebGpuBackend implements RenderBackend {
       // the cached bytes become immune to frame-local index shifts (S3-D4)
       // and address the group-owned row copy below. Layout-aware — delegated
       // to the renderer that packed the bytes (the payload was already
-      // created at record time, so its renderer is in hand here).
+      // created at record time, so its renderer is in hand here). A
+      // shared-transform opt-out renderer's rebase is a no-op (see above);
+      // `base` is irrelevant to it either way.
       const payload = batch.instruction.payload as WebGpuRetainedBatchPayload;
 
       payload.renderer._rebaseRetainedNodeIndices(batch.bytes, base);
@@ -1410,18 +1449,22 @@ export class WebGpuBackend implements RenderBackend {
       stampRetainedBatchGeneration(batch.instruction);
     }
 
-    // Copy the group's transform rows [base, base + rowCount) — written by
-    // this playback's Phase-1 pre-pass into the frame-scoped CPU buffer —
-    // into the group-owned storage at group-local row 0. Rows carry tint
-    // (texel 2), so tint is covered by the copy.
-    const transformData = this._getTransformStorage().buffer.data;
+    if (hasSharedTransformRange) {
+      // Copy the group's transform rows [base, base + rowCount) — written by
+      // this playback's Phase-1 pre-pass into the frame-scoped CPU buffer —
+      // into the group-owned storage at group-local row 0. Rows carry tint
+      // (texel 2), so tint is covered by the copy.
+      const transformData = this._getTransformStorage().buffer.data;
 
-    device.queue.writeBuffer(bundle.transformBuffer!, 0, transformData.buffer, transformData.byteOffset + base * retainedTransformSlotBytes, transformBytes);
-    this._accountant.recordBufferUpload(frame.totalBytes + transformBytes);
+      device.queue.writeBuffer(bundle.transformBuffer!, 0, transformData.buffer, transformData.byteOffset + base * retainedTransformSlotBytes, transformBytes);
+      this._accountant.recordBufferUpload(frame.totalBytes + transformBytes);
+    } else {
+      this._accountant.recordBufferUpload(frame.totalBytes);
+    }
 
     // Slice 4c: record the rebase base + row count so a later child move can
     // patch its one row in place (O(k)) instead of dropping the recording.
-    bundle._recordTransformRowRange(device, base, rowCount);
+    bundle._recordTransformRowRange(device, hasSharedTransformRange ? base : 0, rowCount);
   }
 
   /**
