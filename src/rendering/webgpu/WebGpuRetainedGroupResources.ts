@@ -88,6 +88,16 @@ export interface WebGpuRetainedBatchPayload {
    * a recapture, never a replay.
    */
   readonly recordedViews: readonly GPUTextureView[];
+  /**
+   * Opaque, renderer-private data captured alongside this batch (Text opt-in):
+   * for a renderer whose per-instance node index addresses its OWN private
+   * data store rather than the shared transform buffer (`_consumesSharedTransform
+   * === false`), the generic bundle/scan/rebase machinery has nothing to persist
+   * on its behalf — this field is the renderer's own escape hatch to carry
+   * whatever CPU-side snapshot it needs from record time through to replay,
+   * where only the renderer that set it interprets the value.
+   */
+  readonly rendererData?: unknown;
 }
 
 /**

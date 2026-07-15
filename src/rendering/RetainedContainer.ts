@@ -4,12 +4,50 @@ import { nextNodeRevision } from '#core/NodeRevision';
 import { registerTransformGroupBoundary, unregisterTransformGroupBoundary } from '#core/SceneNode';
 import type { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RetainedGroupFragment } from '#rendering/plan/RetainedGroupFragment';
+import type { RenderBackend } from '#rendering/RenderBackend';
 
 import { Container } from './Container';
 import type { Drawable } from './Drawable';
 import type { RetainedGroupBundle } from './plan/RetainedInstructionSet';
 import type { RenderNode } from './RenderNode';
 import { packTransformRow, TRANSFORM_FLOATS_PER_ROW } from './TransformBuffer';
+
+/**
+ * A backend exposing a renderer registry, structurally — the same narrow
+ * shape `drawCommandUsesSharedTransform` (`plan/RenderCommand.ts`) resolves
+ * through, so both call sites agree on what "the renderer for this drawable"
+ * means without a hard dependency between the two modules.
+ */
+interface BackendWithRendererRegistry {
+  readonly rendererRegistry?: {
+    resolve(drawable: Drawable): unknown;
+  };
+}
+
+/**
+ * Optional per-renderer escape hatch from the generic shared-`TransformBuffer`
+ * row patch (`RetainedGroupBundle._patchTransformRow`): a renderer that packs
+ * its own private per-node data (`_consumesSharedTransform === false`, e.g.
+ * Text — its row format and storage differ from the shared buffer's) implements
+ * this instead, patching whatever it owns directly. `base` is the same
+ * capture-frame direct-draw base {@link RetainedContainer._tryPatchTransformRow}
+ * already computes for the generic path; a renderer whose own indexing scheme
+ * doesn't use it is free to ignore the parameter. Returns `false` when the
+ * node isn't fast-patch-eligible (mirrors the generic path's own eligibility
+ * guards), which drops the recording and falls back to a full re-record —
+ * never wrong pixels, only a missed optimization.
+ *
+ * Renderer-agnostic by design: a WebGL2 implementation of the same renderer
+ * (CPU-side vertex re-bake instead of a GPU buffer write) satisfies this exact
+ * interface unchanged.
+ * @internal
+ */
+export interface OwnTransformRowPatcher {
+  _patchOwnTransformRow(node: RenderNode, bundle: RetainedGroupBundle, base: number): boolean;
+}
+
+const hasOwnTransformRowPatch = (renderer: unknown): renderer is OwnTransformRowPatcher =>
+  typeof (renderer as { _patchOwnTransformRow?: unknown } | null)?._patchOwnTransformRow === 'function';
 
 /**
  * Reused scratch for one patched transform row (3 rgba32f texels, the
@@ -283,7 +321,7 @@ export class RetainedContainer extends Container {
       // for those nodes — patch the changed rows in place (O(k)), or drop the
       // recording so entry replay re-reads live transforms this frame.
       if (this._fragment.hasDirtyTransformRows()) {
-        this._reconcileTransformRows();
+        this._reconcileTransformRows(builder.backend);
       }
 
       // Fast tier (Slice 3, S3-D2): a valid recorded instruction set splices
@@ -356,7 +394,7 @@ export class RetainedContainer extends Container {
    * tier there is nothing to reconcile (transforms are re-read live); the queue
    * is simply drained.
    */
-  private _reconcileTransformRows(): void {
+  private _reconcileTransformRows(backend: RenderBackend): void {
     const set = this._fragment.instructions;
     const bundle = set?.ownedBundle ?? null;
 
@@ -390,7 +428,7 @@ export class RetainedContainer extends Container {
     const patchableBundle: PatchableRetainedGroupBundle = bundle as PatchableRetainedGroupBundle;
 
     for (const node of this._fragment.dirtyTransformRows) {
-      if (!this._tryPatchTransformRow(node, patchableBundle, base)) {
+      if (!this._tryPatchTransformRow(node, backend, patchableBundle, base)) {
         // Ineligible: drop the baked recording. `_markCurrentScopeRetained`
         // will now fail its validity check, so the group falls to entry replay
         // (live transforms) and re-records this frame.
@@ -408,13 +446,36 @@ export class RetainedContainer extends Container {
    * drawable child, non-snapped, present in the recorded row map. The
    * group-local matrix is `getGlobalTransform()` composed to this boundary — the
    * exact value the recorder wrote (S3-D4).
+   *
+   * A renderer that opts out of the shared `TransformBuffer` (its resolved
+   * renderer exposes {@link OwnTransformRowPatcher}, e.g. Text) is dispatched
+   * to its OWN patch method instead of the generic `bundle._patchTransformRow`
+   * below — its row lives in a private, renderer-owned store the generic path
+   * never reads, so calling the generic patch there would silently no-op
+   * against bytes nobody consumes (stale pixels, not a caught failure).
    */
-  private _tryPatchTransformRow(node: RenderNode, bundle: PatchableRetainedGroupBundle, base: number): boolean {
+  private _tryPatchTransformRow(node: RenderNode, backend: RenderBackend, bundle: PatchableRetainedGroupBundle, base: number): boolean {
     if (node.parent !== this) {
       return false;
     }
 
     const drawable = node as unknown as Drawable;
+    const registry = (backend as BackendWithRendererRegistry).rendererRegistry;
+
+    if (registry && typeof registry.resolve === 'function') {
+      try {
+        const renderer = registry.resolve(drawable);
+
+        if (hasOwnTransformRowPatch(renderer)) {
+          return renderer._patchOwnTransformRow(node, bundle, base);
+        }
+      } catch {
+        // No renderer registered for this drawable (custom drawable type) —
+        // fall through to the generic shared-transform patch path below,
+        // unchanged from before this dispatch existed.
+      }
+    }
+
     const nodeIndex = this._fragment.directDrawNodeIndex(drawable);
 
     // Snapped nodes are excluded from recording (their instance words are
