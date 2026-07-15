@@ -5,7 +5,7 @@ import type { PixelSnapMode, RenderPlanBuilder } from '@codexo/exojs/renderer-sd
 import { aggregateChildLocalBounds } from './nodeBounds';
 import { assertPixelSnapMode } from './pixelSnap';
 import { TileChunkNode } from './TileChunkNode';
-import type { TileLayer } from './TileLayer';
+import type { ChunkStructuralEvent, TileLayer } from './TileLayer';
 
 /**
  * Options for a {@link TileLayerNode}. All optional; reserved for forward
@@ -35,8 +35,11 @@ export interface TileLayerNodeOptions {
  * frees its chunk nodes and their cached geometry but leaves the layer, map,
  * and Loader-owned textures intact.
  *
- * Structural changes to the layer (tiles written into previously-empty chunks)
- * are reflected only after {@link TileLayerNode.refresh}; in-place edits to
+ * Structural changes made via `_adoptChunk`/`_evictChunk` (chunk streaming)
+ * are picked up incrementally as they happen, without a full rebuild.
+ * {@link TileLayerNode.refresh} remains available for callers that mutate
+ * chunk structure by other means (e.g. a bulk edit that bypasses
+ * `_adoptChunk`/`_evictChunk`) and need a full resync. In-place tile edits to
  * existing chunks are picked up automatically via chunk revisions.
  *
  * @advanced
@@ -50,6 +53,47 @@ export class TileLayerNode extends Container {
   private _pixelSnapMode: PixelSnapMode = 'none';
   private readonly _baseOffsetX: number;
   private readonly _baseOffsetY: number;
+
+  /**
+   * Bound once so `TileLayer._addStructuralListener`/`_removeStructuralListener`
+   * add and remove the SAME function reference. Incrementally adds/removes
+   * the `TileChunkNode` child for exactly the chunk that changed — never
+   * triggers a full {@link refresh}, so every other chunk node's
+   * revision-cached geometry survives untouched.
+   */
+  private readonly _onStructuralChange = (event: ChunkStructuralEvent): void => {
+    const existingIndex = this._chunkNodes.findIndex(n => n.chunkX === event.cx && n.chunkY === event.cy);
+
+    if (existingIndex !== -1) {
+      const [existing] = this._chunkNodes.splice(existingIndex, 1);
+      this.removeChild(existing!);
+      existing!.destroy();
+    }
+
+    if (event.chunk === null || event.chunk.empty) {
+      return;
+    }
+
+    const layer = this._layer;
+    const node = new TileChunkNode(
+      event.chunk,
+      layer.tilesets,
+      layer.tileWidth,
+      layer.tileHeight,
+      layer.chunkWidth,
+      layer.chunkHeight,
+    );
+
+    node.cullable = this._cullChunks;
+
+    if (this._pixelSnapMode !== 'none') {
+      node.pixelSnapMode = this._pixelSnapMode;
+    }
+
+    this._chunkNodes.push(node);
+    this.addChild(node);
+    this._applyTint(node);
+  };
 
   public constructor(layer: TileLayer, options?: TileLayerNodeOptions) {
     super();
@@ -65,6 +109,8 @@ export class TileLayerNode extends Container {
     if (!this._layer.bounded) {
       this.cullable = false;
     }
+
+    this._layer._addStructuralListener(this._onStructuralChange);
   }
 
   /** The runtime layer this node renders. */
@@ -172,6 +218,8 @@ export class TileLayerNode extends Container {
   }
 
   public override destroy(): void {
+    this._layer._removeStructuralListener(this._onStructuralChange);
+
     const children = [...this._chunkNodes];
 
     this._chunkNodes.length = 0;
@@ -214,9 +262,25 @@ export class TileLayerNode extends Container {
   }
 
   /**
-   * Propagate the layer's live opacity and tint colour onto the chunk render
-   * tints if either changed. Opacity drives the tint alpha; `tintColor`
-   * (`0xRRGGBB`) multiplies the RGB (white = no tint).
+   * Compute and apply this layer's live tint (opacity as alpha, `tintColor`
+   * as RGB multiply) to a single chunk node. Used both by {@link _syncTint}'s
+   * bulk pass and by the structural-listener handler for a freshly-added
+   * node — a node added between two "nothing changed" full syncs must still
+   * receive the current tint, which a change-detection-guarded bulk pass
+   * alone would skip.
+   */
+  private _applyTint(node: TileChunkNode): void {
+    const tintColor = this._layer.tintColor;
+    const r = tintColor === null ? 255 : (tintColor >> 16) & 0xff;
+    const g = tintColor === null ? 255 : (tintColor >> 8) & 0xff;
+    const b = tintColor === null ? 255 : tintColor & 0xff;
+    node.tint.set(r, g, b, this._layer.opacity);
+  }
+
+  /**
+   * Propagate the layer's live opacity and tint colour onto every chunk
+   * render tint if either changed since the last call. Opacity drives the
+   * tint alpha; `tintColor` (`0xRRGGBB`) multiplies the RGB (white = no tint).
    */
   private _syncTint(): void {
     const opacity = this._layer.opacity;
@@ -226,12 +290,8 @@ export class TileLayerNode extends Container {
       return;
     }
 
-    const r = tintColor === null ? 255 : (tintColor >> 16) & 0xff;
-    const g = tintColor === null ? 255 : (tintColor >> 8) & 0xff;
-    const b = tintColor === null ? 255 : tintColor & 0xff;
-
     for (const child of this._chunkNodes) {
-      child.tint.set(r, g, b, opacity);
+      this._applyTint(child);
     }
 
     this._syncedOpacity = opacity;
