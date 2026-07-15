@@ -1,9 +1,13 @@
+import type { RetainedGroupBundle } from '#rendering/plan/RetainedInstructionSet';
+import type { RenderNode } from '#rendering/RenderNode';
+import type { OwnTransformRowPatcher } from '#rendering/RetainedContainer';
 import { Shader } from '#rendering/shader/Shader';
 import { type BitmapText } from '#rendering/text/BitmapText';
 import type { TextPageQuads } from '#rendering/text/Text';
 import { Text } from '#rendering/text/Text';
+import { DataTexture } from '#rendering/texture/DataTexture';
 import type { Texture } from '#rendering/texture/Texture';
-import { BufferTypes, BufferUsage, RenderingPrimitives } from '#rendering/types';
+import { BlendModes, BufferTypes, BufferUsage, RenderingPrimitives } from '#rendering/types';
 
 import { AbstractWebGl2Renderer } from './AbstractWebGl2Renderer';
 import textVertSource from './glsl/text.vert';
@@ -12,6 +16,13 @@ import textMsdfFragSource from './glsl/text-msdf.frag';
 import textSdfFragSource from './glsl/text-sdf.frag';
 import type { WebGl2Backend } from './WebGl2Backend';
 import { WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from './WebGl2RenderBuffer';
+import {
+  type WebGl2RetainedBatchPayload,
+  type WebGl2RetainedBatchReplayer,
+  WebGl2RetainedGroupResources,
+  type WebGl2RetainedNodeIndexRange,
+  type WebGl2RetainedRendererReplayState,
+} from './WebGl2RetainedGroupResources';
 import { createWebGl2ShaderProgram } from './WebGl2ShaderProgram';
 import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './WebGl2VertexArrayObject';
 
@@ -64,6 +75,54 @@ interface PendingQuad {
   readonly nodeIndex: number;
   readonly shaderType: ShaderType;
   readonly atlasTexture: Texture;
+  readonly node: Text | BitmapText;
+}
+
+/**
+ * Per-node re-bake record for the WebGL2 own-transform-move CPU patch: the
+ * moved node's already-known group-local glyph corners plus its recorded
+ * vertex-word range in the group instance buffer. On an own-transform move the
+ * transform is re-applied to `localPositions` on the CPU and written back over
+ * `firstWord`'s range — no glyph re-selection, no atlas lookup.
+ */
+interface TextPatchNode {
+  readonly firstWord: number;
+  readonly vertexCount: number;
+  readonly localPositions: Float32Array;
+  readonly words: Float32Array;
+}
+
+/** Record-time payload carried from `flush()` to `_configureRetainedVao`/replay. */
+interface TextRetainedRendererData {
+  readonly nodeData: Float32Array;
+  readonly nodeCount: number;
+  readonly quadCount: number;
+  readonly shaderType: ShaderType;
+  readonly patchNodes: ReadonlyArray<{ node: Text | BitmapText; patch: TextPatchNode }>;
+}
+
+/**
+ * Group-owned WebGL2 replay state for one recorded Text batch: the persistent
+ * per-node RGBA32F style texture (10 texels/row — the fragment stage's style
+ * lookup, the ONLY per-node data the shipped `text.vert` does not bake into the
+ * vertex bytes) and the drawable→re-bake map the own-transform patch walks.
+ * Grow-only across recaptures; released by the bundle on destroy.
+ */
+class TextRetainedReplayState implements WebGl2RetainedRendererReplayState {
+  public nodeDataTexture: DataTexture<'rgba32f'> | null = null;
+  public nodeDataFloats: Float32Array | null = null;
+  public nodeDataCapacity = 0;
+  public quadCount = 0;
+  public shaderType: ShaderType = 'sdf';
+  public readonly patchByDrawable = new Map<Text | BitmapText, TextPatchNode>();
+
+  public destroy(): void {
+    this.nodeDataTexture?.destroy();
+    this.nodeDataTexture = null;
+    this.nodeDataFloats = null;
+    this.nodeDataCapacity = 0;
+    this.patchByDrawable.clear();
+  }
 }
 
 interface TextRendererConnection {
@@ -88,7 +147,7 @@ interface TextRendererConnection {
  * `RGBA32F` data texture uploaded once per {@link flush}.  Nodes sharing the
  * same shader type and atlas page are drawn in a single `drawElements` call.
  */
-export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText> {
+export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText> implements WebGl2RetainedBatchReplayer, OwnTransformRowPatcher {
   /**
    * Text packs its world transform into its own per-node data texture and never
    * reads the shared {@link TransformBuffer}, so the render-group upload boundary
@@ -96,6 +155,24 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
    * @internal
    */
   public readonly _consumesSharedTransform = false;
+
+  /**
+   * Retained-batch opt-in (Track B extension): a flush whose glyph quads all
+   * share one (shaderType, atlasTexture) — the overwhelmingly common case, one
+   * font/atlas per flush — records the CPU-baked vertex bytes into the group
+   * instance buffer and replays them with `drawElements`. A flush that spans
+   * multiple (shaderType, atlasTexture) batches, or a second Text flush inside
+   * the same capture window, poisons the capture instead — always safe, just a
+   * missed optimization.
+   *
+   * The world transform stays CPU-baked (shipped `text.vert` reads no per-node
+   * transform: a vertex-stage texelFetch of the RGBA32F data texture collapses
+   * the draw on ANGLE/D3D11 whenever a glyph atlas is co-bound), so an
+   * own-transform move re-bakes on the CPU via {@link _patchOwnTransformRow}
+   * rather than the shared O(1) GPU row patch Sprite/NineSlice/Mesh use.
+   * @internal
+   */
+  public readonly _supportsRetainedBatches = true;
 
   private readonly _sdfShader: Shader = new Shader(textVertSource, textSdfFragSource);
   private readonly _msdfShader: Shader = new Shader(textVertSource, textMsdfFragSource);
@@ -109,7 +186,18 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
   private _indexCapacity = initialIndexCapacity;
   private _vertexData: ArrayBuffer = new ArrayBuffer(initialVertexCapacity * vertexStrideBytes);
   private _float32View: Float32Array = new Float32Array(this._vertexData);
+  private _uint32View: Uint32Array = new Uint32Array(this._vertexData);
   private _indexData: Uint16Array = new Uint16Array(initialIndexCapacity);
+
+  // Retained-batch state: the renderer-owned, grow-only quad-index buffer (the
+  // standard `0,1,2, 0,2,3` glyph pattern shared by every recorded batch) and
+  // which capture windows have already recorded a Text batch this session
+  // (S3-D6 nesting-safe — one entry per capture-open call).
+  private _retainedQuadIndexBuffer: WebGl2RenderBuffer | null = null;
+  private _retainedQuadCapacity = 0;
+  private readonly _retainedTextureUnit0Scratch = new Int32Array([0]);
+  private readonly _retainedNodeDataUnitScratch = new Int32Array([1]);
+  private readonly _recordedCaptures = new WeakSet<WebGl2RetainedGroupResources>();
 
   private _nodeDataArray: Float32Array = new Float32Array(initialNodeCapacity * nodeFloats);
   private _nodeCapacity = initialNodeCapacity;
@@ -209,6 +297,9 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     c.vertexBuffer.destroy();
     c.vao.destroy();
     c.gl.deleteTexture(c.nodeDataTexture);
+    this._retainedQuadIndexBuffer?.destroy();
+    this._retainedQuadIndexBuffer = null;
+    this._retainedQuadCapacity = 0;
 
     this._connection = null;
   }
@@ -227,7 +318,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     for (const batch of pageQuads) {
       const page = pages[batch.pageIndex];
       if (page === undefined) continue;
-      this._pendingQuads.push({ quads: batch, nodeIndex, shaderType, atlasTexture: page.texture });
+      this._pendingQuads.push({ quads: batch, nodeIndex, shaderType, atlasTexture: page.texture, node });
     }
   }
 
@@ -241,7 +332,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     for (const batch of pageQuads) {
       const tex = textures[batch.pageIndex];
       if (tex === undefined) continue;
-      this._pendingQuads.push({ quads: batch, nodeIndex, shaderType, atlasTexture: tex });
+      this._pendingQuads.push({ quads: batch, nodeIndex, shaderType, atlasTexture: tex, node });
     }
   }
 
@@ -394,6 +485,18 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     const quads = this._pendingQuads;
     let i = 0;
 
+    // Retained recording (Track B extension): a recordable Text flush is a
+    // SINGLE (shaderType, atlasTexture) batch. Collect the first batch's
+    // group-local re-bake data as it is built; a second batch this flush (or a
+    // second flush into the same capture window) poisons the capture below.
+    const capturing = backend._isRetainedCapturing;
+    let batchCount = 0;
+    let recWordCount = 0;
+    let recQuadCount = 0;
+    let recAtlas: Texture | null = null;
+    let recShaderType: ShaderType = 'sdf';
+    let recPatchNodes: Array<{ node: Text | BitmapText; patch: TextPatchNode }> | null = null;
+
     while (i < quads.length) {
       // In-bounds: `i` < `quads.length` per the loop guard.
       const first = quads[i]!;
@@ -425,11 +528,18 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
       let iOffset = 0; // next index slot in _indexData
       let baseV = 0; // vertex base for current quad group (for index rewriting)
 
+      const recordThisBatch = capturing && batchCount === 0;
+
+      if (recordThisBatch) {
+        recPatchNodes = [];
+      }
+
       for (let k = i; k < j; k++) {
         // In-bounds: `k` ranges over `[i, j)` ⊆ `[0, quads.length)`.
-        const { quads: batch, nodeIndex } = quads[k]!;
+        const { quads: batch, nodeIndex, node } = quads[k]!;
         const qVerts = batch.quadCount * 4;
         const { vertices, uvs, indices } = batch;
+        const nodeFirstWord = vOffset * vertexStrideWords;
 
         // Read this node's transform + gradient bounds back from the packed data array
         // (same layout as _packNodeData) so we can transform vertices on the CPU. The
@@ -470,10 +580,34 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
           this._indexData[iOffset + x] = indices[x]! + baseV;
         }
 
+        if (recordThisBatch && recPatchNodes !== null) {
+          // Copy the node's group-local corners (for the CPU re-bake patch) and
+          // its just-baked vertex words (rewritten in place, positions only, on
+          // an own-transform move) — both detached from the reused scratch.
+          recPatchNodes.push({
+            node,
+            patch: {
+              firstWord: nodeFirstWord,
+              vertexCount: qVerts,
+              localPositions: vertices.slice(0, qVerts * 2),
+              words: this._float32View.slice(nodeFirstWord, nodeFirstWord + qVerts * vertexStrideWords),
+            },
+          });
+        }
+
         vOffset += qVerts;
         iOffset += indices.length;
         baseV += qVerts;
       }
+
+      if (recordThisBatch) {
+        recWordCount = totalVerts * vertexStrideWords;
+        recQuadCount = totalIndices / 6;
+        recAtlas = first.atlasTexture;
+        recShaderType = first.shaderType;
+      }
+
+      batchCount++;
 
       c.vertexBuffer.upload(this._float32View.subarray(0, totalVerts * vertexStrideWords));
       c.indexBuffer.upload(this._indexData.subarray(0, totalIndices));
@@ -514,12 +648,311 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
 
       i = j;
     }
+
+    if (capturing) {
+      this._tryRecordRetainedBatch(backend, batchCount, recWordCount, recQuadCount, recShaderType, recAtlas, recPatchNodes);
+    }
+  }
+
+  /**
+   * Record this flush's ONE glyph-quad batch for retained replay, or poison the
+   * capture when it is not a clean single batch (multiple distinct
+   * (shaderType, atlasTexture) combinations this flush, or a second Text flush
+   * into the same capture window). Poisoning is always safe: the group falls
+   * back to entry replay for that frame, never wrong pixels.
+   */
+  private _tryRecordRetainedBatch(
+    backend: WebGl2Backend,
+    batchCount: number,
+    wordCount: number,
+    quadCount: number,
+    shaderType: ShaderType,
+    atlas: Texture | null,
+    patchNodes: Array<{ node: Text | BitmapText; patch: TextPatchNode }> | null,
+  ): void {
+    const bundle = backend._currentRetainedCaptureBundle;
+
+    if (bundle === null) {
+      return;
+    }
+
+    if (batchCount !== 1 || atlas === null || patchNodes === null || this._recordedCaptures.has(bundle)) {
+      backend._poisonRetainedCaptures();
+
+      return;
+    }
+
+    const rendererData: TextRetainedRendererData = {
+      nodeData: this._nodeDataArray.slice(0, this._nodeCount * nodeFloats),
+      nodeCount: this._nodeCount,
+      quadCount,
+      shaderType,
+      patchNodes,
+    };
+
+    backend._recordRetainedBatch(this, this._uint32View.subarray(0, wordCount), this._nodeCount, BlendModes.Normal, [atlas], 1, null, rendererData);
+
+    this._recordedCaptures.add(bundle);
   }
 
   private _shaderFor(type: ShaderType): Shader {
     if (type === 'sdf') return this._sdfShader;
     if (type === 'msdf') return this._msdfShader;
     return this._colorShader;
+  }
+
+  // ── Retained-batch record/replay (Track B extension) ─────────────────────
+  // Text is the WebGL2 retained renderer that keeps its world transform
+  // CPU-baked (the shipped `text.vert` reads no per-node transform — a
+  // vertex-stage texelFetch of the RGBA32F data texture collapses the draw on
+  // ANGLE/D3D11 whenever a glyph atlas is co-bound). So the recorded instance
+  // bytes are the full per-vertex stream (world-space position + uv + node
+  // index + gradient uv), replayed with `drawElements` over the renderer-owned
+  // quad-index pattern, and the per-node STYLE the fragment stage still looks
+  // up lives in a group-owned RGBA32F texture parked on the bundle. Text's node
+  // index addresses THAT dense per-group texture, not the shared
+  // `TransformBuffer`, so the scan/rebase hooks are true no-ops.
+
+  /** @internal See {@link WebGl2RetainedBatchReplayer._scanRetainedNodeIndexRange}. */
+  public _scanRetainedNodeIndexRange(_payload: WebGl2RetainedBatchPayload, _range: WebGl2RetainedNodeIndexRange): void {
+    // Deliberately does not touch `_range`: Text's node index addresses its own
+    // group-owned style texture, not a shared-transform row, and widening the
+    // range here would corrupt the shared span the backend computes across every
+    // OTHER (shared-transform-consuming) batch recorded into the same bundle.
+  }
+
+  /** @internal See {@link WebGl2RetainedBatchReplayer._rebaseRetainedNodeIndices}. */
+  public _rebaseRetainedNodeIndices(_payload: WebGl2RetainedBatchPayload, _base: number): void {
+    // Deliberately does not touch the bytes: Text's node indices are already
+    // dense and group-local (0..nodeCount-1, matching the group-owned style
+    // texture rows) and have no relationship to the shared-buffer rebase base.
+  }
+
+  /**
+   * Point the batch VAO's per-vertex attributes at the bundle's persistent
+   * instance buffer (based at the batch byte offset) and its element buffer at
+   * the renderer-owned quad-index pattern, then (re)build the group-owned
+   * per-node style texture + own-transform-patch map from the recorded data.
+   * @internal
+   */
+  public _configureRetainedVao(payload: WebGl2RetainedBatchPayload): void {
+    const backend = this.getBackend();
+    const gl = backend.context;
+    const buffer = payload.bundle.instanceBuffer;
+    const vao = payload.vao;
+    const data = payload.rendererData as TextRetainedRendererData | null;
+
+    if (buffer === null || vao === null || data === null || !(payload.bundle instanceof WebGl2RetainedGroupResources)) {
+      throw new Error('WebGl2TextRenderer: retained batch VAO configuration requires an uploaded bundle and recorded data.');
+    }
+
+    const shader = this._shaderFor(data.shaderType);
+    const base = payload.byteOffset;
+    const indexBuffer = this._ensureRetainedQuadIndexBuffer(data.quadCount);
+
+    vao
+      .addIndex(indexBuffer)
+      .addAttribute(buffer, shader.getAttribute('a_position'), gl.FLOAT, false, vertexStrideBytes, base + 0)
+      .addAttribute(buffer, shader.getAttribute('a_texcoord'), gl.FLOAT, false, vertexStrideBytes, base + 8)
+      .addAttribute(buffer, shader.getAttribute('a_nodeIndex'), gl.FLOAT, false, vertexStrideBytes, base + 16);
+
+    if (shader.attributes.has('a_gradUV')) {
+      vao.addAttribute(buffer, shader.getAttribute('a_gradUV'), gl.FLOAT, false, vertexStrideBytes, base + 20);
+    }
+
+    const state = this._getTextReplayState(payload.bundle);
+
+    state.shaderType = data.shaderType;
+    state.quadCount = data.quadCount;
+
+    if (state.nodeDataFloats === null || state.nodeDataCapacity < data.nodeCount) {
+      let capacity = Math.max(state.nodeDataCapacity, initialNodeCapacity);
+
+      while (capacity < data.nodeCount) capacity *= 2;
+
+      state.nodeDataTexture?.destroy();
+      state.nodeDataFloats = new Float32Array(capacity * nodeFloats);
+      state.nodeDataTexture = new DataTexture({ width: nodeTexels, height: capacity, format: 'rgba32f', data: state.nodeDataFloats });
+      state.nodeDataCapacity = capacity;
+    }
+
+    state.nodeDataFloats.set(data.nodeData, 0);
+    state.nodeDataTexture!.commitRect(0, 0, nodeTexels, Math.max(1, data.nodeCount));
+
+    state.patchByDrawable.clear();
+
+    for (const entry of data.patchNodes) {
+      state.patchByDrawable.set(entry.node, entry.patch);
+    }
+  }
+
+  /**
+   * Replay one recorded Text batch: all STATE is resolved live — blend, the
+   * `u_projection`/`u_group` uniforms from the live view + group matrix (the
+   * camera-pan / group-move win), the atlas texture — and only DATA is cached:
+   * the group instance bytes (bound through the per-batch VAO), the renderer's
+   * static quad-index pattern, and the group-owned per-node style texture.
+   * @internal
+   */
+  public _replayRetainedBatch(payload: WebGl2RetainedBatchPayload): void {
+    const backend = this.getBackendOrNull();
+    const vao = payload.vao;
+    const data = payload.rendererData as TextRetainedRendererData | null;
+
+    if (backend === null || vao === null || data === null || !(payload.bundle instanceof WebGl2RetainedGroupResources)) {
+      return;
+    }
+
+    const state = payload.bundle.rendererReplayState;
+
+    if (!(state instanceof TextRetainedReplayState) || state.nodeDataTexture === null) {
+      return;
+    }
+
+    const shader = this._shaderFor(data.shaderType);
+    // Text's recording always stages exactly one atlas page texture (single
+    // batch); the payload's shared type is wider only because other renderers
+    // can target a RenderTexture.
+    const atlas = payload.textures[0] as Texture;
+    const view = backend.view;
+
+    backend.setBlendMode(payload.blendMode);
+    backend.bindTexture(atlas, 0);
+    backend.bindTexture(state.nodeDataTexture, 1);
+
+    if (shader.uniforms.has('u_projection')) {
+      shader.getUniform('u_projection').setValue(view.getTransform().toArray(false));
+    }
+    if (shader.uniforms.has('u_group')) {
+      const groupTransform = backend.renderGroupTransform;
+
+      shader.getUniform('u_group').setValue(groupTransform !== null ? groupTransform.toArray(false) : identityGroupMat3);
+    }
+    if (shader.uniforms.has('u_texture')) {
+      shader.getUniform('u_texture').setValue(this._retainedTextureUnit0Scratch);
+    }
+    if (shader.uniforms.has('u_nodeData')) {
+      shader.getUniform('u_nodeData').setValue(this._retainedNodeDataUnitScratch);
+    }
+    if (shader.uniforms.has('u_pageSize')) {
+      this._floatScratch[0] = atlas.width;
+      shader.getUniform('u_pageSize').setValue(this._floatScratch);
+    }
+
+    shader.sync();
+    backend.bindVertexArrayObject(vao);
+    vao.draw(state.quadCount * 6, 0, RenderingPrimitives.Triangles);
+  }
+
+  /**
+   * Own-transform-move patch ({@link OwnTransformRowPatcher}): the moved node's
+   * world positions are baked into the group instance bytes (the ANGLE
+   * workaround forbids a live GPU-side transform read), so re-apply its current
+   * group-local `getGlobalTransform()` to the already-known glyph corners on the
+   * CPU and overwrite only that node's vertex range — no glyph re-selection, no
+   * atlas lookup, no other node touched. `base` (the shared-buffer direct-draw
+   * base) is irrelevant to Text's own dense indexing and is unused. Returns
+   * `false` (falls back to a full re-record) when `bundle` has no live Text
+   * replay state or `node` was not part of the recorded batch.
+   * @internal
+   */
+  public _patchOwnTransformRow(node: RenderNode, bundle: RetainedGroupBundle, _base: number): boolean {
+    if (!(bundle instanceof WebGl2RetainedGroupResources)) {
+      return false;
+    }
+
+    const state = bundle.rendererReplayState;
+
+    if (!(state instanceof TextRetainedReplayState)) {
+      return false;
+    }
+
+    const drawable = node as unknown as Text | BitmapText;
+    const patch = state.patchByDrawable.get(drawable);
+
+    if (patch === undefined) {
+      return false;
+    }
+
+    // Column-major mat3 [a c 0 | b d 0 | tx ty 1] — indices 0..8 always valid.
+    const m = drawable.getGlobalTransform().toArray(false);
+    const a = m[0]!;
+    const cc = m[1]!;
+    const tx = m[6]!;
+    const b = m[3]!;
+    const dd = m[4]!;
+    const ty = m[7]!;
+    const words = patch.words;
+    const local = patch.localPositions;
+
+    for (let v = 0; v < patch.vertexCount; v++) {
+      const wf = v * vertexStrideWords;
+      const wl = v * 2;
+      const lx = local[wl]!;
+      const ly = local[wl + 1]!;
+
+      words[wf + 0] = a * lx + b * ly + tx;
+      words[wf + 1] = cc * lx + dd * ly + ty;
+    }
+
+    bundle._patchInstanceWords(patch.firstWord, words);
+
+    return true;
+  }
+
+  private _getTextReplayState(bundle: WebGl2RetainedGroupResources): TextRetainedReplayState {
+    const existing = bundle.rendererReplayState;
+    const state = existing instanceof TextRetainedReplayState ? existing : new TextRetainedReplayState();
+
+    if (existing !== state) {
+      existing?.destroy();
+      bundle.rendererReplayState = state;
+    }
+
+    return state;
+  }
+
+  private _ensureRetainedQuadIndexBuffer(quadCount: number): WebGl2RenderBuffer {
+    const c = this._connection;
+
+    if (c === null) {
+      throw new Error('WebGl2TextRenderer: retained quad-index buffer requires a connected backend.');
+    }
+
+    if (this._retainedQuadIndexBuffer !== null && this._retainedQuadCapacity >= quadCount) {
+      return this._retainedQuadIndexBuffer;
+    }
+
+    let capacity = Math.max(this._retainedQuadCapacity, 64);
+
+    while (capacity < quadCount) capacity *= 2;
+
+    const indices = new Uint16Array(capacity * 6);
+
+    for (let q = 0; q < capacity; q++) {
+      const baseV = q * 4;
+      const o = q * 6;
+
+      indices[o + 0] = baseV;
+      indices[o + 1] = baseV + 1;
+      indices[o + 2] = baseV + 2;
+      indices[o + 3] = baseV;
+      indices[o + 4] = baseV + 2;
+      indices[o + 5] = baseV + 3;
+    }
+
+    if (this._retainedQuadIndexBuffer === null) {
+      this._retainedQuadIndexBuffer = new WebGl2RenderBuffer(BufferTypes.ElementArrayBuffer, indices, BufferUsage.StaticDraw).connect(
+        this._createBufferRuntime(c.gl, c.buffers),
+        this.getBackend().accountant,
+      );
+    } else {
+      this._retainedQuadIndexBuffer.upload(indices);
+    }
+
+    this._retainedQuadCapacity = capacity;
+
+    return this._retainedQuadIndexBuffer;
   }
 
   private _resetFrameState(): void {
@@ -537,6 +970,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     while (this._vertexCapacity < vertexCount) this._vertexCapacity *= 2;
     this._vertexData = new ArrayBuffer(this._vertexCapacity * vertexStrideBytes);
     this._float32View = new Float32Array(this._vertexData);
+    this._uint32View = new Uint32Array(this._vertexData);
   }
 
   private _ensureIndexCapacity(indexCount: number): void {

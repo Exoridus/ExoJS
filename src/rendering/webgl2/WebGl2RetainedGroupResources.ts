@@ -61,6 +61,20 @@ export interface WebGl2RetainedGeometryRef {
 }
 
 /**
+ * Auxiliary, renderer-owned replay state parked on a bundle for a renderer
+ * that opts out of the shared `TransformBuffer` (`_consumesSharedTransform ===
+ * false`, e.g. Text): its per-node style data lives in a private, group-owned
+ * store the generic bundle machinery never touches, so the renderer attaches
+ * it here and the bundle only has to release it on destroy. Mirrors the WebGPU
+ * bundle's `rendererReplayState` slot.
+ * @internal
+ */
+export interface WebGl2RetainedRendererReplayState {
+  /** Release any GPU resources this state owns (called from the bundle). */
+  destroy(): void;
+}
+
+/**
  * Backend-side replay descriptor for one recorded sprite flush (S3-D1). This
  * is the opaque `payload` carried by a plan-level `RetainedBatchInstruction`:
  * everything the owning renderer needs to re-issue the batch from group-owned
@@ -91,6 +105,14 @@ export interface WebGl2RetainedBatchPayload {
    * replays with `drawArraysInstanced` over four strip vertices.
    */
   readonly geometry?: WebGl2RetainedGeometryRef | null;
+  /**
+   * Opaque, renderer-owned record-time data for a renderer that carries its
+   * own per-node store instead of the shared `TransformBuffer` (Text: the
+   * packed per-node style rows, the group-local glyph geometry, the drawable
+   * list for the own-transform patch). `null`/absent for the shared-transform
+   * renderers (sprite / nine-slice / repeating / mesh).
+   */
+  readonly rendererData?: unknown;
   /**
    * Per-batch VAO with attribute pointers pre-based at {@link byteOffset}
    * (WebGL2 has no baseInstance). Assigned at capture end; `null` only for a
@@ -160,6 +182,13 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
   private _accountant: GpuResourceAccountant | null = null;
   private _instanceBuffer: WebGl2RenderBuffer | null = null;
   private readonly _vaos: WebGl2VertexArrayObject[] = [];
+
+  /**
+   * Auxiliary replay state owned by a renderer that keeps its own per-node
+   * store (Text). Null for the shared-transform renderers. Released on device
+   * invalidation and destroy.
+   */
+  public rendererReplayState: WebGl2RetainedRendererReplayState | null = null;
 
   private _destroyed = false;
 
@@ -287,6 +316,25 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
     this._transformTexture.commitRect(0, localRow, 3, 1);
   }
 
+  /**
+   * Slice-4b CPU-side vertex re-bake patch, for a renderer that bakes world
+   * positions into its instance bytes rather than reading a shared-transform
+   * row live (Text on WebGL2, the confirmed ANGLE/D3D11 vertex-texel-fetch
+   * workaround). Overwrite `floats.length` words at `wordOffset` in the
+   * instance store and upload just that sub-range. Deliberately does NOT bump
+   * the generation — the recorded byte LAYOUT is unchanged, only the baked
+   * position values move. Out-of-range writes are ignored (a stale patch after
+   * a recapture shrank the store).
+   */
+  public _patchInstanceWords(wordOffset: number, floats: Float32Array): void {
+    if (this._instanceBuffer === null || wordOffset < 0 || wordOffset + floats.length > this._usedWords) {
+      return;
+    }
+
+    this._instanceFloats.set(floats, wordOffset);
+    this._instanceBuffer.upload(floats, wordOffset * Float32Array.BYTES_PER_ELEMENT);
+  }
+
   /** Attach the GL context + accountant the device resources are created against. */
   public _connectDevice(gl: WebGL2RenderingContext, accountant: GpuResourceAccountant): void {
     this._gl = gl;
@@ -355,6 +403,8 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
     this._transformRowCapacity = 0;
     this._transformRowCount = 0;
     this._usedWords = 0;
+    this.rendererReplayState?.destroy();
+    this.rendererReplayState = null;
   }
 
   /** Release all resources (container destroy / boundary disengage / backend switch). Idempotent. */
