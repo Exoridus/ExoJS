@@ -29,6 +29,15 @@ interface AnimatedCell {
  * their geometry, and only on the (infrequent) frames where a boundary is
  * crossed. The large static body of the map never rebuilds.
  *
+ * An unbounded {@link import('./TileLayer').TileLayer} (see
+ * {@link import('./TileLayer').TileLayer.bounded}) is skipped entirely by
+ * the initial scan and reports zero animated cells for that layer, rather
+ * than sweeping every ever-loaded chunk. Streaming/procedural chunk
+ * providers that need animated tiles must drive per-chunk `TileAnimator`
+ * instances themselves (scanning only the newly-adopted chunk's tile
+ * range) — a whole-layer `TileAnimator` is not currently wired to react to
+ * chunk load/unload.
+ *
  * Tick it from your update loop, like `TweenSequencer`:
  *
  * ```ts
@@ -139,6 +148,9 @@ export class TileAnimator {
     const cells: AnimatedCell[] = [];
 
     for (const layer of this._layers) {
+      if (layer.width === undefined || layer.height === undefined) {
+        continue; // unbounded layers are not scanned in v1 — see class doc comment.
+      }
       for (let ty = 0; ty < layer.height; ty++) {
         for (let tx = 0; tx < layer.width; tx++) {
           const tile = layer.getTileAt(tx, ty);
