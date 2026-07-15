@@ -77,6 +77,16 @@ export class TileChunk implements ReadonlyTileChunk {
   private _revision = 0;
 
   /**
+   * Render-node-owned callbacks notified whenever `_revision` advances.
+   * `TileChunkNode.pages` caches geometry against `revision`, but that cache
+   * is only consulted from `render()` — a call the engine skips entirely for
+   * a content-clean subtree under a `RetainedContainer` (Track B). Without
+   * this push, an in-place tile edit after capture would replay stale cached
+   * geometry forever. Package-internal; not part of {@link ReadonlyTileChunk}.
+   */
+  private _dirtyListeners: Set<() => void> | null = null;
+
+  /**
    * @param cx Signed chunk X coordinate (must be finite safe integer).
    * @param cy Signed chunk Y coordinate (must be finite safe integer).
    * @param width Chunk width in tiles (positive safe integer).
@@ -219,6 +229,7 @@ export class TileChunk implements ReadonlyTileChunk {
     this._tiles[i] = packed;
     this._revision++;
     this._empty = null; // invalidate cache
+    this._notifyDirty();
     return true;
   }
 
@@ -232,6 +243,7 @@ export class TileChunk implements ReadonlyTileChunk {
   public _markDirty(): void {
     this._empty = null;
     this._revision++;
+    this._notifyDirty();
   }
 
   /**
@@ -247,5 +259,33 @@ export class TileChunk implements ReadonlyTileChunk {
     this._tiles.fill(0);
     this._revision++;
     this._empty = true;
+    this._notifyDirty();
+  }
+
+  /**
+   * Register a callback invoked synchronously whenever this chunk's revision
+   * advances. Multiple listeners are supported (a chunk may back more than one
+   * `TileChunkNode` — e.g. two `TileLayerNode`s over the same `TileLayer`).
+   * Package-internal: called by `TileChunkNode` to push mutations onto the
+   * scene-node content-revision chain (see the `_dirtyListeners` field).
+   * @internal
+   */
+  public _addDirtyListener(listener: () => void): void {
+    (this._dirtyListeners ??= new Set()).add(listener);
+  }
+
+  /**
+   * Unregister a listener added via {@link _addDirtyListener} (node destroy).
+   * @internal
+   */
+  public _removeDirtyListener(listener: () => void): void {
+    this._dirtyListeners?.delete(listener);
+  }
+
+  private _notifyDirty(): void {
+    if (this._dirtyListeners === null) return;
+    for (const listener of this._dirtyListeners) {
+      listener();
+    }
   }
 }

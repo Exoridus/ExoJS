@@ -1,14 +1,30 @@
 /// <reference types="@webgpu/types" />
 
-import type { BlendModes, WebGpuBackend } from '@codexo/exojs/renderer-sdk';
-import { AbstractWebGpuRenderer, getWebGpuBlendState, stencilContentDepthStencilState, Texture } from '@codexo/exojs/renderer-sdk';
+import { Matrix } from '@codexo/exojs';
+import type {
+  RenderTexture,
+  WebGpuActiveRenderPass,
+  WebGpuRetainedBatchPayload,
+  WebGpuRetainedBatchReplayer,
+  WebGpuRetainedNodeIndexRange,
+} from '@codexo/exojs/renderer-sdk';
+import type { View, WebGpuBackend } from '@codexo/exojs/renderer-sdk';
+import {
+  AbstractWebGpuRenderer,
+  type BlendModes,
+  getWebGpuBlendState,
+  packAffineMat4,
+  retainedGroupUniformBytes,
+  stencilContentDepthStencilState,
+  Texture,
+} from '@codexo/exojs/renderer-sdk';
 
 import type { TileQuad } from '../chunkGeometry';
 import type { TileChunkNode } from '../TileChunkNode';
 
 const instanceStrideBytes = 32;
 const wordsPerInstance = instanceStrideBytes / Uint32Array.BYTES_PER_ELEMENT; // = 8
-const projectionByteLength = 64;
+const projectionByteLength = 128;
 const initialBatchCapacity = 256;
 const indicesPerInstance = 6;
 const quadIndices = new Uint16Array([0, 1, 2, 0, 2, 3]);
@@ -19,6 +35,7 @@ const TILE_DIAGONAL_BIT = 0x20000000;
 const tileShaderSource = `
 struct ProjectionUniforms {
     matrix: mat4x4<f32>,
+    group: mat4x4<f32>,
 };
 
 struct TransformSlot {
@@ -68,7 +85,7 @@ fn vertexMain(input: VertexInput, @builtin(vertex_index) vid: u32) -> VertexOutp
     let worldX = slot.m0.x * localX + slot.m0.y * localY + slot.m1.x;
     let worldY = slot.m0.z * localX + slot.m0.w * localY + slot.m1.y;
 
-    output.position = projection.matrix * vec4<f32>(worldX, worldY, 0.0, 1.0);
+    output.position = projection.matrix * projection.group * vec4<f32>(worldX, worldY, 0.0, 1.0);
 
     // Tile orientation: diagonal transposes the corner-coordinate axes; flipX/Y
     // are baked into the UV corner ordering by the CPU writer.
@@ -103,8 +120,25 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
  * instance buffer grows on demand rather than flushing in fixed runs.
  * @internal
  */
-export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNode> {
+export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNode> implements WebGpuRetainedBatchReplayer {
+  /**
+   * Retained-batch capability opt-in (Track B): a tile chunk's per-flush
+   * instanced batches (fixed 32-byte layout, tile word at word 7) record and
+   * replay from group-owned resources. Pixel-snapped draws are excluded by
+   * the collect-time recordability predicate (and belt-and-braces poisoning
+   * in {@link render}); tile chunks have no custom-material path to exclude.
+   * @internal
+   */
+  public readonly _supportsRetainedBatches = true;
+
   private readonly _projectionData = new Float32Array(projectionByteLength / Float32Array.BYTES_PER_ELEMENT);
+  // Projection-uniform skip state: a matching (view identity, view.updateId,
+  // group-transform id) triple means the shared UBO already holds this
+  // flush's projection, so the 128-byte write is skipped.
+  private _writtenView: View | null = null;
+  private _writtenViewUpdateId = -1;
+  private _writtenGroupTransformId = -1;
+  private _hasWrittenProjection = false;
 
   private _device: GPUDevice | null = null;
   private _shaderModule: GPUShaderModule | null = null;
@@ -121,11 +155,23 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
   private _instanceFloat32 = new Float32Array(this._instanceData);
   private _instanceUint32 = new Uint32Array(this._instanceData);
   private readonly _pipelines = new Map<string, GPURenderPipeline>();
+  // group(1) texture bind groups cached per texture (mirrors the sprite/
+  // nine-slice renderers): resolving `backend.getTextureBinding` is what
+  // syncs a dirty/mutated texture's content to the GPU, so it must run every
+  // flush/replay even when the bind group itself is served from cache.
+  private _textureBindGroups = new WeakMap<Texture | RenderTexture, { group: GPUBindGroup; view: GPUTextureView; sampler: GPUSampler }>();
 
   private _quadIndex = 0;
   private _maxNodeIndex = 0;
   private _currentBlendMode: BlendModes | null = null;
   private _currentTexture: Texture | null = null;
+
+  // ── Retained-batch replay state ───────────────────────────────────────────
+  private _lastReplayPass: WebGpuActiveRenderPass | null = null;
+  private readonly _stagedReplayGroupData = new Float32Array(16);
+  // Reused single-slot texture list handed to the backend at record time; a
+  // tile chunk batch always binds exactly one tileset texture (slot 0).
+  private readonly _recordTextures: Array<Texture | RenderTexture | null> = [null];
 
   protected onConnect(backend: WebGpuBackend): void {
     if (this._device) {
@@ -174,6 +220,9 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     this._indexBuffer = null;
     this._transformBindGroup = null;
     this._transformStorageBuffer = null;
+    // Bind groups belong to the (possibly lost) device; drop the cache so
+    // reconnect rebuilds them against the fresh device.
+    this._textureBindGroups = new WeakMap<Texture | RenderTexture, { group: GPUBindGroup; view: GPUTextureView; sampler: GPUSampler }>();
     this._uniformBuffer = null;
     this._pipelineLayout = null;
     this._textureBindGroupLayout = null;
@@ -189,6 +238,11 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     this._maxNodeIndex = 0;
     this._currentBlendMode = null;
     this._currentTexture = null;
+    this._writtenView = null;
+    this._writtenViewUpdateId = -1;
+    this._writtenGroupTransformId = -1;
+    this._hasWrittenProjection = false;
+    this._lastReplayPass = null;
   }
 
   public render(node: TileChunkNode): void {
@@ -196,6 +250,15 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
 
     if (backend === null) {
       return;
+    }
+
+    // Belt-and-braces for retained recording: the collect-time recordability
+    // predicate already excludes pixel-snapped draws from ever arming a
+    // capture. If one still arrives inside an active capture window, poison
+    // the recording so the resulting set can never validate — degrading to
+    // entry replay instead of wrong pixels.
+    if (node.pixelSnapMode !== 'none' && backend._retainedCaptureActive) {
+      backend._poisonActiveRetainedCaptures();
     }
 
     const pages = node.pages;
@@ -308,10 +371,29 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
       return;
     }
 
-    const viewMatrix = backend.view.getTransform();
+    // ProjectionUniforms layout: mat4x4 projection + mat4x4 group, packed via
+    // the shared canonical (non-transposed) column order (same layout as the
+    // sprite/nine-slice renderers' group UBO, S3-D4/S3-D7 parity). The write
+    // is skipped when the UBO already holds this exact (view, updateId,
+    // group-id) state.
+    const view = backend.view;
 
-    this._projectionData.set([viewMatrix.a, viewMatrix.c, 0, 0, viewMatrix.b, viewMatrix.d, 0, 0, 0, 0, 1, 0, viewMatrix.x, viewMatrix.y, 0, viewMatrix.z]);
-    device.queue.writeBuffer(uniformBuffer, 0, this._projectionData.buffer, this._projectionData.byteOffset, this._projectionData.byteLength);
+    if (
+      !this._hasWrittenProjection ||
+      this._writtenView !== view ||
+      this._writtenViewUpdateId !== view.updateId ||
+      this._writtenGroupTransformId !== backend.renderGroupTransformId
+    ) {
+      packAffineMat4(view.getTransform(), this._projectionData, 0);
+      packAffineMat4(backend.renderGroupTransform ?? Matrix.identity, this._projectionData, 16);
+
+      this._writtenView = view;
+      this._writtenViewUpdateId = view.updateId;
+      this._writtenGroupTransformId = backend.renderGroupTransformId;
+      this._hasWrittenProjection = true;
+
+      device.queue.writeBuffer(uniformBuffer, 0, this._projectionData.buffer, this._projectionData.byteOffset, this._projectionData.byteLength);
+    }
 
     const scissor = backend.getScissorRect();
     const maskClipsAll = scissor !== null && (scissor.width <= 0 || scissor.height <= 0);
@@ -323,7 +405,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
 
       const storage = backend.getTransformStorageBuffer(this._maxNodeIndex + 1);
       const transformBindGroup = this._getOrCreateTransformBindGroup(device, uniformBuffer, storage.buffer);
-      const textureBindGroup = this._createTextureBindGroup(device, backend, this._currentTexture);
+      const textureBindGroup = this._getOrCreateTextureBindGroup(device, backend, this._currentTexture);
 
       const stencil = backend._passCoordinator.stencilActive;
       const pipeline = this._getPipeline(this._currentBlendMode, backend.renderTargetFormat, stencil);
@@ -337,6 +419,26 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
 
       backend.stats.batches++;
       backend.stats.drawCalls++;
+    }
+
+    // Retained capture: while a capture window is active, additionally stage
+    // this batch's exact packed bytes into the group-owned bundle — the
+    // recorded data IS the drawn data, byte-identical by construction.
+    // Recorded regardless of the live visibility decision above (mask/
+    // scissor), since visibility is re-evaluated live at replay. A batch
+    // always binds a single tileset texture (slot 0); a pixel-snapped node
+    // already poisoned the capture in render().
+    if (this._quadIndex > 0 && backend._retainedCaptureActive && this._currentBlendMode !== null && this._currentTexture !== null) {
+      this._recordTextures[0] = this._currentTexture;
+      backend._recordRetainedBatch(
+        this,
+        this._instanceData,
+        this._quadIndex * instanceStrideBytes,
+        this._quadIndex,
+        this._currentBlendMode,
+        this._recordTextures,
+        1,
+      );
     }
 
     backend._passCoordinator.endPass();
@@ -368,16 +470,181 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     return this._transformBindGroup;
   }
 
-  private _createTextureBindGroup(device: GPUDevice, backend: WebGpuBackend, texture: Texture): GPUBindGroup {
-    const binding = backend.getTextureBinding(texture);
+  /**
+   * Build (or reuse) the group(1) texture bind group for `texture`. The
+   * binding is resolved BEFORE the cache lookup on purpose: resolving is what
+   * syncs a dirty/mutated texture's content to the GPU, so it must run every
+   * flush/replay even when the bind group itself is served from cache.
+   */
+  private _getOrCreateTextureBindGroup(device: GPUDevice, backend: WebGpuBackend, texture: Texture | RenderTexture): GPUBindGroup {
+    const { view, sampler } = backend.getTextureBinding(texture);
+    const cached = this._textureBindGroups.get(texture);
 
-    return device.createBindGroup({
+    if (cached?.view === view && cached.sampler === sampler) {
+      return cached.group;
+    }
+
+    const group = device.createBindGroup({
       layout: this._textureBindGroupLayout!,
       entries: [
-        { binding: 0, resource: binding.view },
-        { binding: 1, resource: binding.sampler },
+        { binding: 0, resource: view },
+        { binding: 1, resource: sampler },
       ],
     });
+
+    this._textureBindGroups.set(texture, { group, view, sampler });
+
+    return group;
+  }
+
+  // ── Retained-batch record/replay (Track B) ────────────────────────────────
+  // The bundle/stage stores raw instance bytes; this renderer owns the
+  // 32-byte (8-word) layout (tile word at word 7: transform row in bits
+  // 0..28, diagonal flip in bit 29), so the layout-aware finalize steps
+  // (node-index scan/rebase) and the replay dispatch live here — mirroring
+  // WebGpuNineSliceSpriteRenderer's seam.
+
+  /** @internal See {@link WebGpuRetainedBatchReplayer._scanRetainedNodeIndexRange}. */
+  public _scanRetainedNodeIndexRange(bytes: Uint8Array, range: WebGpuRetainedNodeIndexRange): void {
+    const words = new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / Uint32Array.BYTES_PER_ELEMENT);
+
+    for (let i = 7; i < words.length; i += 8) {
+      // In-bounds: i < words.length via the loop guard. The tile word is the
+      // last word of the 32-byte (8-word) instance layout; only the low 29
+      // bits address the transform buffer row.
+      const row = words[i]! & TILE_ROW_MASK;
+
+      if (row < range.min) {
+        range.min = row;
+      }
+
+      if (row > range.max) {
+        range.max = row;
+      }
+    }
+  }
+
+  /** @internal See {@link WebGpuRetainedBatchReplayer._rebaseRetainedNodeIndices} (group-local indices). */
+  public _rebaseRetainedNodeIndices(bytes: Uint8Array, base: number): void {
+    const words = new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / Uint32Array.BYTES_PER_ELEMENT);
+
+    for (let i = 7; i < words.length; i += 8) {
+      // In-bounds: i < words.length via the loop guard. Rebase ONLY the row
+      // field; the diagonal-flip bit must survive untouched or tile
+      // orientation corrupts.
+      const word = words[i]!;
+      const diagonal = word & TILE_DIAGONAL_BIT;
+      const row = word & TILE_ROW_MASK;
+
+      words[i] = (diagonal | ((row - base) & TILE_ROW_MASK)) >>> 0;
+    }
+  }
+
+  /**
+   * Replay one recorded batch from its group-owned bundle into the OPEN pass.
+   * Reuses only recorded DATA (instance bytes, transform rows, texture, blend
+   * mode); every piece of STATE is resolved live — pipeline via the
+   * `_getPipeline` cache, the group(1) texture bind group via the live
+   * texture-set cache (resolving re-syncs dirty content), and the group's
+   * 128-byte UBO (projection from the live view + the live composed group
+   * matrix) written only when its content changed. The same-frame
+   * double-replay hazard (one group under two views while the open pass
+   * already holds this bundle's draws) ends the pass first.
+   * @internal
+   */
+  public _replayRetainedBatch(payload: WebGpuRetainedBatchPayload): void {
+    const backend = this._backend;
+    const device = this._device;
+    const bundle = payload.bundle;
+
+    if (!backend || !device || this._indexBuffer === null || !bundle.isReady) {
+      return;
+    }
+
+    // Drain any pending live batch first (defensive — the group boundary
+    // already flushed; flush() is a no-op when nothing is pending).
+    this.flush();
+
+    // Match the live path's visibility handling: a fully-clipped scissor
+    // draws nothing (the batch stays recorded; visibility is live per frame).
+    const scissor = backend.getScissorRect();
+
+    if (scissor !== null && (scissor.width <= 0 || scissor.height <= 0)) {
+      return;
+    }
+
+    const coordinator = backend._passCoordinator;
+    let activePass = coordinator.activePass;
+    const passHasDraws = activePass !== null && this._lastReplayPass === activePass;
+
+    // Same-frame texture mutation guard: resolving the bindings below
+    // re-uploads mutated content on the queue timeline BEFORE the deferred
+    // submit, which would retroactively change draws already recorded into
+    // the open pass. End (submit) the pass first so they keep the
+    // pre-mutation content.
+    if (passHasDraws) {
+      for (const texture of payload.textures) {
+        if (backend._textureUploadWouldMutate(texture)) {
+          coordinator.endPass();
+          break;
+        }
+      }
+    }
+
+    // Resolve the single tileset texture LIVE through the texture bind-group
+    // cache (syncs dirty content, adopts refreshed views/samplers). The
+    // recorded batch always has exactly one texture (slot 0).
+    const textureBindGroup = this._getOrCreateTextureBindGroup(device, backend, payload.textures[0]!);
+
+    // Group UBO: skip the write while (view, updateId, group bytes) match
+    // what the buffer holds; guard the double-replay aliasing case first.
+    const view = backend.view;
+    const scratch = this._stagedReplayGroupData;
+
+    packAffineMat4(backend.renderGroupTransform ?? Matrix.identity, scratch, 0);
+
+    let uboDirty = !bundle.uboWritten || bundle.uboView !== view || bundle.uboViewUpdateId !== view.updateId;
+
+    if (!uboDirty) {
+      for (let i = 0; i < 16; i++) {
+        if (scratch[i] !== bundle.uboData[16 + i]) {
+          uboDirty = true;
+          break;
+        }
+      }
+    }
+
+    if (uboDirty) {
+      activePass = coordinator.activePass;
+
+      if (activePass !== null && bundle.drawsInPass === activePass) {
+        // Rewriting the UBO would retroactively re-project this bundle's
+        // draws already recorded into the open pass: end it first.
+        coordinator.endPass();
+      }
+
+      packAffineMat4(view.getTransform(), bundle.uboData, 0);
+      bundle.uboData.set(scratch, 16);
+      bundle.uboView = view;
+      bundle.uboViewUpdateId = view.updateId;
+      bundle.uboWritten = true;
+      device.queue.writeBuffer(bundle.uniformBuffer!, 0, bundle.uboData.buffer, bundle.uboData.byteOffset, retainedGroupUniformBytes);
+    }
+
+    const active = coordinator.acquirePass();
+    const pass = active.pass;
+
+    pass.setPipeline(this._getPipeline(payload.blendMode, backend.renderTargetFormat, coordinator.stencilActive));
+    pass.setBindGroup(0, bundle.getBindGroup(device, this._uniformBindGroupLayout!));
+    pass.setBindGroup(1, textureBindGroup);
+    pass.setVertexBuffer(0, bundle.instanceBuffer, payload.byteOffset);
+    pass.setIndexBuffer(this._indexBuffer, 'uint16');
+    pass.drawIndexed(indicesPerInstance, payload.instanceCount, 0, 0, 0);
+
+    bundle.drawsInPass = active;
+    this._lastReplayPass = active;
+    backend.stats.batches++;
+    backend.stats.drawCalls++;
   }
 
   private _getPipeline(blendMode: BlendModes, format: GPUTextureFormat, stencil: boolean): GPURenderPipeline {
