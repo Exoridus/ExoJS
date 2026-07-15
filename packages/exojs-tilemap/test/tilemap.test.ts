@@ -1110,6 +1110,47 @@ describe('TileLayer', () => {
     expect(layer.parallaxX).toBe(0);
     expect(layer.parallaxY).toBe(0);
   });
+
+  it('unbounded construction (width/height both omitted)', () => {
+    const layer = new TileLayer({
+      id: 0, name: 'l',
+      tileWidth: 16, tileHeight: 16, tilesets: [ts],
+    });
+    expect(layer.bounded).toBe(false);
+    expect(layer.width).toBeUndefined();
+    expect(layer.height).toBeUndefined();
+    expect(layer.pixelWidth).toBeUndefined();
+    expect(layer.pixelHeight).toBeUndefined();
+  });
+
+  it('bounded construction reports bounded=true', () => {
+    const layer = new TileLayer({
+      id: 0, name: 'l', width: 10, height: 10,
+      tileWidth: 16, tileHeight: 16, tilesets: [ts],
+    });
+    expect(layer.bounded).toBe(true);
+  });
+
+  it('rejects mixed width/height (one provided, one omitted)', () => {
+    expect(() => new TileLayer({
+      id: 0, name: 'l', width: 10,
+      tileWidth: 16, tileHeight: 16, tilesets: [ts],
+    } as never)).toThrow(/width and height must both be provided/);
+    expect(() => new TileLayer({
+      id: 0, name: 'l', height: 10,
+      tileWidth: 16, tileHeight: 16, tilesets: [ts],
+    } as never)).toThrow(/width and height must both be provided/);
+  });
+
+  it('unbounded layer.inBounds() is always true', () => {
+    const layer = new TileLayer({
+      id: 0, name: 'l',
+      tileWidth: 16, tileHeight: 16, tilesets: [ts],
+    });
+    expect(layer.inBounds(0, 0)).toBe(true);
+    expect(layer.inBounds(-9999, 9999)).toBe(true);
+    expect(layer.inBounds(1_000_000, -1_000_000)).toBe(true);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════

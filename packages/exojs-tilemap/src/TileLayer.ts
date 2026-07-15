@@ -21,10 +21,14 @@ export interface TileLayerOptions {
   readonly id: number;
   /** Display name (need not be unique). */
   readonly name: string;
-  /** Layer width in tiles. */
-  readonly width: number;
-  /** Layer height in tiles. */
-  readonly height: number;
+  /**
+   * Layer width in tiles. Omit together with {@link height} for an
+   * unbounded layer — chunk storage then accepts any signed chunk
+   * coordinate instead of being clamped to a fixed grid.
+   */
+  readonly width?: number;
+  /** Layer height in tiles. Must be provided iff {@link width} is. */
+  readonly height?: number;
   /** Chunk width in tiles (default 32). */
   readonly chunkWidth?: number;
   /** Chunk height in tiles (default 32). */
@@ -90,8 +94,13 @@ function validateTileLayerOptions(options: TileLayerOptions): ResolvedTileLayerO
   if (!options.name || typeof options.name !== 'string') {
     throw new Error('TileLayer name must be a non-empty string.');
   }
-  validatePositiveInteger(options.width, 'layer.width');
-  validatePositiveInteger(options.height, 'layer.height');
+  if (options.width !== undefined || options.height !== undefined) {
+    if (options.width === undefined || options.height === undefined) {
+      throw new Error('TileLayer width and height must both be provided (bounded) or both omitted (unbounded).');
+    }
+    validatePositiveInteger(options.width, 'layer.width');
+    validatePositiveInteger(options.height, 'layer.height');
+  }
   validatePositiveInteger(options.tileWidth, 'layer.tileWidth');
   validatePositiveInteger(options.tileHeight, 'layer.tileHeight');
 
@@ -148,10 +157,10 @@ export class TileLayer {
   /** Display name (may not be unique). */
   public readonly name: string;
 
-  /** Width in tiles. */
-  public readonly width: number;
-  /** Height in tiles. */
-  public readonly height: number;
+  /** Width in tiles, or `undefined` if unbounded. */
+  public readonly width: number | undefined;
+  /** Height in tiles, or `undefined` if unbounded. */
+  public readonly height: number | undefined;
 
   /** Chunk width (tiles). */
   public readonly chunkWidth: number;
@@ -163,10 +172,19 @@ export class TileLayer {
   /** Tile height in pixels. */
   public readonly tileHeight: number;
 
-  /** Pixel width. */
-  public get pixelWidth(): number { return this.width * this.tileWidth; }
-  /** Pixel height. */
-  public get pixelHeight(): number { return this.height * this.tileHeight; }
+  /** `true` if this layer has a fixed width/height; `false` if unbounded. */
+  public get bounded(): boolean {
+    return this.width !== undefined && this.height !== undefined;
+  }
+
+  /** Pixel width, or `undefined` if unbounded. */
+  public get pixelWidth(): number | undefined {
+    return this.width === undefined ? undefined : this.width * this.tileWidth;
+  }
+  /** Pixel height, or `undefined` if unbounded. */
+  public get pixelHeight(): number | undefined {
+    return this.height === undefined ? undefined : this.height * this.tileHeight;
+  }
 
   /** Visibility flag (mutable). */
   public visible: boolean;
@@ -244,9 +262,11 @@ export class TileLayer {
 
   /**
    * Check whether a tile coordinate lies within the layer bounds.
+   * Always `true` for an unbounded layer.
    * @advanced
    */
   public inBounds(tx: number, ty: number): boolean {
+    if (this.width === undefined || this.height === undefined) return true;
     return tx >= 0 && tx < this.width && ty >= 0 && ty < this.height;
   }
 
