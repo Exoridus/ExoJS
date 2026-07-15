@@ -610,10 +610,44 @@ describe('TileLayer', () => {
       tileWidth: 16, tileHeight: 16, tilesets: [ts],
     });
     const range = layer.chunkRange();
-    expect(range.minCx).toBe(0);
-    expect(range.minCy).toBe(0);
-    expect(range.maxCx).toBe(3);
-    expect(range.maxCy).toBe(2);
+    expect(range).not.toBeNull();
+    expect(range!.minCx).toBe(0);
+    expect(range!.minCy).toBe(0);
+    expect(range!.maxCx).toBe(3);
+    expect(range!.maxCy).toBe(2);
+  });
+
+  it('unbounded layer.chunkRange() is null', () => {
+    const layer = new TileLayer({
+      id: 0, name: 'l',
+      tileWidth: 16, tileHeight: 16, tilesets: [ts],
+    });
+    expect(layer.chunkRange()).toBeNull();
+  });
+
+  it('unbounded layer._ensureChunk accepts any signed chunk coordinate, full chunk size', () => {
+    const layer = new TileLayer({
+      id: 0, name: 'l',
+      tileWidth: 16, tileHeight: 16, tilesets: [ts],
+      chunkWidth: 8, chunkHeight: 8,
+    });
+    const chunk = layer._ensureChunk(-1000, 2500);
+    expect(chunk.cx).toBe(-1000);
+    expect(chunk.cy).toBe(2500);
+    expect(chunk.width).toBe(8);
+    expect(chunk.height).toBe(8);
+  });
+
+  it('unbounded layer.setTileAt accepts negative and large tile coordinates', () => {
+    const layer = new TileLayer({
+      id: 0, name: 'l',
+      tileWidth: 16, tileHeight: 16, tilesets: [ts],
+    });
+    const ref = { tileset: ts, localTileId: 1, transform: TILE_TRANSFORM_IDENTITY };
+    layer.setTileAt(-500, 500, ref);
+    const tile = layer.getTileAt(-500, 500);
+    expect(tile).not.toBeNull();
+    expect(tile!.localTileId).toBe(1);
   });
 
   it('getChunk returns readonly view (ReadonlyTileChunk)', () => {
