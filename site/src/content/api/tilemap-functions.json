@@ -6,10 +6,10 @@
   "subsystem": "tilemap",
   "importPath": "@codexo/exojs-tilemap",
   "tier": "stable",
-  "memberCount": 6,
+  "memberCount": 8,
   "counts": {
     "constructors": 0,
-    "methods": 4,
+    "methods": 6,
     "properties": 2,
     "events": 0
   },
@@ -120,6 +120,95 @@
           ],
           "returnType": "void",
           "description": "Apply Wang autotiling to layer using wangSet. Iterates every cell in the layer. For each cell that belongs to the Wang group, computes a neighbor bitmask and looks up the correct local tile ID from WangSet.blobMap. The layer is mutated in place; cells whose computed bitmask has no mapping in the blobMap are left unchanged. The function performs two passes (snapshot then write) so neighbor tests always reflect the pre-call state regardless of processing order. **Group membership.** With no matchFn, a cell belongs to the group when its tilesetIndex matches WangSet.tilesetIndex and its localTileId is a member of the set. Membership covers every variant the set can produce, so re-running autoTile (or refreshCell) on already-autotiled data is stable. Paint with a tile ID that is a member (a blobMap value, or one listed in WangSetOptions.members). **Blob mode bitmask (bit positions):**  1 | 2 | 4 8 | -- | 16 32 | 64 | 128  Diagonal bits (1, 4, 32, 128) are only set when both adjacent cardinals are also set (the \"corner dependency\" rule that reduces 256 raw combinations to 47 valid blob states). **Edge mode bitmask (bit positions):** Top=1, Right=2, Bottom=4, Left=8."
+        },
+        {
+          "name": "packTile",
+          "signature": "packTile(tilesetIndex: number, localTileId: number, transform: TileTransform): number",
+          "signatureTokens": [
+            {
+              "text": "packTile",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "tilesetIndex",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "localTileId",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "transform",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileTransform",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "tilesetIndex",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "localTileId",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "transform",
+              "type": "TileTransform",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": "Encode a tileset-local tile reference and transform into a packed word. The localTileId is stored as (localTileId + 1) so that a packed value of 0 cleanly represents an empty cell, while tile 0 from tileset 0 with identity transform is stored as 1 (non-zero). Returns 0 for an empty cell. Public so chunk-provider authors (e.g. a format adapter or procedural generator) can build a import('./ChunkSource').ChunkPayload.tiles array without duplicating this encoding."
         },
         {
           "name": "refreshCell",
@@ -507,6 +596,109 @@
           ],
           "returnType": "{ lx: number; ly: number }",
           "description": "Convert tile coordinates to local-in-chunk coordinates."
+        },
+        {
+          "name": "unpackTile",
+          "signature": "unpackTile(packed: number): { localTileId: number; tilesetIndex: number; transform: TileTransform } | null",
+          "signatureTokens": [
+            {
+              "text": "unpackTile",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "packed",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "localTileId",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "tilesetIndex",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "transform",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileTransform",
+              "kind": "type"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "packed",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "{ localTileId: number; tilesetIndex: number; transform: TileTransform } | null",
+          "description": "Decode a packed word into its components. Returns null for an empty cell (packed === 0)."
         }
       ],
       "paragraphs": [],
