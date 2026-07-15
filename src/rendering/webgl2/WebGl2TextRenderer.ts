@@ -52,18 +52,17 @@ const nodeFloats = nodeTexels * 4; // 40 floats per node
 
 const identityGroupMat3 = new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]);
 
-// Per-vertex layout (28 bytes):
-//   a_position : vec2  f32  (offset  0,  8 bytes)  ← WORLD space (CPU-transformed)
+// Per-vertex layout (20 bytes), mirrors WebGpuTextRenderer's vertex buffer exactly:
+//   a_position : vec2  f32  (offset  0,  8 bytes)  ← LOCAL space
 //   a_texcoord : vec2  f32  (offset  8,  8 bytes)
-//   a_nodeIndex: float f32  (offset 16,  4 bytes)  ← row into the data texture (style lookup)
-//   a_gradUV   : vec2  f32  (offset 20,  8 bytes)  ← normalised gradient UV (CPU-computed)
+//   a_nodeIndex: float f32  (offset 16,  4 bytes)  ← row into the data texture (transform + style)
 //
-// The vertex shader does NOT read the per-node data texture: the world transform and
-// gradient UV are computed on the CPU here and uploaded per vertex. This sidesteps an
-// ANGLE/D3D11 bug where a vertex texelFetch of the RGBA32F data texture returns RGB as
-// 0 when an RGBA8 atlas is bound, collapsing the transform and hiding bitmap text.
-const vertexStrideBytes = 28;
-const vertexStrideWords = vertexStrideBytes / 4; // 7 floats per vertex
+// The vertex shader reads the world transform live from the per-node data texture via
+// texelFetch (same texture the fragment stage already reads style from), keyed by
+// a_nodeIndex — no CPU-side transform baking. Gradient UV is likewise computed in the
+// vertex shader from the local a_position and the bounds texel, not uploaded per vertex.
+const vertexStrideBytes = 20;
+const vertexStrideWords = vertexStrideBytes / 4; // 5 floats per vertex
 const initialVertexCapacity = 256;
 const initialIndexCapacity = 384;
 const initialNodeCapacity = 32;
@@ -79,34 +78,24 @@ interface PendingQuad {
 }
 
 /**
- * Per-node re-bake record for the WebGL2 own-transform-move CPU patch: the
- * moved node's already-known group-local glyph corners plus its recorded
- * vertex-word range in the group instance buffer. On an own-transform move the
- * transform is re-applied to `localPositions` on the CPU and written back over
- * `firstWord`'s range — no glyph re-selection, no atlas lookup.
+ * Record-time payload carried from `flush()` to `_configureRetainedVao`/replay.
+ * `drawables[i]` is the node owning dense row `i` of `nodeData` — the
+ * own-transform-move O(1) patch looks a node up here to find its row.
  */
-interface TextPatchNode {
-  readonly firstWord: number;
-  readonly vertexCount: number;
-  readonly localPositions: Float32Array;
-  readonly words: Float32Array;
-}
-
-/** Record-time payload carried from `flush()` to `_configureRetainedVao`/replay. */
 interface TextRetainedRendererData {
   readonly nodeData: Float32Array;
   readonly nodeCount: number;
+  readonly drawables: ReadonlyArray<Text | BitmapText>;
   readonly quadCount: number;
   readonly shaderType: ShaderType;
-  readonly patchNodes: ReadonlyArray<{ node: Text | BitmapText; patch: TextPatchNode }>;
 }
 
 /**
  * Group-owned WebGL2 replay state for one recorded Text batch: the persistent
- * per-node RGBA32F style texture (10 texels/row — the fragment stage's style
- * lookup, the ONLY per-node data the shipped `text.vert` does not bake into the
- * vertex bytes) and the drawable→re-bake map the own-transform patch walks.
- * Grow-only across recaptures; released by the bundle on destroy.
+ * per-node RGBA32F data texture (10 texels/row — transform AND style, read
+ * live by both shader stages) and the drawable→row-index map the
+ * own-transform-move O(1) patch uses. Grow-only across recaptures; released by
+ * the bundle on destroy.
  */
 class TextRetainedReplayState implements WebGl2RetainedRendererReplayState {
   public nodeDataTexture: DataTexture<'rgba32f'> | null = null;
@@ -114,14 +103,14 @@ class TextRetainedReplayState implements WebGl2RetainedRendererReplayState {
   public nodeDataCapacity = 0;
   public quadCount = 0;
   public shaderType: ShaderType = 'sdf';
-  public readonly patchByDrawable = new Map<Text | BitmapText, TextPatchNode>();
+  public readonly nodeIndexByDrawable = new Map<Text | BitmapText, number>();
 
   public destroy(): void {
     this.nodeDataTexture?.destroy();
     this.nodeDataTexture = null;
     this.nodeDataFloats = null;
     this.nodeDataCapacity = 0;
-    this.patchByDrawable.clear();
+    this.nodeIndexByDrawable.clear();
   }
 }
 
@@ -159,17 +148,17 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
   /**
    * Retained-batch opt-in (Track B extension): a flush whose glyph quads all
    * share one (shaderType, atlasTexture) — the overwhelmingly common case, one
-   * font/atlas per flush — records the CPU-baked vertex bytes into the group
-   * instance buffer and replays them with `drawElements`. A flush that spans
-   * multiple (shaderType, atlasTexture) batches, or a second Text flush inside
-   * the same capture window, poisons the capture instead — always safe, just a
-   * missed optimization.
+   * font/atlas per flush — records the vertex bytes into the group instance
+   * buffer and replays them with `drawElements`. A flush that spans multiple
+   * (shaderType, atlasTexture) batches, or a second Text flush inside the same
+   * capture window, poisons the capture instead — always safe, just a missed
+   * optimization.
    *
-   * The world transform stays CPU-baked (shipped `text.vert` reads no per-node
-   * transform: a vertex-stage texelFetch of the RGBA32F data texture collapses
-   * the draw on ANGLE/D3D11 whenever a glyph atlas is co-bound), so an
-   * own-transform move re-bakes on the CPU via {@link _patchOwnTransformRow}
-   * rather than the shared O(1) GPU row patch Sprite/NineSlice/Mesh use.
+   * The world transform is read live in the vertex shader (mirrors
+   * `WebGpuTextRenderer`), so an own-transform move is an O(1) GPU-side texel
+   * patch via {@link _patchOwnTransformRow} — the same shape as Sprite/
+   * NineSlice/Mesh's row patch, just against Text's own private node-data
+   * texture instead of the shared `TransformBuffer`.
    * @internal
    */
   public readonly _supportsRetainedBatches = true;
@@ -181,6 +170,9 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
   private readonly _textureUnitScratch = new Int32Array([0]);
   private readonly _nodeDataUnitScratch = new Int32Array([1]);
   private readonly _floatScratch = new Float32Array(1);
+  // Own-transform-move patch scratch: 2 texels (transform cols 0-1), mirrors
+  // WebGpuTextRenderer's `_patchRowScratch`.
+  private readonly _patchRowScratch = new Float32Array(8);
 
   private _vertexCapacity = initialVertexCapacity;
   private _indexCapacity = initialIndexCapacity;
@@ -271,13 +263,6 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
       .addAttribute(vertexBuffer, this._sdfShader.getAttribute('a_position'), gl.FLOAT, false, vertexStrideBytes, 0)
       .addAttribute(vertexBuffer, this._sdfShader.getAttribute('a_texcoord'), gl.FLOAT, false, vertexStrideBytes, 8)
       .addAttribute(vertexBuffer, this._sdfShader.getAttribute('a_nodeIndex'), gl.FLOAT, false, vertexStrideBytes, 16);
-
-    // a_gradUV is bound only when the program declares it. The real shaders always
-    // do; reduced test stand-in vertex shaders may omit it (an unused attribute is
-    // optimised out and would not get a location).
-    if (this._sdfShader.attributes.has('a_gradUV')) {
-      vao.addAttribute(vertexBuffer, this._sdfShader.getAttribute('a_gradUV'), gl.FLOAT, false, vertexStrideBytes, 20);
-    }
 
     vao.connect(this._createVaoRuntime(gl, vaoHandle));
 
@@ -486,8 +471,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     let i = 0;
 
     // Retained recording (Track B extension): a recordable Text flush is a
-    // SINGLE (shaderType, atlasTexture) batch. Collect the first batch's
-    // group-local re-bake data as it is built; a second batch this flush (or a
+    // SINGLE (shaderType, atlasTexture) batch. A second batch this flush (or a
     // second flush into the same capture window) poisons the capture below.
     const capturing = backend._isRetainedCapturing;
     let batchCount = 0;
@@ -495,7 +479,6 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     let recQuadCount = 0;
     let recAtlas: Texture | null = null;
     let recShaderType: ShaderType = 'sdf';
-    let recPatchNodes: Array<{ node: Text | BitmapText; patch: TextPatchNode }> | null = null;
 
     while (i < quads.length) {
       // In-bounds: `i` < `quads.length` per the loop guard.
@@ -530,69 +513,26 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
 
       const recordThisBatch = capturing && batchCount === 0;
 
-      if (recordThisBatch) {
-        recPatchNodes = [];
-      }
-
       for (let k = i; k < j; k++) {
         // In-bounds: `k` ranges over `[i, j)` ⊆ `[0, quads.length)`.
-        const { quads: batch, nodeIndex, node } = quads[k]!;
+        const { quads: batch, nodeIndex } = quads[k]!;
         const qVerts = batch.quadCount * 4;
         const { vertices, uvs, indices } = batch;
-        const nodeFirstWord = vOffset * vertexStrideWords;
-
-        // Read this node's transform + gradient bounds back from the packed data array
-        // (same layout as _packNodeData) so we can transform vertices on the CPU. The
-        // vertex shader no longer reads the data texture; see the layout comment above.
-        const nb = nodeIndex * nodeFloats;
-        // In-bounds: `_packNodeData` wrote nodeFloats values at `nb` for every node index.
-        const a = this._nodeDataArray[nb + 0]!; // texel0.x
-        const cc = this._nodeDataArray[nb + 1]!; // texel0.y
-        const tx = this._nodeDataArray[nb + 3]!; // texel0.w
-        const b = this._nodeDataArray[nb + 4]!; // texel1.x
-        const dd = this._nodeDataArray[nb + 5]!; // texel1.y
-        const ty = this._nodeDataArray[nb + 7]!; // texel1.w
-        const boundsMinX = this._nodeDataArray[nb + 36]!; // texel9.x
-        const boundsMinY = this._nodeDataArray[nb + 37]!; // texel9.y
-        const boundsW = this._nodeDataArray[nb + 38]!; // texel9.z
-        const boundsH = this._nodeDataArray[nb + 39]!; // texel9.w
-        const hasGradBounds = boundsW > 0 && boundsH > 0;
 
         for (let v = 0; v < qVerts; v++) {
           const w = (vOffset + v) * vertexStrideWords;
           const vp = v * 2;
           // In-bounds: `vp + 1 < qVerts * 2`; `vertices`/`uvs` carry 2 floats per quad vertex.
-          const lx = vertices[vp]!;
-          const ly = vertices[vp + 1]!;
-          // world = M · (lx, ly, 1) with M = column-major [a c 0 | b d 0 | tx ty 1].
-          this._float32View[w + 0] = a * lx + b * ly + tx;
-          this._float32View[w + 1] = cc * lx + dd * ly + ty;
+          this._float32View[w + 0] = vertices[vp]!;
+          this._float32View[w + 1] = vertices[vp + 1]!;
           this._float32View[w + 2] = uvs[vp]!;
           this._float32View[w + 3] = uvs[vp + 1]!;
           this._float32View[w + 4] = nodeIndex;
-          // Normalised gradient UV across the text block (matches the old vertex math).
-          this._float32View[w + 5] = hasGradBounds ? Math.min(1, Math.max(0, (lx - boundsMinX) / boundsW)) : 0;
-          this._float32View[w + 6] = hasGradBounds ? Math.min(1, Math.max(0, (ly - boundsMinY) / boundsH)) : 0;
         }
 
         for (let x = 0; x < indices.length; x++) {
           // In-bounds: `x` < `indices.length`.
           this._indexData[iOffset + x] = indices[x]! + baseV;
-        }
-
-        if (recordThisBatch && recPatchNodes !== null) {
-          // Copy the node's group-local corners (for the CPU re-bake patch) and
-          // its just-baked vertex words (rewritten in place, positions only, on
-          // an own-transform move) — both detached from the reused scratch.
-          recPatchNodes.push({
-            node,
-            patch: {
-              firstWord: nodeFirstWord,
-              vertexCount: qVerts,
-              localPositions: vertices.slice(0, qVerts * 2),
-              words: this._float32View.slice(nodeFirstWord, nodeFirstWord + qVerts * vertexStrideWords),
-            },
-          });
         }
 
         vOffset += qVerts;
@@ -650,7 +590,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     }
 
     if (capturing) {
-      this._tryRecordRetainedBatch(backend, batchCount, recWordCount, recQuadCount, recShaderType, recAtlas, recPatchNodes);
+      this._tryRecordRetainedBatch(backend, batchCount, recWordCount, recQuadCount, recShaderType, recAtlas);
     }
   }
 
@@ -668,7 +608,6 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     quadCount: number,
     shaderType: ShaderType,
     atlas: Texture | null,
-    patchNodes: Array<{ node: Text | BitmapText; patch: TextPatchNode }> | null,
   ): void {
     const bundle = backend._currentRetainedCaptureBundle;
 
@@ -676,7 +615,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
       return;
     }
 
-    if (batchCount !== 1 || atlas === null || patchNodes === null || this._recordedCaptures.has(bundle)) {
+    if (batchCount !== 1 || atlas === null || this._recordedCaptures.has(bundle)) {
       backend._poisonRetainedCaptures();
 
       return;
@@ -685,9 +624,9 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     const rendererData: TextRetainedRendererData = {
       nodeData: this._nodeDataArray.slice(0, this._nodeCount * nodeFloats),
       nodeCount: this._nodeCount,
+      drawables: [...this._nodeIndexMap.keys()],
       quadCount,
       shaderType,
-      patchNodes,
     };
 
     backend._recordRetainedBatch(this, this._uint32View.subarray(0, wordCount), this._nodeCount, BlendModes.Normal, [atlas], 1, null, rendererData);
@@ -702,16 +641,14 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
   }
 
   // ── Retained-batch record/replay (Track B extension) ─────────────────────
-  // Text is the WebGL2 retained renderer that keeps its world transform
-  // CPU-baked (the shipped `text.vert` reads no per-node transform — a
-  // vertex-stage texelFetch of the RGBA32F data texture collapses the draw on
-  // ANGLE/D3D11 whenever a glyph atlas is co-bound). So the recorded instance
-  // bytes are the full per-vertex stream (world-space position + uv + node
-  // index + gradient uv), replayed with `drawElements` over the renderer-owned
-  // quad-index pattern, and the per-node STYLE the fragment stage still looks
-  // up lives in a group-owned RGBA32F texture parked on the bundle. Text's node
-  // index addresses THAT dense per-group texture, not the shared
-  // `TransformBuffer`, so the scan/rebase hooks are true no-ops.
+  // Text's per-vertex "node index" addresses its OWN dense, per-flush node
+  // data texture (transform + style, packed by `_packNodeData`), never a row
+  // in the shared `TransformBuffer` — mirrors `WebGpuTextRenderer` exactly. So,
+  // unlike every other retained renderer, its instance bytes carry no index
+  // the generic bundle/scan/rebase machinery can meaningfully rebase; both
+  // hooks below are true no-ops, and the renderer instead carries its own node
+  // data end-to-end via `rendererData`, uploaded into a group-owned
+  // `DataTexture` on first configure (`_configureRetainedVao`).
 
   /** @internal See {@link WebGl2RetainedBatchReplayer._scanRetainedNodeIndexRange}. */
   public _scanRetainedNodeIndexRange(_payload: WebGl2RetainedBatchPayload, _range: WebGl2RetainedNodeIndexRange): void {
@@ -732,7 +669,8 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
    * Point the batch VAO's per-vertex attributes at the bundle's persistent
    * instance buffer (based at the batch byte offset) and its element buffer at
    * the renderer-owned quad-index pattern, then (re)build the group-owned
-   * per-node style texture + own-transform-patch map from the recorded data.
+   * per-node data texture (transform + style, read live by both shader stages)
+   * and the drawable→row-index map the own-transform-move patch uses.
    * @internal
    */
   public _configureRetainedVao(payload: WebGl2RetainedBatchPayload): void {
@@ -756,10 +694,6 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
       .addAttribute(buffer, shader.getAttribute('a_texcoord'), gl.FLOAT, false, vertexStrideBytes, base + 8)
       .addAttribute(buffer, shader.getAttribute('a_nodeIndex'), gl.FLOAT, false, vertexStrideBytes, base + 16);
 
-    if (shader.attributes.has('a_gradUV')) {
-      vao.addAttribute(buffer, shader.getAttribute('a_gradUV'), gl.FLOAT, false, vertexStrideBytes, base + 20);
-    }
-
     const state = this._getTextReplayState(payload.bundle);
 
     state.shaderType = data.shaderType;
@@ -779,10 +713,10 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     state.nodeDataFloats.set(data.nodeData, 0);
     state.nodeDataTexture!.commitRect(0, 0, nodeTexels, Math.max(1, data.nodeCount));
 
-    state.patchByDrawable.clear();
+    state.nodeIndexByDrawable.clear();
 
-    for (const entry of data.patchNodes) {
-      state.patchByDrawable.set(entry.node, entry.patch);
+    for (let i = 0; i < data.drawables.length; i++) {
+      state.nodeIndexByDrawable.set(data.drawables[i]!, i);
     }
   }
 
@@ -845,13 +779,14 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
   }
 
   /**
-   * Own-transform-move patch ({@link OwnTransformRowPatcher}): the moved node's
-   * world positions are baked into the group instance bytes (the ANGLE
-   * workaround forbids a live GPU-side transform read), so re-apply its current
-   * group-local `getGlobalTransform()` to the already-known glyph corners on the
-   * CPU and overwrite only that node's vertex range — no glyph re-selection, no
-   * atlas lookup, no other node touched. `base` (the shared-buffer direct-draw
-   * base) is irrelevant to Text's own dense indexing and is unused. Returns
+   * Own-transform-move O(1) patch ({@link OwnTransformRowPatcher}): recompute
+   * only the moved node's transform-texel pair (2 of its 10 texels) via
+   * `getGlobalTransform()` (group-local — {@link RetainedContainer} composes up
+   * to the enclosing boundary only) and upload just that row's 2-texel range in
+   * the persisted node-data texture — mirrors `WebGpuTextRenderer`'s buffer
+   * write exactly, just against a `DataTexture` instead of a storage buffer.
+   * No glyph geometry is touched. `base` (the shared-buffer direct-draw base)
+   * is irrelevant to Text's own dense local indexing and is unused. Returns
    * `false` (falls back to a full re-record) when `bundle` has no live Text
    * replay state or `node` was not part of the recorded batch.
    * @internal
@@ -863,39 +798,32 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
 
     const state = bundle.rendererReplayState;
 
-    if (!(state instanceof TextRetainedReplayState)) {
+    if (!(state instanceof TextRetainedReplayState) || state.nodeDataFloats === null || state.nodeDataTexture === null) {
       return false;
     }
 
     const drawable = node as unknown as Text | BitmapText;
-    const patch = state.patchByDrawable.get(drawable);
+    const localIndex = state.nodeIndexByDrawable.get(drawable);
 
-    if (patch === undefined) {
+    if (localIndex === undefined) {
       return false;
     }
 
     // Column-major mat3 [a c 0 | b d 0 | tx ty 1] — indices 0..8 always valid.
     const m = drawable.getGlobalTransform().toArray(false);
-    const a = m[0]!;
-    const cc = m[1]!;
-    const tx = m[6]!;
-    const b = m[3]!;
-    const dd = m[4]!;
-    const ty = m[7]!;
-    const words = patch.words;
-    const local = patch.localPositions;
+    const row = this._patchRowScratch;
 
-    for (let v = 0; v < patch.vertexCount; v++) {
-      const wf = v * vertexStrideWords;
-      const wl = v * 2;
-      const lx = local[wl]!;
-      const ly = local[wl + 1]!;
+    row[0] = m[0]!; // a
+    row[1] = m[1]!; // c
+    row[2] = m[2]!; // 0
+    row[3] = m[6]!; // tx
+    row[4] = m[3]!; // b
+    row[5] = m[4]!; // d
+    row[6] = m[5]!; // 0
+    row[7] = m[7]!; // ty
 
-      words[wf + 0] = a * lx + b * ly + tx;
-      words[wf + 1] = cc * lx + dd * ly + ty;
-    }
-
-    bundle._patchInstanceWords(patch.firstWord, words);
+    state.nodeDataFloats.set(row, localIndex * nodeFloats);
+    state.nodeDataTexture.commitRect(0, localIndex, 2, 1);
 
     return true;
   }
