@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 
-import { type AssetLoaderContext,Texture } from '@codexo/exojs';
-import { type TileLayer, TileMap, TileSet } from '@codexo/exojs-tilemap';
+import { type AssetLoaderContext,Texture, View } from '@codexo/exojs';
+import { ChunkStreamer, type TileLayer, TileMap, TileSet } from '@codexo/exojs-tilemap';
 import { describe, expect, it,vi } from 'vitest';
 
 import { loadTiledMap } from '../src/loadTiledMap';
@@ -364,15 +364,17 @@ describe('TiledMap.toTileMap() — infinite maps', () => {
     expect(map.getChunkSource(1)).toBeUndefined();
   });
 
-  it('does not throw for infinite:true, and converts the layer as unbounded', async () => {
+  it('does not throw for infinite:true, and converts the layer as unbounded with width/height undefined', async () => {
     const { context } = makeInfiniteMapContext([{ x: 0, y: 0, width: 16, height: 16, data: new Array(256).fill(1) }]);
     const map = await loadTiledMap('inf.tmj', context);
     const runtime = map.toTileMap();
     const layer = runtime.getTileLayer('Ground')!;
     expect(layer.bounded).toBe(false);
+    expect(layer.width).toBeUndefined();
+    expect(layer.height).toBeUndefined();
   });
 
-  it('getChunkSource returns undefined for a non-chunked (finite) layer id', async () => {
+  it('getChunkSource returns undefined for a non-chunked (finite) layer id, whose layer stays bounded', async () => {
     const { context } = makeContext({
       'finite.tmj': {
         type: 'map', version: '1.10', orientation: 'orthogonal', width: 2, height: 1,
@@ -385,7 +387,11 @@ describe('TiledMap.toTileMap() — infinite maps', () => {
       },
     });
     const map = await loadTiledMap('finite.tmj', context);
-    map.toTileMap();
+    const runtime = map.toTileMap();
+    const layer = runtime.getTileLayer('Ground')!;
+    expect(layer.bounded).toBe(true);
+    expect(layer.width).toBe(2);
+    expect(layer.height).toBe(1);
     expect(map.getChunkSource(1)).toBeUndefined();
   });
 
@@ -461,6 +467,43 @@ describe('TiledMap.toTileMap() — infinite maps', () => {
     const payload = await source.getChunk(0, 0);
     const { unpackTile } = await import('@codexo/exojs-tilemap');
     expect(unpackTile(payload!.tiles[0])).toMatchObject({ localTileId: 0, transform: { flipX: true, flipY: false, diagonal: false } });
+  });
+
+  it('round-trips through a real ChunkStreamer, resolving both negative and positive tile coordinates', async () => {
+    // On-disk chunk A at (x=-16,y=-16): gid 1 -> localTileId 0, fills tile
+    // rect [-16,0) x [-16,0) (runtime chunk (-1,-1)'s tile rect is the wider
+    // [-32,0) x [-32,0), so this only covers part of it).
+    // On-disk chunk B at (x=0,y=0): gid 2 -> localTileId 1, fills tile rect
+    // [0,16) x [0,16) (part of runtime chunk (0,0)'s [0,32) x [0,32)).
+    const { context } = makeInfiniteMapContext([
+      { x: -16, y: -16, width: 16, height: 16, data: new Array(256).fill(1) },
+      { x: 0, y: 0, width: 16, height: 16, data: new Array(256).fill(2) },
+    ]);
+    const map = await loadTiledMap('inf.tmj', context);
+    const runtime = map.toTileMap();
+    const layer = runtime.getTileLayer('Ground')!;
+    const source = map.getChunkSource(1)!;
+
+    // tileWidth=16, so a view centered on the origin with a 4x4px extent has
+    // bounds [-2,2] x [-2,2] -> topLeftTile=(-1,-1) (floor(-2/16)), bottomRightTile=(0,0)
+    // (floor(2/16)) -> topLeftChunk=(-1,-1), bottomRightChunk=(0,0) (chunkWidth/Height
+    // default to 32). The streamer's first (unbudgeted) update() loads that
+    // core range plus its default loadRadius padding, which always covers at
+    // least those two chunks.
+    const view = new View(0, 0, 4, 4);
+    const streamer = new ChunkStreamer(layer, source, view);
+
+    streamer.update();
+
+    // Negative tile coordinates, inside on-disk chunk A (gid 1 -> localTileId 0).
+    expect(layer.getTileAt(-16, -16)).toMatchObject({ localTileId: 0 });
+    expect(layer.getTileAt(-1, -1)).toMatchObject({ localTileId: 0 });
+    // Positive tile coordinates, inside on-disk chunk B (gid 2 -> localTileId 1).
+    expect(layer.getTileAt(0, 0)).toMatchObject({ localTileId: 1 });
+    expect(layer.getTileAt(15, 15)).toMatchObject({ localTileId: 1 });
+    // Inside runtime chunk (-1,-1) but outside on-disk chunk A's tile rect
+    // (which only covers ty/tx in [-16,-1]) -> untouched, empty cell.
+    expect(layer.getTileAt(-32, -32)).toBeNull();
   });
 });
 
