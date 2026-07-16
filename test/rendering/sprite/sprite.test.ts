@@ -89,6 +89,36 @@ describe('Sprite', () => {
       expect(Number.isNaN(sprite.scale.x)).toBe(false);
       expect(sprite.width).toBe(40);
     });
+
+    test('an explicit frame set while the texture is loading survives hydration', async () => {
+      const { texture, finishLoad } = makeDeferredTexture();
+      const sprite = new Sprite(texture);
+
+      sprite.setTextureFrame(new Rectangle(64, 0, 32, 32));
+
+      finishLoad(128, 128);
+      await texture.loaded;
+      await Promise.resolve(); // flush the .then microtask
+
+      expect(sprite.textureFrame.x).toBe(64);
+      expect(sprite.textureFrame.y).toBe(0);
+      expect(sprite.textureFrame.width).toBe(32);
+      expect(sprite.textureFrame.height).toBe(32);
+    });
+
+    test('heals to the full texture frame when no explicit frame was set before hydration', async () => {
+      const { texture, finishLoad } = makeDeferredTexture();
+      const sprite = new Sprite(texture);
+
+      finishLoad(128, 128);
+      await texture.loaded;
+      await Promise.resolve(); // flush the .then microtask
+
+      expect(sprite.textureFrame.x).toBe(0);
+      expect(sprite.textureFrame.y).toBe(0);
+      expect(sprite.textureFrame.width).toBe(128);
+      expect(sprite.textureFrame.height).toBe(128);
+    });
   });
 
   // Binding a destroyed texture is otherwise silent — warn once (dev) at

@@ -291,8 +291,12 @@ export class Sprite extends Drawable {
       return; // failed load shows Texture.missing; nothing to heal
     }
 
-    // Guard against a texture swap or destroy between scheduling and resolution.
-    if (this._texture === texture && !this.destroyed) {
+    // Guard against a texture swap or destroy between scheduling and resolution —
+    // and against an explicit frame set in the meantime (a Spritesheet slicing
+    // frames out of a still-loading atlas). The schedule-time reset above left a
+    // 0×0 frame, so a non-empty frame here means someone chose one deliberately;
+    // only heal the untouched case.
+    if (this._texture === texture && !this.destroyed && this._textureFrame.width === 0 && this._textureFrame.height === 0) {
       this.resetTextureFrame();
     }
   }
