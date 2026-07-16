@@ -38,6 +38,7 @@ export type { TileSetOptions } from './TileSet';
 export { TileSet } from './TileSet';
 // Scene/rendering nodes (advanced). The per-chunk drawable and the
 // per-backend renderers stay package-internal.
+export { ImageLayerNode } from './ImageLayerNode';
 export type { TileLayerNodeOptions } from './TileLayerNode';
 export { TileLayerNode } from './TileLayerNode';
 export type { TileMapNodeOptions } from './TileMapNode';

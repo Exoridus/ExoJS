@@ -37,6 +37,9 @@ export interface TileMapNodeOptions {
  * Layers added to or removed from the map after construction are reflected only
  * after {@link TileMapNode.refreshLayers}.
  *
+ * `TileMapNode` renders only tile layers; for a map with image layers, compose
+ * `TileMapView` and its {@link import('./ImageLayerNode').ImageLayerNode}s instead.
+ *
  * @advanced
  */
 export class TileMapNode extends Container {

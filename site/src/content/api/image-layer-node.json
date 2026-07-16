@@ -1,16 +1,16 @@
 {
-  "title": "TileMapNode",
-  "description": "A convenience scene node that renders a whole TileMap as a Container of one TileLayerNode per tile layer, in map layer order (back-to-front by document order). `TileMapNode` owns **only** its layer nodes — never application actors. Use it for the simple, non-interleaved case (no actors between layers); for actor interleaving, place individual `TileLayerNode`s into your own scene graph instead. The node references — but never owns — the TileMap: destroying the node frees its layer/chunk nodes and their cached GPU geometry, while the `TileMap` data and Loader-owned tileset textures survive (free them via `TileMap.destroy()` / `Loader.destroy()` respectively). Layers added to or removed from the map after construction are reflected only after TileMapNode.refreshLayers. `TileMapNode` renders only tile layers; for a map with image layers, compose `TileMapView` and its import('./ImageLayerNode').ImageLayerNodes instead.",
-  "symbol": "TileMapNode",
+  "title": "ImageLayerNode",
+  "description": "A scene node that renders one Tiled ImageLayer as a single RepeatingSprite wrapped in a Container. The layer's pixel `offset` becomes this node's position; `parallax` is resolved per frame in _collectContent by patching the node position against the camera centre (exactly like import('./TileLayerNode').TileLayerNode), then restoring it. When `repeatX`/`repeatY` is set the wrapped sprite is grown each frame to cover the visible view with a period-aligned origin, so the pattern tiles seamlessly and scrolls with parallax. A repeat axis or a `parallax` factor other than `1` both make this node's rendered position and/or size camera-dependent at collect time, so its static bounds cannot be culled against — such a node opts out of view culling (`cullable = false`). `visible`, `opacity`, and `tintColor` are applied **once at construction**: ImageLayer is immutable, so there is nothing to re-sync per frame. A layer whose `texture` is `null` (image failed to load / not yet available) produces an empty node with no children — it occupies its offset in the scene graph but draws nothing. The node references — but never owns — the ImageLayer and its Loader-owned texture: destroy frees the wrapped sprite but leaves the layer and texture intact. Image-layer nodes are **not** band-selectable; an application parents them into the scene directly wherever the image belongs in draw order. For a `repeatX`/`repeatY` node, bounds and hit-test queries reflect the coverage geometry computed by the last _collectContent call (since that geometry is recomputed per collect, not maintained incrementally), which is also why such a node force-disables `cullable`. A repeating or parallax node also re-sizes its wrapped sprite as the camera crosses period boundaries, which content-dirties an enclosing retained group the same way a streamed layer does — give it the same treatment (its own `RetainedContainer`, or none).",
+  "symbol": "ImageLayerNode",
   "kind": "class",
   "subsystem": "tilemap",
   "importPath": "@codexo/exojs-tilemap",
   "tier": "advanced",
-  "memberCount": 100,
+  "memberCount": 97,
   "counts": {
     "constructors": 1,
-    "methods": 46,
-    "properties": 40,
+    "methods": 44,
+    "properties": 39,
     "events": 13
   },
   "sections": [
@@ -19,13 +19,13 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "A convenience scene node that renders a whole TileMap as a Container of one TileLayerNode per tile layer, in map layer order (back-to-front by document order).",
-        "`TileMapNode` owns **only** its layer nodes — never application actors. Use it for the simple, non-interleaved case (no actors between layers); for actor interleaving, place individual `TileLayerNode`s into your own scene graph instead.",
-        "The node references — but never owns — the TileMap: destroying the node frees its layer/chunk nodes and their cached GPU geometry, while the `TileMap` data and Loader-owned tileset textures survive (free them via `TileMap.destroy()` / `Loader.destroy()` respectively).",
-        "Layers added to or removed from the map after construction are reflected only after TileMapNode.refreshLayers.",
-        "`TileMapNode` renders only tile layers; for a map with image layers, compose `TileMapView` and its import('./ImageLayerNode').ImageLayerNodes instead."
+        "A scene node that renders one Tiled ImageLayer as a single RepeatingSprite wrapped in a Container.",
+        "The layer's pixel `offset` becomes this node's position; `parallax` is resolved per frame in _collectContent by patching the node position against the camera centre (exactly like import('./TileLayerNode').TileLayerNode), then restoring it. When `repeatX`/`repeatY` is set the wrapped sprite is grown each frame to cover the visible view with a period-aligned origin, so the pattern tiles seamlessly and scrolls with parallax. A repeat axis or a `parallax` factor other than `1` both make this node's rendered position and/or size camera-dependent at collect time, so its static bounds cannot be culled against — such a node opts out of view culling (`cullable = false`).",
+        "`visible`, `opacity`, and `tintColor` are applied **once at construction**: ImageLayer is immutable, so there is nothing to re-sync per frame. A layer whose `texture` is `null` (image failed to load / not yet available) produces an empty node with no children — it occupies its offset in the scene graph but draws nothing.",
+        "The node references — but never owns — the ImageLayer and its Loader-owned texture: destroy frees the wrapped sprite but leaves the layer and texture intact. Image-layer nodes are **not** band-selectable; an application parents them into the scene directly wherever the image belongs in draw order.",
+        "For a `repeatX`/`repeatY` node, bounds and hit-test queries reflect the coverage geometry computed by the last _collectContent call (since that geometry is recomputed per collect, not maintained incrementally), which is also why such a node force-disables `cullable`. A repeating or parallax node also re-sizes its wrapped sprite as the camera crosses period boundaries, which content-dirties an enclosing retained group the same way a streamed layer does — give it the same treatment (its own `RetainedContainer`, or none)."
       ],
-      "importLine": "import { TileMapNode } from '@codexo/exojs-tilemap'",
+      "importLine": "import { ImageLayerNode } from '@codexo/exojs-tilemap'",
       "sourceLink": null
     },
     {
@@ -34,7 +34,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(map: TileMap, options?: TileMapNodeOptions): TileMapNode",
+          "signature": "new(layer: ImageLayer): ImageLayerNode",
           "signatureTokens": [
             {
               "text": "new",
@@ -45,7 +45,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "map",
+              "text": "layer",
               "kind": "param"
             },
             {
@@ -53,27 +53,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "TileMap",
-              "kind": "type"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "options",
-              "kind": "param"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "TileMapNodeOptions",
+              "text": "ImageLayer",
               "kind": "type"
             },
             {
@@ -85,23 +65,18 @@
               "kind": "punctuation"
             },
             {
-              "text": "TileMapNode",
+              "text": "ImageLayerNode",
               "kind": "type"
             }
           ],
           "params": [
             {
-              "name": "map",
-              "type": "TileMap",
+              "name": "layer",
+              "type": "ImageLayer",
               "optional": false
-            },
-            {
-              "name": "options",
-              "type": "TileMapNodeOptions",
-              "optional": true
             }
           ],
-          "returnType": "TileMapNode",
+          "returnType": "ImageLayerNode",
           "description": ""
         }
       ],
@@ -758,61 +733,6 @@
           "description": ""
         },
         {
-          "name": "getLayerNode",
-          "signature": "getLayerNode(name: string): TileLayerNode | undefined",
-          "signatureTokens": [
-            {
-              "text": "getLayerNode",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "name",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "string",
-              "kind": "keyword"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "TileLayerNode",
-              "kind": "type"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "undefined",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "name",
-              "type": "string",
-              "optional": false
-            }
-          ],
-          "returnType": "TileLayerNode | undefined",
-          "description": "Find the layer node rendering the named layer, or undefined."
-        },
-        {
           "name": "getLocalBounds",
           "signature": "getLocalBounds(): Rectangle",
           "signatureTokens": [
@@ -1219,35 +1139,6 @@
           ],
           "returnType": "Interval",
           "description": "Project this shape onto axis and write the scalar min/max into interval. Used internally by the SAT solver."
-        },
-        {
-          "name": "refreshLayers",
-          "signature": "refreshLayers(): this",
-          "signatureTokens": [
-            {
-              "text": "refreshLayers",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "this",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": "this",
-          "description": "Rebuild the layer-node children from the map's current layers. Call after layers are structurally added to or removed from the map."
         },
         {
           "name": "removeChild",
@@ -2723,11 +2614,11 @@
           "description": ""
         },
         {
-          "name": "layerNodes",
-          "signature": "layerNodes: readonly TileLayerNode[]",
+          "name": "layer",
+          "signature": "layer: ImageLayer",
           "signatureTokens": [
             {
-              "text": "layerNodes",
+              "text": "layer",
               "kind": "name"
             },
             {
@@ -2735,25 +2626,13 @@
               "kind": "punctuation"
             },
             {
-              "text": "readonly",
-              "kind": "keyword"
-            },
-            {
-              "text": " ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "TileLayerNode",
+              "text": "ImageLayer",
               "kind": "type"
-            },
-            {
-              "text": "[]",
-              "kind": "punctuation"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "The layer render nodes, in map layer order."
+          "description": "The runtime layer this node renders."
         },
         {
           "name": "left",
@@ -2775,27 +2654,6 @@
           "params": [],
           "returnType": null,
           "description": ""
-        },
-        {
-          "name": "map",
-          "signature": "map: TileMap",
-          "signatureTokens": [
-            {
-              "text": "map",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "TileMap",
-              "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "The runtime map this node renders."
         },
         {
           "name": "mask",
@@ -2887,7 +2745,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Render-only pixel-snap mode applied to every layer (and forwarded to every chunk node, current and rebuilt). Snaps tile chunk origins to the active render target's device-pixel grid for crisp tiles; with integer tile pitch the grid stays exact and adjacent chunks/layers cannot drift apart. Purely visual — tile data, layer offsets, chunk revisions, and culling are unchanged. Setting the current value is a no-op; an invalid value throws and leaves the prior mode unchanged."
+          "description": "Render-only pixel-snap mode forwarded to the wrapped RepeatingSprite (which snaps its rendered origin, and — in 'geometry' mode for axis-aligned transforms — its repeat-segment boundaries, to the render target's device-pixel grid). Purely visual: the layer offset, parallax, and repeat coverage are never changed. For a null-texture layer there is no drawable to forward to, so the mode is simply stored. Setting the current value is a no-op; an invalid value throws and leaves the prior mode unchanged."
         },
         {
           "name": "position",
@@ -3716,11 +3574,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "packages/exojs-tilemap/src/TileMapNode.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/TileMapNode.ts"
+        "label": "packages/exojs-tilemap/src/ImageLayerNode.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/ImageLayerNode.ts"
       }
     }
   ],
-  "sourcePath": "packages/exojs-tilemap/src/TileMapNode.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/TileMapNode.ts"
+  "sourcePath": "packages/exojs-tilemap/src/ImageLayerNode.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/ImageLayerNode.ts"
 }

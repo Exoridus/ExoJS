@@ -3,6 +3,8 @@ import { TextureRegion } from '@codexo/exojs';
 import { type Texture } from '@codexo/exojs';
 import { describe, expect, expectTypeOf, it, vi } from 'vitest';
 
+import { ImageLayer, type ImageLayerOptions } from '../src/ImageLayer';
+import { ImageLayerNode } from '../src/ImageLayerNode';
 import { TileLayer } from '../src/TileLayer';
 import { TileLayerNode } from '../src/TileLayerNode';
 import { TileMap } from '../src/TileMap';
@@ -62,6 +64,15 @@ function makeLayer(tileset: TileSet, opts: LayerOpts = {}): TileLayer {
     offsetY: opts.offsetY,
   });
   return layer;
+}
+
+function makeImageLayer(opts: Partial<ImageLayerOptions> = {}): ImageLayer {
+  return new ImageLayer({
+    id: opts.id ?? 100,
+    image: opts.image ?? 'bg.png',
+    texture: opts.texture === undefined ? fakeTexture() : opts.texture,
+    ...opts,
+  });
 }
 
 function fillLayer(layer: TileLayer, tileset: TileSet): TileLayer {
@@ -722,6 +733,116 @@ describe('TileMapView across multiple maps', () => {
     expect(b.band.x).toBe(0);
     expect(b.band.getBounds().x).toBe(bX);
     expect(b.band.getBounds().y).toBe(bY);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+// TileMapView — image layer nodes
+// ═══════════════════════════════════════════════════════════════════════
+
+describe('TileMapView image layer nodes', () => {
+  function makeImageMap(imageLayers: readonly ImageLayer[]): { map: TileMap; tileset: TileSet } {
+    const tileset = makeTileset();
+    const map = new TileMap({
+      name: 'imaged',
+      width: 4,
+      height: 4,
+      tileWidth: 32,
+      tileHeight: 32,
+      tilesets: [tileset],
+      layers: [fillLayer(makeLayer(tileset, { id: 1, name: 'ground' }), tileset)],
+      imageLayers,
+    });
+
+    return { map, tileset };
+  }
+
+  it('creates one ImageLayerNode per image layer, in insertion order', () => {
+    const bg = makeImageLayer({ id: 10, name: 'bg' });
+    const clouds = makeImageLayer({ id: 11, name: 'clouds' });
+    const { map } = makeImageMap([bg, clouds]);
+    const view = map.createView();
+
+    expect(view.imageLayerNodes).toHaveLength(2);
+    expect(view.imageLayerNodes[0]).toBeInstanceOf(ImageLayerNode);
+    expect(view.imageLayerNodes.map(node => node.layer.id)).toEqual([10, 11]);
+    expect(view.imageLayerNodes[0]!.layer).toBe(bg);
+    expect(view.imageLayerNodes[1]!.layer).toBe(clouds);
+  });
+
+  it('an image-layer-less map yields an empty imageLayerNodes list', () => {
+    const { map } = makeWorldMap();
+    const view = map.createView();
+
+    expect(view.imageLayerNodes).toEqual([]);
+  });
+
+  it('getImageLayerNodeById returns the canonical node for an image layer id, or undefined', () => {
+    const bg = makeImageLayer({ id: 10, name: 'bg' });
+    const { map } = makeImageMap([bg]);
+    const view = map.createView();
+
+    expect(view.getImageLayerNodeById(10)!.layer).toBe(bg);
+    expect(view.getImageLayerNodeById(10)).toBe(view.imageLayerNodes[0]);
+    expect(view.getImageLayerNodeById(999)).toBeUndefined();
+  });
+
+  it('getImageLayerNodeByName returns the node for a unique image layer name, or undefined', () => {
+    const bg = makeImageLayer({ id: 10, name: 'bg' });
+    const clouds = makeImageLayer({ id: 11, name: 'clouds' });
+    const { map } = makeImageMap([bg, clouds]);
+    const view = map.createView();
+
+    expect(view.getImageLayerNodeByName('bg')!.layer).toBe(bg);
+    expect(view.getImageLayerNodeByName('clouds')!.layer).toBe(clouds);
+    expect(view.getImageLayerNodeByName('missing')).toBeUndefined();
+  });
+
+  it('getImageLayerNodeByName throws for an ambiguous (duplicate) image layer name', () => {
+    const a = makeImageLayer({ id: 10, name: 'dup' });
+    const b = makeImageLayer({ id: 11, name: 'dup' });
+    const { map } = makeImageMap([a, b]);
+    const view = map.createView();
+
+    expect(() => view.getImageLayerNodeByName('dup')).toThrow(/ambiguous/);
+    expect(() => view.getImageLayerNodeByName('dup')).toThrow(/by id/);
+  });
+
+  it('destroy() destroys image layer nodes and detaches them from an application parent', () => {
+    const bg = makeImageLayer({ id: 10, name: 'bg' });
+    const { map } = makeImageMap([bg]);
+    const view = map.createView();
+    const worldRoot = new Container();
+    const node = view.getImageLayerNodeById(10)!;
+
+    worldRoot.addChild(node);
+    view.destroy();
+
+    expect(node.destroyed).toBe(true);
+    expect(node.parent).toBeNull();
+    expect(worldRoot.children).toHaveLength(0);
+    expect(view.imageLayerNodes).toHaveLength(0);
+  });
+
+  it('pixelSnapMode cascades to image layer nodes', () => {
+    const bg = makeImageLayer({ id: 10, name: 'bg' });
+    const { map } = makeImageMap([bg]);
+    const view = map.createView();
+    const node = view.getImageLayerNodeById(10)!;
+
+    expect(node.pixelSnapMode).toBe('none');
+
+    view.pixelSnapMode = 'geometry';
+
+    expect(node.pixelSnapMode).toBe('geometry');
+  });
+
+  it('band definitions still reject image-layer ids and names as unknown selectors', () => {
+    const bg = makeImageLayer({ id: 10, name: 'bg' });
+    const { map } = makeImageMap([bg]);
+
+    expect(() => map.createView({ bands: { b: [10] } })).toThrow(/no layer with id 10/);
+    expect(() => map.createView({ bands: { b: ['bg'] } })).toThrow(/no layer named "bg"/);
   });
 });
 
