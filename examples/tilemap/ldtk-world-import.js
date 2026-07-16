@@ -91,7 +91,7 @@ class LdtkWorldImportScene extends Scene {
     buildIntGridOverlay(level) {
         const overlay = new Graphics();
         const walls = level.layers.find(layer => layer.name === 'Walls');
-        if (!walls) {
+        if (!walls || walls.width === undefined || walls.height === undefined) {
             return overlay;
         }
         for (let ty = 0; ty < walls.height; ty++) {
