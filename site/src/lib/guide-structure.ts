@@ -409,7 +409,7 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
                     'move expensive sampling off the main thread with createWorkerSampledChunkSource',
                 ],
                 prerequisites: ['assets/tiled-maps'],
-                examples: ['tilemap/infinite-terrain', 'tilemap/worker-streamed-terrain'],
+                examples: ['tilemap/infinite-terrain', 'tilemap/worker-streamed-terrain', 'tilemap/tiled-infinite-map'],
                 apiLinks: ['tile-map', 'tile-layer', 'chunk-streamer', 'chunk-source', 'tilemap-functions', 'tiled-map'],
             },
         ],

@@ -1911,6 +1911,23 @@
             "capabilities": [
                 "keyboard"
             ]
+        },
+        {
+            "slug": "tiled-infinite-map",
+            "path": "tilemap/tiled-infinite-map.js",
+            "language": "typescript",
+            "title": "Tiled Infinite Map Streaming",
+            "description": "Stream a hand-authored Tiled infinite .tmj map: TiledMap.toTileMap() converts each chunked tile layer to an unbounded TileLayer, and a ChunkStreamer per layer pulls chunks from TiledMap.getChunkSource() around a free-flying WASD camera.",
+            "backend": "core",
+            "tags": [
+                "tilemap",
+                "tiled",
+                "streaming"
+            ],
+            "level": "advanced",
+            "capabilities": [
+                "keyboard"
+            ]
         }
     ],
     "tweens-animation": [
