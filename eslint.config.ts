@@ -1224,7 +1224,23 @@ export default defineConfig([
     },
   },
 
-  // Node / config files / scripts
+  // Node / config files / scripts — not part of any tsconfig `include`, so
+  // type-aware rules (from the global `recommendedTypeChecked`/
+  // `stylisticTypeChecked` configs applied unscoped above) have no type
+  // information to work with here. `parserOptions.project: null` below only
+  // starves those rules of a program; it doesn't disable them, so without
+  // this explicit opt-out (the same pattern `packages/exojs-bench/src` and
+  // the extension-package `test/**` blocks use) linting a file matched only
+  // by this block crashes on the first typed rule it hits (e.g.
+  // `@typescript-eslint/await-thenable`). The four `no-unsafe-*` rules below
+  // were previously re-enabled after that blanket disable, which crashed the
+  // same way (`no-unsafe-argument` needs type info too) — dropped rather than
+  // given a real tsconfig program, since these files intentionally sit
+  // outside any typed program.
+  {
+    files: ['*.config.ts', 'rollup.config.ts', 'jest.config.ts', 'eslint.config.ts', 'scripts/**/*.ts'],
+    ...tseslint.configs.disableTypeChecked,
+  },
   {
     files: ['*.config.ts', 'rollup.config.ts', 'jest.config.ts', 'eslint.config.ts', 'scripts/**/*.ts'],
     languageOptions: {
@@ -1238,14 +1254,13 @@ export default defineConfig([
         project: null,
       },
     },
+    plugins: {
+      unicorn,
+    },
     rules: {
       'no-console': 'warn',
       '@typescript-eslint/no-require-imports': 'warn',
       '@typescript-eslint/no-unused-vars': 'warn',
-      '@typescript-eslint/no-unsafe-assignment': 'warn',
-      '@typescript-eslint/no-unsafe-member-access': 'warn',
-      '@typescript-eslint/no-unsafe-argument': 'warn',
-      '@typescript-eslint/no-unsafe-return': 'warn',
       'unicorn/prefer-node-protocol': 'warn',
       'security/detect-non-literal-fs-filename': 'off',
     },

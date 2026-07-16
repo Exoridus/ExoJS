@@ -81,6 +81,9 @@ export { ChunkStreamer } from './ChunkStreamer';
 // Chunk streaming: generic sampling-function-driven ChunkSource for procedural content.
 export type { SampledChunkSourceOptions } from './SampledChunkSource';
 export { createSampledChunkSource } from './SampledChunkSource';
+// Chunk streaming: worker-backed variant of the above, for expensive sampling.
+export type { WorkerSampledChunkSourceOptions } from './WorkerSampledChunkSource';
+export { createWorkerSampledChunkSource } from './WorkerSampledChunkSource';
 // Wang autotiling: automatic tile selection based on neighbor bitmasks.
 export type { AutoTileOptions } from './autoTile';
 export { autoTile, refreshCell } from './autoTile';

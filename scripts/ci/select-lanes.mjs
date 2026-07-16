@@ -26,7 +26,7 @@ import { pathToFileURL } from 'node:url';
  */
 
 /**
- * @typedef {{ engine: boolean, site: boolean, audioFx: boolean }} LaneAreas
+ * @typedef {{ engine: boolean, site: boolean, audioFx: boolean, tilemapWorker: boolean }} LaneAreas
  * @typedef {{
  *   typecheck: boolean,
  *   lint: boolean,
@@ -36,6 +36,7 @@ import { pathToFileURL } from 'node:url';
  *   browserWebgpu: boolean,
  *   browserFirefox: boolean,
  *   browserAudio: boolean,
+ *   browserTilemapWorker: boolean,
  *   packageVerify: boolean,
  *   siteBuild: boolean,
  * }} EffectiveLanes
@@ -127,6 +128,22 @@ const isAudioFxPath = file => {
 };
 
 /**
+ * Tilemap-worker area: the browser-tilemap-worker lane runs
+ * WorkerSampledChunkSource's real-Worker round trip in headless Chromium
+ * (jsdom implements neither Worker nor URL.createObjectURL). Narrow gate,
+ * same reasoning as isAudioFxPath: expensive relative to its blast radius.
+ * @param {string} file
+ */
+const isTilemapWorkerPath = file => {
+  if (file.startsWith('.github/workflows/')) return true;
+  if (file === 'vitest.config.ts') return true;
+  if (file === 'package.json' || file === 'pnpm-lock.yaml' || file === 'pnpm-workspace.yaml') return true;
+  if (file.startsWith('packages/exojs-config/')) return true;
+  if (file.startsWith('packages/exojs-tilemap/') && !isPackageDocPath(file)) return true;
+  return false;
+};
+
+/**
  * Site area: anything that can change the generated examples site / API docs.
  * Gates the site-build lane. Mirrors (and intentionally keeps) the prior `site`
  * filter: every `packages/**` change — docs included — can affect generated docs
@@ -152,6 +169,7 @@ export function selectAreas(changedFiles) {
   let engine = false;
   let site = false;
   let audioFx = false;
+  let tilemapWorker = false;
   for (const raw of changedFiles) {
     // Normalise Windows separators and trim stray whitespace/blank entries.
     const file = String(raw).replace(/\\/g, '/').trim();
@@ -159,9 +177,10 @@ export function selectAreas(changedFiles) {
     if (!engine && isEnginePath(file)) engine = true;
     if (!site && isSitePath(file)) site = true;
     if (!audioFx && isAudioFxPath(file)) audioFx = true;
-    if (engine && site && audioFx) break;
+    if (!tilemapWorker && isTilemapWorkerPath(file)) tilemapWorker = true;
+    if (engine && site && audioFx && tilemapWorker) break;
   }
-  return { engine, site, audioFx };
+  return { engine, site, audioFx, tilemapWorker };
 }
 
 /**
@@ -177,7 +196,7 @@ export function selectAreas(changedFiles) {
  * @returns {EffectiveLanes}
  */
 export function effectiveLanes(areas) {
-  const { engine, site, audioFx } = areas;
+  const { engine, site, audioFx, tilemapWorker } = areas;
   return {
     typecheck: true,
     lint: true,
@@ -187,6 +206,7 @@ export function effectiveLanes(areas) {
     browserWebgpu: engine,
     browserFirefox: engine,
     browserAudio: audioFx,
+    browserTilemapWorker: tilemapWorker,
     packageVerify: engine,
     siteBuild: site,
   };
@@ -225,11 +245,16 @@ function parseChangedFiles(raw) {
  */
 function main() {
   const eventName = process.env['EVENT_NAME'] ?? '';
-  const areas = eventName === 'pull_request' ? selectAreas(parseChangedFiles(process.env['CHANGED_FILES'])) : { engine: true, site: true, audioFx: true };
+  const areas =
+    eventName === 'pull_request'
+      ? selectAreas(parseChangedFiles(process.env['CHANGED_FILES']))
+      : { engine: true, site: true, audioFx: true, tilemapWorker: true };
 
   // Human-readable trace to the job log (stderr keeps it out of $GITHUB_OUTPUT).
-  process.stderr.write(`select-lanes: event=${eventName || 'unknown'} engine=${areas.engine} site=${areas.site} audioFx=${areas.audioFx}\n`);
-  process.stdout.write(`engine=${areas.engine}\nsite=${areas.site}\naudioFx=${areas.audioFx}\n`);
+  process.stderr.write(
+    `select-lanes: event=${eventName || 'unknown'} engine=${areas.engine} site=${areas.site} audioFx=${areas.audioFx} tilemapWorker=${areas.tilemapWorker}\n`,
+  );
+  process.stdout.write(`engine=${areas.engine}\nsite=${areas.site}\naudioFx=${areas.audioFx}\ntilemapWorker=${areas.tilemapWorker}\n`);
 }
 
 // Only run the CLI when executed directly (`node scripts/ci/select-lanes.mjs`),

@@ -6,10 +6,10 @@
   "subsystem": "tilemap",
   "importPath": "@codexo/exojs-tilemap",
   "tier": "stable",
-  "memberCount": 9,
+  "memberCount": 10,
   "counts": {
     "constructors": 0,
-    "methods": 7,
+    "methods": 8,
     "properties": 2,
     "events": 0
   },
@@ -188,6 +188,98 @@
           ],
           "returnType": "ChunkSource",
           "description": "Build a import('./ChunkStreamer').ChunkStreamer-ready ChunkSource from a caller-supplied sampling function — the generic mechanism behind procedurally generated tile content (noise, a heightmap, or any other per-tile-coordinate scalar function). This module intentionally has no opinion on the sampling algorithm itself (SampledChunkSourceOptions.sample/mapValueToTile are both required, not defaulted) — pick or write whatever generation function fits your game. layer supplies the target chunk grid (TileLayer.chunkWidth/ chunkHeight) and the tileset list tiles are packed against (TileLayer.tilesets) — the same TileLayer you'll construct the ChunkStreamer with."
+        },
+        {
+          "name": "createWorkerSampledChunkSource",
+          "signature": "createWorkerSampledChunkSource(layer: TileLayer, options: WorkerSampledChunkSourceOptions): ChunkSource & { destroy: unknown }",
+          "signatureTokens": [
+            {
+              "text": "createWorkerSampledChunkSource",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "layer",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileLayer",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "WorkerSampledChunkSourceOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ChunkSource",
+              "kind": "type"
+            },
+            {
+              "text": " & ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "layer",
+              "type": "TileLayer",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "WorkerSampledChunkSourceOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "ChunkSource & { destroy: unknown }",
+          "description": "Build a import('./ChunkStreamer').ChunkStreamer-ready ChunkSource that samples off the main thread via a Web Worker — the async counterpart to import('./SampledChunkSource').createSampledChunkSource, for sampling functions expensive enough to want off-thread execution. Unlike the synchronous provider, sampling logic cannot be passed as a live function — functions cannot cross a postMessage boundary. Instead WorkerSampledChunkSourceOptions.workerSource is a self-contained worker script string; see its documentation for the protocol. The returned value's destroy() MUST be called when done with it (e.g. alongside your ChunkStreamer.destroy() call) — the underlying Worker is a real resource that leaks otherwise. ChunkSource itself has no lifecycle hook, so this is not automatic. Implementation note: workerSource is Blob-URL'd into a real Worker (new Blob([workerSource]) → URL.createObjectURL → new Worker(url)) — the same technique import('@codexo/exojs').WorkletEffect already uses for AudioWorklet processors. This is bundler-agnostic (no special config needed in Vite/webpack/etc.) but requires a Content-Security-Policy that permits blob: in worker-src (or script-src as a fallback) if your deployment sets one."
         },
         {
           "name": "packTile",

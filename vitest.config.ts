@@ -140,6 +140,9 @@ export default defineConfig({
         name: 'exojs-tilemap',
         alias: aliasConfig,
         include: ['packages/exojs-tilemap/test/**/*.test.ts'],
+        // The test/browser/** suite needs a real Worker + URL.createObjectURL and
+        // runs in the browser-tilemap-chromium project; exclude it from jsdom.
+        exclude: ['packages/exojs-tilemap/test/browser/**'],
       }),
       createJsdomTestProject({
         name: 'exojs-tiled',
@@ -334,6 +337,27 @@ export default defineConfig({
           globals: true,
           setupFiles: browserSetupFiles,
           include: ['packages/exojs-audio-fx/test/browser/**/*.test.ts'],
+          browser: {
+            enabled: true,
+            headless: true,
+            provider: playwright({ launchOptions: { channel: 'chromium' } }),
+            instances: [{ browser: 'chromium' }],
+          },
+        },
+      },
+
+      // ── browser-tilemap-chromium — real Worker for WorkerSampledChunkSource ──
+      // Runs the worker-backed procedural chunk provider through a real Worker in
+      // headless Chromium (jsdom implements neither Worker nor
+      // URL.createObjectURL). Path-gated in CI so it only runs when exojs-tilemap
+      // changes.
+      {
+        ...browserBase,
+        test: {
+          name: 'browser-tilemap-chromium',
+          globals: true,
+          setupFiles: browserSetupFiles,
+          include: ['packages/exojs-tilemap/test/browser/**/*.test.ts'],
           browser: {
             enabled: true,
             headless: true,
