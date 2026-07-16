@@ -239,6 +239,38 @@ describe('ImageLayerNode repeat coverage', () => {
     expect(sprite.width).toBe(64);
   });
 
+  it('repeatX && repeatY: both axes covered simultaneously', () => {
+    // offsetX 10, offsetY 5, parallax 1, image 64×64; view bounds { x: -130, y: -70, width: 300, height: 220 }.
+    const node = new ImageLayerNode(
+      makeLayer({
+        texture: fakeTexture(64, 64),
+        offsetX: 10,
+        offsetY: 5,
+        repeatX: true,
+        repeatY: true,
+      }),
+    );
+
+    collect(node, mockBuilder({ bounds: { x: -130, y: -70, width: 300, height: 220 } }));
+
+    // X axis (nodeX = offsetX = 10):
+    // localViewMin = -130 - 10 = -140
+    // startLocal   = floor(-140/64)*64 = floor(-2.1875)*64 = -3*64 = -192
+    // periods      = ceil((-140 + 300 - (-192))/64) = ceil(352/64) = 6
+    // child.x = -192, child.width = 6*64 = 384
+    //
+    // Y axis (nodeY = offsetY = 5):
+    // localViewMin = -70 - 5 = -75
+    // startLocal   = floor(-75/64)*64 = floor(-1.171875)*64 = -2*64 = -128
+    // periods      = ceil((-75 + 220 - (-128))/64) = ceil(273/64) = ceil(4.265625) = 5
+    // child.y = -128, child.height = 5*64 = 320
+    const sprite = spriteOf(node);
+    expect(sprite.x).toBe(-192);
+    expect(sprite.width).toBe(384);
+    expect(sprite.y).toBe(-128);
+    expect(sprite.height).toBe(320);
+  });
+
   it('repeat layer disables cullable on the node', () => {
     expect(new ImageLayerNode(makeLayer({ repeatX: true })).cullable).toBe(false);
     expect(new ImageLayerNode(makeLayer({ repeatY: true })).cullable).toBe(false);
@@ -246,6 +278,33 @@ describe('ImageLayerNode repeat coverage', () => {
 
   it('plain layer stays cullable', () => {
     expect(new ImageLayerNode(makeLayer()).cullable).toBe(true);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+// ImageLayerNode — repeat coverage cache
+// ═══════════════════════════════════════════════════════════════════════
+
+describe('ImageLayerNode repeat coverage cache', () => {
+  it('skips the resize/reposition on a second collect with unchanged view bounds', () => {
+    const node = new ImageLayerNode(
+      makeLayer({ texture: fakeTexture(64, 64), offsetX: 10, repeatX: true }),
+    );
+    const builder = mockBuilder({ bounds: { x: -130, y: 0, width: 300, height: 200 } });
+
+    collect(node, builder);
+
+    const sprite = spriteOf(node);
+    const setSizeSpy = vi.spyOn(sprite, 'setSize');
+    const setPositionSpy = vi.spyOn(sprite, 'setPosition');
+
+    // Same view span and (unpatched, since parallax is 1) origin as the first
+    // collect — the cache comparison in `_updateRepeatCoverage` should hit and
+    // skip rebuilding the child's geometry entirely.
+    collect(node, builder);
+
+    expect(setSizeSpy).not.toHaveBeenCalled();
+    expect(setPositionSpy).not.toHaveBeenCalled();
   });
 });
 

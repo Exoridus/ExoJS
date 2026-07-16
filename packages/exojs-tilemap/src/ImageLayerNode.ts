@@ -29,6 +29,11 @@ import { assertPixelSnapMode } from './pixelSnap';
  * application parents them into the scene directly wherever the image belongs
  * in draw order.
  *
+ * For a `repeatX`/`repeatY` node, bounds and hit-test queries reflect the
+ * coverage geometry computed by the last {@link _collectContent} call (since
+ * that geometry is recomputed per collect, not maintained incrementally),
+ * which is also why such a node force-disables `cullable`.
+ *
  * @advanced
  */
 export class ImageLayerNode extends Container {

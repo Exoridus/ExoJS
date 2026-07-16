@@ -319,6 +319,11 @@ export class TileMapView {
    * Application actors are never touched, and bands keep their placement in the
    * application scene graph.
    *
+   * Image-layer nodes are constructed once, at view construction, and are
+   * **not** reconciled by this method: a subsequent
+   * {@link import('./TileMap').TileMap.removeImageLayer} call on the map is not
+   * reflected in {@link imageLayerNodes} (full image-layer reconcile is deferred).
+   *
    * @throws If the view has been destroyed.
    */
   public refreshLayers(): this {
