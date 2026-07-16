@@ -6,10 +6,10 @@
   "subsystem": "tilemap",
   "importPath": "@codexo/exojs-tilemap",
   "tier": "stable",
-  "memberCount": 8,
+  "memberCount": 9,
   "counts": {
     "constructors": 0,
-    "methods": 6,
+    "methods": 7,
     "properties": 2,
     "events": 0
   },
@@ -120,6 +120,74 @@
           ],
           "returnType": "void",
           "description": "Apply Wang autotiling to layer using wangSet. Iterates every cell in the layer. For each cell that belongs to the Wang group, computes a neighbor bitmask and looks up the correct local tile ID from WangSet.blobMap. The layer is mutated in place; cells whose computed bitmask has no mapping in the blobMap are left unchanged. The function performs two passes (snapshot then write) so neighbor tests always reflect the pre-call state regardless of processing order. **Group membership.** With no matchFn, a cell belongs to the group when its tilesetIndex matches WangSet.tilesetIndex and its localTileId is a member of the set. Membership covers every variant the set can produce, so re-running autoTile (or refreshCell) on already-autotiled data is stable. Paint with a tile ID that is a member (a blobMap value, or one listed in WangSetOptions.members). **Blob mode bitmask (bit positions):**  1 | 2 | 4 8 | -- | 16 32 | 64 | 128  Diagonal bits (1, 4, 32, 128) are only set when both adjacent cardinals are also set (the \"corner dependency\" rule that reduces 256 raw combinations to 47 valid blob states). **Edge mode bitmask (bit positions):** Top=1, Right=2, Bottom=4, Left=8."
+        },
+        {
+          "name": "createSampledChunkSource",
+          "signature": "createSampledChunkSource(layer: TileLayer, options: SampledChunkSourceOptions): ChunkSource",
+          "signatureTokens": [
+            {
+              "text": "createSampledChunkSource",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "layer",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileLayer",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SampledChunkSourceOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ChunkSource",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "layer",
+              "type": "TileLayer",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "SampledChunkSourceOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "ChunkSource",
+          "description": "Build a import('./ChunkStreamer').ChunkStreamer-ready ChunkSource from a caller-supplied sampling function — the generic mechanism behind procedurally generated tile content (noise, a heightmap, or any other per-tile-coordinate scalar function). This module intentionally has no opinion on the sampling algorithm itself (SampledChunkSourceOptions.sample/mapValueToTile are both required, not defaulted) — pick or write whatever generation function fits your game. layer supplies the target chunk grid (TileLayer.chunkWidth/ chunkHeight) and the tileset list tiles are packed against (TileLayer.tilesets) — the same TileLayer you'll construct the ChunkStreamer with."
         },
         {
           "name": "packTile",

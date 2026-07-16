@@ -1,0 +1,215 @@
+{
+  "title": "SampledChunkSourceOptions",
+  "description": "Options for createSampledChunkSource.",
+  "symbol": "SampledChunkSourceOptions",
+  "kind": "interface",
+  "subsystem": "tilemap",
+  "importPath": "@codexo/exojs-tilemap",
+  "tier": "advanced",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 2,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Options for createSampledChunkSource."
+      ],
+      "importLine": "import { SampledChunkSourceOptions } from '@codexo/exojs-tilemap'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "mapValueToTile",
+          "signature": "mapValueToTile(value: number, tx: number, ty: number): ResolvedTile | null",
+          "signatureTokens": [
+            {
+              "text": "mapValueToTile",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "value",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "tx",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ty",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ResolvedTile",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "value",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "tx",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "ty",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "ResolvedTile | null",
+          "description": "Convert a sampled value (and its tile coordinate, for position-dependent logic such as river carving or map edges) into a resolved tile, or null for an empty cell. Must be pure and deterministic, same requirement as sample."
+        },
+        {
+          "name": "sample",
+          "signature": "sample(tx: number, ty: number): number",
+          "signatureTokens": [
+            {
+              "text": "sample",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "tx",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ty",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "tx",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "ty",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": "Sample a scalar value at a tile coordinate. Called once per tile within each requested chunk. Must be a pure, deterministic function of (tx, ty) — import('./ChunkStreamer').ChunkStreamer regenerates a chunk from scratch via this source whenever it's revisited after eviction, so a non-deterministic sampler would make previously-visited terrain silently change underneath the player."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-tilemap/src/SampledChunkSource.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/SampledChunkSource.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-tilemap/src/SampledChunkSource.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/SampledChunkSource.ts"
+}
