@@ -1909,7 +1909,8 @@
             ],
             "level": "advanced",
             "capabilities": [
-                "keyboard"
+                "keyboard",
+                "webWorkers"
             ]
         },
         {

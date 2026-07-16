@@ -99,6 +99,10 @@ function deriveCapabilities(source: string, slug: string, sectionSlug: string): 
     caps.add('audio');
   }
 
+  if (/\bcreateWorkerSampledChunkSource\(|\bnew Worker\(/.test(source)) {
+    caps.add('webWorkers');
+  }
+
   // Stable order for diff readability.
   const order: Capability[] = [
     'webgl2',
