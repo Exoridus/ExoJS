@@ -55,7 +55,6 @@ function writeWav(samples) {
   buf.write('data', o);
   o += 4;
   buf.writeUInt32LE(dataSize, o);
-  o += 4;
   for (let i = 0; i < samples.length; i++) {
     buf.writeInt16LE(Math.max(-32768, Math.min(32767, Math.round(samples[i] * 32767))), 44 + i * 2);
   }

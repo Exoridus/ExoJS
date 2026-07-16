@@ -1238,11 +1238,11 @@ export default defineConfig([
   // given a real tsconfig program, since these files intentionally sit
   // outside any typed program.
   {
-    files: ['*.config.ts', 'rollup.config.ts', 'jest.config.ts', 'eslint.config.ts', 'scripts/**/*.ts'],
+    files: ['*.config.ts', 'rollup.config.ts', 'jest.config.ts', 'eslint.config.ts', 'scripts/**/*.ts', 'scripts/**/*.mjs'],
     ...tseslint.configs.disableTypeChecked,
   },
   {
-    files: ['*.config.ts', 'rollup.config.ts', 'jest.config.ts', 'eslint.config.ts', 'scripts/**/*.ts'],
+    files: ['*.config.ts', 'rollup.config.ts', 'jest.config.ts', 'eslint.config.ts', 'scripts/**/*.ts', 'scripts/**/*.mjs'],
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
@@ -1263,6 +1263,21 @@ export default defineConfig([
       '@typescript-eslint/no-unused-vars': 'warn',
       'unicorn/prefer-node-protocol': 'warn',
       'security/detect-non-literal-fs-filename': 'off',
+    },
+  },
+
+  // scripts/webgpu-probe.mjs runs as a Node process that drives a Playwright
+  // page, but several of its callbacks are passed to `page.evaluate()` and
+  // execute inside the browser page instead — so the same file legitimately
+  // references both Node and browser globals. Layer `globals.browser` on top
+  // of the Node/scripts block above just for this file, rather than widening
+  // browser globals onto every `scripts/**` file.
+  {
+    files: ['scripts/webgpu-probe.mjs'],
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+      },
     },
   },
 
