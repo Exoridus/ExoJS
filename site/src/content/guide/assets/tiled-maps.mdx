@@ -80,7 +80,7 @@ Once the extension is active, load a `.tmj` map the same way you load any asset 
 by path, or by config-map. All three resolve to the same handler.
 
 <Callout type="invalid" title="Only orthogonal Tiled JSON loads — the rest throw by design">
-XML (`.tmx`/`.tsx`), infinite maps, isometric or hexagonal orientations, collection-of-images tilesets, and `zstd` compression each raise a clear error rather than loading. Export an orthogonal JSON map (`.tmj`) with CSV, gzip, or zlib data.
+XML (`.tmx`/`.tsx`), isometric or hexagonal orientations, collection-of-images tilesets, and `zstd` compression each raise a clear error rather than loading. Export an orthogonal JSON map (`.tmj`) with CSV, gzip, or zlib data. Infinite (chunked) maps **are** supported: `toTileMap()` converts each chunked layer to an unbounded runtime layer whose data streams in on demand via `getChunkSource()` — see the [Infinite maps](/ExoJS/en/guide/rendering/infinite-maps/) chapter.
 </Callout>
 
 ```js no-check
@@ -332,6 +332,9 @@ The extension covers the common orthogonal workflow, including format details be
 
 - Orthogonal orientation
 - Tile layers, including base64 and gzip/zlib-compressed `data`
+- Infinite (chunked) maps — each chunked layer becomes an unbounded runtime layer whose data
+  streams in on demand via `getChunkSource()` (see the
+  [Infinite maps](/ExoJS/en/guide/rendering/infinite-maps/) chapter)
 - Image-based (atlas) tilesets, embedded in the map or referenced externally (`.tsj`)
 - Object layers — rectangle, ellipse, point, polygon, polyline, tile, and text objects
 - Image layers
@@ -345,7 +348,6 @@ These raise a clear error or are intentionally absent from this release:
 
 - **`.tmx` maps and `.tsx` tilesets (XML)** — only the JSON format is parsed: `.tmj` for maps,
   `.tsj` for external tilesets. Export from Tiled as JSON.
-- **Infinite maps** — chunked/infinite maps throw; use a fixed-size map.
 - **Non-orthogonal orientations** — isometric, staggered, and hexagonal throw.
 - **Collection-of-images tilesets** — a tileset built from one image per tile, rather than a
   single atlas, throws in `toTileMap()`. Use an atlas tileset.

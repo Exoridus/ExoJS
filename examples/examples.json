@@ -1877,6 +1877,40 @@
                 "intgrid"
             ],
             "level": "advanced"
+        },
+        {
+            "slug": "infinite-terrain",
+            "path": "tilemap/infinite-terrain.js",
+            "language": "typescript",
+            "title": "Infinite Procedural Terrain",
+            "description": "Stream an unbounded TileMap from a deterministic value-noise sampler: a ChunkStreamer loads chunks around the free-flying camera via createSampledChunkSource and evicts what you leave behind — same seed, same world.",
+            "backend": "core",
+            "tags": [
+                "tilemap",
+                "procedural",
+                "streaming"
+            ],
+            "level": "intermediate",
+            "capabilities": [
+                "keyboard"
+            ]
+        },
+        {
+            "slug": "worker-streamed-terrain",
+            "path": "tilemap/worker-streamed-terrain.js",
+            "language": "typescript",
+            "title": "Worker-Streamed Terrain",
+            "description": "Move expensive terrain sampling off the main thread with createWorkerSampledChunkSource: the noise lives inside a self-contained workerSource script. Toggle sync vs. worker and raise the sampling cost to feel the main-thread jank disappear.",
+            "backend": "core",
+            "tags": [
+                "tilemap",
+                "procedural",
+                "worker"
+            ],
+            "level": "advanced",
+            "capabilities": [
+                "keyboard"
+            ]
         }
     ],
     "tweens-animation": [
