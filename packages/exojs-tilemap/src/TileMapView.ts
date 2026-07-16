@@ -1,5 +1,6 @@
 import type { PixelSnapMode } from '@codexo/exojs/renderer-sdk';
 
+import { ImageLayerNode } from './ImageLayerNode';
 import { assertPixelSnapMode } from './pixelSnap';
 import type { TileLayer } from './TileLayer';
 import { TileLayerNode } from './TileLayerNode';
@@ -83,6 +84,22 @@ interface ResolvedBandDef {
  * mutation API: to swap maps, destroy the old view, construct a new one, and
  * re-parent its bands — the actor tree is never involved.
  *
+ * **Image layers.** A view also produces exactly one canonical
+ * {@link ImageLayerNode} per {@link TileMap.imageLayers} entry (stable identity,
+ * map document order), reachable through {@link imageLayerNodes},
+ * {@link getImageLayerNodeById}, and {@link getImageLayerNodeByName}. The view
+ * owns these nodes the same way it owns unbanded tile-layer nodes — the
+ * application parents each one wherever the image belongs in draw order, and
+ * {@link TileMapView.destroy} destroys them and detaches them from their
+ * application parents. Image layers are **not** selectable in
+ * {@link TileMapViewOptions.bands}: a band definition only ever reorders its
+ * own members to map document order, and image layers do not share a combined
+ * document position with tile layers — mixing them into one band's selector
+ * list could not resolve a single, unambiguous render order without silently
+ * guessing at an interleaving. Interleave an image layer with tile layers or
+ * bands by parenting {@link getImageLayerNodeById} / {@link getImageLayerNodeByName}
+ * directly, the same way actors are interleaved.
+ *
  * @advanced
  */
 export class TileMapView {
@@ -104,6 +121,11 @@ export class TileMapView {
   private readonly _nodeBand = new Map<TileLayerNode, TileMapBand>();
   /** Unbanded layer nodes owned directly by the view, in map document order. */
   private readonly _directLayerNodes: TileLayerNode[] = [];
+
+  /** All canonical image layer nodes, in map document order. Never band-selectable. */
+  private readonly _imageLayerNodes: ImageLayerNode[] = [];
+  /** Image layer id → its canonical image layer node. */
+  private readonly _imageLayerNodeById = new Map<number, ImageLayerNode>();
 
   private _destroyed = false;
   private _pixelSnapMode: PixelSnapMode = 'none';
@@ -135,6 +157,13 @@ export class TileMapView {
       if (!this._nodeBand.has(node)) {
         this._directLayerNodes.push(node);
       }
+    }
+
+    for (const imageLayer of map.imageLayers) {
+      const imageNode = new ImageLayerNode(imageLayer);
+
+      this._imageLayerNodes.push(imageNode);
+      this._imageLayerNodeById.set(imageLayer.id, imageNode);
     }
   }
 
@@ -186,6 +215,10 @@ export class TileMapView {
     for (const node of this._layerNodes) {
       node.pixelSnapMode = mode;
     }
+
+    for (const node of this._imageLayerNodes) {
+      node.pixelSnapMode = mode;
+    }
   }
 
   /**
@@ -206,6 +239,45 @@ export class TileMapView {
    */
   public getLayerNodesByName(name: string): readonly TileLayerNode[] {
     return this._layerNodes.filter(node => node.layer.name === name);
+  }
+
+  /** All canonical image layer nodes, one per map image layer, in map document order. */
+  public get imageLayerNodes(): readonly ImageLayerNode[] {
+    return this._imageLayerNodes;
+  }
+
+  /**
+   * The canonical image layer node for the image layer with the given **id**,
+   * or `undefined`. Ids are authoritative and unique — this is the unambiguous
+   * lookup. The returned node may be reparented into the caller's own
+   * containers; the view still tracks it for destruction.
+   */
+  public getImageLayerNodeById(id: number): ImageLayerNode | undefined {
+    return this._imageLayerNodeById.get(id);
+  }
+
+  /**
+   * The canonical image layer node for the image layer with the given
+   * **name**, or `undefined` if no image layer has that name. Prefer
+   * {@link getImageLayerNodeById} when you have the id.
+   * @throws If more than one image layer shares that name (reference such
+   *         layers by id instead).
+   */
+  public getImageLayerNodeByName(name: string): ImageLayerNode | undefined {
+    const matches = this._map.imageLayers.filter(layer => layer.name === name);
+
+    if (matches.length === 0) {
+      return undefined;
+    }
+
+    if (matches.length > 1) {
+      throw new Error(
+        `TileMapView image layer name "${name}" is ambiguous ` +
+          `(${matches.length} image layers share it); reference it by id instead.`,
+      );
+    }
+
+    return this._imageLayerNodeById.get(matches[0]!.id);
   }
 
   /**
@@ -313,10 +385,11 @@ export class TileMapView {
   }
 
   /**
-   * Destroy the view: every band and generated layer node is destroyed (and
-   * detached from its application parent), freeing cached chunk geometry.
-   * Idempotent. Application actors, sibling content, the {@link TileMap}, its
-   * {@link TileLayer}s, and Loader-owned tileset textures all survive.
+   * Destroy the view: every band, generated tile-layer node, and generated
+   * {@link ImageLayerNode} is destroyed (and detached from its application
+   * parent), freeing cached chunk geometry. Idempotent. Application actors,
+   * sibling content, the {@link TileMap}, its {@link TileLayer}s and image
+   * layers, and Loader-owned textures all survive.
    */
   public destroy(): void {
     if (this._destroyed) {
@@ -334,6 +407,11 @@ export class TileMapView {
       node.destroy();
     }
 
+    for (const node of this._imageLayerNodes) {
+      node.parent?.removeChild(node);
+      node.destroy();
+    }
+
     this._bands.length = 0;
     this._bandByName.clear();
     this._bandDefs.length = 0;
@@ -341,6 +419,8 @@ export class TileMapView {
     this._layerNodes.length = 0;
     this._layerNodeById.clear();
     this._nodeBand.clear();
+    this._imageLayerNodes.length = 0;
+    this._imageLayerNodeById.clear();
   }
 
   // ── Internals ──────────────────────────────────────────────────────────

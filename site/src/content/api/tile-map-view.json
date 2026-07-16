@@ -1,16 +1,16 @@
 {
   "title": "TileMapView",
-  "description": "Groups a TileMap's layers into independently placeable scene nodes so application actors can be interleaved **between** tile layers. A view produces exactly one canonical TileLayerNode per map layer (stable identity, map document order) and, optionally, named TileMapBands grouping subsets of those nodes. The application parents the bands / layer nodes wherever it wants — typically as siblings of its own actor containers: ```ts const view = map.createView({ bands: { ground: ['background', 'ground'], roof: ['roofs'] } }); worldRoot.addChild(view.band('ground'), actors, view.band('roof')); // or without bands: worldRoot.addChild(view.getLayerNodeById(groundId)!, actors, view.getLayerNodeById(roofId)!); ``` **Actors are application-owned siblings.** A `TileMapView` never adopts or destroys actors. The view is a helper, not a scene node — it does not own the world container, the TileMap, the TileLayers, or tileset textures. **Ownership:** the view owns its generated layer nodes and bands. A layer assigned to a band is owned by that band; an unbanded layer is owned by the view directly. TileMapView.destroy destroys every band and layer node (detaching them from their application parents) but leaves actors, the map, its layers, and Loader-owned textures untouched. There is no map-replacement mutation API: to swap maps, destroy the old view, construct a new one, and re-parent its bands — the actor tree is never involved.",
+  "description": "Groups a TileMap's layers into independently placeable scene nodes so application actors can be interleaved **between** tile layers. A view produces exactly one canonical TileLayerNode per map layer (stable identity, map document order) and, optionally, named TileMapBands grouping subsets of those nodes. The application parents the bands / layer nodes wherever it wants — typically as siblings of its own actor containers: ```ts const view = map.createView({ bands: { ground: ['background', 'ground'], roof: ['roofs'] } }); worldRoot.addChild(view.band('ground'), actors, view.band('roof')); // or without bands: worldRoot.addChild(view.getLayerNodeById(groundId)!, actors, view.getLayerNodeById(roofId)!); ``` **Actors are application-owned siblings.** A `TileMapView` never adopts or destroys actors. The view is a helper, not a scene node — it does not own the world container, the TileMap, the TileLayers, or tileset textures. **Ownership:** the view owns its generated layer nodes and bands. A layer assigned to a band is owned by that band; an unbanded layer is owned by the view directly. TileMapView.destroy destroys every band and layer node (detaching them from their application parents) but leaves actors, the map, its layers, and Loader-owned textures untouched. There is no map-replacement mutation API: to swap maps, destroy the old view, construct a new one, and re-parent its bands — the actor tree is never involved. **Image layers.** A view also produces exactly one canonical ImageLayerNode per TileMap.imageLayers entry (stable identity, map document order), reachable through imageLayerNodes, getImageLayerNodeById, and getImageLayerNodeByName. The view owns these nodes the same way it owns unbanded tile-layer nodes — the application parents each one wherever the image belongs in draw order, and TileMapView.destroy destroys them and detaches them from their application parents. Image layers are **not** selectable in TileMapViewOptions.bands: a band definition only ever reorders its own members to map document order, and image layers do not share a combined document position with tile layers — mixing them into one band's selector list could not resolve a single, unambiguous render order without silently guessing at an interleaving. Interleave an image layer with tile layers or bands by parenting getImageLayerNodeById / getImageLayerNodeByName directly, the same way actors are interleaved.",
   "symbol": "TileMapView",
   "kind": "class",
   "subsystem": "tilemap",
   "importPath": "@codexo/exojs-tilemap",
   "tier": "advanced",
-  "memberCount": 12,
+  "memberCount": 15,
   "counts": {
     "constructors": 1,
-    "methods": 6,
-    "properties": 5,
+    "methods": 8,
+    "properties": 6,
     "events": 0
   },
   "sections": [
@@ -23,7 +23,8 @@
         "A view produces exactly one canonical TileLayerNode per map layer (stable identity, map document order) and, optionally, named TileMapBands grouping subsets of those nodes. The application parents the bands / layer nodes wherever it wants — typically as siblings of its own actor containers:",
         "```ts const view = map.createView({ bands: { ground: ['background', 'ground'], roof: ['roofs'] } }); worldRoot.addChild(view.band('ground'), actors, view.band('roof')); // or without bands: worldRoot.addChild(view.getLayerNodeById(groundId)!, actors, view.getLayerNodeById(roofId)!); ```",
         "**Actors are application-owned siblings.** A `TileMapView` never adopts or destroys actors. The view is a helper, not a scene node — it does not own the world container, the TileMap, the TileLayers, or tileset textures.",
-        "**Ownership:** the view owns its generated layer nodes and bands. A layer assigned to a band is owned by that band; an unbanded layer is owned by the view directly. TileMapView.destroy destroys every band and layer node (detaching them from their application parents) but leaves actors, the map, its layers, and Loader-owned textures untouched. There is no map-replacement mutation API: to swap maps, destroy the old view, construct a new one, and re-parent its bands — the actor tree is never involved."
+        "**Ownership:** the view owns its generated layer nodes and bands. A layer assigned to a band is owned by that band; an unbanded layer is owned by the view directly. TileMapView.destroy destroys every band and layer node (detaching them from their application parents) but leaves actors, the map, its layers, and Loader-owned textures untouched. There is no map-replacement mutation API: to swap maps, destroy the old view, construct a new one, and re-parent its bands — the actor tree is never involved.",
+        "**Image layers.** A view also produces exactly one canonical ImageLayerNode per TileMap.imageLayers entry (stable identity, map document order), reachable through imageLayerNodes, getImageLayerNodeById, and getImageLayerNodeByName. The view owns these nodes the same way it owns unbanded tile-layer nodes — the application parents each one wherever the image belongs in draw order, and TileMapView.destroy destroys them and detaches them from their application parents. Image layers are **not** selectable in TileMapViewOptions.bands: a band definition only ever reorders its own members to map document order, and image layers do not share a combined document position with tile layers — mixing them into one band's selector list could not resolve a single, unambiguous render order without silently guessing at an interleaving. Interleave an image layer with tile layers or bands by parenting getImageLayerNodeById / getImageLayerNodeByName directly, the same way actors are interleaved."
       ],
       "importLine": "import { TileMapView } from '@codexo/exojs-tilemap'",
       "sourceLink": null
@@ -187,7 +188,117 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Destroy the view: every band and generated layer node is destroyed (and detached from its application parent), freeing cached chunk geometry. Idempotent. Application actors, sibling content, the TileMap, its TileLayers, and Loader-owned tileset textures all survive."
+          "description": "Destroy the view: every band, generated tile-layer node, and generated ImageLayerNode is destroyed (and detached from its application parent), freeing cached chunk geometry. Idempotent. Application actors, sibling content, the TileMap, its TileLayers and image layers, and Loader-owned textures all survive."
+        },
+        {
+          "name": "getImageLayerNodeById",
+          "signature": "getImageLayerNodeById(id: number): ImageLayerNode | undefined",
+          "signatureTokens": [
+            {
+              "text": "getImageLayerNodeById",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "id",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ImageLayerNode",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "id",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "ImageLayerNode | undefined",
+          "description": "The canonical image layer node for the image layer with the given **id**, or undefined. Ids are authoritative and unique — this is the unambiguous lookup. The returned node may be reparented into the caller's own containers; the view still tracks it for destruction."
+        },
+        {
+          "name": "getImageLayerNodeByName",
+          "signature": "getImageLayerNodeByName(name: string): ImageLayerNode | undefined",
+          "signatureTokens": [
+            {
+              "text": "getImageLayerNodeByName",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "name",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ImageLayerNode",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "ImageLayerNode | undefined",
+          "description": "The canonical image layer node for the image layer with the given **name**, or undefined if no image layer has that name. Prefer getImageLayerNodeById when you have the id."
         },
         {
           "name": "getLayerNodeById",
@@ -441,6 +552,39 @@
           "params": [],
           "returnType": null,
           "description": "Whether this view has been destroyed."
+        },
+        {
+          "name": "imageLayerNodes",
+          "signature": "imageLayerNodes: readonly ImageLayerNode[]",
+          "signatureTokens": [
+            {
+              "text": "imageLayerNodes",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ImageLayerNode",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "All canonical image layer nodes, one per map image layer, in map document order."
         },
         {
           "name": "layers",
