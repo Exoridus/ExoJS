@@ -140,6 +140,9 @@ export default defineConfig({
         name: 'exojs-tilemap',
         alias: aliasConfig,
         include: ['packages/exojs-tilemap/test/**/*.test.ts'],
+        // The test/browser/** suite needs a real Worker + URL.createObjectURL and
+        // runs in the browser-tilemap-chromium project; exclude it from jsdom.
+        exclude: ['packages/exojs-tilemap/test/browser/**'],
       }),
       createJsdomTestProject({
         name: 'exojs-tiled',
