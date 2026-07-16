@@ -1,0 +1,177 @@
+{
+  "title": "WorkerSampledChunkSourceOptions",
+  "description": "Options for createWorkerSampledChunkSource.",
+  "symbol": "WorkerSampledChunkSourceOptions",
+  "kind": "interface",
+  "subsystem": "tilemap",
+  "importPath": "@codexo/exojs-tilemap",
+  "tier": "advanced",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 1,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Options for createWorkerSampledChunkSource."
+      ],
+      "importLine": "import { WorkerSampledChunkSourceOptions } from '@codexo/exojs-tilemap'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "mapValueToTile",
+          "signature": "mapValueToTile(value: number, tx: number, ty: number): ResolvedTile | null",
+          "signatureTokens": [
+            {
+              "text": "mapValueToTile",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "value",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "tx",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ty",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ResolvedTile",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "value",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "tx",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "ty",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "ResolvedTile | null",
+          "description": "Convert a sampled value (and its absolute tile coordinate) into a resolved tile, or null for an empty cell. Always runs on the main thread — a ResolvedTile references a TileSet/Texture, neither of which can cross a postMessage boundary. Must be pure and deterministic, same requirement as import('./SampledChunkSource').SampledChunkSourceOptions.mapValueToTile."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "workerSource",
+          "signature": "workerSource: string",
+          "signatureTokens": [
+            {
+              "text": "workerSource",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Complete worker script source, written as a self-contained string (a template literal in your own module — no separate file, no bundler worker-import syntax needed). Blob-URL'd into a real Worker at construction time, the same technique import('@codexo/exojs').WorkletEffect uses for AudioWorklet processors. Must implement this request/response protocol: - Request (received via self.onmessage): { requestId: number; cx: number; cy: number; chunkWidth: number; chunkHeight: number }. - Response, success (send via self.postMessage, transferring the buffer for a zero-copy handoff — postMessage(response, [response.values.buffer])): { requestId: number; values: Float64Array }, values.length === chunkWidth * chunkHeight, row-major (localTy * chunkWidth + localTx), one sampled value per tile in the requested chunk. Compute each tile's absolute coordinate as cx * chunkWidth + localTx / cy * chunkHeight + localTy. - Response, error (one request failed without crashing the worker): { requestId: number; error: string }."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-tilemap/src/WorkerSampledChunkSource.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/WorkerSampledChunkSource.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-tilemap/src/WorkerSampledChunkSource.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/WorkerSampledChunkSource.ts"
+}
