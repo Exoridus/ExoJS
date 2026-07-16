@@ -414,6 +414,18 @@ describe('TiledMap.toTileMap() — infinite maps', () => {
     expect(() => map.toTileMap()).toThrow(/non-uniform/);
   });
 
+  it('throws TiledFormatError for a chunk whose x is not aligned to the on-disk chunk width', async () => {
+    const { context } = makeInfiniteMapContext([
+      { x: 0, y: 0, width: 16, height: 16, data: new Array(256).fill(1) },
+      { x: 8, y: 0, width: 16, height: 16, data: new Array(256).fill(1) },
+    ]);
+    const map = await loadTiledMap('inf.tmj', context);
+    expect(() => map.toTileMap()).toThrow(TiledFormatError);
+    expect(() => map.toTileMap()).toThrow(/misaligned/);
+    expect(() => map.toTileMap()).toThrow(/layer 1/);
+    expect(() => map.toTileMap()).toThrow(/\(8, ?0\)/);
+  });
+
   it('getChunk returns null when no on-disk chunk overlaps the query', async () => {
     const { context } = makeInfiniteMapContext([{ x: 0, y: 0, width: 16, height: 16, data: new Array(256).fill(1) }]);
     const map = await loadTiledMap('inf.tmj', context);

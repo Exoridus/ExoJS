@@ -365,6 +365,10 @@ function populateTileLayer(
  * @throws {TiledFormatError} if the layer's on-disk chunks don't all share
  *         the same width/height (Tiled always emits a uniform size in
  *         practice; this is a defensive guard against malformed input).
+ * @throws {TiledFormatError} if an on-disk chunk's `x`/`y` isn't aligned to
+ *         the on-disk chunk grid (Tiled always emits aligned chunks; a
+ *         misaligned chunk would otherwise silently corrupt the re-sliced
+ *         tile indices instead of failing loudly).
  */
 function buildTiledChunkSource(
   layer: TiledTileLayer,
@@ -385,6 +389,13 @@ function buildTiledChunkSource(
         source,
         `layers/${layer.name}/chunks`,
         `non-uniform infinite-map chunk size is not supported (expected ${onDiskWidth}x${onDiskHeight}, got ${chunk.width}x${chunk.height})`,
+      );
+    }
+    if (chunk.x % onDiskWidth !== 0 || chunk.y % onDiskHeight !== 0) {
+      throw new TiledFormatError(
+        source,
+        `layers/${layer.name}/chunks`,
+        `misaligned infinite-map chunk in layer ${layer.id} at (${chunk.x}, ${chunk.y}) is not a multiple of the on-disk chunk size (${onDiskWidth}x${onDiskHeight})`,
       );
     }
     index.set(`${chunk.x},${chunk.y}`, chunk);
