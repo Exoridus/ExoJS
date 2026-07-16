@@ -13,9 +13,10 @@ import { assertPixelSnapMode } from './pixelSnap';
  * against the camera centre (exactly like {@link import('./TileLayerNode').TileLayerNode}),
  * then restoring it. When `repeatX`/`repeatY` is set the wrapped sprite is
  * grown each frame to cover the visible view with a period-aligned origin, so
- * the pattern tiles seamlessly and scrolls with parallax; such a node opts out
- * of view culling (`cullable = false`) because it is, by construction, always
- * on screen.
+ * the pattern tiles seamlessly and scrolls with parallax. A repeat axis or a
+ * `parallax` factor other than `1` both make this node's rendered position
+ * and/or size camera-dependent at collect time, so its static bounds cannot be
+ * culled against — such a node opts out of view culling (`cullable = false`).
  *
  * `visible`, `opacity`, and `tintColor` are applied **once at construction**:
  * {@link ImageLayer} is immutable, so there is nothing to re-sync per frame.
@@ -32,7 +33,11 @@ import { assertPixelSnapMode } from './pixelSnap';
  * For a `repeatX`/`repeatY` node, bounds and hit-test queries reflect the
  * coverage geometry computed by the last {@link _collectContent} call (since
  * that geometry is recomputed per collect, not maintained incrementally),
- * which is also why such a node force-disables `cullable`.
+ * which is also why such a node force-disables `cullable`. A repeating or
+ * parallax node also re-sizes its wrapped sprite as the camera crosses period
+ * boundaries, which content-dirties an enclosing retained group the same way
+ * a streamed layer does — give it the same treatment (its own
+ * `RetainedContainer`, or none).
  *
  * @advanced
  */
@@ -97,7 +102,7 @@ export class ImageLayerNode extends Container {
     this._sprite = sprite;
     this.addChild(sprite);
 
-    if (layer.repeatX || layer.repeatY) {
+    if (layer.repeatX || layer.repeatY || layer.parallaxX !== 1 || layer.parallaxY !== 1) {
       this.cullable = false;
     }
   }

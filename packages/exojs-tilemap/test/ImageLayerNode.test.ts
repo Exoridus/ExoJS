@@ -279,6 +279,11 @@ describe('ImageLayerNode repeat coverage', () => {
   it('plain layer stays cullable', () => {
     expect(new ImageLayerNode(makeLayer()).cullable).toBe(true);
   });
+
+  it('non-repeat parallax layer disables cullable on the node', () => {
+    expect(new ImageLayerNode(makeLayer({ parallaxX: 0.5 })).cullable).toBe(false);
+    expect(new ImageLayerNode(makeLayer({ parallaxY: 0.5 })).cullable).toBe(false);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════
