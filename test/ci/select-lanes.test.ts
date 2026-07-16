@@ -165,7 +165,12 @@ describe('CI lane selection — engine/site areas', () => {
   });
 
   it('handles Windows backslash separators and blank/whitespace entries', () => {
-    expect(selectAreas(['packages\\exojs-tilemap\\src\\TileMap.ts', '', '   '])).toMatchObject({ engine: true, site: true, audioFx: false, tilemapWorker: true });
+    expect(selectAreas(['packages\\exojs-tilemap\\src\\TileMap.ts', '', '   '])).toMatchObject({
+      engine: true,
+      site: true,
+      audioFx: false,
+      tilemapWorker: true,
+    });
   });
 });
 
