@@ -140,6 +140,47 @@ describe('createSampledChunkSource', () => {
     expect(() => source.getChunk(0, 0)).toThrow(/Tileset index -1/);
   });
 
+  it('clamps edge-chunk cells past a bounded layer\'s width/height to empty', () => {
+    const tileset = makeTileset();
+    // width=5, height=5 is not a multiple of chunkWidth=4/chunkHeight=4, so
+    // chunk (1, 0) nominally covers tx in [4, 7] but only tx=4 is in-bounds
+    // (valid tx is 0..4).
+    const layer = new TileLayer({
+      id: 0, name: 'l',
+      tileWidth: 16, tileHeight: 16, tilesets: [tileset],
+      chunkWidth: 4, chunkHeight: 4,
+      width: 5, height: 5,
+    });
+    const source = createSampledChunkSource(layer, {
+      // Resolve unconditionally: if the fix were absent, this would fill
+      // the out-of-bounds cells (tx >= 5) with a tile too.
+      sample: () => 1,
+      mapValueToTile: () => ({ tileset, localTileId: 7, transform: TILE_TRANSFORM_IDENTITY }),
+    });
+
+    const payload = source.getChunk(1, 0)!;
+    expect(payload).not.toBeNull();
+    expect(payload.width).toBe(4);
+    expect(payload.height).toBe(4);
+
+    // Local column 0 corresponds to tx=4, which is in-bounds (width=5).
+    for (let localTy = 0; localTy < 4; localTy++) {
+      expect(unpackTile(payload.tiles[localTy * 4 + 0])).toEqual({
+        tilesetIndex: 0,
+        localTileId: 7,
+        transform: TILE_TRANSFORM_IDENTITY,
+      });
+    }
+
+    // Local columns 1-3 correspond to tx=5..7, which are out-of-bounds and
+    // must stay empty despite mapValueToTile resolving unconditionally.
+    for (let localTy = 0; localTy < 4; localTy++) {
+      for (let localTx = 1; localTx < 4; localTx++) {
+        expect(payload.tiles[localTy * 4 + localTx]).toBe(0);
+      }
+    }
+  });
+
   it('tiles installed via ChunkStreamer are readable through TileLayer.getTileAt', () => {
     const tileset = makeTileset();
     const layer = makeUnboundedLayer(tileset, 4, 4);

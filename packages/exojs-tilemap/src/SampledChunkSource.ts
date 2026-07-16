@@ -43,6 +43,9 @@ export interface SampledChunkSourceOptions {
  * @advanced
  */
 export function createSampledChunkSource(layer: TileLayer, options: SampledChunkSourceOptions): ChunkSource {
+  const sample = options.sample.bind(options);
+  const mapValueToTile = options.mapValueToTile.bind(options);
+
   return {
     getChunk(cx: number, cy: number): ChunkPayload | null {
       const chunkWidth = layer.chunkWidth;
@@ -53,8 +56,14 @@ export function createSampledChunkSource(layer: TileLayer, options: SampledChunk
       let out: Uint32Array | null = null;
       for (let ty = startTy; ty < startTy + chunkHeight; ty++) {
         for (let tx = startTx; tx < startTx + chunkWidth; tx++) {
-          const value = options.sample(tx, ty);
-          const resolved = options.mapValueToTile(value, tx, ty);
+          // Bounded-layer edge chunks may be smaller than a full chunk
+          // (TileLayer._ensureChunk clamps them); this provider always
+          // samples a full chunk rect, so clamp here instead of letting
+          // _adoptChunk over-report tiles past the layer's declared bounds.
+          if (layer.width !== undefined && layer.height !== undefined && (tx >= layer.width || ty >= layer.height)) continue;
+
+          const value = sample(tx, ty);
+          const resolved = mapValueToTile(value, tx, ty);
           if (!resolved) continue;
 
           out ??= new Uint32Array(chunkWidth * chunkHeight);
