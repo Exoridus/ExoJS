@@ -1877,6 +1877,23 @@
                 "intgrid"
             ],
             "level": "advanced"
+        },
+        {
+            "slug": "infinite-terrain",
+            "path": "tilemap/infinite-terrain.js",
+            "language": "typescript",
+            "title": "Infinite Procedural Terrain",
+            "description": "Stream an unbounded TileMap from a deterministic value-noise sampler: a ChunkStreamer loads chunks around the free-flying camera via createSampledChunkSource and evicts what you leave behind — same seed, same world.",
+            "backend": "core",
+            "tags": [
+                "tilemap",
+                "procedural",
+                "streaming"
+            ],
+            "level": "intermediate",
+            "capabilities": [
+                "keyboard"
+            ]
         }
     ],
     "tweens-animation": [
