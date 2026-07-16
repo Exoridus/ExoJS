@@ -410,3 +410,58 @@ describe('ChunkStreamer.destroy()', () => {
     expect([...layer.loadedChunks()]).toHaveLength(0);
   });
 });
+
+describe('ChunkStreamer.destroy() — async in-flight-resolve race', () => {
+  it('a promise resolving after destroy() does not resurrect the chunk', async () => {
+    const tileset = makeTileset();
+    const layer = makeUnboundedLayer(tileset); // chunkSize=4, tileSize=16
+    // Same single-chunk-in-range idiom as the "rejected coordinate is
+    // retried" test above: a tiny view entirely inside chunk (0,0)'s pixel
+    // extent, with loadRadius/unloadRadius both 0, so exactly one request
+    // is in flight and there is no ambiguity about which coordinate it is.
+    const view = new View(32, 32, 2, 2);
+    let resolvePayload!: (payload: ChunkPayload | null) => void;
+    const pending = new Promise<ChunkPayload | null>(resolve => { resolvePayload = resolve; });
+    const source: ChunkSource = { getChunk: () => pending };
+    const streamer = new ChunkStreamer(layer, source, view, { loadRadius: 0, unloadRadius: 0 });
+
+    streamer.update(); // issues the (0,0) request; still pending
+    streamer.destroy(); // destroy while the request is in flight
+
+    resolvePayload({ width: 4, height: 4, tiles: new Uint32Array(16) });
+    await expect(pending).resolves.toBeDefined();
+    await Promise.resolve(); // flush the .then() microtask
+
+    expect(layer.getChunk(0, 0)).toBeUndefined(); // not resurrected after destroy
+    expect(streamer.residentCount).toBe(0);
+  });
+
+  it('destroy() after a resolve already landed still evicts the chunk and leaves a consistent empty state', async () => {
+    const tileset = makeTileset();
+    const layer = makeUnboundedLayer(tileset);
+    const view = new View(32, 32, 2, 2);
+    let resolvePayload!: (payload: ChunkPayload | null) => void;
+    const pending = new Promise<ChunkPayload | null>(resolve => { resolvePayload = resolve; });
+    const source: ChunkSource = { getChunk: () => pending };
+    const streamer = new ChunkStreamer(layer, source, view, { loadRadius: 0, unloadRadius: 0 });
+
+    streamer.update(); // issues the (0,0) request
+    resolvePayload({ width: 4, height: 4, tiles: new Uint32Array(16) });
+    await pending;
+    await Promise.resolve(); // flush the .then() microtask — chunk is now adopted
+    expect(layer.getChunk(0, 0)).toBeDefined();
+    expect(streamer.residentCount).toBe(1);
+
+    streamer.destroy();
+
+    expect(layer.getChunk(0, 0)).toBeUndefined();
+    expect(streamer.residentCount).toBe(0);
+
+    // A follow-up update() must stay a no-op — no leftover in-flight/resident
+    // bookkeeping from the pre-destroy adoption resurrects anything.
+    view.setCenter(1000, 1000);
+    expect(() => { streamer.update(); }).not.toThrow();
+    expect(streamer.residentCount).toBe(0);
+    expect([...layer.loadedChunks()]).toHaveLength(0);
+  });
+});

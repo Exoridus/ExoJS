@@ -266,6 +266,8 @@ if (terrain) {
 
 From there it is the same `ChunkStreamer` loop as the procedural providers — the only difference is where the tiles come from.
 
+<ExamplePreview chapter="tilemap" slug="tiled-infinite-map" />
+
 ## Performance notes
 
 - **Chunk loads are budgeted.** A camera moving faster than `maxChunkLoadsPerFrame` can keep up with will show brief pop-in at the frontier before the band fills. That is the budget doing its job — spreading load cost across frames instead of spiking one. For fast movers, raise `loadRadius` so chunks are requested further ahead of the visible edge, and raise the per-frame budget to fill them faster.
@@ -275,5 +277,6 @@ From there it is the same `ChunkStreamer` loop as the procedural providers — t
 
 - The [Infinite Procedural Terrain](/ExoJS/en/examples/tilemap/infinite-terrain/) example is the sync provider end to end — fly an endless value-noise world and reroll the seed.
 - The [Worker-Streamed Terrain](/ExoJS/en/examples/tilemap/worker-streamed-terrain/) example toggles between the sync and worker providers under a tunable sample cost, so you can watch the main thread hitch or stay smooth.
+- The [Tiled Infinite Map Streaming](/ExoJS/en/examples/tilemap/tiled-infinite-map/) example streams a hand-authored Tiled map instead of procedural terrain — a free-flying camera with two independently chunked layers.
 - [Retained containers](/ExoJS/en/guide/rendering/retained-containers/) covers the group-invalidation rule a streamed layer interacts with.
 - [Tiled maps](/ExoJS/en/guide/assets/tiled-maps/) covers loading `.tmj` maps and `toTileMap()` in full.
