@@ -53,8 +53,8 @@ function fbm(seed: number, x: number, y: number): number {
 // Biome mapping (elevation-style bands; localTileId values are solid
 // full-square terrain-center tiles read off mapPack_tilesheet.png — 17
 // columns, index = row * 17 + column).
-const TILE_DEEP_WATER = 185; // patterned blue  (row 10, col 15)
-const TILE_WATER = 169;      // plain light blue (row 9, col 16)
+const TILE_DEEP_WATER = 203; // patterned blue  (row 11, col 16)
+const TILE_WATER = 186;      // plain light blue (row 10, col 16)
 const TILE_SAND = 18;        // beige center     (row 1, col 1)
 const TILE_GRASS = 23;       // green center     (row 1, col 6)
 const TILE_ROCK = 28;        // gray center      (row 1, col 11)

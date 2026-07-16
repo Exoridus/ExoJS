@@ -137,8 +137,8 @@ function fbm(seed: number, x: number, y: number): number {
 }
 
 // Elevation bands → solid terrain-center tile ids in the tilesheet.
-const TILE_DEEP_WATER = 185;
-const TILE_WATER = 169;
+const TILE_DEEP_WATER = 203;
+const TILE_WATER = 186;
 const TILE_SAND = 18;
 const TILE_GRASS = 23;
 const TILE_ROCK = 28;
@@ -217,7 +217,7 @@ self.onmessage = (event) => {
 // TileSet/Texture, neither of which can cross a postMessage boundary.
 const source = createWorkerSampledChunkSource(terrain, {
     workerSource,
-    mapValueToTile: value => ({ tileset, localTileId: value < 0.5 ? 169 : 23, transform: TILE_TRANSFORM_IDENTITY }),
+    mapValueToTile: value => ({ tileset, localTileId: value < 0.5 ? 186 : 23, transform: TILE_TRANSFORM_IDENTITY }),
 });
 
 // The returned source owns a real Worker — you MUST call destroy() when done
