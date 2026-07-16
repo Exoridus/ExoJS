@@ -38,6 +38,7 @@ jobs:
       engine: ${{ steps.decide.outputs.engine }}
       site: ${{ steps.decide.outputs.site }}
       audioFx: ${{ steps.decide.outputs.audioFx }}
+      tilemapWorker: ${{ steps.decide.outputs.tilemapWorker }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -519,6 +520,63 @@ jobs:
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
 
+  # Runs WorkerSampledChunkSource's real-Worker round trip in headless Chromium
+  # — jsdom implements neither Worker nor URL.createObjectURL. Path-gated to
+  # `tilemapWorker` so it only runs when exojs-tilemap (or a shared root)
+  # changes; required (blocking) on those PRs because it exercises our own
+  # worker-transport logic.
+  browser-tests-tilemap-worker:
+    name: Browser Tests (Tilemap Worker)
+    needs: [changes]
+    if: ${{ needs.changes.outputs.tilemapWorker == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: ${{ inputs.pnpm-version }}
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ inputs.node-version }}
+          check-latest: true
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Browser tests (tilemap worker, headless Chromium)
+        run: pnpm test:browser:tilemap --reporter=default --reporter=junit --outputFile.junit=./test-results/browser-tilemap-worker.junit.xml
+
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/test-results-action@v1
+        with:
+          files: ./test-results/browser-tilemap-worker.junit.xml
+          flags: browser-tilemap-worker
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
+
   # Builds the core package and all extension packages exactly once, then
   # publishes the resulting dist trees as a shared artifact. `package-verify`
   # and `site-build` both consume this artifact instead of each rebuilding the
@@ -777,6 +835,7 @@ jobs:
         browser-tests,
         browser-tests-webgpu-chromium,
         browser-tests-audio,
+        browser-tests-tilemap-worker,
         build,
         package-verify,
         site-build,
@@ -789,6 +848,7 @@ jobs:
           ENGINE: ${{ needs.changes.outputs.engine }}
           SITE: ${{ needs.changes.outputs.site }}
           AUDIOFX: ${{ needs.changes.outputs.audioFx }}
+          TILEMAPWORKER: ${{ needs.changes.outputs.tilemapWorker }}
           CHANGES_RESULT: ${{ needs.changes.result }}
           TYPECHECK_RESULT: ${{ needs.typecheck.result }}
           LINT_RESULT: ${{ needs.lint.result }}
@@ -797,11 +857,12 @@ jobs:
           BROWSER_TESTS_RESULT: ${{ needs['browser-tests'].result }}
           BROWSER_WEBGPU_RESULT: ${{ needs['browser-tests-webgpu-chromium'].result }}
           BROWSER_AUDIO_RESULT: ${{ needs['browser-tests-audio'].result }}
+          BROWSER_TILEMAP_WORKER_RESULT: ${{ needs['browser-tests-tilemap-worker'].result }}
           BUILD_RESULT: ${{ needs.build.result }}
           PACKAGE_VERIFY_RESULT: ${{ needs['package-verify'].result }}
           SITE_BUILD_RESULT: ${{ needs['site-build'].result }}
         run: |
-          echo "areas: engine=$ENGINE site=$SITE audioFx=$AUDIOFX"
+          echo "areas: engine=$ENGINE site=$SITE audioFx=$AUDIOFX tilemapWorker=$TILEMAPWORKER"
           echo "changes: $CHANGES_RESULT"
           echo "typecheck: $TYPECHECK_RESULT"
           echo "lint: $LINT_RESULT"
@@ -810,6 +871,7 @@ jobs:
           echo "browser-tests: $BROWSER_TESTS_RESULT"
           echo "browser-tests-webgpu-chromium: $BROWSER_WEBGPU_RESULT"
           echo "browser-tests-audio: $BROWSER_AUDIO_RESULT"
+          echo "browser-tests-tilemap-worker: $BROWSER_TILEMAP_WORKER_RESULT"
           echo "build: $BUILD_RESULT"
           echo "package-verify: $PACKAGE_VERIFY_RESULT"
           echo "site-build: $SITE_BUILD_RESULT"
@@ -836,6 +898,7 @@ jobs:
             "browser-tests=$BROWSER_TESTS_RESULT" \
             "browser-tests-webgpu-chromium=$BROWSER_WEBGPU_RESULT" \
             "browser-tests-audio=$BROWSER_AUDIO_RESULT" \
+            "browser-tests-tilemap-worker=$BROWSER_TILEMAP_WORKER_RESULT" \
             "build=$BUILD_RESULT" \
             "package-verify=$PACKAGE_VERIFY_RESULT" \
             "site-build=$SITE_BUILD_RESULT"; do
@@ -876,6 +939,12 @@ jobs:
           # An audio-fx change must run the browser-audio lane.
           if [ "$AUDIOFX" = "true" ] && [ "$BROWSER_AUDIO_RESULT" = "skipped" ]; then
             echo "::error::Audio-fx change detected but 'browser-tests-audio' was skipped (path-filter regression)."
+            failed=1
+          fi
+
+          # A tilemap-worker change must run the browser-tilemap-worker lane.
+          if [ "$TILEMAPWORKER" = "true" ] && [ "$BROWSER_TILEMAP_WORKER_RESULT" = "skipped" ]; then
+            echo "::error::Tilemap-worker change detected but 'browser-tests-tilemap-worker' was skipped (path-filter regression)."
             failed=1
           fi
 

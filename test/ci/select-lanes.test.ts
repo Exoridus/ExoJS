@@ -16,7 +16,7 @@ const decide = (...files: readonly string[]) => {
 describe('CI lane selection — engine/site areas', () => {
   it('tilemap SOURCE change runs every engine lane (unit, coverage, package-verify, all browsers) and site', () => {
     const { areas, lanes } = decide('packages/exojs-tilemap/src/TileMap.ts');
-    expect(areas).toEqual({ engine: true, site: true, audioFx: false });
+    expect(areas).toEqual({ engine: true, site: true, audioFx: false, tilemapWorker: true });
     expect(lanes.browserAudio).toBe(false);
     expect(lanes.unit).toBe(true);
     expect(lanes.coverage).toBe(true);
@@ -40,7 +40,7 @@ describe('CI lane selection — engine/site areas', () => {
 
   it('tiled SOURCE change runs engine + package validation + browser lanes', () => {
     const { areas, lanes } = decide('packages/exojs-tiled/src/TiledMap.ts');
-    expect(areas).toEqual({ engine: true, site: true, audioFx: false });
+    expect(areas).toEqual({ engine: true, site: true, audioFx: false, tilemapWorker: false });
     expect(lanes.unit).toBe(true);
     expect(lanes.packageVerify).toBe(true);
     expect(lanes.browserWebgl2).toBe(true);
@@ -50,7 +50,7 @@ describe('CI lane selection — engine/site areas', () => {
 
   it('physics SOURCE change runs every engine lane and site', () => {
     const { areas, lanes } = decide('packages/exojs-physics/src/PhysicsWorld.ts');
-    expect(areas).toEqual({ engine: true, site: true, audioFx: false });
+    expect(areas).toEqual({ engine: true, site: true, audioFx: false, tilemapWorker: false });
     expect(lanes.unit).toBe(true);
     expect(lanes.coverage).toBe(true);
     expect(lanes.packageVerify).toBe(true);
@@ -68,7 +68,7 @@ describe('CI lane selection — engine/site areas', () => {
 
   it('package README-only change is docs/site, NOT engine (no unit/coverage/package-verify/browser)', () => {
     const { areas, lanes } = decide('packages/exojs-tilemap/README.md');
-    expect(areas).toEqual({ engine: false, site: true, audioFx: false });
+    expect(areas).toEqual({ engine: false, site: true, audioFx: false, tilemapWorker: false });
     expect(lanes.unit).toBe(false);
     expect(lanes.coverage).toBe(false);
     expect(lanes.packageVerify).toBe(false);
@@ -82,8 +82,8 @@ describe('CI lane selection — engine/site areas', () => {
   });
 
   it('package LICENSE / CHANGELOG changes are docs/site, NOT engine', () => {
-    expect(selectAreas(['packages/exojs-tiled/LICENSE'])).toEqual({ engine: false, site: true, audioFx: false });
-    expect(selectAreas(['packages/exojs-particles/CHANGELOG.md'])).toEqual({ engine: false, site: true, audioFx: false });
+    expect(selectAreas(['packages/exojs-tiled/LICENSE'])).toEqual({ engine: false, site: true, audioFx: false, tilemapWorker: false });
+    expect(selectAreas(['packages/exojs-particles/CHANGELOG.md'])).toEqual({ engine: false, site: true, audioFx: false, tilemapWorker: false });
   });
 
   it('the ROOT changelog gates the engine lane (release version-coherence tests read it)', () => {
@@ -92,7 +92,7 @@ describe('CI lane selection — engine/site areas', () => {
 
   it('core engine SOURCE change keeps existing behavior (engine lanes, no site)', () => {
     const { areas, lanes } = decide('src/rendering/Drawable.ts');
-    expect(areas).toEqual({ engine: true, site: false, audioFx: false });
+    expect(areas).toEqual({ engine: true, site: false, audioFx: false, tilemapWorker: false });
     expect(lanes.browserAudio).toBe(false);
     expect(lanes.unit).toBe(true);
     expect(lanes.browserWebgl2).toBe(true);
@@ -102,7 +102,7 @@ describe('CI lane selection — engine/site areas', () => {
 
   it('site-only change runs site build but NOT engine/browser/package lanes', () => {
     const { areas, lanes } = decide('site/src/pages/index.astro');
-    expect(areas).toEqual({ engine: false, site: true, audioFx: false });
+    expect(areas).toEqual({ engine: false, site: true, audioFx: false, tilemapWorker: false });
     expect(lanes.unit).toBe(false);
     expect(lanes.browserWebgl2).toBe(false);
     expect(lanes.browserWebgpu).toBe(false);
@@ -111,18 +111,19 @@ describe('CI lane selection — engine/site areas', () => {
   });
 
   it('workflow change triggers broad validation (engine + site)', () => {
-    expect(selectAreas(['.github/workflows/ci.yml'])).toEqual({ engine: true, site: true, audioFx: true });
-    expect(selectAreas(['.github/workflows/_ci-checks.yml'])).toEqual({ engine: true, site: true, audioFx: true });
+    expect(selectAreas(['.github/workflows/ci.yml'])).toEqual({ engine: true, site: true, audioFx: true, tilemapWorker: true });
+    expect(selectAreas(['.github/workflows/_ci-checks.yml'])).toEqual({ engine: true, site: true, audioFx: true, tilemapWorker: true });
   });
 
   it('lockfile / workspace-topology change triggers broad validation (engine + site)', () => {
     const lock = decide('pnpm-lock.yaml');
-    expect(lock.areas).toEqual({ engine: true, site: true, audioFx: true });
+    expect(lock.areas).toEqual({ engine: true, site: true, audioFx: true, tilemapWorker: true });
     expect(lock.lanes.unit).toBe(true);
     expect(lock.lanes.packageVerify).toBe(true);
     expect(lock.lanes.siteBuild).toBe(true);
     expect(lock.lanes.browserAudio).toBe(true);
-    expect(selectAreas(['pnpm-workspace.yaml'])).toEqual({ engine: true, site: true, audioFx: true });
+    expect(lock.lanes.browserTilemapWorker).toBe(true);
+    expect(selectAreas(['pnpm-workspace.yaml'])).toEqual({ engine: true, site: true, audioFx: true, tilemapWorker: true });
   });
 
   it('shared exojs-config package source change triggers engine lanes (affects every build/test)', () => {
@@ -152,7 +153,7 @@ describe('CI lane selection — engine/site areas', () => {
 
   it('negative: a root docs-only change selects no engine and no site lanes', () => {
     const { areas, lanes } = decide('README.md');
-    expect(areas).toEqual({ engine: false, site: false, audioFx: false });
+    expect(areas).toEqual({ engine: false, site: false, audioFx: false, tilemapWorker: false });
     expect(lanes.browserAudio).toBe(false);
     expect(lanes.unit).toBe(false);
     expect(lanes.browserWebgpu).toBe(false);
@@ -164,7 +165,7 @@ describe('CI lane selection — engine/site areas', () => {
   });
 
   it('handles Windows backslash separators and blank/whitespace entries', () => {
-    expect(selectAreas(['packages\\exojs-tilemap\\src\\TileMap.ts', '', '   '])).toEqual({ engine: true, site: true, audioFx: false });
+    expect(selectAreas(['packages\\exojs-tilemap\\src\\TileMap.ts', '', '   '])).toEqual({ engine: true, site: true, audioFx: false, tilemapWorker: true });
   });
 });
 
@@ -194,7 +195,7 @@ describe('CI lane selection — PR #119 regression', () => {
 
   it('selects every lane that PR #119 wrongly skipped', () => {
     const { areas, lanes } = decide(...PR_119_FILES);
-    expect(areas).toEqual({ engine: true, site: true, audioFx: false });
+    expect(areas).toEqual({ engine: true, site: true, audioFx: false, tilemapWorker: true });
     // Previously skipped — must now run:
     expect(lanes.unit).toBe(true);
     expect(lanes.coverage).toBe(true);
@@ -241,5 +242,38 @@ describe('CI lane selection — browser-audio lane', () => {
     expect(decide('vitest.config.ts').lanes.browserAudio).toBe(true);
     expect(decide('packages/exojs-config/vitest/index.js').lanes.browserAudio).toBe(true);
     expect(decide('.github/workflows/ci.yml').lanes.browserAudio).toBe(true);
+  });
+});
+
+describe('CI lane selection — browser-tilemap-worker lane', () => {
+  it('tilemap SOURCE change runs the browser-tilemap-worker lane (and the engine lanes)', () => {
+    const { areas, lanes } = decide('packages/exojs-tilemap/src/WorkerSampledChunkSource.ts');
+    expect(areas.tilemapWorker).toBe(true);
+    expect(areas.engine).toBe(true); // tilemap is a runtime package
+    expect(lanes.browserTilemapWorker).toBe(true);
+    expect(lanes.unit).toBe(true);
+  });
+
+  it('tilemap browser-test change runs the browser-tilemap-worker lane', () => {
+    const { lanes } = decide('packages/exojs-tilemap/test/browser/WorkerSampledChunkSource.test.ts');
+    expect(lanes.browserTilemapWorker).toBe(true);
+  });
+
+  it('tilemap README-only change does NOT run the browser-tilemap-worker lane', () => {
+    const { areas, lanes } = decide('packages/exojs-tilemap/README.md');
+    expect(areas.tilemapWorker).toBe(false);
+    expect(lanes.browserTilemapWorker).toBe(false);
+  });
+
+  it('a non-tilemap engine change does NOT run the browser-tilemap-worker lane', () => {
+    expect(decide('src/rendering/Drawable.ts').lanes.browserTilemapWorker).toBe(false);
+    expect(decide('packages/exojs-physics/src/PhysicsWorld.ts').lanes.browserTilemapWorker).toBe(false);
+    expect(decide('packages/exojs-audio-fx/src/worklets/pitch-shift.worklet.ts').lanes.browserTilemapWorker).toBe(false);
+  });
+
+  it('vitest config / shared config / workflow changes run the browser-tilemap-worker lane', () => {
+    expect(decide('vitest.config.ts').lanes.browserTilemapWorker).toBe(true);
+    expect(decide('packages/exojs-config/vitest/index.js').lanes.browserTilemapWorker).toBe(true);
+    expect(decide('.github/workflows/ci.yml').lanes.browserTilemapWorker).toBe(true);
   });
 });
