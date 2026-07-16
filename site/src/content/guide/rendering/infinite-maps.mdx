@@ -1,0 +1,279 @@
+---
+title: 'Infinite maps'
+description: 'Leave width and height off a TileLayer and let a ChunkStreamer keep only the chunks near the camera resident — procedurally sampled on the main thread, off-thread in a Worker, or re-sliced from a Tiled infinite map.'
+---
+
+import ExamplePreview from '../../../components/ExamplePreview.astro';
+import Callout from '../../../components/Callout.astro';
+
+# Infinite maps
+
+Most tilemaps have edges: a fixed `width` and `height`, a grid you can walk to the end of. An **unbounded** map has none. You construct a [`TileLayer`](/ExoJS/en/api/tile-layer/) (and its [`TileMap`](/ExoJS/en/api/tile-map/)) with no `width` or `height`, and chunk storage stops being clamped to a fixed grid — any signed chunk coordinate becomes valid. Chunks exist only where something writes them; the rest of the plane is simply empty until you populate it.
+
+Everything else is the ordinary tilemap machinery you already know. Rendering, culling, band composition, parallax, and pixel snapping all work exactly as they do on a bounded map — an unbounded layer is not a special renderer, just a layer that never says "no" to a coordinate. What is new is the piece that decides _which_ chunks are worth keeping in memory as the camera moves, and where their tiles come from: a [`ChunkStreamer`](/ExoJS/en/api/chunk-streamer/) driven by a [`ChunkSource`](/ExoJS/en/api/chunk-source/).
+
+## Unbounded layers
+
+Omit `width` and `height` together (they are paired — provide both or neither) and the layer is unbounded. Two properties report the difference:
+
+- [`bounded`](/ExoJS/en/api/tile-layer/) is `false`.
+- `pixelWidth` and `pixelHeight` are `undefined` — **not** `Infinity`. There is no finite extent to report, so there is no number to give.
+
+```ts
+import { TileLayer, TileMap } from '@codexo/exojs-tilemap';
+
+// No width/height: the layer (and map) are unbounded. Chunk storage now
+// accepts any signed chunk coordinate instead of a fixed 0..N grid.
+const terrain = new TileLayer({ id: 1, name: 'terrain', tileWidth: 64, tileHeight: 64, tilesets: [] });
+const map = new TileMap({ name: 'infinite-world', tileWidth: 64, tileHeight: 64, layers: [terrain] });
+
+terrain.bounded;    // false
+terrain.pixelWidth; // undefined — never Infinity
+map.pixelHeight;    // undefined
+```
+
+Because there is no finite extent, there is nothing to clamp a camera to. Do not call `setBounds` on the [`View`](/ExoJS/en/api/view/) that follows your player — an unbounded world has no edges, and clamping to a bound it does not have would just pin the camera at the origin. Let the view follow freely.
+
+## Streaming chunks with ChunkStreamer
+
+A `ChunkStreamer` watches a `View` and keeps the chunks near it resident: chunks that scroll into range are requested from a `ChunkSource` and installed, chunks that scroll far enough away are evicted. It touches only the layer's data — the tilemap scene node reacts to adopt/evict on its own — so it has no rendering dependency. Construct one with the layer, a source, and the view, then tick it once per frame from your update loop:
+
+```ts
+import { View } from '@codexo/exojs';
+import { ChunkStreamer, createSampledChunkSource, TileLayer } from '@codexo/exojs-tilemap';
+
+const terrain = new TileLayer({ id: 1, name: 'terrain', tileWidth: 64, tileHeight: 64, tilesets: [] });
+const view = new View(0, 0, 1280, 720);
+
+// Any ChunkSource works; the next section builds a real procedural one. This
+// placeholder leaves every chunk empty.
+const source = createSampledChunkSource(terrain, {
+    sample: () => 0,
+    mapValueToTile: () => null,
+});
+
+// loadRadius / unloadRadius are a hysteresis band (defaults 1 / 2). The gap
+// between them prevents load/unload thrashing when the view sits on a chunk
+// boundary. unloadRadius must be >= loadRadius or the constructor throws.
+const streamer = new ChunkStreamer(terrain, source, view, {
+    loadRadius: 2,
+    unloadRadius: 3,
+    maxChunkLoadsPerFrame: 8,
+});
+
+// Tick from update(). The very first call loads the whole initial wanted set
+// unbudgeted, so the starting screen never pops in; every later call is
+// capped at maxChunkLoadsPerFrame (default 8).
+streamer.update();
+
+// On teardown, destroy() evicts exactly the chunks this instance loaded —
+// nothing that predated it or another source installed. Idempotent.
+streamer.destroy();
+```
+
+Chunks within `loadRadius` chunk-units (Chebyshev distance) of the visible range are loaded; own-resident chunks beyond `unloadRadius` are evicted. The `maxChunkLoadsPerFrame` budget spreads the cost of a fast camera across frames rather than loading an unbounded burst in one — with the deliberate exception of the first `update()`, which loads everything the starting view wants at once. The streamer tracks only its _own_ resident set, so several sources can coexist on one layer without fighting over each other's chunks.
+
+It works on bounded layers too. A large finite map that you do not want fully resident benefits from the same eviction; there the wanted range is simply clamped to the layer's [`chunkRange()`](/ExoJS/en/api/tile-layer/) so the streamer never asks for chunks outside the grid.
+
+<Callout type="pitfall" title="Your sampler must be deterministic">
+Evicted chunks are thrown away and regenerated from the source the next time you revisit them. If the source is not a pure function of tile coordinates (plus a fixed seed), the regenerated chunk differs from the one you saw before — terrain silently rewrites itself behind the player's back as they walk away and come back. Same seed in, same world out: that is the whole contract. No `Math.random()` anywhere on the sampling path.
+</Callout>
+
+## Procedural terrain with createSampledChunkSource
+
+[`createSampledChunkSource`](/ExoJS/en/api/tilemap-functions/) turns a per-tile sampling function into a `ChunkSource`. It takes two callbacks, and both are required on purpose — the engine has no opinion on which noise algorithm you use or how your tilesheet's ids map to values:
+
+- `sample(tx, ty)` returns a scalar for one tile.
+- `mapValueToTile(value, tx, ty)` turns that scalar into a resolved tile (a `tileset` + `localTileId` + transform), or `null` for an empty cell.
+
+Both must be pure and deterministic, for the reason the callout above spells out. Here is a complete provider built on value-noise fBm and elevation-style biome bands:
+
+```ts
+import { View } from '@codexo/exojs';
+import { ChunkStreamer, createSampledChunkSource, TILE_TRANSFORM_IDENTITY, TileLayer, type TileSet } from '@codexo/exojs-tilemap';
+
+// The tileset you built from your tilesheet (see the Tilesets guide).
+declare const tileset: TileSet;
+
+const FEATURE_SIZE = 28; // tiles per base-octave noise cell
+
+// Deterministic integer-lattice hash → [0, 1). Any change here changes every
+// world.
+function hash2D(seed: number, x: number, y: number): number {
+    let h = (seed ^ Math.imul(x, 0x27d4eb2d) ^ Math.imul(y, 0x165667b1)) | 0;
+    h = Math.imul(h ^ (h >>> 15), 0x85ebca6b);
+    h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35);
+    h ^= h >>> 16;
+    return (h >>> 0) / 4294967296;
+}
+
+function valueNoise(seed: number, x: number, y: number): number {
+    const x0 = Math.floor(x);
+    const y0 = Math.floor(y);
+    const fx = x - x0;
+    const fy = y - y0;
+    const sx = fx * fx * (3 - 2 * fx);
+    const sy = fy * fy * (3 - 2 * fy);
+    const n00 = hash2D(seed, x0, y0);
+    const n10 = hash2D(seed, x0 + 1, y0);
+    const n01 = hash2D(seed, x0, y0 + 1);
+    const n11 = hash2D(seed, x0 + 1, y0 + 1);
+    const nx0 = n00 + (n10 - n00) * sx;
+    const nx1 = n01 + (n11 - n01) * sx;
+    return nx0 + (nx1 - nx0) * sy;
+}
+
+// 4 octaves, persistence 0.5, lacunarity 2 → result in ~[0, 0.94).
+function fbm(seed: number, x: number, y: number): number {
+    let value = 0;
+    let amplitude = 0.5;
+    let frequency = 1;
+    for (let octave = 0; octave < 4; octave++) {
+        value += amplitude * valueNoise(seed + octave, x * frequency, y * frequency);
+        amplitude *= 0.5;
+        frequency *= 2;
+    }
+    return value;
+}
+
+// Elevation bands → solid terrain-center tile ids in the tilesheet.
+const TILE_DEEP_WATER = 185;
+const TILE_WATER = 169;
+const TILE_SAND = 18;
+const TILE_GRASS = 23;
+const TILE_ROCK = 28;
+const TILE_SNOW = 86;
+
+function biomeTileId(value: number): number {
+    if (value < 0.34) return TILE_DEEP_WATER;
+    if (value < 0.42) return TILE_WATER;
+    if (value < 0.5) return TILE_SAND;
+    if (value < 0.68) return TILE_GRASS;
+    if (value < 0.8) return TILE_ROCK;
+    return TILE_SNOW;
+}
+
+const terrain = new TileLayer({ id: 1, name: 'terrain', tileWidth: 64, tileHeight: 64, tilesets: [tileset] });
+const view = new View(0, 0, 1280, 720);
+
+const seed = 1337;
+const source = createSampledChunkSource(terrain, {
+    sample: (tx, ty) => fbm(seed, tx / FEATURE_SIZE, ty / FEATURE_SIZE),
+    mapValueToTile: value => ({ tileset, localTileId: biomeTileId(value), transform: TILE_TRANSFORM_IDENTITY }),
+});
+
+const streamer = new ChunkStreamer(terrain, source, view);
+```
+
+The noise here is illustrative. Swap `sample` for a Simplex generator, a third-party noise library, or a heightmap lookup — anything pure and deterministic works, because the provider makes no assumptions about it beyond that contract.
+
+<ExamplePreview chapter="tilemap" slug="infinite-terrain" />
+
+## Off the main thread with createWorkerSampledChunkSource
+
+A sampling function that is expensive per tile can stall the main thread while a chunk generates — the frame hitches, the camera stutters. [`createWorkerSampledChunkSource`](/ExoJS/en/api/tilemap-functions/) is the async counterpart that runs the sampler on a Web Worker instead.
+
+You cannot hand it a live function: functions cannot cross a `postMessage` boundary. Instead you pass `workerSource` — a complete, self-contained worker script as a **string** (a template literal in your own module). It is Blob-URL'd into a real `Worker` at construction, the same technique the audio package uses to spin up AudioWorklet processors from a source string. Because it shares no scope with your module, the worker must carry its own copy of the sampling code. The script implements a small request/response protocol:
+
+```ts
+import { createWorkerSampledChunkSource, TILE_TRANSFORM_IDENTITY, type TileLayer, type TileSet } from '@codexo/exojs-tilemap';
+
+declare const terrain: TileLayer;
+declare const tileset: TileSet;
+
+// A complete worker script. It shares no scope with this module, so it must
+// carry its own copy of the sampling code — nothing outside this string exists
+// inside the worker.
+const workerSource = `
+"use strict";
+
+// Your sampler, transcribed to plain JS (kept byte-identical to the main-thread
+// copy so both render the same world for the same seed).
+function sample(tx, ty) {
+    return (Math.sin(tx * 0.1) + Math.cos(ty * 0.1)) * 0.25 + 0.5;
+}
+
+self.onmessage = (event) => {
+    const { requestId, cx, cy, chunkWidth, chunkHeight } = event.data;
+    try {
+        const values = new Float64Array(chunkWidth * chunkHeight);
+        for (let localTy = 0; localTy < chunkHeight; localTy++) {
+            for (let localTx = 0; localTx < chunkWidth; localTx++) {
+                const tx = cx * chunkWidth + localTx;
+                const ty = cy * chunkHeight + localTy;
+                values[localTy * chunkWidth + localTx] = sample(tx, ty);
+            }
+        }
+        // Reply once, transferring the buffer for a zero-copy handoff.
+        self.postMessage({ requestId, values }, [values.buffer]);
+    } catch (error) {
+        // The error path must ALSO reply, with the same requestId.
+        self.postMessage({ requestId, error: String(error) });
+    }
+};
+`;
+
+// mapValueToTile always stays on the main thread — a ResolvedTile references a
+// TileSet/Texture, neither of which can cross a postMessage boundary.
+const source = createWorkerSampledChunkSource(terrain, {
+    workerSource,
+    mapValueToTile: value => ({ tileset, localTileId: value < 0.5 ? 169 : 23, transform: TILE_TRANSFORM_IDENTITY }),
+});
+
+// The returned source owns a real Worker — you MUST call destroy() when done
+// (e.g. alongside ChunkStreamer.destroy()). ChunkSource has no lifecycle hook,
+// so this is not automatic; the Worker leaks otherwise.
+source.destroy();
+```
+
+The worker receives `{ requestId, cx, cy, chunkWidth, chunkHeight }`, computes one value per tile in row-major order (`localTy * chunkWidth + localTx`), and replies with `{ requestId, values }` — transferring `values.buffer` so the array moves without a copy. The main-thread `mapValueToTile` then turns each value into a tile, exactly as in the sync provider.
+
+If your deployment sets a Content-Security-Policy, it must permit `blob:` in `worker-src` (or `script-src` as a fallback) — that is how the source string becomes a `Worker`.
+
+<Callout type="pitfall" title="Reply exactly once per request">
+Every request must get exactly one reply — a success or an error message — bearing the same `requestId`. A request left unanswered pins its chunk as in-flight forever: there is no timeout and no retry, so the streamer will never ask for that chunk again. The error path matters just as much as the success path: if your sampler throws, catch it and post `{ requestId, error }` rather than letting the exception swallow the reply.
+</Callout>
+
+<ExamplePreview chapter="tilemap" slug="worker-streamed-terrain" />
+
+## Streaming a Tiled infinite map
+
+You do not have to generate terrain procedurally — you can stream a hand-authored infinite map made in Tiled. [`TiledMap.toTileMap()`](/ExoJS/en/api/tiled-map/) accepts `infinite: true` maps: each chunked tile layer converts to an **unbounded** runtime `TileLayer` with no tiles populated eagerly. Its data streams in on demand through a `ChunkSource` that `toTileMap()` builds as a side effect, retrievable with [`getChunkSource(layerId)`](/ExoJS/en/api/tiled-map/). That source re-slices Tiled's on-disk chunks onto the runtime chunk grid lazily, one requested chunk at a time.
+
+```ts
+import { View } from '@codexo/exojs';
+import { ChunkStreamer } from '@codexo/exojs-tilemap';
+import type { TiledMap } from '@codexo/exojs-tiled';
+
+declare const tiled: TiledMap; // loaded through the @codexo/exojs-tiled Loader
+
+// Build the runtime map. An infinite: true map's chunked layers become
+// unbounded TileLayers; this call is also what builds the chunk sources.
+const map = tiled.toTileMap();
+const terrain = map.getTileLayer('terrain');
+const view = new View(0, 0, 1280, 720);
+
+if (terrain) {
+    // getChunkSource returns undefined for a finite (data-based) layer — only
+    // chunked infinite-map layers get one. Call toTileMap() before this.
+    const source = tiled.getChunkSource(terrain.id);
+    if (source) {
+        const streamer = new ChunkStreamer(terrain, source, view);
+        streamer.update();
+    }
+}
+```
+
+From there it is the same `ChunkStreamer` loop as the procedural providers — the only difference is where the tiles come from.
+
+## Performance notes
+
+- **Chunk loads are budgeted.** A camera moving faster than `maxChunkLoadsPerFrame` can keep up with will show brief pop-in at the frontier before the band fills. That is the budget doing its job — spreading load cost across frames instead of spiking one. For fast movers, raise `loadRadius` so chunks are requested further ahead of the visible edge, and raise the per-frame budget to fill them faster.
+- **Mind the retained tier.** A streamed layer mutates its structure every time a chunk is adopted or evicted. If it lives inside a `RetainedContainer` shared with unrelated static content, every chunk boundary the camera crosses drops and re-captures the _whole_ group — you pay the retention bookkeeping for content that never changed. Give a streamed layer its own [`RetainedContainer`](/ExoJS/en/guide/rendering/retained-containers/), or none at all. See the [Retained containers](/ExoJS/en/guide/rendering/retained-containers/) chapter for the full rule.
+
+## Where to go next
+
+- The [Infinite Procedural Terrain](/ExoJS/en/examples/tilemap/infinite-terrain/) example is the sync provider end to end — fly an endless value-noise world and reroll the seed.
+- The [Worker-Streamed Terrain](/ExoJS/en/examples/tilemap/worker-streamed-terrain/) example toggles between the sync and worker providers under a tunable sample cost, so you can watch the main thread hitch or stay smooth.
+- [Retained containers](/ExoJS/en/guide/rendering/retained-containers/) covers the group-invalidation rule a streamed layer interacts with.
+- [Tiled maps](/ExoJS/en/guide/assets/tiled-maps/) covers loading `.tmj` maps and `toTileMap()` in full.

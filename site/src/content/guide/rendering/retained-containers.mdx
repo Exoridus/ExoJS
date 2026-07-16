@@ -28,6 +28,8 @@ A subtree is a good `RetainedContainer` when all of these hold:
 
 Reach for immediate mode instead when the content is procedural or changes completely every frame; reach for a plain container when children animate independently. `RetainedContainer` is specifically the "thousands of things that sit still while the camera glides over them" case.
 
+One special case: a **streamed tile layer** (see [Infinite maps](/ExoJS/en/guide/rendering/infinite-maps/)) mutates structurally every time a chunk loads or unloads. Give it its own `RetainedContainer` or none at all — sharing a group with unrelated static content drags that whole group through re-capture on every chunk boundary the camera crosses.
+
 <Callout type="hint" title="It is opt-in, and only at construction">
 There is no runtime toggle and no configuration. You choose the tier by constructing a `RetainedContainer` instead of a `Container`; everything else is the normal node API. If the subtree turns out to be a poor fit, swapping back is a one-word edit.
 </Callout>

@@ -400,6 +400,18 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
                 examples: ['scene-graph/retained-container'],
                 apiLinks: ['retained-container', 'container', 'scene-node', 'view'],
             },
+            {
+                slug: 'infinite-maps',
+                level: 'advanced',
+                learningGoals: [
+                    'create unbounded tile maps and stream chunks near the camera with ChunkStreamer',
+                    'generate deterministic procedural terrain with createSampledChunkSource',
+                    'move expensive sampling off the main thread with createWorkerSampledChunkSource',
+                ],
+                prerequisites: ['assets/tiled-maps'],
+                examples: ['tilemap/infinite-terrain', 'tilemap/worker-streamed-terrain'],
+                apiLinks: ['tile-map', 'tile-layer', 'chunk-streamer', 'chunk-source', 'tilemap-functions', 'tiled-map'],
+            },
         ],
     },
     {
