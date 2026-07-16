@@ -78,6 +78,9 @@ export { TileAnimator } from './TileAnimator';
 // Chunk streaming: loads/unloads TileLayer chunks from a View's position via a ChunkSource provider.
 export type { ChunkStreamerOptions } from './ChunkStreamer';
 export { ChunkStreamer } from './ChunkStreamer';
+// Chunk streaming: generic sampling-function-driven ChunkSource for procedural content.
+export type { SampledChunkSourceOptions } from './SampledChunkSource';
+export { createSampledChunkSource } from './SampledChunkSource';
 // Wang autotiling: automatic tile selection based on neighbor bitmasks.
 export type { AutoTileOptions } from './autoTile';
 export { autoTile, refreshCell } from './autoTile';
