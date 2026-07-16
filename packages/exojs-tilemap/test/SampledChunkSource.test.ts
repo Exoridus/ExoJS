@@ -1,7 +1,8 @@
-import { TextureRegion } from '@codexo/exojs';
+import { TextureRegion, View } from '@codexo/exojs';
 import { type Texture } from '@codexo/exojs';
 import { describe, expect, it, vi } from 'vitest';
 
+import { ChunkStreamer } from '../src/ChunkStreamer';
 import { createSampledChunkSource } from '../src/SampledChunkSource';
 import { TileLayer } from '../src/TileLayer';
 import { TileSet } from '../src/TileSet';
@@ -137,5 +138,25 @@ describe('createSampledChunkSource', () => {
     });
 
     expect(() => source.getChunk(0, 0)).toThrow(/Tileset index -1/);
+  });
+
+  it('tiles installed via ChunkStreamer are readable through TileLayer.getTileAt', () => {
+    const tileset = makeTileset();
+    const layer = makeUnboundedLayer(tileset, 4, 4);
+    const source = createSampledChunkSource(layer, {
+      sample: (tx, ty) => tx + ty,
+      mapValueToTile: value => (value % 2 === 0 ? { tileset, localTileId: 1, transform: TILE_TRANSFORM_IDENTITY } : null),
+    });
+    const view = new View(0, 0, 32, 32);
+    const streamer = new ChunkStreamer(layer, source, view);
+
+    streamer.update();
+
+    // (0,0): sample = 0, even -> resolves to localTileId 1.
+    expect(layer.getTileAt(0, 0)).toEqual({ tileset, localTileId: 1, transform: TILE_TRANSFORM_IDENTITY });
+    // (1,0): sample = 1, odd -> stays empty.
+    expect(layer.getTileAt(1, 0)).toBeNull();
+    // (2,0): sample = 2, even -> resolves to localTileId 1.
+    expect(layer.getTileAt(2, 0)).toEqual({ tileset, localTileId: 1, transform: TILE_TRANSFORM_IDENTITY });
   });
 });
