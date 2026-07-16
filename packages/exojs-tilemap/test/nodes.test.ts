@@ -143,6 +143,20 @@ describe('TileLayerNode', () => {
     expect(node.y).toBe(20);
   });
 
+  it('bounded parallax layer opts out of static-bounds culling', () => {
+    const tileset = makeTileset();
+    const layer = new TileLayer({
+      id: 1, name: 'bg', width: 4, height: 4, tileWidth: 32, tileHeight: 32,
+      tilesets: [tileset], parallaxX: 0.5,
+    });
+    const node = new TileLayerNode(layer);
+
+    // The cull test runs before the collect-time parallax patch, so a bounded
+    // parallax layer's static bounds no longer match its render-time position
+    // — it must opt out of culling entirely, exactly like an unbounded layer.
+    expect(node.cullable).toBe(false);
+  });
+
   it('reports local bounds as the layer pixel rect (even when empty)', () => {
     const tileset = makeTileset();
     const layer = makeLayer(tileset, { width: 5, height: 3 });
