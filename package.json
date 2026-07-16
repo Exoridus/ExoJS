@@ -121,6 +121,7 @@
     "test:browser:webgpu:chromium": "pnpm run test:browser:webgpu",
     "test:browser:webgpu:firefox": "vitest run --project=browser-webgpu-firefox",
     "test:browser:audio": "vitest run --project=browser-audio-chromium",
+    "test:browser:tilemap": "vitest run --project=browser-tilemap-chromium",
     "webgpu:probe": "node scripts/webgpu-probe.mjs",
     "bench": "vitest bench",
     "bench:run": "vitest bench --run",
