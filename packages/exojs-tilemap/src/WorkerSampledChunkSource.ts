@@ -28,6 +28,11 @@ export interface WorkerSampledChunkSourceOptions {
    *   `cy * chunkHeight + localTy`.
    * - Response, error (one request failed without crashing the worker):
    *   `{ requestId: number; error: string }`.
+   *
+   * Your worker must reply to every request with exactly one success or
+   * error message bearing the same `requestId`. A request left unanswered
+   * leaves that chunk permanently unfetched — there is no timeout — since
+   * `ChunkStreamer` tracks it as still in flight and never retries it.
    */
   workerSource: string;
   /**
