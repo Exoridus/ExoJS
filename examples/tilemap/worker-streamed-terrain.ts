@@ -196,7 +196,7 @@ class WorkerStreamedTerrainScene extends Scene {
         this.mapView = map.createView({ bands: { terrain: ['terrain'] } });
 
         const characters = new Spritesheet(
-            this.loader.get(assets.demo.spritesheets.platformerCharacters.image),
+            await this.loader.load(Asset.kind('texture', assets.demo.spritesheets.platformerCharacters.image)),
             (await this.loader.load(Asset.kind('json', assets.demo.spritesheets.platformerCharacters.data))) as SpritesheetData,
         );
 
