@@ -32,6 +32,14 @@ export interface TileLayerNodeOptions {
  * `offset` is applied to this node's transform; `visible` and `opacity` are
  * read live from the runtime layer on every frame (no rebuild required).
  *
+ * A `parallax` factor other than `1` makes this node's rendered position
+ * camera-dependent, resolved per frame in {@link _collectContent} by patching
+ * the node position against the camera centre, then restoring it — the cull
+ * test runs before that patch, so a bounded layer with parallax would be
+ * culled at its static base-offset bounds while actually rendering elsewhere.
+ * Such a layer therefore opts out of view culling (`cullable = false`), same
+ * as an unbounded layer (exactly like {@link import('./ImageLayerNode').ImageLayerNode}).
+ *
  * The node references — but never owns — the {@link TileLayer}: destroying it
  * frees its chunk nodes and their cached geometry but leaves the layer, map,
  * and Loader-owned textures intact.
@@ -93,7 +101,7 @@ export class TileLayerNode extends Container {
     this.setPosition(layer.offsetX, layer.offsetY);
     this._buildChunkNodes();
 
-    if (!this._layer.bounded) {
+    if (!this._layer.bounded || layer.parallaxX !== 1 || layer.parallaxY !== 1) {
       this.cullable = false;
     }
 
