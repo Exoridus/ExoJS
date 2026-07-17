@@ -197,9 +197,13 @@ export class TiledMap {
     }
 
     // Collect and convert tile + object + image layers, flattening group layers.
+    // `order` records each converted renderable (tile or image) layer's id in
+    // document (flattened, walk) order — object layers are excluded, matching
+    // TileMap.documentOrder's contract.
     const runtimeLayers: TileLayer[] = [];
     const runtimeObjectLayers: ObjectLayer[] = [];
     const runtimeImageLayers: ImageLayer[] = [];
+    const order: number[] = [];
     const convertLayers = (layers: readonly TiledLayer[]): void => {
       for (const layer of layers) {
         if (layer instanceof TiledGroupLayer) {
@@ -228,6 +232,7 @@ export class TiledMap {
             this._chunkSources.set(layer.id, buildTiledChunkSource(layer, rLayer, this.tilesets, indexToRuntime, this.source));
           }
           runtimeLayers.push(rLayer);
+          order.push(layer.id);
         } else if (layer instanceof TiledObjectLayer) {
           runtimeObjectLayers.push(convertObjectLayer(layer, this.tilesets, indexToRuntime));
         } else if (layer instanceof TiledImageLayer) {
@@ -248,6 +253,7 @@ export class TiledMap {
             repeatY: layer.repeatY,
             properties: convertProperties(layer.properties),
           }));
+          order.push(layer.id);
         }
       }
     };
@@ -269,6 +275,7 @@ export class TiledMap {
       backgroundColor: parseTiledColor(this.backgroundColor),
       renderOrder: this.renderOrder ?? 'right-down',
       properties: convertProperties(this.properties),
+      documentOrder: order,
     });
   }
 
