@@ -139,7 +139,7 @@ export class TileMap {
   private readonly _layerById = new Map<number, TileLayer>();
   private readonly _objectLayers: ObjectLayer[] = [];
   private readonly _imageLayers: ImageLayer[] = [];
-  private readonly _documentOrder: number[] = [];
+  private readonly _documentOrder: Array<TileLayer | ImageLayer> = [];
 
   private _revision = 0;
   private _destroyed = false;
@@ -192,14 +192,17 @@ export class TileMap {
 
   /**
    * Validate an explicit `documentOrder` option against current tile/image
-   * layer membership and return it, or compute the fallback order (tile
-   * layers in insertion order, then image layers) when omitted.
+   * layer membership and resolve it to layer instances, or compute the
+   * fallback order (tile layers in insertion order, then image layers) when
+   * omitted. The order stores instance references — not ids — so a
+   * cross-kind id collision in a fallback map can never resolve to the
+   * wrong layer.
    * @throws Per the validation rules documented on {@link
    *         TileMapOptions.documentOrder}.
    */
-  private _buildDocumentOrder(documentOrder: readonly number[] | undefined): number[] {
+  private _buildDocumentOrder(documentOrder: readonly number[] | undefined): Array<TileLayer | ImageLayer> {
     if (!documentOrder) {
-      return [...this._layers.map(l => l.id), ...this._imageLayers.map(l => l.id)];
+      return [...this._layers, ...this._imageLayers];
     }
 
     const tileIds = new Set(this._layers.map(l => l.id));
@@ -233,7 +236,11 @@ export class TileMap {
       }
     }
 
-    return [...documentOrder];
+    // Ids are unique across kinds here (the cross-kind check above threw
+    // otherwise), so resolving each id to an instance is unambiguous.
+    return documentOrder.map(id =>
+      this._layerById.get(id) ?? this._imageLayers.find(layer => layer.id === id)!,
+    );
   }
 
   // ── Tilesets ──────────────────────────────────────────────────────────
@@ -288,7 +295,7 @@ export class TileMap {
   public addLayer(layer: TileLayer): void {
     this._checkDestroyed();
     this._addLayer(layer);
-    this._documentOrder.push(layer.id);
+    this._documentOrder.push(layer);
     this._revision++;
   }
 
@@ -317,7 +324,7 @@ export class TileMap {
     if (!layer) return false;
     this._layers.splice(this._layers.indexOf(layer), 1);
     this._layerById.delete(id);
-    this._documentOrder.splice(this._documentOrder.indexOf(id), 1);
+    this._documentOrder.splice(this._documentOrder.indexOf(layer), 1);
     layer.destroy();
     this._revision++;
     return true;
@@ -391,7 +398,7 @@ export class TileMap {
   public addImageLayer(layer: ImageLayer): void {
     this._checkDestroyed();
     this._imageLayers.push(layer);
-    this._documentOrder.push(layer.id);
+    this._documentOrder.push(layer);
     this._revision++;
   }
 
@@ -416,10 +423,10 @@ export class TileMap {
    */
   public removeImageLayer(id: number): boolean {
     this._checkDestroyed();
-    const index = this._imageLayers.findIndex(layer => layer.id === id);
-    if (index === -1) return false;
-    this._imageLayers.splice(index, 1);
-    this._documentOrder.splice(this._documentOrder.indexOf(id), 1);
+    const layer = this._imageLayers.find(l => l.id === id);
+    if (!layer) return false;
+    this._imageLayers.splice(this._imageLayers.indexOf(layer), 1);
+    this._documentOrder.splice(this._documentOrder.indexOf(layer), 1);
     this._revision++;
     return true;
   }
@@ -428,17 +435,15 @@ export class TileMap {
 
   /**
    * Tile and image layers combined into a single document order (see {@link
-   * TileMapOptions.documentOrder}), recomputed from current membership on
-   * every read. Reflects `addLayer` / `addImageLayer` / `removeLayer` /
-   * `removeImageLayer` calls made after construction. Object layers are
+   * TileMapOptions.documentOrder}), maintained live as membership changes.
+   * Reflects `addLayer` / `addImageLayer` / `removeLayer` /
+   * `removeImageLayer` calls made after construction. Holds instance
+   * references, so entries stay correct even when a tile layer and an image
+   * layer share an id in a fallback-ordered map. Object layers are
    * data-only and never appear here.
    */
   public get renderableLayers(): ReadonlyArray<TileLayer | ImageLayer> {
-    return this._documentOrder.map(id => {
-      const tileLayer = this._layerById.get(id);
-      if (tileLayer) return tileLayer;
-      return this._imageLayers.find(layer => layer.id === id)!;
-    });
+    return this._documentOrder;
   }
 
   // ── Scene composition ─────────────────────────────────────────────────

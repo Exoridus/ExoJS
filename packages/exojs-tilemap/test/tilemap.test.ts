@@ -1880,6 +1880,52 @@ describe('TileMap', () => {
     })).not.toThrow();
   });
 
+  it('renderableLayers resolves cross-kind duplicate IDs to the distinct instances in a fallback map', () => {
+    const tileA = new TileLayer({ id: 1, name: 'ground', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] });
+    const imageA = new ImageLayer({ id: 1, name: 'bg', image: 'bg.png' });
+    const map = new TileMap({
+      width: 64, height: 64,
+      tileWidth: 32, tileHeight: 32,
+      tilesets: [ts],
+      layers: [tileA],
+      imageLayers: [imageA],
+    });
+    expect(map.renderableLayers).toHaveLength(2);
+    expect(map.renderableLayers[0]).toBe(tileA);
+    expect(map.renderableLayers[1]).toBe(imageA);
+    expect(map.renderableLayers[1]).toBeInstanceOf(ImageLayer);
+  });
+
+  it('addImageLayer with an ID colliding with a tile layer still yields the image instance in renderableLayers', () => {
+    const tileA = new TileLayer({ id: 1, name: 'ground', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] });
+    const map = new TileMap({
+      width: 64, height: 64,
+      tileWidth: 32, tileHeight: 32,
+      tilesets: [ts],
+      layers: [tileA],
+    });
+    const imageA = new ImageLayer({ id: 1, name: 'bg', image: 'bg.png' });
+    map.addImageLayer(imageA);
+    expect(map.renderableLayers).toHaveLength(2);
+    expect(map.renderableLayers[0]).toBe(tileA);
+    expect(map.renderableLayers[1]).toBe(imageA);
+  });
+
+  it('removing one side of a cross-kind duplicate ID keeps the other in renderableLayers', () => {
+    const tileA = new TileLayer({ id: 1, name: 'ground', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] });
+    const imageA = new ImageLayer({ id: 1, name: 'bg', image: 'bg.png' });
+    const map = new TileMap({
+      width: 64, height: 64,
+      tileWidth: 32, tileHeight: 32,
+      tilesets: [ts],
+      layers: [tileA],
+      imageLayers: [imageA],
+    });
+    map.removeImageLayer(1);
+    expect(map.renderableLayers).toEqual([tileA]);
+    expect(map.getTileLayerById(1)).toBe(tileA);
+  });
+
   it('addLayer appends the new layer to renderableLayers order', () => {
     const map = new TileMap({
       width: 64, height: 64,
