@@ -1868,6 +1868,24 @@ describe('TileMap', () => {
     })).toThrow(/both a tile layer and an image layer/i);
   });
 
+  it('documentOrder throws when two image layers share an ID (same-kind duplicate degenerate input)', () => {
+    // Nothing validates image-layer id uniqueness, so this pair can coexist.
+    // Both `1` and `7` are covered by documentOrder's id-set checks even
+    // though there are 3 layer instances total (1 tile + 2 image) — the
+    // count mismatch must still throw instead of silently dropping one.
+    const tileA = new TileLayer({ id: 1, name: 'ground', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] });
+    const imageA = new ImageLayer({ id: 7, name: 'bg', image: 'bg.png' });
+    const imageB = new ImageLayer({ id: 7, name: 'bg2', image: 'bg2.png' });
+    expect(() => new TileMap({
+      width: 64, height: 64,
+      tileWidth: 32, tileHeight: 32,
+      tilesets: [ts],
+      layers: [tileA],
+      imageLayers: [imageA, imageB],
+      documentOrder: [1, 7],
+    })).toThrow(/documentOrder has 2 entries but map .* has 3 tile\/image layer instances/i);
+  });
+
   it('a cross-kind duplicate ID is NOT rejected when documentOrder is omitted (fallback order is unambiguous by construction)', () => {
     const tileA = new TileLayer({ id: 1, name: 'ground', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] });
     const imageA = new ImageLayer({ id: 1, name: 'bg', image: 'bg.png' });
@@ -1936,6 +1954,30 @@ describe('TileMap', () => {
     const added = new TileLayer({ id: 2, name: 'added', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] });
     map.addLayer(added);
     expect(map.renderableLayers.map(l => l.id)).toEqual([1, 2]);
+  });
+
+  it('removeImageLayer on a duplicate-id degenerate fallback map never corrupts the order tail', () => {
+    // Built WITHOUT documentOrder, so the fallback path (unambiguous by
+    // construction) is exercised. Two image layers share id 7; removing the
+    // resolved instance twice must not delete an unrelated order entry via
+    // an unguarded splice(-1, 1) once indexOf(layer) can no longer find it.
+    const tileA = new TileLayer({ id: 1, name: 'ground', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] });
+    const tileB = new TileLayer({ id: 2, name: 'walls', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] });
+    const imageA = new ImageLayer({ id: 7, name: 'bg', image: 'bg.png' });
+    const imageB = new ImageLayer({ id: 7, name: 'bg2', image: 'bg2.png' });
+    const map = new TileMap({
+      width: 64, height: 64,
+      tileWidth: 32, tileHeight: 32,
+      tilesets: [ts],
+      layers: [tileA, tileB],
+      imageLayers: [imageA, imageB],
+    });
+
+    map.removeImageLayer(7);
+    map.removeImageLayer(7);
+
+    expect(map.renderableLayers).toContain(tileA);
+    expect(map.renderableLayers).toContain(tileB);
   });
 
   it('addImageLayer appends the layer to imageLayers and renderableLayers order', () => {

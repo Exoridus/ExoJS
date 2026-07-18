@@ -56,7 +56,11 @@ export interface TileMapOptions {
    * of layer ids — exposed via {@link TileMap.renderableLayers}. Every tile
    * and image layer passed to this map (via {@link layers} / {@link
    * imageLayers}) must appear exactly once; an id that belongs to neither
-   * kind, or is listed more than once, throws.
+   * kind, or is listed more than once, throws. The list's length must also
+   * equal the total number of tile/image layer instances — nothing enforces
+   * unique ids across image layers, so two image layers sharing an id would
+   * otherwise both satisfy the id-based checks while one silently drops out
+   * of {@link TileMap.renderableLayers}; that mismatch throws too.
    *
    * A tile layer and an image layer sharing the same id makes the order
    * ambiguous — that combination throws when `documentOrder` is provided.
@@ -236,6 +240,20 @@ export class TileMap {
       }
     }
 
+    // The checks above are id-SET based, so they can't see a duplicate
+    // image-layer id (nothing enforces image-layer id uniqueness): two
+    // image layers sharing an id collapse to one entry in `imageIds`,
+    // letting a documentOrder that covers every distinct id still be one
+    // instance short. Compare against the actual instance counts so that
+    // case throws instead of silently dropping an instance from
+    // renderableLayers.
+    const instanceCount = this._layers.length + this._imageLayers.length;
+    if (documentOrder.length !== instanceCount) {
+      throw new Error(
+        `documentOrder has ${documentOrder.length} entries but map "${this.name}" has ${instanceCount} tile/image layer instances; check for a duplicate image-layer ID.`,
+      );
+    }
+
     // Ids are unique across kinds here (the cross-kind check above threw
     // otherwise), so resolving each id to an instance is unambiguous.
     return documentOrder.map(id =>
@@ -324,7 +342,8 @@ export class TileMap {
     if (!layer) return false;
     this._layers.splice(this._layers.indexOf(layer), 1);
     this._layerById.delete(id);
-    this._documentOrder.splice(this._documentOrder.indexOf(layer), 1);
+    const orderIndex = this._documentOrder.indexOf(layer);
+    if (orderIndex !== -1) this._documentOrder.splice(orderIndex, 1);
     layer.destroy();
     this._revision++;
     return true;
@@ -426,7 +445,8 @@ export class TileMap {
     const layer = this._imageLayers.find(l => l.id === id);
     if (!layer) return false;
     this._imageLayers.splice(this._imageLayers.indexOf(layer), 1);
-    this._documentOrder.splice(this._documentOrder.indexOf(layer), 1);
+    const orderIndex = this._documentOrder.indexOf(layer);
+    if (orderIndex !== -1) this._documentOrder.splice(orderIndex, 1);
     this._revision++;
     return true;
   }
