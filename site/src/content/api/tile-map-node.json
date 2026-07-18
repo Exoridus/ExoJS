@@ -1,6 +1,6 @@
 {
   "title": "TileMapNode",
-  "description": "A convenience scene node that renders a whole TileMap as a Container of one TileLayerNode per tile layer, in map layer order (back-to-front by document order). `TileMapNode` owns **only** its layer nodes — never application actors. Use it for the simple, non-interleaved case (no actors between layers); for actor interleaving, place individual `TileLayerNode`s into your own scene graph instead. The node references — but never owns — the TileMap: destroying the node frees its layer/chunk nodes and their cached GPU geometry, while the `TileMap` data and Loader-owned tileset textures survive (free them via `TileMap.destroy()` / `Loader.destroy()` respectively). Layers added to or removed from the map after construction are reflected only after TileMapNode.refreshLayers. `TileMapNode` renders only tile layers; for a map with image layers, compose `TileMapView` and its import('./ImageLayerNode').ImageLayerNodes instead.",
+  "description": "A convenience scene node that renders a whole TileMap as a Container of one node per renderable layer — a TileLayerNode per tile layer and an ImageLayerNode per image layer, interleaved back-to-front by the map's combined document order (import('./TileMap').TileMap.renderableLayers). `TileMapNode` owns **only** its layer nodes — never application actors. Use it for the simple, non-interleaved case (no actors between layers); for actor interleaving, place individual `TileLayerNode`s / `ImageLayerNode`s into your own scene graph instead (see `TileMapView`). The node references — but never owns — the TileMap: destroying the node frees its layer/chunk nodes and their cached GPU geometry, while the `TileMap` data and Loader-owned textures survive (free them via `TileMap.destroy()` / `Loader.destroy()` respectively). Layers added to or removed from the map after construction are reflected only after TileMapNode.refreshLayers.",
   "symbol": "TileMapNode",
   "kind": "class",
   "subsystem": "tilemap",
@@ -19,11 +19,10 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "A convenience scene node that renders a whole TileMap as a Container of one TileLayerNode per tile layer, in map layer order (back-to-front by document order).",
-        "`TileMapNode` owns **only** its layer nodes — never application actors. Use it for the simple, non-interleaved case (no actors between layers); for actor interleaving, place individual `TileLayerNode`s into your own scene graph instead.",
-        "The node references — but never owns — the TileMap: destroying the node frees its layer/chunk nodes and their cached GPU geometry, while the `TileMap` data and Loader-owned tileset textures survive (free them via `TileMap.destroy()` / `Loader.destroy()` respectively).",
-        "Layers added to or removed from the map after construction are reflected only after TileMapNode.refreshLayers.",
-        "`TileMapNode` renders only tile layers; for a map with image layers, compose `TileMapView` and its import('./ImageLayerNode').ImageLayerNodes instead."
+        "A convenience scene node that renders a whole TileMap as a Container of one node per renderable layer — a TileLayerNode per tile layer and an ImageLayerNode per image layer, interleaved back-to-front by the map's combined document order (import('./TileMap').TileMap.renderableLayers).",
+        "`TileMapNode` owns **only** its layer nodes — never application actors. Use it for the simple, non-interleaved case (no actors between layers); for actor interleaving, place individual `TileLayerNode`s / `ImageLayerNode`s into your own scene graph instead (see `TileMapView`).",
+        "The node references — but never owns — the TileMap: destroying the node frees its layer/chunk nodes and their cached GPU geometry, while the `TileMap` data and Loader-owned textures survive (free them via `TileMap.destroy()` / `Loader.destroy()` respectively).",
+        "Layers added to or removed from the map after construction are reflected only after TileMapNode.refreshLayers."
       ],
       "importLine": "import { TileMapNode } from '@codexo/exojs-tilemap'",
       "sourceLink": null
@@ -759,7 +758,7 @@
         },
         {
           "name": "getLayerNode",
-          "signature": "getLayerNode(name: string): TileLayerNode | undefined",
+          "signature": "getLayerNode(name: string): ImageLayerNode | TileLayerNode | undefined",
           "signatureTokens": [
             {
               "text": "getLayerNode",
@@ -790,6 +789,14 @@
               "kind": "punctuation"
             },
             {
+              "text": "ImageLayerNode",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
               "text": "TileLayerNode",
               "kind": "type"
             },
@@ -809,8 +816,8 @@
               "optional": false
             }
           ],
-          "returnType": "TileLayerNode | undefined",
-          "description": "Find the layer node rendering the named layer, or undefined."
+          "returnType": "ImageLayerNode | TileLayerNode | undefined",
+          "description": "Find the layer node rendering the named layer (tile or image; first match in document order), or undefined."
         },
         {
           "name": "getLocalBounds",
@@ -1247,7 +1254,7 @@
           ],
           "params": [],
           "returnType": "this",
-          "description": "Rebuild the layer-node children from the map's current layers. Call after layers are structurally added to or removed from the map."
+          "description": "Rebuild the layer-node children from the map's current renderable layers. Call after tile or image layers are structurally added to or removed from the map."
         },
         {
           "name": "removeChild",
@@ -2724,7 +2731,7 @@
         },
         {
           "name": "layerNodes",
-          "signature": "layerNodes: readonly TileLayerNode[]",
+          "signature": "layerNodes: readonly ImageLayerNode | TileLayerNode[]",
           "signatureTokens": [
             {
               "text": "layerNodes",
@@ -2743,6 +2750,14 @@
               "kind": "punctuation"
             },
             {
+              "text": "ImageLayerNode",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
               "text": "TileLayerNode",
               "kind": "type"
             },
@@ -2753,7 +2768,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The layer render nodes, in map layer order."
+          "description": "The layer render nodes — tile and image alike — in the map's combined document order."
         },
         {
           "name": "left",

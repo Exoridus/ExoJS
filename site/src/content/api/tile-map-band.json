@@ -1,6 +1,6 @@
 {
   "title": "TileMapBand",
-  "description": "A named, ordered group of TileLayerNodes produced by a TileMapView for ergonomic actor interleaving. A band is a plain Container scene node that the application parents wherever it wants (typically directly under its own world root). Bands are composition units only: a band owns **its generated tile-layer nodes** and never application actors. Placing actors *between* bands is done by parenting the bands and the actor containers as siblings in the desired document order: ```ts worldRoot.addChild(view.band('ground'), actors, view.band('roof')); ``` **Rendering order within a band always follows map document order**, not the order layers were listed in the band definition — band membership *selects* layers; it never reorders them. **Ownership:** the band owns the TileLayerNodes it was created with. Destroying the band destroys those layer nodes (and their cached chunk geometry) and detaches the band from its application parent — it never touches application actors, sibling bands, the TileMap, the TileLayers, or Loader-owned tileset textures. Bounds are the union of the band's tile-layer-node bounds (an empty band collapses to a degenerate rect at the band's transformed origin). Bands are created by TileMapView; construct them through TileMapView rather than directly.",
+  "description": "A named, ordered group of layer nodes (TileLayerNodes and ImageLayerNodes) produced by a TileMapView for ergonomic actor interleaving. A band is a plain Container scene node that the application parents wherever it wants (typically directly under its own world root). Bands are composition units only: a band owns **its generated layer nodes** and never application actors. Placing actors *between* bands is done by parenting the bands and the actor containers as siblings in the desired document order: ```ts worldRoot.addChild(view.band('ground'), actors, view.band('roof')); ``` **Rendering order within a band always follows map document order** (import('./TileMap').TileMap.renderableLayers), not the order layers were listed in the band definition — band membership *selects* layers; it never reorders them. Tile and image members interleave exactly as the map's combined document order dictates. **Ownership:** the band owns the layer nodes it was created with. Destroying the band destroys those layer nodes (and their cached chunk geometry) and detaches the band from its application parent — it never touches application actors, sibling bands, the TileMap, the TileLayers / ImageLayers, or Loader-owned textures. Bounds are the union of the band's layer-node bounds (an empty band collapses to a degenerate rect at the band's transformed origin). Bands are created by TileMapView; construct them through TileMapView rather than directly.",
   "symbol": "TileMapBand",
   "kind": "class",
   "subsystem": "tilemap",
@@ -19,12 +19,12 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "A named, ordered group of TileLayerNodes produced by a TileMapView for ergonomic actor interleaving.",
-        "A band is a plain Container scene node that the application parents wherever it wants (typically directly under its own world root). Bands are composition units only: a band owns **its generated tile-layer nodes** and never application actors. Placing actors *between* bands is done by parenting the bands and the actor containers as siblings in the desired document order:",
+        "A named, ordered group of layer nodes (TileLayerNodes and ImageLayerNodes) produced by a TileMapView for ergonomic actor interleaving.",
+        "A band is a plain Container scene node that the application parents wherever it wants (typically directly under its own world root). Bands are composition units only: a band owns **its generated layer nodes** and never application actors. Placing actors *between* bands is done by parenting the bands and the actor containers as siblings in the desired document order:",
         "```ts worldRoot.addChild(view.band('ground'), actors, view.band('roof')); ```",
-        "**Rendering order within a band always follows map document order**, not the order layers were listed in the band definition — band membership *selects* layers; it never reorders them.",
-        "**Ownership:** the band owns the TileLayerNodes it was created with. Destroying the band destroys those layer nodes (and their cached chunk geometry) and detaches the band from its application parent — it never touches application actors, sibling bands, the TileMap, the TileLayers, or Loader-owned tileset textures.",
-        "Bounds are the union of the band's tile-layer-node bounds (an empty band collapses to a degenerate rect at the band's transformed origin).",
+        "**Rendering order within a band always follows map document order** (import('./TileMap').TileMap.renderableLayers), not the order layers were listed in the band definition — band membership *selects* layers; it never reorders them. Tile and image members interleave exactly as the map's combined document order dictates.",
+        "**Ownership:** the band owns the layer nodes it was created with. Destroying the band destroys those layer nodes (and their cached chunk geometry) and detaches the band from its application parent — it never touches application actors, sibling bands, the TileMap, the TileLayers / ImageLayers, or Loader-owned textures.",
+        "Bounds are the union of the band's layer-node bounds (an empty band collapses to a degenerate rect at the band's transformed origin).",
         "Bands are created by TileMapView; construct them through TileMapView rather than directly."
       ],
       "importLine": "import { TileMapBand } from '@codexo/exojs-tilemap'",
@@ -495,7 +495,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Destroy the band: detach it from its application parent, then destroy the tile-layer nodes it owns (freeing their chunk geometry). Application actors, sibling bands, the map, layers, and tileset textures are untouched. Idempotent: a second call (e.g. when TileMapView.destroy runs after the application already destroyed this band directly) is a safe no-op."
+          "description": "Destroy the band: detach it from its application parent, then destroy the layer nodes it owns (freeing their chunk geometry / image sprites). Application actors, sibling bands, the map, layers, and Loader-owned textures are untouched. Idempotent: a second call (e.g. when TileMapView.destroy runs after the application already destroyed this band directly) is a safe no-op."
         },
         {
           "name": "focus",
@@ -680,7 +680,7 @@
         },
         {
           "name": "getLayerNodeById",
-          "signature": "getLayerNodeById(id: number): TileLayerNode | undefined",
+          "signature": "getLayerNodeById(id: number): ImageLayerNode | TileLayerNode | undefined",
           "signatureTokens": [
             {
               "text": "getLayerNodeById",
@@ -711,6 +711,14 @@
               "kind": "punctuation"
             },
             {
+              "text": "ImageLayerNode",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
               "text": "TileLayerNode",
               "kind": "type"
             },
@@ -730,8 +738,8 @@
               "optional": false
             }
           ],
-          "returnType": "TileLayerNode | undefined",
-          "description": "Find this band's layer node rendering the layer with the given id."
+          "returnType": "ImageLayerNode | TileLayerNode | undefined",
+          "description": "Find this band's layer node rendering the layer with the given id (tile or image member; first match in document order)."
         },
         {
           "name": "getLocalBounds",
@@ -1994,7 +2002,7 @@
           ],
           "params": [],
           "returnType": "this",
-          "description": "Bounds are the union of the band's visible tile-layer-node bounds. With no visible children the band collapses to a degenerate rect at its transformed origin (rather than the whole-subtree-plus-origin union a bare Container would report)."
+          "description": "Bounds are the union of the band's visible layer-node bounds. With no visible children the band collapses to a degenerate rect at its transformed origin (rather than the whole-subtree-plus-origin union a bare Container would report)."
         },
         {
           "name": "updateParentTransform",
@@ -2629,7 +2637,7 @@
         },
         {
           "name": "layerNodes",
-          "signature": "layerNodes: readonly TileLayerNode[]",
+          "signature": "layerNodes: readonly ImageLayerNode | TileLayerNode[]",
           "signatureTokens": [
             {
               "text": "layerNodes",
@@ -2648,6 +2656,14 @@
               "kind": "punctuation"
             },
             {
+              "text": "ImageLayerNode",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
               "text": "TileLayerNode",
               "kind": "type"
             },
@@ -2658,7 +2674,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The tile-layer nodes that compose this band, in map document order. This is the band's **membership** list (the nodes it owns and destroys); it may differ from Container.children if the caller reparents an individual layer node elsewhere."
+          "description": "The layer nodes that compose this band, in map document order — tile and image members interleaved. This is the band's **membership** list (the nodes it owns and destroys); it may differ from Container.children if the caller reparents an individual layer node elsewhere."
         },
         {
           "name": "left",

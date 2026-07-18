@@ -1,6 +1,6 @@
 {
   "title": "TileMapView",
-  "description": "Groups a TileMap's layers into independently placeable scene nodes so application actors can be interleaved **between** tile layers. A view produces exactly one canonical TileLayerNode per map layer (stable identity, map document order) and, optionally, named TileMapBands grouping subsets of those nodes. The application parents the bands / layer nodes wherever it wants — typically as siblings of its own actor containers: ```ts const view = map.createView({ bands: { ground: ['background', 'ground'], roof: ['roofs'] } }); worldRoot.addChild(view.band('ground'), actors, view.band('roof')); // or without bands: worldRoot.addChild(view.getLayerNodeById(groundId)!, actors, view.getLayerNodeById(roofId)!); ``` **Actors are application-owned siblings.** A `TileMapView` never adopts or destroys actors. The view is a helper, not a scene node — it does not own the world container, the TileMap, the TileLayers, or tileset textures. **Ownership:** the view owns its generated layer nodes and bands. A layer assigned to a band is owned by that band; an unbanded layer is owned by the view directly. TileMapView.destroy destroys every band and layer node (detaching them from their application parents) but leaves actors, the map, its layers, and Loader-owned textures untouched. There is no map-replacement mutation API: to swap maps, destroy the old view, construct a new one, and re-parent its bands — the actor tree is never involved. **Image layers.** A view also produces exactly one canonical ImageLayerNode per TileMap.imageLayers entry (stable identity, map document order), reachable through imageLayerNodes, getImageLayerNodeById, and getImageLayerNodeByName. The view owns these nodes the same way it owns unbanded tile-layer nodes — the application parents each one wherever the image belongs in draw order, and TileMapView.destroy destroys them and detaches them from their application parents. Image layers are **not** selectable in TileMapViewOptions.bands: a band definition only ever reorders its own members to map document order, and image layers do not share a combined document position with tile layers — mixing them into one band's selector list could not resolve a single, unambiguous render order without silently guessing at an interleaving. Interleave an image layer with tile layers or bands by parenting getImageLayerNodeById / getImageLayerNodeByName directly, the same way actors are interleaved.",
+  "description": "Groups a TileMap's layers into independently placeable scene nodes so application actors can be interleaved **between** tile layers. A view produces exactly one canonical TileLayerNode per map layer (stable identity, map document order) and, optionally, named TileMapBands grouping subsets of those nodes. The application parents the bands / layer nodes wherever it wants — typically as siblings of its own actor containers: ```ts const view = map.createView({ bands: { ground: ['background', 'ground'], roof: ['roofs'] } }); worldRoot.addChild(view.band('ground'), actors, view.band('roof')); // or without bands: worldRoot.addChild(view.getLayerNodeById(groundId)!, actors, view.getLayerNodeById(roofId)!); ``` **Actors are application-owned siblings.** A `TileMapView` never adopts or destroys actors. The view is a helper, not a scene node — it does not own the world container, the TileMap, the TileLayers, or tileset textures. **Ownership:** the view owns its generated layer nodes and bands. A layer assigned to a band is owned by that band; an unbanded layer is owned by the view directly. TileMapView.destroy destroys every band and layer node (detaching them from their application parents) but leaves actors, the map, its layers, and Loader-owned textures untouched. There is no map-replacement mutation API: to swap maps, destroy the old view, construct a new one, and re-parent its bands — the actor tree is never involved. **Image layers.** A view also produces exactly one canonical ImageLayerNode per TileMap.imageLayers entry (stable identity, map document order), reachable through imageLayerNodes, getImageLayerNodeById, and getImageLayerNodeByName. Image layers are selectable in TileMapViewOptions.bands exactly like tile layers: a band member list may mix both kinds, and the band stacks its members by the map's combined document order (import('./TileMap').TileMap.renderableLayers). A banded image node is owned by its band; an unbanded one is owned by the view directly, and the application parents it wherever the image belongs in draw order — the same way actors are interleaved.",
   "symbol": "TileMapView",
   "kind": "class",
   "subsystem": "tilemap",
@@ -24,7 +24,7 @@
         "```ts const view = map.createView({ bands: { ground: ['background', 'ground'], roof: ['roofs'] } }); worldRoot.addChild(view.band('ground'), actors, view.band('roof')); // or without bands: worldRoot.addChild(view.getLayerNodeById(groundId)!, actors, view.getLayerNodeById(roofId)!); ```",
         "**Actors are application-owned siblings.** A `TileMapView` never adopts or destroys actors. The view is a helper, not a scene node — it does not own the world container, the TileMap, the TileLayers, or tileset textures.",
         "**Ownership:** the view owns its generated layer nodes and bands. A layer assigned to a band is owned by that band; an unbanded layer is owned by the view directly. TileMapView.destroy destroys every band and layer node (detaching them from their application parents) but leaves actors, the map, its layers, and Loader-owned textures untouched. There is no map-replacement mutation API: to swap maps, destroy the old view, construct a new one, and re-parent its bands — the actor tree is never involved.",
-        "**Image layers.** A view also produces exactly one canonical ImageLayerNode per TileMap.imageLayers entry (stable identity, map document order), reachable through imageLayerNodes, getImageLayerNodeById, and getImageLayerNodeByName. The view owns these nodes the same way it owns unbanded tile-layer nodes — the application parents each one wherever the image belongs in draw order, and TileMapView.destroy destroys them and detaches them from their application parents. Image layers are **not** selectable in TileMapViewOptions.bands: a band definition only ever reorders its own members to map document order, and image layers do not share a combined document position with tile layers — mixing them into one band's selector list could not resolve a single, unambiguous render order without silently guessing at an interleaving. Interleave an image layer with tile layers or bands by parenting getImageLayerNodeById / getImageLayerNodeByName directly, the same way actors are interleaved."
+        "**Image layers.** A view also produces exactly one canonical ImageLayerNode per TileMap.imageLayers entry (stable identity, map document order), reachable through imageLayerNodes, getImageLayerNodeById, and getImageLayerNodeByName. Image layers are selectable in TileMapViewOptions.bands exactly like tile layers: a band member list may mix both kinds, and the band stacks its members by the map's combined document order (import('./TileMap').TileMap.renderableLayers). A banded image node is owned by its band; an unbanded one is owned by the view directly, and the application parents it wherever the image belongs in draw order — the same way actors are interleaved."
       ],
       "importLine": "import { TileMapView } from '@codexo/exojs-tilemap'",
       "sourceLink": null
@@ -188,7 +188,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Destroy the view: every band, generated tile-layer node, and generated ImageLayerNode is destroyed (and detached from its application parent), freeing cached chunk geometry. Idempotent. Application actors, sibling content, the TileMap, its TileLayers and image layers, and Loader-owned textures all survive."
+          "description": "Destroy the view: every band, generated tile-layer node, and generated ImageLayerNode is destroyed (and detached from its application parent), freeing cached chunk geometry. Banded nodes are destroyed by their band; unbanded ones by the view directly. Idempotent. Application actors, sibling content, the TileMap, its TileLayers and image layers, and Loader-owned textures all survive."
         },
         {
           "name": "getImageLayerNodeById",
@@ -243,7 +243,7 @@
             }
           ],
           "returnType": "ImageLayerNode | undefined",
-          "description": "The canonical image layer node for the image layer with the given **id**, or undefined. Ids are authoritative and unique — this is the unambiguous lookup. The returned node may be reparented into the caller's own containers; the view still tracks it for destruction."
+          "description": "The canonical image layer node for the image layer with the given **id**, or undefined. Ids are authoritative and unique — this is the unambiguous lookup. The returned node may be reparented into the caller's own containers; the view still tracks it for refresh and destruction."
         },
         {
           "name": "getImageLayerNodeByName",
@@ -353,7 +353,7 @@
             }
           ],
           "returnType": "TileLayerNode | undefined",
-          "description": "The canonical layer node for the layer with the given **id**, or undefined. Ids are authoritative and unique — this is the unambiguous lookup. The returned node may be reparented into the caller's own containers; the view still tracks it for refresh and destruction."
+          "description": "The canonical layer node for the **tile** layer with the given **id**, or undefined. Tile ids are authoritative and unique — this is the unambiguous lookup. The returned node may be reparented into the caller's own containers; the view still tracks it for refresh and destruction."
         },
         {
           "name": "getLayerNodesByName",
@@ -412,7 +412,7 @@
             }
           ],
           "returnType": "readonly TileLayerNode[]",
-          "description": "Every canonical layer node whose layer has the given **name**, in map document order. Layer names are not guaranteed unique, so this returns an array (empty when no layer matches). Prefer getLayerNodeById when you have the id."
+          "description": "Every canonical tile-layer node whose layer has the given **name**, in map document order. Layer names are not guaranteed unique, so this returns an array (empty when no layer matches). Prefer getLayerNodeById when you have the id."
         },
         {
           "name": "hasBand",
@@ -488,7 +488,7 @@
           ],
           "params": [],
           "returnType": "this",
-          "description": "Rebuild the view after **structural** map changes (layers added to or removed from the map). Ordinary tile edits and chunk creation/removal do NOT need this — those are handled by chunk revisions and TileLayerNode.refresh respectively. - Removed layers: their generated layer node is detached and destroyed. - Unchanged layers: keep their existing layer node (stable identity). - Added layers: a new layer node is created and assigned to the first band whose definition selects it (by id, or by a currently-unambiguous name), otherwise owned directly by the view. - Every band's children are re-ordered to map document order. Application actors are never touched, and bands keep their placement in the application scene graph. Image-layer nodes are constructed once, at view construction, and are **not** reconciled by this method: a subsequent import('./TileMap').TileMap.removeImageLayer call on the map is not reflected in imageLayerNodes (full image-layer reconcile is deferred)."
+          "description": "Rebuild the view after **structural** map changes (tile or image layers added to or removed from the map). Ordinary tile edits and chunk creation/removal do NOT need this — those are handled by chunk revisions and TileLayerNode.refresh respectively. - Removed layers (tile or image): their generated node is detached and destroyed. - Unchanged layers: keep their existing node (stable identity). - Added layers (tile or image): a new node is created and assigned to the first band whose definition selects it (by a currently-unambiguous id or name), otherwise owned directly by the view. - Every band's children are re-ordered to the map's combined document order (import('./TileMap').TileMap.renderableLayers). Application actors are never touched, and bands keep their placement in the application scene graph."
         }
       ],
       "paragraphs": [],
@@ -617,7 +617,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "All canonical layer nodes, one per map layer, in map document order."
+          "description": "All canonical tile-layer nodes, one per map tile layer, in map document order."
         },
         {
           "name": "map",

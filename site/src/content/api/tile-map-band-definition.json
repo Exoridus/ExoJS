@@ -1,6 +1,6 @@
 {
   "title": "TileMapBandDefinition",
-  "description": "The layers composing one band, by id or unique name, in any order. Rendering order always follows map document order regardless of the order listed here — a definition *selects* layers, it never reorders them. The band's name is the key it is registered under in TileMapViewOptions.bands.",
+  "description": "The layers composing one band, by id or unique name, in any order. Tile and image layers may be freely mixed. Rendering order always follows the map's combined document order (import('./TileMap').TileMap.renderableLayers) regardless of the order listed here — a definition *selects* layers, it never reorders them. The band's name is the key it is registered under in TileMapViewOptions.bands.",
   "symbol": "TileMapBandDefinition",
   "kind": "type",
   "subsystem": "tilemap",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "The layers composing one band, by id or unique name, in any order. Rendering order always follows map document order regardless of the order listed here — a definition *selects* layers, it never reorders them. The band's name is the key it is registered under in TileMapViewOptions.bands."
+        "The layers composing one band, by id or unique name, in any order. Tile and image layers may be freely mixed. Rendering order always follows the map's combined document order (import('./TileMap').TileMap.renderableLayers) regardless of the order listed here — a definition *selects* layers, it never reorders them. The band's name is the key it is registered under in TileMapViewOptions.bands."
       ],
       "importLine": "import { TileMapBandDefinition } from '@codexo/exojs-tilemap'",
       "sourceLink": null
