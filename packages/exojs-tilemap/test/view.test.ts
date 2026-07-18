@@ -837,12 +837,246 @@ describe('TileMapView image layer nodes', () => {
     expect(node.pixelSnapMode).toBe('geometry');
   });
 
-  it('band definitions still reject image-layer ids and names as unknown selectors', () => {
+  it('band definitions accept image-layer ids and names as selectors', () => {
     const bg = makeImageLayer({ id: 10, name: 'bg' });
     const { map } = makeImageMap([bg]);
 
-    expect(() => map.createView({ bands: { b: [10] } })).toThrow(/no layer with id 10/);
-    expect(() => map.createView({ bands: { b: ['bg'] } })).toThrow(/no layer named "bg"/);
+    const byId = map.createView({ bands: { b: [10] } }).band('b');
+    const byName = map.createView({ bands: { b: ['bg'] } }).band('b');
+
+    for (const band of [byId, byName]) {
+      expect(band.layerNodes).toHaveLength(1);
+      expect(band.layerNodes[0]).toBeInstanceOf(ImageLayerNode);
+      expect(band.layerNodes[0]!.layer).toBe(bg);
+    }
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+// TileMapView — heterogeneous bands (tile + image members)
+// ═══════════════════════════════════════════════════════════════════════
+
+describe('TileMapView heterogeneous bands', () => {
+  /** ground (1) → bg image (2) → overlay (3), interleaved via documentOrder. */
+  function makeInterleavedMap(): {
+    map: TileMap;
+    tileset: TileSet;
+    ground: TileLayer;
+    overlay: TileLayer;
+    bg: ImageLayer;
+  } {
+    const tileset = makeTileset();
+    const ground = fillLayer(makeLayer(tileset, { id: 1, name: 'ground' }), tileset);
+    const overlay = fillLayer(makeLayer(tileset, { id: 3, name: 'overlay' }), tileset);
+    const bg = makeImageLayer({ id: 2, name: 'bg' });
+    const map = new TileMap({
+      name: 'interleaved',
+      width: 4,
+      height: 4,
+      tileWidth: 32,
+      tileHeight: 32,
+      tilesets: [tileset],
+      layers: [ground, overlay],
+      imageLayers: [bg],
+      documentOrder: [1, 2, 3],
+    });
+
+    return { map, tileset, ground, overlay, bg };
+  }
+
+  it('stacks mixed tile/image members in map document order, not definition order', () => {
+    const { map, bg } = makeInterleavedMap();
+
+    // Selectors listed in REVERSE document order, mixing names and ids.
+    const view = map.createView({ bands: { stage: ['overlay', 2, 'ground'] } });
+    const band = view.band('stage');
+
+    expect(band.layerNodes.map(node => node.layer.id)).toEqual([1, 2, 3]);
+    expect(band.layerNodes[0]).toBeInstanceOf(TileLayerNode);
+    expect(band.layerNodes[1]).toBeInstanceOf(ImageLayerNode);
+    expect(band.layerNodes[2]).toBeInstanceOf(TileLayerNode);
+    expect(band.children).toHaveLength(3);
+    expect(band.children[0]).toBe(band.layerNodes[0]);
+    expect(band.children[1]).toBe(band.layerNodes[1]);
+    expect(band.children[2]).toBe(band.layerNodes[2]);
+
+    // The band member IS the canonical image node.
+    expect(band.layerNodes[1]).toBe(view.getImageLayerNodeById(2));
+    expect(band.layerNodes[1]!.layer).toBe(bg);
+    expect(band.layerNodes[1]!.parent).toBe(band);
+  });
+
+  it('band.layerNodes is typed heterogeneous', () => {
+    const { map } = makeInterleavedMap();
+    const band = map.createView({ bands: { stage: [1, 2] } }).band('stage');
+
+    expectTypeOf(band.layerNodes).toEqualTypeOf<readonly (TileLayerNode | ImageLayerNode)[]>();
+  });
+
+  it('band.getLayerNodeById finds image members too', () => {
+    const { map } = makeInterleavedMap();
+    const view = map.createView({ bands: { stage: [1, 2] } });
+    const band = view.band('stage');
+
+    expect(band.getLayerNodeById(2)).toBe(view.getImageLayerNodeById(2));
+    expect(band.getLayerNodeById(3)).toBeUndefined(); // overlay is not a member
+  });
+
+  it('listing the same image layer by id and by name is a duplicate', () => {
+    const { map } = makeInterleavedMap();
+
+    expect(() => map.createView({ bands: { b: [2, 'bg'] } })).toThrow(/more than once/);
+  });
+
+  it('assigning an image layer to two bands throws', () => {
+    const { map } = makeInterleavedMap();
+
+    expect(() => map.createView({ bands: { a: [2], b: ['bg'] } })).toThrow(/multiple bands/);
+  });
+
+  it('throws for a cross-kind ambiguous id selector in a fallback-ordered map', () => {
+    const tileset = makeTileset();
+    const map = new TileMap({
+      name: 'clash',
+      width: 4,
+      height: 4,
+      tileWidth: 32,
+      tileHeight: 32,
+      tilesets: [tileset],
+      layers: [fillLayer(makeLayer(tileset, { id: 1, name: 'ground' }), tileset)],
+      imageLayers: [makeImageLayer({ id: 1, name: 'bg' })],
+    });
+
+    expect(() => map.createView({ bands: { b: [1] } })).toThrow(/ambiguous/);
+    expect(() => map.createView({ bands: { b: [1] } })).toThrow(/by a unique name/);
+  });
+
+  it('throws for a name shared by a tile layer and an image layer (ambiguity spans kinds)', () => {
+    const tileset = makeTileset();
+    const map = new TileMap({
+      name: 'dup',
+      width: 4,
+      height: 4,
+      tileWidth: 32,
+      tileHeight: 32,
+      tilesets: [tileset],
+      layers: [fillLayer(makeLayer(tileset, { id: 1, name: 'dup' }), tileset)],
+      imageLayers: [makeImageLayer({ id: 2, name: 'dup' })],
+    });
+
+    expect(() => map.createView({ bands: { b: ['dup'] } })).toThrow(/ambiguous/);
+    expect(() => map.createView({ bands: { b: ['dup'] } })).toThrow(/by id/);
+  });
+
+  it('destroy() destroys a banded image node exactly once (via its band)', () => {
+    const { map } = makeInterleavedMap();
+    const view = map.createView({ bands: { stage: [1, 2, 3] } });
+    const imageNode = view.getImageLayerNodeById(2)!;
+    const worldRoot = new Container();
+
+    worldRoot.addChild(view.band('stage'));
+
+    expect(() => view.destroy()).not.toThrow();
+    expect(imageNode.destroyed).toBe(true);
+    expect(imageNode.parent).toBeNull();
+    expect(worldRoot.children).toHaveLength(0);
+  });
+
+  it('refreshLayers: removeImageLayer destroys + releases the node; byId/byName agree', () => {
+    const { map } = makeInterleavedMap();
+    const view = map.createView({ bands: { stage: [1, 2, 3] } });
+    const band = view.band('stage');
+    const imageNode = view.getImageLayerNodeById(2)!;
+
+    map.removeImageLayer(2);
+    view.refreshLayers();
+
+    expect(imageNode.destroyed).toBe(true);
+    expect(imageNode.parent).toBeNull();
+    expect(band.layerNodes.map(node => node.layer.id)).toEqual([1, 3]);
+    expect(view.imageLayerNodes).toHaveLength(0);
+    expect(view.getImageLayerNodeById(2)).toBeUndefined();
+    expect(view.getImageLayerNodeByName('bg')).toBeUndefined();
+  });
+
+  it('refreshLayers: addImageLayer creates a node and band-assigns it in document order', () => {
+    const { map } = makeInterleavedMap();
+    const view = map.createView({ bands: { stage: [1, 'bg', 3] } });
+    const band = view.band('stage');
+
+    map.removeImageLayer(2);
+    view.refreshLayers();
+
+    expect(band.layerNodes.map(node => node.layer.id)).toEqual([1, 3]);
+
+    const reborn = makeImageLayer({ id: 5, name: 'bg' });
+
+    map.addImageLayer(reborn);
+    view.refreshLayers();
+
+    // Appended to the document order (add-after-construction appends), and
+    // adopted by the band whose definition selects its (unambiguous) name.
+    expect(band.layerNodes.map(node => node.layer.id)).toEqual([1, 3, 5]);
+    expect(band.layerNodes[2]).toBeInstanceOf(ImageLayerNode);
+    expect(band.layerNodes[2]!.parent).toBe(band);
+    expect(band.children[2]).toBe(band.layerNodes[2]);
+    expect(view.getImageLayerNodeById(5)).toBe(band.layerNodes[2]);
+    expect(view.getImageLayerNodeByName('bg')).toBe(band.layerNodes[2]);
+  });
+
+  it('refreshLayers: a later cross-kind id collision never band-assigns the new image layer', () => {
+    const tileset = makeTileset();
+    const map = new TileMap({
+      name: 'clash-later',
+      width: 4,
+      height: 4,
+      tileWidth: 32,
+      tileHeight: 32,
+      tilesets: [tileset],
+      layers: [fillLayer(makeLayer(tileset, { id: 1, name: 'ground' }), tileset)],
+    });
+    const view = map.createView({ bands: { stage: [1] } });
+    const band = view.band('stage');
+    const tileNode = view.getLayerNodeById(1)!;
+
+    map.addImageLayer(makeImageLayer({ id: 1, name: 'bg' }));
+    view.refreshLayers();
+
+    // The id selector meant the tile layer; the now-ambiguous id must not
+    // adopt the image node. It stays view-owned and unparented.
+    expect(band.layerNodes).toEqual([tileNode]);
+
+    const imageNode = view.imageLayerNodes.find(node => node.layer.id === 1)!;
+
+    expect(imageNode).toBeInstanceOf(ImageLayerNode);
+    expect(imageNode.parent).toBeNull();
+  });
+
+  it('refreshLayers: an unbanded image node is reconciled and inherits the snap cascade', () => {
+    const { map } = makeInterleavedMap();
+    const view = map.createView();
+
+    view.pixelSnapMode = 'geometry';
+
+    const added = makeImageLayer({ id: 9, name: 'clouds' });
+
+    map.addImageLayer(added);
+    view.refreshLayers();
+
+    const node = view.getImageLayerNodeById(9)!;
+
+    expect(node.layer).toBe(added);
+    expect(node.parent).toBeNull();
+    expect(node.pixelSnapMode).toBe('geometry');
+    expect(view.imageLayerNodes.map(n => n.layer.id)).toEqual([2, 9]);
+
+    // Identity of the pre-existing image node is retained across refreshes.
+    const existing = view.getImageLayerNodeById(2)!;
+
+    view.refreshLayers();
+
+    expect(view.getImageLayerNodeById(2)).toBe(existing);
+    expect(view.getImageLayerNodeById(9)).toBe(node);
   });
 });
 

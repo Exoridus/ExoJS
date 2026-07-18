@@ -83,7 +83,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Named bands, keyed by band name (keys are unique, so duplicate band names cannot occur). Each value lists the layers that compose the band. Layers not listed in any band remain reachable through TileMapView.getLayerNodeById and friends and are owned directly by the view (no implicit fallback band). The definition is copied and frozen; mutating the caller's object afterwards does not change band assignments."
+          "description": "Named bands, keyed by band name (keys are unique, so duplicate band names cannot occur). Each value lists the layers that compose the band — tile and image layers alike. Layers not listed in any band remain reachable through TileMapView.getLayerNodeById and friends and are owned directly by the view (no implicit fallback band). The definition is copied and frozen; mutating the caller's object afterwards does not change band assignments."
         },
         {
           "name": "cullable",

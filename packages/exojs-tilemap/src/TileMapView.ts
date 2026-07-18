@@ -1,5 +1,6 @@
 import type { PixelSnapMode } from '@codexo/exojs/renderer-sdk';
 
+import { ImageLayer } from './ImageLayer';
 import { ImageLayerNode } from './ImageLayerNode';
 import { assertPixelSnapMode } from './pixelSnap';
 import type { TileLayer } from './TileLayer';
@@ -9,18 +10,23 @@ import { TileMapBand } from './TileMapBand';
 
 /**
  * A layer selector inside a {@link TileMapBandDefinition}: either a stable
- * layer **id** (`number`) or a **unique** layer **name** (`string`). Names that
- * are shared by more than one layer are rejected as ambiguous — reference such
- * layers by id.
+ * layer **id** (`number`) or a **unique** layer **name** (`string`). Selectors
+ * resolve across the map's tile **and** image layers. Names that are shared by
+ * more than one layer (of either kind) are rejected as ambiguous — reference
+ * such layers by id. An id shared by a tile layer and an image layer (possible
+ * only in fallback-ordered maps, which never validated cross-kind uniqueness)
+ * is equally ambiguous — reference such layers by a unique name.
  * @advanced
  */
 export type TileLayerSelector = number | string;
 
 /**
- * The layers composing one band, by id or unique name, in any order. Rendering
- * order always follows map document order regardless of the order listed here —
- * a definition *selects* layers, it never reorders them. The band's name is the
- * key it is registered under in {@link TileMapViewOptions.bands}.
+ * The layers composing one band, by id or unique name, in any order. Tile and
+ * image layers may be freely mixed. Rendering order always follows the map's
+ * combined document order ({@link import('./TileMap').TileMap.renderableLayers})
+ * regardless of the order listed here — a definition *selects* layers, it never
+ * reorders them. The band's name is the key it is registered under in
+ * {@link TileMapViewOptions.bands}.
  * @advanced
  */
 export type TileMapBandDefinition = readonly TileLayerSelector[];
@@ -32,15 +38,16 @@ export type TileMapBandDefinition = readonly TileLayerSelector[];
 export interface TileMapViewOptions {
   /**
    * Named bands, keyed by band name (keys are unique, so duplicate band names
-   * cannot occur). Each value lists the layers that compose the band. Layers
-   * not listed in any band remain reachable through
-   * {@link TileMapView.getLayerNodeById} and friends and are owned directly by
-   * the view (no implicit fallback band). The definition is copied and frozen;
-   * mutating the caller's object afterwards does not change band assignments.
+   * cannot occur). Each value lists the layers that compose the band — tile
+   * and image layers alike. Layers not listed in any band remain reachable
+   * through {@link TileMapView.getLayerNodeById} and friends and are owned
+   * directly by the view (no implicit fallback band). The definition is copied
+   * and frozen; mutating the caller's object afterwards does not change band
+   * assignments.
    *
    * @throws (at construction) on an unknown layer id, an unknown or ambiguous
-   *   layer name, a layer listed twice within one band, or a layer assigned to
-   *   more than one band.
+   *   layer name, a cross-kind ambiguous layer id, a layer listed twice within
+   *   one band, or a layer assigned to more than one band.
    */
   readonly bands?: Readonly<Record<string, TileMapBandDefinition>>;
   /**
@@ -87,18 +94,14 @@ interface ResolvedBandDef {
  * **Image layers.** A view also produces exactly one canonical
  * {@link ImageLayerNode} per {@link TileMap.imageLayers} entry (stable identity,
  * map document order), reachable through {@link imageLayerNodes},
- * {@link getImageLayerNodeById}, and {@link getImageLayerNodeByName}. The view
- * owns these nodes the same way it owns unbanded tile-layer nodes — the
- * application parents each one wherever the image belongs in draw order, and
- * {@link TileMapView.destroy} destroys them and detaches them from their
- * application parents. Image layers are **not** selectable in
- * {@link TileMapViewOptions.bands}: a band definition only ever reorders its
- * own members to map document order, and image layers do not share a combined
- * document position with tile layers — mixing them into one band's selector
- * list could not resolve a single, unambiguous render order without silently
- * guessing at an interleaving. Interleave an image layer with tile layers or
- * bands by parenting {@link getImageLayerNodeById} / {@link getImageLayerNodeByName}
- * directly, the same way actors are interleaved.
+ * {@link getImageLayerNodeById}, and {@link getImageLayerNodeByName}. Image
+ * layers are selectable in {@link TileMapViewOptions.bands} exactly like tile
+ * layers: a band member list may mix both kinds, and the band stacks its
+ * members by the map's combined document order
+ * ({@link import('./TileMap').TileMap.renderableLayers}). A banded image node
+ * is owned by its band; an unbanded one is owned by the view directly, and the
+ * application parents it wherever the image belongs in draw order — the same
+ * way actors are interleaved.
  *
  * @advanced
  */
@@ -106,9 +109,9 @@ export class TileMapView {
   private readonly _map: TileMap;
   private readonly _cullable: boolean;
 
-  /** All canonical layer nodes, in map document order. */
+  /** All canonical tile-layer nodes, in map document order. */
   private readonly _layerNodes: TileLayerNode[] = [];
-  /** Layer id → its canonical layer node. */
+  /** Tile layer id → its canonical layer node. */
   private readonly _layerNodeById = new Map<number, TileLayerNode>();
 
   /** Bands in definition (insertion) order. */
@@ -118,11 +121,11 @@ export class TileMapView {
   /** Original band definitions (frozen) for re-resolution on refresh. */
   private readonly _bandDefs: ResolvedBandDef[] = [];
   /** Layer node → its owning band (absent = view-owned / unbanded). */
-  private readonly _nodeBand = new Map<TileLayerNode, TileMapBand>();
-  /** Unbanded layer nodes owned directly by the view, in map document order. */
+  private readonly _nodeBand = new Map<TileLayerNode | ImageLayerNode, TileMapBand>();
+  /** Unbanded tile-layer nodes owned directly by the view, in map document order. */
   private readonly _directLayerNodes: TileLayerNode[] = [];
 
-  /** All canonical image layer nodes, in map document order. Never band-selectable. */
+  /** All canonical image layer nodes, in map document order. */
   private readonly _imageLayerNodes: ImageLayerNode[] = [];
   /** Image layer id → its canonical image layer node. */
   private readonly _imageLayerNodeById = new Map<number, ImageLayerNode>();
@@ -147,6 +150,13 @@ export class TileMapView {
       this._layerNodeById.set(layer.id, node);
     }
 
+    for (const imageLayer of map.imageLayers) {
+      const imageNode = new ImageLayerNode(imageLayer);
+
+      this._imageLayerNodes.push(imageNode);
+      this._imageLayerNodeById.set(imageLayer.id, imageNode);
+    }
+
     if (options?.bands) {
       for (const [name, selectors] of Object.entries(options.bands)) {
         this._defineBand(name, selectors);
@@ -158,13 +168,6 @@ export class TileMapView {
         this._directLayerNodes.push(node);
       }
     }
-
-    for (const imageLayer of map.imageLayers) {
-      const imageNode = new ImageLayerNode(imageLayer);
-
-      this._imageLayerNodes.push(imageNode);
-      this._imageLayerNodeById.set(imageLayer.id, imageNode);
-    }
   }
 
   /** The runtime map this view composes. Referenced, never owned. */
@@ -172,7 +175,7 @@ export class TileMapView {
     return this._map;
   }
 
-  /** All canonical layer nodes, one per map layer, in map document order. */
+  /** All canonical tile-layer nodes, one per map tile layer, in map document order. */
   public get layers(): readonly TileLayerNode[] {
     return this._layerNodes;
   }
@@ -222,17 +225,17 @@ export class TileMapView {
   }
 
   /**
-   * The canonical layer node for the layer with the given **id**, or
-   * `undefined`. Ids are authoritative and unique — this is the unambiguous
-   * lookup. The returned node may be reparented into the caller's own
-   * containers; the view still tracks it for refresh and destruction.
+   * The canonical layer node for the **tile** layer with the given **id**, or
+   * `undefined`. Tile ids are authoritative and unique — this is the
+   * unambiguous lookup. The returned node may be reparented into the caller's
+   * own containers; the view still tracks it for refresh and destruction.
    */
   public getLayerNodeById(id: number): TileLayerNode | undefined {
     return this._layerNodeById.get(id);
   }
 
   /**
-   * Every canonical layer node whose layer has the given **name**, in map
+   * Every canonical tile-layer node whose layer has the given **name**, in map
    * document order. Layer names are not guaranteed unique, so this returns an
    * array (empty when no layer matches). Prefer {@link getLayerNodeById} when
    * you have the id.
@@ -250,7 +253,7 @@ export class TileMapView {
    * The canonical image layer node for the image layer with the given **id**,
    * or `undefined`. Ids are authoritative and unique — this is the unambiguous
    * lookup. The returned node may be reparented into the caller's own
-   * containers; the view still tracks it for destruction.
+   * containers; the view still tracks it for refresh and destruction.
    */
   public getImageLayerNodeById(id: number): ImageLayerNode | undefined {
     return this._imageLayerNodeById.get(id);
@@ -304,25 +307,22 @@ export class TileMapView {
   }
 
   /**
-   * Rebuild the view after **structural** map changes (layers added to or
-   * removed from the map). Ordinary tile edits and chunk creation/removal do
-   * NOT need this — those are handled by chunk revisions and
-   * {@link TileLayerNode.refresh} respectively.
+   * Rebuild the view after **structural** map changes (tile or image layers
+   * added to or removed from the map). Ordinary tile edits and chunk
+   * creation/removal do NOT need this — those are handled by chunk revisions
+   * and {@link TileLayerNode.refresh} respectively.
    *
-   * - Removed layers: their generated layer node is detached and destroyed.
-   * - Unchanged layers: keep their existing layer node (stable identity).
-   * - Added layers: a new layer node is created and assigned to the first band
-   *   whose definition selects it (by id, or by a currently-unambiguous name),
-   *   otherwise owned directly by the view.
-   * - Every band's children are re-ordered to map document order.
+   * - Removed layers (tile or image): their generated node is detached and
+   *   destroyed.
+   * - Unchanged layers: keep their existing node (stable identity).
+   * - Added layers (tile or image): a new node is created and assigned to the
+   *   first band whose definition selects it (by a currently-unambiguous id or
+   *   name), otherwise owned directly by the view.
+   * - Every band's children are re-ordered to the map's combined document
+   *   order ({@link import('./TileMap').TileMap.renderableLayers}).
    *
    * Application actors are never touched, and bands keep their placement in the
    * application scene graph.
-   *
-   * Image-layer nodes are constructed once, at view construction, and are
-   * **not** reconciled by this method: a subsequent
-   * {@link import('./TileMap').TileMap.removeImageLayer} call on the map is not
-   * reflected in {@link imageLayerNodes} (full image-layer reconcile is deferred).
    *
    * @throws If the view has been destroyed.
    */
@@ -341,11 +341,19 @@ export class TileMapView {
     // 1. Remove nodes whose layer no longer exists.
     for (const node of [...this._layerNodes]) {
       if (!currentIds.has(node.layer.id)) {
-        this._removeNode(node);
+        this._removeTileNode(node);
       }
     }
 
-    // 2. Re-derive the doc-ordered node list, creating + assigning new nodes.
+    const currentImageLayers = new Set(this._map.imageLayers);
+
+    for (const node of [...this._imageLayerNodes]) {
+      if (!currentImageLayers.has(node.layer)) {
+        this._removeImageNode(node);
+      }
+    }
+
+    // 2. Re-derive the doc-ordered node lists, creating + assigning new nodes.
     const newOrder: TileLayerNode[] = [];
 
     for (const layer of currentLayers) {
@@ -368,13 +376,38 @@ export class TileMapView {
     this._layerNodes.length = 0;
     this._layerNodes.push(...newOrder);
 
-    // 3. Re-order each band's children to map document order.
-    const documentIndexById = new Map<number, number>();
+    const newImageOrder: ImageLayerNode[] = [];
 
-    for (const [index, layer] of currentLayers.entries()) documentIndexById.set(layer.id, index);
+    for (const imageLayer of this._map.imageLayers) {
+      let node = this._imageLayerNodes.find(candidate => candidate.layer === imageLayer);
+
+      if (!node) {
+        node = new ImageLayerNode(imageLayer);
+
+        if (this._pixelSnapMode !== 'none') {
+          node.pixelSnapMode = this._pixelSnapMode;
+        }
+
+        this._imageLayerNodeById.set(imageLayer.id, node);
+        this._assignNewNode(node, imageLayer);
+      }
+
+      newImageOrder.push(node);
+    }
+
+    this._imageLayerNodes.length = 0;
+    this._imageLayerNodes.push(...newImageOrder);
+
+    // 3. Re-order each band's children to the combined document order. Keyed
+    //    by layer instance: fallback-ordered maps may share an id across kinds.
+    const documentIndex = new Map<TileLayer | ImageLayer, number>();
+
+    for (const [index, layer] of this._map.renderableLayers.entries()) {
+      documentIndex.set(layer, index);
+    }
 
     for (const band of this._bands) {
-      band._reorder(documentIndexById);
+      band._reorder(documentIndex);
     }
 
     // 4. Rebuild the unbanded set in doc order.
@@ -392,9 +425,10 @@ export class TileMapView {
   /**
    * Destroy the view: every band, generated tile-layer node, and generated
    * {@link ImageLayerNode} is destroyed (and detached from its application
-   * parent), freeing cached chunk geometry. Idempotent. Application actors,
-   * sibling content, the {@link TileMap}, its {@link TileLayer}s and image
-   * layers, and Loader-owned textures all survive.
+   * parent), freeing cached chunk geometry. Banded nodes are destroyed by
+   * their band; unbanded ones by the view directly. Idempotent. Application
+   * actors, sibling content, the {@link TileMap}, its {@link TileLayer}s and
+   * image layers, and Loader-owned textures all survive.
    */
   public destroy(): void {
     if (this._destroyed) {
@@ -413,6 +447,10 @@ export class TileMapView {
     }
 
     for (const node of this._imageLayerNodes) {
+      if (this._nodeBand.has(node)) {
+        continue; // Owned and already destroyed by its band.
+      }
+
       node.parent?.removeChild(node);
       node.destroy();
     }
@@ -432,29 +470,37 @@ export class TileMapView {
 
   /** Resolve one band definition into a {@link TileMapBand} and record it. */
   private _defineBand(name: string, selectors: TileMapBandDefinition): void {
-    const memberIds = new Set<number>();
+    const members = new Set<TileLayer | ImageLayer>();
 
     for (const selector of selectors) {
-      const id = this._resolveSelector(name, selector);
+      const layer = this._resolveSelector(name, selector);
 
-      if (memberIds.has(id)) {
-        throw new Error(`TileMapView band "${name}" lists layer ${id} more than once.`);
+      if (members.has(layer)) {
+        throw new Error(`TileMapView band "${name}" lists layer ${layer.id} more than once.`);
       }
 
-      const existing = this._layerNodeById.get(id);
+      const existing = this._nodeFor(layer);
 
       if (existing && this._nodeBand.has(existing)) {
         throw new Error(
-          `TileMapView layer ${id} is assigned to multiple bands ` +
+          `TileMapView layer ${layer.id} is assigned to multiple bands ` +
             `("${this._nodeBand.get(existing)!.name}" and "${name}").`,
         );
       }
 
-      memberIds.add(id);
+      members.add(layer);
     }
 
-    // Order members by map document order (membership selects; doc order renders).
-    const orderedNodes = this._layerNodes.filter(node => memberIds.has(node.layer.id));
+    // Order members by combined document order (membership selects; doc order
+    // renders — tile and image members interleave).
+    const orderedNodes: Array<TileLayerNode | ImageLayerNode> = [];
+
+    for (const layer of this._map.renderableLayers) {
+      if (members.has(layer)) {
+        orderedNodes.push(this._nodeFor(layer)!);
+      }
+    }
+
     const band = new TileMapBand(name, orderedNodes);
 
     for (const node of orderedNodes) {
@@ -466,19 +512,38 @@ export class TileMapView {
     this._bandDefs.push({ name, selectors: Object.freeze([...selectors]) });
   }
 
-  /** Resolve a single selector to a layer id, throwing on unknown/ambiguous. */
-  private _resolveSelector(bandName: string, selector: TileLayerSelector): number {
+  /**
+   * Resolve a single selector to a tile or image layer instance, throwing on
+   * unknown/ambiguous. Instances (not ids) disambiguate fallback-ordered maps
+   * in which a tile layer and an image layer share an id.
+   */
+  private _resolveSelector(bandName: string, selector: TileLayerSelector): TileLayer | ImageLayer {
     if (typeof selector === 'number') {
-      if (!this._layerNodeById.has(selector)) {
+      const tileLayer = this._map.getTileLayerById(selector);
+      const imageLayer = this._map.imageLayers.find(layer => layer.id === selector);
+
+      if (tileLayer && imageLayer) {
+        throw new Error(
+          `TileMapView band "${bandName}": layer id ${selector} is ambiguous ` +
+            `(a tile layer and an image layer share it); reference it by a unique name instead.`,
+        );
+      }
+
+      const layer = tileLayer ?? imageLayer;
+
+      if (!layer) {
         throw new Error(
           `TileMapView band "${bandName}": no layer with id ${selector} in map "${this._map.name}".`,
         );
       }
 
-      return selector;
+      return layer;
     }
 
-    const matches = this._map.layers.filter(layer => layer.name === selector);
+    const matches: Array<TileLayer | ImageLayer> = [
+      ...this._map.layers.filter(layer => layer.name === selector),
+      ...this._map.imageLayers.filter(layer => layer.name === selector),
+    ];
 
     if (matches.length === 0) {
       throw new Error(
@@ -493,11 +558,25 @@ export class TileMapView {
       );
     }
 
-    return matches[0]!.id;
+    return matches[0]!;
+  }
+
+  /** The canonical node for a tile or image layer instance, if one exists. */
+  private _nodeFor(layer: TileLayer | ImageLayer): TileLayerNode | ImageLayerNode | undefined {
+    if (layer instanceof ImageLayer) {
+      // Instance scan rather than the id map: image ids are not validated
+      // unique, and fallback maps may collide with tile ids anyway.
+      return this._imageLayerNodes.find(node => node.layer === layer);
+    }
+
+    return this._layerNodeById.get(layer.id);
   }
 
   /** Assign a freshly created node to the first band that selects its layer. */
-  private _assignNewNode(node: TileLayerNode, layer: TileLayer): void {
+  private _assignNewNode(
+    node: TileLayerNode | ImageLayerNode,
+    layer: TileLayer | ImageLayer,
+  ): void {
     for (const def of this._bandDefs) {
       if (this._definitionSelects(def, layer)) {
         const band = this._bandByName.get(def.name)!;
@@ -510,15 +589,21 @@ export class TileMapView {
     }
   }
 
-  /** Whether a band definition selects the given layer (unambiguously by name). */
-  private _definitionSelects(def: ResolvedBandDef, layer: TileLayer): boolean {
+  /**
+   * Whether a band definition selects the given layer — only by a selector
+   * that is currently unambiguous (a unique name, or an id not shared across
+   * kinds), mirroring {@link _resolveSelector}'s construction-time rules.
+   */
+  private _definitionSelects(def: ResolvedBandDef, layer: TileLayer | ImageLayer): boolean {
     for (const selector of def.selectors) {
       if (typeof selector === 'number') {
-        if (selector === layer.id) {
+        if (selector === layer.id && !this._isCrossKindId(selector)) {
           return true;
         }
       } else if (selector === layer.name) {
-        const sameName = this._map.layers.filter(other => other.name === selector).length;
+        const sameName =
+          this._map.layers.filter(other => other.name === selector).length +
+          this._map.imageLayers.filter(other => other.name === selector).length;
 
         if (sameName === 1) {
           return true;
@@ -529,20 +614,17 @@ export class TileMapView {
     return false;
   }
 
-  /** Detach + destroy a node, dropping it from band membership and registries. */
-  private _removeNode(node: TileLayerNode): void {
-    const band = this._nodeBand.get(node);
+  /** Whether an id currently belongs to both a tile layer and an image layer. */
+  private _isCrossKindId(id: number): boolean {
+    return (
+      this._map.getTileLayerById(id) !== undefined &&
+      this._map.imageLayers.some(layer => layer.id === id)
+    );
+  }
 
-    if (band) {
-      band._release(node);
-      this._nodeBand.delete(node);
-    } else {
-      const directIndex = this._directLayerNodes.indexOf(node);
-
-      if (directIndex !== -1) {
-        this._directLayerNodes.splice(directIndex, 1);
-      }
-    }
+  /** Detach + destroy a tile node, dropping it from bands and registries. */
+  private _removeTileNode(node: TileLayerNode): void {
+    this._releaseFromOwner(node);
 
     node.parent?.removeChild(node);
     this._layerNodeById.delete(node.layer.id);
@@ -554,5 +636,40 @@ export class TileMapView {
     }
 
     node.destroy();
+  }
+
+  /** Detach + destroy an image node, dropping it from bands and registries. */
+  private _removeImageNode(node: ImageLayerNode): void {
+    this._releaseFromOwner(node);
+
+    node.parent?.removeChild(node);
+
+    if (this._imageLayerNodeById.get(node.layer.id) === node) {
+      this._imageLayerNodeById.delete(node.layer.id);
+    }
+
+    const orderIndex = this._imageLayerNodes.indexOf(node);
+
+    if (orderIndex !== -1) {
+      this._imageLayerNodes.splice(orderIndex, 1);
+    }
+
+    node.destroy();
+  }
+
+  /** Release a node from its band, or from the view's direct-ownership list. */
+  private _releaseFromOwner(node: TileLayerNode | ImageLayerNode): void {
+    const band = this._nodeBand.get(node);
+
+    if (band) {
+      band._release(node);
+      this._nodeBand.delete(node);
+    } else if (node instanceof TileLayerNode) {
+      const directIndex = this._directLayerNodes.indexOf(node);
+
+      if (directIndex !== -1) {
+        this._directLayerNodes.splice(directIndex, 1);
+      }
+    }
   }
 }

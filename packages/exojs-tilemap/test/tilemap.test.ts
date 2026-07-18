@@ -1772,6 +1772,277 @@ describe('TileMap', () => {
       name: 'm', height: 10, tileWidth: 16, tileHeight: 16,
     } as never)).toThrow(/width and height must both be provided/);
   });
+
+  // ── documentOrder / renderableLayers ─────────────────────────────────────
+
+  it('renderableLayers falls back to tile layers then image layers when documentOrder is omitted', () => {
+    const tileA = new TileLayer({ id: 1, name: 'ground', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] });
+    const tileB = new TileLayer({ id: 2, name: 'walls', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] });
+    const imageA = new ImageLayer({ id: 3, name: 'bg', image: 'bg.png' });
+    const imageB = new ImageLayer({ id: 4, name: 'fg', image: 'fg.png' });
+    const map = new TileMap({
+      width: 64, height: 64,
+      tileWidth: 32, tileHeight: 32,
+      tilesets: [ts],
+      layers: [tileA, tileB],
+      imageLayers: [imageA, imageB],
+    });
+    expect(map.renderableLayers).toEqual([...map.layers, ...map.imageLayers]);
+    expect(map.renderableLayers.map(l => l.id)).toEqual([1, 2, 3, 4]);
+  });
+
+  it('documentOrder accepts an interleaved order across tile and image layers', () => {
+    const tileA = new TileLayer({ id: 1, name: 'ground', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] });
+    const imageA = new ImageLayer({ id: 2, name: 'bg', image: 'bg.png' });
+    const tileB = new TileLayer({ id: 3, name: 'overlay', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] });
+    const map = new TileMap({
+      width: 64, height: 64,
+      tileWidth: 32, tileHeight: 32,
+      tilesets: [ts],
+      layers: [tileA, tileB],
+      imageLayers: [imageA],
+      documentOrder: [2, 1, 3],
+    });
+    expect(map.renderableLayers.map(l => l.id)).toEqual([2, 1, 3]);
+    expect(map.renderableLayers).toEqual([imageA, tileA, tileB]);
+  });
+
+  it('documentOrder throws on an unknown layer ID', () => {
+    const tileA = new TileLayer({ id: 1, name: 'ground', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] });
+    expect(() => new TileMap({
+      width: 64, height: 64,
+      tileWidth: 32, tileHeight: 32,
+      tilesets: [ts],
+      layers: [tileA],
+      documentOrder: [1, 999],
+    })).toThrow(/unknown/i);
+  });
+
+  it('documentOrder throws when a tile layer is missing from the list', () => {
+    const tileA = new TileLayer({ id: 1, name: 'ground', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] });
+    const tileB = new TileLayer({ id: 2, name: 'walls', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] });
+    expect(() => new TileMap({
+      width: 64, height: 64,
+      tileWidth: 32, tileHeight: 32,
+      tilesets: [ts],
+      layers: [tileA, tileB],
+      documentOrder: [1],
+    })).toThrow(/missing/i);
+  });
+
+  it('documentOrder throws when an image layer is missing from the list', () => {
+    const tileA = new TileLayer({ id: 1, name: 'ground', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] });
+    const imageA = new ImageLayer({ id: 2, name: 'bg', image: 'bg.png' });
+    expect(() => new TileMap({
+      width: 64, height: 64,
+      tileWidth: 32, tileHeight: 32,
+      tilesets: [ts],
+      layers: [tileA],
+      imageLayers: [imageA],
+      documentOrder: [1],
+    })).toThrow(/missing/i);
+  });
+
+  it('documentOrder throws when an ID is listed twice', () => {
+    const tileA = new TileLayer({ id: 1, name: 'ground', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] });
+    const tileB = new TileLayer({ id: 2, name: 'walls', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] });
+    expect(() => new TileMap({
+      width: 64, height: 64,
+      tileWidth: 32, tileHeight: 32,
+      tilesets: [ts],
+      layers: [tileA, tileB],
+      documentOrder: [1, 1, 2],
+    })).toThrow(/more than once/i);
+  });
+
+  it('documentOrder throws when a tile layer and an image layer share an ID (cross-kind ambiguity)', () => {
+    const tileA = new TileLayer({ id: 1, name: 'ground', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] });
+    const imageA = new ImageLayer({ id: 1, name: 'bg', image: 'bg.png' });
+    expect(() => new TileMap({
+      width: 64, height: 64,
+      tileWidth: 32, tileHeight: 32,
+      tilesets: [ts],
+      layers: [tileA],
+      imageLayers: [imageA],
+      documentOrder: [1],
+    })).toThrow(/both a tile layer and an image layer/i);
+  });
+
+  it('documentOrder throws when two image layers share an ID (same-kind duplicate degenerate input)', () => {
+    // Nothing validates image-layer id uniqueness, so this pair can coexist.
+    // Both `1` and `7` are covered by documentOrder's id-set checks even
+    // though there are 3 layer instances total (1 tile + 2 image) — the
+    // count mismatch must still throw instead of silently dropping one.
+    const tileA = new TileLayer({ id: 1, name: 'ground', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] });
+    const imageA = new ImageLayer({ id: 7, name: 'bg', image: 'bg.png' });
+    const imageB = new ImageLayer({ id: 7, name: 'bg2', image: 'bg2.png' });
+    expect(() => new TileMap({
+      width: 64, height: 64,
+      tileWidth: 32, tileHeight: 32,
+      tilesets: [ts],
+      layers: [tileA],
+      imageLayers: [imageA, imageB],
+      documentOrder: [1, 7],
+    })).toThrow(/documentOrder has 2 entries but map .* has 3 tile\/image layer instances/i);
+  });
+
+  it('a cross-kind duplicate ID is NOT rejected when documentOrder is omitted (fallback order is unambiguous by construction)', () => {
+    const tileA = new TileLayer({ id: 1, name: 'ground', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] });
+    const imageA = new ImageLayer({ id: 1, name: 'bg', image: 'bg.png' });
+    expect(() => new TileMap({
+      width: 64, height: 64,
+      tileWidth: 32, tileHeight: 32,
+      tilesets: [ts],
+      layers: [tileA],
+      imageLayers: [imageA],
+    })).not.toThrow();
+  });
+
+  it('renderableLayers resolves cross-kind duplicate IDs to the distinct instances in a fallback map', () => {
+    const tileA = new TileLayer({ id: 1, name: 'ground', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] });
+    const imageA = new ImageLayer({ id: 1, name: 'bg', image: 'bg.png' });
+    const map = new TileMap({
+      width: 64, height: 64,
+      tileWidth: 32, tileHeight: 32,
+      tilesets: [ts],
+      layers: [tileA],
+      imageLayers: [imageA],
+    });
+    expect(map.renderableLayers).toHaveLength(2);
+    expect(map.renderableLayers[0]).toBe(tileA);
+    expect(map.renderableLayers[1]).toBe(imageA);
+    expect(map.renderableLayers[1]).toBeInstanceOf(ImageLayer);
+  });
+
+  it('addImageLayer with an ID colliding with a tile layer still yields the image instance in renderableLayers', () => {
+    const tileA = new TileLayer({ id: 1, name: 'ground', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] });
+    const map = new TileMap({
+      width: 64, height: 64,
+      tileWidth: 32, tileHeight: 32,
+      tilesets: [ts],
+      layers: [tileA],
+    });
+    const imageA = new ImageLayer({ id: 1, name: 'bg', image: 'bg.png' });
+    map.addImageLayer(imageA);
+    expect(map.renderableLayers).toHaveLength(2);
+    expect(map.renderableLayers[0]).toBe(tileA);
+    expect(map.renderableLayers[1]).toBe(imageA);
+  });
+
+  it('removing one side of a cross-kind duplicate ID keeps the other in renderableLayers', () => {
+    const tileA = new TileLayer({ id: 1, name: 'ground', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] });
+    const imageA = new ImageLayer({ id: 1, name: 'bg', image: 'bg.png' });
+    const map = new TileMap({
+      width: 64, height: 64,
+      tileWidth: 32, tileHeight: 32,
+      tilesets: [ts],
+      layers: [tileA],
+      imageLayers: [imageA],
+    });
+    map.removeImageLayer(1);
+    expect(map.renderableLayers).toEqual([tileA]);
+    expect(map.getTileLayerById(1)).toBe(tileA);
+  });
+
+  it('addLayer appends the new layer to renderableLayers order', () => {
+    const map = new TileMap({
+      width: 64, height: 64,
+      tileWidth: 32, tileHeight: 32,
+      tilesets: [ts],
+      layers: [new TileLayer({ id: 1, name: 'ground', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] })],
+    });
+    const added = new TileLayer({ id: 2, name: 'added', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] });
+    map.addLayer(added);
+    expect(map.renderableLayers.map(l => l.id)).toEqual([1, 2]);
+  });
+
+  it('removeImageLayer on a duplicate-id degenerate fallback map never corrupts the order tail', () => {
+    // Built WITHOUT documentOrder, so the fallback path (unambiguous by
+    // construction) is exercised. Two image layers share id 7; removing the
+    // resolved instance twice must not delete an unrelated order entry via
+    // an unguarded splice(-1, 1) once indexOf(layer) can no longer find it.
+    const tileA = new TileLayer({ id: 1, name: 'ground', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] });
+    const tileB = new TileLayer({ id: 2, name: 'walls', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] });
+    const imageA = new ImageLayer({ id: 7, name: 'bg', image: 'bg.png' });
+    const imageB = new ImageLayer({ id: 7, name: 'bg2', image: 'bg2.png' });
+    const map = new TileMap({
+      width: 64, height: 64,
+      tileWidth: 32, tileHeight: 32,
+      tilesets: [ts],
+      layers: [tileA, tileB],
+      imageLayers: [imageA, imageB],
+    });
+
+    map.removeImageLayer(7);
+    map.removeImageLayer(7);
+
+    expect(map.renderableLayers).toContain(tileA);
+    expect(map.renderableLayers).toContain(tileB);
+  });
+
+  it('addImageLayer appends the layer to imageLayers and renderableLayers order', () => {
+    const map = new TileMap({
+      width: 64, height: 64,
+      tileWidth: 32, tileHeight: 32,
+      tilesets: [ts],
+      layers: [new TileLayer({ id: 1, name: 'ground', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] })],
+    });
+    const image = new ImageLayer({ id: 2, name: 'bg', image: 'bg.png' });
+    map.addImageLayer(image);
+    expect(map.imageLayers).toEqual([image]);
+    expect(map.renderableLayers.map(l => l.id)).toEqual([1, 2]);
+  });
+
+  it('addImageLayer increments revision, matching addLayer/addObjectLayer', () => {
+    const map = new TileMap({
+      width: 64, height: 64,
+      tileWidth: 32, tileHeight: 32,
+    });
+    expect(map.revision).toBe(0);
+    map.addImageLayer(new ImageLayer({ id: 1, name: 'bg', image: 'bg.png' }));
+    expect(map.revision).toBe(1);
+  });
+
+  it('removeLayer splices the removed layer out of renderableLayers order', () => {
+    const tileA = new TileLayer({ id: 1, name: 'ground', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] });
+    const tileB = new TileLayer({ id: 2, name: 'walls', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] });
+    const map = new TileMap({
+      width: 64, height: 64,
+      tileWidth: 32, tileHeight: 32,
+      tilesets: [ts],
+      layers: [tileA, tileB],
+    });
+    map.removeLayer(1);
+    expect(map.renderableLayers.map(l => l.id)).toEqual([2]);
+  });
+
+  it('removeImageLayer splices the removed layer out of renderableLayers order', () => {
+    const tileA = new TileLayer({ id: 1, name: 'ground', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] });
+    const imageA = new ImageLayer({ id: 2, name: 'bg', image: 'bg.png' });
+    const map = new TileMap({
+      width: 64, height: 64,
+      tileWidth: 32, tileHeight: 32,
+      tilesets: [ts],
+      layers: [tileA],
+      imageLayers: [imageA],
+    });
+    map.removeImageLayer(2);
+    expect(map.renderableLayers.map(l => l.id)).toEqual([1]);
+  });
+
+  it('renderableLayers reflects current membership (live view)', () => {
+    const map = new TileMap({
+      width: 64, height: 64,
+      tileWidth: 32, tileHeight: 32,
+      tilesets: [ts],
+    });
+    expect(map.renderableLayers).toEqual([]);
+    const layer = new TileLayer({ id: 1, name: 'ground', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] });
+    map.addLayer(layer);
+    expect(map.renderableLayers).toEqual([layer]);
+    map.removeLayer(1);
+    expect(map.renderableLayers).toEqual([]);
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════

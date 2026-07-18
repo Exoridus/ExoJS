@@ -2,6 +2,8 @@ import type { Rectangle } from '@codexo/exojs';
 import { Container } from '@codexo/exojs';
 import type { PixelSnapMode } from '@codexo/exojs/renderer-sdk';
 
+import { ImageLayer } from './ImageLayer';
+import { ImageLayerNode } from './ImageLayerNode';
 import { aggregateChildLocalBounds } from './nodeBounds';
 import { assertPixelSnapMode } from './pixelSnap';
 import { TileLayerNode } from './TileLayerNode';
@@ -21,31 +23,30 @@ export interface TileMapNodeOptions {
 
 /**
  * A convenience scene node that renders a whole {@link TileMap} as a
- * {@link Container} of one {@link TileLayerNode} per tile layer, in map layer
- * order (back-to-front by document order).
+ * {@link Container} of one node per renderable layer — a {@link TileLayerNode}
+ * per tile layer and an {@link ImageLayerNode} per image layer, interleaved
+ * back-to-front by the map's combined document order
+ * ({@link import('./TileMap').TileMap.renderableLayers}).
  *
  * `TileMapNode` owns **only** its layer nodes — never application actors. Use
  * it for the simple, non-interleaved case (no actors between layers); for
- * actor interleaving, place individual `TileLayerNode`s into your own scene
- * graph instead.
+ * actor interleaving, place individual `TileLayerNode`s / `ImageLayerNode`s
+ * into your own scene graph instead (see `TileMapView`).
  *
  * The node references — but never owns — the {@link TileMap}: destroying the
  * node frees its layer/chunk nodes and their cached GPU geometry, while the
- * `TileMap` data and Loader-owned tileset textures survive (free them via
+ * `TileMap` data and Loader-owned textures survive (free them via
  * `TileMap.destroy()` / `Loader.destroy()` respectively).
  *
  * Layers added to or removed from the map after construction are reflected only
  * after {@link TileMapNode.refreshLayers}.
- *
- * `TileMapNode` renders only tile layers; for a map with image layers, compose
- * `TileMapView` and its {@link import('./ImageLayerNode').ImageLayerNode}s instead.
  *
  * @advanced
  */
 export class TileMapNode extends Container {
   private readonly _map: TileMap;
   private readonly _cullChunks: boolean;
-  private readonly _layerNodes: TileLayerNode[] = [];
+  private readonly _layerNodes: Array<TileLayerNode | ImageLayerNode> = [];
   private _pixelSnapMode: PixelSnapMode = 'none';
 
   public constructor(map: TileMap, options?: TileMapNodeOptions) {
@@ -95,19 +96,26 @@ export class TileMapNode extends Container {
     }
   }
 
-  /** The layer render nodes, in map layer order. */
-  public get layerNodes(): readonly TileLayerNode[] {
+  /**
+   * The layer render nodes — tile and image alike — in the map's combined
+   * document order.
+   */
+  public get layerNodes(): ReadonlyArray<TileLayerNode | ImageLayerNode> {
     return this._layerNodes;
   }
 
-  /** Find the layer node rendering the named layer, or `undefined`. */
-  public getLayerNode(name: string): TileLayerNode | undefined {
+  /**
+   * Find the layer node rendering the named layer (tile or image; first match
+   * in document order), or `undefined`.
+   */
+  public getLayerNode(name: string): TileLayerNode | ImageLayerNode | undefined {
     return this._layerNodes.find(node => node.layer.name === name);
   }
 
   /**
-   * Rebuild the layer-node children from the map's current layers. Call after
-   * layers are structurally added to or removed from the map.
+   * Rebuild the layer-node children from the map's current renderable layers.
+   * Call after tile or image layers are structurally added to or removed from
+   * the map.
    */
   public refreshLayers(): this {
     const previous = [...this._layerNodes];
@@ -149,8 +157,11 @@ export class TileMapNode extends Container {
   }
 
   private _buildLayerNodes(): void {
-    for (const layer of this._map.layers) {
-      const node = new TileLayerNode(layer, { cullable: this._cullChunks });
+    for (const layer of this._map.renderableLayers) {
+      const node =
+        layer instanceof ImageLayer
+          ? new ImageLayerNode(layer)
+          : new TileLayerNode(layer, { cullable: this._cullChunks });
 
       if (this._pixelSnapMode !== 'none') {
         node.pixelSnapMode = this._pixelSnapMode;

@@ -1,6 +1,6 @@
 {
   "title": "TileLayerSelector",
-  "description": "A layer selector inside a TileMapBandDefinition: either a stable layer **id** (`number`) or a **unique** layer **name** (`string`). Names that are shared by more than one layer are rejected as ambiguous — reference such layers by id.",
+  "description": "A layer selector inside a TileMapBandDefinition: either a stable layer **id** (`number`) or a **unique** layer **name** (`string`). Selectors resolve across the map's tile **and** image layers. Names that are shared by more than one layer (of either kind) are rejected as ambiguous — reference such layers by id. An id shared by a tile layer and an image layer (possible only in fallback-ordered maps, which never validated cross-kind uniqueness) is equally ambiguous — reference such layers by a unique name.",
   "symbol": "TileLayerSelector",
   "kind": "type",
   "subsystem": "tilemap",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "A layer selector inside a TileMapBandDefinition: either a stable layer **id** (`number`) or a **unique** layer **name** (`string`). Names that are shared by more than one layer are rejected as ambiguous — reference such layers by id."
+        "A layer selector inside a TileMapBandDefinition: either a stable layer **id** (`number`) or a **unique** layer **name** (`string`). Selectors resolve across the map's tile **and** image layers. Names that are shared by more than one layer (of either kind) are rejected as ambiguous — reference such layers by id. An id shared by a tile layer and an image layer (possible only in fallback-ordered maps, which never validated cross-kind uniqueness) is equally ambiguous — reference such layers by a unique name."
       ],
       "importLine": "import { TileLayerSelector } from '@codexo/exojs-tilemap'",
       "sourceLink": null

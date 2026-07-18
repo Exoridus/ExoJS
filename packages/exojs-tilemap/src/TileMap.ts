@@ -51,6 +51,33 @@ export interface TileMapOptions {
   readonly renderOrder?: string;
   /** Map-level properties (copied and frozen). */
   readonly properties?: TileProperties;
+  /**
+   * Combined document order across tile and image layers, as an ordered list
+   * of layer ids — exposed via {@link TileMap.renderableLayers}. Every tile
+   * and image layer passed to this map (via {@link layers} / {@link
+   * imageLayers}) must appear exactly once; an id that belongs to neither
+   * kind, or is listed more than once, throws. The list's length must also
+   * equal the total number of tile/image layer instances — nothing enforces
+   * unique ids across image layers, so two image layers sharing an id would
+   * otherwise both satisfy the id-based checks while one silently drops out
+   * of {@link TileMap.renderableLayers}; that mismatch throws too.
+   *
+   * A tile layer and an image layer sharing the same id makes the order
+   * ambiguous — that combination throws when `documentOrder` is provided.
+   * It is NOT rejected when this option is omitted: the fallback order below
+   * is unambiguous by construction (tile layers are always listed before
+   * image layers), so hand-built maps that predate this option are
+   * unaffected even if such an id collision exists.
+   *
+   * Omit to fall back to all tile layers in insertion order, followed by all
+   * image layers in insertion order — the map's implicit ordering before
+   * this option existed.
+   *
+   * Named `documentOrder` rather than `renderOrder` to avoid colliding with
+   * the unrelated {@link renderOrder} option above (Tiled's tile-draw-
+   * direction string, e.g. `'right-down'`).
+   */
+  readonly documentOrder?: readonly number[];
 }
 
 /**
@@ -116,6 +143,7 @@ export class TileMap {
   private readonly _layerById = new Map<number, TileLayer>();
   private readonly _objectLayers: ObjectLayer[] = [];
   private readonly _imageLayers: ImageLayer[] = [];
+  private readonly _documentOrder: Array<TileLayer | ImageLayer> = [];
 
   private _revision = 0;
   private _destroyed = false;
@@ -162,6 +190,75 @@ export class TileMap {
     if (options.imageLayers) {
       this._imageLayers.push(...options.imageLayers);
     }
+
+    this._documentOrder.push(...this._buildDocumentOrder(options.documentOrder));
+  }
+
+  /**
+   * Validate an explicit `documentOrder` option against current tile/image
+   * layer membership and resolve it to layer instances, or compute the
+   * fallback order (tile layers in insertion order, then image layers) when
+   * omitted. The order stores instance references — not ids — so a
+   * cross-kind id collision in a fallback map can never resolve to the
+   * wrong layer.
+   * @throws Per the validation rules documented on {@link
+   *         TileMapOptions.documentOrder}.
+   */
+  private _buildDocumentOrder(documentOrder: readonly number[] | undefined): Array<TileLayer | ImageLayer> {
+    if (!documentOrder) {
+      return [...this._layers, ...this._imageLayers];
+    }
+
+    const tileIds = new Set(this._layers.map(l => l.id));
+    const imageIds = new Set(this._imageLayers.map(l => l.id));
+
+    for (const id of tileIds) {
+      if (imageIds.has(id)) {
+        throw new Error(
+          `Layer ID ${id} exists as both a tile layer and an image layer in map "${this.name}"; documentOrder cannot disambiguate them.`,
+        );
+      }
+    }
+
+    const seen = new Set<number>();
+    for (const id of documentOrder) {
+      if (!tileIds.has(id) && !imageIds.has(id)) {
+        throw new Error(`documentOrder references unknown layer ID ${id} in map "${this.name}".`);
+      }
+      if (seen.has(id)) {
+        throw new Error(`documentOrder lists layer ID ${id} more than once in map "${this.name}".`);
+      }
+      seen.add(id);
+    }
+
+    const totalLayers = tileIds.size + imageIds.size;
+    if (seen.size !== totalLayers) {
+      for (const id of [...tileIds, ...imageIds]) {
+        if (!seen.has(id)) {
+          throw new Error(`documentOrder is missing layer ID ${id} in map "${this.name}".`);
+        }
+      }
+    }
+
+    // The checks above are id-SET based, so they can't see a duplicate
+    // image-layer id (nothing enforces image-layer id uniqueness): two
+    // image layers sharing an id collapse to one entry in `imageIds`,
+    // letting a documentOrder that covers every distinct id still be one
+    // instance short. Compare against the actual instance counts so that
+    // case throws instead of silently dropping an instance from
+    // renderableLayers.
+    const instanceCount = this._layers.length + this._imageLayers.length;
+    if (documentOrder.length !== instanceCount) {
+      throw new Error(
+        `documentOrder has ${documentOrder.length} entries but map "${this.name}" has ${instanceCount} tile/image layer instances; check for a duplicate image-layer ID.`,
+      );
+    }
+
+    // Ids are unique across kinds here (the cross-kind check above threw
+    // otherwise), so resolving each id to an instance is unambiguous.
+    return documentOrder.map(id =>
+      this._layerById.get(id) ?? this._imageLayers.find(layer => layer.id === id)!,
+    );
   }
 
   // ── Tilesets ──────────────────────────────────────────────────────────
@@ -209,12 +306,14 @@ export class TileMap {
   }
 
   /**
-   * Add a layer after construction.
+   * Add a layer after construction. Appended to the end of {@link
+   * renderableLayers}'s document order.
    * @throws If a layer with the same ID already exists.
    */
   public addLayer(layer: TileLayer): void {
     this._checkDestroyed();
     this._addLayer(layer);
+    this._documentOrder.push(layer);
     this._revision++;
   }
 
@@ -233,7 +332,8 @@ export class TileMap {
   }
 
   /**
-   * Remove a layer by ID. The layer is destroyed.
+   * Remove a layer by ID. The layer is destroyed and spliced out of {@link
+   * renderableLayers}'s document order.
    * @returns true if the layer was found and removed.
    */
   public removeLayer(id: number): boolean {
@@ -242,6 +342,8 @@ export class TileMap {
     if (!layer) return false;
     this._layers.splice(this._layers.indexOf(layer), 1);
     this._layerById.delete(id);
+    const orderIndex = this._documentOrder.indexOf(layer);
+    if (orderIndex !== -1) this._documentOrder.splice(orderIndex, 1);
     layer.destroy();
     this._revision++;
     return true;
@@ -309,6 +411,17 @@ export class TileMap {
   }
 
   /**
+   * Add an image layer after construction. Appended to both {@link
+   * imageLayers} and the end of {@link renderableLayers}'s document order.
+   */
+  public addImageLayer(layer: ImageLayer): void {
+    this._checkDestroyed();
+    this._imageLayers.push(layer);
+    this._documentOrder.push(layer);
+    this._revision++;
+  }
+
+  /**
    * Get an image layer by name (first match in insertion order), or undefined.
    */
   public getImageLayer(name: string): ImageLayer | undefined {
@@ -323,16 +436,34 @@ export class TileMap {
   }
 
   /**
-   * Remove an image layer by ID.
+   * Remove an image layer by ID. Spliced out of {@link renderableLayers}'s
+   * document order.
    * @returns true if the layer was found and removed.
    */
   public removeImageLayer(id: number): boolean {
     this._checkDestroyed();
-    const index = this._imageLayers.findIndex(layer => layer.id === id);
-    if (index === -1) return false;
-    this._imageLayers.splice(index, 1);
+    const layer = this._imageLayers.find(l => l.id === id);
+    if (!layer) return false;
+    this._imageLayers.splice(this._imageLayers.indexOf(layer), 1);
+    const orderIndex = this._documentOrder.indexOf(layer);
+    if (orderIndex !== -1) this._documentOrder.splice(orderIndex, 1);
     this._revision++;
     return true;
+  }
+
+  // ── Combined render order ─────────────────────────────────────────────
+
+  /**
+   * Tile and image layers combined into a single document order (see {@link
+   * TileMapOptions.documentOrder}), maintained live as membership changes.
+   * Reflects `addLayer` / `addImageLayer` / `removeLayer` /
+   * `removeImageLayer` calls made after construction. Holds instance
+   * references, so entries stay correct even when a tile layer and an image
+   * layer share an id in a fallback-ordered map. Object layers are
+   * data-only and never appear here.
+   */
+  public get renderableLayers(): ReadonlyArray<TileLayer | ImageLayer> {
+    return this._documentOrder;
   }
 
   // ── Scene composition ─────────────────────────────────────────────────
@@ -453,6 +584,7 @@ export class TileMap {
     this._layerById.clear();
     this._objectLayers.length = 0;
     this._imageLayers.length = 0;
+    this._documentOrder.length = 0;
     this._tilesets.length = 0;
   }
 }

@@ -1,14 +1,18 @@
 import { Container } from '@codexo/exojs';
 
+import type { ImageLayer } from './ImageLayer';
+import type { ImageLayerNode } from './ImageLayerNode';
+import type { TileLayer } from './TileLayer';
 import type { TileLayerNode } from './TileLayerNode';
 
 /**
- * A named, ordered group of {@link TileLayerNode}s produced by a
- * {@link TileMapView} for ergonomic actor interleaving.
+ * A named, ordered group of layer nodes ({@link TileLayerNode}s and
+ * {@link ImageLayerNode}s) produced by a {@link TileMapView} for ergonomic
+ * actor interleaving.
  *
  * A band is a plain {@link Container} scene node that the application parents
  * wherever it wants (typically directly under its own world root). Bands are
- * composition units only: a band owns **its generated tile-layer nodes** and
+ * composition units only: a band owns **its generated layer nodes** and
  * never application actors. Placing actors *between* bands is done by parenting
  * the bands and the actor containers as siblings in the desired document order:
  *
@@ -16,17 +20,19 @@ import type { TileLayerNode } from './TileLayerNode';
  * worldRoot.addChild(view.band('ground'), actors, view.band('roof'));
  * ```
  *
- * **Rendering order within a band always follows map document order**, not the
- * order layers were listed in the band definition — band membership *selects*
- * layers; it never reorders them.
+ * **Rendering order within a band always follows map document order**
+ * ({@link import('./TileMap').TileMap.renderableLayers}), not the order layers
+ * were listed in the band definition — band membership *selects* layers; it
+ * never reorders them. Tile and image members interleave exactly as the map's
+ * combined document order dictates.
  *
- * **Ownership:** the band owns the {@link TileLayerNode}s it was created with.
- * Destroying the band destroys those layer nodes (and their cached chunk
- * geometry) and detaches the band from its application parent — it never
- * touches application actors, sibling bands, the {@link TileMap}, the
- * {@link TileLayer}s, or Loader-owned tileset textures.
+ * **Ownership:** the band owns the layer nodes it was created with. Destroying
+ * the band destroys those layer nodes (and their cached chunk geometry) and
+ * detaches the band from its application parent — it never touches application
+ * actors, sibling bands, the {@link TileMap}, the {@link TileLayer}s /
+ * {@link ImageLayer}s, or Loader-owned textures.
  *
- * Bounds are the union of the band's tile-layer-node bounds (an empty band
+ * Bounds are the union of the band's layer-node bounds (an empty band
  * collapses to a degenerate rect at the band's transformed origin).
  *
  * Bands are created by {@link TileMapView}; construct them through
@@ -42,7 +48,7 @@ export class TileMapBand extends Container {
    */
   public override name = '';
 
-  private readonly _layerNodes: TileLayerNode[];
+  private readonly _layerNodes: Array<TileLayerNode | ImageLayerNode>;
   private _destroyed = false;
 
   /**
@@ -51,7 +57,7 @@ export class TileMapBand extends Container {
    *                   map document order. Adopted as children.
    * @internal Constructed by {@link TileMapView}.
    */
-  public constructor(name: string, layerNodes: readonly TileLayerNode[]) {
+  public constructor(name: string, layerNodes: ReadonlyArray<TileLayerNode | ImageLayerNode>) {
     super();
 
     this.name = name;
@@ -63,17 +69,20 @@ export class TileMapBand extends Container {
   }
 
   /**
-   * The tile-layer nodes that compose this band, in map document order. This
-   * is the band's **membership** list (the nodes it owns and destroys); it may
-   * differ from {@link Container.children} if the caller reparents an
-   * individual layer node elsewhere.
+   * The layer nodes that compose this band, in map document order — tile and
+   * image members interleaved. This is the band's **membership** list (the
+   * nodes it owns and destroys); it may differ from {@link Container.children}
+   * if the caller reparents an individual layer node elsewhere.
    */
-  public get layerNodes(): readonly TileLayerNode[] {
+  public get layerNodes(): ReadonlyArray<TileLayerNode | ImageLayerNode> {
     return this._layerNodes;
   }
 
-  /** Find this band's layer node rendering the layer with the given id. */
-  public getLayerNodeById(id: number): TileLayerNode | undefined {
+  /**
+   * Find this band's layer node rendering the layer with the given id (tile or
+   * image member; first match in document order).
+   */
+  public getLayerNodeById(id: number): TileLayerNode | ImageLayerNode | undefined {
     return this._layerNodes.find(node => node.layer.id === id);
   }
 
@@ -83,7 +92,7 @@ export class TileMapBand extends Container {
   }
 
   /**
-   * Bounds are the union of the band's visible tile-layer-node bounds. With no
+   * Bounds are the union of the band's visible layer-node bounds. With no
    * visible children the band collapses to a degenerate rect at its transformed
    * origin (rather than the whole-subtree-plus-origin union a bare Container
    * would report).
@@ -114,7 +123,7 @@ export class TileMapBand extends Container {
    * map document order.
    * @internal
    */
-  public _adopt(node: TileLayerNode): void {
+  public _adopt(node: TileLayerNode | ImageLayerNode): void {
     if (!this._layerNodes.includes(node)) {
       this._layerNodes.push(node);
     }
@@ -127,7 +136,7 @@ export class TileMapBand extends Container {
    * when its map layer was removed; the view destroys the node separately).
    * @internal
    */
-  public _release(node: TileLayerNode): void {
+  public _release(node: TileLayerNode | ImageLayerNode): void {
     const index = this._layerNodes.indexOf(node);
 
     if (index !== -1) {
@@ -141,14 +150,16 @@ export class TileMapBand extends Container {
 
   /**
    * Reorder this band's membership and its still-parented children to map
-   * document order. `documentIndexById` maps a layer id to its index in the
-   * map's layer list. Layer nodes the caller has reparented away from this band
-   * keep their membership (for ownership) but are not re-adopted.
+   * document order. `documentIndex` maps a layer **instance** to its index in
+   * the map's combined document order — keyed by instance rather than id
+   * because a tile layer and an image layer may share an id in fallback-ordered
+   * maps. Layer nodes the caller has reparented away from this band keep their
+   * membership (for ownership) but are not re-adopted.
    * @internal
    */
-  public _reorder(documentIndexById: ReadonlyMap<number, number>): void {
+  public _reorder(documentIndex: ReadonlyMap<TileLayer | ImageLayer, number>): void {
     this._layerNodes.sort(
-      (a, b) => (documentIndexById.get(a.layer.id) ?? 0) - (documentIndexById.get(b.layer.id) ?? 0),
+      (a, b) => (documentIndex.get(a.layer) ?? 0) - (documentIndex.get(b.layer) ?? 0),
     );
 
     for (const node of this._layerNodes) {
@@ -160,8 +171,9 @@ export class TileMapBand extends Container {
 
   /**
    * Destroy the band: detach it from its application parent, then destroy the
-   * tile-layer nodes it owns (freeing their chunk geometry). Application actors,
-   * sibling bands, the map, layers, and tileset textures are untouched.
+   * layer nodes it owns (freeing their chunk geometry / image sprites).
+   * Application actors, sibling bands, the map, layers, and Loader-owned
+   * textures are untouched.
    *
    * Idempotent: a second call (e.g. when {@link TileMapView.destroy} runs after
    * the application already destroyed this band directly) is a safe no-op.

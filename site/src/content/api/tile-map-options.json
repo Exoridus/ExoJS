@@ -6,11 +6,11 @@
   "subsystem": "tilemap",
   "importPath": "@codexo/exojs-tilemap",
   "tier": "advanced",
-  "memberCount": 15,
+  "memberCount": 16,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 15,
+    "properties": 16,
     "events": 0
   },
   "sections": [
@@ -135,6 +135,43 @@
           "params": [],
           "returnType": null,
           "description": "Map class/type string (Tiled class). Defaults to ''."
+        },
+        {
+          "name": "documentOrder",
+          "signature": "documentOrder?: readonly number[]",
+          "signatureTokens": [
+            {
+              "text": "documentOrder",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Combined document order across tile and image layers, as an ordered list of layer ids — exposed via TileMap.renderableLayers. Every tile and image layer passed to this map (via layers / imageLayers) must appear exactly once; an id that belongs to neither kind, or is listed more than once, throws. The list's length must also equal the total number of tile/image layer instances — nothing enforces unique ids across image layers, so two image layers sharing an id would otherwise both satisfy the id-based checks while one silently drops out of TileMap.renderableLayers; that mismatch throws too. A tile layer and an image layer sharing the same id makes the order ambiguous — that combination throws when documentOrder is provided. It is NOT rejected when this option is omitted: the fallback order below is unambiguous by construction (tile layers are always listed before image layers), so hand-built maps that predate this option are unaffected even if such an id collision exists. Omit to fall back to all tile layers in insertion order, followed by all image layers in insertion order — the map's implicit ordering before this option existed. Named documentOrder rather than renderOrder to avoid colliding with the unrelated renderOrder option above (Tiled's tile-draw- direction string, e.g. 'right-down')."
         },
         {
           "name": "height",

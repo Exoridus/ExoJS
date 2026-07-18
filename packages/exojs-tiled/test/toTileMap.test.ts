@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 
 import { type AssetLoaderContext,Texture, View } from '@codexo/exojs';
-import { ChunkStreamer, type TileLayer, TileMap, TileSet } from '@codexo/exojs-tilemap';
+import { ChunkStreamer, ImageLayer, TileLayer, TileMap, TileSet } from '@codexo/exojs-tilemap';
 import { describe, expect, it,vi } from 'vitest';
 
 import { loadTiledMap } from '../src/loadTiledMap';
@@ -596,6 +596,71 @@ describe('TiledMap.toTileMap() — image layers', () => {
 
     const layer = runtime.getImageLayer('Background');
     expect(layer?.properties.parallaxLayer).toBe('sky');
+  });
+});
+
+// ── Combined document order (renderableLayers) ───────────────────────────────
+
+describe('TiledMap.toTileMap() — combined document order (renderableLayers)', () => {
+  const baseTileset = {
+    firstgid: 1, name: 'tiles', image: 'tiles-a.png', imagewidth: 64, imageheight: 32,
+    tilewidth: 16, tileheight: 16, columns: 4, tilecount: 8,
+  };
+  const baseTile = { id: 1, name: 'TileA', type: 'tilelayer', visible: true, opacity: 1, x: 0, y: 0, width: 2, height: 1, data: [1, 1] };
+
+  it('renderableLayers preserves flat tile -> image -> tile document order', async () => {
+    const { context } = makeContext({
+      'order-flat.tmj': {
+        type: 'map', version: '1.10', orientation: 'orthogonal',
+        width: 2, height: 1, tilewidth: 16, tileheight: 16, infinite: false,
+        layers: [
+          { ...baseTile, id: 1, name: 'TileA' },
+          { id: 2, name: 'ImageB', type: 'imagelayer', visible: true, opacity: 1, x: 0, y: 0, image: 'bg.png' },
+          { ...baseTile, id: 3, name: 'TileC' },
+        ],
+        tilesets: [baseTileset],
+      },
+    });
+    const tiled = await loadTiledMap('order-flat.tmj', context);
+    const runtime = tiled.toTileMap();
+
+    const order = runtime.renderableLayers;
+    expect(order).toHaveLength(3);
+    expect(order.map(l => l.id)).toEqual([1, 2, 3]);
+    expect(order.map(l => l.name)).toEqual(['TileA', 'ImageB', 'TileC']);
+    expect(order[0]).toBeInstanceOf(TileLayer);
+    expect(order[1]).toBeInstanceOf(ImageLayer);
+    expect(order[2]).toBeInstanceOf(TileLayer);
+  });
+
+  it('renderableLayers preserves flattened document order when the image layer sits inside a group between two tile layers', async () => {
+    const { context } = makeContext({
+      'order-grouped.tmj': {
+        type: 'map', version: '1.10', orientation: 'orthogonal',
+        width: 2, height: 1, tilewidth: 16, tileheight: 16, infinite: false,
+        layers: [
+          { ...baseTile, id: 1, name: 'TileA' },
+          {
+            id: 2, name: 'Wrapper', type: 'group', visible: true, opacity: 1, x: 0, y: 0,
+            layers: [
+              { id: 3, name: 'ImageB', type: 'imagelayer', visible: true, opacity: 1, x: 0, y: 0, image: 'bg.png' },
+            ],
+          },
+          { ...baseTile, id: 4, name: 'TileC' },
+        ],
+        tilesets: [baseTileset],
+      },
+    });
+    const tiled = await loadTiledMap('order-grouped.tmj', context);
+    const runtime = tiled.toTileMap();
+
+    const order = runtime.renderableLayers;
+    expect(order).toHaveLength(3);
+    expect(order.map(l => l.id)).toEqual([1, 3, 4]);
+    expect(order.map(l => l.name)).toEqual(['TileA', 'ImageB', 'TileC']);
+    expect(order[0]).toBeInstanceOf(TileLayer);
+    expect(order[1]).toBeInstanceOf(ImageLayer);
+    expect(order[2]).toBeInstanceOf(TileLayer);
   });
 });
 

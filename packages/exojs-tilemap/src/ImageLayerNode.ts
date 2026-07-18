@@ -26,9 +26,11 @@ import { assertPixelSnapMode } from './pixelSnap';
  *
  * The node references — but never owns — the {@link ImageLayer} and its
  * Loader-owned texture: {@link destroy} frees the wrapped sprite but leaves the
- * layer and texture intact. Image-layer nodes are **not** band-selectable; an
- * application parents them into the scene directly wherever the image belongs
- * in draw order.
+ * layer and texture intact. Image-layer nodes are band-selectable exactly like
+ * tile-layer nodes: list the image layer in a
+ * {@link import('./TileMapView').TileMapViewOptions.bands} definition and the
+ * band stacks it by the map's combined document order, or parent an unbanded
+ * node into the scene directly wherever the image belongs in draw order.
  *
  * For a `repeatX`/`repeatY` node, bounds and hit-test queries reflect the
  * coverage geometry computed by the last {@link _collectContent} call (since

@@ -6,11 +6,11 @@
   "subsystem": "tilemap",
   "importPath": "@codexo/exojs-tilemap",
   "tier": "advanced",
-  "memberCount": 41,
+  "memberCount": 43,
   "counts": {
     "constructors": 1,
-    "methods": 20,
-    "properties": 20,
+    "methods": 21,
+    "properties": 21,
     "events": 0
   },
   "sections": [
@@ -88,6 +88,53 @@
       "title": "Methods",
       "members": [
         {
+          "name": "addImageLayer",
+          "signature": "addImageLayer(layer: ImageLayer): void",
+          "signatureTokens": [
+            {
+              "text": "addImageLayer",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "layer",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ImageLayer",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "layer",
+              "type": "ImageLayer",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Add an image layer after construction. Appended to both imageLayers and the end of renderableLayers's document order."
+        },
+        {
           "name": "addLayer",
           "signature": "addLayer(layer: TileLayer): void",
           "signatureTokens": [
@@ -132,7 +179,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Add a layer after construction."
+          "description": "Add a layer after construction. Appended to the end of renderableLayers's document order."
         },
         {
           "name": "addObjectLayer",
@@ -1048,7 +1095,7 @@
             }
           ],
           "returnType": "boolean",
-          "description": "Remove an image layer by ID."
+          "description": "Remove an image layer by ID. Spliced out of renderableLayers's document order."
         },
         {
           "name": "removeLayer",
@@ -1095,7 +1142,7 @@
             }
           ],
           "returnType": "boolean",
-          "description": "Remove a layer by ID. The layer is destroyed."
+          "description": "Remove a layer by ID. The layer is destroyed and spliced out of renderableLayers's document order."
         },
         {
           "name": "removeObjectLayer",
@@ -1828,6 +1875,47 @@
           "params": [],
           "returnType": null,
           "description": "Pixel width, or undefined if unbounded."
+        },
+        {
+          "name": "renderableLayers",
+          "signature": "renderableLayers: readonly TileLayer | ImageLayer[]",
+          "signatureTokens": [
+            {
+              "text": "renderableLayers",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileLayer",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ImageLayer",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Tile and image layers combined into a single document order (see TileMapOptions.documentOrder), maintained live as membership changes. Reflects addLayer / addImageLayer / removeLayer / removeImageLayer calls made after construction. Holds instance references, so entries stay correct even when a tile layer and an image layer share an id in a fallback-ordered map. Object layers are data-only and never appear here."
         },
         {
           "name": "revision",
