@@ -188,7 +188,9 @@ export class TileMap {
     }
 
     if (options.imageLayers) {
-      this._imageLayers.push(...options.imageLayers);
+      for (const layer of options.imageLayers) {
+        this._addImageLayer(layer);
+      }
     }
 
     this._documentOrder.push(...this._buildDocumentOrder(options.documentOrder));
@@ -413,12 +415,25 @@ export class TileMap {
   /**
    * Add an image layer after construction. Appended to both {@link
    * imageLayers} and the end of {@link renderableLayers}'s document order.
+   * @throws If an image layer with the same ID already exists. An ID shared
+   *   with a *tile* layer is permitted — the two kinds keep separate ID
+   *   spaces, and all internal bookkeeping is instance-based.
    */
   public addImageLayer(layer: ImageLayer): void {
     this._checkDestroyed();
-    this._imageLayers.push(layer);
+    this._addImageLayer(layer);
     this._documentOrder.push(layer);
     this._revision++;
+  }
+
+  /** Shared by the constructor and {@link addImageLayer}: enforce ID uniqueness within the image-layer kind. */
+  private _addImageLayer(layer: ImageLayer): void {
+    if (this._imageLayers.some(existing => existing.id === layer.id)) {
+      throw new Error(
+        `Image layer ID ${layer.id} already exists in map "${this.name}".`,
+      );
+    }
+    this._imageLayers.push(layer);
   }
 
   /**
