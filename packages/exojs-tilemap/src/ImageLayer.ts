@@ -38,9 +38,12 @@ export interface ImageLayerOptions {
 
 /**
  * A data-only image layer: a single image (texture + resolved URL) placed as a
- * background or foreground layer. Image layers are not rendered by the tile
- * renderer — they are exposed as data for a renderer or follow-up scene node to
- * consume.
+ * background or foreground layer. The layer itself holds no scene-graph state —
+ * it is rendered by an {@link import('./ImageLayerNode').ImageLayerNode}, which
+ * {@link import('./TileMapNode').TileMapNode} and
+ * {@link import('./TileMapView').TileMapView} generate and interleave with tile
+ * layers by the map's combined document order
+ * ({@link import('./TileMap').TileMap.renderableLayers}).
  *
  * Parallax, opacity, tint, offset, and repeat flags are carried from the
  * source Tiled map.

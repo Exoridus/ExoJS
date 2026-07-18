@@ -1773,9 +1773,9 @@ describe('TileMap', () => {
     } as never)).toThrow(/width and height must both be provided/);
   });
 
-  // ── renderOrder / renderableLayers ─────────────────────────────────────
+  // ── documentOrder / renderableLayers ─────────────────────────────────────
 
-  it('renderableLayers falls back to tile layers then image layers when renderOrder is omitted', () => {
+  it('renderableLayers falls back to tile layers then image layers when documentOrder is omitted', () => {
     const tileA = new TileLayer({ id: 1, name: 'ground', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] });
     const tileB = new TileLayer({ id: 2, name: 'walls', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] });
     const imageA = new ImageLayer({ id: 3, name: 'bg', image: 'bg.png' });
@@ -1791,7 +1791,7 @@ describe('TileMap', () => {
     expect(map.renderableLayers.map(l => l.id)).toEqual([1, 2, 3, 4]);
   });
 
-  it('renderOrder accepts an interleaved order across tile and image layers', () => {
+  it('documentOrder accepts an interleaved order across tile and image layers', () => {
     const tileA = new TileLayer({ id: 1, name: 'ground', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] });
     const imageA = new ImageLayer({ id: 2, name: 'bg', image: 'bg.png' });
     const tileB = new TileLayer({ id: 3, name: 'overlay', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] });
@@ -1807,7 +1807,7 @@ describe('TileMap', () => {
     expect(map.renderableLayers).toEqual([imageA, tileA, tileB]);
   });
 
-  it('renderOrder throws on an unknown layer ID', () => {
+  it('documentOrder throws on an unknown layer ID', () => {
     const tileA = new TileLayer({ id: 1, name: 'ground', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] });
     expect(() => new TileMap({
       width: 64, height: 64,
@@ -1818,7 +1818,7 @@ describe('TileMap', () => {
     })).toThrow(/unknown/i);
   });
 
-  it('renderOrder throws when a tile layer is missing from the list', () => {
+  it('documentOrder throws when a tile layer is missing from the list', () => {
     const tileA = new TileLayer({ id: 1, name: 'ground', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] });
     const tileB = new TileLayer({ id: 2, name: 'walls', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] });
     expect(() => new TileMap({
@@ -1830,7 +1830,7 @@ describe('TileMap', () => {
     })).toThrow(/missing/i);
   });
 
-  it('renderOrder throws when an image layer is missing from the list', () => {
+  it('documentOrder throws when an image layer is missing from the list', () => {
     const tileA = new TileLayer({ id: 1, name: 'ground', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] });
     const imageA = new ImageLayer({ id: 2, name: 'bg', image: 'bg.png' });
     expect(() => new TileMap({
@@ -1843,7 +1843,7 @@ describe('TileMap', () => {
     })).toThrow(/missing/i);
   });
 
-  it('renderOrder throws when an ID is listed twice', () => {
+  it('documentOrder throws when an ID is listed twice', () => {
     const tileA = new TileLayer({ id: 1, name: 'ground', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] });
     const tileB = new TileLayer({ id: 2, name: 'walls', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] });
     expect(() => new TileMap({
@@ -1855,7 +1855,7 @@ describe('TileMap', () => {
     })).toThrow(/more than once/i);
   });
 
-  it('renderOrder throws when a tile layer and an image layer share an ID (cross-kind ambiguity)', () => {
+  it('documentOrder throws when a tile layer and an image layer share an ID (cross-kind ambiguity)', () => {
     const tileA = new TileLayer({ id: 1, name: 'ground', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] });
     const imageA = new ImageLayer({ id: 1, name: 'bg', image: 'bg.png' });
     expect(() => new TileMap({
@@ -1868,7 +1868,7 @@ describe('TileMap', () => {
     })).toThrow(/both a tile layer and an image layer/i);
   });
 
-  it('a cross-kind duplicate ID is NOT rejected when renderOrder is omitted (fallback order is unambiguous by construction)', () => {
+  it('a cross-kind duplicate ID is NOT rejected when documentOrder is omitted (fallback order is unambiguous by construction)', () => {
     const tileA = new TileLayer({ id: 1, name: 'ground', width: 64, height: 64, tileWidth: 32, tileHeight: 32, tilesets: [ts] });
     const imageA = new ImageLayer({ id: 1, name: 'bg', image: 'bg.png' });
     expect(() => new TileMap({

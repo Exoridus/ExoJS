@@ -2,6 +2,8 @@ import { TextureRegion } from '@codexo/exojs';
 import { type Texture } from '@codexo/exojs';
 import { describe, expect, it, vi } from 'vitest';
 
+import { ImageLayer, type ImageLayerOptions } from '../src/ImageLayer';
+import { ImageLayerNode } from '../src/ImageLayerNode';
 import { TileLayer } from '../src/TileLayer';
 import { TileLayerNode } from '../src/TileLayerNode';
 import { TileMap } from '../src/TileMap';
@@ -68,6 +70,15 @@ function fillLayer(layer: TileLayer, tileset: TileSet): TileLayer {
     }
   }
   return layer;
+}
+
+function makeImageLayer(opts: Partial<ImageLayerOptions> = {}): ImageLayer {
+  return new ImageLayer({
+    id: opts.id ?? 100,
+    image: opts.image ?? 'bg.png',
+    texture: opts.texture === undefined ? fakeTexture() : opts.texture,
+    ...opts,
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -399,6 +410,110 @@ describe('TileMapNode', () => {
 
     // The map is still fully usable.
     expect(map.getTileAt(1, 0, 0)).not.toBeNull();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+// TileMapNode — interleaved image layers
+// ═══════════════════════════════════════════════════════════════════════
+
+describe('TileMapNode interleaved image layers', () => {
+  /** bg image (10) → ground (1) → fg image (11) → roofs (2), via documentOrder. */
+  function makeInterleavedMap(): { map: TileMap; tileset: TileSet } {
+    const tileset = makeTileset();
+    const map = new TileMap({
+      name: 'interleaved',
+      width: 4,
+      height: 4,
+      tileWidth: 32,
+      tileHeight: 32,
+      tilesets: [tileset],
+      layers: [
+        fillLayer(makeLayer(tileset, { id: 1, name: 'ground' }), tileset),
+        fillLayer(makeLayer(tileset, { id: 2, name: 'roofs' }), tileset),
+      ],
+      imageLayers: [makeImageLayer({ id: 10, name: 'bg' }), makeImageLayer({ id: 11, name: 'fg' })],
+      documentOrder: [10, 1, 11, 2],
+    });
+
+    return { map, tileset };
+  }
+
+  it('builds one node per renderable layer, interleaved in document order', () => {
+    const { map } = makeInterleavedMap();
+    const node = new TileMapNode(map);
+
+    expect(node.layerNodes).toHaveLength(4);
+    expect(node.layerNodes.map(child => child.layer.id)).toEqual([10, 1, 11, 2]);
+    expect(node.layerNodes[0]).toBeInstanceOf(ImageLayerNode);
+    expect(node.layerNodes[1]).toBeInstanceOf(TileLayerNode);
+    expect(node.layerNodes[2]).toBeInstanceOf(ImageLayerNode);
+    expect(node.layerNodes[3]).toBeInstanceOf(TileLayerNode);
+    expect([...node.children]).toEqual([...node.layerNodes]);
+  });
+
+  it('falls back to tile layers then image layers when documentOrder is omitted', () => {
+    const tileset = makeTileset();
+    const map = new TileMap({
+      name: 'fallback',
+      width: 4,
+      height: 4,
+      tileWidth: 32,
+      tileHeight: 32,
+      tilesets: [tileset],
+      layers: [fillLayer(makeLayer(tileset, { id: 1, name: 'ground' }), tileset)],
+      imageLayers: [makeImageLayer({ id: 10, name: 'bg' })],
+    });
+    const node = new TileMapNode(map);
+
+    expect(node.layerNodes.map(child => child.layer.id)).toEqual([1, 10]);
+    expect(node.layerNodes[0]).toBeInstanceOf(TileLayerNode);
+    expect(node.layerNodes[1]).toBeInstanceOf(ImageLayerNode);
+  });
+
+  it('refreshLayers rebuilds the interleaved children after image-layer changes', () => {
+    const { map } = makeInterleavedMap();
+    const node = new TileMapNode(map);
+    const before = [...node.layerNodes];
+
+    map.removeImageLayer(10);
+    map.addImageLayer(makeImageLayer({ id: 12, name: 'clouds' }));
+    node.refreshLayers();
+
+    expect(node.layerNodes.map(child => child.layer.id)).toEqual([1, 11, 2, 12]);
+    expect(node.children).toHaveLength(4);
+
+    for (const old of before) {
+      expect(old.destroyed).toBe(true);
+    }
+  });
+
+  it('pixelSnapMode cascades to image layer nodes', () => {
+    const { map } = makeInterleavedMap();
+    const node = new TileMapNode(map);
+
+    node.pixelSnapMode = 'geometry';
+
+    expect(node.layerNodes[0]!.pixelSnapMode).toBe('geometry');
+
+    // Nodes rebuilt by refreshLayers inherit the mode too.
+    node.refreshLayers();
+
+    expect(node.layerNodes[0]!.pixelSnapMode).toBe('geometry');
+  });
+
+  it('destroy() frees image layer nodes but never the map or its layers', () => {
+    const { map } = makeInterleavedMap();
+    const node = new TileMapNode(map);
+    const imageNode = node.layerNodes[0]!;
+
+    node.destroy();
+
+    expect(node.layerNodes).toHaveLength(0);
+    expect(node.children).toHaveLength(0);
+    expect(imageNode.destroyed).toBe(true);
+    expect(map.destroyed).toBe(false);
+    expect(map.imageLayers).toHaveLength(2);
   });
 });
 
