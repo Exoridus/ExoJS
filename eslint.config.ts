@@ -1378,16 +1378,10 @@ export default defineConfig([
       curly: 'error',
       eqeqeq: ['error', 'always'],
       'no-console': 'error',
-      // Scene.init() must be synchronous (definition spec §5.3) — see the
-      // matching rule in the engine-source block for the full rationale.
-      'no-restricted-syntax': [
-        'error',
-        {
-          selector: 'MethodDefinition[value.async=true][key.name="init"]',
-          message:
-            'Scene.init() must be synchronous — an async override runs after activation instead of gating it. Move asynchronous setup into load() instead.',
-        },
-      ],
+      // The sync-init() rule (see the engine-source block) is deliberately NOT
+      // enabled here yet: most of the catalog still uses the pre-v0.17
+      // async `init(loader)` hook and is migrated in the dedicated examples
+      // sweep (v0.17 core model, slice G), not opportunistically per-slice.
       'no-var': 'error',
       'prefer-const': 'error',
       'object-shorthand': 'error',
