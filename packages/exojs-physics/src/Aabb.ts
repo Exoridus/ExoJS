@@ -1,6 +1,6 @@
 // Axis-aligned bounding box used by the broad phase and AABB queries. Stored as
-// min/max extents (not centre + half-extent) because the sweep-and-prune broad
-// phase and overlap tests read the edges directly.
+// min/max extents (not centre + half-extent) because the AABB tree broad phase
+// and overlap tests read the edges directly.
 
 export interface Aabb {
   minX: number;
