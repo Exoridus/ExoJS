@@ -116,14 +116,21 @@ describe('DisposalScope', () => {
 });
 
 describe('Scene — ownership via track()', () => {
-  test('Scene.destroy() disposes tracked resources', () => {
+  // Scene.destroy() is a pure user hook (definition §5.7) — tracked-resource
+  // disposal is engine-owned teardown, run by SceneScope via
+  // Scene._teardownInternals() (see scene-scope.test.ts for the full
+  // permanent-teardown sequence this participates in).
+  test('_teardownInternals() disposes resources tracked via track()', () => {
     const scene = new Scene();
     const log: string[] = [];
     const resource = scene.track(new Tracker('resource', log));
 
     expect(scene.track(resource)).toBe(resource); // fluent + idempotent
 
-    scene.destroy();
+    scene.destroy(); // user hook — no infrastructure side effect
+    expect(resource.destroyed).toBe(false);
+
+    scene._teardownInternals();
 
     expect(resource.destroyed).toBe(true);
     expect(log).toEqual(['resource']);

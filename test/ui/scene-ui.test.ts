@@ -1,5 +1,6 @@
 import type { Application } from '#core/Application';
 import { Scene } from '#core/Scene';
+import type { SceneScope } from '#core/SceneScope';
 import { Signal } from '#core/Signal';
 import { FocusManager } from '#input/FocusManager';
 import type { InputManager } from '#input/InputManager';
@@ -75,7 +76,7 @@ const createUIApp = (): {
 
   app.focus = new FocusManager(typed);
   app.interaction = new InteractionManager(typed);
-  scene.app = typed;
+  scene._attach(typed, {} as unknown as SceneScope<void>);
   app.interaction.attachRoot(scene.root);
 
   return { scene, im: app.interaction, focus: app.focus, signals };

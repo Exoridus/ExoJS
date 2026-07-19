@@ -81,7 +81,7 @@ update() {
     // getBounds() here is group-local. For a real world position, compose
     // through the boundary:
     const worldMatrix = this.enemyInsideGroup.getWorldTransform();
-    this.audio.setPosition(worldMatrix.tx, worldMatrix.ty);
+    this.enemyVoice.setPosition(worldMatrix.tx, worldMatrix.ty);
 }
 ```
 

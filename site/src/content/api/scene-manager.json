@@ -1,6 +1,6 @@
 {
   "title": "SceneManager",
-  "description": "Single-active-scene controller owned by Application. Holds at most one active Scene (the current \"screen\"); SceneManager.setScene switches to a new scene — unloading the previous one — with an optional fade transition. There is no scene stack: overlays, HUDs and pause menus belong on Scene.ui (the screen-fixed UI layer), and \"freeze the game but keep drawing it\" is `scene.paused = true` (skips the scene's `update` + systems while it keeps rendering). Per-frame dispatch is split into four entry points, called by Application.update in normative order: SceneManager.fixedUpdate (zero or more times), SceneManager.update, SceneManager.draw, then SceneManager._drawTransition last, so the fade overlay always sits above both scene and app draw systems.",
+  "description": "Single-active-scene controller owned by Application. Holds at most one active Scene (the current \"screen\"); SceneManager.setScene switches to a new scene — ending the previous one permanently — with an optional fade transition. There is no scene stack: overlays, HUDs and pause menus belong on Scene.ui (the screen-fixed UI layer). Each activation is owned internally by a `SceneScope`, which attaches the scene's facilities, gates per-frame dispatch by SceneState, and runs teardown in the normative order; `SceneManager` itself only tracks which scope is active and drives the transition machinery. Per-frame dispatch is split into four entry points, called by Application.update in normative order: SceneManager.fixedUpdate (zero or more times), SceneManager.update, SceneManager.draw, then SceneManager._drawTransition last, so the fade overlay always sits above both scene and app draw systems.",
   "symbol": "SceneManager",
   "kind": "class",
   "subsystem": "core",
@@ -19,8 +19,8 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Single-active-scene controller owned by Application. Holds at most one active Scene (the current \"screen\"); SceneManager.setScene switches to a new scene — unloading the previous one — with an optional fade transition.",
-        "There is no scene stack: overlays, HUDs and pause menus belong on Scene.ui (the screen-fixed UI layer), and \"freeze the game but keep drawing it\" is `scene.paused = true` (skips the scene's `update` + systems while it keeps rendering).",
+        "Single-active-scene controller owned by Application. Holds at most one active Scene (the current \"screen\"); SceneManager.setScene switches to a new scene — ending the previous one permanently — with an optional fade transition.",
+        "There is no scene stack: overlays, HUDs and pause menus belong on Scene.ui (the screen-fixed UI layer). Each activation is owned internally by a `SceneScope`, which attaches the scene's facilities, gates per-frame dispatch by SceneState, and runs teardown in the normative order; `SceneManager` itself only tracks which scope is active and drives the transition machinery.",
         "Per-frame dispatch is split into four entry points, called by Application.update in normative order: SceneManager.fixedUpdate (zero or more times), SceneManager.update, SceneManager.draw, then SceneManager._drawTransition last, so the fade overlay always sits above both scene and app draw systems."
       ],
       "importLine": "import { SceneManager } from '@codexo/exojs'",
@@ -160,7 +160,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Draw entry point called by Application.update, after this frame's SceneManager.update: draws the active scene — while Active or paused, drawing continues either way — then its systems' draw phase, then its screen-fixed UI layer on top. No-op when no scene is active. The transition overlay is drawn separately, last — see SceneManager._drawTransition."
+          "description": "Draw entry point called by Application.update, after this frame's SceneManager.update: draws the active scene — gated by its SceneScope state — then its systems' draw phase, then its screen-fixed UI layer on top. No-op when no scene is active or the active scope's state does not permit drawing. The transition overlay is drawn separately, last — see SceneManager._drawTransition."
         },
         {
           "name": "fixedUpdate",
@@ -207,11 +207,11 @@
             }
           ],
           "returnType": "this",
-          "description": "Drive one fixed-timestep step on the active scene (unless Scene.paused): the scene's fixedUpdate() hook, then its systems' fixed-update phase. Called zero or more times per frame by the Application loop, ahead of SceneManager.update. No drawing or transition advance happens here — those are per-frame, not per fixed step."
+          "description": "Drive one fixed-timestep step on the active scene, gated by its SceneScope state (only Active dispatches): the scene's fixedUpdate() hook, then its systems' fixed-update phase. Called zero or more times per frame by the Application loop, ahead of SceneManager.update. No drawing or transition advance happens here — those are per-frame, not per fixed step."
         },
         {
           "name": "setScene",
-          "signature": "setScene(scene: Scene | null, options: SetSceneOptions): Promise<SceneManager>",
+          "signature": "setScene(scene: Scene<void> | null, options: SetSceneOptions): Promise<SceneManager>",
           "signatureTokens": [
             {
               "text": "setScene",
@@ -232,6 +232,18 @@
             {
               "text": "Scene",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             },
             {
               "text": " | ",
@@ -285,7 +297,7 @@
           "params": [
             {
               "name": "scene",
-              "type": "Scene | null",
+              "type": "Scene<void> | null",
               "optional": false
             },
             {
@@ -295,7 +307,7 @@
             }
           ],
           "returnType": "Promise<SceneManager>",
-          "description": "Switch to scene (or clear to null), unloading the previously active scene. No-op when scene is already active. An optional fade transition runs the swap at full opacity. The new scene is loaded before the old one is torn down, so there is no blank frame between them."
+          "description": "Switch to scene (or clear to null), ending the previously active scene permanently. No-op when scene is already active. An optional fade transition runs the swap at full opacity. The new scene completes load()+init() before the old one is torn down, so there is no blank frame between them, and the outgoing scene keeps running until the switch boundary is crossed."
         },
         {
           "name": "update",
@@ -342,7 +354,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Per-frame logic entry point called by Application.update, after this frame's fixed steps: for the active scene, unless Scene.paused, runs update() then its systems' update phase. Dispatches SceneManager.onUpdateScene whenever a scene is active, regardless of pause state. Drawing is a separate call — see SceneManager.draw."
+          "description": "Per-frame logic entry point called by Application.update, after this frame's fixed steps: for the active scene, gated by its SceneScope state, runs update() then its systems' update phase. Dispatches SceneManager.onUpdateScene whenever a scene is active, regardless of state. Drawing is a separate call — see SceneManager.draw."
         }
       ],
       "paragraphs": [],
@@ -355,7 +367,7 @@
       "members": [
         {
           "name": "currentScene",
-          "signature": "currentScene: Scene | null",
+          "signature": "currentScene: Scene<void> | null",
           "signatureTokens": [
             {
               "text": "currentScene",
@@ -368,6 +380,18 @@
             {
               "text": "Scene",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             },
             {
               "text": " | ",
@@ -393,7 +417,7 @@
       "members": [
         {
           "name": "onChangeScene",
-          "signature": "onChangeScene: Signal<[Scene | null]>",
+          "signature": "onChangeScene: Signal<[Scene<void> | null]>",
           "signatureTokens": [
             {
               "text": "onChangeScene",
@@ -420,6 +444,18 @@
               "kind": "type"
             },
             {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
               "text": " | ",
               "kind": "punctuation"
             },
@@ -442,7 +478,7 @@
         },
         {
           "name": "onStartScene",
-          "signature": "onStartScene: Signal<[Scene]>",
+          "signature": "onStartScene: Signal<[Scene<void>]>",
           "signatureTokens": [
             {
               "text": "onStartScene",
@@ -469,6 +505,18 @@
               "kind": "type"
             },
             {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
               "text": "]",
               "kind": "punctuation"
             },
@@ -483,7 +531,7 @@
         },
         {
           "name": "onStopScene",
-          "signature": "onStopScene: Signal<[Scene]>",
+          "signature": "onStopScene: Signal<[Scene<void>]>",
           "signatureTokens": [
             {
               "text": "onStopScene",
@@ -510,6 +558,18 @@
               "kind": "type"
             },
             {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
               "text": "]",
               "kind": "punctuation"
             },
@@ -524,7 +584,7 @@
         },
         {
           "name": "onUpdateScene",
-          "signature": "onUpdateScene: Signal<[Scene]>",
+          "signature": "onUpdateScene: Signal<[Scene<void>]>",
           "signatureTokens": [
             {
               "text": "onUpdateScene",
@@ -549,6 +609,18 @@
             {
               "text": "Scene",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             },
             {
               "text": "]",

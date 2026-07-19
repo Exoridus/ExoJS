@@ -1,4 +1,5 @@
-﻿import type { Application } from '#core/Application';
+import type { Application } from '#core/Application';
+import { logger } from '#core/logging';
 import { Scene } from '#core/Scene';
 import { SceneManager } from '#core/SceneManager';
 import { Signal } from '#core/Signal';
@@ -37,6 +38,8 @@ const createInputManagerStub = (): InputManagerStub => ({
 
 const createApplicationStub = (): Application & {
   input: InputManagerStub;
+  onError: Signal<[Error]>;
+  loader: { _releaseScope: MockInstance };
   rendering: {
     backend: {
       view: { getBounds: () => Rectangle };
@@ -62,9 +65,10 @@ const createApplicationStub = (): Application & {
   };
 
   return {
-    loader: {},
+    loader: { _releaseScope: vi.fn() },
     input: createInputManagerStub(),
     interaction: { attachRoot: vi.fn(), detachRoot: vi.fn() },
+    onError: new Signal<[Error]>(),
     rendering: {
       backend: backendMock,
       render: vi.fn(),
@@ -72,6 +76,8 @@ const createApplicationStub = (): Application & {
     backend: backendMock,
   } as unknown as Application & {
     input: InputManagerStub;
+    onError: Signal<[Error]>;
+    loader: { _releaseScope: MockInstance };
     rendering: {
       backend: {
         view: { getBounds: () => Rectangle };
@@ -103,7 +109,7 @@ type SceneHooks = Partial<Pick<Scene, 'load' | 'init' | 'update' | 'fixedUpdate'
 const makeScene = (hooks: SceneHooks = {}): Scene => Object.assign(new Scene(), hooks);
 
 describe('SceneManager', () => {
-  test('keeps scene unset and cleans up when load() fails', async () => {
+  test('keeps scene unset and cleans up when load() fails, without calling unload()', async () => {
     const manager = new SceneManager(createApplicationStub());
     const unload = vi.fn(async () => undefined);
     const scene = makeScene({
@@ -119,19 +125,20 @@ describe('SceneManager', () => {
 
     await expect(manager.setScene(scene)).rejects.toThrow('load failed');
     expect(manager.currentScene).toBeNull();
-    expect(unload).toHaveBeenCalledTimes(1);
+    // definition §16: unload() is never called for a scene that never completed activation.
+    expect(unload).not.toHaveBeenCalled();
     expect(destroySpy).toHaveBeenCalledTimes(1);
     expect(scene.attached).toBe(false);
     expect(changeSpy).not.toHaveBeenCalled();
   });
 
-  test('keeps scene unset and cleans up when init() fails', async () => {
+  test('keeps scene unset and cleans up when init() fails, without calling unload()', async () => {
     const manager = new SceneManager(createApplicationStub());
     const load = vi.fn(async () => undefined);
     const unload = vi.fn(async () => undefined);
     const scene = makeScene({
       load,
-      async init() {
+      init() {
         throw new Error('init failed');
       },
       unload,
@@ -144,32 +151,38 @@ describe('SceneManager', () => {
     await expect(manager.setScene(scene)).rejects.toThrow('init failed');
     expect(manager.currentScene).toBeNull();
     expect(load).toHaveBeenCalledTimes(1);
-    expect(unload).toHaveBeenCalledTimes(1);
+    expect(unload).not.toHaveBeenCalled();
     expect(destroySpy).toHaveBeenCalledTimes(1);
     expect(scene.attached).toBe(false);
     expect(changeSpy).not.toHaveBeenCalled();
   });
 
-  test('surfaces both init and cleanup errors when recovery unload fails', async () => {
-    const manager = new SceneManager(createApplicationStub());
+  test('a failed activation reports cleanup-stage errors through the app error pipeline without masking the original error', async () => {
+    const app = createApplicationStub();
+    const manager = new SceneManager(app);
     const scene = makeScene({
-      async init() {
+      init() {
         throw new Error('init failed');
       },
-      async unload() {
-        throw new Error('cleanup failed');
+      destroy() {
+        throw new Error('user destroy failed');
       },
     });
-    const destroySpy = vi.spyOn(scene, 'destroy');
+    const errorSpy = vi.fn();
+    const loggerErrorSpy = vi.spyOn(logger, 'error').mockImplementation(() => undefined);
 
-    await expect(manager.setScene(scene)).rejects.toThrow('Failed to initialize scene: init failed. Cleanup also failed: cleanup failed.');
+    app.onError.add(errorSpy);
+
+    await expect(manager.setScene(scene)).rejects.toThrow('init failed');
     expect(manager.currentScene).toBeNull();
-    expect(destroySpy).toHaveBeenCalledTimes(1);
-    expect(scene.attached).toBe(false);
+    expect(errorSpy).toHaveBeenCalledWith(expect.objectContaining({ message: 'user destroy failed' }));
+
+    loggerErrorSpy.mockRestore();
   });
 
-  test('does not leak unhandled rejections when destroy() unload fails', async () => {
-    const manager = new SceneManager(createApplicationStub());
+  test('does not leak unhandled rejections when destroy() unload fails, and reports it through the app error pipeline', async () => {
+    const app = createApplicationStub();
+    const manager = new SceneManager(app);
     const unload = vi.fn(async () => {
       throw new Error('unload failed');
     });
@@ -177,32 +190,32 @@ describe('SceneManager', () => {
       async load() {
         // noop
       },
-      async init() {
+      init() {
         // noop
       },
       unload,
     });
-    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const errorSpy = vi.fn();
+    const loggerErrorSpy = vi.spyOn(logger, 'error').mockImplementation(() => undefined);
+
+    app.onError.add(errorSpy);
 
     await manager.setScene(scene);
     manager.destroy();
     await Promise.resolve();
     await Promise.resolve();
+    await Promise.resolve();
 
     expect(unload).toHaveBeenCalledTimes(1);
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
-      '%c[ExoJS][SceneManager]',
-      expect.stringContaining('color'),
-      'SceneManager.destroy() failed to unload the active scene.',
-      expect.any(Error),
-    );
-    consoleErrorSpy.mockRestore();
+    expect(errorSpy).toHaveBeenCalledWith(expect.objectContaining({ message: 'unload failed' }));
+
+    loggerErrorSpy.mockRestore();
   });
 
-  test('setScene switches the active scene and unloads the previous one', async () => {
+  test('setScene switches the active scene and ends the previous one permanently', async () => {
     const manager = new SceneManager(createApplicationStub());
     const firstUnload = vi.fn(async () => undefined);
-    const secondInit = vi.fn(async () => undefined);
+    const secondInit = vi.fn(() => undefined);
     const first = makeScene({ unload: firstUnload });
     const second = makeScene({ init: secondInit });
 
@@ -213,9 +226,10 @@ describe('SceneManager', () => {
     expect(manager.currentScene).toBe(second);
     expect(firstUnload).toHaveBeenCalledTimes(1);
     expect(secondInit).toHaveBeenCalledTimes(1);
+    expect(first.attached).toBe(false);
   });
 
-  test('fixedUpdate dispatches to the active scene unless it is paused', async () => {
+  test('fixedUpdate dispatches to the active scene', async () => {
     const manager = new SceneManager(createApplicationStub());
     const fixedUpdate = vi.fn();
     const scene = makeScene({ fixedUpdate });
@@ -225,14 +239,13 @@ describe('SceneManager', () => {
     manager.fixedUpdate(new Time(16));
     expect(fixedUpdate).toHaveBeenCalledTimes(1);
 
-    scene.paused = true;
     manager.fixedUpdate(new Time(16));
-    expect(fixedUpdate).toHaveBeenCalledTimes(1); // paused → skipped
+    expect(fixedUpdate).toHaveBeenCalledTimes(2);
   });
 
   test('setScene to the already-active scene is a no-op', async () => {
     const manager = new SceneManager(createApplicationStub());
-    const init = vi.fn(async () => undefined);
+    const init = vi.fn(() => undefined);
     const unload = vi.fn(async () => undefined);
     const scene = makeScene({ init, unload });
 
@@ -256,7 +269,7 @@ describe('SceneManager', () => {
     expect(unload).toHaveBeenCalledTimes(1);
   });
 
-  test('paused scene skips update and systems but keeps drawing', async () => {
+  test('active scene updates, ticks its systems, and draws every frame', async () => {
     const app = createApplicationStub();
     const manager = new SceneManager(app);
     const update = vi.fn();
@@ -264,25 +277,18 @@ describe('SceneManager', () => {
     const systemUpdate = vi.fn();
     const scene = makeScene({ update, draw });
 
+    await manager.setScene(scene);
     scene.systems.add({ update: systemUpdate });
 
-    await manager.setScene(scene);
     tick(manager, app);
     expect(update).toHaveBeenCalledTimes(1);
     expect(systemUpdate).toHaveBeenCalledTimes(1);
     expect(draw).toHaveBeenCalledTimes(1);
 
-    scene.paused = true;
-    tick(manager, app);
-    expect(update).toHaveBeenCalledTimes(1);
-    expect(systemUpdate).toHaveBeenCalledTimes(1);
-    expect(draw).toHaveBeenCalledTimes(2);
-
-    scene.paused = false;
     tick(manager, app);
     expect(update).toHaveBeenCalledTimes(2);
     expect(systemUpdate).toHaveBeenCalledTimes(2);
-    expect(draw).toHaveBeenCalledTimes(3);
+    expect(draw).toHaveBeenCalledTimes(2);
   });
 
   test('fade transition runs and completes around setScene', async () => {
@@ -325,7 +331,7 @@ describe('SceneManager', () => {
     const manager = new SceneManager(app);
     const first = makeScene({});
     const failing = makeScene({
-      async init() {
+      init() {
         throw new Error('transition target failed');
       },
     });
@@ -371,15 +377,13 @@ describe('SceneManager', () => {
     const fixedSystemUpdate = vi.fn();
     const scene = makeScene({});
 
-    scene.systems.add({ fixedUpdate: fixedSystemUpdate });
-
     await manager.setScene(scene);
+    scene.systems.add({ fixedUpdate: fixedSystemUpdate });
 
     manager.fixedUpdate(new Time(16));
     expect(fixedSystemUpdate).toHaveBeenCalledTimes(1);
 
-    scene.paused = true;
     manager.fixedUpdate(new Time(16));
-    expect(fixedSystemUpdate).toHaveBeenCalledTimes(1); // paused → skipped
+    expect(fixedSystemUpdate).toHaveBeenCalledTimes(2);
   });
 });

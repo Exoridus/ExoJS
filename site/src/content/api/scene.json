@@ -1,16 +1,16 @@
 {
   "title": "Scene",
-  "description": "A scene's lifecycle host. Subclass to define scene behavior: class GameScene extends Scene { override init(loader: Loader): void { ... } override update(delta: Time): void { ... } override draw(context: RenderingContext): void { ... } } app.start(new GameScene()); For one-off scenes, an anonymous subclass works just as well: app.start(new class extends Scene { override update(delta) { ... } override draw(context) { ... } });",
+  "description": "A scene's lifecycle host. Subclass to define scene behavior: class GameScene extends Scene { override init(): void { ... } override update(delta: Time): void { ... } override draw(context: RenderingContext): void { ... } } `Data` is this scene's activation-data type — the value passed to Scene.load and Scene.init. Scenes that need no activation data use the default: class TitleScene extends Scene { ... } A scene that needs typed data declares it through the generic: interface GameData { readonly level: number; } class GameScene extends Scene<GameData> { ... } Scene-bound facilities (Scene.systems, Scene.loader, Scene.inputs, Scene.interaction, Scene.tweens, Scene.audio) are unavailable during construction and class-field initialization — they become available once the scene is attached and remain available through Scene.load, Scene.init, the frame hooks, Scene.unload, and Scene.destroy.",
   "symbol": "Scene",
   "kind": "class",
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 24,
+  "memberCount": 26,
   "counts": {
     "constructors": 1,
     "methods": 12,
-    "properties": 9,
+    "properties": 11,
     "events": 2
   },
   "sections": [
@@ -20,10 +20,12 @@
       "members": [],
       "paragraphs": [
         "A scene's lifecycle host. Subclass to define scene behavior:",
-        "class GameScene extends Scene { override init(loader: Loader): void { ... } override update(delta: Time): void { ... } override draw(context: RenderingContext): void { ... } }",
-        "app.start(new GameScene());",
-        "For one-off scenes, an anonymous subclass works just as well:",
-        "app.start(new class extends Scene { override update(delta) { ... } override draw(context) { ... } });"
+        "class GameScene extends Scene { override init(): void { ... } override update(delta: Time): void { ... } override draw(context: RenderingContext): void { ... } }",
+        "`Data` is this scene's activation-data type — the value passed to Scene.load and Scene.init. Scenes that need no activation data use the default:",
+        "class TitleScene extends Scene { ... }",
+        "A scene that needs typed data declares it through the generic:",
+        "interface GameData { readonly level: number; } class GameScene extends Scene<GameData> { ... }",
+        "Scene-bound facilities (Scene.systems, Scene.loader, Scene.inputs, Scene.interaction, Scene.tweens, Scene.audio) are unavailable during construction and class-field initialization — they become available once the scene is attached and remain available through Scene.load, Scene.init, the frame hooks, Scene.unload, and Scene.destroy."
       ],
       "importLine": "import { Scene } from '@codexo/exojs'",
       "sourceLink": null
@@ -34,7 +36,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(): Scene",
+          "signature": "new(): Scene<Data>",
           "signatureTokens": [
             {
               "text": "new",
@@ -55,10 +57,22 @@
             {
               "text": "Scene",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Data",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             }
           ],
           "params": [],
-          "returnType": "Scene",
+          "returnType": "Scene<Data>",
           "description": ""
         }
       ],
@@ -191,7 +205,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": ""
+          "description": "Optional synchronous cleanup hook for ordinary objects created directly by the scene and not managed by a scene facility (facility-tracked work — systems, loader claims, input bindings, interaction observations, tweens, audio playback — is cleaned up automatically). Engine-owned scene internals are torn down separately; subclasses never need super.destroy(). Override in subclass."
         },
         {
           "name": "draw",
@@ -242,7 +256,7 @@
         },
         {
           "name": "fixedUpdate",
-          "signature": "fixedUpdate(_delta: Time): void",
+          "signature": "fixedUpdate(_step: Time): void",
           "signatureTokens": [
             {
               "text": "fixedUpdate",
@@ -253,7 +267,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "_delta",
+              "text": "_step",
               "kind": "param"
             },
             {
@@ -279,7 +293,7 @@
           ],
           "params": [
             {
-              "name": "_delta",
+              "name": "_step",
               "type": "Time",
               "optional": false
             }
@@ -289,7 +303,7 @@
         },
         {
           "name": "init",
-          "signature": "init(_loader: Loader): void | Promise<void>",
+          "signature": "init(_data: Readonly<Data>): void",
           "signatureTokens": [
             {
               "text": "init",
@@ -300,7 +314,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "_loader",
+              "text": "_data",
               "kind": "param"
             },
             {
@@ -308,8 +322,20 @@
               "kind": "punctuation"
             },
             {
-              "text": "Loader",
+              "text": "Readonly",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Data",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             },
             {
               "text": ")",
@@ -322,41 +348,21 @@
             {
               "text": "void",
               "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Promise",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "void",
-              "kind": "keyword"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
             }
           ],
           "params": [
             {
-              "name": "_loader",
-              "type": "Loader",
+              "name": "_data",
+              "type": "Readonly<Data>",
               "optional": false
             }
           ],
-          "returnType": "void | Promise<void>",
-          "description": "One-shot setup hook. Called after Scene.load resolves, before the first update. Build the scene-graph subtree, register signal handlers, etc. Override in subclass."
+          "returnType": "void",
+          "description": "Optional synchronous setup hook. Runs once per activation, after the Promise returned by Scene.load has fulfilled and before the scene becomes active: register scene systems, connect stable scene objects, bind input, register interaction roots, start scene audio. Must remain synchronous — development builds detect a returned thenable and fail activation with a lifecycle error. Override in subclass."
         },
         {
           "name": "load",
-          "signature": "load(_loader: Loader): void | Promise<void>",
+          "signature": "load(_data: Readonly<Data>): void | Promise<void>",
           "signatureTokens": [
             {
               "text": "load",
@@ -367,7 +373,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "_loader",
+              "text": "_data",
               "kind": "param"
             },
             {
@@ -375,8 +381,20 @@
               "kind": "punctuation"
             },
             {
-              "text": "Loader",
+              "text": "Readonly",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Data",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             },
             {
               "text": ")",
@@ -413,13 +431,13 @@
           ],
           "params": [
             {
-              "name": "_loader",
-              "type": "Loader",
+              "name": "_data",
+              "type": "Readonly<Data>",
               "optional": false
             }
           ],
           "returnType": "void | Promise<void>",
-          "description": "Async asset preload hook. Called once before Scene.init the first time the scene is pushed. Use the loader to register and resolve assets needed by the scene; await any returned promise from loader.load()."
+          "description": "Optional asynchronous loading hook. Runs once per activation, before Scene.init: initial asset loading, activation-data-dependent asset selection, remote/storage reads, or any other work that must complete before synchronous setup. Reach the loader via this.loader (scene lifetime) or this.app.loader (app lifetime). Override in subclass."
         },
         {
           "name": "removeChild",
@@ -542,11 +560,11 @@
             }
           ],
           "returnType": "T",
-          "description": "Register a Destroyable to be destroyed automatically when this scene is destroyed (reverse registration order). Returns its argument for fluent capture: const world = this.track(new PhysicsWorld()). The scene-bound tweens and inputs registries are tracked the same way."
+          "description": "Register a Destroyable to be destroyed automatically when this scene ends permanently (reverse registration order). Returns its argument for fluent capture: const world = this.track(new PhysicsWorld())."
         },
         {
           "name": "unload",
-          "signature": "unload(_loader: Loader): void | Promise<void>",
+          "signature": "unload(): void | Promise<void>",
           "signatureTokens": [
             {
               "text": "unload",
@@ -555,18 +573,6 @@
             {
               "text": "(",
               "kind": "punctuation"
-            },
-            {
-              "text": "_loader",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Loader",
-              "kind": "type"
             },
             {
               "text": ")",
@@ -601,15 +607,9 @@
               "kind": "punctuation"
             }
           ],
-          "params": [
-            {
-              "name": "_loader",
-              "type": "Loader",
-              "optional": false
-            }
-          ],
+          "params": [],
           "returnType": "void | Promise<void>",
-          "description": "Async asset teardown hook. Called when the scene is finally popped off the stack. Use the loader to release assets that are scene-private and not shared with another scene still on the stack."
+          "description": "Optional asynchronous teardown hook for a scene that completed activation successfully and is ending permanently. Use the loader to release assets that are scene-private and not shared with a scene that remains active. Not called for a scene that never completed activation (see the definition spec's failed-activation cleanup). Override in subclass."
         },
         {
           "name": "update",
@@ -668,27 +668,6 @@
       "title": "Properties",
       "members": [
         {
-          "name": "paused",
-          "signature": "paused: boolean",
-          "signatureTokens": [
-            {
-              "text": "paused",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "boolean",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "When true, the scene's update and systems are skipped each frame while it keeps drawing — the simple way to freeze gameplay behind a pause menu (show a panel on scene.ui, then set scene.paused = true)."
-        },
-        {
           "name": "app",
           "signature": "app: Application",
           "signatureTokens": [
@@ -707,7 +686,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The Application this scene is attached to. The framework attaches a scene before any lifecycle hook (init/update/draw) runs, so scene code can read this.app inside those hooks without a null guard — consistent with Scene.inputs/Scene.tweens/Scene.loader. Throws if accessed before the scene is attached (e.g. in a constructor). Use Scene.attached for the rare \"is it attached yet?\" check that must not throw."
+          "description": "The Application this scene is attached to. The framework attaches a scene before any lifecycle hook (load/init/update/draw) runs, so scene code can read this.app inside those hooks without a null guard — consistent with Scene.inputs/Scene.tweens/Scene.loader. Throws if accessed before the scene is attached (e.g. in a constructor). Use Scene.attached for the rare \"is it attached yet?\" check that must not throw."
         },
         {
           "name": "attached",
@@ -731,6 +710,27 @@
           "description": "true once the scene is attached to an Application — a non-throwing lifecycle probe (see Scene.app)."
         },
         {
+          "name": "audio",
+          "signature": "audio: SceneAudio",
+          "signatureTokens": [
+            {
+              "text": "audio",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneAudio",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Scene-bound audio facade. Playback started via this.audio.play(...) is automatically stopped when the scene ends permanently — no manual cleanup required. Throws if accessed before the scene is attached to an Application."
+        },
+        {
           "name": "inputs",
           "signature": "inputs: SceneInputs",
           "signatureTokens": [
@@ -749,7 +749,28 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Scene-bound input registry. Bindings created via this.inputs.onTrigger(...) etc. are automatically unbound when the scene is destroyed — no manual cleanup required. Throws if accessed before the scene is attached to an Application."
+          "description": "Scene-bound input facade. Bindings created via this.inputs.onTrigger(...) etc. are automatically unbound when the scene ends permanently — no manual cleanup required. Throws if accessed before the scene is attached to an Application."
+        },
+        {
+          "name": "interaction",
+          "signature": "interaction: SceneInteraction",
+          "signatureTokens": [
+            {
+              "text": "interaction",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneInteraction",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Scene-bound interaction facade. this.root and a materialized this.ui are attached automatically; use this.interaction.observe(root) for any additional root that needs pointer/focus routing. Observations are detached automatically when the scene ends permanently. Throws if accessed before the scene is attached to an Application."
         },
         {
           "name": "loader",
@@ -770,7 +791,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Scene-scoped claim view over the application Loader. Assets claimed via this.loader.get/load(...) are held under this scene's own claim scope and released automatically when the scene is destroyed — scene-private assets are evicted on unload with zero manual bookkeeping. App-lifetime assets stay on app.loader. Throws if accessed before the scene is attached to an Application."
+          "description": "Scene-scoped claim view over the application Loader. Assets claimed via this.loader.get/load(...) are held under this scene's own claim scope and released automatically when the scene ends permanently — scene-private assets are evicted on unload with zero manual bookkeeping. App-lifetime assets stay on app.loader. Throws if accessed before the scene is attached to an Application."
         },
         {
           "name": "root",
@@ -794,6 +815,27 @@
           "description": "Structural root container for this scene's hierarchy. Scene.root is an **ownership and traversal anchor**, not an automatic render-authoritative root. The framework never calls root.render(backend) for you. Scene.draw(context) is the explicit orchestration point — see Scene.draw. The root exists eagerly so addChild / removeChild can proxy to a known container, and so transform/bounds traversal has a stable parent. Selecting what to render each frame remains the scene's responsibility."
         },
         {
+          "name": "state",
+          "signature": "state: SceneState",
+          "signatureTokens": [
+            {
+              "text": "state",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneState",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "This scene's current lifecycle state. Read-only — state changes only in response to director-driven lifecycle events, never by direct assignment. Throws if accessed before the scene is attached to an Application."
+        },
+        {
           "name": "systems",
           "signature": "systems: SystemRegistry",
           "signatureTokens": [
@@ -812,7 +854,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Scene-bound system registry. Add tickable Systems (e.g. a physics world) via this.systems.add(world); each participates in the scheduler phases it implements (fixedUpdate/update/draw, ascending order) and is destroyed with the scene — no manual step() / destroy() wiring. Available before the scene is attached to an Application (systems tick only while the scene is active)."
+          "description": "Scene-bound system registry. Add tickable Systems (e.g. a physics world) via this.systems.add(world); each participates in the scheduler phases it implements (fixedUpdate/update/draw, ascending order) and is destroyed with the scene — no manual step() / destroy() wiring. Throws if accessed before the scene is attached to an Application."
         },
         {
           "name": "tweens",
@@ -833,7 +875,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Scene-bound tween registry. Tweens created via this.tweens.create(...) are automatically stopped when the scene is destroyed — no manual cleanup required. Throws if accessed before the scene is attached to an Application."
+          "description": "Scene-bound tween facade. Tweens created via this.tweens.create(...) are automatically stopped when the scene ends permanently — no manual cleanup required. Throws if accessed before the scene is attached to an Application."
         },
         {
           "name": "ui",

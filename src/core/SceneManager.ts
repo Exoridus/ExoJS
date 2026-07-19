@@ -5,8 +5,8 @@ import type { RenderingContext } from '#rendering/RenderingContext';
 import type { Application } from './Application';
 import { Color } from './Color';
 import { logger } from './logging';
-import { Perf } from './Perf';
 import { Scene } from './Scene';
+import { SceneScope } from './SceneScope';
 import { Signal } from './Signal';
 import type { Time } from './Time';
 
@@ -59,28 +59,18 @@ const createOverlayMesh = (): TransitionOverlayMesh =>
 
 const defaultFadeTransitionDuration = 220;
 
-// User Timing mark/measure names for the scene sub-phases of `update()`/`draw()`
-// (dev-only). Constant strings so the Performance panel groups every frame's
-// entries under a stable label instead of one row per frame.
-const sceneUpdateStartMark = 'exojs:scene-update:start';
-const sceneUpdateMeasure = 'exojs:scene-update';
-const sceneTickStartMark = 'exojs:scene-tick:start';
-const sceneTickMeasure = 'exojs:scene-tick';
-const drawStartMark = 'exojs:draw:start';
-const drawMeasure = 'exojs:draw';
-const uiStartMark = 'exojs:ui:start';
-const uiMeasure = 'exojs:ui';
-
 /**
  * Single-active-scene controller owned by {@link Application}. Holds at most one
  * active {@link Scene} (the current "screen"); {@link SceneManager.setScene}
- * switches to a new scene — unloading the previous one — with an optional fade
- * transition.
+ * switches to a new scene — ending the previous one permanently — with an
+ * optional fade transition.
  *
  * There is no scene stack: overlays, HUDs and pause menus belong on
- * {@link Scene.ui} (the screen-fixed UI layer), and "freeze the game but keep
- * drawing it" is `scene.paused = true` (skips the scene's `update` + systems
- * while it keeps rendering).
+ * {@link Scene.ui} (the screen-fixed UI layer). Each activation is owned
+ * internally by a `SceneScope`, which attaches the scene's facilities, gates
+ * per-frame dispatch by {@link SceneState}, and runs teardown in the
+ * normative order; `SceneManager` itself only tracks which scope is active
+ * and drives the transition machinery.
  *
  * Per-frame dispatch is split into four entry points, called by
  * {@link Application.update} in normative order: {@link SceneManager.fixedUpdate}
@@ -90,7 +80,7 @@ const uiMeasure = 'exojs:ui';
  */
 export class SceneManager {
   private readonly _app: Application;
-  private _activeScene: Scene | null = null;
+  private _activeScope: SceneScope<void> | null = null;
   private readonly _transitionOverlay: TransitionOverlayMesh = createOverlayMesh();
   private _transition: ActiveFadeTransition | null = null;
 
@@ -103,16 +93,13 @@ export class SceneManager {
   /** Fires just before a scene is unloaded (`unload` then `destroy`). */
   public readonly onStopScene = new Signal<[Scene]>();
 
-  private readonly _asyncUpdateWarned = new WeakSet<Scene>();
-  private readonly _asyncDrawWarned = new WeakSet<Scene>();
-
   public constructor(app: Application) {
     this._app = app;
   }
 
   /** The active scene, or `null` when none is set. */
   public get currentScene(): Scene | null {
-    return this._activeScene;
+    return this._activeScope?.scene ?? null;
   }
 
   public set currentScene(scene: Scene | null) {
@@ -120,28 +107,34 @@ export class SceneManager {
   }
 
   /**
-   * Switch to `scene` (or clear to `null`), unloading the previously active
-   * scene. No-op when `scene` is already active. An optional fade transition
-   * runs the swap at full opacity. The new scene is loaded before the old one
-   * is torn down, so there is no blank frame between them.
+   * Switch to `scene` (or clear to `null`), ending the previously active
+   * scene permanently. No-op when `scene` is already active. An optional
+   * fade transition runs the swap at full opacity. The new scene completes
+   * `load()`+`init()` before the old one is torn down, so there is no blank
+   * frame between them, and the outgoing scene keeps running until the
+   * switch boundary is crossed.
    */
   public async setScene(scene: Scene | null, options: SetSceneOptions = {}): Promise<this> {
     await this._runWithTransition(async () => {
-      if (scene === this._activeScene) {
+      if (scene === (this._activeScope?.scene ?? null)) {
         return;
       }
 
+      let newScope: SceneScope<void> | null = null;
+
       if (scene !== null) {
-        await this._prepareScene(scene);
+        newScope = await this._prepareScene(scene);
       }
 
-      const previous = this._activeScene;
+      const previousScope = this._activeScope;
 
-      this._activeScene = scene;
+      this._activeScope = newScope;
 
-      if (previous !== null) {
-        await this._disposeScene(previous);
+      if (previousScope !== null) {
+        await this._disposeScene(previousScope);
       }
+
+      newScope?.activate();
 
       this.onChangeScene.dispatch(scene);
 
@@ -154,64 +147,33 @@ export class SceneManager {
   }
 
   /**
-   * Drive one fixed-timestep step on the active scene (unless {@link
-   * Scene.paused}): the scene's `fixedUpdate()` hook, then its systems'
-   * fixed-update phase. Called zero or more times per frame by the
-   * {@link Application} loop, ahead of {@link SceneManager.update}. No
-   * drawing or transition advance happens here — those are per-frame, not
-   * per fixed step.
+   * Drive one fixed-timestep step on the active scene, gated by its
+   * `SceneScope` state (only `Active` dispatches): the scene's
+   * `fixedUpdate()` hook, then its systems' fixed-update phase. Called zero
+   * or more times per frame by the {@link Application} loop, ahead of
+   * {@link SceneManager.update}. No drawing or transition advance happens
+   * here — those are per-frame, not per fixed step.
    */
   public fixedUpdate(step: Time): this {
-    const scene = this._activeScene;
-
-    if (scene !== null && !scene.paused) {
-      scene.fixedUpdate(step);
-      scene._peekSystems()?._fixedUpdate(step);
-    }
+    this._activeScope?.fixedUpdate(step);
 
     return this;
   }
 
   /**
    * Per-frame logic entry point called by {@link Application.update}, after
-   * this frame's fixed steps: for the active scene, unless {@link
-   * Scene.paused}, runs `update()` then its systems' update phase.
-   * Dispatches {@link SceneManager.onUpdateScene} whenever a scene is active,
-   * regardless of pause state. Drawing is a separate call — see
+   * this frame's fixed steps: for the active scene, gated by its
+   * `SceneScope` state, runs `update()` then its systems' update phase.
+   * Dispatches {@link SceneManager.onUpdateScene} whenever a scene is
+   * active, regardless of state. Drawing is a separate call — see
    * {@link SceneManager.draw}.
    */
   public update(delta: Time): this {
-    const scene = this._activeScene;
+    const scope = this._activeScope;
 
-    if (scene !== null) {
-      if (!scene.paused) {
-        if (__DEV__) Perf.mark(sceneUpdateStartMark);
-        // eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
-        const updateResult = scene.update(delta);
-        if (__DEV__) Perf.measure(sceneUpdateMeasure, sceneUpdateStartMark);
-
-        if (!this._asyncUpdateWarned.has(scene) && (updateResult as unknown) instanceof Promise) {
-          this._asyncUpdateWarned.add(scene);
-          logger.warn(
-            `Scene.update() returned a Promise. update() must be synchronous — async logic here breaks frame timing and silently drops errors. Move async work into load() or init() instead.`,
-            { source: 'SceneManager' },
-          );
-        }
-
-        // Tick the scene's systems (e.g. a physics world) after its update().
-        if (__DEV__) Perf.mark(sceneTickStartMark);
-        scene._peekSystems()?._update(delta);
-        if (__DEV__) Perf.measure(sceneTickMeasure, sceneTickStartMark);
-      }
-
-      this.onUpdateScene.dispatch(scene);
-
-      if (__DEV__) {
-        Perf.clearMarks(sceneUpdateStartMark);
-        Perf.clearMarks(sceneTickStartMark);
-        Perf.clearMeasures(sceneUpdateMeasure);
-        Perf.clearMeasures(sceneTickMeasure);
-      }
+    if (scope !== null) {
+      scope.update(delta);
+      this.onUpdateScene.dispatch(scope.scene);
     }
 
     return this;
@@ -219,43 +181,14 @@ export class SceneManager {
 
   /**
    * Draw entry point called by {@link Application.update}, after this
-   * frame's {@link SceneManager.update}: draws the active scene — while
-   * `Active` or paused, drawing continues either way — then its systems'
-   * draw phase, then its screen-fixed UI layer on top. No-op when no scene
-   * is active. The transition overlay is drawn separately, last — see
-   * {@link SceneManager._drawTransition}.
+   * frame's {@link SceneManager.update}: draws the active scene — gated by
+   * its `SceneScope` state — then its systems' draw phase, then its
+   * screen-fixed UI layer on top. No-op when no scene is active or the
+   * active scope's state does not permit drawing. The transition overlay is
+   * drawn separately, last — see {@link SceneManager._drawTransition}.
    */
   public draw(context: RenderingContext): this {
-    const scene = this._activeScene;
-
-    if (scene !== null) {
-      if (__DEV__) Perf.mark(drawStartMark);
-      // eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
-      const drawResult = scene.draw(context);
-      if (__DEV__) Perf.measure(drawMeasure, drawStartMark);
-
-      if (!this._asyncDrawWarned.has(scene) && (drawResult as unknown) instanceof Promise) {
-        this._asyncDrawWarned.add(scene);
-        logger.warn(`Scene.draw() returned a Promise. draw() must be synchronous — an async draw() produces incomplete frames and silently drops errors.`, {
-          source: 'SceneManager',
-        });
-      }
-
-      // Tick the scene's draw systems after its own draw().
-      scene._peekSystems()?._draw(context);
-
-      // Auto-render the scene's screen-fixed UI layer above its content.
-      if (__DEV__) Perf.mark(uiStartMark);
-      scene._peekUI()?._render(context);
-      if (__DEV__) Perf.measure(uiMeasure, uiStartMark);
-
-      if (__DEV__) {
-        Perf.clearMarks(drawStartMark);
-        Perf.clearMarks(uiStartMark);
-        Perf.clearMeasures(drawMeasure);
-        Perf.clearMeasures(uiMeasure);
-      }
-    }
+    this._activeScope?.draw(context);
 
     return this;
   }
@@ -280,23 +213,21 @@ export class SceneManager {
   }
 
   /**
-   * @internal Opens the active scene's systems registry mutation-buffering
+   * @internal Opens the active scope's systems registry mutation-buffering
    * window for this frame — forwards to {@link SystemRegistry._beginFrame}.
-   * No-op when no scene is active or its systems registry was never
-   * materialized (no lazy allocation forced).
+   * No-op when no scene is active.
    */
   public _beginFrame(): void {
-    this._activeScene?._peekSystems()?._beginFrame();
+    this._activeScope?._beginFrame();
   }
 
   /**
-   * @internal Drains the active scene's systems registry buffered
+   * @internal Drains the active scope's systems registry buffered
    * mutations, closing this frame's window — forwards to
-   * {@link SystemRegistry._endFrame}. No-op when no scene is active or its
-   * systems registry was never materialized.
+   * {@link SystemRegistry._endFrame}. No-op when no scene is active.
    */
   public _endFrame(): void {
-    this._activeScene?._peekSystems()?._endFrame();
+    this._activeScope?._endFrame();
   }
 
   public destroy(): void {
@@ -317,12 +248,18 @@ export class SceneManager {
     this.onStopScene.destroy();
   }
 
-  private async _prepareScene(scene: Scene): Promise<void> {
-    scene.app = this._app;
+  /**
+   * Construct a `SceneScope` for `scene` and run its activation sequence
+   * (attach → `Preparing` → `load()` → `init()`). On failure, runs the
+   * definition §16 failed-activation cleanup — engine-managed registrations
+   * destroyed, loader claims released, `scene.destroy()` invoked, but
+   * `unload()` is never called — and rethrows the original error unchanged.
+   */
+  private async _prepareScene(scene: Scene): Promise<SceneScope<void>> {
+    const scope = new SceneScope(this._app, scene);
 
     try {
-      await scene.load(this._app.loader);
-      await scene.init(this._app.loader);
+      await scope.prepare();
 
       if (scene.root.children.length > 0 && scene.draw === Scene.prototype.draw) {
         logger.warn(
@@ -331,75 +268,31 @@ export class SceneManager {
         );
       }
 
-      // Bind the scene's root to the app's interaction manager so its nodes
-      // route picking/bounds notifications to this Application (no global).
-      this._app.interaction.attachRoot(scene.root);
-
-      // Bind the UI layer too, if it was materialized before activation.
-      const ui = scene._peekUI();
-
-      if (ui !== null) {
-        this._app.interaction.attachUIRoot(ui);
-      }
-
-      scene.onLoad.dispatch();
+      return scope;
     } catch (error) {
-      let cleanupError: unknown = null;
-
-      try {
-        await scene.unload(this._app.loader);
-      } catch (unloadError) {
-        cleanupError = unloadError;
-      }
-
-      scene.destroy();
-      scene.app = null;
-
-      if (cleanupError) {
-        const initMessage = error instanceof Error ? error.message : String(error);
-        let cleanupMessage = 'unknown cleanup error';
-        if (cleanupError instanceof Error) {
-          cleanupMessage = cleanupError.message;
-        } else if (typeof cleanupError === 'string') {
-          cleanupMessage = cleanupError;
-        }
-
-        throw new Error(`Failed to initialize scene: ${initMessage}. Cleanup also failed: ${cleanupMessage}.`, {
-          cause: error,
-        });
-      }
+      scope.destroyFailedActivation();
 
       throw error;
     }
   }
 
-  private async _disposeScene(scene: Scene): Promise<void> {
-    scene.onUnload.dispatch();
-    this.onStopScene.dispatch(scene);
-    await scene.unload(this._app.loader);
-
-    const ui = scene._peekUI();
-
-    if (ui !== null) {
-      this._app.interaction.detachUIRoot(ui);
-    }
-
-    this._app.interaction.detachRoot(scene.root);
-    scene.destroy();
-    scene.app = null;
+  /** Permanently end `scope`'s scene: dispatch {@link SceneManager.onStopScene}, then run the scope's teardown sequence (definition §17). */
+  private async _disposeScene(scope: SceneScope<void>): Promise<void> {
+    this.onStopScene.dispatch(scope.scene);
+    await scope.destroy();
   }
 
   private async _unloadActiveSceneOnDestroy(): Promise<void> {
-    const scene = this._activeScene;
+    const scope = this._activeScope;
 
-    if (scene === null) {
+    if (scope === null) {
       return;
     }
 
-    this._activeScene = null;
+    this._activeScope = null;
 
     try {
-      await this._disposeScene(scene);
+      await this._disposeScene(scope);
     } catch (error) {
       logger.error('SceneManager.destroy() failed to unload the active scene.', { source: 'SceneManager', ...(error instanceof Error && { error }) });
     }
