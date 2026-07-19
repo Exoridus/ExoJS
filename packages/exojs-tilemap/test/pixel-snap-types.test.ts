@@ -63,9 +63,11 @@ describe('PixelSnapMode type contracts', () => {
     drawable.pixelSnapMode = String('none');
     // @ts-expect-error — arbitrary strings are not PixelSnapMode
     view.pixelSnapMode = 'bogus';
-    // @ts-expect-error — a widened number is not narrowable to PixelSnapMode
-    mapNode.pixelSnapMode = Number(1);
     // @ts-expect-error — out-of-domain numeric literals are not PixelSnapMode
-    layerNode.pixelSnapMode = 7;
+    mapNode.pixelSnapMode = 7;
+    // A widened `number` IS statically assignable to a numeric enum (TypeScript
+    // semantics) — the runtime setter guard is what rejects out-of-domain
+    // values there, covered by the invalid-value tests in pixel-snap.test.ts.
+    layerNode.pixelSnapMode = Number(1);
   });
 });
