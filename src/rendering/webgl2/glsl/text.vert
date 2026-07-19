@@ -22,7 +22,7 @@ flat out int  v_nodeIndex;
 void main(void) {
     int ni = int(a_nodeIndex);
 
-    // texel 0: (a, c, 0, tx) — mat3 column-major: col0 + translate.x
+    // texel 0: (a, c, snapMode, tx) — mat3 column-major: col0 + snap flag + translate.x
     // texel 1: (b, d, 0, ty) — mat3 column-major: col1 + translate.y
     // texel 9: (minX, minY, w, h) — text block bounds (local space, for gradient UV)
     vec4 t0 = texelFetch(u_nodeData, ivec2(0, ni), 0);

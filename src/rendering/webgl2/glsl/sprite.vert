@@ -31,13 +31,13 @@ void main(void) {
 
     // Fetch the world transform and tint for this instance from the shared
     // buffer, keyed by a_nodeIndex. Row layout: texel 0 = (a, b, c, d),
-    // texel 1 = (tx, ty, 0, 0), texel 2 = tint (rgb in 0..1, a). The node tint
+    // texel 1 = (tx, ty, snapMode, 0), texel 2 = tint (rgb in 0..1, a). The node tint
     // is the sprite's own tint (written at the transform-buffer upload
     // boundary), so reading it here unifies with the mesh path and removes the
     // redundant per-instance a_color stream.
     int row = int(a_nodeIndex);
     vec4 m0 = texelFetch(u_transforms, ivec2(0, row), 0); // a, b, c, d
-    vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0); // tx, ty, 0, 0
+    vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0); // tx, ty, snapMode, 0
     vec4 m2 = texelFetch(u_transforms, ivec2(2, row), 0); // tint (rgb 0..1, a)
 
     // world = M * (localX, localY, 1)

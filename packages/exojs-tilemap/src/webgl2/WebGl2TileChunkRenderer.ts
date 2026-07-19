@@ -71,7 +71,7 @@ void main(void) {
     bool diagonal = (a_tileWord & ${TILE_DIAGONAL_BIT}u) != 0u;
 
     vec4 m0 = texelFetch(u_transforms, ivec2(0, row), 0); // a, b, c, d
-    vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0); // tx, ty, 0, 0
+    vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0); // tx, ty, snapMode, 0
 
     float worldX = (m0.x * localX) + (m0.y * localY) + m1.x;
     float worldY = (m0.z * localX) + (m0.w * localY) + m1.y;
