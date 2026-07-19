@@ -24,10 +24,13 @@
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { Container } from '#rendering/Container';
+import { ShaderSource } from '#rendering/material/ShaderSource';
+import { SpriteMaterial } from '#rendering/material/SpriteMaterial';
 import { PixelSnapMode } from '#rendering/pixelSnap';
 import type { RenderNode } from '#rendering/RenderNode';
 import { RetainedContainer } from '#rendering/RetainedContainer';
 import { Sprite } from '#rendering/sprite/Sprite';
+import { spriteVertexGlsl } from '#rendering/sprite/spriteMaterialSources';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 
@@ -227,6 +230,55 @@ describe('WebGL2 GPU pixel snapping — Sprite position mode', () => {
       expect(sprite.y).toBe(20.6);
     } finally {
       root.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+
+  // -------------------------------------------------------------------------
+  // Case 1b: a CUSTOM SpriteMaterial snaps identically. A custom material owns
+  // only the fragment stage; the engine's `spriteVertexGlsl` runs the same
+  // origin snap. Before the snap block was ported into that vertex source,
+  // custom-material sprites silently lost position snapping (the CPU seam that
+  // used to snap them was deleted) — this pins the regression.
+  // -------------------------------------------------------------------------
+  test('Case 1b: a custom-material Position sprite snaps identically to the default path', async () => {
+    const backend = await createBackend(true);
+    const texture = createSolidTexture('#ff0000', 10);
+    // Fragment samples the base texture unchanged, so the coverage/edge is the
+    // same red quad as Case 1 — only the vertex path (custom vs default) differs.
+    const material = new SpriteMaterial({
+      shader: new ShaderSource({
+        glsl: {
+          vertex: spriteVertexGlsl,
+          fragment: `#version 300 es
+precision mediump float;
+in vec2 v_texcoord;
+uniform sampler2D u_texture;
+out vec4 fragColor;
+void main() { fragColor = texture(u_texture, v_texcoord); }`,
+        },
+      }),
+    });
+    const root = new Container();
+    const sprite = new Sprite(texture);
+
+    try {
+      sprite.material = material;
+      sprite.setPosition(20.4, 20.6);
+      sprite.pixelSnapMode = PixelSnapMode.Position;
+      root.addChild(sprite);
+
+      render(backend, root);
+
+      // Same hard-edge assertions as Case 1: origin snapped to device (20, 21).
+      expect(readPixel(backend, 20, 26)[0]).toBeGreaterThan(240);
+      expect(readPixel(backend, 19, 26)[0]).toBeLessThan(16);
+      expect(readPixel(backend, 26, 21)[0]).toBeGreaterThan(240);
+      expect(readPixel(backend, 26, 20)[0]).toBeLessThan(16);
+    } finally {
+      root.destroy();
+      material.destroy();
       texture.destroy();
       backend.destroy();
     }

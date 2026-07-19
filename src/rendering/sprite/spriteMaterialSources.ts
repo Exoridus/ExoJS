@@ -43,6 +43,7 @@ layout(location = 6) in uint a_nodeIndex;       // row into the shared transform
 
 uniform mat3 u_projection;
 uniform mat3 u_group;
+uniform vec4 u_viewport;                        // device-pixel snap rect (x, y, width, height)
 uniform sampler2D u_transforms;                 // shared per-frame transform buffer (3 texels/row)
 
 out vec2 v_texcoord;
@@ -59,7 +60,7 @@ void main(void) {
     float localY = (cornerY == 0) ? a_localBounds.y : a_localBounds.w;
 
     // Fetch the per-instance world transform and tint from the shared buffer
-    // (row = a_nodeIndex): texel 0 = (a, b, c, d), texel 1 = (tx, ty, 0, 0),
+    // (row = a_nodeIndex): texel 0 = (a, b, c, d), texel 1 = (tx, ty, snapMode, 0),
     // texel 2 = tint (rgb 0..1, a).
     int row = int(a_nodeIndex);
     vec4 m0 = texelFetch(u_transforms, ivec2(0, row), 0);
@@ -69,7 +70,21 @@ void main(void) {
     float worldX = (m0.x * localX) + (m0.y * localY) + m1.x;
     float worldY = (m0.z * localX) + (m0.w * localY) + m1.y;
 
-    gl_Position = vec4((u_projection * u_group * vec3(worldX, worldY, 1.0)).xy, 0.0, 1.0);
+    vec2 clip = (u_projection * u_group * vec3(worldX, worldY, 1.0)).xy;
+
+    // Render-only pixel snapping (m1.z: 0 = none, 1 = position, 2 = geometry —
+    // both non-zero modes snap the origin), identical to the default sprite
+    // vertex stage: snap the node ORIGIN's device-pixel position and rigid-shift
+    // the whole primitive by the same delta. floor(x+0.5) matches the CPU
+    // Math.round policy; GLSL round() is undefined at .5. A custom material
+    // customizes only the fragment stage, so its origin snap must stay identical.
+    if (m1.z != 0.0) {
+        vec2 originClip = (u_projection * u_group * vec3(m1.x, m1.y, 1.0)).xy;
+        vec2 originDevice = u_viewport.xy + (originClip * 0.5 + 0.5) * u_viewport.zw;
+        clip += (floor(originDevice + 0.5) - originDevice) * 2.0 / max(u_viewport.zw, vec2(1.0));
+    }
+
+    gl_Position = vec4(clip, 0.0, 1.0);
 
     float u = (cornerX == 0) ? a_uvBounds.x : a_uvBounds.z;
     float v = (cornerY == 0) ? a_uvBounds.y : a_uvBounds.w;
@@ -94,6 +109,7 @@ export const spriteVertexWgsl = `
 struct ProjectionUniforms {
     matrix: mat4x4<f32>,
     group: mat4x4<f32>,
+    viewport: vec4<f32>,
 };
 
 struct TransformSlot {
@@ -132,13 +148,28 @@ fn vertexMain(input: VertexInput, @builtin(vertex_index) vid: u32) -> VertexOutp
     let localY = select(input.localBounds.y, input.localBounds.w, cornerY == 1u);
 
     // Fetch this instance's world transform and tint from the shared storage
-    // buffer, keyed by nodeIndex: m0 = (a, b, c, d), m1 = (tx, ty, 0, 0),
+    // buffer, keyed by nodeIndex: m0 = (a, b, c, d), m1 = (tx, ty, snapMode, 0),
     // m2 = tint (rgb 0..1, a).
     let slot = transforms[input.nodeIndex];
     let worldX = slot.m0.x * localX + slot.m0.y * localY + slot.m1.x;
     let worldY = slot.m0.z * localX + slot.m0.w * localY + slot.m1.y;
 
-    output.position = projection.matrix * projection.group * vec4<f32>(worldX, worldY, 0.0, 1.0);
+    var position = projection.matrix * projection.group * vec4<f32>(worldX, worldY, 0.0, 1.0);
+
+    // Render-only pixel snapping (slot.m1.z: 0 = none, non-zero = snap origin),
+    // identical to the default sprite vertex stage: snap the node ORIGIN's
+    // device-pixel position and rigid-shift the whole primitive by the same
+    // delta. floor(x + 0.5) matches the CPU Math.round policy; WGSL round() is
+    // half-to-even. A custom material customizes only the fragment stage, so its
+    // origin snap must stay identical.
+    if (slot.m1.z != 0.0) {
+        let originClip = projection.matrix * projection.group * vec4<f32>(slot.m1.x, slot.m1.y, 0.0, 1.0);
+        let originDevice = projection.viewport.xy + (originClip.xy * 0.5 + vec2<f32>(0.5)) * projection.viewport.zw;
+        let snapDelta = (floor(originDevice + vec2<f32>(0.5)) - originDevice) * 2.0 / max(projection.viewport.zw, vec2<f32>(1.0));
+        position = vec4<f32>(position.xy + snapDelta, position.z, position.w);
+    }
+
+    output.position = position;
 
     let u = select(input.uvBounds.x, input.uvBounds.z, cornerX == 1u);
     let v = select(input.uvBounds.y, input.uvBounds.w, cornerY == 1u);

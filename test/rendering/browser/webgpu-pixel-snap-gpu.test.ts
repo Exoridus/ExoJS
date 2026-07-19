@@ -27,6 +27,8 @@
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { Container } from '#rendering/Container';
+import { ShaderSource } from '#rendering/material/ShaderSource';
+import { SpriteMaterial } from '#rendering/material/SpriteMaterial';
 import { PixelSnapMode } from '#rendering/pixelSnap';
 import type { RenderNode } from '#rendering/RenderNode';
 import { RetainedContainer } from '#rendering/RetainedContainer';
@@ -203,6 +205,59 @@ describe('WebGPU GPU pixel snapping — Sprite position mode', () => {
       expect(sprite.y).toBe(20.6);
     } finally {
       root.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+
+  // -------------------------------------------------------------------------
+  // Case 1b: a CUSTOM SpriteMaterial snaps identically. A custom material owns
+  // only the fragment stage; the engine prepends `spriteVertexWgsl`, which runs
+  // the same origin snap. Before that snap block was ported into the custom
+  // vertex module (and `viewport` added to its ProjectionUniforms), custom-
+  // material sprites silently lost position snapping once the CPU seam was
+  // deleted — this pins the regression on the WebGPU side.
+  // -------------------------------------------------------------------------
+  test('Case 1b: a custom-material Position sprite snaps identically to the default path', async ctx => {
+    const backend = await setupBackend();
+    const texture = createQuadrantTexture(10);
+    // Fragment samples the base texture straight through, so the internal colour
+    // boundary is the same as Case 1 — only the vertex path (custom module vs
+    // built-in) differs.
+    const material = new SpriteMaterial({
+      shader: new ShaderSource({
+        wgsl: `
+@fragment
+fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
+  return textureSample(u_texture, u_sampler, input.texcoord);
+}
+`.trim(),
+      }),
+    });
+    const root = new Container();
+    const sprite = new Sprite(texture);
+
+    try {
+      sprite.material = material;
+      sprite.setPosition(20.4, 20.6);
+      sprite.pixelSnapMode = PixelSnapMode.Position;
+      root.addChild(sprite);
+
+      if (!(await renderScene(ctx, backend, root))) {
+        return;
+      }
+
+      const pixels = snapshotCanvas(backend);
+
+      // Same hard colour-boundary assertions as Case 1: origin snapped so pixel
+      // centres sample texel centres exactly.
+      expect(readPixelFrom(pixels, 24, 23)[0]).toBeGreaterThan(240); // pure red
+      expect(readPixelFrom(pixels, 25, 23)[2]).toBeGreaterThan(240); // pure blue
+      expect(readPixelFrom(pixels, 22, 25)[0]).toBeGreaterThan(240);
+      expect(readPixelFrom(pixels, 22, 26)[2]).toBeGreaterThan(240);
+    } finally {
+      root.destroy();
+      material.destroy();
       texture.destroy();
       backend.destroy();
     }
