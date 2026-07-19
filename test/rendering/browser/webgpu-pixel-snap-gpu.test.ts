@@ -32,6 +32,7 @@ import { SpriteMaterial } from '#rendering/material/SpriteMaterial';
 import { PixelSnapMode } from '#rendering/pixelSnap';
 import type { RenderNode } from '#rendering/RenderNode';
 import { RetainedContainer } from '#rendering/RetainedContainer';
+import { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
@@ -356,6 +357,91 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
       expect(boundary[0]).toBeGreaterThan(16); // red bleeds in → not pure blue
       expect(boundary[0]).toBeLessThan(240); // not pure red either
       expect(boundary[2]).toBeGreaterThan(16); // blue present → a genuine blend
+    } finally {
+      root.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Case 5: NineSlice geometry snap under a FRACTIONAL zoom. NineSlice is the
+// first renderer with INTERNAL shared edges, so the seam guarantee is load-
+// bearing: the pure `snapBoundary` moves both neighbours of a shared edge
+// identically, keeping the covered span contiguous (no gap/overlap). Under the
+// single-sample rasterizer we discriminate through covered WIDTH, mirroring the
+// sprite Case 4 pattern but position-independently: with the origin snapped to
+// an integer device pixel and the 42-local panel spanning 52.5 device px, POSITION
+// snap alone leaves the far edge fractional and the fill rule covers 52 columns,
+// while GEOMETRY snap rounds the far edge out to a whole pixel and covers exactly
+// one more (53). Without the shader boundary block geometry would behave exactly
+// like position (RED: equal runs). A crack at an internal seam (were `snapBoundary`
+// impure) would split the run below 53 and also break the +1 relation.
+// ---------------------------------------------------------------------------
+
+describe('WebGPU GPU pixel snapping — NineSlice geometry seams', () => {
+  test('Case 5: a NineSlice geometry snap widens the covered span by one column vs position snap', async ctx => {
+    const backend = await setupBackend();
+    const texture = createSolidTexture('#00ff00', 24);
+    const root = new Container();
+    const panel = new NineSliceSprite(texture, { slices: 8, width: 42, height: 42 });
+
+    try {
+      backend.view.setZoom(1.25); // 42 · 1.25 = 52.5 device px: fractional far edge
+      panel.setPosition(10.3, 10.7);
+      root.addChild(panel);
+
+      // Longest contiguous run of fully covered (green) columns over the panel's
+      // mid-band — the row with the longest run is interior (no top/bottom edge).
+      const longestGreenRun = (): number => {
+        const pixels = snapshotCanvas(backend);
+        let best = 0;
+
+        for (let y = 0; y < canvasSize; y++) {
+          let run = 0;
+
+          for (let x = 0; x < canvasSize; x++) {
+            if (readPixelFrom(pixels, x, y)[1] > 240) {
+              run += 1;
+              best = Math.max(best, run);
+            } else {
+              run = 0;
+            }
+          }
+        }
+
+        return best;
+      };
+
+      // Position snap: the origin lands on an integer device pixel but the far
+      // panel edge stays at fractional 52.5 device x, dropped by the fill rule.
+      panel.pixelSnapMode = PixelSnapMode.Position;
+
+      if (!(await renderScene(ctx, backend, root))) {
+        return;
+      }
+
+      const positionRun = longestGreenRun();
+
+      // Geometry snap additionally rounds every quad edge (including the far
+      // outer edge) to a whole device pixel, so the contiguous covered span is
+      // exactly one column wider. Without the shader boundary block geometry
+      // would match position (RED).
+      panel.pixelSnapMode = PixelSnapMode.Geometry;
+
+      if (!(await renderScene(ctx, backend, root))) {
+        return;
+      }
+
+      const geometryRun = longestGreenRun();
+
+      expect(positionRun).toBeGreaterThan(0); // the panel drew
+      expect(geometryRun).toBe(positionRun + 1);
+
+      // Render-only: logical geometry untouched.
+      expect(panel.width).toBe(42);
+      expect(panel.x).toBe(10.3);
     } finally {
       root.destroy();
       texture.destroy();
