@@ -1,13 +1,16 @@
+import type { Application } from '#core/Application';
 import { Scene } from '#core/Scene';
+import { SceneScope } from '#core/SceneScope';
+import { Signal } from '#core/Signal';
 import type { System } from '#core/System';
 import { Time } from '#core/Time';
 
 // Scene-bound system registry: `scene.systems` is an ordinary SystemRegistry
-// (see system-registry.test.ts for its full ordering/mutation-buffering/
-// destruction contract), scoped to the scene and destroyed with it. This file
-// exercises the Scene-level wiring: `scene.systems` returns a working
-// registry, its update phase runs once per simulated frame, and
-// `Scene.destroy()` destroys every remaining registered system.
+// owned by the scene's SceneScope (see system-registry.test.ts for its full
+// ordering/mutation-buffering/destruction contract). This file exercises the
+// Scene-level wiring: `scene.systems` returns the scope's working registry,
+// its update phase runs once per simulated frame, and permanent teardown
+// destroys every remaining registered system.
 
 // `System` is a union (via `RequireAtLeastOne`), so a class cannot
 // `implements` it directly — structural assignability (e.g. passing an
@@ -35,6 +38,24 @@ class MockSystem {
   }
 }
 
+// Minimal Application stand-in covering everything a permanent-teardown
+// SceneScope.destroy() call reaches (loader claim release, error reporting)
+// even though this file never exercises loader claims, input bindings,
+// tweens, audio, or interaction directly.
+const fakeApp = {
+  id: 'app',
+  loader: { _releaseScope: vi.fn() },
+  onError: new Signal<[Error]>(),
+} as unknown as Application;
+
+/** A scene attached to a real SceneScope (facilities materialized), without running the full load()/init() activation sequence. */
+const makeAttachedScene = (): { scene: Scene; scope: SceneScope<void> } => {
+  const scene = new Scene();
+  const scope = new SceneScope(fakeApp, scene);
+
+  return { scene, scope };
+};
+
 // A "frame" against a bare registry: open the mutation-buffering window,
 // dispatch the update phase, then close it — mirroring how Application
 // drives `scene.systems` in practice.
@@ -45,19 +66,23 @@ const tick = (scene: Scene): void => {
 };
 
 describe('Scene.systems', () => {
-  test('add returns the system and registers it', () => {
+  test('throws before the scene is attached', () => {
     const scene = new Scene();
+
+    expect(() => scene.systems).toThrow(/unavailable/);
+  });
+
+  test('add returns the system and registers it', () => {
+    const { scene } = makeAttachedScene();
     const system = new MockSystem(0);
 
     expect(scene.systems.add(system)).toBe(system);
     expect(scene.systems.has(system)).toBe(true);
     expect(scene.systems.size).toBe(1);
-
-    scene.destroy();
   });
 
   test('systems tick after update in ascending order', () => {
-    const scene = new Scene();
+    const { scene } = makeAttachedScene();
     const log: string[] = [];
 
     scene.systems.add(new MockSystem(30, log, 'c'));
@@ -67,47 +92,41 @@ describe('Scene.systems', () => {
     tick(scene);
 
     expect(log).toEqual(['a', 'b', 'c']);
-
-    scene.destroy();
   });
 
   test('each tick advances every system once', () => {
-    const scene = new Scene();
+    const { scene } = makeAttachedScene();
     const system = scene.systems.add(new MockSystem(0));
 
     tick(scene);
     tick(scene);
 
     expect(system.updates).toBe(2);
-
-    scene.destroy();
   });
 
   test('removed systems stop ticking', () => {
-    const scene = new Scene();
+    const { scene } = makeAttachedScene();
     const system = scene.systems.add(new MockSystem(0));
 
     expect(scene.systems.remove(system)).toBe(true);
     tick(scene);
 
     expect(system.updates).toBe(0);
-
-    scene.destroy();
   });
 
-  test('Scene.destroy() destroys registered systems', () => {
-    const scene = new Scene();
+  test('permanent teardown destroys registered systems', async () => {
+    const { scene, scope } = makeAttachedScene();
     const a = scene.systems.add(new MockSystem(0));
     const b = scene.systems.add(new MockSystem(1));
 
-    scene.destroy();
+    await scope.destroy();
 
     expect(a.destroyed).toBe(true);
     expect(b.destroyed).toBe(true);
   });
 
   test('a system added during a tick is deferred to the next frame', () => {
-    const scene = new Scene();
+    const { scene } = makeAttachedScene();
     const late = new MockSystem(0);
 
     // A system that registers `late` the first time it updates.
@@ -129,19 +148,5 @@ describe('Scene.systems', () => {
 
     tick(scene); // now `late` runs
     expect(late.updates).toBe(1);
-
-    scene.destroy();
-  });
-
-  test('_peekSystems() reflects the materialized registry without forcing allocation', () => {
-    const scene = new Scene();
-
-    expect(scene._peekSystems()).toBeNull();
-
-    const registry = scene.systems;
-
-    expect(scene._peekSystems()).toBe(registry);
-
-    scene.destroy();
   });
 });

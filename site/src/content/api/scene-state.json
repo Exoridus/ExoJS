@@ -1,0 +1,129 @@
+{
+  "title": "SceneState",
+  "description": "Lifecycle state of one Scene activation, owned by its internal `SceneScope` and exposed read-only via Scene.state. State is read-only from user code — it changes only in response to director-driven lifecycle events (activation, teardown, and — from a later slice — pause and retention). | State | fixed/update | draw | input & interaction | |---|---:|---:|---| | `Preparing` | no | no | registrations accepted, dispatch gated | | `Active` | yes | yes | active | | `Paused` | no | yes | pause-policy filtered | | `Suspended` | no | no | disabled | | `Destroying` / `Destroyed` | no | no | disabled |",
+  "symbol": "SceneState",
+  "kind": "enum",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 6,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Lifecycle state of one Scene activation, owned by its internal `SceneScope` and exposed read-only via Scene.state. State is read-only from user code — it changes only in response to director-driven lifecycle events (activation, teardown, and — from a later slice — pause and retention).",
+        "| State | fixed/update | draw | input & interaction | |---|---:|---:|---| | `Preparing` | no | no | registrations accepted, dispatch gated | | `Active` | yes | yes | active | | `Paused` | no | yes | pause-policy filtered | | `Suspended` | no | no | disabled | | `Destroying` / `Destroyed` | no | no | disabled |"
+      ],
+      "importLine": "import { SceneState } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "members",
+      "title": "Members",
+      "members": [
+        {
+          "name": "Active",
+          "signature": "Active",
+          "signatureTokens": [
+            {
+              "text": "Active",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Destroyed",
+          "signature": "Destroyed",
+          "signatureTokens": [
+            {
+              "text": "Destroyed",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Destroying",
+          "signature": "Destroying",
+          "signatureTokens": [
+            {
+              "text": "Destroying",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Paused",
+          "signature": "Paused",
+          "signatureTokens": [
+            {
+              "text": "Paused",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Preparing",
+          "signature": "Preparing",
+          "signatureTokens": [
+            {
+              "text": "Preparing",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Suspended",
+          "signature": "Suspended",
+          "signatureTokens": [
+            {
+              "text": "Suspended",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/SceneState.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneState.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/SceneState.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneState.ts"
+}

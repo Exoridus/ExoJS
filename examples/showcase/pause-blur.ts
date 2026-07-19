@@ -19,13 +19,15 @@ const PAUSE_FADE_SECONDS = 0.35;
 
 /**
  * Pause without a scene stack: a pause overlay lives on `scene.ui` (always
- * above the world) and is toggled together with `scene.paused`, which skips the
- * scene's `update` + systems while it keeps drawing. The blur tween runs on the
- * app-level TweenManager, so it still animates while the scene is frozen.
+ * above the world) and is toggled together with a scene-local `frozen` flag,
+ * which the scene's own `update()` checks to skip gameplay while it keeps
+ * drawing. The blur tween runs on the app-level TweenManager, so it still
+ * animates while the scene is frozen.
  */
 class GameScene extends Scene {
     private sprite!: Sprite;
     private time = 0;
+    private frozen = false;
     private readonly blur = new BlurFilter({ radius: 0, quality: 2 });
     private pausePanel!: Panel;
     private pauseLabel!: Label;
@@ -62,7 +64,8 @@ class GameScene extends Scene {
     }
 
     override update(delta: Time): void {
-        // Not called while paused — the SceneManager skips update() + systems.
+        if (this.frozen) return;
+
         this.time += delta.seconds;
         this.sprite.setRotation(this.time * 80);
     }
@@ -78,11 +81,11 @@ class GameScene extends Scene {
     }
 
     private togglePause(): void {
-        this.paused = !this.paused;
-        this.pausePanel.visible = this.paused;
-        this.pauseLabel.visible = this.paused;
+        this.frozen = !this.frozen;
+        this.pausePanel.visible = this.frozen;
+        this.pauseLabel.visible = this.frozen;
 
-        if (this.paused) {
+        if (this.frozen) {
             this.blur.radius = 0;
             this.root.filters = [this.blur];
             this.tweens.create(this.blur).to({ radius: PAUSE_BLUR_RADIUS }, PAUSE_FADE_SECONDS).start();

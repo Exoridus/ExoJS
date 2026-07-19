@@ -1,5 +1,5 @@
 import type { Application } from '#core/Application';
-import { Scene } from '#core/Scene';
+import { SceneLoader } from '#core/scene/SceneLoader';
 import { materializeAssetBindings } from '#extensions/materialize';
 import { Texture } from '#rendering/texture/Texture';
 import { Assets } from '#resources/Assets';
@@ -38,14 +38,13 @@ function mockFetchJson(payload: unknown): void {
   );
 }
 
-function makeSceneWithTextureLoader(): { scene: Scene; loader: Loader } {
+function makeSceneLoaderWithTextures(): { sceneLoader: SceneLoader; loader: Loader } {
   const loader = new Loader();
   materializeAssetBindings(loader, coreAssetBindings);
   const app = { loader } as unknown as Application;
-  const scene = new Scene();
-  scene.app = app;
+  const sceneLoader = new SceneLoader(app);
 
-  return { scene, loader };
+  return { sceneLoader, loader };
 }
 
 describe('SceneLoader catalog adopt', () => {
@@ -62,27 +61,27 @@ describe('SceneLoader catalog adopt', () => {
     global.fetch = originalFetch;
   });
 
-  test('claims catalog leaves under the scene scope and releases on destroy', async () => {
-    const { scene, loader } = makeSceneWithTextureLoader();
+  test('claims catalog leaves under its own scope and releases on destroy', async () => {
+    const { sceneLoader, loader } = makeSceneLoaderWithTextures();
     const assets = new Assets({ ship: { kind: 'texture', source: 'ship.png' } });
 
-    scene.loader.load(assets);
+    sceneLoader.load(assets);
     await assets.ship.loaded;
     expect(assets.ship.loadState).toBe('ready');
 
     const key = loader['_key'](Texture, 'ship.png');
     expect(loader['_claims'].get(key)?.scopes.size).toBe(1);
 
-    scene.destroy();
+    sceneLoader.destroy();
     // last claim gone → evicted (payload dropped, identity kept, back to 'loading')
     expect(assets.ship.loadState).toBe('loading');
   });
 
-  test('get(catalog) through this.loader adopts every leaf under the scene scope', async () => {
-    const { scene, loader } = makeSceneWithTextureLoader();
+  test('get(catalog) adopts every leaf under its own scope', async () => {
+    const { sceneLoader, loader } = makeSceneLoaderWithTextures();
     const assets = new Assets({ ship: { kind: 'texture', source: 'ship.png' } });
 
-    const got = scene.loader.get(assets);
+    const got = sceneLoader.get(assets);
     expect(got.ship).toBe(assets.ship);
 
     await assets.ship.loaded;
@@ -92,19 +91,19 @@ describe('SceneLoader catalog adopt', () => {
     const key = loader['_key'](Texture, 'ship.png');
     expect(loader['_claims'].get(key)?.scopes.size).toBe(1);
 
-    scene.destroy();
+    sceneLoader.destroy();
     expect(assets.ship.loadState).toBe('loading');
   });
 
   // NEW-1: `SceneLoader.load` was missing the single-leaf overloads that
-  // `SceneLoader.get` already had, so `scene.loader.load(assets.ship)` typed
+  // `SceneLoader.get` already had, so `sceneLoader.load(assets.ship)` typed
   // against the wrong (greedy) overload. These mirror Loader.load's leaf
   // overloads (including the M1 AssetRef discriminator) verbatim.
-  test('load(single resource leaf) forwards through this.loader, claiming under the scene scope', async () => {
-    const { scene, loader } = makeSceneWithTextureLoader();
+  test('load(single resource leaf) claims under its own scope', async () => {
+    const { sceneLoader, loader } = makeSceneLoaderWithTextures();
     const assets = new Assets({ ship: { kind: 'texture', source: 'ship.png' } });
 
-    const result = await scene.loader.load(assets.ship);
+    const result = await sceneLoader.load(assets.ship);
 
     expect(result).toBe(assets.ship); // resource leaf resolves to the healed handle itself
     expect(assets.ship.loadState).toBe('ready');
@@ -112,23 +111,23 @@ describe('SceneLoader catalog adopt', () => {
     const key = loader['_key'](Texture, 'ship.png');
     expect(loader['_claims'].get(key)?.scopes.size).toBe(1);
 
-    scene.destroy();
+    sceneLoader.destroy();
     expect(assets.ship.loadState).toBe('loading');
   });
 
   test('load(single value leaf) resolves the raw value, mirroring Loader.load(AssetRef leaf)', async () => {
     mockFetchJson({ hp: 3 });
-    const { scene } = makeSceneWithTextureLoader(); // loader carries coreAssetBindings, incl. json
+    const { sceneLoader } = makeSceneLoaderWithTextures(); // loader carries coreAssetBindings, incl. json
     const assets = new Assets({ config: { kind: 'json', source: 'cfg.json' } });
 
-    const result = await scene.loader.load(assets.config);
+    const result = await sceneLoader.load(assets.config);
 
     expect(result).toEqual({ hp: 3 }); // raw value, not the AssetRef itself
     expect(assets.config.value).toEqual({ hp: 3 }); // ref healed in place
   });
 
   test('type-level: SceneLoader.load leaf/catalog overloads mirror Loader.load', () => {
-    const { scene } = makeSceneWithTextureLoader();
+    const { sceneLoader } = makeSceneLoaderWithTextures();
     const assets = new Assets({
       ship: { kind: 'texture', source: 'ship.png' },
       config: { kind: 'json', source: 'cfg.json' },
@@ -139,10 +138,10 @@ describe('SceneLoader catalog adopt', () => {
     // unmocked fetch.
     //
     // Value leaf (AssetRef<T>): resolves to LoadingQueue<T>, never LoadingQueue<AssetRef<T>>.
-    expectTypeOf(() => scene.loader.load(assets.config)).returns.toEqualTypeOf<LoadingQueue<unknown>>();
+    expectTypeOf(() => sceneLoader.load(assets.config)).returns.toEqualTypeOf<LoadingQueue<unknown>>();
     // Resource leaf: resolves to LoadingQueue<T> for the handle type itself.
-    expectTypeOf(() => scene.loader.load(assets.ship)).returns.toEqualTypeOf<LoadingQueue<Texture>>();
+    expectTypeOf(() => sceneLoader.load(assets.ship)).returns.toEqualTypeOf<LoadingQueue<Texture>>();
     // Catalog form still resolves to the full loaded map.
-    expectTypeOf(() => scene.loader.load(assets)).returns.toEqualTypeOf<LoadingQueue<{ ship: Texture; config: unknown }>>();
+    expectTypeOf(() => sceneLoader.load(assets)).returns.toEqualTypeOf<LoadingQueue<{ ship: Texture; config: unknown }>>();
   });
 });

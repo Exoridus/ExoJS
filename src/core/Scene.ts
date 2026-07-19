@@ -1,193 +1,76 @@
-import type { Tween } from '#animation/Tween';
-import type { Sound } from '#audio/Sound';
-import type { InputBinding, InputBindingOptions, InputChannel } from '#input/InputBinding';
 import { Container } from '#rendering/Container';
 import type { RenderingContext } from '#rendering/RenderingContext';
 import type { RenderNode } from '#rendering/RenderNode';
-import type { Texture } from '#rendering/texture/Texture';
-import type { Asset, ValueAsset } from '#resources/Asset';
-import type { AssetInput } from '#resources/AssetDefinitions';
-import type { AssetRef } from '#resources/AssetRef';
-import type { Assets, InferAssetsProperties } from '#resources/Assets';
-import type { InferLoadedMap, Loadable, LoadByPath, Loader, LoadOptions, LoadReturn, PathExtension } from '#resources/Loader';
-import type { LoadingQueue } from '#resources/LoadingQueue';
 import { UIRoot } from '#ui/UIRoot';
 
 import type { Application } from './Application';
 import { DisposalScope } from './DisposalScope';
+import type { SceneAudio } from './scene/SceneAudio';
+import type { SceneInputs } from './scene/SceneInputs';
+import type { SceneInteraction } from './scene/SceneInteraction';
+import type { SceneLoader } from './scene/SceneLoader';
+import type { SceneTweens } from './scene/SceneTweens';
+import type { SceneScope } from './SceneScope';
+import type { SceneState } from './SceneState';
 import { deserializeInto, migrate, serializeTree } from './serialization/serialize';
 import { SERIALIZATION_VERSION, type SerializedScene } from './serialization/types';
 import { Signal } from './Signal';
-import { SystemRegistry } from './SystemRegistry';
+import type { SystemRegistry } from './SystemRegistry';
 import type { Time } from './Time';
 import type { Destroyable } from './types';
-
-/**
- * Scene-bound input proxy. Bindings created here are automatically unbound
- * when the owning scene is destroyed. Access via {@link Scene.inputs}.
- */
-class SceneInputs implements Destroyable {
-  private readonly _bindings = new Set<InputBinding>();
-
-  public constructor(private readonly _scene: Scene) {}
-
-  public onStart(channel: InputChannel | readonly InputChannel[], callback: (value: number) => void, options?: InputBindingOptions): InputBinding {
-    return this._track(this._scene.app.input.onStart(channel, callback, options));
-  }
-
-  public onActive(channel: InputChannel | readonly InputChannel[], callback: (value: number) => void, options?: InputBindingOptions): InputBinding {
-    return this._track(this._scene.app.input.onActive(channel, callback, options));
-  }
-
-  public onStop(channel: InputChannel | readonly InputChannel[], callback: (value: number) => void, options?: InputBindingOptions): InputBinding {
-    return this._track(this._scene.app.input.onStop(channel, callback, options));
-  }
-
-  public onTrigger(channel: InputChannel | readonly InputChannel[], callback: (value: number) => void, options?: InputBindingOptions): InputBinding {
-    return this._track(this._scene.app.input.onTrigger(channel, callback, options));
-  }
-
-  public destroy(): void {
-    for (const binding of this._bindings) {
-      binding.unbind();
-    }
-
-    this._bindings.clear();
-  }
-
-  private _track(binding: InputBinding): InputBinding {
-    this._bindings.add(binding);
-
-    return binding;
-  }
-}
-
-/**
- * Scene-bound tween proxy. Tweens created or added here are automatically
- * stopped when the owning scene is destroyed. Access via {@link Scene.tweens}.
- */
-class SceneTweens implements Destroyable {
-  private readonly _tweens = new Set<Tween>();
-
-  public constructor(private readonly _scene: Scene) {}
-
-  public create<T extends object>(target: T): Tween<T> {
-    const tween = this._scene.app.tweens.create(target);
-    this._tweens.add(tween);
-
-    return tween;
-  }
-
-  public add(tween: Tween): this {
-    this._scene.app.tweens.add(tween);
-    this._tweens.add(tween);
-
-    return this;
-  }
-
-  public destroy(): void {
-    for (const tween of this._tweens) {
-      tween.stop();
-    }
-
-    this._tweens.clear();
-  }
-}
-
-/**
- * Scene-scoped claim view over the application {@link Loader}. Assets claimed
- * through `scene.loader.get/load(…)` are held under this scene's claim scope
- * and released automatically when the scene is destroyed (refcount −1), so
- * scene-private assets are evicted on unload without manual bookkeeping.
- * App-lifetime assets stay on `app.loader`.
- */
-class SceneLoader implements Destroyable {
-  private readonly _scope = Symbol('scene-loader');
-
-  public constructor(private readonly _scene: Scene) {}
-
-  private get _loader(): Loader {
-    return this._scene.app.loader;
-  }
-
-  public get<S extends string>(path: LoadByPath<S> extends Texture | Sound ? S : never, options?: unknown): LoadByPath<S>;
-  // Legacy in-memory lookup by type + alias (advanced — mirrors Loader.get; a cache
-  // lookup, not a token fetch, which was removed).
-  public get<T extends Loadable>(type: T, alias: string): LoadReturn<T>;
-  // Seamless/value access from an `Asset.kind()` descriptor (mirrors Loader.get(asset)):
-  // a value-kind descriptor returns AssetRef<T>, a resource-kind descriptor the resource.
-  public get<T>(asset: ValueAsset<T>): AssetRef<T>;
-  public get<T>(asset: Asset<T>): T;
-  // Adopts an Assets catalog under the scene scope (mirrors Loader.get(catalog)).
-  public get<M extends Record<string, AssetInput>>(catalog: Assets<M>): InferAssetsProperties<M>;
-  // Adopts a single handle-hybrid leaf under the scene scope (mirrors Loader.get(leaf)).
-  public get<T extends object>(leaf: T): T;
-  public get(typeOrPath: Loadable | string | object, source?: unknown): unknown {
-    return this._loader._getClaimed(this._scope, typeOrPath, source);
-  }
-
-  public load<T>(asset: Asset<T>): LoadingQueue<T>;
-  public load<M extends Record<string, AssetInput>>(assets: Assets<M>, options?: LoadOptions): LoadingQueue<InferLoadedMap<M>>;
-  // Single value-leaf (an `Assets.from()` AssetRef property): mirrors Loader.load(leaf).
-  public load<T>(leaf: AssetRef<T>, options?: LoadOptions): LoadingQueue<T>;
-  // Single handle-hybrid leaf (an `Assets.from()` property): mirrors Loader.load(leaf).
-  public load<T extends object>(leaf: T, options?: LoadOptions): LoadingQueue<T>;
-  public load<R, S extends string>(path: [PathExtension<S>] extends [never] ? never : S): LoadingQueue<R>;
-  public load<S extends string>(path: [PathExtension<S>] extends [never] ? never : S): LoadingQueue<LoadByPath<S>>;
-  public load(arg0: unknown, arg1?: unknown): LoadingQueue<unknown> {
-    return this._loader._loadClaimed(this._scope, arg0, arg1);
-  }
-
-  public destroy(): void {
-    this._loader._releaseScope(this._scope);
-  }
-}
 
 /**
  * A scene's lifecycle host. Subclass to define scene behavior:
  *
  *   class GameScene extends Scene {
- *       override init(loader: Loader): void { ... }
+ *       override init(): void { ... }
  *       override update(delta: Time): void { ... }
  *       override draw(context: RenderingContext): void { ... }
  *   }
  *
- *   app.start(new GameScene());
+ * `Data` is this scene's activation-data type — the value passed to
+ * {@link Scene.load} and {@link Scene.init}. Scenes that need no activation
+ * data use the default:
  *
- * For one-off scenes, an anonymous subclass works just as well:
+ *   class TitleScene extends Scene { ... }
  *
- *   app.start(new class extends Scene {
- *       override update(delta) { ... }
- *       override draw(context) { ... }
- *   });
+ * A scene that needs typed data declares it through the generic:
+ *
+ *   interface GameData { readonly level: number; }
+ *   class GameScene extends Scene<GameData> { ... }
+ *
+ * Scene-bound facilities ({@link Scene.systems}, {@link Scene.loader},
+ * {@link Scene.inputs}, {@link Scene.interaction}, {@link Scene.tweens},
+ * {@link Scene.audio}) are unavailable during construction and class-field
+ * initialization — they become available once the scene is attached and
+ * remain available through {@link Scene.load}, {@link Scene.init}, the frame
+ * hooks, {@link Scene.unload}, and {@link Scene.destroy}.
  * @stable
  */
-export class Scene {
+export class Scene<Data = void> {
+  /**
+   * Type-only marker that keeps `Data` in the class's structural type so it
+   * survives inference through a zero-argument constructor (used by scene
+   * navigation typing). `declare`d — erased at runtime, never assigned, and
+   * not part of authored code or autocomplete.
+   */
+  declare private readonly _sceneData?: Data;
+
   protected _app: Application | null = null;
   protected readonly _root = new Container();
-
-  /**
-   * When `true`, the scene's `update` and systems are skipped each frame while
-   * it keeps drawing — the simple way to freeze gameplay behind a pause menu
-   * (show a panel on `scene.ui`, then set `scene.paused = true`).
-   */
-  public paused = false;
 
   /** Dispatched after the scene finishes loading (after load() and init() complete). */
   public readonly onLoad = new Signal();
   /** Dispatched when the scene is about to be unloaded. */
   public readonly onUnload = new Signal();
 
-  private _inputs: SceneInputs | null = null;
-  private _tweens: SceneTweens | null = null;
-  private _loader: SceneLoader | null = null;
-  private _systems: SystemRegistry | null = null;
+  private _scope: SceneScope<Data> | null = null;
   private readonly _disposal = new DisposalScope();
 
   /**
    * The {@link Application} this scene is attached to. The framework attaches a
-   * scene before any lifecycle hook (`init`/`update`/`draw`) runs, so scene code
-   * can read `this.app` inside those hooks without a null guard — consistent
+   * scene before any lifecycle hook (`load`/`init`/`update`/`draw`) runs, so scene
+   * code can read `this.app` inside those hooks without a null guard — consistent
    * with {@link Scene.inputs}/{@link Scene.tweens}/{@link Scene.loader}.
    *
    * Throws if accessed before the scene is attached (e.g. in a constructor). Use
@@ -200,10 +83,6 @@ export class Scene {
     }
 
     return this._app;
-  }
-
-  public set app(app: Application | null) {
-    this._app = app;
   }
 
   /** `true` once the scene is attached to an {@link Application} — a non-throwing lifecycle probe (see {@link Scene.app}). */
@@ -229,93 +108,94 @@ export class Scene {
   }
 
   /**
-   * Scene-bound input registry. Bindings created via `this.inputs.onTrigger(...)`
-   * etc. are automatically unbound when the scene is destroyed — no manual
-   * cleanup required.
+   * Scene-bound system registry. Add tickable {@link System}s (e.g. a physics
+   * world) via `this.systems.add(world)`; each participates in the scheduler
+   * phases it implements (`fixedUpdate`/`update`/`draw`, ascending `order`)
+   * and is destroyed with the scene — no manual `step()` / `destroy()`
+   * wiring.
    *
    * Throws if accessed before the scene is attached to an {@link Application}.
    */
-  public get inputs(): SceneInputs {
-    if (this._inputs === null) {
-      if (this._app === null) {
-        throw new Error('Scene.inputs is unavailable before the scene is attached to an Application.');
-      }
-
-      this._inputs = this._disposal.track(new SceneInputs(this));
-    }
-
-    return this._inputs;
-  }
-
-  /**
-   * Scene-bound tween registry. Tweens created via `this.tweens.create(...)`
-   * are automatically stopped when the scene is destroyed — no manual cleanup
-   * required.
-   *
-   * Throws if accessed before the scene is attached to an {@link Application}.
-   */
-  public get tweens(): SceneTweens {
-    if (this._tweens === null) {
-      if (this._app === null) {
-        throw new Error('Scene.tweens is unavailable before the scene is attached to an Application.');
-      }
-
-      this._tweens = this._disposal.track(new SceneTweens(this));
-    }
-
-    return this._tweens;
+  public get systems(): SystemRegistry {
+    return this._requireScope('systems').systems;
   }
 
   /**
    * Scene-scoped claim view over the application {@link Loader}. Assets
    * claimed via `this.loader.get/load(...)` are held under this scene's own
-   * claim scope and released automatically when the scene is destroyed —
+   * claim scope and released automatically when the scene ends permanently —
    * scene-private assets are evicted on unload with zero manual bookkeeping.
    * App-lifetime assets stay on `app.loader`.
    *
    * Throws if accessed before the scene is attached to an {@link Application}.
    */
   public get loader(): SceneLoader {
-    if (this._loader === null) {
-      if (this._app === null) {
-        throw new Error('Scene.loader is unavailable before the scene is attached to an Application.');
-      }
+    return this._requireScope('loader').loader;
+  }
 
-      this._loader = this._disposal.track(new SceneLoader(this));
-    }
+  /**
+   * Scene-bound input facade. Bindings created via `this.inputs.onTrigger(...)`
+   * etc. are automatically unbound when the scene ends permanently — no manual
+   * cleanup required.
+   *
+   * Throws if accessed before the scene is attached to an {@link Application}.
+   */
+  public get inputs(): SceneInputs {
+    return this._requireScope('inputs').inputs;
+  }
 
-    return this._loader;
+  /**
+   * Scene-bound interaction facade. `this.root` and a materialized `this.ui`
+   * are attached automatically; use `this.interaction.observe(root)` for any
+   * additional root that needs pointer/focus routing. Observations are
+   * detached automatically when the scene ends permanently.
+   *
+   * Throws if accessed before the scene is attached to an {@link Application}.
+   */
+  public get interaction(): SceneInteraction {
+    return this._requireScope('interaction').interaction;
+  }
+
+  /**
+   * Scene-bound tween facade. Tweens created via `this.tweens.create(...)`
+   * are automatically stopped when the scene ends permanently — no manual
+   * cleanup required.
+   *
+   * Throws if accessed before the scene is attached to an {@link Application}.
+   */
+  public get tweens(): SceneTweens {
+    return this._requireScope('tweens').tweens;
+  }
+
+  /**
+   * Scene-bound audio facade. Playback started via `this.audio.play(...)` is
+   * automatically stopped when the scene ends permanently — no manual
+   * cleanup required.
+   *
+   * Throws if accessed before the scene is attached to an {@link Application}.
+   */
+  public get audio(): SceneAudio {
+    return this._requireScope('audio').audio;
+  }
+
+  /**
+   * This scene's current lifecycle state. Read-only — state changes only in
+   * response to director-driven lifecycle events, never by direct
+   * assignment.
+   *
+   * Throws if accessed before the scene is attached to an {@link Application}.
+   */
+  public get state(): SceneState {
+    return this._requireScope('state').state;
   }
 
   /**
    * Register a {@link Destroyable} to be destroyed automatically when this
-   * scene is destroyed (reverse registration order). Returns its argument for
-   * fluent capture: `const world = this.track(new PhysicsWorld())`. The
-   * scene-bound `tweens` and `inputs` registries are tracked the same way.
+   * scene ends permanently (reverse registration order). Returns its argument
+   * for fluent capture: `const world = this.track(new PhysicsWorld())`.
    */
   public track<T extends Destroyable>(item: T): T {
     return this._disposal.track(item);
-  }
-
-  /**
-   * Scene-bound system registry. Add tickable {@link System}s (e.g. a physics
-   * world) via `this.systems.add(world)`; each participates in the scheduler
-   * phases it implements (`fixedUpdate`/`update`/`draw`, ascending `order`)
-   * and is destroyed with the scene — no manual `step()` / `destroy()`
-   * wiring. Available before the scene is attached to an Application
-   * (systems tick only while the scene is active).
-   */
-  public get systems(): SystemRegistry {
-    if (this._systems === null) {
-      this._systems = this._disposal.track(new SystemRegistry());
-    }
-
-    return this._systems;
-  }
-
-  /** @internal — the systems registry if materialized, else `null` (no lazy allocation). Phase dispatch is driven directly on the returned {@link SystemRegistry} by {@link SceneManager}. */
-  public _peekSystems(): SystemRegistry | null {
-    return this._systems;
   }
 
   private _ui: UIRoot | null = null;
@@ -335,7 +215,7 @@ export class Scene {
       this._ui = this._disposal.track(new UIRoot());
 
       // If the scene is already active (its root carries a stage), bind the UI
-      // layer now; otherwise SceneManager attaches it when the scene activates.
+      // layer now; otherwise the director attaches it when the scene activates.
       if (this._root._getStage() !== null) {
         this._app?.interaction.attachUIRoot(this._ui);
       }
@@ -410,21 +290,26 @@ export class Scene {
   }
 
   /**
-   * Async asset preload hook. Called once before {@link Scene.init} the
-   * first time the scene is pushed. Use the loader to register and
-   * resolve assets needed by the scene; await any returned promise from
-   * `loader.load()`.
+   * Optional asynchronous loading hook. Runs once per activation, before
+   * {@link Scene.init}: initial asset loading, activation-data-dependent
+   * asset selection, remote/storage reads, or any other work that must
+   * complete before synchronous setup. Reach the loader via `this.loader`
+   * (scene lifetime) or `this.app.loader` (app lifetime). Override in
+   * subclass.
    */
-  public load(_loader: Loader): Promise<void> | void {
+  public load(_data: Readonly<Data>): Promise<void> | void {
     // override in subclass
   }
 
   /**
-   * One-shot setup hook. Called after {@link Scene.load} resolves, before
-   * the first update. Build the scene-graph subtree, register signal
-   * handlers, etc. Override in subclass.
+   * Optional synchronous setup hook. Runs once per activation, after the
+   * Promise returned by {@link Scene.load} has fulfilled and before the
+   * scene becomes active: register scene systems, connect stable scene
+   * objects, bind input, register interaction roots, start scene audio.
+   * Must remain synchronous — development builds detect a returned thenable
+   * and fail activation with a lifecycle error. Override in subclass.
    */
-  public init(_loader: Loader): Promise<void> | void {
+  public init(_data: Readonly<Data>): void {
     // override in subclass
   }
 
@@ -445,7 +330,7 @@ export class Scene {
    * purely visual work in {@link Scene.update}. Default is a no-op. Override in
    * subclass.
    */
-  public fixedUpdate(_delta: Time): void {
+  public fixedUpdate(_step: Time): void {
     // override in subclass
   }
 
@@ -469,25 +354,65 @@ export class Scene {
   }
 
   /**
-   * Async asset teardown hook. Called when the scene is finally popped
-   * off the stack. Use the loader to release assets that are scene-private
-   * and not shared with another scene still on the stack.
+   * Optional asynchronous teardown hook for a scene that completed
+   * activation successfully and is ending permanently. Use the loader to
+   * release assets that are scene-private and not shared with a scene that
+   * remains active. Not called for a scene that never completed activation
+   * (see the definition spec's failed-activation cleanup). Override in
+   * subclass.
    */
-  public unload(_loader: Loader): Promise<void> | void {
+  public unload(): Promise<void> | void {
     // override in subclass
   }
 
+  /**
+   * Optional synchronous cleanup hook for ordinary objects created directly
+   * by the scene and not managed by a scene facility (facility-tracked work —
+   * systems, loader claims, input bindings, interaction observations, tweens,
+   * audio playback — is cleaned up automatically). Engine-owned scene
+   * internals are torn down separately; subclasses never need
+   * `super.destroy()`. Override in subclass.
+   */
   public destroy(): void {
-    // Destroys everything tracked (scene-bound tweens/inputs + user-tracked
-    // resources) in reverse registration order, then the scene-graph root.
+    // override in subclass
+  }
+
+  /**
+   * Attach this scene to `app` and its owning `scope`, making every
+   * scene-bound facility getter resolve. Called once by `SceneScope` at the
+   * start of activation.
+   * @internal
+   */
+  public _attach(app: Application, scope: SceneScope<Data>): void {
+    this._app = app;
+    this._scope = scope;
+  }
+
+  /**
+   * Tear down engine-owned scene internals that are not part of the user
+   * `destroy()` hook: the tracked-resource disposal scope (which also
+   * destroys a materialized {@link Scene.ui}), the lifecycle signals, the
+   * structural root, and the attachment to `app`/`scope`. Called once by
+   * `SceneScope` immediately after `scene.destroy()`, on both the normal
+   * teardown path and the failed-activation cleanup path.
+   * @internal
+   */
+  public _teardownInternals(): void {
     this._disposal.destroy();
-    this._inputs = null;
-    this._tweens = null;
-    this._loader = null;
-    this._systems = null;
     this.onLoad.destroy();
     this.onUnload.destroy();
     this._root.destroy();
     this._app = null;
+    this._scope = null;
+  }
+
+  private _requireScope(name: string): SceneScope<Data> {
+    if (this._scope === null) {
+      throw new Error(
+        `Scene.${name} is unavailable during construction and field initialization. Scene-bound facilities become available in load() and init().`,
+      );
+    }
+
+    return this._scope;
   }
 }

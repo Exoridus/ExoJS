@@ -144,6 +144,7 @@ exports[`root index export surface snapshot > sorted runtime export names match 
   "Scene",
   "SceneManager",
   "SceneNode",
+  "SceneState",
   "ScrollContainer",
   "Segment",
   "SerializationRegistry",

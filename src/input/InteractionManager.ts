@@ -314,23 +314,28 @@ export class InteractionManager implements InteractionHooks {
   }
 
   /**
-   * Bind a scene's root container to this manager: install the manager's
-   * {@link Stage} on the subtree (so its nodes route their hooks here) and
-   * register the subtree's interactive nodes. Called by {@link SceneManager}
-   * when a scene becomes active.
+   * Bind a root node to this manager: install the manager's {@link Stage} on
+   * the subtree (so its nodes route their hooks here) and register the
+   * subtree's interactive nodes. `root` accepts any {@link RenderNode} (not
+   * just a {@link Container}) so it also serves {@link SceneInteraction.observe}'s
+   * explicit-root path — a leaf node has no descendants to walk, so binding
+   * one just installs the stage on itself. Called automatically for a
+   * scene's structural root by its `SceneScope` when the scene becomes
+   * active.
    * @internal
    */
-  public attachRoot(root: Container): void {
+  public attachRoot(root: RenderNode): void {
     root._setStage(this._stage);
     this._notifyNodeAdded(root);
   }
 
   /**
-   * Unbind a scene's root: unregister its interactive nodes and clear the stage
-   * from the subtree. Called by {@link SceneManager} when a scene is removed.
+   * Unbind a root node: unregister its interactive nodes and clear the stage
+   * from the subtree. Called automatically for a scene's structural root by
+   * its `SceneScope` when the scene ends permanently.
    * @internal
    */
-  public detachRoot(root: Container): void {
+  public detachRoot(root: RenderNode): void {
     this._app.focus.blur();
     this._captureStack.length = 0;
     this._notifyNodeRemoved(root);

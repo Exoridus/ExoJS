@@ -1,5 +1,6 @@
 import type { Application } from '#core/Application';
 import { Scene } from '#core/Scene';
+import { SceneLoader } from '#core/scene/SceneLoader';
 import { materializeAssetBindings } from '#extensions/materialize';
 import { coreAssetBindings } from '#resources/coreAssetBindings';
 import { Loader } from '#resources/Loader';
@@ -38,40 +39,42 @@ function makeAppWithAudio(): { app: Application; fetchMock: typeof fetch } {
   return { app, fetchMock: global.fetch };
 }
 
-describe('Scene.loader', () => {
+describe('SceneLoader', () => {
   afterEach(() => {
     decodeAudioDataMock.mockClear();
     global.fetch = originalFetch;
   });
 
-  test('throws before the scene is attached', () => {
-    const scene = new Scene();
-    expect(() => scene.loader).toThrow(/attached/i);
-  });
-
-  test('get() through this.loader claims under the scene scope', async () => {
+  test('get() claims under its own scope, distinct from the app loader', async () => {
     const { app } = makeAppWithAudio();
-    const scene = new Scene();
-    scene.app = app;
+    const sceneLoader = new SceneLoader(app);
 
-    const handle = scene.loader.get('boom.ogg');
+    const handle = sceneLoader.get('boom.ogg');
     await handle.loaded;
     expect(handle.audioBuffer).not.toBeNull();
 
-    // app-level release must NOT free it — the scene holds the claim.
+    // app-level release must NOT free it — the scene scope holds the claim.
     app.loader.release(handle);
     expect(handle.audioBuffer).not.toBeNull();
   });
 
-  test('destroying the scene releases its claims (refcount 0 → evict)', async () => {
+  test('destroy() releases its claims (refcount 0 → evict)', async () => {
     const { app } = makeAppWithAudio();
-    const scene = new Scene();
-    scene.app = app;
-    const handle = scene.loader.get('boom.ogg');
+    const sceneLoader = new SceneLoader(app);
+    const handle = sceneLoader.get('boom.ogg');
+
     await handle.loaded;
 
-    scene.destroy(); // _disposal.destroy() → SceneLoader.destroy() → release all
+    sceneLoader.destroy();
     expect(handle.audioBuffer).toBeNull();
     expect(handle.loadState).toBe('loading');
+  });
+});
+
+describe('Scene.loader', () => {
+  test('throws before the scene is attached', () => {
+    const scene = new Scene();
+
+    expect(() => scene.loader).toThrow(/unavailable/);
   });
 });
