@@ -264,6 +264,68 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
   });
 
   // -------------------------------------------------------------------------
+  // Case 4: Geometry mode under a FRACTIONAL zoom — the reason geometry snap
+  // exists. Position snap alone lands the ORIGIN on a device pixel but leaves
+  // the far quad edge at a fractional device coordinate (device width =
+  // 10 · 1.25 = 12.5 px), so under WebGPU's single-sample rasterizer (no MSAA
+  // path) the quad covers only floor(12.5) = 12 whole columns — its right edge
+  // sits on a pixel centre and the top-left fill rule drops that column.
+  // Geometry additionally rounds each local quad corner to the device grid IN
+  // THE VERTEX SHADER, so the far edge lands on a whole device pixel and the
+  // quad covers exactly round(12.5) = 13 columns. The contiguous run of fully
+  // covered columns therefore equals the snapped device width — one column
+  // wider than position snap alone, the discriminator that flips this RED→GREEN.
+  // -------------------------------------------------------------------------
+  test('Case 4: a fractional Geometry sprite snaps its quad edges under fractional zoom', async ctx => {
+    const backend = await setupBackend();
+    const texture = createSolidTexture('#ff0000', 10);
+    const root = new Container();
+    const sprite = new Sprite(texture);
+
+    try {
+      const zoom = 1.25; // non-integer scale: geometry snap must round edges to device px
+      const snappedWidth = Math.round(10 * zoom); // 13 device px — the geometry-snapped quad width
+
+      backend.view.setZoom(zoom);
+      sprite.setPosition(20.4, 20.6);
+      sprite.pixelSnapMode = PixelSnapMode.Geometry;
+      root.addChild(sprite);
+
+      if (!(await renderScene(ctx, backend, root))) {
+        return;
+      }
+
+      const pixels = snapshotCanvas(backend);
+
+      // Longest contiguous run of fully covered (red) columns along the row.
+      let longestRun = 0;
+      let run = 0;
+
+      for (let x = 0; x < canvasSize; x++) {
+        if (readPixelFrom(pixels, x, 26)[0] > 240) {
+          run += 1;
+          longestRun = Math.max(longestRun, run);
+        } else {
+          run = 0;
+        }
+      }
+
+      // Geometry snapped both quad edges to the device grid, so the covered span
+      // is exactly the snapped device width. Position snap alone would cover one
+      // fewer column (fractional far edge dropped by the top-left fill rule).
+      expect(longestRun).toBe(snappedWidth);
+
+      // Render-only: logical position untouched.
+      expect(sprite.x).toBe(20.4);
+      expect(sprite.y).toBe(20.6);
+    } finally {
+      root.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+
+  // -------------------------------------------------------------------------
   // Case 3: the control. With snapping OFF the same scene samples BETWEEN
   // texel centres, so the colour boundary column is a red/blue blend — proving
   // the snap branch is gated on the row flag (same position, opposite outcome).

@@ -19,6 +19,15 @@ out vec2 v_texcoord;
 out vec4 v_color;
 flat out uint v_textureSlot;
 
+// Round one local boundary coordinate to the device grid along an axis whose
+// local→device scale is `scale`: floor(L*scale + 0.5) / scale. Pure in the
+// boundary value, so two quads sharing a boundary snap identically — seams stay
+// closed. Degenerate scales pass the value through unchanged.
+float snapBoundary(float localValue, float scale) {
+    if (abs(scale) < 1e-6) return localValue;
+    return floor(localValue * scale + 0.5) / scale;
+}
+
 void main(void) {
     // gl_VertexID 0..3 → corner: 0=TL, 1=TR, 2=BL, 3=BR (TRIANGLE_STRIP order)
     int vid = gl_VertexID;
@@ -39,6 +48,30 @@ void main(void) {
     vec4 m0 = texelFetch(u_transforms, ivec2(0, row), 0); // a, b, c, d
     vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0); // tx, ty, snapMode, 0
     vec4 m2 = texelFetch(u_transforms, ivec2(2, row), 0); // tint (rgb 0..1, a)
+
+    // Geometry boundary snap: round each local corner to the device grid so the
+    // quad edges land on whole device pixels (m1.z == 2.0, axis-aligned only).
+    // Derive the per-axis device scale from the composed pipeline exactly like
+    // buildPixelSnapContext: device positions of the local origin and the two
+    // local unit axes give scaleX/scaleY (device-per-local) and the cross-terms.
+    if (m1.z == 2.0) {
+        vec2 vp = u_viewport.zw;
+        vec3 dO = u_projection * u_group * vec3(m1.x, m1.y, 1.0);          // NOTE: origin uses row translation
+        vec2 devO = u_viewport.xy + (dO.xy * 0.5 + 0.5) * vp;
+        // The linear part maps local (1,0)->(m0.x,m0.z), (0,1)->(m0.y,m0.w).
+        vec3 dX = u_projection * u_group * vec3(m1.x + m0.x, m1.y + m0.z, 1.0);
+        vec3 dY = u_projection * u_group * vec3(m1.x + m0.y, m1.y + m0.w, 1.0);
+        vec2 devX = u_viewport.xy + (dX.xy * 0.5 + 0.5) * vp;
+        vec2 devY = u_viewport.xy + (dY.xy * 0.5 + 0.5) * vp;
+        float scaleX = devX.x - devO.x;
+        float scaleY = devY.y - devO.y;
+        float crossXy = devX.y - devO.y;
+        float crossYx = devY.x - devO.x;
+        if (abs(crossXy) < 1e-3 && abs(crossYx) < 1e-3) { // axis-aligned
+            localX = snapBoundary(localX, scaleX);
+            localY = snapBoundary(localY, scaleY);
+        }
+    }
 
     // world = M * (localX, localY, 1)
     float worldX = (m0.x * localX) + (m0.y * localY) + m1.x;

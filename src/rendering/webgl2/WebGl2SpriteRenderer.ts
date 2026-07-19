@@ -1,4 +1,4 @@
-import { Rectangle } from '#math/Rectangle';
+import type { Rectangle } from '#math/Rectangle';
 import type { UniformValue } from '#rendering/material/Material';
 import type { SpriteMaterial } from '#rendering/material/SpriteMaterial';
 import { PixelSnapMode } from '#rendering/pixelSnap';
@@ -115,9 +115,10 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
   private readonly _transformUnitScratch: Int32Array = new Int32Array([transformTextureUnit]);
   private _currentMaterial: SpriteMaterial | null = null;
   private _currentBaseTexture: Texture | RenderTexture | null = null;
-  // Reusable scratch for device-snapped local bounds (PixelSnapMode.Geometry), and the
-  // bounds resolved for the sprite currently being packed (snapped or logical).
-  private readonly _snapBounds: Rectangle = new Rectangle();
+  // Local bounds resolved for the sprite currently being packed. Geometry-mode
+  // boundary snapping now happens in the vertex shader, so this is always the
+  // sprite's logical local bounds; the field lets _packInstance read the value
+  // resolved once per render() call.
   private _activeBounds: Rectangle | null = null;
 
   private _instanceCount = 0;
@@ -170,7 +171,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     const command = backend.activeDrawCommand;
     const nodeIndex = command !== null ? command.nodeIndex : backend._pushTransform(sprite);
 
-    this._activeBounds = this._resolveBounds(sprite, backend);
+    this._activeBounds = this._resolveBounds(sprite);
 
     if (material === null) {
       this._renderDefault(sprite, texture, backend, nodeIndex);
@@ -182,19 +183,14 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
   }
 
   /**
-   * Local bounds to upload for `sprite` this draw: device-pixel-snapped in
-   * `PixelSnapMode.Geometry` (axis-aligned only), otherwise the sprite's
-   * logical local bounds. Reuses a scratch rectangle and never mutates logical
-   * state. Consumed synchronously by {@link _packInstance}.
+   * Local bounds to upload for `sprite` this draw: always the sprite's logical
+   * local bounds. Geometry-mode boundary snapping is resolved in the vertex
+   * shader (`snapBoundary` block, gated on the row's snap flag), so no CPU
+   * bounds-snap happens here and logical state is never mutated. Consumed
+   * synchronously by {@link _packInstance}.
    */
-  private _resolveBounds(sprite: Sprite, backend: WebGl2Backend): Rectangle {
-    if (sprite.pixelSnapMode !== PixelSnapMode.Geometry) {
-      return sprite.getLocalBounds();
-    }
-
-    const snap = backend._getSnapPixelSize();
-
-    return sprite.getRenderBounds(backend.view, snap.width, snap.height, this._snapBounds);
+  private _resolveBounds(sprite: Sprite): Rectangle {
+    return sprite.getLocalBounds();
   }
 
   public flush(): void {

@@ -285,6 +285,64 @@ void main() { fragColor = texture(u_texture, v_texcoord); }`,
   });
 
   // -------------------------------------------------------------------------
+  // Case 4: Geometry mode under a FRACTIONAL zoom — the reason geometry snap
+  // exists. Position snap alone lands the ORIGIN on a device pixel but leaves
+  // the far quad edge at a fractional device coordinate (device width =
+  // 10 · 1.25 = 12.5 px), so MSAA renders that right edge as a ~50 %-covered
+  // boundary column. Geometry additionally rounds each local quad corner to the
+  // device grid IN THE VERTEX SHADER, so every edge lands on a whole device
+  // pixel (snapped width = round(12.5) = 13 px) and the whole row is crisp: a
+  // horizontal scan holds no partially-covered column. Without the shader
+  // boundary block the right edge sits at x.5 and produces exactly such a
+  // blended column — the discriminator that flips this case RED→GREEN.
+  // -------------------------------------------------------------------------
+  test('Case 4: a fractional Geometry sprite snaps its quad edges under fractional zoom', async () => {
+    const backend = await createBackend(true);
+    const texture = createSolidTexture('#ff0000', 10);
+    const root = new Container();
+    const sprite = new Sprite(texture);
+
+    try {
+      backend.view.setZoom(1.25); // non-integer scale: geometry snap must round edges to device px
+      sprite.setPosition(20.4, 20.6);
+      sprite.pixelSnapMode = PixelSnapMode.Geometry;
+      root.addChild(sprite);
+
+      render(backend, root);
+
+      // Scan the row through the quad's left and right edges. Every column is
+      // either full sprite (> 240) or full background (< 16) — no blended
+      // boundary. Position snap alone would leave the right edge at a fractional
+      // device x, MSAA-ing one column to a mid value in (16, 240).
+      let sawSprite = false;
+      let sawBackground = false;
+
+      for (let x = 0; x < canvasSize; x++) {
+        const red = readPixel(backend, x, 26)[0];
+
+        if (red > 240) {
+          sawSprite = true;
+        } else if (red < 16) {
+          sawBackground = true;
+        } else {
+          throw new Error(`blended boundary column at x=${x}: red=${red} (geometry edge not snapped to a device pixel)`);
+        }
+      }
+
+      expect(sawSprite).toBe(true); // the quad actually drew
+      expect(sawBackground).toBe(true); // and it did not fill the whole row
+
+      // Render-only: logical position untouched.
+      expect(sprite.x).toBe(20.4);
+      expect(sprite.y).toBe(20.6);
+    } finally {
+      root.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+
+  // -------------------------------------------------------------------------
   // Case 3: the control. With snapping OFF the fractional edge is NOT snapped,
   // so the boundary column is partially covered — proving the snap branch is
   // gated on the row flag (same position as Case 1, opposite outcome).
