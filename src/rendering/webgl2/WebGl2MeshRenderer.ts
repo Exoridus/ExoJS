@@ -466,6 +466,8 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
       shader.getUniform('u_group').setValue(groupTransform !== null ? groupTransform.toArray(false) : identityGroupMat3);
     }
 
+    backend._stageViewportUniform(shader);
+
     if (shader.uniforms.has('u_translation')) {
       // Invariant: a custom mesh vertex shader must not declare BOTH `u_group`
       // and consume `u_translation` — that would apply the group transform
@@ -522,6 +524,8 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
 
       shader.getUniform('u_group').setValue(groupTransform !== null ? groupTransform.toArray(false) : identityGroupMat3);
     }
+
+    backend._stageViewportUniform(shader);
 
     if (shader.uniforms.has('u_transforms')) {
       backend.bindTransformBufferTexture(transformTextureUnit, maxNodeIndex + 1);
@@ -650,6 +654,8 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
 
       shader.getUniform('u_group').setValue(groupTransform !== null ? groupTransform.toArray(false) : identityGroupMat3);
     }
+
+    backend._stageViewportUniform(shader);
 
     if (shader.uniforms.has('u_texture')) {
       shader.getUniform('u_texture').setValue(this._textureUnitScratch);

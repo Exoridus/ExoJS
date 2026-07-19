@@ -227,6 +227,8 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
         shader.getUniform('u_group').setValue(groupTransform !== null ? groupTransform.toArray(false) : identityGroupMat3);
       }
 
+      backend._stageViewportUniform(shader);
+
       // The single base texture binds to unit 0 as `u_texture`.
       const baseTexture = this._currentBaseTexture;
 
@@ -299,6 +301,8 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
 
       this._shader.getUniform('u_group').setValue(groupTransform !== null ? groupTransform.toArray(false) : identityGroupMat3);
     }
+
+    backend._stageViewportUniform(this._shader);
   }
 
   // ── Retained-batch record/replay (Track B Slice 3, Tasks 6/7) ────────────

@@ -52,6 +52,7 @@ layout(location = 3) in uint a_tileWord;     // transform row (bits 0..28) | dia
 
 uniform mat3 u_projection;
 uniform mat3 u_group;
+uniform vec4 u_viewport;                      // device-pixel viewport rect (x, y, width, height)
 uniform sampler2D u_transforms;              // shared per-frame transform buffer (2 texels/row)
 
 out vec2 v_texcoord;
@@ -75,7 +76,21 @@ void main(void) {
     float worldX = (m0.x * localX) + (m0.y * localY) + m1.x;
     float worldY = (m0.z * localX) + (m0.w * localY) + m1.y;
 
-    gl_Position = vec4((u_projection * u_group * vec3(worldX, worldY, 1.0)).xy, 0.0, 1.0);
+    vec2 clip = (u_projection * u_group * vec3(worldX, worldY, 1.0)).xy;
+
+    // Render-only pixel snapping (m1.z: 0 = none, 1 = position, 2 = geometry —
+    // both non-zero modes snap the origin). Snap the chunk ORIGIN's device-pixel
+    // position and rigid-shift the whole tile quad by the same delta. floor(x+0.5)
+    // matches the CPU Math.round policy; GLSL round() is undefined at .5. Grid
+    // alignment is independent of the y-axis convention because the staged
+    // viewport rect is whole device pixels.
+    if (m1.z != 0.0) {
+        vec2 originClip = (u_projection * u_group * vec3(m1.x, m1.y, 1.0)).xy;
+        vec2 originDevice = u_viewport.xy + (originClip * 0.5 + 0.5) * u_viewport.zw;
+        clip += (floor(originDevice + 0.5) - originDevice) * 2.0 / max(u_viewport.zw, vec2(1.0));
+    }
+
+    gl_Position = vec4(clip, 0.0, 1.0);
 
     // Tile orientation: the diagonal flip transposes the corner-coordinate axes
     // before the UV corner is selected; flipX/flipY are already baked into the
@@ -377,6 +392,8 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
 
       this._shader.getUniform('u_group').setValue(groupTransform !== null ? groupTransform.toArray(false) : identityGroupMat3);
     }
+
+    backend._stageViewportUniform(this._shader);
   }
 
   // ── Retained-batch record/replay (Track B) ────────────────────────────────
