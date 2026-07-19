@@ -197,8 +197,22 @@ describe('Application', () => {
     const { Application, ApplicationStatus } = await loadApplicationHarness();
     const app = Object.create(Application.prototype) as import('#core/Application').Application;
     const rawApp = app as unknown as Record<string, unknown>;
-    const systemsTick = vi.fn();
-    const sceneManager = { update: vi.fn() };
+    const systemsUpdate = vi.fn();
+    const systems = {
+      _beginFrame: vi.fn(),
+      _endFrame: vi.fn(),
+      _fixedUpdate: vi.fn(),
+      _update: systemsUpdate,
+      _draw: vi.fn(),
+    };
+    const sceneManager = {
+      _beginFrame: vi.fn(),
+      _endFrame: vi.fn(),
+      fixedUpdate: vi.fn(),
+      update: vi.fn(),
+      draw: vi.fn(),
+      _drawTransition: vi.fn(),
+    };
     const backend = {
       flush: vi.fn(),
       resetStats: vi.fn().mockReturnThis(),
@@ -212,20 +226,26 @@ describe('Application', () => {
     rawApp['_status'] = ApplicationStatus.Running;
     rawApp['pauseOnHidden'] = false;
     rawApp['_documentVisible'] = true;
-    rawApp['systems'] = { _tick: systemsTick };
+    rawApp['systems'] = systems;
     rawApp['scene'] = sceneManager;
+    rawApp['input'] = { _prepareFrame: vi.fn() };
+    rawApp['interaction'] = { _prepareFrame: vi.fn() };
+    rawApp['_audio'] = { _prepareFrame: vi.fn() };
+    rawApp['tweens'] = { _prepareFrame: vi.fn() };
+    rawApp['_rendering'] = { _prepareFrame: vi.fn() };
     rawApp['_backend'] = backend;
     rawApp['_frameClock'] = frameClock;
     rawApp['_fixed'] = { advance: () => 0, alpha: 0 };
     rawApp['_updateHandler'] = vi.fn();
     rawApp['_frameCount'] = 0;
     rawApp['onFrame'] = { dispatch: vi.fn() };
+    rawApp['onFixedFrame'] = { dispatch: vi.fn() };
 
     const rafSpy = vi.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 1);
 
     app.update();
 
-    expect(systemsTick).toHaveBeenCalledTimes(1);
+    expect(systemsUpdate).toHaveBeenCalledTimes(1);
     expect(sceneManager.update).toHaveBeenCalledTimes(1);
     expect(backend.resetStats).toHaveBeenCalledTimes(1);
     expect(backend.flush).toHaveBeenCalledTimes(1);

@@ -299,10 +299,11 @@ export class Scene {
 
   /**
    * Scene-bound system registry. Add tickable {@link System}s (e.g. a physics
-   * world) via `this.systems.add(world)`; each is updated once per frame after
-   * {@link Scene.update} (ascending `order`) and destroyed with the scene — no
-   * manual `step()` / `destroy()` wiring. Available before the scene is
-   * attached to an Application (systems tick only while the scene is active).
+   * world) via `this.systems.add(world)`; each participates in the scheduler
+   * phases it implements (`fixedUpdate`/`update`/`draw`, ascending `order`)
+   * and is destroyed with the scene — no manual `step()` / `destroy()`
+   * wiring. Available before the scene is attached to an Application
+   * (systems tick only while the scene is active).
    */
   public get systems(): SystemRegistry {
     if (this._systems === null) {
@@ -312,9 +313,9 @@ export class Scene {
     return this._systems;
   }
 
-  /** @internal — called by {@link SceneManager} each frame after `update`. */
-  public _tickSystems(delta: Time): void {
-    this._systems?._tick(delta);
+  /** @internal — the systems registry if materialized, else `null` (no lazy allocation). Phase dispatch is driven directly on the returned {@link SystemRegistry} by {@link SceneManager}. */
+  public _peekSystems(): SystemRegistry | null {
+    return this._systems;
   }
 
   private _ui: UIRoot | null = null;

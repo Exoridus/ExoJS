@@ -88,8 +88,14 @@ const createApplicationStub = (): Application & {
   };
 };
 
-const tick = (manager: SceneManager, milliseconds = 16): void => {
-  manager.update(new Time(milliseconds));
+// Mirrors the per-frame call sequence Application.update() makes on
+// SceneManager: logic update, draw, then the transition overlay last.
+const tick = (manager: SceneManager, app: ReturnType<typeof createApplicationStub>, milliseconds = 16): void => {
+  const time = new Time(milliseconds);
+
+  manager.update(time);
+  manager.draw(app.rendering);
+  manager._drawTransition(app.rendering, time);
 };
 
 type SceneHooks = Partial<Pick<Scene, 'load' | 'init' | 'update' | 'fixedUpdate' | 'draw' | 'unload'>>;
@@ -251,28 +257,31 @@ describe('SceneManager', () => {
   });
 
   test('paused scene skips update and systems but keeps drawing', async () => {
-    const manager = new SceneManager(createApplicationStub());
+    const app = createApplicationStub();
+    const manager = new SceneManager(app);
     const update = vi.fn();
     const draw = vi.fn();
+    const systemUpdate = vi.fn();
     const scene = makeScene({ update, draw });
-    const tickSystems = vi.spyOn(scene, '_tickSystems');
+
+    scene.systems.add({ update: systemUpdate });
 
     await manager.setScene(scene);
-    tick(manager);
+    tick(manager, app);
     expect(update).toHaveBeenCalledTimes(1);
-    expect(tickSystems).toHaveBeenCalledTimes(1);
+    expect(systemUpdate).toHaveBeenCalledTimes(1);
     expect(draw).toHaveBeenCalledTimes(1);
 
     scene.paused = true;
-    tick(manager);
+    tick(manager, app);
     expect(update).toHaveBeenCalledTimes(1);
-    expect(tickSystems).toHaveBeenCalledTimes(1);
+    expect(systemUpdate).toHaveBeenCalledTimes(1);
     expect(draw).toHaveBeenCalledTimes(2);
 
     scene.paused = false;
-    tick(manager);
+    tick(manager, app);
     expect(update).toHaveBeenCalledTimes(2);
-    expect(tickSystems).toHaveBeenCalledTimes(2);
+    expect(systemUpdate).toHaveBeenCalledTimes(2);
     expect(draw).toHaveBeenCalledTimes(3);
   });
 
@@ -296,13 +305,13 @@ describe('SceneManager', () => {
       transitionSettled = true;
     });
 
-    tick(manager, 50);
+    tick(manager, app, 50);
     expect(manager.currentScene).toBe(first);
 
-    tick(manager, 60);
+    tick(manager, app, 60);
     for (let i = 0; i < 64 && !transitionSettled; i++) {
       await Promise.resolve();
-      tick(manager, 100);
+      tick(manager, app, 100);
     }
 
     expect(transitionSettled).toBe(true);
@@ -312,7 +321,8 @@ describe('SceneManager', () => {
   });
 
   test('transition failure rejects and leaves manager in a valid state', async () => {
-    const manager = new SceneManager(createApplicationStub());
+    const app = createApplicationStub();
+    const manager = new SceneManager(app);
     const first = makeScene({});
     const failing = makeScene({
       async init() {
@@ -330,7 +340,7 @@ describe('SceneManager', () => {
       },
     });
 
-    tick(manager, 60);
+    tick(manager, app, 60);
     await Promise.resolve();
 
     await expect(transitionPromise).rejects.toThrow('transition target failed');
@@ -351,8 +361,25 @@ describe('SceneManager', () => {
     });
 
     await manager.setScene(scene);
-    tick(manager);
+    tick(manager, app);
 
     expect(drawArg).toBe(app.rendering);
+  });
+
+  test('fixedUpdate additionally dispatches the scene systems fixed-update phase', async () => {
+    const manager = new SceneManager(createApplicationStub());
+    const fixedSystemUpdate = vi.fn();
+    const scene = makeScene({});
+
+    scene.systems.add({ fixedUpdate: fixedSystemUpdate });
+
+    await manager.setScene(scene);
+
+    manager.fixedUpdate(new Time(16));
+    expect(fixedSystemUpdate).toHaveBeenCalledTimes(1);
+
+    scene.paused = true;
+    manager.fixedUpdate(new Time(16));
+    expect(fixedSystemUpdate).toHaveBeenCalledTimes(1); // paused → skipped
   });
 });

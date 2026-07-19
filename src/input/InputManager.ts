@@ -1,6 +1,5 @@
 import type { Application } from '#core/Application';
 import { Signal } from '#core/Signal';
-import type { System } from '#core/System';
 import type { Time } from '#core/Time';
 import { stopEvent } from '#core/utils';
 import { Flags } from '#math/Flags';
@@ -55,12 +54,11 @@ enum InputManagerFlag {
  * subscribe to the signal-style notifications
  * (`onKeyDown`, `onPointerDown`, `onGamepadConnected`, `onAnyGamepadButtonDown`, …).
  *
- * Driven each frame by {@link Application.update}; constructed
+ * Driven each frame by {@link Application.update}'s internal prepare stage
+ * (first, ahead of interaction/audio/tweens/rendering); constructed
  * automatically — you do not instantiate this class yourself.
  */
-export class InputManager implements System {
-  /** App-systems tick band — input flushes first; see Application.systems. @internal */
-  public readonly order = 100;
+export class InputManager {
   private readonly _app: Application;
   private readonly canvas: HTMLCanvasElement;
   private readonly channels: Float32Array = new Float32Array(ChannelSize.Container);
@@ -344,6 +342,15 @@ export class InputManager implements System {
     if (this.flags.value !== InputManagerFlag.None) {
       this.updateEvents();
     }
+  }
+
+  /**
+   * @internal Invoked once per frame by {@link Application.update}'s
+   * internal prepare stage, ahead of fixed steps — not a public
+   * {@link System} phase. Thin wrapper over {@link InputManager.update}.
+   */
+  public _prepareFrame(delta: Time): void {
+    this.update(delta);
   }
 
   public destroy(): void {

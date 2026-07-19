@@ -1,16 +1,16 @@
 {
   "title": "System",
-  "description": "A per-frame unit of simulation owned by a Scene (for example a physics world). Added via `scene.systems.add(...)`, ticked once per frame after the scene's `update()` and before its `draw()`, and destroyed with the scene. A system owns its own timestep policy — it receives the frame delta and decides how to integrate (fixed-step, variable, etc.). Extends Destroyable so a system fits the ownership model uniformly: the scene's registry destroys its systems when the scene is destroyed.",
+  "description": "A per-frame unit of simulation or rendering, owned by a SystemRegistry (`app.systems` or `scene.systems`). A system is a class instance or plain object that implements at least one of SystemMethods.fixedUpdate, SystemMethods.update, or SystemMethods.draw — it participates only in the phases it defines. ```ts app.systems.add({ update(delta: Time) { simulation.update(delta); }, draw(context: RenderingContext) { context.render(stage); }, }); ``` `destroy()` is optional: the registry calls it, if present, exactly once when the system is still registered at registry destruction.",
   "symbol": "System",
-  "kind": "interface",
+  "kind": "type",
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 3,
+  "memberCount": 0,
   "counts": {
     "constructors": 0,
-    "methods": 2,
-    "properties": 1,
+    "methods": 0,
+    "properties": 0,
     "events": 0
   },
   "sections": [
@@ -19,105 +19,65 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "A per-frame unit of simulation owned by a Scene (for example a physics world). Added via `scene.systems.add(...)`, ticked once per frame after the scene's `update()` and before its `draw()`, and destroyed with the scene. A system owns its own timestep policy — it receives the frame delta and decides how to integrate (fixed-step, variable, etc.).",
-        "Extends Destroyable so a system fits the ownership model uniformly: the scene's registry destroys its systems when the scene is destroyed."
+        "A per-frame unit of simulation or rendering, owned by a SystemRegistry (`app.systems` or `scene.systems`). A system is a class instance or plain object that implements at least one of SystemMethods.fixedUpdate, SystemMethods.update, or SystemMethods.draw — it participates only in the phases it defines.",
+        "```ts app.systems.add({ update(delta: Time) { simulation.update(delta); }, draw(context: RenderingContext) { context.render(stage); }, }); ```",
+        "`destroy()` is optional: the registry calls it, if present, exactly once when the system is still registered at registry destruction."
       ],
       "importLine": "import { System } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
-      "id": "methods",
-      "title": "Methods",
+      "id": "definition",
+      "title": "Definition",
       "members": [
         {
-          "name": "destroy",
-          "signature": "destroy(): void",
+          "name": "System",
+          "signature": "RequireAtLeastOne<SystemMethods> & Partial<Destroyable> & { order?: number }",
           "signatureTokens": [
             {
-              "text": "destroy",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "void",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": "void",
-          "description": ""
-        },
-        {
-          "name": "update",
-          "signature": "update(delta: Time): void",
-          "signatureTokens": [
-            {
-              "text": "update",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "delta",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Time",
+              "text": "RequireAtLeastOne",
               "kind": "type"
             },
             {
-              "text": ")",
+              "text": "<",
               "kind": "punctuation"
             },
             {
-              "text": ": ",
+              "text": "SystemMethods",
+              "kind": "type"
+            },
+            {
+              "text": ">",
               "kind": "punctuation"
             },
             {
-              "text": "void",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
+              "text": " & ",
+              "kind": "punctuation"
+            },
             {
-              "name": "delta",
-              "type": "Time",
-              "optional": false
-            }
-          ],
-          "returnType": "void",
-          "description": "Advance the system by the frame delta."
-        }
-      ],
-      "paragraphs": [],
-      "importLine": null,
-      "sourceLink": null
-    },
-    {
-      "id": "properties",
-      "title": "Properties",
-      "members": [
-        {
-          "name": "order",
-          "signature": "order?: number",
-          "signatureTokens": [
+              "text": "Partial",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Destroyable",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " & ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
             {
               "text": "order",
               "kind": "name"
@@ -133,11 +93,15 @@
             {
               "text": "number",
               "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Tick order within the scene (ascending; default 0). Systems sharing an order tick in insertion order. Read when the registry next sorts."
+          "description": ""
         }
       ],
       "paragraphs": [],

@@ -1,6 +1,6 @@
 {
   "title": "InputManager",
-  "description": "Owns the unified input pipeline for an Application: keyboard events, pointer (mouse/touch/pen) events with multi-touch slot management, gamepad polling with mapping detection, mouse-wheel events, canvas-focus tracking, and high-level gesture recognition (pinch / rotate / long-press). All raw inputs are written into a shared `Float32Array` channel buffer. Bind input listeners via the onTrigger / onActive / onStart / onStop factory methods (or via Gamepad.onTrigger-style methods on individual pads), or subscribe to the signal-style notifications (`onKeyDown`, `onPointerDown`, `onGamepadConnected`, `onAnyGamepadButtonDown`, …). Driven each frame by Application.update; constructed automatically — you do not instantiate this class yourself.",
+  "description": "Owns the unified input pipeline for an Application: keyboard events, pointer (mouse/touch/pen) events with multi-touch slot management, gamepad polling with mapping detection, mouse-wheel events, canvas-focus tracking, and high-level gesture recognition (pinch / rotate / long-press). All raw inputs are written into a shared `Float32Array` channel buffer. Bind input listeners via the onTrigger / onActive / onStart / onStop factory methods (or via Gamepad.onTrigger-style methods on individual pads), or subscribe to the signal-style notifications (`onKeyDown`, `onPointerDown`, `onGamepadConnected`, `onAnyGamepadButtonDown`, …). Driven each frame by Application.update's internal prepare stage (first, ahead of interaction/audio/tweens/rendering); constructed automatically — you do not instantiate this class yourself.",
   "symbol": "InputManager",
   "kind": "class",
   "subsystem": "input",
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Owns the unified input pipeline for an Application: keyboard events, pointer (mouse/touch/pen) events with multi-touch slot management, gamepad polling with mapping detection, mouse-wheel events, canvas-focus tracking, and high-level gesture recognition (pinch / rotate / long-press).",
         "All raw inputs are written into a shared `Float32Array` channel buffer. Bind input listeners via the onTrigger / onActive / onStart / onStop factory methods (or via Gamepad.onTrigger-style methods on individual pads), or subscribe to the signal-style notifications (`onKeyDown`, `onPointerDown`, `onGamepadConnected`, `onAnyGamepadButtonDown`, …).",
-        "Driven each frame by Application.update; constructed automatically — you do not instantiate this class yourself."
+        "Driven each frame by Application.update's internal prepare stage (first, ahead of interaction/audio/tweens/rendering); constructed automatically — you do not instantiate this class yourself."
       ],
       "importLine": "import { InputManager } from '@codexo/exojs'",
       "sourceLink": null

@@ -1,6 +1,6 @@
 {
   "title": "Application",
-  "description": "Top-level engine instance. Owns the canvas, render backend, scene-stack controller, the app system registry (input, interaction, audio, tweens, rendering), asset loader, and the per-frame loop. Lifecycle: construct with options → `await app.start(scene)` → engine runs the request-animation-frame loop until `app.stop()` or `app.destroy()`. The render backend is chosen and initialized during `start()`; query Application.backend or Application.capabilities after start has resolved. The class exposes Signals for the major state-change points (Application.onResize, Application.onFrame, Application.onCanvasFocusChange, Application.onVisibilityChange, Application.onBackendLost, Application.onBackendRestored) so subscribers can react without subclassing. `pauseOnHidden = true` short-circuits the per-frame work while `document.hidden` is true (still consumes RAF callbacks but skips scene update + render). Useful for games; leave off for tools and background-active simulations.",
+  "description": "Top-level engine instance. Owns the canvas, render backend, scene-stack controller, the core managers (input, interaction, audio, tweens, rendering), the app-level SystemRegistry for user/extension systems, asset loader, and the per-frame loop. Lifecycle: construct with options → `await app.start(scene)` → engine runs the request-animation-frame loop until `app.stop()` or `app.destroy()`. The render backend is chosen and initialized during `start()`; query Application.backend or Application.capabilities after start has resolved. The class exposes Signals for the major state-change points (Application.onResize, Application.onFrame, Application.onCanvasFocusChange, Application.onVisibilityChange, Application.onBackendLost, Application.onBackendRestored) so subscribers can react without subclassing. `pauseOnHidden = true` short-circuits the per-frame work while `document.hidden` is true (still consumes RAF callbacks but skips scene update + render). Useful for games; leave off for tools and background-active simulations.",
   "symbol": "Application",
   "kind": "class",
   "subsystem": "core",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Top-level engine instance. Owns the canvas, render backend, scene-stack controller, the app system registry (input, interaction, audio, tweens, rendering), asset loader, and the per-frame loop.",
+        "Top-level engine instance. Owns the canvas, render backend, scene-stack controller, the core managers (input, interaction, audio, tweens, rendering), the app-level SystemRegistry for user/extension systems, asset loader, and the per-frame loop.",
         "Lifecycle: construct with options → `await app.start(scene)` → engine runs the request-animation-frame loop until `app.stop()` or `app.destroy()`. The render backend is chosen and initialized during `start()`; query Application.backend or Application.capabilities after start has resolved.",
         "The class exposes Signals for the major state-change points (Application.onResize, Application.onFrame, Application.onCanvasFocusChange, Application.onVisibilityChange, Application.onBackendLost, Application.onBackendRestored) so subscribers can react without subclassing.",
         "`pauseOnHidden = true` short-circuits the per-frame work while `document.hidden` is true (still consumes RAF callbacks but skips scene update + render). Useful for games; leave off for tools and background-active simulations."
@@ -182,7 +182,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Tear down every owned subsystem (loader, the app systems — input, interaction, audio, tweens, rendering — backend, scene manager, all clocks, all signals) and release event listeners. The application instance is unusable after this call."
+          "description": "Tear down every owned subsystem (loader, the core managers — input, interaction, audio, tweens, rendering — the app system registry, backend, scene manager, all clocks, all signals) and release event listeners. The application instance is unusable after this call."
         },
         {
           "name": "resize",
@@ -506,7 +506,7 @@
           ],
           "params": [],
           "returnType": "this",
-          "description": "One iteration of the per-frame loop. Invoked by requestAnimationFrame. When the document is hidden and pauseOnHidden is true, the frame clock is reset and the body is skipped — preventing a large delta spike on the first visible frame after resume. Each normal frame runs two distinct phases: **Update phase** — the app systems tick in ascending order (input, interaction, audio, tweens, rendering, plus any user systems at 600+), then scene.update(delta) for each participating scene in stack order. **Render phase** — scene.draw(context) for each participating scene in stack order, followed by the transition overlay when active. **Frame dispatch / flush** — onFrame signal, backend GPU flush, frame-time stat write, RAF reschedule. The simulation delta forwarded to all update recipients is clamped to an internal maximum (100 ms) so that debugger pauses, device sleep/resume, or severe browser scheduling gaps cannot produce runaway animation advancement. Real wall-clock time and RAF cadence are unaffected; the raw elapsed delta is recorded separately in backend.stats.rawFrameDeltaMs."
+          "description": "One iteration of the per-frame loop. Invoked by requestAnimationFrame. When the document is hidden and pauseOnHidden is true, the frame clock is reset and the body is skipped — preventing a large delta spike on the first visible frame after resume. Each normal frame runs, in order: 1. **Internal prepare stage** (not a public phase) — input, interaction, audio, tweens, then rendering normalize their per-frame state. 2. **Fixed steps** (zero or more) — app.systems fixed-update phase, scene.fixedUpdate() + the scene's systems fixed-update phase, Application.onFixedFrame. 3. **Update** — app.systems update phase, then scene.update() + the scene's systems update phase. 4. **Draw** — the scene draws (plus its systems and UI layer), then app.systems draw phase (app draw systems render *above* scene output), then the transition overlay (always topmost). 5. **Frame dispatch / flush** — Application.onFrame, backend GPU flush, frame-time stat write, RAF reschedule. The simulation delta forwarded to all update recipients is clamped to an internal maximum (100 ms) so that debugger pauses, device sleep/resume, or severe browser scheduling gaps cannot produce runaway animation advancement. Real wall-clock time and RAF cadence are unaffected; the raw elapsed delta is recorded separately in backend.stats.rawFrameDeltaMs."
         }
       ],
       "paragraphs": [],
@@ -746,7 +746,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "App-level system registry, ticked once per frame in ascending order. The core managers occupy reserved bands (input 100, interaction 200, audio 300, tweens 400, rendering 500); register your own app-wide systems at order 600+ via app.systems.add(...). Scene-scoped systems live on scene.systems."
+          "description": "App-level system registry for user/extension systems — Application lifetime, independent of the active scene. The core managers (input, interaction, audio, tweens, rendering) are driven directly by the internal per-frame prepare stage and never occupy this registry, so any order is available; see SystemOrder for common reference points. Scene-scoped systems live on scene.systems."
         },
         {
           "name": "tweens",

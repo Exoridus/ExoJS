@@ -1,5 +1,4 @@
 import type { Color } from '#core/Color';
-import type { System } from '#core/System';
 import type { Time } from '#core/Time';
 import type { Matrix } from '#math/Matrix';
 import type { Geometry } from '#rendering/geometry/Geometry';
@@ -70,9 +69,7 @@ export interface DrawBatchOptions {
  *   context.capture(node, { width, height }) // into a freshly allocated RenderTexture
  * @stable
  */
-export class RenderingContext implements System, DrawContext {
-  /** App-systems tick band — rendering last (camera + render-plan prep). @internal */
-  public readonly order = 500;
+export class RenderingContext implements DrawContext {
   private readonly _backend: RenderBackend;
   private _view: View;
   private readonly _screenView: View;
@@ -152,7 +149,8 @@ export class RenderingContext implements System, DrawContext {
   /**
    * Advance follow, shake, and bounds-constraint animations on the active
    * {@link view}, every view rendered last frame (automatic), and any
-   * {@link trackView}-ed view. Ticked once per frame via {@link Application.systems}.
+   * {@link trackView}-ed view. Ticked once per frame via
+   * {@link Application.update}'s internal prepare stage.
    */
   public update(delta: Time): void {
     const ms = delta.milliseconds;
@@ -178,10 +176,20 @@ export class RenderingContext implements System, DrawContext {
   }
 
   /**
+   * @internal Invoked once per frame by {@link Application.update}'s
+   * internal prepare stage, last — after audio and tweens, ahead of fixed
+   * steps — not a public {@link System} phase. Thin wrapper over
+   * {@link RenderingContext.update}.
+   */
+  public _prepareFrame(delta: Time): void {
+    this.update(delta);
+  }
+
+  /**
    * Destroy the resources this context owns — the active {@link View} and the
    * screen-space {@link View}. The {@link RenderBackend} is owned by the
    * Application and destroyed separately.
-   * @internal — invoked via Application.systems on teardown.
+   * @internal — invoked directly by {@link Application.destroy}.
    */
   public destroy(): void {
     this._view.destroy();

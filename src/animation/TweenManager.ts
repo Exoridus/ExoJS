@@ -1,4 +1,3 @@
-import type { System } from '#core/System';
 import type { Time } from '#core/Time';
 
 import { Tween } from './Tween';
@@ -23,9 +22,7 @@ interface Ticker {
  * stopped tweens are evicted automatically.
  * @stable
  */
-export class TweenManager implements System {
-  /** App-systems tick band — tweens after audio. @internal */
-  public readonly order = 400;
+export class TweenManager {
   private _tweens: Tween[] = [];
   private _tickers: Ticker[] = [];
   private _destroyed = false;
@@ -167,6 +164,15 @@ export class TweenManager implements System {
     for (const ticker of tickerSnapshot) {
       ticker.update(delta.seconds);
     }
+  }
+
+  /**
+   * @internal Invoked once per frame by {@link Application.update}'s
+   * internal prepare stage, after audio and ahead of fixed steps — not a
+   * public {@link System} phase. Thin wrapper over {@link TweenManager.update}.
+   */
+  public _prepareFrame(delta: Time): void {
+    this.update(delta);
   }
 
   /**

@@ -1,0 +1,102 @@
+{
+  "title": "SystemOrder",
+  "description": "Named tick-order constants for SystemRegistry.add's `order` option. Purely conventional — the registry only compares numbers, and `order` accepts any of them — but shared names keep unrelated systems from picking colliding magic numbers. Not a larger phase taxonomy: pick any number, these are just common reference points.",
+  "symbol": "SystemOrder",
+  "kind": "enum",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Named tick-order constants for SystemRegistry.add's `order` option. Purely conventional — the registry only compares numbers, and `order` accepts any of them — but shared names keep unrelated systems from picking colliding magic numbers. Not a larger phase taxonomy: pick any number, these are just common reference points."
+      ],
+      "importLine": "import { SystemOrder } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "members",
+      "title": "Members",
+      "members": [
+        {
+          "name": "Debug",
+          "signature": "Debug",
+          "signatureTokens": [
+            {
+              "text": "Debug",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Default",
+          "signature": "Default",
+          "signatureTokens": [
+            {
+              "text": "Default",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Overlay",
+          "signature": "Overlay",
+          "signatureTokens": [
+            {
+              "text": "Overlay",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Physics",
+          "signature": "Physics",
+          "signatureTokens": [
+            {
+              "text": "Physics",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/SystemOrder.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SystemOrder.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/SystemOrder.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SystemOrder.ts"
+}

@@ -812,7 +812,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Scene-bound system registry. Add tickable Systems (e.g. a physics world) via this.systems.add(world); each is updated once per frame after Scene.update (ascending order) and destroyed with the scene — no manual step() / destroy() wiring. Available before the scene is attached to an Application (systems tick only while the scene is active)."
+          "description": "Scene-bound system registry. Add tickable Systems (e.g. a physics world) via this.systems.add(world); each participates in the scheduler phases it implements (fixedUpdate/update/draw, ascending order) and is destroyed with the scene — no manual step() / destroy() wiring. Available before the scene is attached to an Application (systems tick only while the scene is active)."
         },
         {
           "name": "tweens",

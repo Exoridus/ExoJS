@@ -542,7 +542,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Called once per frame from Application.update(). The frame delta is unused here (hence _delta); present for System contract compliance."
+          "description": "Called once per frame from Application.update(). The frame delta is unused here (hence _delta)."
         }
       ],
       "paragraphs": [],
