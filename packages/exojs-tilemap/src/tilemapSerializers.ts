@@ -1,8 +1,22 @@
 import type { NodeSerializer } from '@codexo/exojs';
-import type { PixelSnapMode } from '@codexo/exojs/renderer-sdk';
+import { PixelSnapMode } from '@codexo/exojs/renderer-sdk';
 
 import { TileMap } from './TileMap';
 import { TileMapNode } from './TileMapNode';
+
+// On-disk format: the mode is persisted as its NAME (readable JSON, robust
+// against enum renumbering), mapped to/from the numeric enum here.
+const pixelSnapModeNames: Record<PixelSnapMode, string> = {
+  [PixelSnapMode.None]: 'none',
+  [PixelSnapMode.Position]: 'position',
+  [PixelSnapMode.Geometry]: 'geometry',
+};
+
+const pixelSnapModeFromName: Record<string, PixelSnapMode> = {
+  none: PixelSnapMode.None,
+  position: PixelSnapMode.Position,
+  geometry: PixelSnapMode.Geometry,
+};
 
 /**
  * Scene serializer for {@link TileMapNode} — the convenience node that renders a
@@ -29,8 +43,8 @@ export const tileMapNodeSerializer: NodeSerializer<TileMapNode> = {
       out.map = source;
     }
 
-    if (node.pixelSnapMode !== 'none') {
-      out.pixelSnapMode = node.pixelSnapMode;
+    if (node.pixelSnapMode !== PixelSnapMode.None) {
+      out.pixelSnapMode = pixelSnapModeNames[node.pixelSnapMode];
     }
 
     return out;
@@ -44,9 +58,12 @@ export const tileMapNodeSerializer: NodeSerializer<TileMapNode> = {
 
     const node = new TileMapNode(map);
 
-    // The TileMapNode setter validates the value (throws on an invalid mode).
     if (typeof data.pixelSnapMode === 'string') {
-      node.pixelSnapMode = data.pixelSnapMode as PixelSnapMode;
+      const mode = pixelSnapModeFromName[data.pixelSnapMode];
+
+      if (mode !== undefined) {
+        node.pixelSnapMode = mode;
+      }
     }
 
     return node;

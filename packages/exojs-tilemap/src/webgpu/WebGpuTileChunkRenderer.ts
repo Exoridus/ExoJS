@@ -14,6 +14,7 @@ import {
   type BlendModes,
   getWebGpuBlendState,
   packAffineMat4,
+  PixelSnapMode,
   retainedGroupUniformBytes,
   stencilContentDepthStencilState,
   Texture,
@@ -257,7 +258,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     // capture. If one still arrives inside an active capture window, poison
     // the recording so the resulting set can never validate — degrading to
     // entry replay instead of wrong pixels.
-    if (node.pixelSnapMode !== 'none' && backend._retainedCaptureActive) {
+    if (node.pixelSnapMode !== PixelSnapMode.None && backend._retainedCaptureActive) {
       backend._poisonActiveRetainedCaptures();
     }
 

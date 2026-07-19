@@ -1,4 +1,4 @@
-import { RepeatingSprite, type Texture } from '@codexo/exojs';
+import { PixelSnapMode, RepeatingSprite, type Texture } from '@codexo/exojs';
 import { describe, expect, it, vi } from 'vitest';
 
 import { ImageLayer, type ImageLayerOptions } from '../src/ImageLayer';
@@ -320,32 +320,32 @@ describe('ImageLayerNode repeat coverage cache', () => {
 describe('ImageLayerNode pixelSnapMode', () => {
   it('defaults to none and forwards a valid mode to the sprite', () => {
     const node = new ImageLayerNode(makeLayer());
-    expect(node.pixelSnapMode).toBe('none');
+    expect(node.pixelSnapMode).toBe(PixelSnapMode.None);
 
-    node.pixelSnapMode = 'geometry';
+    node.pixelSnapMode = PixelSnapMode.Geometry;
 
-    expect(node.pixelSnapMode).toBe('geometry');
-    expect(spriteOf(node).pixelSnapMode).toBe('geometry');
+    expect(node.pixelSnapMode).toBe(PixelSnapMode.Geometry);
+    expect(spriteOf(node).pixelSnapMode).toBe(PixelSnapMode.Geometry);
   });
 
   it('rejects an invalid mode and leaves the prior mode unchanged', () => {
     const node = new ImageLayerNode(makeLayer());
-    node.pixelSnapMode = 'position';
+    node.pixelSnapMode = PixelSnapMode.Position;
 
     expect(() => {
       (node as unknown as { pixelSnapMode: string }).pixelSnapMode = 'bogus';
     }).toThrow();
 
-    expect(node.pixelSnapMode).toBe('position');
-    expect(spriteOf(node).pixelSnapMode).toBe('position');
+    expect(node.pixelSnapMode).toBe(PixelSnapMode.Position);
+    expect(spriteOf(node).pixelSnapMode).toBe(PixelSnapMode.Position);
   });
 
   it('accepts pixelSnapMode on a null-texture node (no drawable to forward to)', () => {
     const node = new ImageLayerNode(makeLayer({ texture: null }));
 
     expect(() => {
-      node.pixelSnapMode = 'geometry';
+      node.pixelSnapMode = PixelSnapMode.Geometry;
     }).not.toThrow();
-    expect(node.pixelSnapMode).toBe('geometry');
+    expect(node.pixelSnapMode).toBe(PixelSnapMode.Geometry);
   });
 });

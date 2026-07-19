@@ -8,19 +8,19 @@ description: 'Keep sprites, panels, and tilemaps crisp by snapping rendered outp
 When a drawable lands between device pixels — a camera at a fractional offset, a tween easing to rest, a 1.25× zoom on a high-DPR display — texel edges fall across pixel boundaries and crisp art starts to shimmer and blur. Every [`Drawable`](/ExoJS/en/api/drawable/) carries a `pixelSnapMode` property that fixes this at render time:
 
 ```ts
-import type { NineSliceSprite, Sprite } from '@codexo/exojs';
+import { type NineSliceSprite, PixelSnapMode, type Sprite } from '@codexo/exojs';
 import type { TileMapNode } from '@codexo/exojs-tilemap';
 
 declare const sprite: Sprite;
 declare const panel: NineSliceSprite;
 declare const mapNode: TileMapNode;
 
-sprite.pixelSnapMode = 'position';  // snap the rendered origin
-panel.pixelSnapMode = 'geometry';   // panel is a NineSliceSprite — also snap its slice edges
-mapNode.pixelSnapMode = 'geometry'; // mapNode is a TileMapNode (or TileMapView) — cascades to chunks
+sprite.pixelSnapMode = PixelSnapMode.Position; // snap the rendered origin
+panel.pixelSnapMode = PixelSnapMode.Geometry;  // panel is a NineSliceSprite — also snap its slice edges
+mapNode.pixelSnapMode = PixelSnapMode.Geometry; // mapNode is a TileMapNode (or TileMapView) — cascades to chunks
 ```
 
-The value is the `PixelSnapMode` union exported from `@codexo/exojs` — `'none' | 'position' | 'geometry'` — and defaults to `'none'` (existing behaviour). Setting the current value is a no-op; setting anything outside the union throws and leaves the prior mode unchanged.
+The value is the numeric `PixelSnapMode` enum exported from `@codexo/exojs` — `PixelSnapMode.None` (0), `PixelSnapMode.Position` (1), `PixelSnapMode.Geometry` (2) — and defaults to `PixelSnapMode.None` (existing behaviour). Log the enum object itself to see every option at once. Setting the current value is a no-op; setting anything outside the enum throws and leaves the prior mode unchanged.
 
 ## Render-only, by contract
 
@@ -34,20 +34,20 @@ A tween moving a snapped sprite still animates its logical position smoothly —
 
 ## The two snapping modes
 
-`'position'` snaps the drawable's rendered origin to the nearest device pixel. Only the translation of the uploaded world matrix is adjusted — the linear part is untouched — so it is safe under **any** transform: rotation, skew, and non-uniform scale included.
+`PixelSnapMode.Position` snaps the drawable's rendered origin to the nearest device pixel. Only the translation of the uploaded world matrix is adjusted — the linear part is untouched — so it is safe under **any** transform: rotation, skew, and non-uniform scale included.
 
-`'geometry'` does that and additionally snaps the drawable's shared boundary plan: nine-slice edges, repeat-segment boundaries, the sprite quad, tilemap chunk and layer origins. Every boundary goes through the same pure rounding function, so two neighbours that share a boundary value snap to the same result — seams cannot open between adjacent slices, segments, or chunks.
+`PixelSnapMode.Geometry` does that and additionally snaps the drawable's shared boundary plan: nine-slice edges, repeat-segment boundaries, the sprite quad, tilemap chunk and layer origins. Every boundary goes through the same pure rounding function, so two neighbours that share a boundary value snap to the same result — seams cannot open between adjacent slices, segments, or chunks.
 
 ```ts
-import { NineSliceSprite, RepeatingSprite, Texture } from '@codexo/exojs';
+import { NineSliceSprite, PixelSnapMode, RepeatingSprite, Texture } from '@codexo/exojs';
 
 declare const uiTexture: Texture;
 
 const panel = new NineSliceSprite(uiTexture, { slices: 12, width: 240, height: 96 });
-panel.pixelSnapMode = 'geometry'; // slice edges land on whole device pixels
+panel.pixelSnapMode = PixelSnapMode.Geometry; // slice edges land on whole device pixels
 
 const backdrop = new RepeatingSprite(uiTexture, { width: 640, height: 360 });
-backdrop.pixelSnapMode = 'geometry'; // repeat boundaries stay seam-free
+backdrop.pixelSnapMode = PixelSnapMode.Geometry; // repeat boundaries stay seam-free
 ```
 
 ## Device pixels, not world units
@@ -56,36 +56,37 @@ Snapping targets the **device-pixel grid of the active render target** — world
 
 ## Rotation downgrades `geometry` — no errors
 
-`'geometry'` is guaranteed only while the combined node + view transform is **axis-aligned**. Under rotation or skew (on the node, any ancestor, or the camera) it automatically downgrades to `'position'` for the affected frames — no error, no throw; dev builds log a one-time console warning. Axis-aligned non-uniform scale is fully supported: snapping is computed per axis.
+`PixelSnapMode.Geometry` is guaranteed only while the combined node + view transform is **axis-aligned**. Under rotation or skew (on the node, any ancestor, or the camera) it automatically downgrades to `PixelSnapMode.Position` for the affected frames — no error, no throw; dev builds log a one-time console warning. Axis-aligned non-uniform scale is fully supported: snapping is computed per axis.
 
 ## Supported drawables
 
-| Type             | `'position'` | `'geometry'`                                                                                                |
+| Type             | `Position` | `Geometry`                                                                                                |
 | ---------------- | ------------ | ----------------------------------------------------------------------------------------------------------- |
 | `Sprite`         | yes          | snaps the textured quad's edges                                                                              |
 | `NineSliceSprite` | yes         | snaps every slice boundary; corners stay pixel-exact                                                         |
 | `RepeatingSprite` | yes         | snaps repeat-segment boundaries (atlas-region sources); bare-`Texture` sources snap the destination quad while repetition stays shader-based |
 | Tilemap nodes    | yes          | snaps chunk/layer origins; integer tile pitch keeps every tile edge exact across chunks                      |
 
-`'position'` is honoured by **every** drawable — it is applied once at the backend's transform-upload seam, identically on WebGL2 and WebGPU. `'geometry'` adds boundary snapping only for the types above; on other drawables it currently behaves like `'position'`.
+`PixelSnapMode.Position` is honoured by **every** drawable — it is applied once at the backend's transform-upload seam, identically on WebGL2 and WebGPU. `PixelSnapMode.Geometry` adds boundary snapping only for the types above; on other drawables it currently behaves like `PixelSnapMode.Position`.
 
 ## Tilemaps
 
 `@codexo/exojs-tilemap` exposes the same property on its scene nodes — `TileMapNode`, `TileMapView`, and `TileLayerNode`. Setting it cascades to every chunk node, current and rebuilt:
 
 ```ts
+import { PixelSnapMode } from '@codexo/exojs';
 import { TileLayerNode, TileMap, TileMapNode, TileMapView } from '@codexo/exojs-tilemap';
 
 declare const map: TileMap;
 
 const mapNode = new TileMapNode(map);
-mapNode.pixelSnapMode = 'geometry'; // forwarded to every TileLayerNode and chunk
+mapNode.pixelSnapMode = PixelSnapMode.Geometry; // forwarded to every TileLayerNode and chunk
 
 declare const mapView: TileMapView;
 declare const groundLayer: TileLayerNode;
 
-mapView.pixelSnapMode = 'geometry';     // same property on a composed view (bands)
-groundLayer.pixelSnapMode = 'position'; // or per individual layer node
+mapView.pixelSnapMode = PixelSnapMode.Geometry;     // same property on a composed view (bands)
+groundLayer.pixelSnapMode = PixelSnapMode.Position; // or per individual layer node
 ```
 
 Chunk origins snap on the shared device grid, and a chunk's internal tile geometry uses integer tile pitch — so snapping the origin keeps every tile edge exact, and adjacent chunks and layers cannot drift apart. Tile data, layer offsets, chunk revisions, and culling are unaffected.

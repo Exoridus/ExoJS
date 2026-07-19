@@ -1,5 +1,5 @@
 import { Container, RepeatingSprite } from '@codexo/exojs';
-import type { PixelSnapMode, RenderPlanBuilder } from '@codexo/exojs/renderer-sdk';
+import { PixelSnapMode, type RenderPlanBuilder } from '@codexo/exojs/renderer-sdk';
 
 import type { ImageLayer } from './ImageLayer';
 import { assertPixelSnapMode } from './pixelSnap';
@@ -50,7 +50,7 @@ export class ImageLayerNode extends Container {
   private readonly _baseOffsetY: number;
   private readonly _imageWidth: number;
   private readonly _imageHeight: number;
-  private _pixelSnapMode: PixelSnapMode = 'none';
+  private _pixelSnapMode: PixelSnapMode = PixelSnapMode.None;
 
   // Repeat-coverage cache: the view span and patched origin that last drove a
   // resize. A static camera pays one comparison per frame and skips the rebuild.
@@ -116,7 +116,7 @@ export class ImageLayerNode extends Container {
 
   /**
    * Render-only pixel-snap mode forwarded to the wrapped {@link RepeatingSprite}
-   * (which snaps its rendered origin, and — in `'geometry'` mode for
+   * (which snaps its rendered origin, and — in `PixelSnapMode.Geometry` mode for
    * axis-aligned transforms — its repeat-segment boundaries, to the render
    * target's device-pixel grid). Purely visual: the layer offset, parallax, and
    * repeat coverage are never changed.
@@ -125,7 +125,7 @@ export class ImageLayerNode extends Container {
    * is simply stored. Setting the current value is a no-op; an invalid value
    * throws and leaves the prior mode unchanged.
    *
-   * @default 'none'
+   * @default PixelSnapMode.None
    * @stable
    */
   public get pixelSnapMode(): PixelSnapMode {

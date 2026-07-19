@@ -1,6 +1,6 @@
 import type { Rectangle } from '@codexo/exojs';
 import { Container } from '@codexo/exojs';
-import type { PixelSnapMode, RenderPlanBuilder } from '@codexo/exojs/renderer-sdk';
+import { PixelSnapMode, type RenderPlanBuilder } from '@codexo/exojs/renderer-sdk';
 
 import { aggregateChildLocalBounds } from './nodeBounds';
 import { assertPixelSnapMode } from './pixelSnap';
@@ -59,7 +59,7 @@ export class TileLayerNode extends Container {
   private readonly _chunkNodes: TileChunkNode[] = [];
   private _syncedOpacity = -1;
   private _syncedTint: number | null | undefined = undefined;
-  private _pixelSnapMode: PixelSnapMode = 'none';
+  private _pixelSnapMode: PixelSnapMode = PixelSnapMode.None;
   private readonly _baseOffsetX: number;
   private readonly _baseOffsetY: number;
 
@@ -121,12 +121,12 @@ export class TileLayerNode extends Container {
    * origin, the whole grid stays exact and adjacent chunks cannot drift apart.
    *
    * Purely visual: tile data, the layer offset, chunk content revisions, and
-   * culling bounds are never changed. `'geometry'` and `'position'` both resolve
+   * culling bounds are never changed. `PixelSnapMode.Geometry` and `PixelSnapMode.Position` both resolve
    * to coherent origin snapping for tile chunks (chunk quads are already on the
    * integer pixel grid by construction). Setting the current value is a no-op;
    * an invalid value throws and leaves the prior mode unchanged.
    *
-   * @default 'none'
+   * @default PixelSnapMode.None
    * @stable
    */
   public get pixelSnapMode(): PixelSnapMode {
@@ -262,7 +262,7 @@ export class TileLayerNode extends Container {
 
     node.cullable = this._cullChunks;
 
-    if (this._pixelSnapMode !== 'none') {
+    if (this._pixelSnapMode !== PixelSnapMode.None) {
       node.pixelSnapMode = this._pixelSnapMode;
     }
 

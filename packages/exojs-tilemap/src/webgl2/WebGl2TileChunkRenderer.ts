@@ -15,6 +15,7 @@ import {
   BufferTypes,
   BufferUsage,
   createWebGl2ShaderProgram,
+  PixelSnapMode,
   RenderingPrimitives,
   Shader,
   WebGl2RenderBuffer,
@@ -181,7 +182,7 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
     // capture. If one still arrives inside an active capture window, poison
     // the recording so the resulting set can never validate — degrading to
     // entry replay instead of wrong pixels.
-    if (backend._isRetainedCapturing && node.pixelSnapMode !== 'none') {
+    if (backend._isRetainedCapturing && node.pixelSnapMode !== PixelSnapMode.None) {
       backend._poisonRetainedCaptures();
     }
 

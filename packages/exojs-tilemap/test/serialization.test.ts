@@ -1,5 +1,5 @@
 import type { Loadable, Loader } from '@codexo/exojs';
-import { Prefab, registerSerializer } from '@codexo/exojs';
+import { PixelSnapMode, Prefab, registerSerializer } from '@codexo/exojs';
 import { describe, expect, it } from 'vitest';
 
 import { TileMap } from '../src/TileMap';
@@ -30,7 +30,7 @@ describe('tilemap serialization', () => {
     const map = new TileMap({ name: 'world', width: 4, height: 4, tileWidth: 32, tileHeight: 32 });
     const loader = fakeLoader(map, 'world.tmj');
     const node = new TileMapNode(map);
-    node.pixelSnapMode = 'position';
+    node.pixelSnapMode = PixelSnapMode.Position;
 
     const data = Prefab.from(node, loader).toJSON();
 
@@ -42,7 +42,7 @@ describe('tilemap serialization', () => {
 
     expect(restored).toBeInstanceOf(TileMapNode);
     expect(restored.map).toBe(map);
-    expect(restored.pixelSnapMode).toBe('position');
+    expect(restored.pixelSnapMode).toBe(PixelSnapMode.Position);
 
     node.destroy();
     restored.destroy();
@@ -63,7 +63,7 @@ describe('tilemap serialization', () => {
 
   it('omits the map/pixelSnapMode keys entirely for a procedural map with default pixelSnapMode', () => {
     const map = new TileMap({ name: 'procedural', width: 4, height: 4, tileWidth: 32, tileHeight: 32 });
-    const node = new TileMapNode(map); // pixelSnapMode stays 'none'
+    const node = new TileMapNode(map); // pixelSnapMode stays PixelSnapMode.None
     const loaderWithoutSourceKey = { keyFor: () => null, _peekResource: () => null } as unknown as Loader;
 
     const data = Prefab.from(node, loaderWithoutSourceKey).toJSON();
@@ -81,7 +81,7 @@ describe('tilemap serialization', () => {
 
     const restored = Prefab.fromJSON({ type: 'TileMapNode', map: 'world.tmj' }).instantiate(loader) as TileMapNode;
 
-    expect(restored.pixelSnapMode).toBe('none');
+    expect(restored.pixelSnapMode).toBe(PixelSnapMode.None);
 
     restored.destroy();
     map.destroy();

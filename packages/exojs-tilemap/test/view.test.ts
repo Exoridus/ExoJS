@@ -1,4 +1,4 @@
-import { Container } from '@codexo/exojs';
+import { Container, PixelSnapMode } from '@codexo/exojs';
 import { TextureRegion } from '@codexo/exojs';
 import { type Texture } from '@codexo/exojs';
 import { describe, expect, expectTypeOf, it, vi } from 'vitest';
@@ -830,11 +830,11 @@ describe('TileMapView image layer nodes', () => {
     const view = map.createView();
     const node = view.getImageLayerNodeById(10)!;
 
-    expect(node.pixelSnapMode).toBe('none');
+    expect(node.pixelSnapMode).toBe(PixelSnapMode.None);
 
-    view.pixelSnapMode = 'geometry';
+    view.pixelSnapMode = PixelSnapMode.Geometry;
 
-    expect(node.pixelSnapMode).toBe('geometry');
+    expect(node.pixelSnapMode).toBe(PixelSnapMode.Geometry);
   });
 
   it('band definitions accept image-layer ids and names as selectors', () => {
@@ -1056,7 +1056,7 @@ describe('TileMapView heterogeneous bands', () => {
     const { map } = makeInterleavedMap();
     const view = map.createView();
 
-    view.pixelSnapMode = 'geometry';
+    view.pixelSnapMode = PixelSnapMode.Geometry;
 
     const added = makeImageLayer({ id: 9, name: 'clouds' });
 
@@ -1067,7 +1067,7 @@ describe('TileMapView heterogeneous bands', () => {
 
     expect(node.layer).toBe(added);
     expect(node.parent).toBeNull();
-    expect(node.pixelSnapMode).toBe('geometry');
+    expect(node.pixelSnapMode).toBe(PixelSnapMode.Geometry);
     expect(view.imageLayerNodes.map(n => n.layer.id)).toEqual([2, 9]);
 
     // Identity of the pre-existing image node is retained across refreshes.
