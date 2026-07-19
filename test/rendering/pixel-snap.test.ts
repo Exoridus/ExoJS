@@ -8,11 +8,9 @@ import {
   PixelSnapMode,
   type RenderQuad,
   resolveEffectivePixelSnapMode,
-  resolveUploadTransform,
   snapBoundsInto,
   snapLocalBoundary,
   snapQuadsInto,
-  snapWorldTranslationInto,
 } from '#rendering/pixelSnap';
 import { RetainedContainer } from '#rendering/RetainedContainer';
 import { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
@@ -326,33 +324,6 @@ describe('buildPixelSnapContext — coordinate conversion', () => {
 });
 
 // ---------------------------------------------------------------------------
-// snapWorldTranslationInto — position snapping is translation-only
-// ---------------------------------------------------------------------------
-
-describe('snapWorldTranslationInto', () => {
-  test('replaces only the translation, preserving the linear part, without mutating the source', () => {
-    const view = makeView(100, 100);
-    const world = new Matrix().set(2, 0.5, 12.4, -0.5, 2, 7.8);
-    const snapshot = world.clone();
-    const ctx = buildPixelSnapContext(world, view, 100, 100);
-    const out = new Matrix();
-
-    snapWorldTranslationInto(out, world, ctx);
-
-    // linear part copied verbatim
-    expect(out.a).toBe(world.a);
-    expect(out.b).toBe(world.b);
-    expect(out.c).toBe(world.c);
-    expect(out.d).toBe(world.d);
-    // translation replaced by the snapped world origin
-    expect(out.x).toBe(ctx.worldX);
-    expect(out.y).toBe(ctx.worldY);
-    // source untouched
-    expect(world.equals(snapshot)).toBe(true);
-  });
-});
-
-// ---------------------------------------------------------------------------
 // resolveEffectivePixelSnapMode / downgrade
 // ---------------------------------------------------------------------------
 
@@ -397,135 +368,6 @@ describe('effective alignment from a composed world transform', () => {
     expect(buildPixelSnapContext(child.getGlobalTransform(), view, 200, 200).axisAligned).toBe(true);
 
     parent.destroy();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// resolveUploadTransform — group-aware DEVICE snapping (expert-review R2)
-// ---------------------------------------------------------------------------
-//
-// Inside a RetainedContainer the GPU applies the group matrix AFTER the buffer
-// row (`u_projection · u_group · (row · local)`), so snapping the group-LOCAL
-// origin (the old behaviour) snapped to the wrong grid and the final device
-// position drifted off-pixel. resolveUploadTransform now snaps the composed
-// `group · local` device origin and peels the group matrix back off the row it
-// uploads, so the shader's re-applied group matrix lands the origin on a whole
-// device pixel.
-
-describe('resolveUploadTransform — group-aware device snapping (R2)', () => {
-  test('without a group, snaps the global origin directly (unchanged behaviour)', () => {
-    const view = makeView(100, 100);
-    const sprite = new Sprite(makeTexture());
-
-    sprite.setPosition(12.37, 7.91);
-    sprite.pixelSnapMode = PixelSnapMode.Position;
-
-    const scratch = new Matrix();
-    const uploaded = resolveUploadTransform(sprite, view, 100, 100, scratch, null);
-    const device = view.worldToScreen(uploaded.x, uploaded.y, 100, 100);
-
-    expect(device.x).toBeCloseTo(Math.round(device.x), 6);
-    expect(device.y).toBeCloseTo(Math.round(device.y), 6);
-
-    sprite.destroy();
-  });
-
-  test('PixelSnapMode.None returns the live group-local transform, group or not', () => {
-    const view = makeView(100, 100);
-    const group = new RetainedContainer();
-    const sprite = new Sprite(makeTexture());
-
-    group.setPosition(30.4, 10.6);
-    group.addChild(sprite);
-    sprite.setPosition(5.2, 7.8);
-    sprite.pixelSnapMode = PixelSnapMode.None;
-
-    const uploaded = resolveUploadTransform(sprite, view, 100, 100, new Matrix(), group.getGlobalTransform());
-
-    expect(uploaded).toBe(sprite.getGlobalTransform());
-
-    group.destroy();
-  });
-
-  test('snaps the FINAL device origin (group × local), not the group-local origin', () => {
-    const view = makeView(100, 100);
-    const group = new RetainedContainer();
-    const sprite = new Sprite(makeTexture());
-
-    // Both offsets fractional → the composed origin is fractional in device space.
-    group.setPosition(30.4, 10.6);
-    group.addChild(sprite);
-    sprite.setPosition(5.2, 7.8);
-    sprite.pixelSnapMode = PixelSnapMode.Position;
-
-    const groupWorld = group.getGlobalTransform(); // group is the boundary → its own world matrix
-    const uploaded = resolveUploadTransform(sprite, view, 100, 100, new Matrix(), groupWorld);
-
-    // The shader computes `group · uploaded`; that composed origin must be a
-    // whole device pixel — the whole point of the fix.
-    const composed = uploaded.clone().combine(groupWorld);
-    const device = view.worldToScreen(composed.x, composed.y, 100, 100);
-
-    expect(device.x).toBeCloseTo(Math.round(device.x), 5);
-    expect(device.y).toBeCloseTo(Math.round(device.y), 5);
-
-    // The uploaded row's LINEAR part is still the sprite's group-local linear
-    // part (position snapping never touches scale/rotation).
-    const local = sprite.getGlobalTransform();
-
-    expect(uploaded.a).toBeCloseTo(local.a, 6);
-    expect(uploaded.d).toBeCloseTo(local.d, 6);
-
-    group.destroy();
-  });
-
-  test('snapping the group-local origin (the old behaviour) would MISS the device grid', () => {
-    const view = makeView(100, 100);
-    const group = new RetainedContainer();
-    const sprite = new Sprite(makeTexture());
-
-    group.setPosition(0.5, 0.5); // half-pixel group offset
-    group.addChild(sprite);
-    sprite.setPosition(4, 4); // already integer in group-local space
-    sprite.pixelSnapMode = PixelSnapMode.Position;
-
-    const groupWorld = group.getGlobalTransform();
-
-    // Group-local snap (ignores the group) leaves the row at (4, 4); composed
-    // with the 0.5 group offset the device origin is 4.5 — off the grid.
-    const groupLocalOnly = view.worldToScreen(4 + 0.5, 4 + 0.5, 100, 100);
-
-    expect(groupLocalOnly.x).not.toBeCloseTo(Math.round(groupLocalOnly.x), 3);
-
-    // The fix pulls it back onto a whole device pixel.
-    const uploaded = resolveUploadTransform(sprite, view, 100, 100, new Matrix(), groupWorld);
-    const composed = uploaded.clone().combine(groupWorld);
-    const device = view.worldToScreen(composed.x, composed.y, 100, 100);
-
-    expect(device.x).toBeCloseTo(Math.round(device.x), 5);
-
-    group.destroy();
-  });
-
-  test('never mutates the group matrix it is handed', () => {
-    const view = makeView(100, 100);
-    const group = new RetainedContainer();
-    const sprite = new Sprite(makeTexture());
-
-    group.setPosition(12.3, 4.7);
-    group.addChild(sprite);
-    sprite.setPosition(3.1, 9.4);
-    sprite.pixelSnapMode = PixelSnapMode.Position;
-
-    const groupWorld = group.getGlobalTransform();
-    const snapshot = groupWorld.clone();
-
-    resolveUploadTransform(sprite, view, 100, 100, new Matrix(), groupWorld);
-
-    expect(groupWorld.equals(snapshot)).toBe(true);
-
-    snapshot.destroy();
-    group.destroy();
   });
 });
 

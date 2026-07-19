@@ -263,7 +263,9 @@ interface BackendWithRendererRegistry {
  * as an instruction set iff every captured draw uses a renderer that opts in
  * via {@link RetainedBatchCapableRenderer}, has no own material (custom
  * uniforms re-upload live at flush and their mutation bumps no revision), and
- * does not pixel-snap (snapped instance words are view-dependent); and no
+ * does not geometry-snap (geometry instance words are view-dependent; position
+ * snapping is resolved in-shader from the transform row flag, so a
+ * position-snapped draw is recordable); and no
  * barrier record exists anywhere in the fragment (barriers re-dispatch live
  * per frame and cannot interleave with cached batch runs, S3-D5.4). Nested
  * plain/retained groups recurse. Anything non-recordable stays on the
@@ -296,7 +298,7 @@ const entriesRecordable = (entries: readonly RetainedFragmentEntry[], registry: 
 
     const drawable = entry.drawable;
 
-    if (drawableHasOwnMaterial(drawable) || drawable.pixelSnapMode !== PixelSnapMode.None) {
+    if (drawableHasOwnMaterial(drawable) || drawable.pixelSnapMode === PixelSnapMode.Geometry) {
       return false;
     }
 

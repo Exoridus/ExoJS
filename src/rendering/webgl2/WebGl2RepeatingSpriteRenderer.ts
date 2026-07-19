@@ -298,11 +298,12 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
     const backend = this.getBackend();
 
     // Retained recording (Track B Slice 3): only the geometry path is
-    // replayable. A shader-path or pixel-snapped draw inside an active capture
-    // cannot be replayed from group-owned resources, so poison the window —
-    // the group falls back to entry replay (correct, never stale) rather than
-    // replaying an incomplete or wrap-less instruction stream.
-    if (backend._isRetainedCapturing && (strategy === 'shader' || sprite.pixelSnapMode !== PixelSnapMode.None)) {
+    // replayable. A shader-path or geometry-snapped draw inside an active
+    // capture cannot be replayed from group-owned resources, so poison the
+    // window — the group falls back to entry replay (correct, never stale)
+    // rather than replaying an incomplete or wrap-less instruction stream.
+    // Position snapping is resolved in-shader and stays recordable.
+    if (backend._isRetainedCapturing && (strategy === 'shader' || sprite.pixelSnapMode === PixelSnapMode.Geometry)) {
       backend._poisonRetainedCaptures();
     }
 

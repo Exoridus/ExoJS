@@ -171,8 +171,8 @@ export class Sprite extends Drawable {
    * `PixelSnapMode.Geometry` (and only when the combined node+view transform
    * is axis-aligned) the quad edges are snapped to the render target's
    * device-pixel grid via the shared {@link snapLocalBoundary} helper — combined
-   * with the device-snapped origin from the transform seam, all four corners
-   * land on whole device pixels. The logical local bounds (used by collision /
+   * with the origin the vertex shader rounds to a whole device pixel, all four
+   * corners land on whole device pixels. The logical local bounds (used by collision /
    * `getBounds`) are never changed. Returns the unsnapped local bounds for
    * `PixelSnapMode.None`/`PixelSnapMode.Position` or under a rotation/skew
    * downgrade.

@@ -514,10 +514,11 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
 
     const material = sprite.material;
 
-    // Defensive (S3-D5.3): pixel-snapped instance words are view-dependent —
-    // the recordability predicate excludes them at collect time, so a snapped
-    // sprite inside a capture window means the stream cannot be replayed.
-    if (sprite.pixelSnapMode !== PixelSnapMode.None && backend._retainedCaptureActive) {
+    // Defensive (S3-D5.3): geometry-snapped instance words are view-dependent —
+    // the recordability predicate excludes them at collect time, so a
+    // geometry-snapped sprite inside a capture window means the stream cannot be
+    // replayed. Position snapping is resolved in-shader and stays recordable.
+    if (sprite.pixelSnapMode === PixelSnapMode.Geometry && backend._retainedCaptureActive) {
       backend._poisonActiveRetainedCaptures();
     }
 

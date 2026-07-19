@@ -154,12 +154,13 @@ export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSl
     const backend = this.getBackend();
 
     // Belt-and-braces for retained recording (S3-D5.3): the collect-time
-    // recordability predicate excludes pixel-snapped draws from ever arming a
-    // capture (snapped instance words are view-dependent). If one still arrives
-    // inside an active capture window, poison the recording so the resulting
-    // set can never validate — degrading to entry replay instead of wrong
-    // pixels. Nine-slice has no custom-material path to guard.
-    if (backend._isRetainedCapturing && sprite.pixelSnapMode !== PixelSnapMode.None) {
+    // recordability predicate excludes geometry-snapped draws from ever arming a
+    // capture (geometry instance words are view-dependent; position snapping is
+    // resolved in-shader and stays recordable). If one still arrives inside an
+    // active capture window, poison the recording so the resulting set can never
+    // validate — degrading to entry replay instead of wrong pixels. Nine-slice
+    // has no custom-material path to guard.
+    if (backend._isRetainedCapturing && sprite.pixelSnapMode === PixelSnapMode.Geometry) {
       backend._poisonRetainedCaptures();
     }
 

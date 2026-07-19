@@ -269,11 +269,12 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     }
 
     // Belt-and-braces for retained recording: the collect-time recordability
-    // predicate already excludes pixel-snapped draws from ever arming a
-    // capture. If one still arrives inside an active capture window, poison
-    // the recording so the resulting set can never validate — degrading to
-    // entry replay instead of wrong pixels.
-    if (node.pixelSnapMode !== PixelSnapMode.None && backend._retainedCaptureActive) {
+    // predicate already excludes geometry-snapped draws from ever arming a
+    // capture (position snapping is resolved in-shader and stays recordable).
+    // If one still arrives inside an active capture window, poison the recording
+    // so the resulting set can never validate — degrading to entry replay
+    // instead of wrong pixels.
+    if (node.pixelSnapMode === PixelSnapMode.Geometry && backend._retainedCaptureActive) {
       backend._poisonActiveRetainedCaptures();
     }
 

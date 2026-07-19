@@ -89,9 +89,10 @@ const retainedDiagnosticThreshold = 108;
  * resolve group-relative transforms, so hit-testing/`getBounds()` inside the
  * group are group-local; per-child view culling is disabled inside the group
  * (the group is culled as a whole); particle-extension drawables bake their own
- * transforms and are not group-transform-aware. `pixelSnapMode` IS group-aware —
- * the renderer composes the group matrix in before snapping, so a snapped node
- * inside a translated/scaled group still lands on the device-pixel grid. Group-wide fades are done
+ * transforms and are not group-transform-aware. `PixelSnapMode.Position` IS
+ * group-aware — the shader applies the group matrix before rounding the composed
+ * device origin, so a position-snapped node inside a translated/scaled group
+ * still lands on the device-pixel grid (and stays recordable). Group-wide fades are done
  * per-drawable tint (the engine has no inherited alpha) or via
  * {@link RenderNode.cacheAsBitmap}. Nodes with filters/mask/clip/
  * cacheAsBitmap are supported as DIRECT children (they stay world-space and
@@ -479,10 +480,13 @@ export class RetainedContainer extends Container {
 
     const nodeIndex = this._fragment.directDrawNodeIndex(drawable);
 
-    // Snapped nodes are excluded from recording (their instance words are
-    // view-dependent), so a recorded direct child is never snapped — but guard
-    // belt-and-braces: an ineligible node drops to the re-record fallback.
-    if (nodeIndex === undefined || drawable.pixelSnapMode !== PixelSnapMode.None) {
+    // A recorded direct child may be position-snapped: its patched row carries
+    // the raw transform plus the snap flag (packTransformRow), and the shader
+    // rounds the device origin — the row stays view-independent. Only
+    // geometry-snapped nodes are excluded from recording (their instance words
+    // are view-dependent); guard them here belt-and-braces so an ineligible node
+    // drops to the re-record fallback.
+    if (nodeIndex === undefined || drawable.pixelSnapMode === PixelSnapMode.Geometry) {
       return false;
     }
 

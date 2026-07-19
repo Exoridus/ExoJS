@@ -261,11 +261,12 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
       return;
     }
 
-    // Defensive (S3-D5.3): pixel-snapped instance words are view-dependent —
-    // the recordability predicate excludes them at collect time, so a snapped
-    // nine-slice inside a capture window means the stream cannot be replayed.
+    // Defensive (S3-D5.3): geometry-snapped instance words are view-dependent —
+    // the recordability predicate excludes them at collect time, so a
+    // geometry-snapped nine-slice inside a capture window means the stream cannot
+    // be replayed. Position snapping is resolved in-shader and stays recordable.
     // Nine-slice has no custom-material path to guard.
-    if (sprite.pixelSnapMode !== PixelSnapMode.None && backend._retainedCaptureActive) {
+    if (sprite.pixelSnapMode === PixelSnapMode.Geometry && backend._retainedCaptureActive) {
       backend._poisonActiveRetainedCaptures();
     }
 

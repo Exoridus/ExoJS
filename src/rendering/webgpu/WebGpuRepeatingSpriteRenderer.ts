@@ -372,11 +372,12 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
 
     // Retained recording (Track B Slice 3): only the geometry path is
     // replayable (see _supportsRetainedBatches). A shader-path or
-    // pixel-snapped draw inside an active capture window cannot be replayed
+    // geometry-snapped draw inside an active capture window cannot be replayed
     // from group-owned resources, so poison the window — the group falls
     // back to entry replay (correct, never stale) instead of a replay that is
     // either missing the wrap-mode sampler or holding view-dependent bytes.
-    if ((strategy === 'shader' || sprite.pixelSnapMode !== PixelSnapMode.None) && backend._retainedCaptureActive) {
+    // Position snapping is resolved in-shader and stays recordable.
+    if ((strategy === 'shader' || sprite.pixelSnapMode === PixelSnapMode.Geometry) && backend._retainedCaptureActive) {
       backend._poisonActiveRetainedCaptures();
     }
 

@@ -154,11 +154,12 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     const material = sprite.material;
 
     // Belt-and-braces for retained recording (S3-D5.2/5.3): the collect-time
-    // recordability predicate excludes custom-material and pixel-snapped
-    // draws from ever arming a capture. If one still arrives inside an
-    // active capture window, poison the recording so the resulting set can
-    // never validate — degrading to entry replay instead of wrong pixels.
-    if (backend._isRetainedCapturing && (material !== null || sprite.pixelSnapMode !== PixelSnapMode.None)) {
+    // recordability predicate excludes custom-material and geometry-snapped
+    // draws from ever arming a capture (position snapping is resolved in-shader
+    // and stays recordable). If one still arrives inside an active capture
+    // window, poison the recording so the resulting set can never validate —
+    // degrading to entry replay instead of wrong pixels.
+    if (backend._isRetainedCapturing && (material !== null || sprite.pixelSnapMode === PixelSnapMode.Geometry)) {
       backend._poisonRetainedCaptures();
     }
 
