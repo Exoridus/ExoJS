@@ -256,7 +256,13 @@ describe('WebGPU GPU pixel snapping — Sprite position mode', () => {
 
 describe('WebGPU GPU pixel snapping — retained/immediate parity', () => {
   test('Case 2: a retained group-relative snap matches the immediate world snap', async ctx => {
-    // Retained scene: group at (10,10), child at (10.4,10.6) → world (20.4,20.6).
+    // Retained scene: group at the FRACTIONAL (10.3,10.7), child at (10.1,9.9) →
+    // world (20.4,20.6). The fractional group offset is what gives this case its
+    // teeth: a shader that snapped the group-LOCAL origin (10.1,9.9) → (10,10)
+    // and applied the group matrix afterwards would land the sprite at (20.3,20.7),
+    // NOT the immediate scene's snapped (20,21). Only snapping the COMPOSED
+    // (group · local) device origin matches. An integer group offset would mask
+    // that difference (both paths would share the same fractional delta).
     const retainedBackend = await setupBackend();
     const retainedTexture = createSolidTexture('#00ff00', 10);
     const retainedRoot = new Container();
@@ -270,8 +276,8 @@ describe('WebGPU GPU pixel snapping — retained/immediate parity', () => {
     const immediateSprite = new Sprite(immediateTexture);
 
     try {
-      group.setPosition(10, 10);
-      groupSprite.setPosition(10.4, 10.6);
+      group.setPosition(10.3, 10.7);
+      groupSprite.setPosition(10.1, 9.9);
       groupSprite.pixelSnapMode = PixelSnapMode.Position;
       group.addChild(groupSprite);
       retainedRoot.addChild(group);
