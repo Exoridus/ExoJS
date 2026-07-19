@@ -1,12 +1,12 @@
 {
   "title": "PixelSnapMode",
-  "description": "Render-only pixel-snapping policy for a Drawable. - `'none'` — no snapping; rendered transform and geometry use existing behaviour. - `'position'` — snap the rendered origin to the nearest device pixel. Logical `x`/`y`, matrices, bounds and collision are unchanged. - `'geometry'` — snap a single coherent shared-boundary plan (origin + boundaries) so neighbouring quads stay seam-free. Falls back to `'position'` automatically when the transform is not axis-aligned (rotation / skew). Snapping targets device pixels (× view scale × pixel ratio), not integer world units, and never alters logical state.",
+  "description": "Render-only pixel-snapping policy for a Drawable. - `None` — no snapping; rendered transform and geometry use existing behaviour. - `Position` — snap the rendered origin to the nearest device pixel. Logical `x`/`y`, matrices, bounds and collision are unchanged. - `Geometry` — snap a single coherent shared-boundary plan (origin + boundaries) so neighbouring quads stay seam-free. Falls back to `Position` automatically when the transform is not axis-aligned (rotation / skew). Snapping targets device pixels (× view scale × pixel ratio), not integer world units, and never alters logical state. The numeric values are the shader encoding carried in the transform row and must not be reordered.",
   "symbol": "PixelSnapMode",
-  "kind": "type",
+  "kind": "enum",
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 0,
+  "memberCount": 3,
   "counts": {
     "constructors": 0,
     "methods": 0,
@@ -20,39 +20,49 @@
       "members": [],
       "paragraphs": [
         "Render-only pixel-snapping policy for a Drawable.",
-        "- `'none'` — no snapping; rendered transform and geometry use existing behaviour. - `'position'` — snap the rendered origin to the nearest device pixel. Logical `x`/`y`, matrices, bounds and collision are unchanged. - `'geometry'` — snap a single coherent shared-boundary plan (origin + boundaries) so neighbouring quads stay seam-free. Falls back to `'position'` automatically when the transform is not axis-aligned (rotation / skew).",
-        "Snapping targets device pixels (× view scale × pixel ratio), not integer world units, and never alters logical state."
+        "- `None` — no snapping; rendered transform and geometry use existing behaviour. - `Position` — snap the rendered origin to the nearest device pixel. Logical `x`/`y`, matrices, bounds and collision are unchanged. - `Geometry` — snap a single coherent shared-boundary plan (origin + boundaries) so neighbouring quads stay seam-free. Falls back to `Position` automatically when the transform is not axis-aligned (rotation / skew).",
+        "Snapping targets device pixels (× view scale × pixel ratio), not integer world units, and never alters logical state. The numeric values are the shader encoding carried in the transform row and must not be reordered."
       ],
       "importLine": "import { PixelSnapMode } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
-      "id": "definition",
-      "title": "Definition",
+      "id": "members",
+      "title": "Members",
       "members": [
         {
-          "name": "PixelSnapMode",
-          "signature": "\"none\" | \"position\" | \"geometry\"",
+          "name": "Geometry",
+          "signature": "Geometry",
           "signatureTokens": [
             {
-              "text": "\"none\"",
-              "kind": "keyword"
-            },
+              "text": "Geometry",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "None",
+          "signature": "None",
+          "signatureTokens": [
             {
-              "text": " | ",
-              "kind": "punctuation"
-            },
+              "text": "None",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Position",
+          "signature": "Position",
+          "signatureTokens": [
             {
-              "text": "\"position\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"geometry\"",
-              "kind": "keyword"
+              "text": "Position",
+              "kind": "name"
             }
           ],
           "params": [],

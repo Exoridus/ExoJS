@@ -67,7 +67,7 @@ Snapping targets the **device-pixel grid of the active render target** — world
 | `RepeatingSprite` | yes         | snaps repeat-segment boundaries (atlas-region sources); bare-`Texture` sources snap the destination quad while repetition stays shader-based |
 | Tilemap nodes    | yes          | snaps chunk/layer origins; integer tile pitch keeps every tile edge exact across chunks                      |
 
-`PixelSnapMode.Position` is honoured by **every** drawable — it is applied once at the backend's transform-upload seam, identically on WebGL2 and WebGPU. `PixelSnapMode.Geometry` adds boundary snapping only for the types above; on other drawables it currently behaves like `PixelSnapMode.Position`.
+`PixelSnapMode.Position` is honoured by **every** drawable — the origin is rounded in the vertex shader against the composed device grid, identically on WebGL2 and WebGPU, so it stays correct even inside a `RetainedContainer` and adds no per-frame CPU cost. `PixelSnapMode.Geometry` adds boundary snapping only for the types above; on other drawables it currently behaves like `PixelSnapMode.Position`.
 
 ## Tilemaps
 
@@ -94,7 +94,7 @@ Chunk origins snap on the shared device grid, and a chunk's internal tile geomet
 ## Limitations and non-goals
 
 - **Not a layout system.** There is no screen-space/UI layout rounding — logical widths, heights, and positions are never rounded for you.
-- **No shader-based snapping.** Snapping happens on the CPU during render-data preparation, with one deterministic rounding policy (`Math.round` to the nearest device pixel) shared by both backends.
+- **One rounding policy.** `PixelSnapMode.Position` rounds the drawable's origin in the vertex shader (`floor(x + 0.5)`, the exact device-pixel nearest-rounding both backends agree on); `PixelSnapMode.Geometry`'s extra boundary snapping is still computed on the CPU during render-data preparation. Both use the same nearest-device-pixel policy.
 - **Logical bounds stay logical.** `getBounds()` reports unsnapped values; the rasterised result may differ from them by less than one device pixel.
 
 ## Where to go next
