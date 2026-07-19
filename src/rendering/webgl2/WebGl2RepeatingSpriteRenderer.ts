@@ -1,4 +1,3 @@
-import { Rectangle } from '#math/Rectangle';
 import { PixelSnapMode } from '#rendering/pixelSnap';
 import { Shader } from '#rendering/shader/Shader';
 import type { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
@@ -36,20 +35,63 @@ uniform sampler2D u_transforms;
 out vec2 v_texcoord;
 out vec4 v_color;
 
+// Round one local boundary coordinate to the device grid along an axis whose
+// local→device scale is \`scale\`: floor(L*scale + 0.5) / scale. Pure in the
+// boundary value, so a shared boundary snaps identically. Degenerate scales
+// pass the value through unchanged.
+float snapBoundary(float localValue, float scale) {
+    if (abs(scale) < 1e-6) return localValue;
+    return floor(localValue * scale + 0.5) / scale;
+}
+
 void main(void) {
     int vid = gl_VertexID;
     int cx = vid & 1;
     int cy = (vid >> 1) & 1;
 
-    float lx = (cx == 0) ? a_quadBounds.x : a_quadBounds.z;
-    float ly = (cy == 0) ? a_quadBounds.y : a_quadBounds.w;
-
-    float destW = a_quadBounds.z - a_quadBounds.x;
-    float destH = a_quadBounds.w - a_quadBounds.y;
-
     int row = int(a_nodeIndex);
     vec4 m0 = texelFetch(u_transforms, ivec2(0, row), 0);
     vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0);
+
+    // Local destination boundaries. In geometry mode they are snapped BELOW,
+    // and destW/destH (which drive the tiling UVs) are derived from the snapped
+    // values so the tile period stays aligned to the snapped destination width.
+    float x0 = a_quadBounds.x;
+    float y0 = a_quadBounds.y;
+    float x1 = a_quadBounds.z;
+    float y1 = a_quadBounds.w;
+
+    // Geometry boundary snap: round each local corner to the device grid so the
+    // destination edges land on whole device pixels (m1.z == 2.0, axis-aligned
+    // only). Derive the per-axis device scale from the composed pipeline exactly
+    // like buildPixelSnapContext: device positions of the local origin and the
+    // two local unit axes give scaleX/scaleY (device-per-local) and the
+    // cross-terms.
+    if (m1.z == 2.0) {
+        vec2 vp = u_viewport.zw;
+        vec3 dO = u_projection * u_group * vec3(m1.x, m1.y, 1.0);
+        vec2 devO = u_viewport.xy + (dO.xy * 0.5 + 0.5) * vp;
+        vec3 dX = u_projection * u_group * vec3(m1.x + m0.x, m1.y + m0.z, 1.0);
+        vec3 dY = u_projection * u_group * vec3(m1.x + m0.y, m1.y + m0.w, 1.0);
+        vec2 devX = u_viewport.xy + (dX.xy * 0.5 + 0.5) * vp;
+        vec2 devY = u_viewport.xy + (dY.xy * 0.5 + 0.5) * vp;
+        float scaleX = devX.x - devO.x;
+        float scaleY = devY.y - devO.y;
+        float crossXy = devX.y - devO.y;
+        float crossYx = devY.x - devO.x;
+        if (abs(crossXy) < 1e-3 && abs(crossYx) < 1e-3) { // axis-aligned
+            x0 = snapBoundary(x0, scaleX);
+            x1 = snapBoundary(x1, scaleX);
+            y0 = snapBoundary(y0, scaleY);
+            y1 = snapBoundary(y1, scaleY);
+        }
+    }
+
+    float lx = (cx == 0) ? x0 : x1;
+    float ly = (cy == 0) ? y0 : y1;
+
+    float destW = x1 - x0;
+    float destH = y1 - y0;
 
     float wx = m0.x * lx + m0.y * ly + m1.x;
     float wy = m0.z * lx + m0.w * ly + m1.y;
@@ -70,10 +112,10 @@ void main(void) {
     gl_Position = vec4(clip, 0.0, 1.0);
 
     float u = (destW > 0.0)
-        ? ((lx - a_quadBounds.x) / destW) * a_uvParams.x + a_uvParams.z
+        ? ((lx - x0) / destW) * a_uvParams.x + a_uvParams.z
         : a_uvParams.z;
     float v = (destH > 0.0)
-        ? ((ly - a_quadBounds.y) / destH) * a_uvParams.y + a_uvParams.w
+        ? ((ly - y0) / destH) * a_uvParams.y + a_uvParams.w
         : a_uvParams.w;
     v_texcoord = vec2(u, v);
 
@@ -101,6 +143,15 @@ uniform sampler2D u_transforms;
 out vec2 v_texcoord;
 out vec4 v_color;
 
+// Round one local boundary coordinate to the device grid along an axis whose
+// local→device scale is \`scale\`: floor(L*scale + 0.5) / scale. Pure in the
+// boundary value, so two segments sharing a boundary snap identically — seams
+// stay closed. Degenerate scales pass the value through unchanged.
+float snapBoundary(float localValue, float scale) {
+    if (abs(scale) < 1e-6) return localValue;
+    return floor(localValue * scale + 0.5) / scale;
+}
+
 void main(void) {
     int vid = gl_VertexID;
     int cx = vid & 1;
@@ -112,6 +163,30 @@ void main(void) {
     int row = int(a_nodeIndex);
     vec4 m0 = texelFetch(u_transforms, ivec2(0, row), 0);
     vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0);
+
+    // Geometry boundary snap: round each local corner to the device grid so the
+    // segment edges land on whole device pixels (m1.z == 2.0, axis-aligned only).
+    // Derive the per-axis device scale from the composed pipeline exactly like
+    // buildPixelSnapContext. Shared repeat-segment edges are the same local
+    // value, so this pure snap moves both neighbours identically — the internal
+    // seams stay closed.
+    if (m1.z == 2.0) {
+        vec2 vp = u_viewport.zw;
+        vec3 dO = u_projection * u_group * vec3(m1.x, m1.y, 1.0);
+        vec2 devO = u_viewport.xy + (dO.xy * 0.5 + 0.5) * vp;
+        vec3 dX = u_projection * u_group * vec3(m1.x + m0.x, m1.y + m0.z, 1.0);
+        vec3 dY = u_projection * u_group * vec3(m1.x + m0.y, m1.y + m0.w, 1.0);
+        vec2 devX = u_viewport.xy + (dX.xy * 0.5 + 0.5) * vp;
+        vec2 devY = u_viewport.xy + (dY.xy * 0.5 + 0.5) * vp;
+        float scaleX = devX.x - devO.x;
+        float scaleY = devY.y - devO.y;
+        float crossXy = devX.y - devO.y;
+        float crossYx = devY.x - devO.x;
+        if (abs(crossXy) < 1e-3 && abs(crossYx) < 1e-3) { // axis-aligned
+            lx = snapBoundary(lx, scaleX);
+            ly = snapBoundary(ly, scaleY);
+        }
+    }
 
     float wx = m0.x * lx + m0.y * ly + m1.x;
     float wy = m0.z * lx + m0.w * ly + m1.y;
@@ -246,7 +321,6 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
 
   private readonly _transformUnitScratch = new Int32Array([transformTextureUnit]);
   private readonly _textureUnitScratch = new Int32Array([0]);
-  private readonly _snapBounds = new Rectangle();
   private _currentView: unknown = null;
   private _currentViewId = -1;
   private _currentGroupTransformId = -1;
@@ -339,21 +413,12 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
     const texture = sprite.texture;
     const srcW = sprite.region.width;
     const srcH = sprite.region.height;
-    let destW = sprite.width;
-    let destH = sprite.height;
+    // The destination rectangle is uploaded RAW; PixelSnapMode.Geometry rounds
+    // its edges to the device grid in the vertex shader (which also re-derives
+    // destW/destH from the snapped corners so the tiling UVs stay aligned).
+    const destW = sprite.width;
+    const destH = sprite.height;
     const flipY = texture instanceof Texture && texture.flipY;
-
-    // PixelSnapMode.Geometry: snap the destination quad to the device grid.
-    // Repetition stays shader-based; only the outer rectangle (and the tiling
-    // derived from it) moves. Position/None leave the destination unchanged.
-    if (sprite.pixelSnapMode === PixelSnapMode.Geometry) {
-      const backend = this.getBackend();
-      const snap = backend._getSnapPixelSize();
-      const rb = sprite.getRenderBounds(backend.view, snap.width, snap.height, this._snapBounds);
-
-      destW = rb.width;
-      destH = rb.height;
-    }
 
     const tilingX = computeShaderTiling(srcW, destW, sprite.modeX, sprite.fitX);
     const tilingY = computeShaderTiling(srcH, destH, sprite.modeY, sprite.fitY);
@@ -387,15 +452,9 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
   }
 
   private _writeGeoQuads(sprite: RepeatingSprite, nodeIndex: number): void {
-    let quads: readonly RepeatingSpriteQuad[] = sprite.quads;
-
-    // PixelSnapMode.Geometry: snap shared segment boundaries once (gap-free), like NineSlice.
-    if (sprite.pixelSnapMode === PixelSnapMode.Geometry) {
-      const backend = this.getBackend();
-      const snap = backend._getSnapPixelSize();
-
-      quads = sprite.getRenderQuads(backend.view, snap.width, snap.height);
-    }
+    // Quads are uploaded RAW; PixelSnapMode.Geometry snaps each shared segment
+    // boundary to the device grid in the vertex shader (gap-free, like NineSlice).
+    const quads: readonly RepeatingSpriteQuad[] = sprite.quads;
 
     const flipY = sprite.texture instanceof Texture && sprite.texture.flipY;
     const tint = sprite.tint.toRgba();

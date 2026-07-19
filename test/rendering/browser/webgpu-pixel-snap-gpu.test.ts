@@ -33,6 +33,7 @@ import { PixelSnapMode } from '#rendering/pixelSnap';
 import type { RenderNode } from '#rendering/RenderNode';
 import { RetainedContainer } from '#rendering/RetainedContainer';
 import { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
+import { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
@@ -442,6 +443,86 @@ describe('WebGPU GPU pixel snapping — NineSlice geometry seams', () => {
       // Render-only: logical geometry untouched.
       expect(panel.width).toBe(42);
       expect(panel.x).toBe(10.3);
+    } finally {
+      root.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Case 6: RepeatingSprite (shader strategy) geometry snap under a FRACTIONAL
+// zoom. Repeating carries the destW-from-snapped-corners subtlety: the shader
+// derives the tiling destination width from the SNAPPED corners, so the far edge
+// snaps to a whole device pixel like NineSlice's outer edge. Mirroring Case 5's
+// single-sample differential: with the origin snapped and the 42-local quad
+// spanning 52.5 device px, POSITION snap leaves the far edge fractional (52
+// covered columns) while GEOMETRY snap rounds it out to 53. Without the shader
+// boundary block geometry would behave exactly like position (RED: equal runs).
+// A bad destW derivation (raw instead of snapped corners) would also break the
+// +1 relation by mis-sizing the tiled span.
+// ---------------------------------------------------------------------------
+
+describe('WebGPU GPU pixel snapping — RepeatingSprite geometry', () => {
+  test('Case 6: a shader-strategy RepeatingSprite widens the covered span by one column vs position snap', async ctx => {
+    const backend = await setupBackend();
+    const texture = createSolidTexture('#0000ff', 8); // bare Texture → shader strategy
+    const root = new Container();
+    const tiled = new RepeatingSprite(texture, { width: 42, height: 42, modeX: 'repeat', modeY: 'repeat' });
+
+    try {
+      backend.view.setZoom(1.25); // 42 · 1.25 = 52.5 device px: fractional far edge
+      tiled.setPosition(10.3, 10.7);
+      root.addChild(tiled);
+
+      // Longest contiguous run of fully covered (blue) columns over any row — the
+      // row with the longest run is interior (no top/bottom edge).
+      const longestBlueRun = (): number => {
+        const pixels = snapshotCanvas(backend);
+        let best = 0;
+
+        for (let y = 0; y < canvasSize; y++) {
+          let run = 0;
+
+          for (let x = 0; x < canvasSize; x++) {
+            if (readPixelFrom(pixels, x, y)[2] > 240) {
+              run += 1;
+              best = Math.max(best, run);
+            } else {
+              run = 0;
+            }
+          }
+        }
+
+        return best;
+      };
+
+      // Position snap: origin on an integer device pixel, far edge fractional 52.5.
+      tiled.pixelSnapMode = PixelSnapMode.Position;
+
+      if (!(await renderScene(ctx, backend, root))) {
+        return;
+      }
+
+      const positionRun = longestBlueRun();
+
+      // Geometry snap: the far edge rounds out to a whole device pixel (destW is
+      // re-derived from the snapped corners), covering exactly one more column.
+      tiled.pixelSnapMode = PixelSnapMode.Geometry;
+
+      if (!(await renderScene(ctx, backend, root))) {
+        return;
+      }
+
+      const geometryRun = longestBlueRun();
+
+      expect(positionRun).toBeGreaterThan(0); // the tiled quad drew
+      expect(geometryRun).toBe(positionRun + 1);
+
+      // Render-only: logical geometry untouched.
+      expect(tiled.width).toBe(42);
+      expect(tiled.x).toBe(10.3);
     } finally {
       root.destroy();
       texture.destroy();
