@@ -486,7 +486,7 @@ export class RetainedContainer extends Container {
       return false;
     }
 
-    packTransformRow(patchRowScratch, 0, node.getGlobalTransform(), drawable.tint);
+    packTransformRow(patchRowScratch, 0, node.getGlobalTransform(), drawable.tint, drawable.pixelSnapMode);
     bundle._patchTransformRow(nodeIndex - base, patchRowScratch);
 
     return true;

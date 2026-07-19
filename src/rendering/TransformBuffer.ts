@@ -1,5 +1,6 @@
 import type { Color } from '#core/Color';
 import type { Matrix } from '#math/Matrix';
+import { PixelSnapMode } from '#rendering/pixelSnap';
 
 /**
  * Floats per transform+tint row (3 rgba32f texels): the single source of truth
@@ -18,20 +19,23 @@ const hashUintScratch = new Uint32Array(hashFloatScratch.buffer);
 
 /**
  * Write one transform+tint row into `target` at `offset` in the canonical layout
- * (a,b,c,d, tx,ty,0,0, r/255,g/255,b/255,a). The single packer shared by
+ * (a,b,c,d, tx,ty, snapMode,0, r/255,g/255,b/255,a). The single packer shared by
  * {@link TransformBuffer.write} and the Slice-4b row patch, so the frame buffer
  * and a patched retained row stay bit-identical by construction — a layout change
  * lands in exactly one place.
+ *
+ * `snapMode` is carried as-is (no shader currently reads it); the backends still
+ * upload a CPU-resolved, already-snapped transform, so this is transport only.
  * @internal
  */
-export const packTransformRow = (target: Float32Array, offset: number, transform: Matrix, tint: Color): void => {
+export const packTransformRow = (target: Float32Array, offset: number, transform: Matrix, tint: Color, snapMode: PixelSnapMode = PixelSnapMode.None): void => {
   target[offset + 0] = transform.a;
   target[offset + 1] = transform.b;
   target[offset + 2] = transform.c;
   target[offset + 3] = transform.d;
   target[offset + 4] = transform.x;
   target[offset + 5] = transform.y;
-  target[offset + 6] = 0;
+  target[offset + 6] = snapMode;
   target[offset + 7] = 0;
   target[offset + 8] = tint.r / 255;
   target[offset + 9] = tint.g / 255;
@@ -52,7 +56,7 @@ export interface TransformBufferFrameSnapshot {
  *
  * Slot layout (12 floats):
  * - 0..3:  (a, b, c, d)
- * - 4..7:  (tx, ty, 0, 0)
+ * - 4..7:  (tx, ty, snapMode, 0)
  * - 8..11: (tintR, tintG, tintB, tintA) with RGB in 0..1
  *
  * @internal
@@ -152,10 +156,10 @@ export class TransformBuffer {
     return this;
   }
 
-  public push(transform: Matrix, tint: Color): number {
+  public push(transform: Matrix, tint: Color, snapMode: PixelSnapMode = PixelSnapMode.None): number {
     const slot = this._count;
 
-    this.write(slot, transform, tint);
+    this.write(slot, transform, tint, snapMode);
 
     return slot;
   }
@@ -201,7 +205,7 @@ export class TransformBuffer {
     return { firstRow, rowCount };
   }
 
-  public write(slot: number, transform: Matrix, tint: Color): this {
+  public write(slot: number, transform: Matrix, tint: Color, snapMode: PixelSnapMode = PixelSnapMode.None): this {
     if (!Number.isInteger(slot) || slot < 0) {
       throw new Error(`TransformBuffer slot must be a non-negative integer (got ${slot}).`);
     }
@@ -210,7 +214,7 @@ export class TransformBuffer {
 
     const offset = slot * floatsPerSlot;
 
-    packTransformRow(this._data, offset, transform, tint);
+    packTransformRow(this._data, offset, transform, tint, snapMode);
 
     if (slot >= this._count) {
       this._count = slot + 1;

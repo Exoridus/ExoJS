@@ -2,6 +2,7 @@ import type { Color } from '#core/Color';
 import type { Matrix } from '#math/Matrix';
 import type { Drawable } from '#rendering/Drawable';
 import type { GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
+import { PixelSnapMode } from '#rendering/pixelSnap';
 import type { DrawCommand } from '#rendering/plan/RenderCommand';
 import { TransformBuffer } from '#rendering/TransformBuffer';
 
@@ -33,10 +34,10 @@ export class WebGpuTransformStorage {
     this._buffer.begin(nodeCount);
   }
 
-  public writeCommand(command: DrawCommand, transform?: Matrix): void {
+  public writeCommand(command: DrawCommand, transform?: Matrix, snapMode: PixelSnapMode = PixelSnapMode.None): void {
     const drawable = command.drawable;
 
-    this._buffer.write(command.nodeIndex, transform ?? drawable.getGlobalTransform(), drawable.tint);
+    this._buffer.write(command.nodeIndex, transform ?? drawable.getGlobalTransform(), drawable.tint, snapMode);
   }
 
   /**
@@ -54,8 +55,8 @@ export class WebGpuTransformStorage {
    * `nodeIndex` — a direct `backend.draw(drawable)` outside the plan player —
    * so a batch of synthetic draws does not collide on a single row.
    */
-  public push(drawable: Drawable, transform?: Matrix): number {
-    return this._buffer.push(transform ?? drawable.getGlobalTransform(), drawable.tint);
+  public push(drawable: Drawable, transform?: Matrix, snapMode: PixelSnapMode = PixelSnapMode.None): number {
+    return this._buffer.push(transform ?? drawable.getGlobalTransform(), drawable.tint, snapMode);
   }
 
   /**
@@ -63,8 +64,8 @@ export class WebGpuTransformStorage {
    * slot. Unlike {@link push} the values are supplied directly rather than read
    * from a drawable — used by explicit instanced batches.
    */
-  public pushValues(transform: Matrix, tint: Color): number {
-    return this._buffer.push(transform, tint);
+  public pushValues(transform: Matrix, tint: Color, snapMode: PixelSnapMode = PixelSnapMode.None): number {
+    return this._buffer.push(transform, tint, snapMode);
   }
 
   /**

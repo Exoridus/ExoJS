@@ -442,7 +442,7 @@ export class WebGl2Backend implements RenderBackend {
   public _writeTransformCommand(command: DrawCommand): void {
     const drawable = command.drawable;
 
-    this._transformBuffer.write(command.nodeIndex, this._resolveSnapTransform(drawable), drawable.tint);
+    this._transformBuffer.write(command.nodeIndex, this._resolveSnapTransform(drawable), drawable.tint, drawable.pixelSnapMode);
   }
 
   /**
@@ -487,7 +487,7 @@ export class WebGl2Backend implements RenderBackend {
    * @internal
    */
   public _pushTransform(drawable: Drawable): number {
-    return this._transformBuffer.push(this._resolveSnapTransform(drawable), drawable.tint);
+    return this._transformBuffer.push(this._resolveSnapTransform(drawable), drawable.tint, drawable.pixelSnapMode);
   }
 
   /** @internal */

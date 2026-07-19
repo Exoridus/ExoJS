@@ -419,7 +419,7 @@ export class WebGpuBackend implements RenderBackend {
       const command = entry.command;
 
       if (drawCommandUsesSharedTransform(command, this)) {
-        storage.writeCommand(command, this._resolveSnapTransform(command.drawable));
+        storage.writeCommand(command, this._resolveSnapTransform(command.drawable), command.drawable.pixelSnapMode);
       } else {
         storage.recordSkippedWrite();
       }
@@ -1013,7 +1013,7 @@ export class WebGpuBackend implements RenderBackend {
    * @internal
    */
   public _pushTransform(drawable: Drawable): number {
-    return this._getTransformStorage().push(drawable, this._resolveSnapTransform(drawable));
+    return this._getTransformStorage().push(drawable, this._resolveSnapTransform(drawable), drawable.pixelSnapMode);
   }
 
   /**
