@@ -1,4 +1,5 @@
 import { Rectangle } from '#math/Rectangle';
+import { PixelSnapMode } from '#rendering/pixelSnap';
 import { Shader } from '#rendering/shader/Shader';
 import type { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
 import { computeShaderTiling, type RepeatingSpriteQuad } from '#rendering/sprite/repeatingSpritePlan';
@@ -29,6 +30,7 @@ layout(location = 3) in uint a_nodeIndex;    // transform row
 
 uniform mat3 u_projection;
 uniform mat3 u_group;
+uniform vec4 u_viewport;
 uniform sampler2D u_transforms;
 
 out vec2 v_texcoord;
@@ -51,7 +53,21 @@ void main(void) {
 
     float wx = m0.x * lx + m0.y * ly + m1.x;
     float wy = m0.z * lx + m0.w * ly + m1.y;
-    gl_Position = vec4((u_projection * u_group * vec3(wx, wy, 1.0)).xy, 0.0, 1.0);
+    vec2 clip = (u_projection * u_group * vec3(wx, wy, 1.0)).xy;
+
+    // Render-only pixel snapping (m1.z: 0 = none, 1 = position, 2 = geometry —
+    // both non-zero modes snap the origin). Snap the node ORIGIN's device-pixel
+    // position and rigid-shift the whole primitive by the same delta. floor(x+0.5)
+    // matches the CPU Math.round policy; GLSL round() is undefined at .5. Grid
+    // alignment is independent of the y-axis convention because the staged
+    // viewport rect is whole device pixels.
+    if (m1.z != 0.0) {
+        vec2 originClip = (u_projection * u_group * vec3(m1.x, m1.y, 1.0)).xy;
+        vec2 originDevice = u_viewport.xy + (originClip * 0.5 + 0.5) * u_viewport.zw;
+        clip += (floor(originDevice + 0.5) - originDevice) * 2.0 / max(u_viewport.zw, vec2(1.0));
+    }
+
+    gl_Position = vec4(clip, 0.0, 1.0);
 
     float u = (destW > 0.0)
         ? ((lx - a_quadBounds.x) / destW) * a_uvParams.x + a_uvParams.z
@@ -79,6 +95,7 @@ layout(location = 3) in uint a_nodeIndex;    // transform row
 
 uniform mat3 u_projection;
 uniform mat3 u_group;
+uniform vec4 u_viewport;
 uniform sampler2D u_transforms;
 
 out vec2 v_texcoord;
@@ -98,7 +115,21 @@ void main(void) {
 
     float wx = m0.x * lx + m0.y * ly + m1.x;
     float wy = m0.z * lx + m0.w * ly + m1.y;
-    gl_Position = vec4((u_projection * u_group * vec3(wx, wy, 1.0)).xy, 0.0, 1.0);
+    vec2 clip = (u_projection * u_group * vec3(wx, wy, 1.0)).xy;
+
+    // Render-only pixel snapping (m1.z: 0 = none, 1 = position, 2 = geometry —
+    // both non-zero modes snap the origin). Snap the node ORIGIN's device-pixel
+    // position and rigid-shift the whole primitive by the same delta. floor(x+0.5)
+    // matches the CPU Math.round policy; GLSL round() is undefined at .5. Grid
+    // alignment is independent of the y-axis convention because the staged
+    // viewport rect is whole device pixels.
+    if (m1.z != 0.0) {
+        vec2 originClip = (u_projection * u_group * vec3(m1.x, m1.y, 1.0)).xy;
+        vec2 originDevice = u_viewport.xy + (originClip * 0.5 + 0.5) * u_viewport.zw;
+        clip += (floor(originDevice + 0.5) - originDevice) * 2.0 / max(u_viewport.zw, vec2(1.0));
+    }
+
+    gl_Position = vec4(clip, 0.0, 1.0);
 
     float u = (cx == 0) ? a_uvBounds.x : a_uvBounds.z;
     float v = (cy == 0) ? a_uvBounds.y : a_uvBounds.w;
@@ -267,11 +298,12 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
     const backend = this.getBackend();
 
     // Retained recording (Track B Slice 3): only the geometry path is
-    // replayable. A shader-path or pixel-snapped draw inside an active capture
-    // cannot be replayed from group-owned resources, so poison the window —
-    // the group falls back to entry replay (correct, never stale) rather than
-    // replaying an incomplete or wrap-less instruction stream.
-    if (backend._isRetainedCapturing && (strategy === 'shader' || sprite.pixelSnapMode !== 'none')) {
+    // replayable. A shader-path or geometry-snapped draw inside an active
+    // capture cannot be replayed from group-owned resources, so poison the
+    // window — the group falls back to entry replay (correct, never stale)
+    // rather than replaying an incomplete or wrap-less instruction stream.
+    // Position snapping is resolved in-shader and stays recordable.
+    if (backend._isRetainedCapturing && (strategy === 'shader' || sprite.pixelSnapMode === PixelSnapMode.Geometry)) {
       backend._poisonRetainedCaptures();
     }
 
@@ -311,10 +343,10 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
     let destH = sprite.height;
     const flipY = texture instanceof Texture && texture.flipY;
 
-    // 'geometry' mode: snap the destination quad to the device grid. Repetition
-    // stays shader-based; only the outer rectangle (and the tiling derived from
-    // it) moves. Position/none leave the destination unchanged.
-    if (sprite.pixelSnapMode === 'geometry') {
+    // PixelSnapMode.Geometry: snap the destination quad to the device grid.
+    // Repetition stays shader-based; only the outer rectangle (and the tiling
+    // derived from it) moves. Position/None leave the destination unchanged.
+    if (sprite.pixelSnapMode === PixelSnapMode.Geometry) {
       const backend = this.getBackend();
       const snap = backend._getSnapPixelSize();
       const rb = sprite.getRenderBounds(backend.view, snap.width, snap.height, this._snapBounds);
@@ -357,8 +389,8 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
   private _writeGeoQuads(sprite: RepeatingSprite, nodeIndex: number): void {
     let quads: readonly RepeatingSpriteQuad[] = sprite.quads;
 
-    // 'geometry' mode: snap shared segment boundaries once (gap-free), like NineSlice.
-    if (sprite.pixelSnapMode === 'geometry') {
+    // PixelSnapMode.Geometry: snap shared segment boundaries once (gap-free), like NineSlice.
+    if (sprite.pixelSnapMode === PixelSnapMode.Geometry) {
       const backend = this.getBackend();
       const snap = backend._getSnapPixelSize();
 
@@ -454,6 +486,11 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
         this._geoPathShader.getUniform('u_group').setValue(groupArray);
       }
     }
+
+    // Staged unconditionally per flush (cheap vec4) so a viewport change without
+    // a group change still refreshes the snap projection on both path shaders.
+    backend._stageViewportUniform(this._shaderPathShader);
+    backend._stageViewportUniform(this._geoPathShader);
 
     if (this._shaderQuadCount > 0) {
       this._flushShaderBatch(backend);
@@ -665,6 +702,8 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
 
       this._geoPathShader.getUniform('u_group').setValue(groupTransform !== null ? groupTransform.toArray(false) : identityGroupMat3);
     }
+
+    backend._stageViewportUniform(this._geoPathShader);
   }
 
   private _resetBatchState(): void {

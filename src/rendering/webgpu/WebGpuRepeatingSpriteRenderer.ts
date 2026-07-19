@@ -3,6 +3,7 @@
 import { Matrix } from '#math/Matrix';
 import { Rectangle } from '#math/Rectangle';
 import { packAffineMat4 } from '#rendering/affinePacking';
+import { PixelSnapMode } from '#rendering/pixelSnap';
 import type { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
 import { computeShaderTiling, type RepeatingSpriteQuad } from '#rendering/sprite/repeatingSpritePlan';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
@@ -22,6 +23,7 @@ import {
   type WebGpuRetainedBatchReplayer,
   type WebGpuRetainedNodeIndexRange,
 } from './WebGpuRetainedGroupResources';
+import { packSnapViewport } from './webgpuSnapViewport';
 import { stencilContentDepthStencilState } from './WebGpuStencilState';
 
 // ---------------------------------------------------------------------------
@@ -34,6 +36,7 @@ export const commonWgsl = `
 struct ProjectionUniforms {
     matrix: mat4x4<f32>,
     group: mat4x4<f32>,
+    viewport: vec4<f32>,        // device-pixel snap rect (x, y, width, height)
 };
 struct TransformSlot {
     m0: vec4<f32>,
@@ -51,6 +54,21 @@ struct VOut {
     @location(0) uv:    vec2<f32>,
     @location(1) color: vec4<f32>,
 };
+
+// Render-only pixel snapping (slot.m1.z: 0 = none, non-zero = snap origin).
+// Snap the node ORIGIN's device-pixel position and rigid-shift the whole
+// primitive by the same delta. floor(x + 0.5) matches the CPU Math.round
+// policy; WGSL round() is half-to-even. Grid alignment is independent of the
+// y-axis convention because the staged viewport rect is whole device pixels.
+fn snapPosition(position: vec4<f32>, slot: TransformSlot) -> vec4<f32> {
+    if (slot.m1.z == 0.0) {
+        return position;
+    }
+    let originClip = projection.matrix * projection.group * vec4<f32>(slot.m1.x, slot.m1.y, 0.0, 1.0);
+    let originDevice = projection.viewport.xy + (originClip.xy * 0.5 + vec2<f32>(0.5)) * projection.viewport.zw;
+    let snapDelta = (floor(originDevice + vec2<f32>(0.5)) - originDevice) * 2.0 / max(projection.viewport.zw, vec2<f32>(1.0));
+    return vec4<f32>(position.xy + snapDelta, position.z, position.w);
+}
 `;
 
 // ---------------------------------------------------------------------------
@@ -80,7 +98,7 @@ fn shaderVert(input: ShaderVIn, @builtin(vertex_index) vid: u32) -> VOut {
     let slot = transforms[input.nodeIndex];
     let wx = slot.m0.x * lx + slot.m0.y * ly + slot.m1.x;
     let wy = slot.m0.z * lx + slot.m0.w * ly + slot.m1.y;
-    out.pos = projection.matrix * projection.group * vec4<f32>(wx, wy, 0.0, 1.0);
+    out.pos = snapPosition(projection.matrix * projection.group * vec4<f32>(wx, wy, 0.0, 1.0), slot);
 
     let u = select(input.uvParams.z, ((lx - input.quadBounds.x) / destW) * input.uvParams.x + input.uvParams.z, destW > 0.0);
     let v = select(input.uvParams.w, ((ly - input.quadBounds.y) / destH) * input.uvParams.y + input.uvParams.w, destH > 0.0);
@@ -119,7 +137,7 @@ fn geoVert(input: GeoVIn, @builtin(vertex_index) vid: u32) -> VOut {
     let slot = transforms[input.nodeIndex];
     let wx = slot.m0.x * lx + slot.m0.y * ly + slot.m1.x;
     let wy = slot.m0.z * lx + slot.m0.w * ly + slot.m1.y;
-    out.pos = projection.matrix * projection.group * vec4<f32>(wx, wy, 0.0, 1.0);
+    out.pos = snapPosition(projection.matrix * projection.group * vec4<f32>(wx, wy, 0.0, 1.0), slot);
 
     let u = select(input.uvBounds.x, input.uvBounds.z, cx == 1u);
     let v = select(input.uvBounds.y, input.uvBounds.w, cy == 1u);
@@ -140,7 +158,8 @@ fn geoFrag(input: VOut) -> @location(0) vec4<f32> {
 
 const shaderStrideBytes = 40; // float32x4 bounds + float32x4 uvParams + unorm8x4 + uint32
 const geoStrideBytes = 32; // float32x4 bounds + unorm16x4 + unorm8x4 + uint32 (NineSlice layout)
-const projectionByteLength = 128;
+// mat4x4 projection + mat4x4 group + vec4 snap viewport (aligned 16, total 144).
+const projectionByteLength = 144;
 const initialBatchCapacity = 32;
 const indicesPerInstance = 6;
 const quadIndices = new Uint16Array([0, 1, 2, 0, 2, 3]);
@@ -231,7 +250,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
   private _currentModeX: RepeatMode | null = null;
   private _currentModeY: RepeatMode | null = null;
   private _currentPath: 'shader' | 'geometry' | null = null;
-  // Reusable scratch for device-snapped bounds ('geometry' mode).
+  // Reusable scratch for device-snapped bounds (PixelSnapMode.Geometry).
   private readonly _snapBounds = new Rectangle();
 
   // Retained-batch record/replay scratch (Track B Slice 3). One-texture list
@@ -353,11 +372,12 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
 
     // Retained recording (Track B Slice 3): only the geometry path is
     // replayable (see _supportsRetainedBatches). A shader-path or
-    // pixel-snapped draw inside an active capture window cannot be replayed
+    // geometry-snapped draw inside an active capture window cannot be replayed
     // from group-owned resources, so poison the window — the group falls
     // back to entry replay (correct, never stale) instead of a replay that is
     // either missing the wrap-mode sampler or holding view-dependent bytes.
-    if ((strategy === 'shader' || sprite.pixelSnapMode !== 'none') && backend._retainedCaptureActive) {
+    // Position snapping is resolved in-shader and stays recordable.
+    if ((strategy === 'shader' || sprite.pixelSnapMode === PixelSnapMode.Geometry) && backend._retainedCaptureActive) {
       backend._poisonActiveRetainedCaptures();
     }
 
@@ -400,10 +420,10 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     let destH = sprite.height;
     const flipY = texture instanceof Texture && texture.flipY;
 
-    // 'geometry' mode: snap the destination quad to the device grid. Repetition
-    // stays shader-based; only the outer rectangle (and the tiling derived from
-    // it) moves. Position/none leave the destination unchanged.
-    if (sprite.pixelSnapMode === 'geometry') {
+    // PixelSnapMode.Geometry: snap the destination quad to the device grid.
+    // Repetition stays shader-based; only the outer rectangle (and the tiling
+    // derived from it) moves. Position/None leave the destination unchanged.
+    if (sprite.pixelSnapMode === PixelSnapMode.Geometry) {
       const backend = this.getBackend();
       const snap = backend._getSnapPixelSize();
       const rb = sprite.getRenderBounds(backend.view, snap.width, snap.height, this._snapBounds);
@@ -443,8 +463,8 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
   private _writeGeoQuads(sprite: RepeatingSprite, nodeIndex: number): void {
     let quads: readonly RepeatingSpriteQuad[] = sprite.quads;
 
-    // 'geometry' mode: snap shared segment boundaries once (gap-free), like NineSlice.
-    if (sprite.pixelSnapMode === 'geometry') {
+    // PixelSnapMode.Geometry: snap shared segment boundaries once (gap-free), like NineSlice.
+    if (sprite.pixelSnapMode === PixelSnapMode.Geometry) {
       const backend = this.getBackend();
       const snap = backend._getSnapPixelSize();
 
@@ -515,17 +535,20 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
       this._instanceArena.resetPass();
     }
 
-    // ProjectionUniforms layout: mat4x4 projection + mat4x4 group, packed via
-    // the shared canonical (non-transposed) column order. The write is skipped
-    // when the UBO already holds this exact (view, updateId, group-id) state —
-    // static frames then issue zero projection uploads.
+    // ProjectionUniforms layout: mat4x4 projection + mat4x4 group + vec4 snap
+    // viewport, packed via the shared canonical (non-transposed) column order.
+    // The write is skipped when the UBO already holds this exact (view,
+    // updateId, group-id, snap-rect) state — static frames then issue zero
+    // projection uploads.
     const view = backend.view;
+    const viewportChanged = packSnapViewport(backend, this._projData, 32);
 
     if (
       !this._hasWrittenProjection ||
       this._writtenView !== view ||
       this._writtenViewUpdateId !== view.updateId ||
-      this._writtenGroupTransformId !== backend.renderGroupTransformId
+      this._writtenGroupTransformId !== backend.renderGroupTransformId ||
+      viewportChanged
     ) {
       packAffineMat4(view.getTransform(), this._projData, 0);
       packAffineMat4(backend.renderGroupTransform ?? Matrix.identity, this._projData, 16);
@@ -800,7 +823,11 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
 
     packAffineMat4(backend.renderGroupTransform ?? Matrix.identity, scratch, 0);
 
-    let uboDirty = !bundle.uboWritten || bundle.uboView !== view || bundle.uboViewUpdateId !== view.updateId;
+    // Staged unconditionally: an unchanged rect makes this an identity write,
+    // while a changed one forces the rewrite the skip state cannot see.
+    const viewportChanged = packSnapViewport(backend, bundle.uboData, 32);
+
+    let uboDirty = !bundle.uboWritten || bundle.uboView !== view || bundle.uboViewUpdateId !== view.updateId || viewportChanged;
 
     if (!uboDirty) {
       for (let i = 0; i < 16; i++) {

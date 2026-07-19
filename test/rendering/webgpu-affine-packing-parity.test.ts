@@ -218,6 +218,7 @@ describe('WebGpuMeshRenderer uniform packing parity', () => {
       {
         view: { getTransform: (): Matrix => projection },
         renderGroupTransform: group,
+        _snapViewport: { x: 0, y: 0, width: 800, height: 600 },
       },
       false,
     );
@@ -251,6 +252,7 @@ describe('WebGpuMeshRenderer uniform packing parity', () => {
       {
         view: { getTransform: (): Matrix => projection },
         renderGroupTransform: null,
+        _snapViewport: { x: 0, y: 0, width: 800, height: 600 },
       },
       true,
     );

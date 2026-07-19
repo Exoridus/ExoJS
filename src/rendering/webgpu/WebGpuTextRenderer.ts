@@ -24,6 +24,7 @@ import {
   type WebGpuRetainedNodeIndexRange,
   type WebGpuRetainedRendererReplayState,
 } from './WebGpuRetainedGroupResources';
+import { packSnapViewport } from './webgpuSnapViewport';
 import { stencilContentDepthStencilState } from './WebGpuStencilState';
 
 // ── Node data layout (identical to WebGl2TextRenderer) ───────────────────────
@@ -52,8 +53,9 @@ const initialVertexCapacity = 256;
 const initialIndexCapacity = 384;
 const initialNodeCapacity = 32;
 
-// FrameUniforms: 6 × vec4<f32> = 96 bytes (projection + group mat3x3, column-major)
-const projectionBytes = 96;
+// FrameUniforms: 7 × vec4<f32> = 112 bytes (projection + group mat3x3,
+// column-major, + device-pixel snap viewport rect)
+const projectionBytes = 112;
 
 type ShaderType = 'sdf' | 'msdf' | 'color';
 
@@ -145,6 +147,7 @@ struct FrameUniforms {
     groupCol0 : vec4<f32>,
     groupCol1 : vec4<f32>,
     groupCol2 : vec4<f32>,
+    viewport : vec4<f32>,       // device-pixel snap rect (x, y, width, height)
 };
 
 @group(0) @binding(0) var<uniform>       frame : FrameUniforms;
@@ -193,6 +196,21 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     );
     let worldPos = proj * grp * xf * vec3<f32>(input.position, 1.0);
 
+    var clipPos = vec4<f32>(worldPos.xy, 0.0, 1.0);
+
+    // Render-only pixel snapping (t0.z: 0 = none, non-zero = snap origin).
+    // Snap the node ORIGIN (t0.w, t1.w)'s device-pixel position and
+    // rigid-shift every glyph vertex by the same delta. floor(x + 0.5)
+    // matches the CPU Math.round policy; WGSL round() is half-to-even. Grid
+    // alignment is independent of the y-axis convention because the staged
+    // viewport rect is whole device pixels.
+    if (t0.z != 0.0) {
+        let originClip = (proj * grp * vec3<f32>(t0.w, t1.w, 1.0)).xy;
+        let originDevice = frame.viewport.xy + (originClip * 0.5 + vec2<f32>(0.5)) * frame.viewport.zw;
+        let snapDelta = (floor(originDevice + vec2<f32>(0.5)) - originDevice) * 2.0 / max(frame.viewport.zw, vec2<f32>(1.0));
+        clipPos = vec4<f32>(clipPos.xy + snapDelta, clipPos.z, clipPos.w);
+    }
+
     let bSize  = t9.zw;
     var gradUV = vec2<f32>(0.0);
     if (bSize.x > 0.0 && bSize.y > 0.0) {
@@ -200,7 +218,7 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     }
 
     var out: VertexOutput;
-    out.clipPos  = vec4<f32>(worldPos.xy, 0.0, 1.0);
+    out.clipPos  = clipPos;
     out.texcoord = input.texcoord;
     out.gradUV   = gradUV;
     out.nodeIdx  = ni;
@@ -447,17 +465,20 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
       return (this._textureKeyMap.get(a.atlasTexture) ?? 0) - (this._textureKeyMap.get(b.atlasTexture) ?? 0);
     });
 
-    // Upload FrameUniforms: projection + group as vec4-padded mat3x3 columns,
-    // packed via the shared canonical (non-transposed) column order. The write
-    // is skipped when the UBO already holds this exact (view, updateId,
-    // group-id) state — static text then issues zero projection uploads.
+    // Upload FrameUniforms: projection + group as vec4-padded mat3x3 columns
+    // plus the device-pixel snap viewport rect, packed via the shared canonical
+    // (non-transposed) column order. The write is skipped when the UBO already
+    // holds this exact (view, updateId, group-id, snap-rect) state — static
+    // text then issues zero projection uploads.
     const view = backend.view;
+    const viewportChanged = packSnapViewport(backend, this._projData, 24);
 
     if (
       !this._hasWrittenProjection ||
       this._writtenView !== view ||
       this._writtenViewUpdateId !== view.updateId ||
-      this._writtenGroupTransformId !== backend.renderGroupTransformId
+      this._writtenGroupTransformId !== backend.renderGroupTransformId ||
+      viewportChanged
     ) {
       packAffineMat3Std140(view.getTransform(), this._projData, 0);
       packAffineMat3Std140(backend.renderGroupTransform ?? Matrix.identity, this._projData, 12);
@@ -793,7 +814,10 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     const m = node.getGlobalTransform().toArray(false);
     arr[base + 0] = m[0]!;
     arr[base + 1] = m[1]!;
-    arr[base + 2] = m[2]!;
+    // Texel 0's spare `.z` carries the snap-mode flag the vertex stage reads to
+    // decide whether to snap the glyph origin to the device-pixel grid (spec D2:
+    // this turns Text position snapping from a silent no-op into a real feature).
+    arr[base + 2] = node.pixelSnapMode;
     arr[base + 3] = m[6]!;
     arr[base + 4] = m[3]!;
     arr[base + 5] = m[4]!;
@@ -1152,6 +1176,9 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
 
     packAffineMat3Std140(view.getTransform(), scratch, 0);
     packAffineMat3Std140(backend.renderGroupTransform ?? Matrix.identity, scratch, 12);
+    // The snap viewport rides in the same scratch, so the full content compare
+    // below already covers a snap-rect change (attachment resize).
+    packSnapViewport(backend, scratch, 24);
 
     let uboDirty = !state.uboWritten;
 
@@ -1241,7 +1268,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
 
     row[0] = m[0]!;
     row[1] = m[1]!;
-    row[2] = m[2]!;
+    row[2] = drawable.pixelSnapMode; // snap-mode flag (texel 0's spare .z)
     row[3] = m[6]!;
     row[4] = m[3]!;
     row[5] = m[4]!;

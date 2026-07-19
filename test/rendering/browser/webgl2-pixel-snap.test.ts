@@ -20,6 +20,7 @@
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { Container } from '#rendering/Container';
+import { PixelSnapMode } from '#rendering/pixelSnap';
 import type { RenderNode } from '#rendering/RenderNode';
 import { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
 import { Sprite } from '#rendering/sprite/Sprite';
@@ -210,7 +211,7 @@ describe('WebGL2 pixel snapping — Sprite position mode', () => {
 
     try {
       sprite.setPosition(12.37, 14.83);
-      sprite.pixelSnapMode = 'position';
+      sprite.pixelSnapMode = PixelSnapMode.Position;
       root.addChild(sprite);
 
       const worldBefore = sprite.getGlobalTransform().clone();
@@ -242,7 +243,7 @@ describe('WebGL2 pixel snapping — Sprite position mode', () => {
 
     try {
       sprite.setPosition(12.37, 14.83);
-      sprite.pixelSnapMode = 'none';
+      sprite.pixelSnapMode = PixelSnapMode.None;
       root.addChild(sprite);
 
       render(backend, root);
@@ -263,7 +264,7 @@ describe('WebGL2 pixel snapping — Sprite position mode', () => {
 
     try {
       sprite.setPosition(9.6, 5.2);
-      sprite.pixelSnapMode = 'geometry';
+      sprite.pixelSnapMode = PixelSnapMode.Geometry;
       root.addChild(sprite);
 
       render(backend, root);
@@ -294,7 +295,7 @@ describe('WebGL2 pixel snapping — NineSlice geometry mode', () => {
 
     try {
       panel.setPosition(6.3, 6.3);
-      panel.pixelSnapMode = 'geometry';
+      panel.pixelSnapMode = PixelSnapMode.Geometry;
       root.addChild(panel);
 
       render(backend, root);
@@ -322,7 +323,7 @@ describe('WebGL2 pixel snapping — NineSlice geometry mode', () => {
     try {
       panel.setPosition(32, 32);
       panel.setRotation(25);
-      panel.pixelSnapMode = 'geometry';
+      panel.pixelSnapMode = PixelSnapMode.Geometry;
       root.addChild(panel);
 
       const worldBefore = panel.getGlobalTransform().clone();

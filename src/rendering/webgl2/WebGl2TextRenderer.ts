@@ -344,7 +344,10 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     const m = node.getGlobalTransform().toArray(false); // col-major: [a,c,0, b,d,0, tx,ty,1]
     arr[base + 0] = m[0]!; // a
     arr[base + 1] = m[1]!; // c
-    arr[base + 2] = m[2]!; // 0
+    // texel 0's spare `.z` carries the snap-mode flag the vertex shader reads to
+    // decide whether to snap the glyph origin to the device-pixel grid (spec D2:
+    // this turns Text position snapping from a silent no-op into a real feature).
+    arr[base + 2] = node.pixelSnapMode; // snap-mode flag
     arr[base + 3] = m[6]!; // tx
     arr[base + 4] = m[3]!; // b
     arr[base + 5] = m[4]!; // d
@@ -563,6 +566,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
 
         shader.getUniform('u_group').setValue(groupTransform !== null ? groupTransform.toArray(false) : identityGroupMat3);
       }
+      backend._stageViewportUniform(shader);
       if (shader.uniforms.has('u_texture')) {
         shader.getUniform('u_texture').setValue(this._textureUnitScratch);
       }
@@ -762,6 +766,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
 
       shader.getUniform('u_group').setValue(groupTransform !== null ? groupTransform.toArray(false) : identityGroupMat3);
     }
+    backend._stageViewportUniform(shader);
     if (shader.uniforms.has('u_texture')) {
       shader.getUniform('u_texture').setValue(this._retainedTextureUnit0Scratch);
     }
@@ -815,7 +820,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
 
     row[0] = m[0]!; // a
     row[1] = m[1]!; // c
-    row[2] = m[2]!; // 0
+    row[2] = drawable.pixelSnapMode; // snap-mode flag (texel 0's spare .z)
     row[3] = m[6]!; // tx
     row[4] = m[3]!; // b
     row[5] = m[4]!; // d

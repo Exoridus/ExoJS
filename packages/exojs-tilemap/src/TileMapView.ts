@@ -1,4 +1,4 @@
-import type { PixelSnapMode } from '@codexo/exojs/renderer-sdk';
+import { PixelSnapMode } from '@codexo/exojs/renderer-sdk';
 
 import { ImageLayer } from './ImageLayer';
 import { ImageLayerNode } from './ImageLayerNode';
@@ -131,7 +131,7 @@ export class TileMapView {
   private readonly _imageLayerNodeById = new Map<number, ImageLayerNode>();
 
   private _destroyed = false;
-  private _pixelSnapMode: PixelSnapMode = 'none';
+  private _pixelSnapMode: PixelSnapMode = PixelSnapMode.None;
 
   /**
    * @param map     The runtime map to compose. Referenced, never owned.
@@ -200,7 +200,7 @@ export class TileMapView {
    * current value is a no-op; an invalid value throws and leaves the prior mode
    * unchanged.
    *
-   * @default 'none'
+   * @default PixelSnapMode.None
    * @stable
    */
   public get pixelSnapMode(): PixelSnapMode {
@@ -362,7 +362,7 @@ export class TileMapView {
       if (!node) {
         node = new TileLayerNode(layer, { cullable: this._cullable });
 
-        if (this._pixelSnapMode !== 'none') {
+        if (this._pixelSnapMode !== PixelSnapMode.None) {
           node.pixelSnapMode = this._pixelSnapMode;
         }
 
@@ -384,7 +384,7 @@ export class TileMapView {
       if (!node) {
         node = new ImageLayerNode(imageLayer);
 
-        if (this._pixelSnapMode !== 'none') {
+        if (this._pixelSnapMode !== PixelSnapMode.None) {
           node.pixelSnapMode = this._pixelSnapMode;
         }
 

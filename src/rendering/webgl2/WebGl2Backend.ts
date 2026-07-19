@@ -9,7 +9,6 @@ import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import { dataTextureBytesPerPixel, estimateTextureBytes, GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
 import type { Mesh } from '#rendering/mesh/Mesh';
-import { resolveUploadTransform } from '#rendering/pixelSnap';
 import { type DrawCommand, drawCommandUsesSharedTransform, RenderEntryKind } from '#rendering/plan/RenderCommand';
 import type { ScopeEntry } from '#rendering/plan/RenderScope';
 import {
@@ -230,7 +229,11 @@ export class WebGl2Backend implements RenderBackend {
   /** Whether `EXT_color_buffer_float` is available (float RenderTexture targets are renderable). */
   private _floatRenderable = false;
   private _renderTarget: RenderTarget;
-  private readonly _snapTransform: Matrix = new Matrix();
+  // Device-pixel viewport rect last handed to `gl.viewport` (x, y, width,
+  // height). Cached at the bind seam so the vertex shaders can map a drawable's
+  // clip-space origin into device pixels for GPU-side position snapping.
+  private readonly _deviceViewport = { x: 0, y: 0, width: 0, height: 0 };
+  private readonly _viewportUniformScratch = new Float32Array(4);
   private _renderer: Renderer | null = null;
   private _renderGroupTransform: Matrix | null = null;
   private _renderGroupTransformId = 0;
@@ -442,22 +445,11 @@ export class WebGl2Backend implements RenderBackend {
   public _writeTransformCommand(command: DrawCommand): void {
     const drawable = command.drawable;
 
-    this._transformBuffer.write(command.nodeIndex, this._resolveSnapTransform(drawable), drawable.tint);
-  }
-
-  /**
-   * Resolve the world transform to upload for `drawable`, applying render-only
-   * pixel snapping against the active render target's device-pixel grid when the
-   * drawable opts in. Returns the live (unsnapped) global transform for the
-   * `'none'` default; never mutates logical state.
-   * @internal
-   */
-  private _resolveSnapTransform(drawable: Drawable): Matrix {
-    const target = this._renderTarget;
-    const width = target.root ? this._canvas.width : target.width;
-    const height = target.root ? this._canvas.height : target.height;
-
-    return resolveUploadTransform(drawable, target.view, width, height, this._snapTransform, this._renderGroupTransform);
+    // Upload the RAW global transform: WebGL2 position snapping now happens in
+    // the vertex shaders (the row's snap-mode flag at texel 1's `.z` tells them
+    // whether to snap the device origin), so the CPU seam no longer rounds the
+    // translation. Geometry-boundary snapping still composes on the CPU.
+    this._transformBuffer.write(command.nodeIndex, drawable.getGlobalTransform(), drawable.tint, drawable.pixelSnapMode);
   }
 
   /**
@@ -477,6 +469,43 @@ export class WebGl2Backend implements RenderBackend {
   }
 
   /**
+   * Device-pixel viewport rect last applied via `gl.viewport` — origin `(x, y)`
+   * and size `(width, height)` in actual framebuffer pixels (GL bottom-left
+   * origin). The core vertex shaders read this (as `u_viewport`) to project a
+   * drawable's clip-space origin into device pixels for GPU-side position
+   * snapping. Because the rect is whole device pixels, grid alignment is
+   * independent of the y-flip convention.
+   * @internal
+   */
+  public get _snapViewport(): { readonly x: number; readonly y: number; readonly width: number; readonly height: number } {
+    return this._deviceViewport;
+  }
+
+  /**
+   * Stage the device-pixel viewport rect into `shader`'s `u_viewport` uniform
+   * (a no-op when the program doesn't declare it). Staged unconditionally per
+   * flush alongside `u_group` — a vec4 uniform set is cheap — so every core
+   * vertex shader can snap a drawable's device origin whenever its transform-row
+   * flag is set.
+   * @internal
+   */
+  public _stageViewportUniform(shader: Shader): void {
+    if (!shader.uniforms.has('u_viewport')) {
+      return;
+    }
+
+    const viewport = this._deviceViewport;
+    const scratch = this._viewportUniformScratch;
+
+    scratch[0] = viewport.x;
+    scratch[1] = viewport.y;
+    scratch[2] = viewport.width;
+    scratch[3] = viewport.height;
+
+    shader.getUniform('u_viewport').setValue(scratch);
+  }
+
+  /**
    * Append a drawable's world transform (+ tint) to the shared transform buffer
    * and return the slot it was written to. Used by instanced renderers for draws
    * that arrive without a render-group upload boundary — i.e. a direct
@@ -487,7 +516,9 @@ export class WebGl2Backend implements RenderBackend {
    * @internal
    */
   public _pushTransform(drawable: Drawable): number {
-    return this._transformBuffer.push(this._resolveSnapTransform(drawable), drawable.tint);
+    // Raw global transform — the vertex shaders snap the origin (see
+    // {@link _writeTransformCommand}).
+    return this._transformBuffer.push(drawable.getGlobalTransform(), drawable.tint, drawable.pixelSnapMode);
   }
 
   /** @internal */
@@ -1871,6 +1902,13 @@ export class WebGl2Backend implements RenderBackend {
 
       gl.bindFramebuffer(gl.FRAMEBUFFER, state.framebuffer);
       gl.viewport(x, y, width, height);
+
+      // Cache exactly the rect handed to GL so the vertex shaders can map a
+      // drawable's clip-space origin into device pixels for position snapping.
+      this._deviceViewport.x = x;
+      this._deviceViewport.y = y;
+      this._deviceViewport.width = width;
+      this._deviceViewport.height = height;
 
       this._boundFramebuffer = state.framebuffer;
       state.version = target.version;

@@ -2,7 +2,7 @@
  * WebGPU tilemap pixel-snapping browser tests — opt-in, capability-aware.
  *
  * Parity counterpart of `webgl2-tilemap-snap.test.ts` on the WebGPU backend.
- * Verifies that `pixelSnapMode = 'geometry'` on a {@link TileMapNode} placed
+ * Verifies that `pixelSnapMode = PixelSnapMode.Geometry` on a {@link TileMapNode} placed
  * at a fractional world position produces no background/clear-colour gaps
  * across a chunk boundary in the rendered output.
  *
@@ -18,6 +18,7 @@ import { TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, TileMapNode } from '@codex
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
+import { PixelSnapMode } from '#rendering/pixelSnap';
 import type { RenderNode } from '#rendering/RenderNode';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
@@ -156,7 +157,7 @@ describe('WebGPU tilemap pixel snapping — chunk seam', () => {
       // a 1-pixel gap at the chunk seam. With 'geometry' mode each chunk's origin
       // is snapped to the device-pixel grid, keeping all four tiles contiguous.
       node.setPosition(0.7, 0.7);
-      node.pixelSnapMode = 'geometry';
+      node.pixelSnapMode = PixelSnapMode.Geometry;
 
       if (!(await renderScene(ctx, backend, node))) {
         return;
@@ -187,7 +188,7 @@ describe('WebGPU tilemap pixel snapping — chunk seam', () => {
 
     try {
       node.setPosition(3.14, 7.77);
-      node.pixelSnapMode = 'geometry';
+      node.pixelSnapMode = PixelSnapMode.Geometry;
 
       if (!(await renderScene(ctx, backend, node))) {
         return;
@@ -211,7 +212,7 @@ describe('WebGPU tilemap pixel snapping — chunk seam', () => {
 
     try {
       node.setPosition(5.5, 2.3);
-      node.pixelSnapMode = 'geometry';
+      node.pixelSnapMode = PixelSnapMode.Geometry;
 
       if (!(await renderScene(ctx, backend, node))) {
         return;
@@ -254,7 +255,7 @@ describe('WebGPU tilemap pixel snapping — chunk seam', () => {
 
     try {
       node.setPosition(0.7, 0.7);
-      node.pixelSnapMode = 'position';
+      node.pixelSnapMode = PixelSnapMode.Position;
 
       if (!(await renderScene(ctx, backend, node))) {
         return;
@@ -285,7 +286,7 @@ describe('WebGPU tilemap pixel snapping — chunk seam', () => {
     try {
       // An integer position means no sub-pixel drift; no snapping needed.
       node.setPosition(0, 0);
-      node.pixelSnapMode = 'none';
+      node.pixelSnapMode = PixelSnapMode.None;
 
       if (!(await renderScene(ctx, backend, node))) {
         return;

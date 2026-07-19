@@ -13,7 +13,7 @@
 
 export { packAffineMat4 } from '#rendering/affinePacking';
 export { Drawable } from '#rendering/Drawable';
-export type { PixelSnapMode } from '#rendering/pixelSnap';
+export { PixelSnapMode } from '#rendering/pixelSnap';
 export type { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 export type { RetainedGroupBundle } from '#rendering/plan/RetainedInstructionSet';
 export type { RenderBackend } from '#rendering/RenderBackend';
@@ -55,4 +55,5 @@ export {
   type WebGpuRetainedGeometryRef,
   type WebGpuRetainedNodeIndexRange,
 } from '#rendering/webgpu/WebGpuRetainedGroupResources';
+export { packSnapViewport } from '#rendering/webgpu/webgpuSnapViewport';
 export { stencilContentDepthStencilState } from '#rendering/webgpu/WebGpuStencilState';

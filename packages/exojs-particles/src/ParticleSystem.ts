@@ -108,6 +108,13 @@ export interface ParticleSystemOptions {
  * Position the system itself via `system.setPosition(...)` and emit relative
  * to `(0, 0)`.
  *
+ * **Pixel snapping:** {@link Drawable.pixelSnapMode} is intentionally ignored
+ * for particle systems. Particle instances bake their own per-particle
+ * transforms in the emitter/compute path rather than reading the shared
+ * pixel-snap transform row, so a snap mode set on the system has no effect on
+ * rendered output — snapping thousands of independently-moving sub-pixel
+ * particles to the device grid is neither meaningful nor desirable.
+ *
  * @example
  * // Backend-agnostic — runs CPU on WebGL2, GPU on WebGPU automatically.
  * const system = new ParticleSystem(loader.get('spark.png'), {

@@ -12,6 +12,7 @@ layout(location = 2) in float a_nodeIndex;  // row into the per-node data textur
 
 uniform mat3 u_projection;
 uniform mat3 u_group;
+uniform vec4 u_viewport;
 uniform sampler2D u_nodeData;
 
 flat out int  v_nodeIndex;
@@ -21,7 +22,7 @@ flat out int  v_nodeIndex;
 void main(void) {
     int ni = int(a_nodeIndex);
 
-    // texel 0: (a, c, 0, tx) — mat3 column-major: col0 + translate.x
+    // texel 0: (a, c, snapMode, tx) — mat3 column-major: col0 + snap flag + translate.x
     // texel 1: (b, d, 0, ty) — mat3 column-major: col1 + translate.y
     // texel 9: (minX, minY, w, h) — text block bounds (local space, for gradient UV)
     vec4 t0 = texelFetch(u_nodeData, ivec2(0, ni), 0);
@@ -34,7 +35,21 @@ void main(void) {
         t0.w, t1.w, 1.0
     );
 
-    gl_Position = vec4((u_projection * u_group * xf * vec3(a_position, 1.0)).xy, 0.0, 1.0);
+    vec2 clip = (u_projection * u_group * xf * vec3(a_position, 1.0)).xy;
+
+    // Render-only pixel snapping (t0.z: 0 = none, 1 = position, 2 = geometry —
+    // both non-zero modes snap the origin). Snap the node ORIGIN (t0.w, t1.w)
+    // to its nearest device pixel and rigid-shift the whole glyph by the same
+    // delta. floor(x+0.5) matches the CPU Math.round policy; GLSL round() is
+    // undefined at .5. Grid alignment is independent of the y-axis convention
+    // because the staged viewport rect is whole device pixels.
+    if (t0.z != 0.0) {
+        vec2 originClip = (u_projection * u_group * vec3(t0.w, t1.w, 1.0)).xy;
+        vec2 originDevice = u_viewport.xy + (originClip * 0.5 + 0.5) * u_viewport.zw;
+        clip += (floor(originDevice + 0.5) - originDevice) * 2.0 / max(u_viewport.zw, vec2(1.0));
+    }
+
+    gl_Position = vec4(clip, 0.0, 1.0);
     v_texcoord  = a_texcoord;
     v_nodeIndex = ni;
 

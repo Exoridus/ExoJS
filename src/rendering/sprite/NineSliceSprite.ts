@@ -216,15 +216,15 @@ export class NineSliceSprite extends Drawable {
   }
 
   /**
-   * Render-time quads for the active pass. In `'geometry'` pixel-snap mode (and
+   * Render-time quads for the active pass. In `PixelSnapMode.Geometry` (and
    * only when the combined node+view transform is axis-aligned) the shared
    * boundary plan is snapped to the render target's device-pixel grid via the
    * common {@link snapQuadsInto} helper, so every corner/edge/center quad reuses
    * the exact same snapped boundary value and no seams can open. The content
    * quad cache ({@link quads}) is never rebuilt by snapping — camera movement
    * reuses it — and snapped quads are written into a reused buffer. Returns the
-   * unsnapped content quads for `'none'`/`'position'` or under a rotation/skew
-   * downgrade.
+   * unsnapped content quads for `PixelSnapMode.None`/`PixelSnapMode.Position`
+   * or under a rotation/skew downgrade.
    * @internal
    */
   public getRenderQuads(view: View, targetPxWidth: number, targetPxHeight: number): readonly NineSliceQuad[] {

@@ -2,6 +2,7 @@
 
 import { Matrix } from '#math/Matrix';
 import { packAffineMat4 } from '#rendering/affinePacking';
+import { PixelSnapMode } from '#rendering/pixelSnap';
 import type { NineSliceQuad } from '#rendering/sprite/nineSlice';
 import type { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
@@ -20,6 +21,7 @@ import {
   type WebGpuRetainedBatchReplayer,
   type WebGpuRetainedNodeIndexRange,
 } from './WebGpuRetainedGroupResources';
+import { packSnapViewport } from './webgpuSnapViewport';
 import { stencilContentDepthStencilState } from './WebGpuStencilState';
 
 /** WGSL source for the nine-slice sprite pipeline. @internal */
@@ -27,6 +29,7 @@ export const nineSliceShaderSource = `
 struct ProjectionUniforms {
     matrix: mat4x4<f32>,
     group: mat4x4<f32>,
+    viewport: vec4<f32>,        // device-pixel snap rect (x, y, width, height)
 };
 
 struct TransformSlot {
@@ -73,7 +76,19 @@ fn vertexMain(input: VertexInput, @builtin(vertex_index) vid: u32) -> VertexOutp
     let worldX = slot.m0.x * localX + slot.m0.y * localY + slot.m1.x;
     let worldY = slot.m0.z * localX + slot.m0.w * localY + slot.m1.y;
 
-    output.position = projection.matrix * projection.group * vec4<f32>(worldX, worldY, 0.0, 1.0);
+    var position = projection.matrix * projection.group * vec4<f32>(worldX, worldY, 0.0, 1.0);
+
+    // Render-only pixel snapping (slot.m1.z: 0 = none, non-zero = snap origin).
+    // floor(x + 0.5) matches the CPU Math.round policy; WGSL round() is
+    // half-to-even. Grid alignment is independent of the y-axis convention
+    // because the staged viewport rect is whole device pixels.
+    if (slot.m1.z != 0.0) {
+        let originClip = projection.matrix * projection.group * vec4<f32>(slot.m1.x, slot.m1.y, 0.0, 1.0);
+        let originDevice = projection.viewport.xy + (originClip.xy * 0.5 + vec2<f32>(0.5)) * projection.viewport.zw;
+        let snapDelta = (floor(originDevice + vec2<f32>(0.5)) - originDevice) * 2.0 / max(projection.viewport.zw, vec2<f32>(1.0));
+        position = vec4<f32>(position.xy + snapDelta, position.z, position.w);
+    }
+    output.position = position;
 
     let u = select(input.uvBounds.x, input.uvBounds.z, cornerX == 1u);
     let v = select(input.uvBounds.y, input.uvBounds.w, cornerY == 1u);
@@ -93,7 +108,8 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
 
 const instanceStrideBytes = 32;
 const wordsPerInstance = instanceStrideBytes / Uint32Array.BYTES_PER_ELEMENT; // = 8
-const projectionByteLength = 128;
+// mat4x4 projection + mat4x4 group + vec4 snap viewport (aligned 16, total 144).
+const projectionByteLength = 144;
 const initialBatchCapacity = 32;
 const indicesPerInstance = 6;
 const quadIndices = new Uint16Array([0, 1, 2, 0, 2, 3]);
@@ -245,17 +261,18 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
       return;
     }
 
-    // Defensive (S3-D5.3): pixel-snapped instance words are view-dependent —
-    // the recordability predicate excludes them at collect time, so a snapped
-    // nine-slice inside a capture window means the stream cannot be replayed.
+    // Defensive (S3-D5.3): geometry-snapped instance words are view-dependent —
+    // the recordability predicate excludes them at collect time, so a
+    // geometry-snapped nine-slice inside a capture window means the stream cannot
+    // be replayed. Position snapping is resolved in-shader and stays recordable.
     // Nine-slice has no custom-material path to guard.
-    if (sprite.pixelSnapMode !== 'none' && backend._retainedCaptureActive) {
+    if (sprite.pixelSnapMode === PixelSnapMode.Geometry && backend._retainedCaptureActive) {
       backend._poisonActiveRetainedCaptures();
     }
 
     let quads: readonly NineSliceQuad[] = sprite.quads;
 
-    if (sprite.pixelSnapMode === 'geometry') {
+    if (sprite.pixelSnapMode === PixelSnapMode.Geometry) {
       const snap = backend._getSnapPixelSize();
 
       quads = sprite.getRenderQuads(backend.view, snap.width, snap.height);
@@ -355,17 +372,20 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
       this._instanceArena.resetPass();
     }
 
-    // ProjectionUniforms layout: mat4x4 projection + mat4x4 group, packed via
-    // the shared canonical (non-transposed) column order. The write is skipped
-    // when the UBO already holds this exact (view, updateId, group-id) state —
-    // static frames then issue zero projection uploads.
+    // ProjectionUniforms layout: mat4x4 projection + mat4x4 group + vec4 snap
+    // viewport, packed via the shared canonical (non-transposed) column order.
+    // The write is skipped when the UBO already holds this exact (view,
+    // updateId, group-id, snap-rect) state — static frames then issue zero
+    // projection uploads.
     const view = backend.view;
+    const viewportChanged = packSnapViewport(backend, this._projectionData, 32);
 
     if (
       !this._hasWrittenProjection ||
       this._writtenView !== view ||
       this._writtenViewUpdateId !== view.updateId ||
-      this._writtenGroupTransformId !== backend.renderGroupTransformId
+      this._writtenGroupTransformId !== backend.renderGroupTransformId ||
+      viewportChanged
     ) {
       packAffineMat4(view.getTransform(), this._projectionData, 0);
       packAffineMat4(backend.renderGroupTransform ?? Matrix.identity, this._projectionData, 16);
@@ -601,7 +621,11 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
 
     packAffineMat4(backend.renderGroupTransform ?? Matrix.identity, scratch, 0);
 
-    let uboDirty = !bundle.uboWritten || bundle.uboView !== view || bundle.uboViewUpdateId !== view.updateId;
+    // Staged unconditionally: an unchanged rect makes this an identity write,
+    // while a changed one forces the rewrite the skip state cannot see.
+    const viewportChanged = packSnapViewport(backend, bundle.uboData, 32);
+
+    let uboDirty = !bundle.uboWritten || bundle.uboView !== view || bundle.uboViewUpdateId !== view.updateId || viewportChanged;
 
     if (!uboDirty) {
       for (let i = 0; i < 16; i++) {

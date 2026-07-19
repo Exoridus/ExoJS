@@ -1,6 +1,6 @@
 import type { Rectangle } from '@codexo/exojs';
 import { Container } from '@codexo/exojs';
-import type { PixelSnapMode } from '@codexo/exojs/renderer-sdk';
+import { PixelSnapMode } from '@codexo/exojs/renderer-sdk';
 
 import { ImageLayer } from './ImageLayer';
 import { ImageLayerNode } from './ImageLayerNode';
@@ -47,7 +47,7 @@ export class TileMapNode extends Container {
   private readonly _map: TileMap;
   private readonly _cullChunks: boolean;
   private readonly _layerNodes: Array<TileLayerNode | ImageLayerNode> = [];
-  private _pixelSnapMode: PixelSnapMode = 'none';
+  private _pixelSnapMode: PixelSnapMode = PixelSnapMode.None;
 
   public constructor(map: TileMap, options?: TileMapNodeOptions) {
     super();
@@ -76,7 +76,7 @@ export class TileMapNode extends Container {
    * unchanged. Setting the current value is a no-op; an invalid value throws and
    * leaves the prior mode unchanged.
    *
-   * @default 'none'
+   * @default PixelSnapMode.None
    * @stable
    */
   public get pixelSnapMode(): PixelSnapMode {
@@ -163,7 +163,7 @@ export class TileMapNode extends Container {
           ? new ImageLayerNode(layer)
           : new TileLayerNode(layer, { cullable: this._cullChunks });
 
-      if (this._pixelSnapMode !== 'none') {
+      if (this._pixelSnapMode !== PixelSnapMode.None) {
         node.pixelSnapMode = this._pixelSnapMode;
       }
 

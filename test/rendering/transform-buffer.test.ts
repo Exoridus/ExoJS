@@ -1,11 +1,25 @@
 import { Color } from '#core/Color';
 import { Matrix } from '#math/Matrix';
 import { Container } from '#rendering/Container';
+import { PixelSnapMode } from '#rendering/pixelSnap';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { Texture } from '#rendering/texture/Texture';
-import { TransformBuffer } from '#rendering/TransformBuffer';
+import { packTransformRow, TransformBuffer } from '#rendering/TransformBuffer';
 
 describe('TransformBuffer', () => {
+  test('packTransformRow writes the snap mode at offset 6 and keeps offset 7 reserved', () => {
+    const row = new Float32Array(12).fill(Number.NaN);
+
+    packTransformRow(row, 0, new Matrix(), Color.white, PixelSnapMode.Geometry);
+
+    expect(row[6]).toBe(2);
+    expect(row[7]).toBe(0);
+
+    packTransformRow(row, 0, new Matrix(), Color.white, PixelSnapMode.None);
+
+    expect(row[6]).toBe(0);
+  });
+
   test('stores transform rows and normalized tint at the requested slot', () => {
     const buffer = new TransformBuffer();
     const transform = new Matrix(2, 3, 11, 5, 7, 13, 0, 0, 1);

@@ -5,7 +5,7 @@ import { Vector } from '#math/Vector';
 import { Drawable } from '#rendering/Drawable';
 import type { Material } from '#rendering/material/Material';
 import type { SpriteMaterial } from '#rendering/material/SpriteMaterial';
-import { buildPixelSnapContext, snapBoundsInto } from '#rendering/pixelSnap';
+import { buildPixelSnapContext, PixelSnapMode, snapBoundsInto } from '#rendering/pixelSnap';
 import { RenderNode } from '#rendering/RenderNode';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
@@ -168,19 +168,20 @@ export class Sprite extends Drawable {
 
   /**
    * Local-space quad bounds for the active pass, written into `out`. In
-   * `'geometry'` pixel-snap mode (and only when the combined node+view transform
+   * `PixelSnapMode.Geometry` (and only when the combined node+view transform
    * is axis-aligned) the quad edges are snapped to the render target's
    * device-pixel grid via the shared {@link snapLocalBoundary} helper — combined
-   * with the device-snapped origin from the transform seam, all four corners
-   * land on whole device pixels. The logical local bounds (used by collision /
+   * with the origin the vertex shader rounds to a whole device pixel, all four
+   * corners land on whole device pixels. The logical local bounds (used by collision /
    * `getBounds`) are never changed. Returns the unsnapped local bounds for
-   * `'none'`/`'position'` or under a rotation/skew downgrade.
+   * `PixelSnapMode.None`/`PixelSnapMode.Position` or under a rotation/skew
+   * downgrade.
    * @internal
    */
   public getRenderBounds(view: View, targetPxWidth: number, targetPxHeight: number, out: Rectangle): Rectangle {
     const base = this.getLocalBounds();
 
-    if (this.pixelSnapMode !== 'geometry') {
+    if (this.pixelSnapMode !== PixelSnapMode.Geometry) {
       return base;
     }
 

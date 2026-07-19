@@ -2745,7 +2745,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Render-only pixel-snap mode forwarded to the wrapped RepeatingSprite (which snaps its rendered origin, and — in 'geometry' mode for axis-aligned transforms — its repeat-segment boundaries, to the render target's device-pixel grid). Purely visual: the layer offset, parallax, and repeat coverage are never changed. For a null-texture layer there is no drawable to forward to, so the mode is simply stored. Setting the current value is a no-op; an invalid value throws and leaves the prior mode unchanged."
+          "description": "Render-only pixel-snap mode forwarded to the wrapped RepeatingSprite (which snaps its rendered origin, and — in PixelSnapMode.Geometry mode for axis-aligned transforms — its repeat-segment boundaries, to the render target's device-pixel grid). Purely visual: the layer offset, parallax, and repeat coverage are never changed. For a null-texture layer there is no drawable to forward to, so the mode is simply stored. Setting the current value is a no-op; an invalid value throws and leaves the prior mode unchanged."
         },
         {
           "name": "position",

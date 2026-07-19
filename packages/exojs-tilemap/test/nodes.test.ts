@@ -1,4 +1,4 @@
-import { TextureRegion } from '@codexo/exojs';
+import { PixelSnapMode, TextureRegion } from '@codexo/exojs';
 import { type Texture } from '@codexo/exojs';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -492,14 +492,14 @@ describe('TileMapNode interleaved image layers', () => {
     const { map } = makeInterleavedMap();
     const node = new TileMapNode(map);
 
-    node.pixelSnapMode = 'geometry';
+    node.pixelSnapMode = PixelSnapMode.Geometry;
 
-    expect(node.layerNodes[0]!.pixelSnapMode).toBe('geometry');
+    expect(node.layerNodes[0]!.pixelSnapMode).toBe(PixelSnapMode.Geometry);
 
     // Nodes rebuilt by refreshLayers inherit the mode too.
     node.refreshLayers();
 
-    expect(node.layerNodes[0]!.pixelSnapMode).toBe('geometry');
+    expect(node.layerNodes[0]!.pixelSnapMode).toBe(PixelSnapMode.Geometry);
   });
 
   it('destroy() frees image layer nodes but never the map or its layers', () => {

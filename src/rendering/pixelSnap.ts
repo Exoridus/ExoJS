@@ -1,7 +1,6 @@
-import { Matrix } from '#math/Matrix';
+import type { Matrix } from '#math/Matrix';
 import type { Rectangle } from '#math/Rectangle';
 
-import type { Drawable } from './Drawable';
 import type { View } from './View';
 
 /**
@@ -37,40 +36,43 @@ import type { View } from './View';
  *
  * ## Retained transform groups
  *
- * Inside a {@link RetainedContainer} the GPU applies the group matrix *after*
- * the per-node transform row (`u_projection · u_group · (row · local)`), and a
- * node's {@link SceneNode.getGlobalTransform} is group-RELATIVE (it stops at the
- * boundary). Snapping that group-local origin would snap to the wrong grid, so
- * {@link resolveUploadTransform} composes the group matrix in first, snaps the
- * TRUE device origin (`group · local`), then peels the group matrix back off the
- * row it uploads — the shader's re-applied group matrix therefore lands the
- * origin on a whole device pixel. The geometry-boundary helpers build their snap
- * context from {@link SceneNode.getWorldTransform} for the same reason (the
- * group's scale/rotation must be in the device mapping).
+ * Position snapping happens entirely on the GPU. Both backends upload the raw,
+ * unsnapped {@link SceneNode.getGlobalTransform} into the transform row and set
+ * a per-row snap flag (`m1.z`); the vertex shader composes `u_group · row`,
+ * rounds the resulting device origin (`floor(deviceOrigin + 0.5)`), and uses the
+ * rounded origin only when the flag is set. Because the group matrix is applied
+ * *before* the rounding, a node inside a translated / scaled
+ * {@link RetainedContainer} lands on the device-pixel grid without any CPU
+ * peel-inverse dance — and the uploaded row stays view-independent, so a
+ * position-snapped drawable remains eligible for retained instruction recording.
+ * The geometry-boundary helpers (still a CPU path) build their snap context from
+ * {@link SceneNode.getWorldTransform} so the group's scale/rotation is in the
+ * device mapping.
  *
  * ## Render-only contract
  *
- * Snapping happens on the CPU during render-data preparation and affects only
- * the values handed to the GPU for that frame. It never mutates logical
- * position, world/local matrices used for queries, collision data, tween or
- * physics state, or {@link SceneNode.getBounds} results. {@link snapWorldTranslationInto}
- * writes into a caller-owned scratch matrix; the node's cached global transform
- * is left untouched.
+ * Snapping affects only the values handed to the GPU for that frame. It never
+ * mutates logical position, world/local matrices used for queries, collision
+ * data, tween or physics state, or {@link SceneNode.getBounds} results. Position
+ * snapping is resolved in the vertex shader from the uploaded raw transform;
+ * geometry snapping runs on the CPU during render-data preparation and writes
+ * into caller-owned scratch buffers. The node's cached global transform is never
+ * mutated.
  *
  * ## Modes
  *
- * - `position` — snap the node's rendered origin (the world translation) only.
- *   Touches the matrix translation `(x, y)` exclusively, leaving the linear part
- *   `(a, b, c, d)` intact, so it is safe under any transform (rotation, skew,
- *   non-uniform scale) — the origin is a single point with a well-defined device
- *   position.
- * - `geometry` — additionally snap shared geometry boundaries (NineSlice edges,
- *   repeat-segment boundaries, the sprite quad). Each unique boundary is snapped
- *   by the **same** pure function {@link snapLocalBoundary}, so adjacent quads
- *   that share a boundary value snap to the same result — seams cannot open.
- *   Guaranteed only for **axis-aligned** transforms; rotation / skew (in the
- *   node or the view) downgrade it to `position` (see
- *   {@link resolveEffectivePixelSnapMode}).
+ * - `PixelSnapMode.Position` — snap the node's rendered origin (the world
+ *   translation) only. Touches the matrix translation `(x, y)` exclusively,
+ *   leaving the linear part `(a, b, c, d)` intact, so it is safe under any
+ *   transform (rotation, skew, non-uniform scale) — the origin is a single
+ *   point with a well-defined device position.
+ * - `PixelSnapMode.Geometry` — additionally snap shared geometry boundaries
+ *   (NineSlice edges, repeat-segment boundaries, the sprite quad). Each unique
+ *   boundary is snapped by the **same** pure function {@link snapLocalBoundary},
+ *   so adjacent quads that share a boundary value snap to the same result —
+ *   seams cannot open. Guaranteed only for **axis-aligned** transforms; rotation
+ *   / skew (in the node or the view) downgrade it to `PixelSnapMode.Position`
+ *   (see {@link resolveEffectivePixelSnapMode}).
  *
  * ## Rounding policy
  *
@@ -83,30 +85,33 @@ import type { View } from './View';
 /**
  * Render-only pixel-snapping policy for a {@link Drawable}.
  *
- * - `'none'` — no snapping; rendered transform and geometry use existing behaviour.
- * - `'position'` — snap the rendered origin to the nearest device pixel. Logical
+ * - `None` — no snapping; rendered transform and geometry use existing behaviour.
+ * - `Position` — snap the rendered origin to the nearest device pixel. Logical
  *   `x`/`y`, matrices, bounds and collision are unchanged.
- * - `'geometry'` — snap a single coherent shared-boundary plan (origin + boundaries)
- *   so neighbouring quads stay seam-free. Falls back to `'position'` automatically
+ * - `Geometry` — snap a single coherent shared-boundary plan (origin + boundaries)
+ *   so neighbouring quads stay seam-free. Falls back to `Position` automatically
  *   when the transform is not axis-aligned (rotation / skew).
  *
  * Snapping targets device pixels (× view scale × pixel ratio), not integer world
- * units, and never alters logical state.
+ * units, and never alters logical state. The numeric values are the shader
+ * encoding carried in the transform row and must not be reordered.
  *
- * @default 'none'
+ * @default PixelSnapMode.None
  * @stable
  */
-export type PixelSnapMode = 'none' | 'position' | 'geometry';
-
-const pixelSnapModes: ReadonlySet<string> = new Set<string>(['none', 'position', 'geometry']);
+export enum PixelSnapMode {
+  None = 0,
+  Position = 1,
+  Geometry = 2,
+}
 
 /**
- * Runtime guard for the {@link PixelSnapMode} union. Used by the public setter to
+ * Runtime guard for the {@link PixelSnapMode} enum. Used by the public setter to
  * reject JavaScript-invalid values atomically.
  * @internal
  */
 export function isPixelSnapMode(value: unknown): value is PixelSnapMode {
-  return typeof value === 'string' && pixelSnapModes.has(value);
+  return value === PixelSnapMode.None || value === PixelSnapMode.Position || value === PixelSnapMode.Geometry;
 }
 
 /** Below this magnitude an axis is treated as collapsed / cross-coupled. @internal */
@@ -225,21 +230,6 @@ function noopContext(ox: number, oy: number): PixelSnapContext {
 }
 
 /**
- * Copy `world` into `out`, replacing only the translation with the snapped world
- * origin from `ctx`. The linear part `(a, b, c, d)` and homogeneous row are
- * preserved, so rotation / scale / skew are untouched — position snapping is safe
- * under any transform. The source `world` matrix is never mutated.
- * @internal
- */
-export function snapWorldTranslationInto(out: Matrix, world: Matrix, ctx: PixelSnapContext): Matrix {
-  out.copy(world);
-  out.x = ctx.worldX;
-  out.y = ctx.worldY;
-
-  return out;
-}
-
-/**
  * Snap a single local boundary coordinate to the device-pixel grid along an axis
  * whose local→device scale is `scale`. Returns the local value whose device
  * position (relative to the already-snapped origin) lands on an integer device
@@ -321,63 +311,6 @@ export function snapQuadsInto(source: readonly BoundaryQuad[], ctx: PixelSnapCon
   return out;
 }
 
-/** Scratch for the group inverse used to peel a group matrix off a snapped row. @internal */
-const groupInverseScratch = new Matrix();
-
-/**
- * Resolve the transform-buffer row to upload for `drawable` at the write seam.
- * Returns the drawable's live group-local transform unchanged when its mode is
- * `'none'` (zero overhead), otherwise a snapped copy written into the caller-
- * owned `scratch` matrix — the logical global transform is never mutated.
- *
- * `groupTransform` is the active retained-group world matrix (`u_group`) the GPU
- * applies AFTER this row, or `null` at the root / outside any group. When it is
- * `null`, the group-local origin IS the world origin and is snapped directly.
- * When a group is active the shader computes `group · row`, so we snap the
- * composed device origin (`group · local`) and peel `group` back off the row we
- * return — the shader's re-applied `u_group` then lands the origin on a whole
- * device pixel. `groupTransform` is read-only (its inverse is taken into a
- * private scratch); it is never mutated.
- *
- * Both backends call this at their single transform-write boundary, so position
- * snapping (and tilemap chunk/layer origin snapping) is applied once, backend-
- * neutrally, to every drawable. `view` and the target device-pixel dimensions
- * come from the active pass.
- * @internal
- */
-export function resolveUploadTransform(
-  drawable: Drawable,
-  view: View,
-  targetPxWidth: number,
-  targetPxHeight: number,
-  scratch: Matrix,
-  groupTransform: Matrix | null,
-): Matrix {
-  const local = drawable.getGlobalTransform();
-
-  if (drawable.pixelSnapMode === 'none') {
-    return local;
-  }
-
-  if (groupTransform === null) {
-    // No group: group-local space IS world space — snap the origin directly.
-    const ctx = buildPixelSnapContext(local, view, targetPxWidth, targetPxHeight);
-
-    return snapWorldTranslationInto(scratch, local, ctx);
-  }
-
-  // Inside a group: compose `group · local` (scratch = the true world matrix),
-  // snap that device origin, then peel the group matrix off so the row we upload
-  // round-trips to the snapped device pixel once the shader re-applies u_group.
-  const world = scratch.copy(local).combine(groupTransform);
-  const ctx = buildPixelSnapContext(world, view, targetPxWidth, targetPxHeight);
-
-  scratch.x = ctx.worldX;
-  scratch.y = ctx.worldY;
-
-  return scratch.combine(groupTransform.getInverse(groupInverseScratch));
-}
-
 /**
  * Snap a single local-space bounds rectangle (e.g. a sprite quad) to the device
  * grid using the per-axis scale in `ctx`, writing the result into `out`. Each of
@@ -401,16 +334,16 @@ export type PixelSnapDowngradeReason = 'non-axis-aligned' | null;
 
 /**
  * Resolve the effective snap mode from the requested mode and whether the
- * combined node+view transform is axis-aligned. `geometry` downgrades to
- * `position` when the transform is not axis-aligned (rotation or skew, in the
- * node itself or any ancestor or the view); `none` and `position` pass through
+ * combined node+view transform is axis-aligned. `Geometry` downgrades to
+ * `Position` when the transform is not axis-aligned (rotation or skew, in the
+ * node itself or any ancestor or the view); `None` and `Position` pass through
  * unchanged. Pure and stateless — never stores an effective mode, so it always
  * reflects the current world transform.
  * @internal
  */
 export function resolveEffectivePixelSnapMode(requested: PixelSnapMode, axisAligned: boolean): PixelSnapMode {
-  if (requested === 'geometry' && !axisAligned) {
-    return 'position';
+  if (requested === PixelSnapMode.Geometry && !axisAligned) {
+    return PixelSnapMode.Position;
   }
 
   return requested;
@@ -418,12 +351,12 @@ export function resolveEffectivePixelSnapMode(requested: PixelSnapMode, axisAlig
 
 /**
  * Diagnostic companion to {@link resolveEffectivePixelSnapMode}: returns why a
- * `geometry` request was downgraded, or `null` when no downgrade occurred. Not a
+ * `Geometry` request was downgraded, or `null` when no downgrade occurred. Not a
  * stable public API — exposed for tests and dev warnings only.
  * @internal
  */
 export function getPixelSnapDowngradeReason(requested: PixelSnapMode, axisAligned: boolean): PixelSnapDowngradeReason {
-  if (requested === 'geometry' && !axisAligned) {
+  if (requested === PixelSnapMode.Geometry && !axisAligned) {
     return 'non-axis-aligned';
   }
 

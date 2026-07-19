@@ -1,6 +1,4 @@
-import type { PixelSnapMode } from '@codexo/exojs/renderer-sdk';
-
-const validPixelSnapModes: ReadonlySet<string> = new Set<string>(['none', 'position', 'geometry']);
+import { PixelSnapMode } from '@codexo/exojs/renderer-sdk';
 
 /**
  * Throw a deterministic error when `mode` is not a valid {@link PixelSnapMode}.
@@ -13,7 +11,12 @@ const validPixelSnapModes: ReadonlySet<string> = new Set<string>(['none', 'posit
  * @internal
  */
 export function assertPixelSnapMode(mode: PixelSnapMode): void {
-  if (typeof mode !== 'string' || !validPixelSnapModes.has(mode)) {
-    throw new Error(`pixelSnapMode must be 'none', 'position', or 'geometry' (got ${String(mode)}).`);
+  // Widen first: the parameter type would otherwise narrow the third
+  // comparison to a statically-false branch, but JavaScript callers can pass
+  // anything.
+  const value: unknown = mode;
+
+  if (value !== PixelSnapMode.None && value !== PixelSnapMode.Position && value !== PixelSnapMode.Geometry) {
+    throw new Error(`pixelSnapMode must be a PixelSnapMode enum value (got ${String(mode)}).`);
   }
 }

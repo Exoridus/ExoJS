@@ -1,5 +1,5 @@
 // Auto-generated from tile-chunks-and-bands.ts — edit the .ts source, not this file.
-import { Application, Asset, Color, Container, Keyboard, Rectangle, Scene, Spritesheet, TextureRegion, View } from '@codexo/exojs';
+import { Application, Asset, Color, Container, Keyboard, PixelSnapMode, Rectangle, Scene, Spritesheet, TextureRegion, View } from '@codexo/exojs';
 import { TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, tilemapExtension, TileSet } from '@codexo/exojs-tilemap';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // Core @codexo/exojs-tilemap API, with no on-disk map format involved: a
@@ -15,7 +15,7 @@ import { mountControlPanel, mountControls } from '@examples/runtime';
 //     'ground' and 'canopy' bands makes the explorer sprite render under the
 //     canopy tiles and over the ground tiles, without either layer knowing
 //     the actor exists.
-//   - PixelSnapMode: cycle through 'none' / 'position' / 'geometry' on the
+//   - PixelSnapMode: cycle through None / Position / Geometry on the
 //     view — it cascades to every TileLayerNode and chunk (see the "Pixel
 //     snapping" guide for what each mode does).
 const TILE = 64;
@@ -143,8 +143,9 @@ class TileChunksAndBandsScene extends Scene {
             label: 'Pixel snap',
             options: ['none', 'position', 'geometry'],
             index: 0,
-            onChange: (_, mode) => {
-                this.mapView.pixelSnapMode = mode;
+            onChange: index => {
+                const modes = [PixelSnapMode.None, PixelSnapMode.Position, PixelSnapMode.Geometry];
+                this.mapView.pixelSnapMode = modes[index] ?? PixelSnapMode.None;
             },
         });
     }

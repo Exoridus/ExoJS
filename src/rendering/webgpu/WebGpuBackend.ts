@@ -4,7 +4,7 @@ import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { logger } from '#core/logging';
 import { Signal } from '#core/Signal';
-import { Matrix } from '#math/Matrix';
+import { type Matrix } from '#math/Matrix';
 import type { Rectangle } from '#math/Rectangle';
 import { Vector } from '#math/Vector';
 import type { BackendRenderPass } from '#rendering/BackendRenderPass';
@@ -12,7 +12,6 @@ import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import { dataTextureBytesPerPixel, estimateTextureBytes, GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
 import type { Mesh } from '#rendering/mesh/Mesh';
-import { resolveUploadTransform } from '#rendering/pixelSnap';
 import { type DrawCommand, drawCommandUsesSharedTransform, RenderEntryKind } from '#rendering/plan/RenderCommand';
 import type { ScopeEntry } from '#rendering/plan/RenderScope';
 import {
@@ -185,7 +184,8 @@ export class WebGpuBackend implements RenderBackend {
   private _format: GPUTextureFormat | null = null;
   private _initializePromise: Promise<this> | null = null;
   private _renderTarget: RenderTarget;
-  private readonly _snapTransform: Matrix = new Matrix();
+  // Reused scratch for the device-pixel snap viewport rect (see _snapViewport).
+  private readonly _snapViewportRect = { x: 0, y: 0, width: 0, height: 0 };
   private _renderer: Renderer | null = null;
   private _renderGroupTransform: Matrix | null = null;
   private _renderGroupTransformId = 0;
@@ -419,7 +419,9 @@ export class WebGpuBackend implements RenderBackend {
       const command = entry.command;
 
       if (drawCommandUsesSharedTransform(command, this)) {
-        storage.writeCommand(command, this._resolveSnapTransform(command.drawable));
+        // Upload the RAW world transform + snap-mode flag; the vertex stage snaps
+        // the device-pixel origin (spec D3-D5). No CPU snap at this seam anymore.
+        storage.writeCommand(command, undefined, command.drawable.pixelSnapMode);
       } else {
         storage.recordSkippedWrite();
       }
@@ -1013,23 +1015,43 @@ export class WebGpuBackend implements RenderBackend {
    * @internal
    */
   public _pushTransform(drawable: Drawable): number {
-    return this._getTransformStorage().push(drawable, this._resolveSnapTransform(drawable));
+    // Raw world transform + snap-mode flag; the vertex stage snaps the origin.
+    return this._getTransformStorage().push(drawable, undefined, drawable.pixelSnapMode);
   }
 
   /**
-   * Resolve the world transform to upload for `drawable`, applying render-only
-   * pixel snapping against the active render target's device-pixel grid when the
-   * drawable opts in. Returns the live (unsnapped) global transform for the
-   * `'none'` default; never mutates logical state.
+   * Device-pixel viewport rect of the active render pass — the region the pass
+   * coordinator applies via `setViewport`, or the full colour attachment when
+   * the view uses the default `0..1` viewport. The core vertex stages read this
+   * (staged into their `viewport` uniform) to project a drawable's clip-space
+   * origin into device pixels for GPU-side position snapping. Mirrors
+   * {@link WebGpuPassCoordinator._applyViewport}; because the rect is whole
+   * device pixels, grid alignment is independent of WebGPU's y-up clip
+   * convention. The returned object is a reused scratch — read it immediately.
    * @internal
    */
-  private _resolveSnapTransform(drawable: Drawable): Matrix {
-    const target = this._renderTarget;
-    const root = target === this._rootRenderTarget;
-    const width = root ? this._canvas.width : target.width;
-    const height = root ? this._canvas.height : target.height;
+  public get _snapViewport(): { readonly x: number; readonly y: number; readonly width: number; readonly height: number } {
+    const { width, height } = this._getAttachmentPixelSize(this._renderTarget);
+    const vp = this.view.viewport;
+    const rect = this._snapViewportRect;
 
-    return resolveUploadTransform(drawable, target.view, width, height, this._snapTransform, this._renderGroupTransform);
+    if (vp.x === 0 && vp.y === 0 && vp.width === 1 && vp.height === 1) {
+      rect.x = 0;
+      rect.y = 0;
+      rect.width = width;
+      rect.height = height;
+
+      return rect;
+    }
+
+    // WebGPU's framebuffer origin is top-left (y-down), so `viewport.y` maps
+    // directly — no flip (unlike WebGL2's bottom-left `gl.viewport`).
+    rect.x = Math.floor(vp.x * width);
+    rect.y = Math.floor(vp.y * height);
+    rect.width = Math.max(1, Math.round(vp.width * width));
+    rect.height = Math.max(1, Math.round(vp.height * height));
+
+    return rect;
   }
 
   /**

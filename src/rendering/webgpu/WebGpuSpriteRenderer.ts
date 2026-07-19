@@ -4,6 +4,7 @@ import { Matrix } from '#math/Matrix';
 import { Rectangle } from '#math/Rectangle';
 import { packAffineMat4 } from '#rendering/affinePacking';
 import type { SpriteMaterial } from '#rendering/material/SpriteMaterial';
+import { PixelSnapMode } from '#rendering/pixelSnap';
 import type { Sprite } from '#rendering/sprite/Sprite';
 import { spriteVertexWgsl } from '#rendering/sprite/spriteMaterialSources';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
@@ -22,6 +23,7 @@ import {
   type WebGpuRetainedBatchReplayer,
   type WebGpuRetainedNodeIndexRange,
 } from './WebGpuRetainedGroupResources';
+import { packSnapViewport } from './webgpuSnapViewport';
 import { stencilContentDepthStencilState } from './WebGpuStencilState';
 import {
   collectScalarUniforms,
@@ -131,6 +133,7 @@ export const buildSpriteShaderSource = (textureSlots: number): string => {
 struct ProjectionUniforms {
     matrix: mat4x4<f32>,
     group: mat4x4<f32>,
+    viewport: vec4<f32>,        // device-pixel snap rect (x, y, width, height)
 };
 
 struct TransformSlot {
@@ -189,7 +192,20 @@ fn vertexMain(input: VertexInput, @builtin(vertex_index) vid: u32) -> VertexOutp
     let worldX = slot.m0.x * localX + slot.m0.y * localY + slot.m1.x;
     let worldY = slot.m0.z * localX + slot.m0.w * localY + slot.m1.y;
 
-    output.position = projection.matrix * projection.group * vec4<f32>(worldX, worldY, 0.0, 1.0);
+    var position = projection.matrix * projection.group * vec4<f32>(worldX, worldY, 0.0, 1.0);
+
+    // Render-only pixel snapping (slot.m1.z: 0 = none, non-zero = snap origin).
+    // Snap the node ORIGIN's device-pixel position and rigid-shift the whole
+    // primitive by the same delta. floor(x + 0.5) matches the CPU Math.round
+    // policy; WGSL round() is half-to-even. Grid alignment is independent of the
+    // y-axis convention because the staged viewport rect is whole device pixels.
+    if (slot.m1.z != 0.0) {
+        let originClip = projection.matrix * projection.group * vec4<f32>(slot.m1.x, slot.m1.y, 0.0, 1.0);
+        let originDevice = projection.viewport.xy + (originClip.xy * 0.5 + vec2<f32>(0.5)) * projection.viewport.zw;
+        let snapDelta = (floor(originDevice + vec2<f32>(0.5)) - originDevice) * 2.0 / max(projection.viewport.zw, vec2<f32>(1.0));
+        position = vec4<f32>(position.xy + snapDelta, position.z, position.w);
+    }
+    output.position = position;
 
     let u = select(input.uvBounds.x, input.uvBounds.z, cornerX == 1u);
     let v = select(input.uvBounds.y, input.uvBounds.w, cornerY == 1u);
@@ -228,7 +244,8 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
 
 const instanceStrideBytes = 32;
 const wordsPerInstance = instanceStrideBytes / Uint32Array.BYTES_PER_ELEMENT;
-const projectionByteLength = 128;
+// mat4x4 projection + mat4x4 group + vec4 snap viewport (aligned 16, total 144).
+const projectionByteLength = 144;
 const initialBatchCapacity = 32;
 // Deliberately decoupled from the multi-texture batch slot count — bumping the
 // default-path batch tiers must not silently widen the custom-material
@@ -347,7 +364,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
   private _customBaseTextureLayout: GPUBindGroupLayout | null = null;
   private _currentMaterial: SpriteMaterial | null = null;
   private _currentBaseTexture: Texture | RenderTexture | null = null;
-  // Reusable scratch for device-snapped local bounds ('geometry' mode), and the
+  // Reusable scratch for device-snapped local bounds (PixelSnapMode.Geometry), and the
   // bounds resolved for the sprite currently being packed (snapped or logical).
   private readonly _snapBounds: Rectangle = new Rectangle();
   private _activeBounds: Rectangle | null = null;
@@ -497,10 +514,11 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
 
     const material = sprite.material;
 
-    // Defensive (S3-D5.3): pixel-snapped instance words are view-dependent —
-    // the recordability predicate excludes them at collect time, so a snapped
-    // sprite inside a capture window means the stream cannot be replayed.
-    if (sprite.pixelSnapMode !== 'none' && backend._retainedCaptureActive) {
+    // Defensive (S3-D5.3): geometry-snapped instance words are view-dependent —
+    // the recordability predicate excludes them at collect time, so a
+    // geometry-snapped sprite inside a capture window means the stream cannot be
+    // replayed. Position snapping is resolved in-shader and stays recordable.
+    if (sprite.pixelSnapMode === PixelSnapMode.Geometry && backend._retainedCaptureActive) {
       backend._poisonActiveRetainedCaptures();
     }
 
@@ -522,12 +540,12 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
 
   /**
    * Local bounds to upload for `sprite` this draw: device-pixel-snapped in
-   * `'geometry'` pixel-snap mode (axis-aligned only), otherwise the sprite's
+   * `PixelSnapMode.Geometry` (axis-aligned only), otherwise the sprite's
    * logical local bounds. Reuses a scratch rectangle and never mutates logical
    * state. Consumed synchronously by {@link _packInstance}.
    */
   private _resolveBounds(sprite: Sprite, backend: WebGpuBackend): Rectangle {
-    if (sprite.pixelSnapMode !== 'geometry') {
+    if (sprite.pixelSnapMode !== PixelSnapMode.Geometry) {
       return sprite.getLocalBounds();
     }
 
@@ -629,8 +647,18 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     // when the UBO already holds this exact (view, updateId, group-bytes)
     // state — static frames then issue zero projection uploads.
     const view = backend.view;
+    // Staged unconditionally so a snap-rect change (attachment resize with an
+    // unchanged view) forces the rewrite the (view, updateId, group) skip
+    // state cannot see.
+    const viewportChanged = packSnapViewport(backend, this._projectionData, 32);
 
-    if (!this._hasWrittenProjection || this._writtenView !== view || this._writtenViewUpdateId !== view.updateId || this._groupContentChanged(backend)) {
+    if (
+      !this._hasWrittenProjection ||
+      this._writtenView !== view ||
+      this._writtenViewUpdateId !== view.updateId ||
+      viewportChanged ||
+      this._groupContentChanged(backend)
+    ) {
       packAffineMat4(view.getTransform(), this._projectionData, 0);
       packAffineMat4(backend.renderGroupTransform ?? Matrix.identity, this._projectionData, 16);
 
@@ -973,7 +1001,11 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
 
     packAffineMat4(backend.renderGroupTransform ?? Matrix.identity, scratch, 0);
 
-    let uboDirty = !bundle.uboWritten || bundle.uboView !== view || bundle.uboViewUpdateId !== view.updateId;
+    // Staged unconditionally: an unchanged rect makes this an identity write,
+    // while a changed one forces the rewrite the skip state cannot see.
+    const viewportChanged = packSnapViewport(backend, bundle.uboData, 32);
+
+    let uboDirty = !bundle.uboWritten || bundle.uboView !== view || bundle.uboViewUpdateId !== view.updateId || viewportChanged;
 
     if (!uboDirty) {
       for (let i = 0; i < 16; i++) {
@@ -1089,7 +1121,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     const u32 = this._instanceUint32;
 
     // localBounds: left, top, right, bottom (words 0..3, offset 0) — device-snapped in
-    // 'geometry' pixel-snap mode, otherwise the logical local bounds.
+    // PixelSnapMode.Geometry, otherwise the logical local bounds.
     const bounds = this._activeBounds ?? sprite.getLocalBounds();
 
     f32[offset + 0] = bounds.left;

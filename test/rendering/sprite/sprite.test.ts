@@ -1,6 +1,7 @@
 import { logger } from '#core/logging';
 import { Rectangle } from '#math/Rectangle';
 import { Vector } from '#math/Vector';
+import { PixelSnapMode } from '#rendering/pixelSnap';
 import { Sprite } from '#rendering/sprite/Sprite';
 import type { Texture } from '#rendering/texture/Texture';
 import { View } from '#rendering/View';
@@ -330,7 +331,7 @@ describe('Sprite', () => {
     test('snaps quad boundaries to the device grid in "geometry" mode when the transform is axis-aligned', () => {
       const sprite = new Sprite(makeTexture(10, 10));
 
-      sprite.pixelSnapMode = 'geometry';
+      sprite.pixelSnapMode = PixelSnapMode.Geometry;
       sprite.setPosition(1.4, 2.6);
 
       const view = new View(50, 50, 100, 100);
@@ -345,7 +346,7 @@ describe('Sprite', () => {
     test('downgrades to unsnapped bounds and warns once when the transform is rotated', () => {
       const sprite = new Sprite(makeTexture(10, 10));
 
-      sprite.pixelSnapMode = 'geometry';
+      sprite.pixelSnapMode = PixelSnapMode.Geometry;
       sprite.setRotation(30);
 
       const view = new View(50, 50, 100, 100);

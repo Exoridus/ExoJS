@@ -1,3 +1,4 @@
+import { PixelSnapMode } from '#rendering/pixelSnap';
 import { Shader } from '#rendering/shader/Shader';
 import type { NineSliceQuad } from '#rendering/sprite/nineSlice';
 import type { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
@@ -26,6 +27,7 @@ layout(location = 3) in uint a_nodeIndex;    // row into the shared transform bu
 
 uniform mat3 u_projection;
 uniform mat3 u_group;
+uniform vec4 u_viewport;                     // device-pixel viewport rect (x, y, width, height)
 uniform sampler2D u_transforms;              // shared per-frame transform buffer (3 texels/row)
 
 out vec2 v_texcoord;
@@ -42,12 +44,26 @@ void main(void) {
 
     int row = int(a_nodeIndex);
     vec4 m0 = texelFetch(u_transforms, ivec2(0, row), 0); // a, b, c, d
-    vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0); // tx, ty, 0, 0
+    vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0); // tx, ty, snapMode, 0
 
     float worldX = (m0.x * localX) + (m0.y * localY) + m1.x;
     float worldY = (m0.z * localX) + (m0.w * localY) + m1.y;
 
-    gl_Position = vec4((u_projection * u_group * vec3(worldX, worldY, 1.0)).xy, 0.0, 1.0);
+    vec2 clip = (u_projection * u_group * vec3(worldX, worldY, 1.0)).xy;
+
+    // Render-only pixel snapping (m1.z: 0 = none, 1 = position, 2 = geometry —
+    // both non-zero modes snap the origin). Snap the node ORIGIN's device-pixel
+    // position and rigid-shift the whole primitive by the same delta. floor(x+0.5)
+    // matches the CPU Math.round policy; GLSL round() is undefined at .5. Grid
+    // alignment is independent of the y-axis convention because the staged
+    // viewport rect is whole device pixels.
+    if (m1.z != 0.0) {
+        vec2 originClip = (u_projection * u_group * vec3(m1.x, m1.y, 1.0)).xy;
+        vec2 originDevice = u_viewport.xy + (originClip * 0.5 + 0.5) * u_viewport.zw;
+        clip += (floor(originDevice + 0.5) - originDevice) * 2.0 / max(u_viewport.zw, vec2(1.0));
+    }
+
+    gl_Position = vec4(clip, 0.0, 1.0);
 
     float u = (cornerX == 0) ? a_uvBounds.x : a_uvBounds.z;
     float v = (cornerY == 0) ? a_uvBounds.y : a_uvBounds.w;
@@ -138,18 +154,19 @@ export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSl
     const backend = this.getBackend();
 
     // Belt-and-braces for retained recording (S3-D5.3): the collect-time
-    // recordability predicate excludes pixel-snapped draws from ever arming a
-    // capture (snapped instance words are view-dependent). If one still arrives
-    // inside an active capture window, poison the recording so the resulting
-    // set can never validate — degrading to entry replay instead of wrong
-    // pixels. Nine-slice has no custom-material path to guard.
-    if (backend._isRetainedCapturing && sprite.pixelSnapMode !== 'none') {
+    // recordability predicate excludes geometry-snapped draws from ever arming a
+    // capture (geometry instance words are view-dependent; position snapping is
+    // resolved in-shader and stays recordable). If one still arrives inside an
+    // active capture window, poison the recording so the resulting set can never
+    // validate — degrading to entry replay instead of wrong pixels. Nine-slice
+    // has no custom-material path to guard.
+    if (backend._isRetainedCapturing && sprite.pixelSnapMode === PixelSnapMode.Geometry) {
       backend._poisonRetainedCaptures();
     }
 
     let quads: readonly NineSliceQuad[] = sprite.quads;
 
-    if (sprite.pixelSnapMode === 'geometry') {
+    if (sprite.pixelSnapMode === PixelSnapMode.Geometry) {
       const snap = backend._getSnapPixelSize();
 
       quads = sprite.getRenderQuads(backend.view, snap.width, snap.height);
@@ -322,6 +339,8 @@ export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSl
 
       this._shader.getUniform('u_group').setValue(groupTransform !== null ? groupTransform.toArray(false) : identityGroupMat3);
     }
+
+    backend._stageViewportUniform(this._shader);
   }
 
   // ── Retained-batch record/replay (Track B Slice 3) ───────────────────────

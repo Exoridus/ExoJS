@@ -2,6 +2,7 @@ import type { Matrix } from '#math/Matrix';
 import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
+import { PixelSnapMode } from '#rendering/pixelSnap';
 import { RenderEntryKind } from '#rendering/plan/RenderCommand';
 import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RenderPlanOptimizer } from '#rendering/plan/RenderPlanOptimizer';
@@ -206,17 +207,33 @@ describe('recordability predicate (S3-D5): v1 records default-path flagged rende
     backend.destroy();
   });
 
-  test("pixelSnapMode !== 'none' makes the fragment non-recordable (S3-D5.3)", () => {
+  test('a geometry-snapped drawable makes the fragment non-recordable (S3-D5.3)', () => {
     const backend = createTestBackend();
     const group = new RetainedContainer();
     const snapped = new RecordableLeaf('a');
 
-    snapped.pixelSnapMode = 'geometry';
+    snapped.pixelSnapMode = PixelSnapMode.Geometry;
     group.addChild(snapped);
 
     const fragment = captureFragment(group, backend);
 
     expect(fragment.isRecordable(backend)).toBe(false);
+
+    group.parent!.destroy();
+    backend.destroy();
+  });
+
+  test('a position-snapped drawable stays recordable (snapping is resolved in-shader)', () => {
+    const backend = createTestBackend();
+    const group = new RetainedContainer();
+    const snapped = new RecordableLeaf('a');
+
+    snapped.pixelSnapMode = PixelSnapMode.Position;
+    group.addChild(snapped);
+
+    const fragment = captureFragment(group, backend);
+
+    expect(fragment.isRecordable(backend)).toBe(true);
 
     group.parent!.destroy();
     backend.destroy();

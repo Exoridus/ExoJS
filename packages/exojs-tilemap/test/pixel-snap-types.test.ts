@@ -8,13 +8,13 @@
  * contracts cover exactly what consumers see.
  */
 
-import type { Drawable, NineSliceSprite, PixelSnapMode, Sprite } from '@codexo/exojs';
+import { type Drawable, type NineSliceSprite, PixelSnapMode, type Sprite } from '@codexo/exojs';
 import type { TileLayerNode, TileMapNode, TileMapView } from '@codexo/exojs-tilemap';
 import { describe, expectTypeOf, it } from 'vitest';
 
 describe('PixelSnapMode type contracts', () => {
-  it('is exactly the three documented literal modes', () => {
-    expectTypeOf<PixelSnapMode>().toEqualTypeOf<'none' | 'position' | 'geometry'>();
+  it('is exactly the three documented enum members', () => {
+    expectTypeOf<PixelSnapMode>().toEqualTypeOf<PixelSnapMode.None | PixelSnapMode.Position | PixelSnapMode.Geometry>();
   });
 
   it('core drawables expose pixelSnapMode as PixelSnapMode', () => {
@@ -29,11 +29,11 @@ describe('PixelSnapMode type contracts', () => {
     expectTypeOf<TileLayerNode['pixelSnapMode']>().toEqualTypeOf<PixelSnapMode>();
   });
 
-  it('valid literals are assignable; arbitrary strings are not', () => {
-    expectTypeOf<'none'>().toMatchTypeOf<PixelSnapMode>();
-    expectTypeOf<'position'>().toMatchTypeOf<PixelSnapMode>();
-    expectTypeOf<'geometry'>().toMatchTypeOf<PixelSnapMode>();
-    expectTypeOf<'bogus'>().not.toMatchTypeOf<PixelSnapMode>();
+  it('enum members are assignable; the legacy string literals are not', () => {
+    expectTypeOf<PixelSnapMode.None>().toMatchTypeOf<PixelSnapMode>();
+    expectTypeOf<PixelSnapMode.Position>().toMatchTypeOf<PixelSnapMode>();
+    expectTypeOf<PixelSnapMode.Geometry>().toMatchTypeOf<PixelSnapMode>();
+    expectTypeOf<'position'>().not.toMatchTypeOf<PixelSnapMode>();
     expectTypeOf<string>().not.toMatchTypeOf<PixelSnapMode>();
   });
 
@@ -47,25 +47,27 @@ describe('PixelSnapMode type contracts', () => {
     const mapNode = {} as TileMapNode;
     const layerNode = {} as TileLayerNode;
 
-    // Valid literals compile on every carrier …
-    sprite.pixelSnapMode = 'none';
-    drawable.pixelSnapMode = 'position';
-    view.pixelSnapMode = 'position';
-    mapNode.pixelSnapMode = 'geometry';
-    layerNode.pixelSnapMode = 'geometry';
+    // Valid enum members compile on every carrier …
+    sprite.pixelSnapMode = PixelSnapMode.None;
+    drawable.pixelSnapMode = PixelSnapMode.Position;
+    view.pixelSnapMode = PixelSnapMode.Position;
+    mapNode.pixelSnapMode = PixelSnapMode.Geometry;
+    layerNode.pixelSnapMode = PixelSnapMode.Geometry;
 
     // … invalid ones do not.
-    // @ts-expect-error — 'crisp' is not a PixelSnapMode
-    sprite.pixelSnapMode = 'crisp';
-    // @ts-expect-error — 'Geometry' (wrong case) is not a PixelSnapMode
-    nineSlice.pixelSnapMode = 'Geometry';
+    // @ts-expect-error — the legacy 'none' string is not a PixelSnapMode
+    sprite.pixelSnapMode = 'none';
+    // @ts-expect-error — the legacy 'geometry' string is not a PixelSnapMode
+    nineSlice.pixelSnapMode = 'geometry';
     // @ts-expect-error — a widened string is not narrowable to PixelSnapMode
     drawable.pixelSnapMode = String('none');
-    // @ts-expect-error — 'bogus' is not a PixelSnapMode
+    // @ts-expect-error — arbitrary strings are not PixelSnapMode
     view.pixelSnapMode = 'bogus';
-    // @ts-expect-error — 'snap' is not a PixelSnapMode
-    mapNode.pixelSnapMode = 'snap';
-    // @ts-expect-error — numbers are not PixelSnapMode
-    layerNode.pixelSnapMode = 0;
+    // @ts-expect-error — out-of-domain numeric literals are not PixelSnapMode
+    mapNode.pixelSnapMode = 7;
+    // A widened `number` IS statically assignable to a numeric enum (TypeScript
+    // semantics) — the runtime setter guard is what rejects out-of-domain
+    // values there, covered by the invalid-value tests in pixel-snap.test.ts.
+    layerNode.pixelSnapMode = Number(1);
   });
 });

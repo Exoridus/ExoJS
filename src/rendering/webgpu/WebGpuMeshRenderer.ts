@@ -23,6 +23,7 @@ import type {
   WebGpuRetainedNodeIndexRange,
   WebGpuRetainedRendererReplayState,
 } from './WebGpuRetainedGroupResources';
+import { packSnapViewport } from './webgpuSnapViewport';
 import { stencilContentDepthStencilState } from './WebGpuStencilState';
 import {
   collectScalarUniforms,
@@ -106,6 +107,7 @@ struct TransformUniforms {
     projection: mat3x3<f32>,
     group: mat3x3<f32>,
     flags: vec4<f32>,
+    viewport: vec4<f32>,        // device-pixel snap rect (x, y, width, height)
 };
 
 @group(0) @binding(0) var<uniform> uniforms: TransformUniforms;
@@ -127,7 +129,20 @@ fn vertexMain(input: VertexInput) -> VertexOutput {
     );
 
     var output: VertexOutput;
-    output.position = vec4<f32>((uniforms.projection * uniforms.group * world).xy, 0.0, 1.0);
+    var position = vec4<f32>((uniforms.projection * uniforms.group * world).xy, 0.0, 1.0);
+
+    // Render-only pixel snapping (slot.m1.z: 0 = none, non-zero = snap origin).
+    // Snap the node ORIGIN's device-pixel position and rigid-shift the whole
+    // primitive by the same delta. floor(x + 0.5) matches the CPU Math.round
+    // policy; WGSL round() is half-to-even. Grid alignment is independent of the
+    // y-axis convention because the staged viewport rect is whole device pixels.
+    if (slot.m1.z != 0.0) {
+        let originClip = (uniforms.projection * uniforms.group * vec3<f32>(slot.m1.x, slot.m1.y, 1.0)).xy;
+        let originDevice = uniforms.viewport.xy + (originClip * 0.5 + vec2<f32>(0.5)) * uniforms.viewport.zw;
+        let snapDelta = (floor(originDevice + vec2<f32>(0.5)) - originDevice) * 2.0 / max(uniforms.viewport.zw, vec2<f32>(1.0));
+        position = vec4<f32>(position.xy + snapDelta, position.z, position.w);
+    }
+    output.position = position;
     output.texcoord = input.texcoord;
     output.color = input.color;
     output.tint = slot.m2;
@@ -152,7 +167,7 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
 const vertexStrideBytes = 20;
 const wordsPerVertex = vertexStrideBytes / 4;
 const tintByteLength = 32; // vec4 tint + vec4 flags (only flags.x used)
-const transformUniformByteLength = 112; // mat3x3<f32> projection (48B) + mat3x3<f32> group (48B) + vec4<f32> flags (16B)
+const transformUniformByteLength = 128; // mat3x3<f32> projection (48B) + mat3x3<f32> group (48B) + vec4<f32> flags (16B) + vec4<f32> snap viewport (16B)
 
 // Custom-shader uniform layout:
 //   mat3x3<f32> projection   — 48 bytes (3 vec3 columns padded to vec4 in WGSL)
@@ -1287,11 +1302,13 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     const groupTransform = backend.renderGroupTransform;
 
     data.fill(0);
-    // TransformUniforms layout: mat3x3 projection + mat3x3 group + vec4 flags,
-    // packed via the shared canonical (non-transposed) column order.
+    // TransformUniforms layout: mat3x3 projection + mat3x3 group + vec4 flags
+    // + vec4 snap viewport, packed via the shared canonical (non-transposed)
+    // column order.
     packAffineMat3Std140(backend.view.getTransform(), data, 0);
     packAffineMat3Std140(groupTransform ?? Matrix.identity, data, 12);
     data[24] = premultiplySample ? 1 : 0;
+    packSnapViewport(backend, data, 28);
 
     this._device!.queue.writeBuffer(this._instancedUniformBuffer!, slot * this._uniformAlignment, data.buffer, data.byteOffset, transformUniformByteLength);
   }
@@ -1418,6 +1435,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     packAffineMat3Std140(view.getTransform(), data, 0);
     packAffineMat3Std140(backend.renderGroupTransform ?? Matrix.identity, data, 12);
     data[24] = backend.shouldPremultiplyTextureSample(texture) ? 1 : 0;
+    packSnapViewport(backend, data, 28);
     device.queue.writeBuffer(state.uniformBuffer!, slot * this._uniformAlignment, data.buffer, data.byteOffset, transformUniformByteLength);
 
     const textureBindGroup = this._getTextureBindGroup(backend, texture);
