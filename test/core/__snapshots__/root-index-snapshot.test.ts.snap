@@ -170,6 +170,7 @@ exports[`root index export surface snapshot > sorted runtime export names match 
   "SvgFactory",
   "Sweep",
   "SwitchProGamepadMapping",
+  "SystemOrder",
   "SystemRegistry",
   "TAU",
   "Text",

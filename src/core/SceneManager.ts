@@ -1,5 +1,6 @@
 import { Mesh } from '#rendering/mesh/Mesh';
 import type { RenderBackend } from '#rendering/RenderBackend';
+import type { RenderingContext } from '#rendering/RenderingContext';
 
 import type { Application } from './Application';
 import { Color } from './Color';
@@ -58,7 +59,7 @@ const createOverlayMesh = (): TransitionOverlayMesh =>
 
 const defaultFadeTransitionDuration = 220;
 
-// User Timing mark/measure names for the scene sub-phases of `update()`
+// User Timing mark/measure names for the scene sub-phases of `update()`/`draw()`
 // (dev-only). Constant strings so the Performance panel groups every frame's
 // entries under a stable label instead of one row per frame.
 const sceneUpdateStartMark = 'exojs:scene-update:start';
@@ -80,6 +81,12 @@ const uiMeasure = 'exojs:ui';
  * {@link Scene.ui} (the screen-fixed UI layer), and "freeze the game but keep
  * drawing it" is `scene.paused = true` (skips the scene's `update` + systems
  * while it keeps rendering).
+ *
+ * Per-frame dispatch is split into four entry points, called by
+ * {@link Application.update} in normative order: {@link SceneManager.fixedUpdate}
+ * (zero or more times), {@link SceneManager.update}, {@link SceneManager.draw},
+ * then {@link SceneManager._drawTransition} last, so the fade overlay always
+ * sits above both scene and app draw systems.
  */
 export class SceneManager {
   private readonly _app: Application;
@@ -147,14 +154,33 @@ export class SceneManager {
   }
 
   /**
-   * Per-frame entry point called by {@link Application.update}. Advances any
-   * active fade transition, then — for the active scene — runs `update` and
-   * ticks its systems (unless {@link Scene.paused}), draws it, and renders its
-   * UI layer on top.
+   * Drive one fixed-timestep step on the active scene (unless {@link
+   * Scene.paused}): the scene's `fixedUpdate()` hook, then its systems'
+   * fixed-update phase. Called zero or more times per frame by the
+   * {@link Application} loop, ahead of {@link SceneManager.update}. No
+   * drawing or transition advance happens here — those are per-frame, not
+   * per fixed step.
+   */
+  public fixedUpdate(step: Time): this {
+    const scene = this._activeScene;
+
+    if (scene !== null && !scene.paused) {
+      scene.fixedUpdate(step);
+      scene._peekSystems()?._fixedUpdate(step);
+    }
+
+    return this;
+  }
+
+  /**
+   * Per-frame logic entry point called by {@link Application.update}, after
+   * this frame's fixed steps: for the active scene, unless {@link
+   * Scene.paused}, runs `update()` then its systems' update phase.
+   * Dispatches {@link SceneManager.onUpdateScene} whenever a scene is active,
+   * regardless of pause state. Drawing is a separate call — see
+   * {@link SceneManager.draw}.
    */
   public update(delta: Time): this {
-    this._advanceTransition(delta.milliseconds);
-
     const scene = this._activeScene;
 
     if (scene !== null) {
@@ -174,13 +200,38 @@ export class SceneManager {
 
         // Tick the scene's systems (e.g. a physics world) after its update().
         if (__DEV__) Perf.mark(sceneTickStartMark);
-        scene._tickSystems(delta);
+        scene._peekSystems()?._update(delta);
         if (__DEV__) Perf.measure(sceneTickMeasure, sceneTickStartMark);
       }
 
+      this.onUpdateScene.dispatch(scene);
+
+      if (__DEV__) {
+        Perf.clearMarks(sceneUpdateStartMark);
+        Perf.clearMarks(sceneTickStartMark);
+        Perf.clearMeasures(sceneUpdateMeasure);
+        Perf.clearMeasures(sceneTickMeasure);
+      }
+    }
+
+    return this;
+  }
+
+  /**
+   * Draw entry point called by {@link Application.update}, after this
+   * frame's {@link SceneManager.update}: draws the active scene — while
+   * `Active` or paused, drawing continues either way — then its systems'
+   * draw phase, then its screen-fixed UI layer on top. No-op when no scene
+   * is active. The transition overlay is drawn separately, last — see
+   * {@link SceneManager._drawTransition}.
+   */
+  public draw(context: RenderingContext): this {
+    const scene = this._activeScene;
+
+    if (scene !== null) {
       if (__DEV__) Perf.mark(drawStartMark);
       // eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
-      const drawResult = scene.draw(this._app.rendering);
+      const drawResult = scene.draw(context);
       if (__DEV__) Perf.measure(drawMeasure, drawStartMark);
 
       if (!this._asyncDrawWarned.has(scene) && (drawResult as unknown) instanceof Promise) {
@@ -190,50 +241,62 @@ export class SceneManager {
         });
       }
 
+      // Tick the scene's draw systems after its own draw().
+      scene._peekSystems()?._draw(context);
+
       // Auto-render the scene's screen-fixed UI layer above its content.
       if (__DEV__) Perf.mark(uiStartMark);
-      scene._peekUI()?._render(this._app.rendering);
+      scene._peekUI()?._render(context);
       if (__DEV__) Perf.measure(uiMeasure, uiStartMark);
-    }
 
-    const transitionAlpha = this._getTransitionAlpha();
-
-    if (transitionAlpha > 0) {
-      this._renderTransitionOverlay(transitionAlpha);
-    }
-
-    if (scene !== null) {
-      this.onUpdateScene.dispatch(scene);
-    }
-
-    if (__DEV__) {
-      Perf.clearMarks(sceneUpdateStartMark);
-      Perf.clearMarks(sceneTickStartMark);
-      Perf.clearMarks(drawStartMark);
-      Perf.clearMarks(uiStartMark);
-      Perf.clearMeasures(sceneUpdateMeasure);
-      Perf.clearMeasures(sceneTickMeasure);
-      Perf.clearMeasures(drawMeasure);
-      Perf.clearMeasures(uiMeasure);
+      if (__DEV__) {
+        Perf.clearMarks(drawStartMark);
+        Perf.clearMarks(uiStartMark);
+        Perf.clearMeasures(drawMeasure);
+        Perf.clearMeasures(uiMeasure);
+      }
     }
 
     return this;
   }
 
   /**
-   * Drive one fixed-timestep step on the active scene (unless paused). Called
-   * zero or more times per frame by the {@link Application} loop, ahead of
-   * {@link SceneManager.update}. No drawing or transition advance happens here —
-   * those are per-frame, not per fixed step.
+   * @internal Advances the active fade transition by `delta` and, once it
+   * has any visible opacity, draws the fullscreen overlay into `context`'s
+   * backend. Called once per frame by the {@link Application} loop, after
+   * Scene draw and app draw systems have rendered — the overlay is always
+   * topmost (definition §10.5).
    */
-  public fixedUpdate(delta: Time): this {
-    const scene = this._activeScene;
+  public _drawTransition(context: RenderingContext, delta: Time): this {
+    this._advanceTransition(delta.milliseconds);
 
-    if (scene !== null && !scene.paused) {
-      scene.fixedUpdate(delta);
+    const transitionAlpha = this._getTransitionAlpha();
+
+    if (transitionAlpha > 0) {
+      this._renderTransitionOverlay(transitionAlpha, context.backend);
     }
 
     return this;
+  }
+
+  /**
+   * @internal Opens the active scene's systems registry mutation-buffering
+   * window for this frame — forwards to {@link SystemRegistry._beginFrame}.
+   * No-op when no scene is active or its systems registry was never
+   * materialized (no lazy allocation forced).
+   */
+  public _beginFrame(): void {
+    this._activeScene?._peekSystems()?._beginFrame();
+  }
+
+  /**
+   * @internal Drains the active scene's systems registry buffered
+   * mutations, closing this frame's window — forwards to
+   * {@link SystemRegistry._endFrame}. No-op when no scene is active or its
+   * systems registry was never materialized.
+   */
+  public _endFrame(): void {
+    this._activeScene?._peekSystems()?._endFrame();
   }
 
   public destroy(): void {
@@ -453,10 +516,9 @@ export class SceneManager {
     return this._transition.phase === 'out' ? progress : 1 - progress;
   }
 
-  private _renderTransitionOverlay(alpha: number): void {
+  private _renderTransitionOverlay(alpha: number, backend: RenderBackend): void {
     const transition = this._transition;
     const overlayColor = transition ? transition.color : Color.black;
-    const backend = this._app.backend;
     const bounds = backend.view.getBounds();
     const overlay = this._transitionOverlay;
     const vertices = overlay.vertices;

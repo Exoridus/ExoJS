@@ -87,10 +87,12 @@ describe('AudioManager.update()', () => {
     sound.destroy();
   });
 
-  // 4. Application.update() ticks the app systems in ascending order. The core
-  // managers register on app.systems with reserved bands, so the loop runs
-  // interaction (200) → audio (300) → tweens (400). Stand in with ordered probes.
-  test('Application.update() ticks app systems in ascending order', async () => {
+  // 4. Application.update() drives the internal prepare stage — input,
+  // interaction, audio, tweens, rendering, in that fixed relative order —
+  // ahead of fixed steps. The core managers are no longer app systems (they
+  // no longer occupy `app.systems`), so this stubs each manager's
+  // `_prepareFrame` directly rather than going through the registry.
+  test('Application.update() drives the internal prepare stage in the historical core-manager order', async () => {
     vi.resetModules();
 
     const callOrder: string[] = [];
@@ -109,17 +111,25 @@ describe('AudioManager.update()', () => {
     const app = Object.create(Application.prototype) as import('#core/Application').Application;
     const rawApp = app as unknown as Record<string, unknown>;
 
-    // Register out of order to prove the registry sorts by `order`, not insertion.
-    const systems = new SystemRegistry();
-    systems.add({ order: 400, update: () => callOrder.push('tweens'), destroy: vi.fn() });
-    systems.add({ order: 200, update: () => callOrder.push('interaction'), destroy: vi.fn() });
-    systems.add({ order: 300, update: () => callOrder.push('audio'), destroy: vi.fn() });
+    const prepareStub = (name: string): { _prepareFrame: () => void } => ({ _prepareFrame: () => callOrder.push(name) });
 
     rawApp['_status'] = ApplicationStatus.Running;
     rawApp['pauseOnHidden'] = false;
     rawApp['_documentVisible'] = true;
-    rawApp['systems'] = systems;
-    rawApp['scene'] = { update: vi.fn() };
+    rawApp['systems'] = new SystemRegistry();
+    rawApp['scene'] = {
+      _beginFrame: vi.fn(),
+      _endFrame: vi.fn(),
+      fixedUpdate: vi.fn(),
+      update: vi.fn(),
+      draw: vi.fn(),
+      _drawTransition: vi.fn(),
+    };
+    rawApp['input'] = prepareStub('input');
+    rawApp['interaction'] = prepareStub('interaction');
+    rawApp['_audio'] = prepareStub('audio');
+    rawApp['tweens'] = prepareStub('tweens');
+    rawApp['_rendering'] = prepareStub('rendering');
     rawApp['_backend'] = {
       flush: vi.fn(),
       resetStats: vi.fn().mockReturnThis(),
@@ -133,12 +143,13 @@ describe('AudioManager.update()', () => {
     rawApp['_updateHandler'] = vi.fn();
     rawApp['_frameCount'] = 0;
     rawApp['onFrame'] = { dispatch: vi.fn() };
+    rawApp['onFixedFrame'] = { dispatch: vi.fn() };
 
     vi.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 1);
 
     app.update();
 
-    expect(callOrder).toEqual(['interaction', 'audio', 'tweens']);
+    expect(callOrder).toEqual(['input', 'interaction', 'audio', 'tweens', 'rendering']);
 
     vi.resetModules();
   });

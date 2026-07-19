@@ -747,7 +747,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Advance follow, shake, and bounds-constraint animations on the active view, every view rendered last frame (automatic), and any trackView-ed view. Ticked once per frame via Application.systems."
+          "description": "Advance follow, shake, and bounds-constraint animations on the active view, every view rendered last frame (automatic), and any trackView-ed view. Ticked once per frame via Application.update's internal prepare stage."
         }
       ],
       "paragraphs": [],

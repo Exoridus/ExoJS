@@ -35,7 +35,9 @@ export { registerSerializer, SerializationRegistry } from './serialization/Seria
 export type { SerializedAssetRef, SerializedNode, SerializedScene } from './serialization/types';
 export { SERIALIZATION_VERSION } from './serialization/types';
 export { Signal } from './Signal';
-export type { System } from './System';
+export type { System, SystemMethods } from './System';
+export { SystemOrder } from './SystemOrder';
+export type { SystemRegistrationOptions } from './SystemRegistry';
 export { SystemRegistry } from './SystemRegistry';
 export { Time } from './Time';
 export { Timer } from './Timer';

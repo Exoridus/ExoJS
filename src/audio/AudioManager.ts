@@ -1,5 +1,4 @@
 import { Signal } from '#core/Signal';
-import type { System } from '#core/System';
 import type { Time } from '#core/Time';
 
 import { getAudioContext, isAudioContextReady, onAudioContextReady } from './audio-context';
@@ -23,9 +22,7 @@ import { createSpatialSmoothingSettings, type SpatialSmoothingSettings } from '.
  * voice, and propagates visibility-driven mute when
  * {@link AudioManager.muteOnHidden} is enabled.
  */
-export class AudioManager implements System {
-  /** App-systems tick band — audio after interaction. @internal */
-  public readonly order = 300;
+export class AudioManager {
   public readonly master: AudioBus;
   public readonly music: AudioBus;
   public readonly sound: AudioBus;
@@ -151,7 +148,7 @@ export class AudioManager implements System {
     });
   }
 
-  /** Called once per frame from Application.update(). The frame delta is unused here (hence `_delta`); present for {@link System} contract compliance. */
+  /** Called once per frame from Application.update(). The frame delta is unused here (hence `_delta`). */
   public update(_delta: Time): void {
     this.listener._tick();
     // Tick spatial voices and prune ended ones.
@@ -162,6 +159,16 @@ export class AudioManager implements System {
       }
       voice._tickSpatial();
     }
+  }
+
+  /**
+   * @internal Invoked once per frame by {@link Application.update}'s
+   * internal prepare stage, after interaction and ahead of fixed steps —
+   * not a public {@link System} phase. Thin wrapper over
+   * {@link AudioManager.update}.
+   */
+  public _prepareFrame(delta: Time): void {
+    this.update(delta);
   }
 
   /**

@@ -1,16 +1,18 @@
-import { AudioManager } from '#audio/AudioManager';
 import { Scene } from '#core/Scene';
 import type { System } from '#core/System';
 import { Time } from '#core/Time';
-import { InputManager } from '#input/InputManager';
-import { InteractionManager } from '#input/InteractionManager';
 
-// Scene-bound system registry: systems tick after Scene.update in ascending
-// `order`, structural mutations during a tick are deferred, and systems are
-// destroyed with the scene. SceneSystems is internal to Scene.ts, so it is
-// exercised through `scene.systems` / `scene._tickSystems`.
+// Scene-bound system registry: `scene.systems` is an ordinary SystemRegistry
+// (see system-registry.test.ts for its full ordering/mutation-buffering/
+// destruction contract), scoped to the scene and destroyed with it. This file
+// exercises the Scene-level wiring: `scene.systems` returns a working
+// registry, its update phase runs once per simulated frame, and
+// `Scene.destroy()` destroys every remaining registered system.
 
-class MockSystem implements System {
+// `System` is a union (via `RequireAtLeastOne`), so a class cannot
+// `implements` it directly — structural assignability (e.g. passing an
+// instance to `scene.systems.add()`) is what the contract actually relies on.
+class MockSystem {
   public updates = 0;
   public destroyed = false;
 
@@ -33,8 +35,13 @@ class MockSystem implements System {
   }
 }
 
+// A "frame" against a bare registry: open the mutation-buffering window,
+// dispatch the update phase, then close it — mirroring how Application
+// drives `scene.systems` in practice.
 const tick = (scene: Scene): void => {
-  scene._tickSystems(Time.temp.set(16));
+  scene.systems._beginFrame();
+  scene.systems._update(Time.temp.set(16));
+  scene.systems._endFrame();
 };
 
 describe('Scene.systems', () => {
@@ -113,25 +120,28 @@ describe('Scene.systems', () => {
           scene.systems.add(late);
         }
       },
-      destroy: (): void => {},
     };
     scene.systems.add(adder);
 
     tick(scene); // adder runs, schedules `late`; `late` must NOT run this frame
     expect(late.updates).toBe(0);
-    expect(scene.systems.has(late)).toBe(true);
+    expect(scene.systems.has(late)).toBe(true); // eligible now that the frame boundary closed
 
     tick(scene); // now `late` runs
     expect(late.updates).toBe(1);
 
     scene.destroy();
   });
-});
 
-describe('System.update contract', () => {
-  test('InputManager, InteractionManager, AudioManager all satisfy (delta: Time) => void', () => {
-    expectTypeOf(InputManager.prototype.update).toEqualTypeOf<(delta: Time) => void>();
-    expectTypeOf(InteractionManager.prototype.update).toEqualTypeOf<(delta: Time) => void>();
-    expectTypeOf(AudioManager.prototype.update).toEqualTypeOf<(delta: Time) => void>();
+  test('_peekSystems() reflects the materialized registry without forcing allocation', () => {
+    const scene = new Scene();
+
+    expect(scene._peekSystems()).toBeNull();
+
+    const registry = scene.systems;
+
+    expect(scene._peekSystems()).toBe(registry);
+
+    scene.destroy();
   });
 });

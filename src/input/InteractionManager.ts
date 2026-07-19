@@ -2,7 +2,6 @@ import type { Application } from '#core/Application';
 import { logger } from '#core/logging';
 import type { Signal } from '#core/Signal';
 import type { InteractionHooks, Stage } from '#core/Stage';
-import type { System } from '#core/System';
 import type { Time } from '#core/Time';
 import { DynamicAabbTree } from '#math/DynamicAabbTree';
 import { Matrix } from '#math/Matrix';
@@ -68,9 +67,7 @@ interface IndexedNode {
  * Constructed automatically by {@link Application}; you do not instantiate
  * this class yourself.
  */
-export class InteractionManager implements InteractionHooks, System {
-  /** App-systems tick band — interaction after input. @internal */
-  public readonly order = 200;
+export class InteractionManager implements InteractionHooks {
   private readonly _app: Application;
 
   // Persistent spatial index (dynamic AABB tree) — null when no interactive
@@ -304,6 +301,16 @@ export class InteractionManager implements InteractionHooks, System {
 
     this._pending.clear();
     this._updateCursor();
+  }
+
+  /**
+   * @internal Invoked once per frame by {@link Application.update}'s
+   * internal prepare stage, after input and ahead of fixed steps — not a
+   * public {@link System} phase. Thin wrapper over
+   * {@link InteractionManager.update}.
+   */
+  public _prepareFrame(delta: Time): void {
+    this.update(delta);
   }
 
   /**

@@ -148,9 +148,14 @@ describe('Application.onFrame', () => {
 
     const callOrder: string[] = [];
     const sceneManager = {
+      _beginFrame: vi.fn(),
+      _endFrame: vi.fn(),
+      fixedUpdate: vi.fn(),
       update: vi.fn(() => {
         callOrder.push('sceneManager.update');
       }),
+      draw: vi.fn(),
+      _drawTransition: vi.fn(),
     };
 
     // Get the Signal class from the same module registry that Application uses.
@@ -174,14 +179,20 @@ describe('Application.onFrame', () => {
     rawApp['_status'] = ApplicationStatus.Running;
     rawApp['pauseOnHidden'] = false;
     rawApp['_documentVisible'] = true;
-    rawApp['systems'] = { _tick: vi.fn() };
+    rawApp['systems'] = { _beginFrame: vi.fn(), _endFrame: vi.fn(), _fixedUpdate: vi.fn(), _update: vi.fn(), _draw: vi.fn() };
     rawApp['scene'] = sceneManager;
+    rawApp['input'] = { _prepareFrame: vi.fn() };
+    rawApp['interaction'] = { _prepareFrame: vi.fn() };
+    rawApp['_audio'] = { _prepareFrame: vi.fn() };
+    rawApp['tweens'] = { _prepareFrame: vi.fn() };
+    rawApp['_rendering'] = { _prepareFrame: vi.fn() };
     rawApp['_backend'] = backend;
     rawApp['_frameClock'] = { elapsedTime: { milliseconds: 16, seconds: 0.016 }, restart: vi.fn() };
     rawApp['_fixed'] = { advance: () => 0, alpha: 0 };
     rawApp['_updateHandler'] = vi.fn();
     rawApp['_frameCount'] = 0;
     rawApp['onFrame'] = onFrame;
+    rawApp['onFixedFrame'] = { dispatch: vi.fn() };
 
     vi.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 1);
 

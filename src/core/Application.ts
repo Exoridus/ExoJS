@@ -240,8 +240,9 @@ const defaultInputSettings: Required<InputApplicationOptions> = {
 
 /**
  * Top-level engine instance. Owns the canvas, render backend, scene-stack
- * controller, the app system registry (input, interaction, audio, tweens,
- * rendering), asset loader, and the per-frame loop.
+ * controller, the core managers (input, interaction, audio, tweens,
+ * rendering), the app-level {@link SystemRegistry} for user/extension
+ * systems, asset loader, and the per-frame loop.
  *
  * Lifecycle: construct with options → `await app.start(scene)` → engine
  * runs the request-animation-frame loop until `app.stop()` or
@@ -273,10 +274,12 @@ export class Application {
   public readonly random: Random;
   public readonly tweens: TweenManager = new TweenManager();
   /**
-   * App-level system registry, ticked once per frame in ascending `order`. The
-   * core managers occupy reserved bands (input 100, interaction 200, audio 300,
-   * tweens 400, rendering 500); register your own app-wide systems at order
-   * 600+ via `app.systems.add(...)`. Scene-scoped systems live on `scene.systems`.
+   * App-level system registry for user/extension systems — Application
+   * lifetime, independent of the active scene. The core managers (input,
+   * interaction, audio, tweens, rendering) are driven directly by the
+   * internal per-frame prepare stage and never occupy this registry, so any
+   * `order` is available; see {@link SystemOrder} for common reference
+   * points. Scene-scoped systems live on `scene.systems`.
    */
   public readonly systems = new SystemRegistry();
   /**
@@ -447,14 +450,6 @@ export class Application {
 
     this._fixed = new FixedTimestep(fixedStepMs, maxFixedSteps);
     this._fixedTime = new Time(fixedStepMs);
-
-    // Register the core managers as ordered app systems (reserved order bands);
-    // they tick from one loop, ahead of any user systems (order 600+).
-    this.systems.add(this.input);
-    this.systems.add(this.interaction);
-    this.systems.add(this._audio);
-    this.systems.add(this.tweens);
-    this.systems.add(this._rendering);
 
     this._startupClock.start();
 
@@ -704,17 +699,20 @@ export class Application {
    * clock is reset and the body is skipped — preventing a large delta spike
    * on the first visible frame after resume.
    *
-   * Each normal frame runs two distinct phases:
+   * Each normal frame runs, in order:
    *
-   * **Update phase** — the app systems tick in ascending `order` (input,
-   * interaction, audio, tweens, rendering, plus any user systems at 600+), then
-   * `scene.update(delta)` for each participating scene in stack order.
-   *
-   * **Render phase** — `scene.draw(context)` for each participating scene in
-   * stack order, followed by the transition overlay when active.
-   *
-   * **Frame dispatch / flush** — `onFrame` signal, backend GPU flush,
-   * frame-time stat write, RAF reschedule.
+   * 1. **Internal prepare stage** (not a public phase) — input, interaction,
+   *    audio, tweens, then rendering normalize their per-frame state.
+   * 2. **Fixed steps** (zero or more) — `app.systems` fixed-update phase,
+   *    `scene.fixedUpdate()` + the scene's systems fixed-update phase,
+   *    {@link Application.onFixedFrame}.
+   * 3. **Update** — `app.systems` update phase, then `scene.update()` + the
+   *    scene's systems update phase.
+   * 4. **Draw** — the scene draws (plus its systems and UI layer), then
+   *    `app.systems` draw phase (app draw systems render *above* scene
+   *    output), then the transition overlay (always topmost).
+   * 5. **Frame dispatch / flush** — {@link Application.onFrame}, backend GPU
+   *    flush, frame-time stat write, RAF reschedule.
    *
    * The simulation `delta` forwarded to all update recipients is clamped to
    * an internal maximum (100 ms) so that debugger pauses, device sleep/resume,
@@ -732,6 +730,9 @@ export class Application {
         return this;
       }
 
+      this.systems._beginFrame();
+      this.scene._beginFrame();
+
       // Frame guard (render-fail surface): a throwing frame is reported
       // through the error pipeline instead of killing the RAF loop; the loop
       // halts only after `maxConsecutiveFrameErrors` consecutive failures.
@@ -746,22 +747,36 @@ export class Application {
         this.backend.resetStats();
         this.backend.stats.rawFrameDeltaMs = rawDeltaMs;
 
-        if (__DEV__) Perf.mark(systemsStartMark);
-        this.systems._tick(frameDelta);
-        if (__DEV__) Perf.measure(systemsMeasure, systemsStartMark);
+        // Internal frame setup — not a public System phase. Same relative
+        // order the core managers ticked in as (former) app systems.
+        this.input._prepareFrame(frameDelta);
+        this.interaction._prepareFrame(frameDelta);
+        this._audio._prepareFrame(frameDelta);
+        this.tweens._prepareFrame(frameDelta);
+        this._rendering._prepareFrame(frameDelta);
 
         // Fixed-timestep steps (0..N) for deterministic logic/physics, after input
         // so they see this frame's input and before the variable update/draw.
         const fixedSteps = this._fixed.advance(clampedDeltaMs);
 
         for (let step = 0; step < fixedSteps; step++) {
+          this.systems._fixedUpdate(this._fixedTime);
           this.scene.fixedUpdate(this._fixedTime);
           this.onFixedFrame.dispatch(this._fixedTime);
         }
 
         this._frameAlpha = this._fixed.alpha;
 
+        if (__DEV__) Perf.mark(systemsStartMark);
+        this.systems._update(frameDelta);
+        if (__DEV__) Perf.measure(systemsMeasure, systemsStartMark);
+
         this.scene.update(frameDelta);
+
+        this.scene.draw(this._rendering);
+        this.systems._draw(this._rendering);
+        this.scene._drawTransition(this._rendering, frameDelta);
+
         this.onFrame.dispatch(frameDelta);
         this.backend.flush();
         this.backend.stats.frameTimeMs = performance.now() - frameStart;
@@ -778,6 +793,9 @@ export class Application {
       } catch (error) {
         this._handleFrameError(error);
       } finally {
+        this.scene._endFrame();
+        this.systems._endFrame();
+
         // RAF rescheduling always happens unless the guard halted the loop —
         // this is what keeps the canvas alive through a throwing frame.
         if (this._status === ApplicationStatus.Running) {
@@ -1049,10 +1067,10 @@ export class Application {
   }
 
   /**
-   * Tear down every owned subsystem (loader, the app systems — input,
-   * interaction, audio, tweens, rendering — backend, scene manager, all clocks,
-   * all signals) and release event listeners. The application instance is
-   * unusable after this call.
+   * Tear down every owned subsystem (loader, the core managers — input,
+   * interaction, audio, tweens, rendering — the app system registry, backend,
+   * scene manager, all clocks, all signals) and release event listeners. The
+   * application instance is unusable after this call.
    */
   public destroy(): void {
     this._destroyed = true;
@@ -1068,6 +1086,14 @@ export class Application {
     this.loader.destroy();
     this.focus.destroy();
     this.systems.destroy();
+    // Core managers are driven directly (not via `systems`, see the internal
+    // prepare stage in `update()`), so they are torn down explicitly here, in
+    // the same reverse order they used to run in as app systems.
+    this._rendering.destroy();
+    this.tweens.destroy();
+    this._audio.destroy();
+    this.interaction.destroy();
+    this.input.destroy();
     this._backend.destroy();
     this.scene.destroy();
     this._startupClock.destroy();
@@ -1176,13 +1202,13 @@ export class Application {
       this._backendType = 'webgl2';
       this._backend = this.createBackend(this._backendType, this._snapshot);
 
-      // Swap the rendering system for one bound to the rebuilt backend so
-      // app.systems keeps ticking the live RenderingContext.
+      // Swap in a rendering context bound to the rebuilt backend. The internal
+      // prepare stage reads `this._rendering` fresh every frame, so no
+      // registry bookkeeping is needed here.
       const previousRendering = this._rendering;
-      this.systems.remove(previousRendering);
+
       previousRendering.destroy();
       this._rendering = new RenderingContext(this._backend);
-      this.systems.add(this._rendering);
 
       await this._backend.initialize();
     }

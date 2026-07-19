@@ -1,6 +1,6 @@
 {
   "title": "SystemRegistry",
-  "description": "Ordered registry of per-frame Systems, shared by Scene (as `scene.systems`) and `Application` (as `app.systems`). Systems tick once per frame in ascending `order` (ties keep insertion order) and are destroyed in reverse registration order when the registry is destroyed. Structural mutations made from inside a system's `update()` (a system adding or removing another, or itself) are deferred until the tick completes, so the iteration is never invalidated mid-frame.",
+  "description": "Phase-dispatching registry of Systems, shared by `Scene` (as `scene.systems`) and `Application` (as `app.systems`). Each system participates only in the scheduler phases it implements (`fixedUpdate`/`update`/`draw`); within a phase, systems run in ascending `order` (ties keep registration order) and are destroyed in reverse registration order when the registry is destroyed. Structural mutations are frame-scoped (definition §9.6): a system added during a frame — whether from outside or from another system's own callback — does not participate in any phase until the *next* frame, in any phase. Removing a system during a callback marks it inactive immediately, so it is skipped by every later phase and every later fixed step in the *same* frame; the structural delete and the single SystemRegistry.onRemove dispatch are finalized at the frame boundary. Outside a frame — before the first SystemRegistry._beginFrame or after its matching SystemRegistry._endFrame — `add()`/`remove()` apply immediately.",
   "symbol": "SystemRegistry",
   "kind": "class",
   "subsystem": "core",
@@ -19,8 +19,8 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Ordered registry of per-frame Systems, shared by Scene (as `scene.systems`) and `Application` (as `app.systems`). Systems tick once per frame in ascending `order` (ties keep insertion order) and are destroyed in reverse registration order when the registry is destroyed.",
-        "Structural mutations made from inside a system's `update()` (a system adding or removing another, or itself) are deferred until the tick completes, so the iteration is never invalidated mid-frame."
+        "Phase-dispatching registry of Systems, shared by `Scene` (as `scene.systems`) and `Application` (as `app.systems`). Each system participates only in the scheduler phases it implements (`fixedUpdate`/`update`/`draw`); within a phase, systems run in ascending `order` (ties keep registration order) and are destroyed in reverse registration order when the registry is destroyed.",
+        "Structural mutations are frame-scoped (definition §9.6): a system added during a frame — whether from outside or from another system's own callback — does not participate in any phase until the *next* frame, in any phase. Removing a system during a callback marks it inactive immediately, so it is skipped by every later phase and every later fixed step in the *same* frame; the structural delete and the single SystemRegistry.onRemove dispatch are finalized at the frame boundary. Outside a frame — before the first SystemRegistry._beginFrame or after its matching SystemRegistry._endFrame — `add()`/`remove()` apply immediately."
       ],
       "importLine": "import { SystemRegistry } from '@codexo/exojs'",
       "sourceLink": null
@@ -69,7 +69,7 @@
       "members": [
         {
           "name": "add",
-          "signature": "add(system: T): T",
+          "signature": "add(system: T, options?: SystemRegistrationOptions): T",
           "signatureTokens": [
             {
               "text": "add",
@@ -92,6 +92,26 @@
               "kind": "type"
             },
             {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SystemRegistrationOptions",
+              "kind": "type"
+            },
+            {
               "text": ")",
               "kind": "punctuation"
             },
@@ -109,10 +129,15 @@
               "name": "system",
               "type": "T",
               "optional": false
+            },
+            {
+              "name": "options",
+              "type": "SystemRegistrationOptions",
+              "optional": true
             }
           ],
           "returnType": "T",
-          "description": "Add system; returns it for fluent capture. Ticks from the next frame."
+          "description": "Register system, returning it unchanged for fluent capture (const world = app.systems.add(new PhysicsWorld())). Adding the same object twice is a no-op. See the class docs for buffering timing."
         },
         {
           "name": "destroy",
@@ -141,7 +166,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": ""
+          "description": "Destroy every remaining registered system exactly once, in reverse registration order, then clear the registry. A system already removed via SystemRegistry.remove — even if not yet structurally finalized — is not destroyed: remove() never destroys."
         },
         {
           "name": "has",
@@ -188,7 +213,7 @@
             }
           ],
           "returnType": "boolean",
-          "description": "Whether system is registered."
+          "description": "Whether system is currently registered and eligible to run — false for a not-yet-eligible buffered add or an already-removed system."
         },
         {
           "name": "remove",
@@ -235,7 +260,7 @@
             }
           ],
           "returnType": "boolean",
-          "description": "Remove system without destroying it. Returns true if it was registered."
+          "description": "Remove system without destroying it — never destroys. Returns true if it was registered. See the class docs for the exact timing of structural cleanup and SystemRegistry.onRemove."
         }
       ],
       "paragraphs": [],
@@ -265,7 +290,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Number of registered systems."
+          "description": "Number of systems currently registered and eligible to run."
         }
       ],
       "paragraphs": [],
@@ -315,7 +340,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Dispatched when a system is added to this registry."
+          "description": "Dispatched when a system structurally enters the registry (immediately, or at the frame boundary for a buffered add)."
         },
         {
           "name": "onRemove",
@@ -356,7 +381,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Dispatched when a system is removed from this registry."
+          "description": "Dispatched when a system structurally leaves the registry (immediately, or at the frame boundary for a buffered remove)."
         }
       ],
       "paragraphs": [],

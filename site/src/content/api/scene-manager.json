@@ -1,15 +1,15 @@
 {
   "title": "SceneManager",
-  "description": "Single-active-scene controller owned by Application. Holds at most one active Scene (the current \"screen\"); SceneManager.setScene switches to a new scene — unloading the previous one — with an optional fade transition. There is no scene stack: overlays, HUDs and pause menus belong on Scene.ui (the screen-fixed UI layer), and \"freeze the game but keep drawing it\" is `scene.paused = true` (skips the scene's `update` + systems while it keeps rendering).",
+  "description": "Single-active-scene controller owned by Application. Holds at most one active Scene (the current \"screen\"); SceneManager.setScene switches to a new scene — unloading the previous one — with an optional fade transition. There is no scene stack: overlays, HUDs and pause menus belong on Scene.ui (the screen-fixed UI layer), and \"freeze the game but keep drawing it\" is `scene.paused = true` (skips the scene's `update` + systems while it keeps rendering). Per-frame dispatch is split into four entry points, called by Application.update in normative order: SceneManager.fixedUpdate (zero or more times), SceneManager.update, SceneManager.draw, then SceneManager._drawTransition last, so the fade overlay always sits above both scene and app draw systems.",
   "symbol": "SceneManager",
   "kind": "class",
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 10,
+  "memberCount": 11,
   "counts": {
     "constructors": 1,
-    "methods": 4,
+    "methods": 5,
     "properties": 1,
     "events": 4
   },
@@ -20,7 +20,8 @@
       "members": [],
       "paragraphs": [
         "Single-active-scene controller owned by Application. Holds at most one active Scene (the current \"screen\"); SceneManager.setScene switches to a new scene — unloading the previous one — with an optional fade transition.",
-        "There is no scene stack: overlays, HUDs and pause menus belong on Scene.ui (the screen-fixed UI layer), and \"freeze the game but keep drawing it\" is `scene.paused = true` (skips the scene's `update` + systems while it keeps rendering)."
+        "There is no scene stack: overlays, HUDs and pause menus belong on Scene.ui (the screen-fixed UI layer), and \"freeze the game but keep drawing it\" is `scene.paused = true` (skips the scene's `update` + systems while it keeps rendering).",
+        "Per-frame dispatch is split into four entry points, called by Application.update in normative order: SceneManager.fixedUpdate (zero or more times), SceneManager.update, SceneManager.draw, then SceneManager._drawTransition last, so the fade overlay always sits above both scene and app draw systems."
       ],
       "importLine": "import { SceneManager } from '@codexo/exojs'",
       "sourceLink": null
@@ -115,8 +116,55 @@
           "description": ""
         },
         {
+          "name": "draw",
+          "signature": "draw(context: RenderingContext): this",
+          "signatureTokens": [
+            {
+              "text": "draw",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "context",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderingContext",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "context",
+              "type": "RenderingContext",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Draw entry point called by Application.update, after this frame's SceneManager.update: draws the active scene — while Active or paused, drawing continues either way — then its systems' draw phase, then its screen-fixed UI layer on top. No-op when no scene is active. The transition overlay is drawn separately, last — see SceneManager._drawTransition."
+        },
+        {
           "name": "fixedUpdate",
-          "signature": "fixedUpdate(delta: Time): this",
+          "signature": "fixedUpdate(step: Time): this",
           "signatureTokens": [
             {
               "text": "fixedUpdate",
@@ -127,7 +175,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "delta",
+              "text": "step",
               "kind": "param"
             },
             {
@@ -153,13 +201,13 @@
           ],
           "params": [
             {
-              "name": "delta",
+              "name": "step",
               "type": "Time",
               "optional": false
             }
           ],
           "returnType": "this",
-          "description": "Drive one fixed-timestep step on the active scene (unless paused). Called zero or more times per frame by the Application loop, ahead of SceneManager.update. No drawing or transition advance happens here — those are per-frame, not per fixed step."
+          "description": "Drive one fixed-timestep step on the active scene (unless Scene.paused): the scene's fixedUpdate() hook, then its systems' fixed-update phase. Called zero or more times per frame by the Application loop, ahead of SceneManager.update. No drawing or transition advance happens here — those are per-frame, not per fixed step."
         },
         {
           "name": "setScene",
@@ -294,7 +342,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Per-frame entry point called by Application.update. Advances any active fade transition, then — for the active scene — runs update and ticks its systems (unless Scene.paused), draws it, and renders its UI layer on top."
+          "description": "Per-frame logic entry point called by Application.update, after this frame's fixed steps: for the active scene, unless Scene.paused, runs update() then its systems' update phase. Dispatches SceneManager.onUpdateScene whenever a scene is active, regardless of pause state. Drawing is a separate call — see SceneManager.draw."
         }
       ],
       "paragraphs": [],
