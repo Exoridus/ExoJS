@@ -51,9 +51,9 @@ void main(void) {
 
     // Geometry boundary snap: round each local corner to the device grid so the
     // quad edges land on whole device pixels (m1.z == 2.0, axis-aligned only).
-    // Derive the per-axis device scale from the composed pipeline exactly like
-    // buildPixelSnapContext: device positions of the local origin and the two
-    // local unit axes give scaleX/scaleY (device-per-local) and the cross-terms.
+    // Derive the per-axis device scale from the composed pipeline: device
+    // positions of the local origin and the two local unit axes give scaleX/
+    // scaleY (device-per-local) and the cross-terms.
     if (m1.z == 2.0) {
         vec2 vp = u_viewport.zw;
         vec3 dO = u_projection * u_group * vec3(m1.x, m1.y, 1.0);          // NOTE: origin uses row translation

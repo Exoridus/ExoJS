@@ -1054,17 +1054,6 @@ export class WebGpuBackend implements RenderBackend {
     return rect;
   }
 
-  /**
-   * Device-pixel dimensions of the active render target — `canvas.width/height`
-   * (css × pixelRatio) for the root, or the target's own size for an offscreen
-   * {@link RenderTexture}. Used by batched renderers to snap shared geometry
-   * boundaries to the same device grid the transform seam snaps the origin to.
-   * @internal
-   */
-  public _getSnapPixelSize(): { readonly width: number; readonly height: number } {
-    return this._getAttachmentPixelSize(this._renderTarget);
-  }
-
   private _setActiveRenderer(renderer: Renderer | null): void {
     if (this._renderer !== renderer) {
       this._flushActiveRenderer();

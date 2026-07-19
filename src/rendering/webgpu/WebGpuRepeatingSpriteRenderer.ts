@@ -2,7 +2,6 @@
 
 import { Matrix } from '#math/Matrix';
 import { packAffineMat4 } from '#rendering/affinePacking';
-import { PixelSnapMode } from '#rendering/pixelSnap';
 import type { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
 import { computeShaderTiling, type RepeatingSpriteQuad } from '#rendering/sprite/repeatingSpritePlan';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
@@ -81,8 +80,8 @@ fn snapBoundary(localValue: f32, scale: f32) -> f32 {
 }
 
 // Per-axis device scale for the geometry boundary snap, derived from the
-// composed pipeline exactly like buildPixelSnapContext: device positions of the
-// local origin and the two local unit axes. Returns (scaleX, scaleY,
+// composed pipeline: device positions of the local origin and the two local
+// unit axes. Returns (scaleX, scaleY,
 // axisAligned) where axisAligned is 1.0 only when the cross-terms vanish (safe
 // to boundary-snap), else 0.0.
 fn deviceSnapScale(slot: TransformSlot) -> vec3<f32> {
@@ -431,13 +430,12 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     const modeY = sprite.modeY;
 
     // Retained recording (Track B Slice 3): only the geometry path is
-    // replayable (see _supportsRetainedBatches). A shader-path or
-    // geometry-snapped draw inside an active capture window cannot be replayed
-    // from group-owned resources, so poison the window — the group falls
-    // back to entry replay (correct, never stale) instead of a replay that is
-    // either missing the wrap-mode sampler or holding view-dependent bytes.
-    // Position snapping is resolved in-shader and stays recordable.
-    if ((strategy === 'shader' || sprite.pixelSnapMode === PixelSnapMode.Geometry) && backend._retainedCaptureActive) {
+    // replayable (see _supportsRetainedBatches). A shader-path draw inside an
+    // active capture window cannot be replayed from group-owned resources, so
+    // poison the window — the group falls back to entry replay (correct, never
+    // stale) instead of a replay missing the wrap-mode sampler. Both pixel-snap
+    // modes are resolved in-shader and stay recordable.
+    if (strategy === 'shader' && backend._retainedCaptureActive) {
       backend._poisonActiveRetainedCaptures();
     }
 

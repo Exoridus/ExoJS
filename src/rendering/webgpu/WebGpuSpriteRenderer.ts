@@ -4,7 +4,6 @@ import { Matrix } from '#math/Matrix';
 import type { Rectangle } from '#math/Rectangle';
 import { packAffineMat4 } from '#rendering/affinePacking';
 import type { SpriteMaterial } from '#rendering/material/SpriteMaterial';
-import { PixelSnapMode } from '#rendering/pixelSnap';
 import type { Sprite } from '#rendering/sprite/Sprite';
 import { spriteVertexWgsl } from '#rendering/sprite/spriteMaterialSources';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
@@ -203,9 +202,9 @@ fn vertexMain(input: VertexInput, @builtin(vertex_index) vid: u32) -> VertexOutp
 
     // Geometry boundary snap (slot.m1.z == 2.0, axis-aligned only): round each
     // local corner to the device grid so the quad edges land on whole device
-    // pixels. The per-axis device scale is derived from the composed pipeline
-    // exactly like buildPixelSnapContext: device positions of the local origin
-    // and the two local unit axes give scaleX/scaleY and the cross-terms.
+    // pixels. The per-axis device scale is derived from the composed pipeline:
+    // device positions of the local origin and the two local unit axes give
+    // scaleX/scaleY and the cross-terms.
     if (slot.m1.z == 2.0) {
         let vp = projection.viewport.zw;
         let dO = projection.matrix * projection.group * vec4<f32>(slot.m1.x, slot.m1.y, 0.0, 1.0);
@@ -547,14 +546,6 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     }
 
     const material = sprite.material;
-
-    // Defensive (S3-D5.3): geometry-snapped instance words are view-dependent —
-    // the recordability predicate excludes them at collect time, so a
-    // geometry-snapped sprite inside a capture window means the stream cannot be
-    // replayed. Position snapping is resolved in-shader and stays recordable.
-    if (sprite.pixelSnapMode === PixelSnapMode.Geometry && backend._retainedCaptureActive) {
-      backend._poisonActiveRetainedCaptures();
-    }
 
     // The transform lives in the shared storage buffer, keyed by the draw
     // command's stable nodeIndex (already packed at the draw-command boundary).

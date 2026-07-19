@@ -453,22 +453,6 @@ export class WebGl2Backend implements RenderBackend {
   }
 
   /**
-   * Device-pixel dimensions of the active render target — `canvas.width/height`
-   * (css × pixelRatio) for the root, or the target's own size for an offscreen
-   * {@link RenderTexture}. Used by batched renderers to snap shared geometry
-   * boundaries to the same device grid the transform seam snaps the origin to.
-   * @internal
-   */
-  public _getSnapPixelSize(): { readonly width: number; readonly height: number } {
-    const target = this._renderTarget;
-
-    return {
-      width: target.root ? this._canvas.width : target.width,
-      height: target.root ? this._canvas.height : target.height,
-    };
-  }
-
-  /**
    * Device-pixel viewport rect last applied via `gl.viewport` — origin `(x, y)`
    * and size `(width, height)` in actual framebuffer pixels (GL bottom-left
    * origin). The core vertex shaders read this (as `u_viewport`) to project a

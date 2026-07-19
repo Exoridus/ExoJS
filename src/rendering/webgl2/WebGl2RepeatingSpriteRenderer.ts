@@ -1,4 +1,3 @@
-import { PixelSnapMode } from '#rendering/pixelSnap';
 import { Shader } from '#rendering/shader/Shader';
 import type { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
 import { computeShaderTiling, type RepeatingSpriteQuad } from '#rendering/sprite/repeatingSpritePlan';
@@ -63,10 +62,9 @@ void main(void) {
 
     // Geometry boundary snap: round each local corner to the device grid so the
     // destination edges land on whole device pixels (m1.z == 2.0, axis-aligned
-    // only). Derive the per-axis device scale from the composed pipeline exactly
-    // like buildPixelSnapContext: device positions of the local origin and the
-    // two local unit axes give scaleX/scaleY (device-per-local) and the
-    // cross-terms.
+    // only). Derive the per-axis device scale from the composed pipeline:
+    // device positions of the local origin and the two local unit axes give
+    // scaleX/scaleY (device-per-local) and the cross-terms.
     if (m1.z == 2.0) {
         vec2 vp = u_viewport.zw;
         vec3 dO = u_projection * u_group * vec3(m1.x, m1.y, 1.0);
@@ -166,10 +164,9 @@ void main(void) {
 
     // Geometry boundary snap: round each local corner to the device grid so the
     // segment edges land on whole device pixels (m1.z == 2.0, axis-aligned only).
-    // Derive the per-axis device scale from the composed pipeline exactly like
-    // buildPixelSnapContext. Shared repeat-segment edges are the same local
-    // value, so this pure snap moves both neighbours identically — the internal
-    // seams stay closed.
+    // Derive the per-axis device scale from the composed pipeline. Shared
+    // repeat-segment edges are the same local value, so this pure snap moves
+    // both neighbours identically — the internal seams stay closed.
     if (m1.z == 2.0) {
         vec2 vp = u_viewport.zw;
         vec3 dO = u_projection * u_group * vec3(m1.x, m1.y, 1.0);
@@ -372,12 +369,12 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
     const backend = this.getBackend();
 
     // Retained recording (Track B Slice 3): only the geometry path is
-    // replayable. A shader-path or geometry-snapped draw inside an active
-    // capture cannot be replayed from group-owned resources, so poison the
-    // window — the group falls back to entry replay (correct, never stale)
-    // rather than replaying an incomplete or wrap-less instruction stream.
-    // Position snapping is resolved in-shader and stays recordable.
-    if (backend._isRetainedCapturing && (strategy === 'shader' || sprite.pixelSnapMode === PixelSnapMode.Geometry)) {
+    // replayable. A shader-path draw inside an active capture cannot be replayed
+    // from group-owned resources, so poison the window — the group falls back to
+    // entry replay (correct, never stale) rather than replaying an incomplete or
+    // wrap-less instruction stream. Both pixel-snap modes are resolved in-shader
+    // and stay recordable.
+    if (backend._isRetainedCapturing && strategy === 'shader') {
       backend._poisonRetainedCaptures();
     }
 

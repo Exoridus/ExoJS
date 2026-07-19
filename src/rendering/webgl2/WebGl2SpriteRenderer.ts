@@ -1,7 +1,6 @@
 import type { Rectangle } from '#math/Rectangle';
 import type { UniformValue } from '#rendering/material/Material';
 import type { SpriteMaterial } from '#rendering/material/SpriteMaterial';
-import { PixelSnapMode } from '#rendering/pixelSnap';
 import { Shader } from '#rendering/shader/Shader';
 import type { Sprite } from '#rendering/sprite/Sprite';
 import { spriteVertexGlsl } from '#rendering/sprite/spriteMaterialSources';
@@ -154,13 +153,13 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     const backend = this.getBackend();
     const material = sprite.material;
 
-    // Belt-and-braces for retained recording (S3-D5.2/5.3): the collect-time
-    // recordability predicate excludes custom-material and geometry-snapped
-    // draws from ever arming a capture (position snapping is resolved in-shader
-    // and stays recordable). If one still arrives inside an active capture
-    // window, poison the recording so the resulting set can never validate —
-    // degrading to entry replay instead of wrong pixels.
-    if (backend._isRetainedCapturing && (material !== null || sprite.pixelSnapMode === PixelSnapMode.Geometry)) {
+    // Belt-and-braces for retained recording (S3-D5.2): the collect-time
+    // recordability predicate excludes custom-material draws from ever arming a
+    // capture (both pixel-snap modes are resolved in-shader and stay recordable).
+    // If one still arrives inside an active capture window, poison the recording
+    // so the resulting set can never validate — degrading to entry replay instead
+    // of wrong pixels.
+    if (backend._isRetainedCapturing && material !== null) {
       backend._poisonRetainedCaptures();
     }
 

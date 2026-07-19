@@ -1,4 +1,3 @@
-import { PixelSnapMode } from '#rendering/pixelSnap';
 import { Shader } from '#rendering/shader/Shader';
 import type { NineSliceQuad } from '#rendering/sprite/nineSlice';
 import type { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
@@ -57,9 +56,9 @@ void main(void) {
 
     // Geometry boundary snap: round each local corner to the device grid so the
     // quad edges land on whole device pixels (m1.z == 2.0, axis-aligned only).
-    // Derive the per-axis device scale from the composed pipeline exactly like
-    // buildPixelSnapContext: device positions of the local origin and the two
-    // local unit axes give scaleX/scaleY (device-per-local) and the cross-terms.
+    // Derive the per-axis device scale from the composed pipeline: device
+    // positions of the local origin and the two local unit axes give scaleX/
+    // scaleY (device-per-local) and the cross-terms.
     // Shared nine-slice quad edges are the same local value, so this pure snap
     // moves both neighbours identically — the internal seams stay closed.
     if (m1.z == 2.0) {
@@ -187,17 +186,6 @@ export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSl
 
   public render(sprite: NineSliceSprite): void {
     const backend = this.getBackend();
-
-    // Belt-and-braces for retained recording (S3-D5.3): the collect-time
-    // recordability predicate excludes geometry-snapped draws from ever arming a
-    // capture (geometry instance words are view-dependent; position snapping is
-    // resolved in-shader and stays recordable). If one still arrives inside an
-    // active capture window, poison the recording so the resulting set can never
-    // validate — degrading to entry replay instead of wrong pixels. Nine-slice
-    // has no custom-material path to guard.
-    if (backend._isRetainedCapturing && sprite.pixelSnapMode === PixelSnapMode.Geometry) {
-      backend._poisonRetainedCaptures();
-    }
 
     // Always upload the raw content quads. Geometry-mode boundary snapping is
     // resolved in the vertex shader (the `snapBoundary` block, gated on the

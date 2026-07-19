@@ -78,8 +78,8 @@ void main(void) {
 
     // Geometry boundary snap (m1.z == 2.0, axis-aligned only): round each local
     // corner to the device grid so the quad edges land on whole device pixels.
-    // The per-axis device scale is derived from the composed pipeline exactly
-    // like buildPixelSnapContext. Identical to the default sprite vertex stage.
+    // The per-axis device scale is derived from the composed pipeline.
+    // Identical to the default sprite vertex stage.
     if (m1.z == 2.0) {
         vec2 vp = u_viewport.zw;
         vec3 dO = u_projection * u_group * vec3(m1.x, m1.y, 1.0);
@@ -194,8 +194,8 @@ fn vertexMain(input: VertexInput, @builtin(vertex_index) vid: u32) -> VertexOutp
 
     // Geometry boundary snap (slot.m1.z == 2.0, axis-aligned only): round each
     // local corner to the device grid so the quad edges land on whole device
-    // pixels. The per-axis device scale is derived from the composed pipeline
-    // exactly like buildPixelSnapContext. Identical to the default sprite stage.
+    // pixels. The per-axis device scale is derived from the composed pipeline.
+    // Identical to the default sprite stage.
     if (slot.m1.z == 2.0) {
         let vp = projection.viewport.zw;
         let dO = projection.matrix * projection.group * vec4<f32>(slot.m1.x, slot.m1.y, 0.0, 1.0);

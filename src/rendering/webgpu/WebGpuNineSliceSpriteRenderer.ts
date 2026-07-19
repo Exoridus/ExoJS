@@ -2,7 +2,6 @@
 
 import { Matrix } from '#math/Matrix';
 import { packAffineMat4 } from '#rendering/affinePacking';
-import { PixelSnapMode } from '#rendering/pixelSnap';
 import type { NineSliceQuad } from '#rendering/sprite/nineSlice';
 import type { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
@@ -87,9 +86,9 @@ fn vertexMain(input: VertexInput, @builtin(vertex_index) vid: u32) -> VertexOutp
 
     // Geometry boundary snap (slot.m1.z == 2.0, axis-aligned only): round each
     // local corner to the device grid so the quad edges land on whole device
-    // pixels. The per-axis device scale is derived from the composed pipeline
-    // exactly like buildPixelSnapContext: device positions of the local origin
-    // and the two local unit axes give scaleX/scaleY and the cross-terms. Shared
+    // pixels. The per-axis device scale is derived from the composed pipeline:
+    // device positions of the local origin and the two local unit axes give
+    // scaleX/scaleY and the cross-terms. Shared
     // nine-slice quad edges are the same local value, so this pure snap moves
     // both neighbours identically — the internal seams stay closed.
     if (slot.m1.z == 2.0) {
@@ -294,15 +293,6 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
 
     if (backend === null) {
       return;
-    }
-
-    // Defensive (S3-D5.3): geometry-snapped instance words are view-dependent —
-    // the recordability predicate excludes them at collect time, so a
-    // geometry-snapped nine-slice inside a capture window means the stream cannot
-    // be replayed. Position snapping is resolved in-shader and stays recordable.
-    // Nine-slice has no custom-material path to guard.
-    if (sprite.pixelSnapMode === PixelSnapMode.Geometry && backend._retainedCaptureActive) {
-      backend._poisonActiveRetainedCaptures();
     }
 
     // Always upload the raw content quads. Geometry-mode boundary snapping is

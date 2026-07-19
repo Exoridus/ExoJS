@@ -1,15 +1,15 @@
 /**
- * Permanent structural gates for the GPU position pixel-snap payoff (PR 1): a
- * `PixelSnapMode.Position` drawable is now snapped in the vertex shader from a
- * per-row flag, so its uploaded transform row is view-independent and the draw
- * stays eligible for the retained instruction-set tier. These gates pin that
- * closure of R2's position half:
+ * Permanent structural gates for the GPU pixel-snap payoff: both snap modes are
+ * resolved in the vertex shaders from a per-row flag, so the uploaded transform
+ * row (and, in geometry mode, the raw quads) stay view-independent and the draw
+ * stays eligible for the retained instruction-set tier. These gates pin R2's
+ * full closure:
  *
  * - position-snapped sprites inside a RetainedContainer reach the recorded tier
  *   and replay under a camera pan with ZERO instance / transform re-upload,
  * - a position-snapped tilemap node records and splices the same way,
- * - a `PixelSnapMode.Geometry` draw STILL poisons the recording (its geometry
- *   instance words are view-dependent — that half moves to the GPU in PR 2),
+ * - the SAME two scenes in `PixelSnapMode.Geometry` are now equally recordable
+ *   (PR 2 moved boundary snapping to the GPU, so geometry no longer poisons),
  * - a transform-only move of a position-snapped DIRECT child fast-patches its
  *   row in place (raw translation + snap flag) without dropping the recording.
  *
@@ -21,7 +21,6 @@ import { describe, expect, it, vi } from 'vitest';
 import { Container } from '#rendering/Container';
 import { PixelSnapMode } from '#rendering/pixelSnap';
 import type { RetainedGroupFragment } from '#rendering/plan/RetainedGroupFragment';
-import { RetainedInstructionSet } from '#rendering/plan/RetainedInstructionSet';
 import { RetainedContainer } from '#rendering/RetainedContainer';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { TRANSFORM_FLOATS_PER_ROW } from '#rendering/TransformBuffer';
@@ -173,30 +172,68 @@ describe('GPU position pixel-snap: retained recording gates (PR 1)', () => {
     });
   });
 
-  it('a geometry-snapped draw still poisons the recording (PR 2 scope)', () => {
+  it('geometry-snapped sprites inside a RetainedContainer reach the recorded tier under camera pan', () => {
     withHarness(harness => {
-      const [texture] = makeTextures(1);
-      const backend = harness.backend;
-      const snapped = new Sprite(texture!);
+      const { root, group, inside } = buildSnappedScene(200, PixelSnapMode.Geometry);
 
-      // Geometry snapping is a CPU boundary plan whose instance words are
-      // view-dependent — still excluded from recording until PR 2 moves it to
-      // the GPU. A geometry-snapped draw inside an open capture poisons the set.
-      snapped.pixelSnapMode = PixelSnapMode.Geometry;
+      measureFrame(harness, root); // F1 capture
+      measureFrame(harness, root); // F2 record
+      measureFrame(harness, root); // F3 splice
 
-      const set = new RetainedInstructionSet();
+      // PR 2 moved boundary snapping into the vertex shaders, so a geometry-
+      // snapped draw uploads raw quads + the snap flag and is fully recordable.
+      expect(fragmentOf(group).instructions?.hasRecording).toBe(true);
 
-      set.beginRecording(backend);
-      backend._beginRetainedCapture(set);
-      backend.draw(snapped);
-      backend.flush();
-      backend._endRetainedCapture(set);
-      set.commitRecording();
+      const beginSpy = vi.spyOn(harness.backend, '_beginRetainedCapture');
+      const replaySpy = vi.spyOn(harness.backend, '_replayRetainedBatch');
 
-      expect(set.hasRecording).toBe(true);
-      expect(set.isValidFor(backend)).toBe(false);
+      const panned = measureFrame(harness, root, () => harness.view.move(1.37, 0.61));
 
-      snapped.destroy();
+      expect(beginSpy).not.toHaveBeenCalled(); // no re-record
+      expect(replaySpy).toHaveBeenCalled(); // instruction replay
+      expect(panned.uploadedBufferBytes).toBe(0); // zero instance re-upload
+      expect(panned.transformUploads).toBe(0); // raw rows are view-independent
+      expect(panned.instances).toBe(inside.length);
+
+      root.destroy();
+    });
+  });
+
+  it('a geometry-snapped tilemap node inside a RetainedContainer records and splices', () => {
+    withHarness(harness => {
+      wireTilemapRenderers(harness.backend);
+
+      const scene = buildTilemapScene({ widthTiles: 64, heightTiles: 64, chunkSize: 32, tilesets: makeTilesets(1) });
+
+      scene.node.pixelSnapMode = PixelSnapMode.Geometry;
+
+      const root = new Container();
+      const group = new RetainedContainer();
+
+      group.addChild(scene.node);
+      root.addChild(group);
+
+      harness.view.reset(scene.pixelWidth / 2, scene.pixelHeight / 2, scene.pixelWidth, scene.pixelHeight);
+
+      measureFrame(harness, root); // F1 capture
+      measureFrame(harness, root); // F2 record
+      measureFrame(harness, root); // F3 splice
+
+      // Tilemaps snap only their chunk ORIGIN (GPU-side, PR 1) and keep integer
+      // chunk-local tile bounds, so geometry mode records exactly like position.
+      expect(fragmentOf(group).instructions?.hasRecording).toBe(true);
+
+      const beginSpy = vi.spyOn(harness.backend, '_beginRetainedCapture');
+      const replaySpy = vi.spyOn(harness.backend, '_replayRetainedBatch');
+
+      const panned = measureFrame(harness, root, () => harness.view.move(1.37, 0.61));
+
+      expect(beginSpy).not.toHaveBeenCalled();
+      expect(replaySpy).toHaveBeenCalled();
+      expect(panned.uploadedBufferBytes).toBe(0);
+      expect(panned.transformUploads).toBe(0);
+
+      root.destroy();
     });
   });
 

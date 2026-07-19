@@ -5,11 +5,9 @@ import { Vector } from '#math/Vector';
 import { Drawable } from '#rendering/Drawable';
 import type { Material } from '#rendering/material/Material';
 import type { SpriteMaterial } from '#rendering/material/SpriteMaterial';
-import { buildPixelSnapContext, PixelSnapMode, snapBoundsInto } from '#rendering/pixelSnap';
 import { RenderNode } from '#rendering/RenderNode';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
-import type { View } from '#rendering/View';
 
 /**
  * Internal dirty-flag bitmask used by {@link Sprite} to lazily recompute
@@ -164,41 +162,6 @@ export class Sprite extends Drawable {
     }
 
     return this._vertices;
-  }
-
-  /**
-   * Local-space quad bounds for the active pass, written into `out`. In
-   * `PixelSnapMode.Geometry` (and only when the combined node+view transform
-   * is axis-aligned) the quad edges are snapped to the render target's
-   * device-pixel grid via the shared {@link snapLocalBoundary} helper — combined
-   * with the origin the vertex shader rounds to a whole device pixel, all four
-   * corners land on whole device pixels. The logical local bounds (used by collision /
-   * `getBounds`) are never changed. Returns the unsnapped local bounds for
-   * `PixelSnapMode.None`/`PixelSnapMode.Position` or under a rotation/skew
-   * downgrade.
-   * @internal
-   */
-  public getRenderBounds(view: View, targetPxWidth: number, targetPxHeight: number, out: Rectangle): Rectangle {
-    const base = this.getLocalBounds();
-
-    if (this.pixelSnapMode !== PixelSnapMode.Geometry) {
-      return base;
-    }
-
-    // World transform (composed through any RetainedContainer boundary) so the
-    // device scale / axis-alignment reflect the group the GPU applies as u_group.
-    const ctx = buildPixelSnapContext(this.getWorldTransform(), view, targetPxWidth, targetPxHeight);
-
-    if (!ctx.axisAligned) {
-      logger.warn('pixelSnapMode "geometry" downgraded to "position" for a rotated/skewed transform; rendered geometry is not boundary-snapped this frame.', {
-        source: 'Sprite',
-        once: 'pixel-snap:geometry-downgrade',
-      });
-
-      return base;
-    }
-
-    return snapBoundsInto(base, ctx, out);
   }
 
   /**
