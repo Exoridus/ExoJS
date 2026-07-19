@@ -3,7 +3,7 @@ import { drawableHasOwnMaterial, type MaterialKey, writeMaterialKeyInto } from '
 import type { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import type { RenderBackend } from '#rendering/RenderBackend';
 
-import { isPixelSnapMode, type PixelSnapMode } from './pixelSnap';
+import { isPixelSnapMode, PixelSnapMode } from './pixelSnap';
 import { RenderNode } from './RenderNode';
 import { BlendModes } from './types';
 
@@ -17,7 +17,7 @@ import { BlendModes } from './types';
 export class Drawable extends RenderNode {
   private _tint: Color = Color.white.clone();
   private _blendMode: BlendModes = BlendModes.Normal;
-  private _pixelSnapMode: PixelSnapMode = 'none';
+  private _pixelSnapMode: PixelSnapMode = PixelSnapMode.None;
 
   /**
    * Cached material key (Slice 2b). `null` until first computed or after
@@ -47,21 +47,22 @@ export class Drawable extends RenderNode {
 
   /**
    * Render-only pixel-snapping policy for this drawable. Aligns the rendered
-   * origin (`'position'`) or origin plus shared geometry boundaries
-   * (`'geometry'`) to the active render target's device-pixel grid. Purely
-   * visual: logical `x`/`y`, transforms, bounds, collision, tween and physics
-   * state are never affected, and {@link getBounds}/{@link getGlobalTransform}
+   * origin (`PixelSnapMode.Position`) or origin plus shared geometry boundaries
+   * (`PixelSnapMode.Geometry`) to the active render target's device-pixel grid.
+   * Purely visual: logical `x`/`y`, transforms, bounds, collision, tween and
+   * physics state are never affected, and {@link getBounds}/{@link getGlobalTransform}
    * keep returning logical values.
    *
-   * `'geometry'` is guaranteed only for axis-aligned transforms; rotation or
-   * skew (on this node, an ancestor, or the view) downgrade it to `'position'`
-   * for the affected frame, with no logical-state change. Snapping targets
-   * device pixels (× view scale × pixel ratio), not integer world units.
+   * `PixelSnapMode.Geometry` is guaranteed only for axis-aligned transforms;
+   * rotation or skew (on this node, an ancestor, or the view) downgrade it to
+   * `PixelSnapMode.Position` for the affected frame, with no logical-state
+   * change. Snapping targets device pixels (× view scale × pixel ratio), not
+   * integer world units.
    *
    * Setting the current value is a no-op. Setting a value outside the
-   * {@link PixelSnapMode} union throws and leaves the prior mode unchanged.
+   * {@link PixelSnapMode} enum throws and leaves the prior mode unchanged.
    *
-   * @default 'none'
+   * @default PixelSnapMode.None
    * @stable
    */
   public get pixelSnapMode(): PixelSnapMode {
@@ -74,7 +75,7 @@ export class Drawable extends RenderNode {
     }
 
     if (!isPixelSnapMode(mode)) {
-      throw new Error(`Drawable.pixelSnapMode must be 'none', 'position', or 'geometry' (got ${String(mode)}).`);
+      throw new Error(`Drawable.pixelSnapMode must be a PixelSnapMode enum value (got ${String(mode)}).`);
     }
 
     this._pixelSnapMode = mode;

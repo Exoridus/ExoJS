@@ -3,7 +3,7 @@ import { logger } from '#core/logging';
 import type { SceneNode } from '#core/SceneNode';
 import { Rectangle } from '#math/Rectangle';
 import { Drawable } from '#rendering/Drawable';
-import { isPixelSnapMode } from '#rendering/pixelSnap';
+import { isPixelSnapMode, PixelSnapMode } from '#rendering/pixelSnap';
 import { RenderNode } from '#rendering/RenderNode';
 import { BlendModes } from '#rendering/types';
 
@@ -66,7 +66,7 @@ export function writeCommonFields(node: SceneNode, out: SerializedNode): void {
       out.blendMode = node.blendMode;
     }
 
-    if (node.pixelSnapMode !== 'none') {
+    if (node.pixelSnapMode !== PixelSnapMode.None) {
       out.pixelSnapMode = node.pixelSnapMode;
     }
   }
@@ -129,7 +129,7 @@ export function applyCommonFields(node: SceneNode, data: SerializedNode): void {
       node.blendMode = data.blendMode;
     }
 
-    if (typeof data.pixelSnapMode === 'string' && isPixelSnapMode(data.pixelSnapMode)) {
+    if (typeof data.pixelSnapMode === 'number' && isPixelSnapMode(data.pixelSnapMode)) {
       node.pixelSnapMode = data.pixelSnapMode;
     }
   }

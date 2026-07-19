@@ -2,6 +2,7 @@ import type { Matrix } from '#math/Matrix';
 import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
+import { PixelSnapMode } from '#rendering/pixelSnap';
 import { RenderEntryKind } from '#rendering/plan/RenderCommand';
 import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RenderPlanOptimizer } from '#rendering/plan/RenderPlanOptimizer';
@@ -206,12 +207,12 @@ describe('recordability predicate (S3-D5): v1 records default-path flagged rende
     backend.destroy();
   });
 
-  test("pixelSnapMode !== 'none' makes the fragment non-recordable (S3-D5.3)", () => {
+  test('pixelSnapMode !== PixelSnapMode.None makes the fragment non-recordable (S3-D5.3)', () => {
     const backend = createTestBackend();
     const group = new RetainedContainer();
     const snapped = new RecordableLeaf('a');
 
-    snapped.pixelSnapMode = 'geometry';
+    snapped.pixelSnapMode = PixelSnapMode.Geometry;
     group.addChild(snapped);
 
     const fragment = captureFragment(group, backend);

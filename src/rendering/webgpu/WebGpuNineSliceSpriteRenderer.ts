@@ -2,6 +2,7 @@
 
 import { Matrix } from '#math/Matrix';
 import { packAffineMat4 } from '#rendering/affinePacking';
+import { PixelSnapMode } from '#rendering/pixelSnap';
 import type { NineSliceQuad } from '#rendering/sprite/nineSlice';
 import type { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
@@ -249,13 +250,13 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
     // the recordability predicate excludes them at collect time, so a snapped
     // nine-slice inside a capture window means the stream cannot be replayed.
     // Nine-slice has no custom-material path to guard.
-    if (sprite.pixelSnapMode !== 'none' && backend._retainedCaptureActive) {
+    if (sprite.pixelSnapMode !== PixelSnapMode.None && backend._retainedCaptureActive) {
       backend._poisonActiveRetainedCaptures();
     }
 
     let quads: readonly NineSliceQuad[] = sprite.quads;
 
-    if (sprite.pixelSnapMode === 'geometry') {
+    if (sprite.pixelSnapMode === PixelSnapMode.Geometry) {
       const snap = backend._getSnapPixelSize();
 
       quads = sprite.getRenderQuads(backend.view, snap.width, snap.height);

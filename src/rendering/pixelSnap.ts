@@ -59,18 +59,18 @@ import type { View } from './View';
  *
  * ## Modes
  *
- * - `position` — snap the node's rendered origin (the world translation) only.
- *   Touches the matrix translation `(x, y)` exclusively, leaving the linear part
- *   `(a, b, c, d)` intact, so it is safe under any transform (rotation, skew,
- *   non-uniform scale) — the origin is a single point with a well-defined device
- *   position.
- * - `geometry` — additionally snap shared geometry boundaries (NineSlice edges,
- *   repeat-segment boundaries, the sprite quad). Each unique boundary is snapped
- *   by the **same** pure function {@link snapLocalBoundary}, so adjacent quads
- *   that share a boundary value snap to the same result — seams cannot open.
- *   Guaranteed only for **axis-aligned** transforms; rotation / skew (in the
- *   node or the view) downgrade it to `position` (see
- *   {@link resolveEffectivePixelSnapMode}).
+ * - `PixelSnapMode.Position` — snap the node's rendered origin (the world
+ *   translation) only. Touches the matrix translation `(x, y)` exclusively,
+ *   leaving the linear part `(a, b, c, d)` intact, so it is safe under any
+ *   transform (rotation, skew, non-uniform scale) — the origin is a single
+ *   point with a well-defined device position.
+ * - `PixelSnapMode.Geometry` — additionally snap shared geometry boundaries
+ *   (NineSlice edges, repeat-segment boundaries, the sprite quad). Each unique
+ *   boundary is snapped by the **same** pure function {@link snapLocalBoundary},
+ *   so adjacent quads that share a boundary value snap to the same result —
+ *   seams cannot open. Guaranteed only for **axis-aligned** transforms; rotation
+ *   / skew (in the node or the view) downgrade it to `PixelSnapMode.Position`
+ *   (see {@link resolveEffectivePixelSnapMode}).
  *
  * ## Rounding policy
  *
@@ -83,30 +83,33 @@ import type { View } from './View';
 /**
  * Render-only pixel-snapping policy for a {@link Drawable}.
  *
- * - `'none'` — no snapping; rendered transform and geometry use existing behaviour.
- * - `'position'` — snap the rendered origin to the nearest device pixel. Logical
+ * - `None` — no snapping; rendered transform and geometry use existing behaviour.
+ * - `Position` — snap the rendered origin to the nearest device pixel. Logical
  *   `x`/`y`, matrices, bounds and collision are unchanged.
- * - `'geometry'` — snap a single coherent shared-boundary plan (origin + boundaries)
- *   so neighbouring quads stay seam-free. Falls back to `'position'` automatically
+ * - `Geometry` — snap a single coherent shared-boundary plan (origin + boundaries)
+ *   so neighbouring quads stay seam-free. Falls back to `Position` automatically
  *   when the transform is not axis-aligned (rotation / skew).
  *
  * Snapping targets device pixels (× view scale × pixel ratio), not integer world
- * units, and never alters logical state.
+ * units, and never alters logical state. The numeric values are the shader
+ * encoding carried in the transform row and must not be reordered.
  *
- * @default 'none'
+ * @default PixelSnapMode.None
  * @stable
  */
-export type PixelSnapMode = 'none' | 'position' | 'geometry';
-
-const pixelSnapModes: ReadonlySet<string> = new Set<string>(['none', 'position', 'geometry']);
+export enum PixelSnapMode {
+  None = 0,
+  Position = 1,
+  Geometry = 2,
+}
 
 /**
- * Runtime guard for the {@link PixelSnapMode} union. Used by the public setter to
+ * Runtime guard for the {@link PixelSnapMode} enum. Used by the public setter to
  * reject JavaScript-invalid values atomically.
  * @internal
  */
 export function isPixelSnapMode(value: unknown): value is PixelSnapMode {
-  return typeof value === 'string' && pixelSnapModes.has(value);
+  return value === PixelSnapMode.None || value === PixelSnapMode.Position || value === PixelSnapMode.Geometry;
 }
 
 /** Below this magnitude an axis is treated as collapsed / cross-coupled. @internal */
@@ -327,8 +330,8 @@ const groupInverseScratch = new Matrix();
 /**
  * Resolve the transform-buffer row to upload for `drawable` at the write seam.
  * Returns the drawable's live group-local transform unchanged when its mode is
- * `'none'` (zero overhead), otherwise a snapped copy written into the caller-
- * owned `scratch` matrix — the logical global transform is never mutated.
+ * `PixelSnapMode.None` (zero overhead), otherwise a snapped copy written into the
+ * caller-owned `scratch` matrix — the logical global transform is never mutated.
  *
  * `groupTransform` is the active retained-group world matrix (`u_group`) the GPU
  * applies AFTER this row, or `null` at the root / outside any group. When it is
@@ -355,7 +358,7 @@ export function resolveUploadTransform(
 ): Matrix {
   const local = drawable.getGlobalTransform();
 
-  if (drawable.pixelSnapMode === 'none') {
+  if (drawable.pixelSnapMode === PixelSnapMode.None) {
     return local;
   }
 
@@ -401,16 +404,16 @@ export type PixelSnapDowngradeReason = 'non-axis-aligned' | null;
 
 /**
  * Resolve the effective snap mode from the requested mode and whether the
- * combined node+view transform is axis-aligned. `geometry` downgrades to
- * `position` when the transform is not axis-aligned (rotation or skew, in the
- * node itself or any ancestor or the view); `none` and `position` pass through
+ * combined node+view transform is axis-aligned. `Geometry` downgrades to
+ * `Position` when the transform is not axis-aligned (rotation or skew, in the
+ * node itself or any ancestor or the view); `None` and `Position` pass through
  * unchanged. Pure and stateless — never stores an effective mode, so it always
  * reflects the current world transform.
  * @internal
  */
 export function resolveEffectivePixelSnapMode(requested: PixelSnapMode, axisAligned: boolean): PixelSnapMode {
-  if (requested === 'geometry' && !axisAligned) {
-    return 'position';
+  if (requested === PixelSnapMode.Geometry && !axisAligned) {
+    return PixelSnapMode.Position;
   }
 
   return requested;
@@ -418,12 +421,12 @@ export function resolveEffectivePixelSnapMode(requested: PixelSnapMode, axisAlig
 
 /**
  * Diagnostic companion to {@link resolveEffectivePixelSnapMode}: returns why a
- * `geometry` request was downgraded, or `null` when no downgrade occurred. Not a
+ * `Geometry` request was downgraded, or `null` when no downgrade occurred. Not a
  * stable public API — exposed for tests and dev warnings only.
  * @internal
  */
 export function getPixelSnapDowngradeReason(requested: PixelSnapMode, axisAligned: boolean): PixelSnapDowngradeReason {
-  if (requested === 'geometry' && !axisAligned) {
+  if (requested === PixelSnapMode.Geometry && !axisAligned) {
     return 'non-axis-aligned';
   }
 

@@ -17,6 +17,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { Container } from '#rendering/Container';
+import { PixelSnapMode } from '#rendering/pixelSnap';
 import type { RetainedGroupFragment } from '#rendering/plan/RetainedGroupFragment';
 import { RetainedInstructionSet } from '#rendering/plan/RetainedInstructionSet';
 import { RetainedContainer } from '#rendering/RetainedContainer';
@@ -425,7 +426,7 @@ describe('WebGL2 retained instruction set: record + splice ladder (Tasks 6/7)', 
       const backend = harness.backend;
       const snapped = new Sprite(texture!);
 
-      snapped.pixelSnapMode = 'geometry';
+      snapped.pixelSnapMode = PixelSnapMode.Geometry;
 
       const set = new RetainedInstructionSet();
 

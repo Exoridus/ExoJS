@@ -1,6 +1,7 @@
 import { Rectangle } from '#math/Rectangle';
 import type { UniformValue } from '#rendering/material/Material';
 import type { SpriteMaterial } from '#rendering/material/SpriteMaterial';
+import { PixelSnapMode } from '#rendering/pixelSnap';
 import { Shader } from '#rendering/shader/Shader';
 import type { Sprite } from '#rendering/sprite/Sprite';
 import { spriteVertexGlsl } from '#rendering/sprite/spriteMaterialSources';
@@ -114,7 +115,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
   private readonly _transformUnitScratch: Int32Array = new Int32Array([transformTextureUnit]);
   private _currentMaterial: SpriteMaterial | null = null;
   private _currentBaseTexture: Texture | RenderTexture | null = null;
-  // Reusable scratch for device-snapped local bounds ('geometry' mode), and the
+  // Reusable scratch for device-snapped local bounds (PixelSnapMode.Geometry), and the
   // bounds resolved for the sprite currently being packed (snapped or logical).
   private readonly _snapBounds: Rectangle = new Rectangle();
   private _activeBounds: Rectangle | null = null;
@@ -157,7 +158,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     // draws from ever arming a capture. If one still arrives inside an
     // active capture window, poison the recording so the resulting set can
     // never validate — degrading to entry replay instead of wrong pixels.
-    if (backend._isRetainedCapturing && (material !== null || sprite.pixelSnapMode !== 'none')) {
+    if (backend._isRetainedCapturing && (material !== null || sprite.pixelSnapMode !== PixelSnapMode.None)) {
       backend._poisonRetainedCaptures();
     }
 
@@ -181,12 +182,12 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
 
   /**
    * Local bounds to upload for `sprite` this draw: device-pixel-snapped in
-   * `'geometry'` pixel-snap mode (axis-aligned only), otherwise the sprite's
+   * `PixelSnapMode.Geometry` (axis-aligned only), otherwise the sprite's
    * logical local bounds. Reuses a scratch rectangle and never mutates logical
    * state. Consumed synchronously by {@link _packInstance}.
    */
   private _resolveBounds(sprite: Sprite, backend: WebGl2Backend): Rectangle {
-    if (sprite.pixelSnapMode !== 'geometry') {
+    if (sprite.pixelSnapMode !== PixelSnapMode.Geometry) {
       return sprite.getLocalBounds();
     }
 
@@ -548,7 +549,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     const u32 = this._instanceUint32;
 
     // localBounds: left, top, right, bottom (offset 0..3) — device-snapped in
-    // 'geometry' pixel-snap mode, otherwise the logical local bounds.
+    // PixelSnapMode.Geometry, otherwise the logical local bounds.
     const bounds = this._activeBounds ?? sprite.getLocalBounds();
 
     f32[offset + 0] = bounds.left;

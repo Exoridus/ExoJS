@@ -1,3 +1,4 @@
+import { PixelSnapMode } from '#rendering/pixelSnap';
 import { Shader } from '#rendering/shader/Shader';
 import type { NineSliceQuad } from '#rendering/sprite/nineSlice';
 import type { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
@@ -143,13 +144,13 @@ export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSl
     // inside an active capture window, poison the recording so the resulting
     // set can never validate — degrading to entry replay instead of wrong
     // pixels. Nine-slice has no custom-material path to guard.
-    if (backend._isRetainedCapturing && sprite.pixelSnapMode !== 'none') {
+    if (backend._isRetainedCapturing && sprite.pixelSnapMode !== PixelSnapMode.None) {
       backend._poisonRetainedCaptures();
     }
 
     let quads: readonly NineSliceQuad[] = sprite.quads;
 
-    if (sprite.pixelSnapMode === 'geometry') {
+    if (sprite.pixelSnapMode === PixelSnapMode.Geometry) {
       const snap = backend._getSnapPixelSize();
 
       quads = sprite.getRenderQuads(backend.view, snap.width, snap.height);

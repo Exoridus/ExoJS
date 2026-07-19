@@ -13,7 +13,7 @@
 
 export { packAffineMat4 } from '#rendering/affinePacking';
 export { Drawable } from '#rendering/Drawable';
-export type { PixelSnapMode } from '#rendering/pixelSnap';
+export { PixelSnapMode } from '#rendering/pixelSnap';
 export type { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 export type { RetainedGroupBundle } from '#rendering/plan/RetainedInstructionSet';
 export type { RenderBackend } from '#rendering/RenderBackend';

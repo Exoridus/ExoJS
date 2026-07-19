@@ -4,9 +4,8 @@ import { Container } from '#rendering/Container';
 import {
   buildPixelSnapContext,
   getPixelSnapDowngradeReason,
-  isPixelSnapMode,
   type PixelSnapContext,
-  type PixelSnapMode,
+  PixelSnapMode,
   type RenderQuad,
   resolveEffectivePixelSnapMode,
   resolveUploadTransform,
@@ -51,13 +50,13 @@ const ctxOf = (scaleX: number, scaleY: number): PixelSnapContext => ({
 
 describe('Drawable.pixelSnapMode — public API', () => {
   test('defaults to none', () => {
-    expect(new Sprite(null).pixelSnapMode).toBe('none');
+    expect(new Sprite(null).pixelSnapMode).toBe(PixelSnapMode.None);
   });
 
   test('accepts every valid mode', () => {
     const sprite = new Sprite(null);
 
-    for (const mode of ['position', 'geometry', 'none'] as const) {
+    for (const mode of [PixelSnapMode.Position, PixelSnapMode.Geometry, PixelSnapMode.None] as const) {
       sprite.pixelSnapMode = mode;
       expect(sprite.pixelSnapMode).toBe(mode);
     }
@@ -66,37 +65,23 @@ describe('Drawable.pixelSnapMode — public API', () => {
   test('throws on an invalid value and leaves the prior mode unchanged', () => {
     const sprite = new Sprite(null);
 
-    sprite.pixelSnapMode = 'geometry';
+    sprite.pixelSnapMode = PixelSnapMode.Geometry;
 
     expect(() => {
-      sprite.pixelSnapMode = 'invalid' as PixelSnapMode;
+      sprite.pixelSnapMode = 'invalid' as unknown as PixelSnapMode;
     }).toThrow();
-    expect(sprite.pixelSnapMode).toBe('geometry');
+    expect(sprite.pixelSnapMode).toBe(PixelSnapMode.Geometry);
   });
 
   test('setting the same value is a no-op (does not invalidate the cache)', () => {
     const sprite = new Sprite(null);
 
-    sprite.pixelSnapMode = 'position';
+    sprite.pixelSnapMode = PixelSnapMode.Position;
     sprite.invalidateCache();
     // Re-clear via a fresh read; then a same-value set must not re-dirty.
     (sprite as unknown as { _cacheDirty: boolean })._cacheDirty = false;
-    sprite.pixelSnapMode = 'position';
+    sprite.pixelSnapMode = PixelSnapMode.Position;
     expect((sprite as unknown as { _cacheDirty: boolean })._cacheDirty).toBe(false);
-  });
-});
-
-describe('isPixelSnapMode', () => {
-  test('accepts the three valid values', () => {
-    expect(isPixelSnapMode('none')).toBe(true);
-    expect(isPixelSnapMode('position')).toBe(true);
-    expect(isPixelSnapMode('geometry')).toBe(true);
-  });
-
-  test('rejects everything else', () => {
-    for (const value of ['', 'None', 'GEOMETRY', 0, null, undefined, {}]) {
-      expect(isPixelSnapMode(value)).toBe(false);
-    }
   });
 });
 
@@ -374,26 +359,26 @@ describe('snapWorldTranslationInto', () => {
 describe('resolveEffectivePixelSnapMode', () => {
   test('passes none / position through regardless of alignment', () => {
     for (const aligned of [true, false]) {
-      expect(resolveEffectivePixelSnapMode('none', aligned)).toBe('none');
-      expect(resolveEffectivePixelSnapMode('position', aligned)).toBe('position');
+      expect(resolveEffectivePixelSnapMode(PixelSnapMode.None, aligned)).toBe(PixelSnapMode.None);
+      expect(resolveEffectivePixelSnapMode(PixelSnapMode.Position, aligned)).toBe(PixelSnapMode.Position);
     }
   });
 
   test('keeps geometry when axis-aligned, downgrades to position otherwise', () => {
-    expect(resolveEffectivePixelSnapMode('geometry', true)).toBe('geometry');
-    expect(resolveEffectivePixelSnapMode('geometry', false)).toBe('position');
+    expect(resolveEffectivePixelSnapMode(PixelSnapMode.Geometry, true)).toBe(PixelSnapMode.Geometry);
+    expect(resolveEffectivePixelSnapMode(PixelSnapMode.Geometry, false)).toBe(PixelSnapMode.Position);
   });
 
   test('is stateless — alignment restoring brings geometry back', () => {
-    expect(resolveEffectivePixelSnapMode('geometry', false)).toBe('position');
-    expect(resolveEffectivePixelSnapMode('geometry', true)).toBe('geometry');
+    expect(resolveEffectivePixelSnapMode(PixelSnapMode.Geometry, false)).toBe(PixelSnapMode.Position);
+    expect(resolveEffectivePixelSnapMode(PixelSnapMode.Geometry, true)).toBe(PixelSnapMode.Geometry);
   });
 
   test('downgrade reason is set only for a downgraded geometry request', () => {
-    expect(getPixelSnapDowngradeReason('geometry', false)).toBe('non-axis-aligned');
-    expect(getPixelSnapDowngradeReason('geometry', true)).toBeNull();
-    expect(getPixelSnapDowngradeReason('position', false)).toBeNull();
-    expect(getPixelSnapDowngradeReason('none', false)).toBeNull();
+    expect(getPixelSnapDowngradeReason(PixelSnapMode.Geometry, false)).toBe('non-axis-aligned');
+    expect(getPixelSnapDowngradeReason(PixelSnapMode.Geometry, true)).toBeNull();
+    expect(getPixelSnapDowngradeReason(PixelSnapMode.Position, false)).toBeNull();
+    expect(getPixelSnapDowngradeReason(PixelSnapMode.None, false)).toBeNull();
   });
 });
 
@@ -433,7 +418,7 @@ describe('resolveUploadTransform — group-aware device snapping (R2)', () => {
     const sprite = new Sprite(makeTexture());
 
     sprite.setPosition(12.37, 7.91);
-    sprite.pixelSnapMode = 'position';
+    sprite.pixelSnapMode = PixelSnapMode.Position;
 
     const scratch = new Matrix();
     const uploaded = resolveUploadTransform(sprite, view, 100, 100, scratch, null);
@@ -445,7 +430,7 @@ describe('resolveUploadTransform — group-aware device snapping (R2)', () => {
     sprite.destroy();
   });
 
-  test("'none' returns the live group-local transform, group or not", () => {
+  test('PixelSnapMode.None returns the live group-local transform, group or not', () => {
     const view = makeView(100, 100);
     const group = new RetainedContainer();
     const sprite = new Sprite(makeTexture());
@@ -453,7 +438,7 @@ describe('resolveUploadTransform — group-aware device snapping (R2)', () => {
     group.setPosition(30.4, 10.6);
     group.addChild(sprite);
     sprite.setPosition(5.2, 7.8);
-    sprite.pixelSnapMode = 'none';
+    sprite.pixelSnapMode = PixelSnapMode.None;
 
     const uploaded = resolveUploadTransform(sprite, view, 100, 100, new Matrix(), group.getGlobalTransform());
 
@@ -471,7 +456,7 @@ describe('resolveUploadTransform — group-aware device snapping (R2)', () => {
     group.setPosition(30.4, 10.6);
     group.addChild(sprite);
     sprite.setPosition(5.2, 7.8);
-    sprite.pixelSnapMode = 'position';
+    sprite.pixelSnapMode = PixelSnapMode.Position;
 
     const groupWorld = group.getGlobalTransform(); // group is the boundary → its own world matrix
     const uploaded = resolveUploadTransform(sprite, view, 100, 100, new Matrix(), groupWorld);
@@ -502,7 +487,7 @@ describe('resolveUploadTransform — group-aware device snapping (R2)', () => {
     group.setPosition(0.5, 0.5); // half-pixel group offset
     group.addChild(sprite);
     sprite.setPosition(4, 4); // already integer in group-local space
-    sprite.pixelSnapMode = 'position';
+    sprite.pixelSnapMode = PixelSnapMode.Position;
 
     const groupWorld = group.getGlobalTransform();
 
@@ -530,7 +515,7 @@ describe('resolveUploadTransform — group-aware device snapping (R2)', () => {
     group.setPosition(12.3, 4.7);
     group.addChild(sprite);
     sprite.setPosition(3.1, 9.4);
-    sprite.pixelSnapMode = 'position';
+    sprite.pixelSnapMode = PixelSnapMode.Position;
 
     const groupWorld = group.getGlobalTransform();
     const snapshot = groupWorld.clone();
@@ -586,7 +571,7 @@ describe('geometry snapping is group-aware (R2)', () => {
     const group = new RetainedContainer();
     const sprite = new Sprite(makeTexture(16, 16));
 
-    sprite.pixelSnapMode = 'geometry';
+    sprite.pixelSnapMode = PixelSnapMode.Geometry;
     group.addChild(sprite);
     group.setRotation(20);
 
@@ -614,7 +599,7 @@ describe('logical / render separation', () => {
     const boundsBefore = sprite.getBounds().clone();
     const verticesBefore = Float32Array.from(sprite.vertices);
 
-    sprite.pixelSnapMode = 'geometry';
+    sprite.pixelSnapMode = PixelSnapMode.Geometry;
 
     expect(sprite.x).toBe(10.37);
     expect(sprite.y).toBe(20.91);
@@ -631,7 +616,7 @@ describe('logical / render separation', () => {
     const sprite = new NineSliceSprite(makeTexture(48, 48), { slices: 8, width: 100, height: 100 });
 
     sprite.setPosition(5.3, 9.7);
-    sprite.pixelSnapMode = 'geometry';
+    sprite.pixelSnapMode = PixelSnapMode.Geometry;
 
     const contentQuads = sprite.quads; // builds + caches the content plan
     const dirtyAfterBuild = (sprite as unknown as { _geometryDirty: boolean })._geometryDirty;
@@ -653,7 +638,7 @@ describe('logical / render separation', () => {
     const sprite = new NineSliceSprite(makeTexture(48, 48), { slices: 8, width: 100, height: 100 });
 
     sprite.setRotation(15);
-    sprite.pixelSnapMode = 'geometry';
+    sprite.pixelSnapMode = PixelSnapMode.Geometry;
 
     const view = makeView(200, 200);
 
@@ -667,7 +652,7 @@ describe('logical / render separation', () => {
     const view = makeView(100, 100);
     const out = new Rectangle();
 
-    sprite.pixelSnapMode = 'position';
+    sprite.pixelSnapMode = PixelSnapMode.Position;
     expect(sprite.getRenderBounds(view, 100, 100, out)).toBe(sprite.getLocalBounds());
 
     sprite.destroy();

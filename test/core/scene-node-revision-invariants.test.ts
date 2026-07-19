@@ -4,6 +4,7 @@ import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
 import { Filter } from '#rendering/filters/Filter';
 import { Mesh } from '#rendering/mesh/Mesh';
+import { PixelSnapMode } from '#rendering/pixelSnap';
 import type { RenderNode } from '#rendering/RenderNode';
 import { RetainedContainer } from '#rendering/RetainedContainer';
 import { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
@@ -122,7 +123,7 @@ const cases: readonly MutatorCase[] = [
   // Drawable visual-source family — content-dirty.
   drawableCase('setTint', 'content', n => n.setTint(new Color(10, 20, 30))),
   drawableCase('setBlendMode', 'content', n => n.setBlendMode(BlendModes.Add)),
-  drawableCase('pixelSnapMode setter', 'content', n => (n.pixelSnapMode = 'geometry')),
+  drawableCase('pixelSnapMode setter', 'content', n => (n.pixelSnapMode = PixelSnapMode.Geometry)),
   // Container structural mutators — structure-dirty (wired in Slice 1).
   containerCase('addChild', 'structure', n => n.addChild(new Drawable())),
   // addChild is itself a structure-dirty mutator (tested above), so the

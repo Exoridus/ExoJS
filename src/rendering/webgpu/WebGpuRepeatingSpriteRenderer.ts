@@ -3,6 +3,7 @@
 import { Matrix } from '#math/Matrix';
 import { Rectangle } from '#math/Rectangle';
 import { packAffineMat4 } from '#rendering/affinePacking';
+import { PixelSnapMode } from '#rendering/pixelSnap';
 import type { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
 import { computeShaderTiling, type RepeatingSpriteQuad } from '#rendering/sprite/repeatingSpritePlan';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
@@ -231,7 +232,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
   private _currentModeX: RepeatMode | null = null;
   private _currentModeY: RepeatMode | null = null;
   private _currentPath: 'shader' | 'geometry' | null = null;
-  // Reusable scratch for device-snapped bounds ('geometry' mode).
+  // Reusable scratch for device-snapped bounds (PixelSnapMode.Geometry).
   private readonly _snapBounds = new Rectangle();
 
   // Retained-batch record/replay scratch (Track B Slice 3). One-texture list
@@ -357,7 +358,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     // from group-owned resources, so poison the window — the group falls
     // back to entry replay (correct, never stale) instead of a replay that is
     // either missing the wrap-mode sampler or holding view-dependent bytes.
-    if ((strategy === 'shader' || sprite.pixelSnapMode !== 'none') && backend._retainedCaptureActive) {
+    if ((strategy === 'shader' || sprite.pixelSnapMode !== PixelSnapMode.None) && backend._retainedCaptureActive) {
       backend._poisonActiveRetainedCaptures();
     }
 
@@ -400,10 +401,10 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     let destH = sprite.height;
     const flipY = texture instanceof Texture && texture.flipY;
 
-    // 'geometry' mode: snap the destination quad to the device grid. Repetition
-    // stays shader-based; only the outer rectangle (and the tiling derived from
-    // it) moves. Position/none leave the destination unchanged.
-    if (sprite.pixelSnapMode === 'geometry') {
+    // PixelSnapMode.Geometry: snap the destination quad to the device grid.
+    // Repetition stays shader-based; only the outer rectangle (and the tiling
+    // derived from it) moves. Position/None leave the destination unchanged.
+    if (sprite.pixelSnapMode === PixelSnapMode.Geometry) {
       const backend = this.getBackend();
       const snap = backend._getSnapPixelSize();
       const rb = sprite.getRenderBounds(backend.view, snap.width, snap.height, this._snapBounds);
@@ -443,8 +444,8 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
   private _writeGeoQuads(sprite: RepeatingSprite, nodeIndex: number): void {
     let quads: readonly RepeatingSpriteQuad[] = sprite.quads;
 
-    // 'geometry' mode: snap shared segment boundaries once (gap-free), like NineSlice.
-    if (sprite.pixelSnapMode === 'geometry') {
+    // PixelSnapMode.Geometry: snap shared segment boundaries once (gap-free), like NineSlice.
+    if (sprite.pixelSnapMode === PixelSnapMode.Geometry) {
       const backend = this.getBackend();
       const snap = backend._getSnapPixelSize();
 

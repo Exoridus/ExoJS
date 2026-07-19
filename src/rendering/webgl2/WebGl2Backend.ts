@@ -449,7 +449,7 @@ export class WebGl2Backend implements RenderBackend {
    * Resolve the world transform to upload for `drawable`, applying render-only
    * pixel snapping against the active render target's device-pixel grid when the
    * drawable opts in. Returns the live (unsnapped) global transform for the
-   * `'none'` default; never mutates logical state.
+   * `PixelSnapMode.None` default; never mutates logical state.
    * @internal
    */
   private _resolveSnapTransform(drawable: Drawable): Matrix {

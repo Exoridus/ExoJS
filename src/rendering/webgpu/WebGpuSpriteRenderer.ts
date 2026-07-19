@@ -4,6 +4,7 @@ import { Matrix } from '#math/Matrix';
 import { Rectangle } from '#math/Rectangle';
 import { packAffineMat4 } from '#rendering/affinePacking';
 import type { SpriteMaterial } from '#rendering/material/SpriteMaterial';
+import { PixelSnapMode } from '#rendering/pixelSnap';
 import type { Sprite } from '#rendering/sprite/Sprite';
 import { spriteVertexWgsl } from '#rendering/sprite/spriteMaterialSources';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
@@ -347,7 +348,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
   private _customBaseTextureLayout: GPUBindGroupLayout | null = null;
   private _currentMaterial: SpriteMaterial | null = null;
   private _currentBaseTexture: Texture | RenderTexture | null = null;
-  // Reusable scratch for device-snapped local bounds ('geometry' mode), and the
+  // Reusable scratch for device-snapped local bounds (PixelSnapMode.Geometry), and the
   // bounds resolved for the sprite currently being packed (snapped or logical).
   private readonly _snapBounds: Rectangle = new Rectangle();
   private _activeBounds: Rectangle | null = null;
@@ -500,7 +501,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     // Defensive (S3-D5.3): pixel-snapped instance words are view-dependent —
     // the recordability predicate excludes them at collect time, so a snapped
     // sprite inside a capture window means the stream cannot be replayed.
-    if (sprite.pixelSnapMode !== 'none' && backend._retainedCaptureActive) {
+    if (sprite.pixelSnapMode !== PixelSnapMode.None && backend._retainedCaptureActive) {
       backend._poisonActiveRetainedCaptures();
     }
 
@@ -522,12 +523,12 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
 
   /**
    * Local bounds to upload for `sprite` this draw: device-pixel-snapped in
-   * `'geometry'` pixel-snap mode (axis-aligned only), otherwise the sprite's
+   * `PixelSnapMode.Geometry` (axis-aligned only), otherwise the sprite's
    * logical local bounds. Reuses a scratch rectangle and never mutates logical
    * state. Consumed synchronously by {@link _packInstance}.
    */
   private _resolveBounds(sprite: Sprite, backend: WebGpuBackend): Rectangle {
-    if (sprite.pixelSnapMode !== 'geometry') {
+    if (sprite.pixelSnapMode !== PixelSnapMode.Geometry) {
       return sprite.getLocalBounds();
     }
 
@@ -1089,7 +1090,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     const u32 = this._instanceUint32;
 
     // localBounds: left, top, right, bottom (words 0..3, offset 0) — device-snapped in
-    // 'geometry' pixel-snap mode, otherwise the logical local bounds.
+    // PixelSnapMode.Geometry, otherwise the logical local bounds.
     const bounds = this._activeBounds ?? sprite.getLocalBounds();
 
     f32[offset + 0] = bounds.left;

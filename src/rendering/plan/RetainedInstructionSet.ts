@@ -1,4 +1,5 @@
 import type { Drawable } from '#rendering/Drawable';
+import { PixelSnapMode } from '#rendering/pixelSnap';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { RenderNode } from '#rendering/RenderNode';
 
@@ -295,7 +296,7 @@ const entriesRecordable = (entries: readonly RetainedFragmentEntry[], registry: 
 
     const drawable = entry.drawable;
 
-    if (drawableHasOwnMaterial(drawable) || drawable.pixelSnapMode !== 'none') {
+    if (drawableHasOwnMaterial(drawable) || drawable.pixelSnapMode !== PixelSnapMode.None) {
       return false;
     }
 

@@ -23,6 +23,7 @@
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { Container } from '#rendering/Container';
+import { PixelSnapMode } from '#rendering/pixelSnap';
 import type { RenderNode } from '#rendering/RenderNode';
 import { RetainedContainer } from '#rendering/RetainedContainer';
 import { Sprite } from '#rendering/sprite/Sprite';
@@ -465,7 +466,7 @@ describe('WebGPU renderer matrix: RetainedContainer cells', () => {
       // re-applied u_group still lands the origin on a whole device pixel.
       group.setPosition(8.4, 8.4);
       sprite.setPosition(0.3, 0.3);
-      sprite.pixelSnapMode = 'position';
+      sprite.pixelSnapMode = PixelSnapMode.Position;
       group.addChild(sprite);
       root.addChild(group);
 

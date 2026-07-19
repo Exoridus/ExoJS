@@ -14,7 +14,7 @@ export { Container } from './Container';
 export { Drawable } from './Drawable';
 export type { DrawContext, RenderToOptions } from './DrawContext';
 export { PassContext } from './PassContext';
-export type { PixelSnapMode } from './pixelSnap';
+export { PixelSnapMode } from './pixelSnap';
 export { RenderBackendType } from './RenderBackendType';
 export { RenderBatch } from './RenderBatch';
 export type { RenderErrorCode, RenderErrorOptions } from './RenderError';

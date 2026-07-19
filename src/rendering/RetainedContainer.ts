@@ -8,6 +8,7 @@ import type { RenderBackend } from '#rendering/RenderBackend';
 
 import { Container } from './Container';
 import type { Drawable } from './Drawable';
+import { PixelSnapMode } from './pixelSnap';
 import type { RetainedGroupBundle } from './plan/RetainedInstructionSet';
 import type { RenderNode } from './RenderNode';
 import { packTransformRow, TRANSFORM_FLOATS_PER_ROW } from './TransformBuffer';
@@ -481,7 +482,7 @@ export class RetainedContainer extends Container {
     // Snapped nodes are excluded from recording (their instance words are
     // view-dependent), so a recorded direct child is never snapped — but guard
     // belt-and-braces: an ineligible node drops to the re-record fallback.
-    if (nodeIndex === undefined || drawable.pixelSnapMode !== 'none') {
+    if (nodeIndex === undefined || drawable.pixelSnapMode !== PixelSnapMode.None) {
       return false;
     }
 

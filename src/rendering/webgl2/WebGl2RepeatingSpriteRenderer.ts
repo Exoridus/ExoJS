@@ -1,4 +1,5 @@
 import { Rectangle } from '#math/Rectangle';
+import { PixelSnapMode } from '#rendering/pixelSnap';
 import { Shader } from '#rendering/shader/Shader';
 import type { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
 import { computeShaderTiling, type RepeatingSpriteQuad } from '#rendering/sprite/repeatingSpritePlan';
@@ -271,7 +272,7 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
     // cannot be replayed from group-owned resources, so poison the window —
     // the group falls back to entry replay (correct, never stale) rather than
     // replaying an incomplete or wrap-less instruction stream.
-    if (backend._isRetainedCapturing && (strategy === 'shader' || sprite.pixelSnapMode !== 'none')) {
+    if (backend._isRetainedCapturing && (strategy === 'shader' || sprite.pixelSnapMode !== PixelSnapMode.None)) {
       backend._poisonRetainedCaptures();
     }
 
@@ -311,10 +312,10 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
     let destH = sprite.height;
     const flipY = texture instanceof Texture && texture.flipY;
 
-    // 'geometry' mode: snap the destination quad to the device grid. Repetition
-    // stays shader-based; only the outer rectangle (and the tiling derived from
-    // it) moves. Position/none leave the destination unchanged.
-    if (sprite.pixelSnapMode === 'geometry') {
+    // PixelSnapMode.Geometry: snap the destination quad to the device grid.
+    // Repetition stays shader-based; only the outer rectangle (and the tiling
+    // derived from it) moves. Position/None leave the destination unchanged.
+    if (sprite.pixelSnapMode === PixelSnapMode.Geometry) {
       const backend = this.getBackend();
       const snap = backend._getSnapPixelSize();
       const rb = sprite.getRenderBounds(backend.view, snap.width, snap.height, this._snapBounds);
@@ -357,8 +358,8 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
   private _writeGeoQuads(sprite: RepeatingSprite, nodeIndex: number): void {
     let quads: readonly RepeatingSpriteQuad[] = sprite.quads;
 
-    // 'geometry' mode: snap shared segment boundaries once (gap-free), like NineSlice.
-    if (sprite.pixelSnapMode === 'geometry') {
+    // PixelSnapMode.Geometry: snap shared segment boundaries once (gap-free), like NineSlice.
+    if (sprite.pixelSnapMode === PixelSnapMode.Geometry) {
       const backend = this.getBackend();
       const snap = backend._getSnapPixelSize();
 
