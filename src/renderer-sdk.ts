@@ -55,4 +55,5 @@ export {
   type WebGpuRetainedGeometryRef,
   type WebGpuRetainedNodeIndexRange,
 } from '#rendering/webgpu/WebGpuRetainedGroupResources';
+export { packSnapViewport } from '#rendering/webgpu/webgpuSnapViewport';
 export { stencilContentDepthStencilState } from '#rendering/webgpu/WebGpuStencilState';

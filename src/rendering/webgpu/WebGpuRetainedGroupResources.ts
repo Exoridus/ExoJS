@@ -43,8 +43,8 @@ export interface WebGpuRetainedRendererReplayState {
   destroy(): void;
 }
 
-/** Bytes of the per-group uniform buffer (projection mat4 + group mat4, S3-D7). */
-export const retainedGroupUniformBytes = 128;
+/** Bytes of the per-group uniform buffer (projection mat4 + group mat4 + snap viewport vec4, S3-D7). */
+export const retainedGroupUniformBytes = 144;
 
 /**
  * Backend-owned replay descriptor for one recorded renderer flush (Track B

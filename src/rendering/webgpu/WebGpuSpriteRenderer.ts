@@ -23,6 +23,7 @@ import {
   type WebGpuRetainedBatchReplayer,
   type WebGpuRetainedNodeIndexRange,
 } from './WebGpuRetainedGroupResources';
+import { packSnapViewport } from './webgpuSnapViewport';
 import { stencilContentDepthStencilState } from './WebGpuStencilState';
 import {
   collectScalarUniforms,
@@ -132,6 +133,7 @@ export const buildSpriteShaderSource = (textureSlots: number): string => {
 struct ProjectionUniforms {
     matrix: mat4x4<f32>,
     group: mat4x4<f32>,
+    viewport: vec4<f32>,        // device-pixel snap rect (x, y, width, height)
 };
 
 struct TransformSlot {
@@ -190,7 +192,20 @@ fn vertexMain(input: VertexInput, @builtin(vertex_index) vid: u32) -> VertexOutp
     let worldX = slot.m0.x * localX + slot.m0.y * localY + slot.m1.x;
     let worldY = slot.m0.z * localX + slot.m0.w * localY + slot.m1.y;
 
-    output.position = projection.matrix * projection.group * vec4<f32>(worldX, worldY, 0.0, 1.0);
+    var position = projection.matrix * projection.group * vec4<f32>(worldX, worldY, 0.0, 1.0);
+
+    // Render-only pixel snapping (slot.m1.z: 0 = none, non-zero = snap origin).
+    // Snap the node ORIGIN's device-pixel position and rigid-shift the whole
+    // primitive by the same delta. floor(x + 0.5) matches the CPU Math.round
+    // policy; WGSL round() is half-to-even. Grid alignment is independent of the
+    // y-axis convention because the staged viewport rect is whole device pixels.
+    if (slot.m1.z != 0.0) {
+        let originClip = projection.matrix * projection.group * vec4<f32>(slot.m1.x, slot.m1.y, 0.0, 1.0);
+        let originDevice = projection.viewport.xy + (originClip.xy * 0.5 + vec2<f32>(0.5)) * projection.viewport.zw;
+        let snapDelta = (floor(originDevice + vec2<f32>(0.5)) - originDevice) * 2.0 / max(projection.viewport.zw, vec2<f32>(1.0));
+        position = vec4<f32>(position.xy + snapDelta, position.z, position.w);
+    }
+    output.position = position;
 
     let u = select(input.uvBounds.x, input.uvBounds.z, cornerX == 1u);
     let v = select(input.uvBounds.y, input.uvBounds.w, cornerY == 1u);
@@ -229,7 +244,8 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
 
 const instanceStrideBytes = 32;
 const wordsPerInstance = instanceStrideBytes / Uint32Array.BYTES_PER_ELEMENT;
-const projectionByteLength = 128;
+// mat4x4 projection + mat4x4 group + vec4 snap viewport (aligned 16, total 144).
+const projectionByteLength = 144;
 const initialBatchCapacity = 32;
 // Deliberately decoupled from the multi-texture batch slot count — bumping the
 // default-path batch tiers must not silently widen the custom-material
@@ -630,8 +646,18 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     // when the UBO already holds this exact (view, updateId, group-bytes)
     // state — static frames then issue zero projection uploads.
     const view = backend.view;
+    // Staged unconditionally so a snap-rect change (attachment resize with an
+    // unchanged view) forces the rewrite the (view, updateId, group) skip
+    // state cannot see.
+    const viewportChanged = packSnapViewport(backend, this._projectionData, 32);
 
-    if (!this._hasWrittenProjection || this._writtenView !== view || this._writtenViewUpdateId !== view.updateId || this._groupContentChanged(backend)) {
+    if (
+      !this._hasWrittenProjection ||
+      this._writtenView !== view ||
+      this._writtenViewUpdateId !== view.updateId ||
+      viewportChanged ||
+      this._groupContentChanged(backend)
+    ) {
       packAffineMat4(view.getTransform(), this._projectionData, 0);
       packAffineMat4(backend.renderGroupTransform ?? Matrix.identity, this._projectionData, 16);
 
@@ -974,7 +1000,11 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
 
     packAffineMat4(backend.renderGroupTransform ?? Matrix.identity, scratch, 0);
 
-    let uboDirty = !bundle.uboWritten || bundle.uboView !== view || bundle.uboViewUpdateId !== view.updateId;
+    // Staged unconditionally: an unchanged rect makes this an identity write,
+    // while a changed one forces the rewrite the skip state cannot see.
+    const viewportChanged = packSnapViewport(backend, bundle.uboData, 32);
+
+    let uboDirty = !bundle.uboWritten || bundle.uboView !== view || bundle.uboViewUpdateId !== view.updateId || viewportChanged;
 
     if (!uboDirty) {
       for (let i = 0; i < 16; i++) {

@@ -24,8 +24,9 @@ const hashUintScratch = new Uint32Array(hashFloatScratch.buffer);
  * and a patched retained row stay bit-identical by construction — a layout change
  * lands in exactly one place.
  *
- * `snapMode` is carried as-is (no shader currently reads it); the backends still
- * upload a CPU-resolved, already-snapped transform, so this is transport only.
+ * `snapMode` rides in the row's spare slot (`m1.z`): both backends now upload
+ * the RAW world transform and snap the drawable's device-pixel origin in the
+ * vertex stage, gated on this flag (spec D3-D5).
  * @internal
  */
 export const packTransformRow = (target: Float32Array, offset: number, transform: Matrix, tint: Color, snapMode: PixelSnapMode = PixelSnapMode.None): void => {
