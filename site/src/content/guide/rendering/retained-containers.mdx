@@ -72,7 +72,7 @@ The speed comes from a deliberate trade: descendants of an engaged group resolve
 
 - [`getBounds()`](/ExoJS/en/api/scene-node/) and hit-testing on a child report **group-local** coordinates, not world coordinates.
 - Per-child view culling is disabled inside the group; the group is culled as a whole.
-- `pixelSnapMode` position snapping is resolved on the GPU against the composed world origin, so it stays correct inside a group; `geometry`-mode boundary snapping is still computed CPU-side and opts the group out of batch recording.
+- `pixelSnapMode` is resolved entirely on the GPU against the composed world origin in **both** modes — `position` rounds the origin, `geometry` additionally rounds the boundaries — so snapping stays correct inside a group and never opts it out of batch recording.
 
 For a true world-space position or orientation of a node inside the group — picking, spatial audio, physics, any math against nodes outside the group — use [`getWorldTransform()`](/ExoJS/en/api/scene-node/), which composes through the group boundary and returns the real world matrix:
 

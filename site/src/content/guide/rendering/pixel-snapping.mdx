@@ -36,7 +36,7 @@ A tween moving a snapped sprite still animates its logical position smoothly —
 
 `PixelSnapMode.Position` snaps the drawable's rendered origin to the nearest device pixel. Only the translation of the uploaded world matrix is adjusted — the linear part is untouched — so it is safe under **any** transform: rotation, skew, and non-uniform scale included.
 
-`PixelSnapMode.Geometry` does that and additionally snaps the drawable's shared boundary plan: nine-slice edges, repeat-segment boundaries, the sprite quad, tilemap chunk and layer origins. Every boundary goes through the same pure rounding function, so two neighbours that share a boundary value snap to the same result — seams cannot open between adjacent slices, segments, or chunks.
+`PixelSnapMode.Geometry` does that and additionally snaps the drawable's shared boundary plan: nine-slice edges, repeat-segment boundaries, the sprite quad, tilemap chunk and layer origins. Every boundary is rounded to the device grid in the vertex shader by the same pure function, so two neighbours that share a boundary value snap to the same result — seams cannot open between adjacent slices, segments, or chunks.
 
 ```ts
 import { NineSliceSprite, PixelSnapMode, RepeatingSprite, Texture } from '@codexo/exojs';
@@ -67,7 +67,7 @@ Snapping targets the **device-pixel grid of the active render target** — world
 | `RepeatingSprite` | yes         | snaps repeat-segment boundaries (atlas-region sources); bare-`Texture` sources snap the destination quad while repetition stays shader-based |
 | Tilemap nodes    | yes          | snaps chunk/layer origins; integer tile pitch keeps every tile edge exact across chunks                      |
 
-`PixelSnapMode.Position` is honoured by **every** drawable — the origin is rounded in the vertex shader against the composed device grid, identically on WebGL2 and WebGPU, so it stays correct even inside a `RetainedContainer` and adds no per-frame CPU cost. `PixelSnapMode.Geometry` adds boundary snapping only for the types above; on other drawables it currently behaves like `PixelSnapMode.Position`.
+Both modes are resolved in the vertex shaders against the composed device grid, identically on WebGL2 and WebGPU, so they stay correct even inside a `RetainedContainer`, add no per-frame CPU cost, and keep a snapped drawable fully eligible for retained instruction recording. `PixelSnapMode.Position` is honoured by **every** drawable; `PixelSnapMode.Geometry` adds boundary snapping only for the types above and behaves like `PixelSnapMode.Position` on the rest.
 
 ## Tilemaps
 
@@ -94,7 +94,7 @@ Chunk origins snap on the shared device grid, and a chunk's internal tile geomet
 ## Limitations and non-goals
 
 - **Not a layout system.** There is no screen-space/UI layout rounding — logical widths, heights, and positions are never rounded for you.
-- **One rounding policy.** `PixelSnapMode.Position` rounds the drawable's origin in the vertex shader (`floor(x + 0.5)`, the exact device-pixel nearest-rounding both backends agree on); `PixelSnapMode.Geometry`'s extra boundary snapping is still computed on the CPU during render-data preparation. Both use the same nearest-device-pixel policy.
+- **One rounding policy.** Both modes round entirely in the vertex shaders (`floor(x + 0.5)`, the exact device-pixel nearest-rounding both backends agree on): `PixelSnapMode.Position` rounds the drawable's origin, and `PixelSnapMode.Geometry` additionally rounds each shared boundary to the device grid. There is no CPU snap path — the same nearest-device-pixel policy runs on WebGL2 and WebGPU alike.
 - **Logical bounds stay logical.** `getBounds()` reports unsnapped values; the rasterised result may differ from them by less than one device pixel.
 
 ## Where to go next
