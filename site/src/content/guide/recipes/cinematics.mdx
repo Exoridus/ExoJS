@@ -8,11 +8,11 @@ import Callout from '../../../components/Callout.astro';
 
 # Cinematics
 
-A cinematic (or cutscene) is a choreographed sequence where the camera moves, dialogue appears, characters animate, music swells, and the player's input is temporarily suspended — all driven by timing, not by gameplay logic. ExoJS does not ship a timeline or cutscene system, but you can build one from the primitives that already exist: tweens (for timed animation), `View` (for camera movement), `AudioStream` (for music), and `app.scene.setScene(...)` for transitioning between game states.
+A cinematic (or cutscene) is a choreographed sequence where the camera moves, dialogue appears, characters animate, music swells, and the player's input is temporarily suspended — all driven by timing, not by gameplay logic. ExoJS does not ship a timeline or cutscene system, but you can build one from the primitives that already exist: tweens (for timed animation), `View` (for camera movement), `AudioStream` (for music), and `app.scenes.setScene(...)` for transitioning between game states.
 
 ## Approach
 
-A cinematic is a scene. It owns the sequence. Tweens drive every timed element — camera pans, title reveals, character entrances, music fades. Navigate to the cinematic scene via `app.scene.setScene(new CinematicScene())` to fully replace the game scene while the cutscene plays, and call `app.scene.setScene(...)` again when the sequence ends to return to gameplay.
+A cinematic is a scene. It owns the sequence. Tweens drive every timed element — camera pans, title reveals, character entrances, music fades. Navigate to the cinematic scene via `app.scenes.setScene(new CinematicScene())` to fully replace the game scene while the cutscene plays, and call `app.scenes.setScene(...)` again when the sequence ends to return to gameplay.
 
 The key technique: **tween chains and delays**. Each tween starts at a specific time offset. Together they form a timeline:
 
@@ -113,7 +113,7 @@ Navigate to the cinematic scene from the game to fully replace the active scene 
 
 ```js
 // From the game scene — switch to the cinematic:
-this.app.scene.setScene(new CinematicScene());
+this.app.scenes.setScene(new CinematicScene());
 ```
 
 Because the cinematic is now the only active scene, the game scene neither renders nor updates for the duration. When the cinematic ends, switch back:
@@ -124,7 +124,7 @@ this.app.tweens.create(this.barSize)
     .to({ v: 70 }, 0.6)
     .delay(3.5) // start closing bars after the sequence plays
     .onComplete(() => {
-        this.app.scene.setScene(new GameScene(), { transition: { type: 'fade' } });
+        this.app.scenes.setScene(new GameScene(), { transition: { type: 'fade' } });
     })
     .start();
 ```
@@ -168,12 +168,12 @@ init(loader) {
     // ... cinematic setup ...
 
     this.inputs.onTrigger(Keyboard.Space, () => {
-        this.app.scene.setScene(new GameScene());
+        this.app.scenes.setScene(new GameScene());
     });
 
     const pad = this.app.input.getGamepad(0);
     pad.onTrigger(GamepadButton.Start, () => {
-        this.app.scene.setScene(new GameScene());
+        this.app.scenes.setScene(new GameScene());
     });
 }
 ```
@@ -187,7 +187,7 @@ this.inputs.onTrigger(Keyboard.Space, () => {
     this.musicVoice.volume = 0.85;
     this.boss.setScale(2.1, 2.1);
     // ... snap other properties ...
-    this.app.scene.setScene(new GameScene());
+    this.app.scenes.setScene(new GameScene());
 });
 ```
 

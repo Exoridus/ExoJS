@@ -193,7 +193,7 @@ this.timeText.text  = `${this.elapsed.toFixed(1)} s`;
   title="examples/showcase/orb-dodge.ts — GameOverScene"
 />
 
-When the player restarts, `setScene(play)` switches back to `PlayScene`. `SceneManager` calls `init()` on `play` again — the scene reinitializes from scratch, so no manual reset is needed. Input bindings registered in `init` via `this.inputs` are disposed and recreated automatically with each scene activation.
+When the player restarts, `setScene(play)` switches back to `PlayScene`. `SceneDirector` calls `init()` on `play` again — the scene reinitializes from scratch, so no manual reset is needed. Input bindings registered in `init` via `this.inputs` are disposed and recreated automatically with each scene activation.
 
 ## How scenes reference each other
 
@@ -206,11 +206,11 @@ const gameOver = new GameOverScene();
 app.start(play);
 ```
 
-`PlayScene` calls `gameOver.setResult(...)` then `void this.app.scene.setScene(gameOver)`. `GameOverScene` calls `void this.app.scene.setScene(play)`. The forward reference is safe because both scenes exist before `app.start` is called.
+`PlayScene` calls `gameOver.setResult(...)` then `void this.app.scenes.setScene(gameOver)`. `GameOverScene` calls `void this.app.scenes.setScene(play)`. The forward reference is safe because both scenes exist before `app.start` is called.
 
 ## Cleanup in destroy
 
-When `SceneManager` switches scenes it calls `destroy()` on the outgoing scene. For `PlayScene`, override it to release orb graphics that were created dynamically:
+When `SceneDirector` switches scenes it calls `destroy()` on the outgoing scene. For `PlayScene`, override it to release orb graphics that were created dynamically:
 
 ```js
 override destroy() {

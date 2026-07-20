@@ -53,19 +53,19 @@ From this point on, the application runs the scene's `update` and `draw` once pe
 
 ## Switching scenes
 
-Most non-trivial projects have more than one scene. The application owns a scene manager (`app.scene`) that drives the active scene. Use `setScene` to swap in a new scene:
+Most non-trivial projects have more than one scene. The application owns a scene manager (`app.scenes`) that drives the active scene. Use `setScene` to swap in a new scene:
 
 ```js
 // Replace the active scene with a new one
-await app.scene.setScene(new GameScene());
+await app.scenes.setScene(new GameScene());
 
 // Replace with a fade transition
-await app.scene.setScene(new GameScene(), { transition: { type: 'fade' } });
+await app.scenes.setScene(new GameScene(), { transition: { type: 'fade' } });
 ```
 
 `setScene` ends the current scene — running `unload` and `destroy` — and starts the new one. The optional `transition` argument adds a brief cross-fade so the cut is not jarring.
 
-For a typical app: a `MenuScene` calls `setScene(new GameScene())` when the player clicks Start. `app.scene.currentScene` always reflects the currently active scene.
+For a typical app: a `MenuScene` calls `setScene(new GameScene())` when the player clicks Start. `app.scenes.currentScene` always reflects the currently active scene.
 
 ## Scene UI layer
 
@@ -93,12 +93,12 @@ Available UI widgets: `Panel`, `Button`, `Label`, `ProgressBar`, `Stack`. Wire u
 
 ## Pausing and overlays
 
-To freeze a scene without leaving it — the canonical pause menu — set `scene.paused = true`. The SceneManager skips `update()` and the scene's systems while paused, but the scene keeps drawing. Set it back to `false` to resume.
+To freeze a scene without leaving it — the canonical pause menu — call `app.scenes.pause()`. It stops `update()` and the scene's systems, but the scene keeps drawing. Call `app.scenes.resume()` to resume.
 
-A pause overlay is just nodes on `scene.ui` that you show and hide together with `scene.paused`:
+A pause overlay is just nodes on `scene.ui` that you show and hide in response to the state change:
 
 ```js
-import { Keyboard, Label, Panel, Scene } from '@codexo/exojs';
+import { Keyboard, Label, Panel, Scene, SceneState } from '@codexo/exojs';
 
 class GameScene extends Scene {
     init() {
@@ -117,9 +117,15 @@ class GameScene extends Scene {
     }
 
     togglePause() {
-        this.paused = !this.paused;
-        this.pausePanel.visible = this.paused;
-        this.pauseLabel.visible = this.paused;
+        if (this.app.scenes.state === SceneState.Paused) {
+            this.app.scenes.resume();
+        } else {
+            this.app.scenes.pause();
+        }
+
+        const paused = this.app.scenes.state === SceneState.Paused;
+        this.pausePanel.visible = paused;
+        this.pauseLabel.visible = paused;
     }
 }
 ```
@@ -307,7 +313,7 @@ The default `destroy` disposes scene-owned input bindings and graph references. 
 
 <ExamplePreview chapter="application-scenes" slug="multiple-scenes" />
 
-Switching between two scenes — a menu and a game — using `app.scene.setScene`.
+Switching between two scenes — a menu and a game — using `app.scenes.setScene`.
 
 <ExamplePreview chapter="application-scenes" slug="scene-lifecycle" />
 
@@ -319,7 +325,7 @@ A screen-fixed HUD on `scene.ui` — a label and a live health bar above the wor
 
 <ExamplePreview chapter="application-scenes" slug="pause-and-resume" />
 
-`scene.paused` gates `update`; `draw` keeps running. A pause overlay on `scene.ui` is toggled in sync so the player sees a menu while the world freezes.
+`app.scenes.pause()`/`resume()` gate `update`; `draw` keeps running. A pause overlay on `scene.ui` is toggled in sync so the player sees a menu while the world freezes.
 
 <ExamplePreview chapter="getting-started" slug="game-loop" />
 

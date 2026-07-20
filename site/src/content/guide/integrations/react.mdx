@@ -126,7 +126,7 @@ For full control with no wrapper element, drop down to `useExoApplication`.
 `<Scenes>` switches the one active scene by name. Declare each scene with `<Scene>` and select
 the active one through the `active` prop. The first activation calls `app.start(scene)` (which
 initializes the backend and starts the frame loop); later switches call
-`app.scene.setScene(scene, …)` with the optional `transition`.
+`app.scenes.setScene(scene, …)` with the optional `transition`.
 
 The scene classes you reference are ordinary ExoJS scenes — the React layer only decides which
 one is active:
@@ -253,7 +253,7 @@ loop. The two stay cleanly separated.
 - **Package README:** [`@codexo/exojs-react`](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-react/README.md)
   — install, the export table, and the reactivity model.
 - **Scenes & lifecycle:** the [Scenes & lifecycle](/ExoJS/en/guide/runtime/scenes-and-lifecycle/)
-  chapter explains `app.start`, `app.scene.setScene`, transitions, and the hooks the React layer
+  chapter explains `app.start`, `app.scenes.setScene`, transitions, and the hooks the React layer
   drives for you.
 - **API reference:** the [`Application`](/ExoJS/en/api/application/) and
   [`Scene`](/ExoJS/en/api/scene/) pages document the underlying engine surface the bindings wrap.

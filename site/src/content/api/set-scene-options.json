@@ -1,6 +1,6 @@
 {
   "title": "SetSceneOptions",
-  "description": "Options passed to SceneManager.setScene.",
+  "description": "Options passed to SceneDirector.setScene.",
   "symbol": "SetSceneOptions",
   "kind": "interface",
   "subsystem": "core",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Options passed to SceneManager.setScene."
+        "Options passed to SceneDirector.setScene."
       ],
       "importLine": "import { SetSceneOptions } from '@codexo/exojs'",
       "sourceLink": null
@@ -65,11 +65,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/core/SceneManager.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneManager.ts"
+        "label": "src/core/SceneDirector.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneDirector.ts"
       }
     }
   ],
-  "sourcePath": "src/core/SceneManager.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneManager.ts"
+  "sourcePath": "src/core/SceneDirector.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneDirector.ts"
 }
