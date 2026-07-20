@@ -123,6 +123,19 @@ export interface Spatializable {
    * app-wide default from `app.audio.spatial.panningModel`.
    */
   panningModel: PanningModelType | null;
+  /**
+   * Facing direction for cone attenuation, in degrees — same convention as
+   * `SceneNode.rotation` (0° = local +X / "east", clockwise-positive on a
+   * Y-down screen). Has no audible effect unless `coneInnerAngle`/
+   * `coneOuterAngle` are narrowed below 360°. Default `0`.
+   */
+  orientation: number;
+  /** Full-gain cone half-angle in degrees. Default `360` (omnidirectional — no cone). */
+  coneInnerAngle: number;
+  /** Falloff-to-`coneOuterGain` cone half-angle in degrees. Default `360`. */
+  coneOuterAngle: number;
+  /** Gain applied outside `coneOuterAngle`. Default `0`. */
+  coneOuterGain: number;
 }
 
 /**
@@ -155,6 +168,14 @@ export interface PlayOptions {
   rolloffFactor?: number;
   /** Per-play panning model override. Omit to inherit the app-wide default. */
   panningModel?: PanningModelType;
+  /** Initial cone facing direction, in degrees (`SceneNode.rotation` convention). Default `0`. */
+  orientation?: number;
+  /** Initial full-gain cone half-angle. Default `360` (no cone). */
+  coneInnerAngle?: number;
+  /** Initial falloff cone half-angle. Default `360`. */
+  coneOuterAngle?: number;
+  /** Initial gain outside the outer cone. Default `0`. */
+  coneOuterGain?: number;
 }
 
 /**

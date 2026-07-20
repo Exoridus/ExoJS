@@ -1,6 +1,6 @@
 import type { SceneNode } from '#core/SceneNode';
 import { Signal } from '#core/Signal';
-import { clamp } from '#math/utils';
+import { clamp, degreesToRadians } from '#math/utils';
 import { Vector } from '#math/Vector';
 
 import type { AudioBus } from './AudioBus';
@@ -84,6 +84,13 @@ export abstract class BaseVoice implements Voice, Spatializable, SpatialVoice {
   private readonly _smoothX = new SmoothedAudioParam();
   private readonly _smoothY = new SmoothedAudioParam();
   private readonly _smoothZ = new SmoothedAudioParam();
+  private _orientation = 0;
+  private _coneInnerAngle = 360;
+  private _coneOuterAngle = 360;
+  private _coneOuterGain = 0;
+  private readonly _smoothOrientX = new SmoothedAudioParam();
+  private readonly _smoothOrientY = new SmoothedAudioParam();
+  private readonly _smoothOrientZ = new SmoothedAudioParam();
   /** Unsubscribe for a deferred bus-reconnect queued while the bus was locked (AU3). */
   private _pendingBusSetup: (() => void) | null = null;
 
@@ -305,6 +312,48 @@ export abstract class BaseVoice implements Voice, Spatializable, SpatialVoice {
     }
   }
 
+  public get orientation(): number {
+    return this._orientation;
+  }
+
+  public set orientation(value: number) {
+    this._orientation = value;
+    this._writeOrientation();
+  }
+
+  public get coneInnerAngle(): number {
+    return this._coneInnerAngle;
+  }
+
+  public set coneInnerAngle(value: number) {
+    this._coneInnerAngle = value;
+    if (this._panner !== null) {
+      this._panner.coneInnerAngle = value;
+    }
+  }
+
+  public get coneOuterAngle(): number {
+    return this._coneOuterAngle;
+  }
+
+  public set coneOuterAngle(value: number) {
+    this._coneOuterAngle = value;
+    if (this._panner !== null) {
+      this._panner.coneOuterAngle = value;
+    }
+  }
+
+  public get coneOuterGain(): number {
+    return this._coneOuterGain;
+  }
+
+  public set coneOuterGain(value: number) {
+    this._coneOuterGain = value;
+    if (this._panner !== null) {
+      this._panner.coneOuterGain = value;
+    }
+  }
+
   /** @internal Called once per frame by {@link AudioManager.update} for spatial voices. */
   public _tickSpatial(): void {
     if (this._panner === null || this._ended) return;
@@ -344,6 +393,37 @@ export abstract class BaseVoice implements Voice, Spatializable, SpatialVoice {
     } else if (panner.setPosition) {
       // Legacy AudioParam-less API: snap only (no smoothing available).
       panner.setPosition(x, y, 0);
+    }
+  }
+
+  /**
+   * Convert `_orientation` (degrees, `SceneNode.rotation` convention) to a
+   * unit XY vector (Z fixed at 0 — no Z axis in this engine) and write it
+   * through the same smoothing layer used for position, so a fast-rotating
+   * emitter's cone direction never zippers.
+   */
+  private _writeOrientation(): void {
+    if (this._panner === null || this._ended) return;
+
+    const radians = degreesToRadians(this._orientation);
+    const x = Math.cos(radians);
+    const y = Math.sin(radians);
+
+    const panner = this._panner as unknown as Partial<{
+      orientationX: AudioParam;
+      orientationY: AudioParam;
+      orientationZ: AudioParam;
+      setOrientation: (x: number, y: number, z: number) => void;
+    }>;
+    const t = this._audioContext.currentTime;
+    const settings = this._manager.spatial;
+
+    if (panner.orientationX) {
+      this._smoothOrientX.write(panner.orientationX, x, t, settings);
+      this._smoothOrientY.write(panner.orientationY!, y, t, settings);
+      this._smoothOrientZ.write(panner.orientationZ!, 0, t, settings);
+    } else if (panner.setOrientation) {
+      panner.setOrientation(x, y, 0);
     }
   }
 
@@ -421,9 +501,13 @@ export abstract class BaseVoice implements Voice, Spatializable, SpatialVoice {
     panner.refDistance = this._spatialConfig.refDistance;
     panner.maxDistance = this._spatialConfig.maxDistance;
     panner.rolloffFactor = this._spatialConfig.rolloffFactor;
+    panner.coneInnerAngle = this._coneInnerAngle;
+    panner.coneOuterAngle = this._coneOuterAngle;
+    panner.coneOuterGain = this._coneOuterGain;
 
     this._routeThroughPanner(panner);
     this._panner = panner;
+    this._writeOrientation();
 
     if (!this._spatialRegistered) {
       this._spatialRegistered = true;

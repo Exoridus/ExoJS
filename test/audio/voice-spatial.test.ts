@@ -26,6 +26,12 @@ interface MockPannerNode {
   positionX: { setValueAtTime: MockInstance; setTargetAtTime: MockInstance; cancelScheduledValues: MockInstance };
   positionY: { setValueAtTime: MockInstance; setTargetAtTime: MockInstance; cancelScheduledValues: MockInstance };
   positionZ: { setValueAtTime: MockInstance; setTargetAtTime: MockInstance; cancelScheduledValues: MockInstance };
+  coneInnerAngle: number;
+  coneOuterAngle: number;
+  coneOuterGain: number;
+  orientationX: { setValueAtTime: MockInstance; setTargetAtTime: MockInstance; cancelScheduledValues: MockInstance };
+  orientationY: { setValueAtTime: MockInstance; setTargetAtTime: MockInstance; cancelScheduledValues: MockInstance };
+  orientationZ: { setValueAtTime: MockInstance; setTargetAtTime: MockInstance; cancelScheduledValues: MockInstance };
 }
 
 const setupPannerSpy = (): {
@@ -47,6 +53,12 @@ const setupPannerSpy = (): {
       positionX: { setValueAtTime: vi.fn(), setTargetAtTime: vi.fn(), cancelScheduledValues: vi.fn() },
       positionY: { setValueAtTime: vi.fn(), setTargetAtTime: vi.fn(), cancelScheduledValues: vi.fn() },
       positionZ: { setValueAtTime: vi.fn(), setTargetAtTime: vi.fn(), cancelScheduledValues: vi.fn() },
+      coneInnerAngle: 360,
+      coneOuterAngle: 360,
+      coneOuterGain: 0,
+      orientationX: { setValueAtTime: vi.fn(), setTargetAtTime: vi.fn(), cancelScheduledValues: vi.fn() },
+      orientationY: { setValueAtTime: vi.fn(), setTargetAtTime: vi.fn(), cancelScheduledValues: vi.fn() },
+      orientationZ: { setValueAtTime: vi.fn(), setTargetAtTime: vi.fn(), cancelScheduledValues: vi.fn() },
     };
     panners.push(panner);
     return panner as unknown as PannerNode;
@@ -360,6 +372,68 @@ describe('Voice — spatial (PannerNode)', () => {
     manager.play(sound, { position: { x: 0, y: 0 }, panningModel: 'equalpower' });
     expect(spy.panners[0].panningModel).toBe('HRTF');
     expect(spy.panners[1].panningModel).toBe('equalpower');
+    spy.restore();
+    sound.destroy();
+  });
+
+  test('orientation and cone angles default to omnidirectional (no cone)', () => {
+    const spy = setupPannerSpy();
+    const manager = new AudioManager();
+    const sound = new Sound(createAudioBufferStub());
+    manager.play(sound, { position: { x: 0, y: 0 } });
+    const panner = spy.panners[0];
+    expect(panner.coneInnerAngle).toBe(360);
+    expect(panner.coneOuterAngle).toBe(360);
+    expect(panner.coneOuterGain).toBe(0);
+    spy.restore();
+    sound.destroy();
+  });
+
+  test('PlayOptions cone fields configure the PannerNode at play time', () => {
+    const spy = setupPannerSpy();
+    const manager = new AudioManager();
+    const sound = new Sound(createAudioBufferStub());
+    manager.play(sound, {
+      position: { x: 0, y: 0 },
+      orientation: 90,
+      coneInnerAngle: 30,
+      coneOuterAngle: 60,
+      coneOuterGain: 0.2,
+    });
+    const panner = spy.panners[0];
+    expect(panner.coneInnerAngle).toBe(30);
+    expect(panner.coneOuterAngle).toBe(60);
+    expect(panner.coneOuterGain).toBeCloseTo(0.2);
+    expect(panner.orientationX.setValueAtTime).toHaveBeenCalledWith(expect.closeTo(0, 5), expect.any(Number));
+    expect(panner.orientationY.setValueAtTime).toHaveBeenCalledWith(expect.closeTo(1, 5), expect.any(Number));
+    spy.restore();
+    sound.destroy();
+  });
+
+  test('orientation degree 0 maps to the local +X axis (SceneNode.rotation convention)', () => {
+    const spy = setupPannerSpy();
+    const manager = new AudioManager();
+    const sound = new Sound(createAudioBufferStub());
+    manager.play(sound, { position: { x: 0, y: 0 }, orientation: 0, coneInnerAngle: 10 });
+    const panner = spy.panners[0];
+    expect(panner.orientationX.setValueAtTime).toHaveBeenCalledWith(expect.closeTo(1, 5), expect.any(Number));
+    expect(panner.orientationY.setValueAtTime).toHaveBeenCalledWith(expect.closeTo(0, 5), expect.any(Number));
+    spy.restore();
+    sound.destroy();
+  });
+
+  test('voice.orientation and cone setters round-trip and write through live', () => {
+    const spy = setupPannerSpy();
+    const manager = new AudioManager();
+    const sound = new Sound(createAudioBufferStub());
+    const voice = manager.play(sound, { position: { x: 0, y: 0 } });
+
+    voice.coneInnerAngle = 45;
+    voice.coneOuterAngle = 90;
+    voice.coneOuterGain = 0.1;
+    expect(voice.coneInnerAngle).toBe(45);
+    expect(spy.panners[0].coneInnerAngle).toBe(45);
+
     spy.restore();
     sound.destroy();
   });
