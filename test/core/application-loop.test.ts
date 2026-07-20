@@ -244,7 +244,7 @@ describe('Application.update() — loop timing', () => {
     test('a very large raw delta is clamped before sceneManager.update receives it', () => {
       mockFrameElapsed(app, 30_000);
 
-      const sceneUpdateSpy = vi.spyOn(app.scene, 'update');
+      const sceneUpdateSpy = vi.spyOn(app.scenes, 'update');
 
       app.update();
 
@@ -375,7 +375,7 @@ describe('Application.update() — loop timing', () => {
     const STEP_MS = 1000 / 60;
 
     test('runs one fixed step per single-step frame', () => {
-      const fixedSpy = vi.spyOn(app.scene, 'fixedUpdate');
+      const fixedSpy = vi.spyOn(app.scenes, 'fixedUpdate');
 
       mockFrameElapsed(app, STEP_MS);
       app.update();
@@ -384,7 +384,7 @@ describe('Application.update() — loop timing', () => {
     });
 
     test('runs multiple fixed steps for a multi-step frame', () => {
-      const fixedSpy = vi.spyOn(app.scene, 'fixedUpdate');
+      const fixedSpy = vi.spyOn(app.scenes, 'fixedUpdate');
 
       mockFrameElapsed(app, STEP_MS * 3);
       app.update();
@@ -412,7 +412,7 @@ describe('Application.update() — loop timing', () => {
     });
 
     test('caps fixed steps per frame (spiral-of-death guard)', () => {
-      const fixedSpy = vi.spyOn(app.scene, 'fixedUpdate');
+      const fixedSpy = vi.spyOn(app.scenes, 'fixedUpdate');
 
       // The frame delta is clamped to 100 ms first → 6 steps wanted, capped at 5.
       mockFrameElapsed(app, 1000);

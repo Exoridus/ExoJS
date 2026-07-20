@@ -78,7 +78,7 @@ const makeBackend = () => {
   };
 };
 
-const makeSceneManager = () => ({
+const makeSceneDirector = () => ({
   scene: null as null | { root: object },
 });
 
@@ -94,7 +94,7 @@ const makeApp = () => {
   return {
     canvas: { width: 800, height: 600 },
     backend: makeBackend(),
-    scene: makeSceneManager(),
+    scenes: makeSceneDirector(),
     input: { onKeyDown },
     onFrame,
     onResize,

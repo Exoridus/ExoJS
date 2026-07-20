@@ -107,7 +107,7 @@ const createApp = (): {
         screenToWorld: (x: number, y: number): { x: number; y: number } => ({ x, y }),
       },
     },
-    scene: {
+    scenes: {
       get currentScene(): Scene | null {
         return scene;
       },
@@ -150,7 +150,7 @@ const createAppNoScene = (
         screenToWorld: (x: number, y: number): { x: number; y: number } => ({ x, y }),
       },
     },
-    scene: {
+    scenes: {
       get currentScene(): Scene | null {
         return null;
       },
@@ -1427,7 +1427,7 @@ describe('InteractionManager — no active scene', () => {
 
     // A freestanding container (not the scene's root — there is no scene) can
     // still be attached directly; registering its interactive child forces
-    // quadtree creation while `app.scene.currentScene` is null.
+    // quadtree creation while `app.scenes.currentScene` is null.
     const root = new Container();
     const sprite = new TestSprite().setBounds(0, 0, 10, 10);
 

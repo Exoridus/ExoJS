@@ -637,7 +637,7 @@ export class InteractionManager implements InteractionHooks {
       return { node: this._hitTestNode(capture, coords.x, coords.y), x: coords.x, y: coords.y };
     }
 
-    const uiRoot = this._app.scene.currentScene?._peekUI() ?? null;
+    const uiRoot = this._app.scenes.currentScene?._peekUI() ?? null;
 
     if (uiRoot !== null) {
       const ui = this._app.rendering.screenView.screenToWorld(pointer.x, pointer.y);
@@ -663,7 +663,7 @@ export class InteractionManager implements InteractionHooks {
   /** Whether `node` lives inside the active scene's UI layer. */
   // eslint-disable-next-line @typescript-eslint/naming-convention -- UI is an acronym (cf. HTMLText)
   private _isUINode(node: RenderNode): boolean {
-    const uiRoot = this._app.scene.currentScene?._peekUI() ?? null;
+    const uiRoot = this._app.scenes.currentScene?._peekUI() ?? null;
 
     if (uiRoot === null) {
       return false;
@@ -687,7 +687,7 @@ export class InteractionManager implements InteractionHooks {
       return this._hitTestIndexed(x, y);
     }
 
-    const root = this._app.scene.currentScene?.root;
+    const root = this._app.scenes.currentScene?.root;
 
     if (!root) {
       return null;

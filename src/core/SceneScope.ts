@@ -29,7 +29,7 @@ const isThenable = (value: unknown): boolean => value instanceof Promise;
  * Internal owner of one {@link Scene} activation: constructs and attaches the
  * scene's facilities, runs `load()`/`init()`, gates per-frame dispatch by
  * {@link SceneState}, and runs permanent teardown in the normative order.
- * Not exported from the package root — `Scene` and `SceneManager` are the
+ * Not exported from the package root — `Scene` and `SceneDirector` are the
  * public surface; this class is their shared internal implementation detail.
  * @internal
  */

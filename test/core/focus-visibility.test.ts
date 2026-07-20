@@ -129,8 +129,8 @@ const loadHarness = async (): Promise<FocusVisibilityHarness> => {
       return interactionMock;
     }),
   }));
-  vi.doMock('#core/SceneManager', () => ({
-    SceneManager: vi.fn(function () {
+  vi.doMock('#core/SceneDirector', () => ({
+    SceneDirector: vi.fn(function () {
       return sceneManagerMock;
     }),
   }));

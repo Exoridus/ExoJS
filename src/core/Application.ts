@@ -33,7 +33,7 @@ import { computeLetterboxLayout } from './letterbox';
 import { hello, logger } from './logging';
 import { Perf } from './Perf';
 import type { Scene } from './Scene';
-import { SceneManager } from './SceneManager';
+import { SceneDirector } from './SceneDirector';
 import { defaultSerializationRegistry, SerializationRegistry } from './serialization/SerializationRegistry';
 import { Signal } from './Signal';
 import { SystemRegistry } from './SystemRegistry';
@@ -269,7 +269,7 @@ export class Application {
   public readonly input: InputManager;
   public readonly focus: FocusManager;
   public readonly interaction: InteractionManager;
-  public readonly scene: SceneManager;
+  public readonly scenes: SceneDirector;
   /** Per-Application seedable RNG. Isolated from other Applications and from the global `rand()`. */
   public readonly random: Random;
   public readonly tweens: TweenManager = new TweenManager();
@@ -279,7 +279,7 @@ export class Application {
    * interaction, audio, tweens, rendering) are driven directly by the
    * internal per-frame prepare stage and never occupy this registry, so any
    * `order` is available; see {@link SystemOrder} for common reference
-   * points. Scene-scoped systems live on `scene.systems`.
+   * points. Scene-scoped systems live on `scenes.systems`.
    */
   public readonly systems = new SystemRegistry();
   /**
@@ -442,7 +442,7 @@ export class Application {
     this.input = new InputManager(this);
     this.focus = new FocusManager(this);
     this.interaction = new InteractionManager(this);
-    this.scene = new SceneManager(this);
+    this.scenes = new SceneDirector(this);
     this.random = new Random(this.options.seed);
     this._updateHandler = this.update.bind(this);
 
@@ -678,7 +678,7 @@ export class Application {
         }
 
         this._capabilities = await capabilitiesPromise;
-        await this.scene.setScene(scene);
+        await this.scenes.setScene(scene);
         this._frameRequest = requestAnimationFrame(this._updateHandler);
         this._frameClock.restart();
         this._fixed.reset();
@@ -704,9 +704,9 @@ export class Application {
    * 1. **Internal prepare stage** (not a public phase) — input, interaction,
    *    audio, tweens, then rendering normalize their per-frame state.
    * 2. **Fixed steps** (zero or more) — `app.systems` fixed-update phase,
-   *    `scene.fixedUpdate()` + the scene's systems fixed-update phase,
+   *    `scenes.fixedUpdate()` + the scene's systems fixed-update phase,
    *    {@link Application.onFixedFrame}.
-   * 3. **Update** — `app.systems` update phase, then `scene.update()` + the
+   * 3. **Update** — `app.systems` update phase, then `scenes.update()` + the
    *    scene's systems update phase.
    * 4. **Draw** — the scene draws (plus its systems and UI layer), then
    *    `app.systems` draw phase (app draw systems render *above* scene
@@ -731,7 +731,7 @@ export class Application {
       }
 
       this.systems._beginFrame();
-      this.scene._beginFrame();
+      this.scenes._beginFrame();
 
       // Frame guard (render-fail surface): a throwing frame is reported
       // through the error pipeline instead of killing the RAF loop; the loop
@@ -761,7 +761,7 @@ export class Application {
 
         for (let step = 0; step < fixedSteps; step++) {
           this.systems._fixedUpdate(this._fixedTime);
-          this.scene.fixedUpdate(this._fixedTime);
+          this.scenes.fixedUpdate(this._fixedTime);
           this.onFixedFrame.dispatch(this._fixedTime);
         }
 
@@ -771,11 +771,11 @@ export class Application {
         this.systems._update(frameDelta);
         if (__DEV__) Perf.measure(systemsMeasure, systemsStartMark);
 
-        this.scene.update(frameDelta);
+        this.scenes.update(frameDelta);
 
-        this.scene.draw(this._rendering);
+        this.scenes.draw(this._rendering);
         this.systems._draw(this._rendering);
-        this.scene._drawTransition(this._rendering, frameDelta);
+        this.scenes._drawTransition(this._rendering, frameDelta);
 
         this.onFrame.dispatch(frameDelta);
         this.backend.flush();
@@ -793,7 +793,7 @@ export class Application {
       } catch (error) {
         this._handleFrameError(error);
       } finally {
-        this.scene._endFrame();
+        this.scenes._endFrame();
         this.systems._endFrame();
 
         // RAF rescheduling always happens unless the guard halted the loop —
@@ -884,7 +884,7 @@ export class Application {
     if (this._status === ApplicationStatus.Running) {
       this._status = ApplicationStatus.Halting;
       cancelAnimationFrame(this._frameRequest);
-      void this.scene.setScene(null).catch((error: unknown) => {
+      void this.scenes.setScene(null).catch((error: unknown) => {
         logger.error('Application.stop() failed to unload the active scene.', { source: 'Application', ...(error instanceof Error && { error }) });
         this.onError?.dispatch(error instanceof Error ? error : new Error(String(error)));
       });
@@ -1069,7 +1069,7 @@ export class Application {
   /**
    * Tear down every owned subsystem (loader, the core managers — input,
    * interaction, audio, tweens, rendering — the app system registry, backend,
-   * scene manager, all clocks, all signals) and release event listeners. The
+   * scene director, all clocks, all signals) and release event listeners. The
    * application instance is unusable after this call.
    */
   public destroy(): void {
@@ -1095,7 +1095,7 @@ export class Application {
     this.interaction.destroy();
     this.input.destroy();
     this._backend.destroy();
-    this.scene.destroy();
+    this.scenes.destroy();
     this._startupClock.destroy();
     this._activeClock.destroy();
     this._frameClock.destroy();

@@ -179,7 +179,7 @@ export class FocusManager implements FocusHooks {
    * by document (tree) order.
    */
   private _collectFocusables(): RenderNode[] {
-    const root: RenderNode | null = this._scopeStack.at(-1) ?? this._app.scene.currentScene?.root ?? null;
+    const root: RenderNode | null = this._scopeStack.at(-1) ?? this._app.scenes.currentScene?.root ?? null;
 
     if (root === null) {
       return [];

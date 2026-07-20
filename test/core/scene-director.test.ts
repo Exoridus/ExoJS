@@ -1,7 +1,7 @@
 import type { Application } from '#core/Application';
 import { logger } from '#core/logging';
 import { Scene } from '#core/Scene';
-import { SceneManager } from '#core/SceneManager';
+import { SceneDirector } from '#core/SceneDirector';
 import { Signal } from '#core/Signal';
 import { Time } from '#core/Time';
 import type { Pointer } from '#input/Pointer';
@@ -95,8 +95,8 @@ const createApplicationStub = (): Application & {
 };
 
 // Mirrors the per-frame call sequence Application.update() makes on
-// SceneManager: logic update, draw, then the transition overlay last.
-const tick = (manager: SceneManager, app: ReturnType<typeof createApplicationStub>, milliseconds = 16): void => {
+// SceneDirector: logic update, draw, then the transition overlay last.
+const tick = (manager: SceneDirector, app: ReturnType<typeof createApplicationStub>, milliseconds = 16): void => {
   const time = new Time(milliseconds);
 
   manager.update(time);
@@ -108,9 +108,9 @@ type SceneHooks = Partial<Pick<Scene, 'load' | 'init' | 'update' | 'fixedUpdate'
 
 const makeScene = (hooks: SceneHooks = {}): Scene => Object.assign(new Scene(), hooks);
 
-describe('SceneManager', () => {
+describe('SceneDirector', () => {
   test('keeps scene unset and cleans up when load() fails, without calling unload()', async () => {
-    const manager = new SceneManager(createApplicationStub());
+    const manager = new SceneDirector(createApplicationStub());
     const unload = vi.fn(async () => undefined);
     const scene = makeScene({
       async load() {
@@ -133,7 +133,7 @@ describe('SceneManager', () => {
   });
 
   test('keeps scene unset and cleans up when init() fails, without calling unload()', async () => {
-    const manager = new SceneManager(createApplicationStub());
+    const manager = new SceneDirector(createApplicationStub());
     const load = vi.fn(async () => undefined);
     const unload = vi.fn(async () => undefined);
     const scene = makeScene({
@@ -159,7 +159,7 @@ describe('SceneManager', () => {
 
   test('a failed activation reports cleanup-stage errors through the app error pipeline without masking the original error', async () => {
     const app = createApplicationStub();
-    const manager = new SceneManager(app);
+    const manager = new SceneDirector(app);
     const scene = makeScene({
       init() {
         throw new Error('init failed');
@@ -182,7 +182,7 @@ describe('SceneManager', () => {
 
   test('does not leak unhandled rejections when destroy() unload fails, and reports it through the app error pipeline', async () => {
     const app = createApplicationStub();
-    const manager = new SceneManager(app);
+    const manager = new SceneDirector(app);
     const unload = vi.fn(async () => {
       throw new Error('unload failed');
     });
@@ -213,7 +213,7 @@ describe('SceneManager', () => {
   });
 
   test('setScene switches the active scene and ends the previous one permanently', async () => {
-    const manager = new SceneManager(createApplicationStub());
+    const manager = new SceneDirector(createApplicationStub());
     const firstUnload = vi.fn(async () => undefined);
     const secondInit = vi.fn(() => undefined);
     const first = makeScene({ unload: firstUnload });
@@ -230,7 +230,7 @@ describe('SceneManager', () => {
   });
 
   test('fixedUpdate dispatches to the active scene', async () => {
-    const manager = new SceneManager(createApplicationStub());
+    const manager = new SceneDirector(createApplicationStub());
     const fixedUpdate = vi.fn();
     const scene = makeScene({ fixedUpdate });
 
@@ -244,7 +244,7 @@ describe('SceneManager', () => {
   });
 
   test('setScene to the already-active scene is a no-op', async () => {
-    const manager = new SceneManager(createApplicationStub());
+    const manager = new SceneDirector(createApplicationStub());
     const init = vi.fn(() => undefined);
     const unload = vi.fn(async () => undefined);
     const scene = makeScene({ init, unload });
@@ -258,7 +258,7 @@ describe('SceneManager', () => {
   });
 
   test('setScene(null) clears the active scene', async () => {
-    const manager = new SceneManager(createApplicationStub());
+    const manager = new SceneDirector(createApplicationStub());
     const unload = vi.fn(async () => undefined);
     const scene = makeScene({ unload });
 
@@ -271,7 +271,7 @@ describe('SceneManager', () => {
 
   test('active scene updates, ticks its systems, and draws every frame', async () => {
     const app = createApplicationStub();
-    const manager = new SceneManager(app);
+    const manager = new SceneDirector(app);
     const update = vi.fn();
     const draw = vi.fn();
     const systemUpdate = vi.fn();
@@ -293,7 +293,7 @@ describe('SceneManager', () => {
 
   test('fade transition runs and completes around setScene', async () => {
     const app = createApplicationStub();
-    const manager = new SceneManager(app);
+    const manager = new SceneDirector(app);
     const first = makeScene({});
     const second = makeScene({});
 
@@ -328,7 +328,7 @@ describe('SceneManager', () => {
 
   test('transition failure rejects and leaves manager in a valid state', async () => {
     const app = createApplicationStub();
-    const manager = new SceneManager(app);
+    const manager = new SceneDirector(app);
     const first = makeScene({});
     const failing = makeScene({
       init() {
@@ -358,7 +358,7 @@ describe('SceneManager', () => {
 
   test('passes the rendering context to scene.draw()', async () => {
     const app = createApplicationStub();
-    const manager = new SceneManager(app);
+    const manager = new SceneDirector(app);
     let drawArg: unknown = null;
     const scene = makeScene({
       draw(context): void {
@@ -373,7 +373,7 @@ describe('SceneManager', () => {
   });
 
   test('fixedUpdate additionally dispatches the scene systems fixed-update phase', async () => {
-    const manager = new SceneManager(createApplicationStub());
+    const manager = new SceneDirector(createApplicationStub());
     const fixedSystemUpdate = vi.fn();
     const scene = makeScene({});
 

@@ -216,8 +216,8 @@ const loadHarness = async (options: LifecycleHarnessOptions = {}): Promise<Lifec
       };
     }),
   }));
-  vi.doMock('#core/SceneManager', () => ({
-    SceneManager: vi.fn(function () {
+  vi.doMock('#core/SceneDirector', () => ({
+    SceneDirector: vi.fn(function () {
       return sceneManager;
     }),
   }));

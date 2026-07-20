@@ -124,7 +124,7 @@ export class RenderPassInspectorLayer extends DebugLayer {
 
     this._entries.length = 0;
 
-    const root = this._app.scene.currentScene?.root;
+    const root = this._app.scenes.currentScene?.root;
     if (root) {
       this._collect(root);
     }
