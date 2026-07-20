@@ -1,10 +1,11 @@
+import type { Application } from '#core/Application';
 import type { SerializationRegistry } from '#core/serialization/SerializationRegistry';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { DrawableConstructor } from '#rendering/Renderer';
 import type { AssetConstructor } from '#resources/FactoryRegistry';
 import type { Loader } from '#resources/Loader';
 
-import type { AssetBinding, AssetHandler, RendererBinding, SerializerBinding } from './Extension';
+import type { ApplicationSystemBinding, AssetBinding, AssetHandler, RendererBinding, SerializerBinding } from './Extension';
 
 /**
  * Materialise all renderer bindings into the backend's renderer registry.
@@ -97,5 +98,22 @@ export function materializeAssetBindings(loader: Loader, bindings: readonly Asse
 export function materializeSerializerBindings(registry: SerializationRegistry, bindings: readonly SerializerBinding[]): void {
   for (const binding of bindings) {
     registry.register(binding.typeName, binding.target, binding.serializer);
+  }
+}
+
+/**
+ * Materialise all app-system bindings onto {@link Application.systems}.
+ * Called once per Application, after every core manager already exists on
+ * `app` — a binding's `create(app)` may safely read them. A binding
+ * returning `undefined` opts out for this application and is skipped.
+ * @internal
+ */
+export function materializeApplicationSystems(app: Application, bindings: readonly ApplicationSystemBinding[]): void {
+  for (const binding of bindings) {
+    const system = binding.create(app);
+
+    if (system === undefined) continue;
+
+    app.systems.add(system);
   }
 }
