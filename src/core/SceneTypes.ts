@@ -45,6 +45,24 @@ export type SceneTransition = FadeSceneTransition;
 /** Options passed to {@link SceneDirector.setScene} / {@link Application.start}. */
 export interface SetSceneOptions {
   transition?: SceneTransition;
+  /**
+   * Suspend the outgoing scene instead of ending it permanently, retaining
+   * it (keyed by its constructor) for a later {@link SceneDirector.restoreScene}
+   * call. The same scene instance and its state are preserved; `load()`/
+   * `init()` do not re-run on restore.
+   */
+  retainCurrent?: boolean;
+}
+
+/** Options passed to {@link SceneDirector.restoreScene}. */
+export interface RestoreSceneOptions {
+  transition?: SceneTransition;
+  /**
+   * Suspend the currently active scene (if any) instead of ending it
+   * permanently, retaining it for a later {@link SceneDirector.restoreScene}
+   * call — mirrors {@link SetSceneOptions.retainCurrent}.
+   */
+  retainCurrent?: boolean;
 }
 
 /**
@@ -140,6 +158,47 @@ export class UnregisteredSceneError extends Error {
     this.name = 'UnregisteredSceneError';
     this.constructorName = constructorName;
     this.registeredNames = registeredNames;
+  }
+}
+
+/**
+ * Thrown when `setScene`/`restoreScene` is called while another Scene
+ * switch, restore, or fade transition is already in flight — navigation
+ * never queues (definition §11.5).
+ */
+export class ConcurrentSceneNavigationError extends Error {
+  public constructor() {
+    super('A Scene switch or transition is already in progress. Concurrent navigation is not supported — await the in-flight operation before starting another.');
+    this.name = 'ConcurrentSceneNavigationError';
+  }
+}
+
+/**
+ * Thrown when `setScene` targets a constructor that already has a retained
+ * (suspended) Scene. Call {@link SceneDirector.restoreScene} or
+ * {@link SceneDirector.releaseScene} for it first.
+ */
+export class RetainedSceneConflictError extends Error {
+  public readonly constructorName: string;
+
+  public constructor(constructorName: string) {
+    super(`Scene constructor "${constructorName}" already has a retained (suspended) instance. Call restoreScene(...) or releaseScene(...) for it before starting a fresh activation.`);
+    this.name = 'RetainedSceneConflictError';
+    this.constructorName = constructorName;
+  }
+}
+
+/**
+ * Thrown when `restoreScene` targets a constructor with no retained
+ * (suspended) Scene.
+ */
+export class RetainedSceneNotFoundError extends Error {
+  public readonly constructorName: string;
+
+  public constructor(constructorName: string) {
+    super(`Scene constructor "${constructorName}" has no retained (suspended) instance to restore.`);
+    this.name = 'RetainedSceneNotFoundError';
+    this.constructorName = constructorName;
   }
 }
 
