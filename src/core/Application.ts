@@ -2,7 +2,7 @@ import { TweenManager } from '#animation/TweenManager';
 import { AudioManager } from '#audio/AudioManager';
 import type { Extension } from '#extensions/Extension';
 import { getGlobalSnapshotInternal } from '#extensions/ExtensionRegistry';
-import { materializeAssetBindings, materializeRendererBindings, materializeSerializerBindings } from '#extensions/materialize';
+import { materializeApplicationSystems, materializeAssetBindings, materializeRendererBindings, materializeSerializerBindings } from '#extensions/materialize';
 import { buildSnapshot, type ExtensionSnapshot } from '#extensions/snapshot';
 import { FocusManager } from '#input/FocusManager';
 import type { GamepadDefinition } from '#input/GamepadDefinitions';
@@ -476,6 +476,9 @@ export class Application {
     this.onVisibilityChange.add(visible => {
       this._audio._applyVisibility(visible);
     });
+
+    // Every core manager exists by this point, so app-system bindings can capture references to them.
+    materializeApplicationSystems(this, this._snapshot.systems);
   }
 
   public get status(): ApplicationStatus {

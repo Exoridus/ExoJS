@@ -187,6 +187,7 @@ const loadHarness = async (options: LifecycleHarnessOptions = {}): Promise<Lifec
     }),
   }));
   vi.doMock('#extensions/materialize', () => ({
+    materializeApplicationSystems: vi.fn(),
     materializeAssetBindings: options.materializeAssetBindings ?? vi.fn(),
     materializeRendererBindings: options.materializeRendererBindings ?? vi.fn(),
     materializeSerializerBindings: options.materializeSerializerBindings ?? vi.fn(),
