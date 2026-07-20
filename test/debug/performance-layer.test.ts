@@ -87,7 +87,7 @@ const makeSceneRoot = (): FakeNode => {
 const makeApp = (opts: { root?: FakeNode | null } = {}) =>
   ({
     backend: makeBackend(),
-    scene: { currentScene: opts.root !== undefined && opts.root !== null ? { root: opts.root } : null },
+    scenes: { currentScene: opts.root !== undefined && opts.root !== null ? { root: opts.root } : null },
   }) as unknown as import('#core/Application').Application;
 
 const time = (ms: number): Time => ({ milliseconds: ms, seconds: ms / 1000 }) as unknown as Time;

@@ -71,7 +71,7 @@ const createApp = (): {
         screenToWorld: (x: number, y: number): { x: number; y: number } => ({ x, y }),
       },
     },
-    scene: {
+    scenes: {
       get currentScene(): Scene | null {
         return scene;
       },

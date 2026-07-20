@@ -105,7 +105,7 @@ const makeApp = (
   ({
     canvas: { width: 800, height: 600 },
     backend: makeBackend(),
-    scene: { currentScene: opts.root !== undefined && opts.root !== null ? { root: opts.root } : null },
+    scenes: { currentScene: opts.root !== undefined && opts.root !== null ? { root: opts.root } : null },
     input: {
       onKeyDown: new Signal<[number]>(),
       getPrimaryPointerPosition: vi.fn(() => (opts.pointerPos !== undefined ? opts.pointerPos : null)),
