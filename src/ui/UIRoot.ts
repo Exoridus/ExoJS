@@ -7,7 +7,7 @@ import type { RenderingContext } from '#rendering/RenderingContext';
  * you do not construct it directly.
  *
  * Unlike {@link Scene.root}, the UI layer is **auto-rendered** by the
- * {@link SceneManager} after `Scene.draw()`, through the
+ * {@link SceneDirector} after `Scene.draw()`, through the
  * {@link RenderingContext.screenView} — so its children live in screen space
  * (origin top-left, `0..width` × `0..height`) and never scroll with the
  * camera. Pointer hit-testing and keyboard focus are routed to UI nodes in that

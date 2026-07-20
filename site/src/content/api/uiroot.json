@@ -1,6 +1,6 @@
 {
   "title": "UIRoot",
-  "description": "Root of a scene's screen-fixed UI layer. Reached through Scene.ui; you do not construct it directly. Unlike Scene.root, the UI layer is **auto-rendered** by the SceneManager after `Scene.draw()`, through the RenderingContext.screenView — so its children live in screen space (origin top-left, `0..width` × `0..height`) and never scroll with the camera. Pointer hit-testing and keyboard focus are routed to UI nodes in that same screen space, ahead of the world layer. Add widgets with `scene.ui.addChild(...)`. The UIRoot.onResize signal fires whenever the screen size changes, so anchored widgets can re-layout.",
+  "description": "Root of a scene's screen-fixed UI layer. Reached through Scene.ui; you do not construct it directly. Unlike Scene.root, the UI layer is **auto-rendered** by the SceneDirector after `Scene.draw()`, through the RenderingContext.screenView — so its children live in screen space (origin top-left, `0..width` × `0..height`) and never scroll with the camera. Pointer hit-testing and keyboard focus are routed to UI nodes in that same screen space, ahead of the world layer. Add widgets with `scene.ui.addChild(...)`. The UIRoot.onResize signal fires whenever the screen size changes, so anchored widgets can re-layout.",
   "symbol": "UIRoot",
   "kind": "class",
   "subsystem": "ui",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Root of a scene's screen-fixed UI layer. Reached through Scene.ui; you do not construct it directly.",
-        "Unlike Scene.root, the UI layer is **auto-rendered** by the SceneManager after `Scene.draw()`, through the RenderingContext.screenView — so its children live in screen space (origin top-left, `0..width` × `0..height`) and never scroll with the camera. Pointer hit-testing and keyboard focus are routed to UI nodes in that same screen space, ahead of the world layer.",
+        "Unlike Scene.root, the UI layer is **auto-rendered** by the SceneDirector after `Scene.draw()`, through the RenderingContext.screenView — so its children live in screen space (origin top-left, `0..width` × `0..height`) and never scroll with the camera. Pointer hit-testing and keyboard focus are routed to UI nodes in that same screen space, ahead of the world layer.",
         "Add widgets with `scene.ui.addChild(...)`. The UIRoot.onResize signal fires whenever the screen size changes, so anchored widgets can re-layout."
       ],
       "importLine": "import { UIRoot } from '@codexo/exojs'",

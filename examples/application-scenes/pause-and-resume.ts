@@ -16,7 +16,6 @@ const app = new Application({
 class PauseResumeScene extends Scene {
     private sprite!: Sprite;
     private label!: Text;
-    private frozen = false;
 
     override init(): void {
         const app = this.app;
@@ -32,26 +31,26 @@ class PauseResumeScene extends Scene {
         this.label.setPosition(width / 2, 16);
 
         this.inputs.onTrigger(Keyboard.Space, () => {
-            this.toggleFrozen();
+            this.toggle();
         });
 
         // Same toggle on click/tap so the pause works without a keyboard.
         app.input.onPointerTap.add(() => {
-            this.toggleFrozen();
+            this.toggle();
         });
     }
 
-    private toggleFrozen(): void {
-        // A scene-local flag freezes this scene's own update loop while it
-        // keeps drawing — the same effect the director's pause() (a later
-        // engine slice) will provide for the whole scene.
-        this.frozen = !this.frozen;
-        this.label.text = this.frozen ? 'Paused (draw running)' : 'Running';
+    private toggle(): void {
+        if (this.app.scenes.state === 'paused') {
+            this.app.scenes.resume();
+        } else {
+            this.app.scenes.pause();
+        }
+
+        this.label.text = this.app.scenes.state === 'paused' ? 'Paused (draw running)' : 'Running';
     }
 
     override update(delta: Time): void {
-        if (this.frozen) return;
-
         this.sprite.rotate(delta.seconds * 180);
     }
 

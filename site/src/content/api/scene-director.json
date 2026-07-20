@@ -1,17 +1,17 @@
 {
-  "title": "SceneManager",
-  "description": "Single-active-scene controller owned by Application. Holds at most one active Scene (the current \"screen\"); SceneManager.setScene switches to a new scene — ending the previous one permanently — with an optional fade transition. There is no scene stack: overlays, HUDs and pause menus belong on Scene.ui (the screen-fixed UI layer). Each activation is owned internally by a `SceneScope`, which attaches the scene's facilities, gates per-frame dispatch by SceneState, and runs teardown in the normative order; `SceneManager` itself only tracks which scope is active and drives the transition machinery. Per-frame dispatch is split into four entry points, called by Application.update in normative order: SceneManager.fixedUpdate (zero or more times), SceneManager.update, SceneManager.draw, then SceneManager._drawTransition last, so the fade overlay always sits above both scene and app draw systems.",
-  "symbol": "SceneManager",
+  "title": "SceneDirector",
+  "description": "Single-active-scene controller owned by Application. Holds at most one active Scene (the current \"screen\"); SceneDirector.setScene switches to a new scene — ending the previous one permanently — with an optional fade transition. There is no scene stack: overlays, HUDs and pause menus belong on Scene.ui (the screen-fixed UI layer). Each activation is owned internally by a `SceneScope`, which attaches the scene's facilities, gates per-frame dispatch by SceneState, and runs teardown in the normative order; `SceneDirector` itself only tracks which scope is active and drives the transition machinery. Per-frame dispatch is split into four entry points, called by Application.update in normative order: SceneDirector.fixedUpdate (zero or more times), SceneDirector.update, SceneDirector.draw, then SceneDirector._drawTransition last, so the fade overlay always sits above both scene and app draw systems.",
+  "symbol": "SceneDirector",
   "kind": "class",
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 11,
+  "memberCount": 17,
   "counts": {
     "constructors": 1,
-    "methods": 5,
-    "properties": 1,
-    "events": 4
+    "methods": 7,
+    "properties": 2,
+    "events": 7
   },
   "sections": [
     {
@@ -19,11 +19,11 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Single-active-scene controller owned by Application. Holds at most one active Scene (the current \"screen\"); SceneManager.setScene switches to a new scene — ending the previous one permanently — with an optional fade transition.",
-        "There is no scene stack: overlays, HUDs and pause menus belong on Scene.ui (the screen-fixed UI layer). Each activation is owned internally by a `SceneScope`, which attaches the scene's facilities, gates per-frame dispatch by SceneState, and runs teardown in the normative order; `SceneManager` itself only tracks which scope is active and drives the transition machinery.",
-        "Per-frame dispatch is split into four entry points, called by Application.update in normative order: SceneManager.fixedUpdate (zero or more times), SceneManager.update, SceneManager.draw, then SceneManager._drawTransition last, so the fade overlay always sits above both scene and app draw systems."
+        "Single-active-scene controller owned by Application. Holds at most one active Scene (the current \"screen\"); SceneDirector.setScene switches to a new scene — ending the previous one permanently — with an optional fade transition.",
+        "There is no scene stack: overlays, HUDs and pause menus belong on Scene.ui (the screen-fixed UI layer). Each activation is owned internally by a `SceneScope`, which attaches the scene's facilities, gates per-frame dispatch by SceneState, and runs teardown in the normative order; `SceneDirector` itself only tracks which scope is active and drives the transition machinery.",
+        "Per-frame dispatch is split into four entry points, called by Application.update in normative order: SceneDirector.fixedUpdate (zero or more times), SceneDirector.update, SceneDirector.draw, then SceneDirector._drawTransition last, so the fade overlay always sits above both scene and app draw systems."
       ],
-      "importLine": "import { SceneManager } from '@codexo/exojs'",
+      "importLine": "import { SceneDirector } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
@@ -32,7 +32,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(app: Application): SceneManager",
+          "signature": "new(app: Application): SceneDirector",
           "signatureTokens": [
             {
               "text": "new",
@@ -63,7 +63,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "SceneManager",
+              "text": "SceneDirector",
               "kind": "type"
             }
           ],
@@ -74,7 +74,7 @@
               "optional": false
             }
           ],
-          "returnType": "SceneManager",
+          "returnType": "SceneDirector",
           "description": ""
         }
       ],
@@ -160,7 +160,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Draw entry point called by Application.update, after this frame's SceneManager.update: draws the active scene — gated by its SceneScope state — then its systems' draw phase, then its screen-fixed UI layer on top. No-op when no scene is active or the active scope's state does not permit drawing. The transition overlay is drawn separately, last — see SceneManager._drawTransition."
+          "description": "Draw entry point called by Application.update, after this frame's SceneDirector.update: draws the active scene — gated by its SceneScope state — then its systems' draw phase, then its screen-fixed UI layer on top. No-op when no scene is active or the active scope's state does not permit drawing. The transition overlay is drawn separately, last — see SceneDirector._drawTransition."
         },
         {
           "name": "fixedUpdate",
@@ -207,11 +207,69 @@
             }
           ],
           "returnType": "this",
-          "description": "Drive one fixed-timestep step on the active scene, gated by its SceneScope state (only Active dispatches): the scene's fixedUpdate() hook, then its systems' fixed-update phase. Called zero or more times per frame by the Application loop, ahead of SceneManager.update. No drawing or transition advance happens here — those are per-frame, not per fixed step."
+          "description": "Drive one fixed-timestep step on the active scene, gated by its SceneScope state (only Active dispatches): the scene's fixedUpdate() hook, then its systems' fixed-update phase. Called zero or more times per frame by the Application loop, ahead of SceneDirector.update. No drawing or transition advance happens here — those are per-frame, not per fixed step."
+        },
+        {
+          "name": "pause",
+          "signature": "pause(): boolean",
+          "signatureTokens": [
+            {
+              "text": "pause",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "boolean",
+          "description": "Pause the active scene: Active → Paused. Its fixedUpdate/update stop running, but draw keeps rendering and input/interaction stay live — the canonical \"pause menu drawn over a frozen world\" shape. No-op (returns false) when no scene is active or it is not currently Active."
+        },
+        {
+          "name": "resume",
+          "signature": "resume(): boolean",
+          "signatureTokens": [
+            {
+              "text": "resume",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "boolean",
+          "description": "Resume a paused scene: Paused → Active. No-op (returns false) when no scene is active or it is not currently Paused."
         },
         {
           "name": "setScene",
-          "signature": "setScene(scene: Scene<void> | null, options: SetSceneOptions): Promise<SceneManager>",
+          "signature": "setScene(scene: Scene<void> | null, options: SetSceneOptions): Promise<SceneDirector>",
           "signatureTokens": [
             {
               "text": "setScene",
@@ -286,7 +344,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "SceneManager",
+              "text": "SceneDirector",
               "kind": "type"
             },
             {
@@ -306,7 +364,7 @@
               "optional": false
             }
           ],
-          "returnType": "Promise<SceneManager>",
+          "returnType": "Promise<SceneDirector>",
           "description": "Switch to scene (or clear to null), ending the previously active scene permanently. No-op when scene is already active. An optional fade transition runs the swap at full opacity. The new scene completes load()+init() before the old one is torn down, so there is no blank frame between them, and the outgoing scene keeps running until the switch boundary is crossed."
         },
         {
@@ -354,7 +412,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Per-frame logic entry point called by Application.update, after this frame's fixed steps: for the active scene, gated by its SceneScope state, runs update() then its systems' update phase. Dispatches SceneManager.onUpdateScene whenever a scene is active, regardless of state. Drawing is a separate call — see SceneManager.draw."
+          "description": "Per-frame logic entry point called by Application.update, after this frame's fixed steps: for the active scene, gated by its SceneScope state, runs update() then its systems' update phase. Dispatches SceneDirector.onUpdateScene whenever a scene is active, regardless of state. Drawing is a separate call — see SceneDirector.draw."
         }
       ],
       "paragraphs": [],
@@ -405,6 +463,35 @@
           "params": [],
           "returnType": null,
           "description": "The active scene, or null when none is set."
+        },
+        {
+          "name": "state",
+          "signature": "state: SceneState | null",
+          "signatureTokens": [
+            {
+              "text": "state",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneState",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The active scene's current SceneState, or null when no scene is active."
         }
       ],
       "paragraphs": [],
@@ -477,6 +564,112 @@
           "description": "Fires whenever the active scene changes (set or clear). Payload is the new scene, or null when cleared."
         },
         {
+          "name": "onPause",
+          "signature": "onPause: Signal<[Scene<void>]>",
+          "signatureTokens": [
+            {
+              "text": "onPause",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Scene",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fires after pause() actually transitions the active scene to Paused."
+        },
+        {
+          "name": "onResume",
+          "signature": "onResume: Signal<[Scene<void>]>",
+          "signatureTokens": [
+            {
+              "text": "onResume",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Scene",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fires after resume() actually transitions the active scene back to Active."
+        },
+        {
           "name": "onStartScene",
           "signature": "onStartScene: Signal<[Scene<void>]>",
           "signatureTokens": [
@@ -528,6 +721,75 @@
           "params": [],
           "returnType": null,
           "description": "Fires after a scene's init resolves and it becomes active."
+        },
+        {
+          "name": "onStateChange",
+          "signature": "onStateChange: Signal<[SceneState, SceneState, Scene<void>]>",
+          "signatureTokens": [
+            {
+              "text": "onStateChange",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneState",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneState",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Scene",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fires whenever the active scene's SceneState changes, as (previous, next, scene)."
         },
         {
           "name": "onStopScene",
@@ -647,11 +909,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/core/SceneManager.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneManager.ts"
+        "label": "src/core/SceneDirector.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneDirector.ts"
       }
     }
   ],
-  "sourcePath": "src/core/SceneManager.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneManager.ts"
+  "sourcePath": "src/core/SceneDirector.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneDirector.ts"
 }

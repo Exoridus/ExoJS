@@ -156,7 +156,7 @@ export class PointerStackLayer extends DebugLayer {
     lines.push('Stack (top→bottom):');
 
     // Collect all visible RenderNodes whose contains() returns true.
-    const root = this._app.scene.currentScene?.root;
+    const root = this._app.scenes.currentScene?.root;
     const stack: RenderNode[] = [];
 
     if (root) {

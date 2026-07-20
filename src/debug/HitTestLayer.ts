@@ -47,7 +47,7 @@ export class HitTestLayer extends DebugLayer {
    * active, helping diagnose the tree's grouping behavior.
    */
   public override render(backend: RenderBackend): void {
-    const root = this._app.scene.currentScene?.root;
+    const root = this._app.scenes.currentScene?.root;
 
     if (!root) {
       return;

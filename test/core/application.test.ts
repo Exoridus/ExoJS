@@ -41,7 +41,7 @@ interface ApplicationTestHarness {
   };
   readonly BackendMock: MockInstance;
   readonly WebGpuBackendMock: MockInstance;
-  readonly sceneManager: {
+  readonly sceneDirector: {
     update: MockInstance;
     setScene: MockInstance;
     destroy: MockInstance;
@@ -91,7 +91,7 @@ const loadApplicationHarness = async (
     rendererRegistry,
     backendType: 'webgpu',
   };
-  const sceneManager = {
+  const sceneDirector = {
     update: vi.fn(),
     setScene: vi.fn().mockResolvedValue(undefined),
     destroy: vi.fn(),
@@ -166,9 +166,9 @@ const loadApplicationHarness = async (
       };
     }),
   }));
-  vi.doMock('#core/SceneManager', () => ({
-    SceneManager: vi.fn(function () {
-      return sceneManager;
+  vi.doMock('#core/SceneDirector', () => ({
+    SceneDirector: vi.fn(function () {
+      return sceneDirector;
     }),
   }));
 
@@ -183,7 +183,7 @@ const loadApplicationHarness = async (
     webgpuManager,
     BackendMock,
     WebGpuBackendMock,
-    sceneManager,
+    sceneDirector,
   };
 };
 
@@ -205,7 +205,7 @@ describe('Application', () => {
       _update: systemsUpdate,
       _draw: vi.fn(),
     };
-    const sceneManager = {
+    const sceneDirector = {
       _beginFrame: vi.fn(),
       _endFrame: vi.fn(),
       fixedUpdate: vi.fn(),
@@ -227,7 +227,7 @@ describe('Application', () => {
     rawApp['pauseOnHidden'] = false;
     rawApp['_documentVisible'] = true;
     rawApp['systems'] = systems;
-    rawApp['scene'] = sceneManager;
+    rawApp['scenes'] = sceneDirector;
     rawApp['input'] = { _prepareFrame: vi.fn() };
     rawApp['interaction'] = { _prepareFrame: vi.fn() };
     rawApp['_audio'] = { _prepareFrame: vi.fn() };
@@ -246,7 +246,7 @@ describe('Application', () => {
     app.update();
 
     expect(systemsUpdate).toHaveBeenCalledTimes(1);
-    expect(sceneManager.update).toHaveBeenCalledTimes(1);
+    expect(sceneDirector.update).toHaveBeenCalledTimes(1);
     expect(backend.resetStats).toHaveBeenCalledTimes(1);
     expect(backend.flush).toHaveBeenCalledTimes(1);
     expect(backend.stats.frameTimeMs).toBeGreaterThanOrEqual(0);
@@ -314,7 +314,7 @@ describe('Application', () => {
     const rafSpy = vi.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 1);
 
     try {
-      const { Application, webglManager, webgpuManager, BackendMock, WebGpuBackendMock, sceneManager } = await loadApplicationHarness({
+      const { Application, webglManager, webgpuManager, BackendMock, WebGpuBackendMock, sceneDirector } = await loadApplicationHarness({
         webgpuInitialize,
         webglInitialize,
       });
@@ -329,7 +329,7 @@ describe('Application', () => {
       expect(webgpuManager.destroy).toHaveBeenCalledTimes(1);
       expect(BackendMock).toHaveBeenCalledTimes(1);
       expect(webglManager.initialize).toHaveBeenCalledTimes(1);
-      expect(sceneManager.setScene).toHaveBeenCalledTimes(1);
+      expect(sceneDirector.setScene).toHaveBeenCalledTimes(1);
       expect(app.backend).toBe(webglManager);
     } finally {
       restoreGpu();
@@ -517,7 +517,7 @@ describe('Application', () => {
     const app = Object.create(Application.prototype) as import('#core/Application').Application;
     const rawApp = app as unknown as Record<string, unknown>;
     const sceneTeardownError = new Error('scene teardown failed');
-    const sceneManager = {
+    const sceneDirector = {
       setScene: vi.fn().mockRejectedValue(sceneTeardownError),
     };
     const activeClock = { stop: vi.fn() };
@@ -527,7 +527,7 @@ describe('Application', () => {
 
     rawApp['_status'] = ApplicationStatus.Running;
     rawApp['_frameRequest'] = 99;
-    rawApp['scene'] = sceneManager;
+    rawApp['scenes'] = sceneDirector;
     rawApp['_activeClock'] = activeClock;
     rawApp['_frameClock'] = frameClock;
     rawApp['_fixed'] = { advance: () => 0, alpha: 0 };
@@ -535,7 +535,7 @@ describe('Application', () => {
     app.stop();
     await Promise.resolve();
 
-    expect(sceneManager.setScene).toHaveBeenCalledWith(null);
+    expect(sceneDirector.setScene).toHaveBeenCalledWith(null);
     expect(cancelSpy).toHaveBeenCalledWith(99);
     expect(activeClock.stop).toHaveBeenCalledTimes(1);
     expect(frameClock.stop).toHaveBeenCalledTimes(1);

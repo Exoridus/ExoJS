@@ -176,7 +176,7 @@ class PlayScene extends Scene {
 
         if (gameEnded) {
             gameOver.setResult(this.score, this.elapsed);
-            void app.scene.setScene(gameOver);
+            void app.scenes.setScene(gameOver);
             return;
         }
 
@@ -241,7 +241,7 @@ class GameOverScene extends Scene {
         this.hint.setPosition(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 70);
 
         const restart = (): void => {
-            void app.scene.setScene(play);
+            void app.scenes.setScene(play);
         };
         this.inputs.onTrigger(Keyboard.Space, restart);
         this.inputs.onTrigger(Keyboard.R, restart);

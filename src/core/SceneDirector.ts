@@ -7,6 +7,7 @@ import { Color } from './Color';
 import { logger } from './logging';
 import { Scene } from './Scene';
 import { SceneScope } from './SceneScope';
+import type { SceneState } from './SceneState';
 import { Signal } from './Signal';
 import type { Time } from './Time';
 
@@ -21,10 +22,10 @@ export interface FadeSceneTransition {
   color?: Color;
 }
 
-/** Discriminated union of supported {@link SceneManager} transitions. */
+/** Discriminated union of supported {@link SceneDirector} transitions. */
 export type SceneTransition = FadeSceneTransition;
 
-/** Options passed to {@link SceneManager.setScene}. */
+/** Options passed to {@link SceneDirector.setScene}. */
 export interface SetSceneOptions {
   transition?: SceneTransition;
 }
@@ -61,7 +62,7 @@ const defaultFadeTransitionDuration = 220;
 
 /**
  * Single-active-scene controller owned by {@link Application}. Holds at most one
- * active {@link Scene} (the current "screen"); {@link SceneManager.setScene}
+ * active {@link Scene} (the current "screen"); {@link SceneDirector.setScene}
  * switches to a new scene — ending the previous one permanently — with an
  * optional fade transition.
  *
@@ -69,16 +70,16 @@ const defaultFadeTransitionDuration = 220;
  * {@link Scene.ui} (the screen-fixed UI layer). Each activation is owned
  * internally by a `SceneScope`, which attaches the scene's facilities, gates
  * per-frame dispatch by {@link SceneState}, and runs teardown in the
- * normative order; `SceneManager` itself only tracks which scope is active
+ * normative order; `SceneDirector` itself only tracks which scope is active
  * and drives the transition machinery.
  *
  * Per-frame dispatch is split into four entry points, called by
- * {@link Application.update} in normative order: {@link SceneManager.fixedUpdate}
- * (zero or more times), {@link SceneManager.update}, {@link SceneManager.draw},
- * then {@link SceneManager._drawTransition} last, so the fade overlay always
+ * {@link Application.update} in normative order: {@link SceneDirector.fixedUpdate}
+ * (zero or more times), {@link SceneDirector.update}, {@link SceneDirector.draw},
+ * then {@link SceneDirector._drawTransition} last, so the fade overlay always
  * sits above both scene and app draw systems.
  */
-export class SceneManager {
+export class SceneDirector {
   private readonly _app: Application;
   private _activeScope: SceneScope<void> | null = null;
   private readonly _transitionOverlay: TransitionOverlayMesh = createOverlayMesh();
@@ -92,6 +93,12 @@ export class SceneManager {
   public readonly onUpdateScene = new Signal<[Scene]>();
   /** Fires just before a scene is unloaded (`unload` then `destroy`). */
   public readonly onStopScene = new Signal<[Scene]>();
+  /** Fires after `pause()` actually transitions the active scene to `Paused`. */
+  public readonly onPause = new Signal<[Scene]>();
+  /** Fires after `resume()` actually transitions the active scene back to `Active`. */
+  public readonly onResume = new Signal<[Scene]>();
+  /** Fires whenever the active scene's {@link SceneState} changes, as `(previous, next, scene)`. */
+  public readonly onStateChange = new Signal<[SceneState, SceneState, Scene]>();
 
   public constructor(app: Application) {
     this._app = app;
@@ -104,6 +111,11 @@ export class SceneManager {
 
   public set currentScene(scene: Scene | null) {
     void this.setScene(scene);
+  }
+
+  /** The active scene's current {@link SceneState}, or `null` when no scene is active. */
+  public get state(): SceneState | null {
+    return this._activeScope?.state ?? null;
   }
 
   /**
@@ -147,11 +159,57 @@ export class SceneManager {
   }
 
   /**
+   * Pause the active scene: `Active` → `Paused`. Its `fixedUpdate`/`update`
+   * stop running, but `draw` keeps rendering and input/interaction stay live
+   * — the canonical "pause menu drawn over a frozen world" shape. No-op
+   * (returns `false`) when no scene is active or it is not currently `Active`.
+   */
+  public pause(): boolean {
+    const scope = this._activeScope;
+
+    if (scope === null) {
+      return false;
+    }
+
+    const previous = scope.state;
+    const changed = scope.pause();
+
+    if (changed) {
+      this.onPause.dispatch(scope.scene);
+      this.onStateChange.dispatch(previous, scope.state, scope.scene);
+    }
+
+    return changed;
+  }
+
+  /**
+   * Resume a paused scene: `Paused` → `Active`. No-op (returns `false`) when
+   * no scene is active or it is not currently `Paused`.
+   */
+  public resume(): boolean {
+    const scope = this._activeScope;
+
+    if (scope === null) {
+      return false;
+    }
+
+    const previous = scope.state;
+    const changed = scope.resume();
+
+    if (changed) {
+      this.onResume.dispatch(scope.scene);
+      this.onStateChange.dispatch(previous, scope.state, scope.scene);
+    }
+
+    return changed;
+  }
+
+  /**
    * Drive one fixed-timestep step on the active scene, gated by its
    * `SceneScope` state (only `Active` dispatches): the scene's
    * `fixedUpdate()` hook, then its systems' fixed-update phase. Called zero
    * or more times per frame by the {@link Application} loop, ahead of
-   * {@link SceneManager.update}. No drawing or transition advance happens
+   * {@link SceneDirector.update}. No drawing or transition advance happens
    * here — those are per-frame, not per fixed step.
    */
   public fixedUpdate(step: Time): this {
@@ -164,9 +222,9 @@ export class SceneManager {
    * Per-frame logic entry point called by {@link Application.update}, after
    * this frame's fixed steps: for the active scene, gated by its
    * `SceneScope` state, runs `update()` then its systems' update phase.
-   * Dispatches {@link SceneManager.onUpdateScene} whenever a scene is
+   * Dispatches {@link SceneDirector.onUpdateScene} whenever a scene is
    * active, regardless of state. Drawing is a separate call — see
-   * {@link SceneManager.draw}.
+   * {@link SceneDirector.draw}.
    */
   public update(delta: Time): this {
     const scope = this._activeScope;
@@ -181,11 +239,11 @@ export class SceneManager {
 
   /**
    * Draw entry point called by {@link Application.update}, after this
-   * frame's {@link SceneManager.update}: draws the active scene — gated by
+   * frame's {@link SceneDirector.update}: draws the active scene — gated by
    * its `SceneScope` state — then its systems' draw phase, then its
    * screen-fixed UI layer on top. No-op when no scene is active or the
    * active scope's state does not permit drawing. The transition overlay is
-   * drawn separately, last — see {@link SceneManager._drawTransition}.
+   * drawn separately, last — see {@link SceneDirector._drawTransition}.
    */
   public draw(context: RenderingContext): this {
     this._activeScope?.draw(context);
@@ -236,7 +294,7 @@ export class SceneManager {
 
       this._transition = null;
       transition.color.destroy();
-      transition.reject(new Error('SceneManager was destroyed while a transition was active.'));
+      transition.reject(new Error('SceneDirector was destroyed while a transition was active.'));
     }
 
     void this._unloadActiveSceneOnDestroy();
@@ -246,6 +304,9 @@ export class SceneManager {
     this.onStartScene.destroy();
     this.onUpdateScene.destroy();
     this.onStopScene.destroy();
+    this.onPause.destroy();
+    this.onResume.destroy();
+    this.onStateChange.destroy();
   }
 
   /**
@@ -264,7 +325,7 @@ export class SceneManager {
       if (scene.root.children.length > 0 && scene.draw === Scene.prototype.draw) {
         logger.warn(
           `Scene.root has ${scene.root.children.length} child(ren) after init() but draw() is not overridden. Scene.root is not auto-rendered — call context.render(this.root) inside draw().`,
-          { source: 'SceneManager' },
+          { source: 'SceneDirector' },
         );
       }
 
@@ -276,7 +337,7 @@ export class SceneManager {
     }
   }
 
-  /** Permanently end `scope`'s scene: dispatch {@link SceneManager.onStopScene}, then run the scope's teardown sequence (definition §17). */
+  /** Permanently end `scope`'s scene: dispatch {@link SceneDirector.onStopScene}, then run the scope's teardown sequence (definition §17). */
   private async _disposeScene(scope: SceneScope<void>): Promise<void> {
     this.onStopScene.dispatch(scope.scene);
     await scope.destroy();
@@ -294,7 +355,7 @@ export class SceneManager {
     try {
       await this._disposeScene(scope);
     } catch (error) {
-      logger.error('SceneManager.destroy() failed to unload the active scene.', { source: 'SceneManager', ...(error instanceof Error && { error }) });
+      logger.error('SceneDirector.destroy() failed to unload the active scene.', { source: 'SceneDirector', ...(error instanceof Error && { error }) });
     }
   }
 

@@ -126,7 +126,7 @@ export class PerformanceLayer extends DebugLayer {
 
     // --- Stats ---
     const stats = this._app.backend.stats;
-    const scene = this._app.scene.currentScene;
+    const scene = this._app.scenes.currentScene;
     const nodeCount = scene ? countNodes(scene.root) : 0;
 
     // --- Update text ---

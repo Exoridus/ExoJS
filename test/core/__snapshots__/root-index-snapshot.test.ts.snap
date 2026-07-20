@@ -142,7 +142,7 @@ exports[`root index export surface snapshot > sorted runtime export names match 
   "Sampler",
   "ScaleModes",
   "Scene",
-  "SceneManager",
+  "SceneDirector",
   "SceneNode",
   "SceneState",
   "ScrollContainer",

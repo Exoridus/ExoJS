@@ -42,7 +42,7 @@ class GameScene extends Scene {
     }
 
     update(delta) {
-        // Not called while paused — SceneManager skips update() + systems.
+        // Not called while paused — SceneDirector skips update() + systems.
         // ... normal game logic ...
     }
 
@@ -75,14 +75,14 @@ await app.start(new GameScene());
 ```
 
 <Callout type="warning" title="Clear filters in destroy">
-Any filter you set in `init` or `togglePause` — the `BlurFilter` here — must be cleared in `destroy`. Otherwise it stays attached to `scene.root` and bleeds into the next scene after `app.scene.setScene(...)`.
+Any filter you set in `init` or `togglePause` — the `BlurFilter` here — must be cleared in `destroy`. Otherwise it stays attached to `scene.root` and bleeds into the next scene after `app.scenes.setScene(...)`.
 </Callout>
 
 ## How `scene.paused` works
 
 Setting `scene.paused = true`:
 
-- **Freezes `update()`** — the SceneManager skips `update()` and all scene-level systems. No game logic runs.
+- **Freezes `update()`** — the SceneDirector skips `update()` and all scene-level systems. No game logic runs.
 - **Keeps drawing** — the scene still renders every frame, so the world remains visible behind the overlay.
 - **Tweens on `app.tweens` still run** — tween managers at the application level are unaffected, so blur animations and UI transitions animate smoothly while the game is frozen.
 
@@ -90,11 +90,11 @@ Setting `scene.paused = true`:
 
 ## Cleanup
 
-The `destroy` hook clears the blur filter from `scene.root`. Without this, the filter array would linger if the scene is ever replaced via `app.scene.setScene(...)`. As a rule, any filter applied in `init` or `togglePause` should be cleaned up in `destroy`.
+The `destroy` hook clears the blur filter from `scene.root`. Without this, the filter array would linger if the scene is ever replaced via `app.scenes.setScene(...)`. As a rule, any filter applied in `init` or `togglePause` should be cleaned up in `destroy`.
 
 ## Switching scenes from the pause menu
 
-If the pause menu offers options like "Return to main menu" or "Quit", use `app.scene.setScene(...)` to navigate away — it unloads the current scene and loads the next one, optionally with a fade transition:
+If the pause menu offers options like "Return to main menu" or "Quit", use `app.scenes.setScene(...)` to navigate away — it unloads the current scene and loads the next one, optionally with a fade transition:
 
 ```js
 // Inside a resume button's onClick handler:
@@ -104,7 +104,7 @@ resumeButton.onClick.add(() => {
 
 // Inside a "main menu" button's onClick handler:
 mainMenuButton.onClick.add(() => {
-    this.app.scene.setScene(new MainMenuScene(), { transition: { type: 'fade' } });
+    this.app.scenes.setScene(new MainMenuScene(), { transition: { type: 'fade' } });
 });
 ```
 

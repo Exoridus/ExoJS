@@ -32,7 +32,7 @@ const createFocusApp = (): {
   const scene = new Scene();
   const app = {
     input: { onKeyDown, onKeyUp } as unknown as InputManager,
-    scene: {
+    scenes: {
       get currentScene(): Scene | null {
         return scene;
       },
@@ -312,7 +312,7 @@ describe('FocusManager', () => {
     const onKeyUp = new Signal<[number]>();
     const app = {
       input: { onKeyDown, onKeyUp } as unknown as InputManager,
-      scene: {
+      scenes: {
         get currentScene(): Scene | null {
           return null;
         },

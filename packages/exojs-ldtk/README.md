@@ -43,7 +43,7 @@ const world = await app.loader.load(LdtkMap, 'levels/world.ldtk');
 
 // Render the first level (each LDtk level is its own TileMap):
 const level = world.getLevelByName('Level_0') ?? world.levels[0];
-app.scene.root.addChild(new TileMapNode(level));
+app.scenes.root.addChild(new TileMapNode(level));
 ```
 
 `TileMapNode` is the same class exported by `@codexo/exojs-tilemap` (see its

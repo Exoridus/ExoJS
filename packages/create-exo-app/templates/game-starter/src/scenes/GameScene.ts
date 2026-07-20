@@ -40,7 +40,7 @@ export class GameScene extends Scene {
     this.inputs.onStop(Keyboard.Right, () => { this._move.right = 0; });
 
     this.inputs.onTrigger(Keyboard.Escape, () => {
-      void this.app!.scene.setScene(new GameOverScene(Math.floor(this._elapsed)));
+      void this.app!.scenes.setScene(new GameOverScene(Math.floor(this._elapsed)));
     });
   }
 

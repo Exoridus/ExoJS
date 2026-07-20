@@ -22,7 +22,7 @@ export class GameOverScene extends Scene {
     this.addChild(this._label);
 
     this.inputs.onTrigger(Keyboard.Space, () => {
-      void this.app!.scene.setScene(new GameScene());
+      void this.app!.scenes.setScene(new GameScene());
     });
   }
 

@@ -123,7 +123,7 @@ const makeBackend = () => ({
 const makeApp = (root: FakeNode | null = null) =>
   ({
     canvas: { width: 800, height: 600 },
-    scene: { currentScene: root ? { root } : null },
+    scenes: { currentScene: root ? { root } : null },
     onFrame: new Signal(),
     onResize: new Signal(),
   }) as unknown as import('#core/Application').Application;

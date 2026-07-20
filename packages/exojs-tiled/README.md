@@ -46,7 +46,7 @@ const app = new Application({ extensions: [tiledExtension] });
 const map = await app.loader.load(Asset.kind('tileMap', 'maps/world.tmj'));
 // map is a @codexo/exojs-tilemap TileMap
 
-app.scene.root.addChild(new TileMapNode(map));
+app.scenes.root.addChild(new TileMapNode(map));
 ```
 
 `TileMapNode` and `TileLayerNode` are the same classes exported by `@codexo/exojs-tilemap` (see its

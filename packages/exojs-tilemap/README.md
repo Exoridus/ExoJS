@@ -83,7 +83,7 @@ const map = new TileMap({
 });
 
 // Render the whole map.
-app.scene.root.addChild(new TileMapNode(map));
+app.scenes.root.addChild(new TileMapNode(map));
 ```
 
 ### Interleaving actors between layers — `TileMapView`

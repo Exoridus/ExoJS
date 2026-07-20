@@ -117,7 +117,7 @@ describe('AudioManager.update()', () => {
     rawApp['pauseOnHidden'] = false;
     rawApp['_documentVisible'] = true;
     rawApp['systems'] = new SystemRegistry();
-    rawApp['scene'] = {
+    rawApp['scenes'] = {
       _beginFrame: vi.fn(),
       _endFrame: vi.fn(),
       fixedUpdate: vi.fn(),

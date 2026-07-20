@@ -306,7 +306,7 @@ init(loader) {
 
 update(delta) {
     if (this.actions.pause) {
-        this.togglePause();       // sets this.paused + shows/hides the pause overlay on scene.ui
+        this.togglePause();       // pauses/resumes via app.scenes + shows/hides the pause overlay on scene.ui
         this.actions.pause = 0;
     }
 

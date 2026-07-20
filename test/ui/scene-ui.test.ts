@@ -66,7 +66,7 @@ const createUIApp = (): {
       view: { screenToWorld: (x: number, y: number): { x: number; y: number } => ({ x: x + CAMERA_OFFSET, y: y + CAMERA_OFFSET }) },
       screenView: { screenToWorld: (x: number, y: number): { x: number; y: number } => ({ x, y }) },
     },
-    scene: {
+    scenes: {
       get currentScene(): Scene | null {
         return scene;
       },

@@ -9,7 +9,7 @@
 interface OnFrameTestHarness {
   readonly Application: typeof import('#core/Application').Application;
   readonly ApplicationStatus: typeof import('#core/Application').ApplicationStatus;
-  readonly sceneManager: { update: MockInstance; setScene: MockInstance; destroy: MockInstance };
+  readonly sceneDirector: { update: MockInstance; setScene: MockInstance; destroy: MockInstance };
   readonly backend: {
     flush: MockInstance;
     resetStats: MockInstance;
@@ -37,7 +37,7 @@ const loadOnFrameHarness = async (): Promise<OnFrameTestHarness> => {
     onDeviceRestored: { add: vi.fn(), destroy: vi.fn() },
     onRenderError: { add: vi.fn(), destroy: vi.fn() },
   };
-  const sceneManager = {
+  const sceneDirector = {
     update: vi.fn(),
     setScene: vi.fn().mockResolvedValue(undefined),
     destroy: vi.fn(),
@@ -107,15 +107,15 @@ const loadOnFrameHarness = async (): Promise<OnFrameTestHarness> => {
       };
     }),
   }));
-  vi.doMock('#core/SceneManager', () => ({
-    SceneManager: vi.fn(function () {
-      return sceneManager;
+  vi.doMock('#core/SceneDirector', () => ({
+    SceneDirector: vi.fn(function () {
+      return sceneDirector;
     }),
   }));
 
   const { Application, ApplicationStatus } = await import('#core/Application');
 
-  return { Application, ApplicationStatus, sceneManager, backend };
+  return { Application, ApplicationStatus, sceneDirector, backend };
 };
 
 // ---------------------------------------------------------------------------
@@ -141,18 +141,18 @@ describe('Application.onFrame', () => {
     app.destroy();
   });
 
-  test('app.update() dispatches onFrame after sceneManager.update and before backend.flush', async () => {
+  test('app.update() dispatches onFrame after sceneDirector.update and before backend.flush', async () => {
     const { Application, ApplicationStatus } = await loadOnFrameHarness();
     const app = Object.create(Application.prototype) as import('#core/Application').Application;
     const rawApp = app as unknown as Record<string, unknown>;
 
     const callOrder: string[] = [];
-    const sceneManager = {
+    const sceneDirector = {
       _beginFrame: vi.fn(),
       _endFrame: vi.fn(),
       fixedUpdate: vi.fn(),
       update: vi.fn(() => {
-        callOrder.push('sceneManager.update');
+        callOrder.push('sceneDirector.update');
       }),
       draw: vi.fn(),
       _drawTransition: vi.fn(),
@@ -180,7 +180,7 @@ describe('Application.onFrame', () => {
     rawApp['pauseOnHidden'] = false;
     rawApp['_documentVisible'] = true;
     rawApp['systems'] = { _beginFrame: vi.fn(), _endFrame: vi.fn(), _fixedUpdate: vi.fn(), _update: vi.fn(), _draw: vi.fn() };
-    rawApp['scene'] = sceneManager;
+    rawApp['scenes'] = sceneDirector;
     rawApp['input'] = { _prepareFrame: vi.fn() };
     rawApp['interaction'] = { _prepareFrame: vi.fn() };
     rawApp['_audio'] = { _prepareFrame: vi.fn() };
@@ -198,7 +198,7 @@ describe('Application.onFrame', () => {
 
     app.update();
 
-    expect(callOrder).toEqual(['sceneManager.update', 'onFrame.dispatch', 'backend.flush']);
+    expect(callOrder).toEqual(['sceneDirector.update', 'onFrame.dispatch', 'backend.flush']);
   });
 
   test('app.destroy() destroys the onFrame signal (bindings cleared)', async () => {

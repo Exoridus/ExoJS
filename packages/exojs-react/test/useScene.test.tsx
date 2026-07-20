@@ -41,7 +41,7 @@ describe('useScene', () => {
 
     expect(app.start).toHaveBeenCalledTimes(1);
     expect(app.start.mock.calls[0]![0]).toBeInstanceOf(LevelScene);
-    expect(app.scene.setScene).not.toHaveBeenCalled();
+    expect(app.scenes.setScene).not.toHaveBeenCalled();
 
     expect(await findByText('LevelScene')).toBeTruthy();
   });
@@ -54,7 +54,7 @@ describe('useScene', () => {
     view.rerender(provide(app, <SceneProbe sceneClass={LevelScene} deps={[2]} />));
 
     // The new scene is installed through setScene; the engine is NOT started again.
-    await waitFor(() => expect(app.scene.setScene.mock.calls.some(call => call[0] instanceof LevelScene)).toBe(true));
+    await waitFor(() => expect(app.scenes.setScene.mock.calls.some(call => call[0] instanceof LevelScene)).toBe(true));
     expect(app.start).toHaveBeenCalledTimes(1);
   });
 
@@ -65,7 +65,7 @@ describe('useScene', () => {
 
     view.unmount();
 
-    expect(app.scene.setScene).toHaveBeenCalledWith(null);
+    expect(app.scenes.setScene).toHaveBeenCalledWith(null);
   });
 
   it('routes a rejected app.start() to app.onError instead of an unhandled rejection', async () => {
@@ -82,7 +82,7 @@ describe('useScene', () => {
     expect(await findByText('loading')).toBeTruthy();
   });
 
-  it('routes a rejected app.scene.setScene() (dep-change switch) to app.onError', async () => {
+  it('routes a rejected app.scenes.setScene() (dep-change switch) to app.onError', async () => {
     const app = makeApp();
     const view = render(provide(app, <SceneProbe sceneClass={LevelScene} deps={[1]} />));
     await view.findByText('LevelScene');
@@ -90,7 +90,7 @@ describe('useScene', () => {
     const onError = vi.fn();
     app.onError.add(onError);
     const failure = new Error('switch failed');
-    app.scene.setScene.mockRejectedValueOnce(failure);
+    app.scenes.setScene.mockRejectedValueOnce(failure);
 
     view.rerender(provide(app, <SceneProbe sceneClass={LevelScene} deps={[2]} />));
 
@@ -115,7 +115,7 @@ describe('useScene', () => {
 
     const onError = vi.fn();
     app.onError.add(onError);
-    app.scene.setScene.mockRejectedValueOnce('clear failed as a plain string');
+    app.scenes.setScene.mockRejectedValueOnce('clear failed as a plain string');
 
     view.unmount();
 

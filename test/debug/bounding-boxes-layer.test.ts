@@ -104,7 +104,7 @@ const makeApp = (root: FakeNode | null = null) =>
   ({
     canvas: { width: 800, height: 600 },
     backend: makeBackend(),
-    scene: { currentScene: root ? { root } : null },
+    scenes: { currentScene: root ? { root } : null },
     input: { onKeyDown: new Signal<[number]>(), getPrimaryPointerPosition: vi.fn(() => null) },
     interaction: {
       getHoveredNode: vi.fn(() => null),

@@ -40,7 +40,7 @@ const sheet = await app.loader.load(AsepriteSheet, 'sprites/hero.aseprite.json')
 
 const sprite = sheet.createAnimatedSprite();
 sprite.play('run'); // 'run' is an Aseprite frame-tag name
-app.scene.root.addChild(sprite);
+app.scenes.root.addChild(sprite);
 ```
 
 Clip frame rate is derived from each frame's Aseprite `duration` (falling back to 12 fps). Frame

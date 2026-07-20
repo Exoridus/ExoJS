@@ -58,12 +58,12 @@ export interface ScenesProps {
 /**
  * Declarative scene switch over the one-active-scene model. Renders a set of
  * {@link Scene} declarations and activates the one whose `name` equals `active`
- * via `app.start()` (first activation) or `app.scene.setScene()` (subsequent
+ * via `app.start()` (first activation) or `app.scenes.setScene()` (subsequent
  * switches, with the optional `transition`). The active scene's React children
  * (HUD overlay) render alongside, and can read the instance via
  * {@link useActiveScene}.
  *
- * A failure in `app.start()`/`app.scene.setScene()` (e.g. a scene's `onLoad`
+ * A failure in `app.start()`/`app.scenes.setScene()` (e.g. a scene's `onLoad`
  * rejects) is caught and routed to {@link Application.onError} rather than
  * left as an unhandled promise rejection — subscribe via `app.onError.add(...)`
  * or the {@link import('./ExoCanvas').ExoCanvas} `onError` prop to observe it.
@@ -102,7 +102,7 @@ export function Scenes({ active, transition, children }: ScenesProps): ReactElem
   useEffect(() => {
     if (SceneClass === null) {
       setInstance(null);
-      void app.scene.setScene(null).catch((error: unknown) => {
+      void app.scenes.setScene(null).catch((error: unknown) => {
         app.onError.dispatch(error instanceof Error ? error : new Error(String(error)));
       });
       return;
@@ -118,7 +118,7 @@ export function Scenes({ active, transition, children }: ScenesProps): ReactElem
           // transitions only apply to subsequent switches.
           await app.start(scene);
         } else {
-          await app.scene.setScene(scene, transition !== undefined ? { transition } : {});
+          await app.scenes.setScene(scene, transition !== undefined ? { transition } : {});
         }
         if (!cancelled) {
           setInstance(scene);

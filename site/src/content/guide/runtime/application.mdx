@@ -157,7 +157,7 @@ Once an application exists, its subsystems are accessible as properties:
 - `app.canvas` — the render target.
 - `app.loader` — the [`Loader`](/ExoJS/en/api/loader/) used by every scene to register and resolve assets.
 - `app.input` — the `InputManager` for keyboard, pointer, and gamepad routing.
-- `app.scene` — the [`SceneManager`](/ExoJS/en/api/scene-manager/) that holds the single active scene; switch scenes via `setScene` (with optional fade).
+- `app.scenes` — the [`SceneDirector`](/ExoJS/en/api/scene-director/) that holds the single active scene; switch scenes via `setScene` (with optional fade).
 - `app.audio` — the [`AudioManager`](/ExoJS/en/api/audio-manager/) for playback, busses, and the spatial listener.
 - `app.systems` — the [`SystemRegistry`](/ExoJS/en/api/system-registry/) for app-scoped `System` instances.
 - `app.tweens` — the global `TweenManager`.

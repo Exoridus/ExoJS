@@ -182,7 +182,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Tear down every owned subsystem (loader, the core managers — input, interaction, audio, tweens, rendering — the app system registry, backend, scene manager, all clocks, all signals) and release event listeners. The application instance is unusable after this call."
+          "description": "Tear down every owned subsystem (loader, the core managers — input, interaction, audio, tweens, rendering — the app system registry, backend, scene director, all clocks, all signals) and release event listeners. The application instance is unusable after this call."
         },
         {
           "name": "resize",
@@ -506,7 +506,7 @@
           ],
           "params": [],
           "returnType": "this",
-          "description": "One iteration of the per-frame loop. Invoked by requestAnimationFrame. When the document is hidden and pauseOnHidden is true, the frame clock is reset and the body is skipped — preventing a large delta spike on the first visible frame after resume. Each normal frame runs, in order: 1. **Internal prepare stage** (not a public phase) — input, interaction, audio, tweens, then rendering normalize their per-frame state. 2. **Fixed steps** (zero or more) — app.systems fixed-update phase, scene.fixedUpdate() + the scene's systems fixed-update phase, Application.onFixedFrame. 3. **Update** — app.systems update phase, then scene.update() + the scene's systems update phase. 4. **Draw** — the scene draws (plus its systems and UI layer), then app.systems draw phase (app draw systems render *above* scene output), then the transition overlay (always topmost). 5. **Frame dispatch / flush** — Application.onFrame, backend GPU flush, frame-time stat write, RAF reschedule. The simulation delta forwarded to all update recipients is clamped to an internal maximum (100 ms) so that debugger pauses, device sleep/resume, or severe browser scheduling gaps cannot produce runaway animation advancement. Real wall-clock time and RAF cadence are unaffected; the raw elapsed delta is recorded separately in backend.stats.rawFrameDeltaMs."
+          "description": "One iteration of the per-frame loop. Invoked by requestAnimationFrame. When the document is hidden and pauseOnHidden is true, the frame clock is reset and the body is skipped — preventing a large delta spike on the first visible frame after resume. Each normal frame runs, in order: 1. **Internal prepare stage** (not a public phase) — input, interaction, audio, tweens, then rendering normalize their per-frame state. 2. **Fixed steps** (zero or more) — app.systems fixed-update phase, scenes.fixedUpdate() + the scene's systems fixed-update phase, Application.onFixedFrame. 3. **Update** — app.systems update phase, then scenes.update() + the scene's systems update phase. 4. **Draw** — the scene draws (plus its systems and UI layer), then app.systems draw phase (app draw systems render *above* scene output), then the transition overlay (always topmost). 5. **Frame dispatch / flush** — Application.onFrame, backend GPU flush, frame-time stat write, RAF reschedule. The simulation delta forwarded to all update recipients is clamped to an internal maximum (100 ms) so that debugger pauses, device sleep/resume, or severe browser scheduling gaps cannot produce runaway animation advancement. Real wall-clock time and RAF cadence are unaffected; the raw elapsed delta is recorded separately in backend.stats.rawFrameDeltaMs."
         }
       ],
       "paragraphs": [],
@@ -686,11 +686,11 @@
           "description": "Per-Application seedable RNG. Isolated from other Applications and from the global rand()."
         },
         {
-          "name": "scene",
-          "signature": "scene: SceneManager",
+          "name": "scenes",
+          "signature": "scenes: SceneDirector",
           "signatureTokens": [
             {
-              "text": "scene",
+              "text": "scenes",
               "kind": "name"
             },
             {
@@ -698,7 +698,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "SceneManager",
+              "text": "SceneDirector",
               "kind": "type"
             }
           ],
@@ -746,7 +746,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "App-level system registry for user/extension systems — Application lifetime, independent of the active scene. The core managers (input, interaction, audio, tweens, rendering) are driven directly by the internal per-frame prepare stage and never occupy this registry, so any order is available; see SystemOrder for common reference points. Scene-scoped systems live on scene.systems."
+          "description": "App-level system registry for user/extension systems — Application lifetime, independent of the active scene. The core managers (input, interaction, audio, tweens, rendering) are driven directly by the internal per-frame prepare stage and never occupy this registry, so any order is available; see SystemOrder for common reference points. Scene-scoped systems live on scenes.systems."
         },
         {
           "name": "tweens",
