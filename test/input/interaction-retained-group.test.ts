@@ -1,6 +1,7 @@
 import type { Application } from '#core/Application';
 import { logger } from '#core/logging';
 import { Scene } from '#core/Scene';
+import { SceneState } from '#core/SceneState';
 import { Signal } from '#core/Signal';
 import type { InputManager } from '#input/InputManager';
 import { InteractionManager } from '#input/InteractionManager';
@@ -75,6 +76,8 @@ const createApp = (): {
       get currentScene(): Scene | null {
         return scene;
       },
+      state: SceneState.Active,
+      _transitionGateOpen: false,
     },
   } as unknown as Application;
 

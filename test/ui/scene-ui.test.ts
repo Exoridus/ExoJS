@@ -1,6 +1,7 @@
 import type { Application } from '#core/Application';
 import { Scene } from '#core/Scene';
 import type { SceneScope } from '#core/SceneScope';
+import { SceneState } from '#core/SceneState';
 import { Signal } from '#core/Signal';
 import { FocusManager } from '#input/FocusManager';
 import type { InputManager } from '#input/InputManager';
@@ -70,6 +71,8 @@ const createUIApp = (): {
       get currentScene(): Scene | null {
         return scene;
       },
+      state: SceneState.Active,
+      _transitionGateOpen: false,
     },
   };
   const typed = app as unknown as Application;

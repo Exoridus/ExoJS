@@ -1,5 +1,6 @@
 import type { Application } from '#core/Application';
 import { logger } from '#core/logging';
+import { SceneState } from '#core/SceneState';
 import type { Signal } from '#core/Signal';
 import type { InteractionHooks, Stage } from '#core/Stage';
 import type { Time } from '#core/Time';
@@ -288,10 +289,27 @@ export class InteractionManager implements InteractionHooks {
    * The dirty flag ensures this is a no-op on frames with no pointer
    * activity; every signal handler that enqueues an event sets `_dirty =
    * true`, and `update()` clears it at the top before draining the queue.
+   *
+   * Gated by the active scope's {@link SceneState} (only `Active`/`Paused`
+   * dispatch; `Preparing`/`Suspended`/`Destroying`/`Destroyed`/no-scene do
+   * not) and by the director's transition gate (definition §13.6) — gated
+   * frames discard the pending queue rather than deferring it, so a
+   * pointer-down queued before a pause or transition never replays once it
+   * clears.
    */
   public update(_delta: Time): void {
     if (!this._dirty) return;
+
+    const state = this._app.scenes.state;
+    const gated = (state !== null && state !== SceneState.Active && state !== SceneState.Paused) || this._app.scenes._transitionGateOpen;
+
     this._dirty = false;
+
+    if (gated) {
+      this._pending.clear();
+
+      return;
+    }
 
     this._flushStaleEntries();
 
