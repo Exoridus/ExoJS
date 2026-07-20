@@ -85,6 +85,19 @@ export interface RatePitched {
   detune: number;
 }
 
+/**
+ * Distance-attenuation model used by spatial sounds.
+ *
+ * Mirrors Web Audio's `PannerNode.distanceModel`:
+ * - `'linear'` — `v = 1 - rolloffFactor * (d - refDistance) / (maxDistance - refDistance)`,
+ *   clamped to [0, 1]. Reaches silence at `maxDistance`.
+ * - `'inverse'` — `v = refDistance / (refDistance + rolloffFactor * (d - refDistance))`.
+ *   Physically realistic; never reaches absolute silence.
+ * - `'exponential'` — `v = (d / refDistance) ^ -rolloffFactor`. Steepest near
+ *   the listener; useful for very intimate sources.
+ */
+export type DistanceModel = 'linear' | 'inverse' | 'exponential';
+
 /** A voice that can be positioned in 2D space and optionally track a node. */
 export interface Spatializable {
   /** World-space position of the source, or `null` when not spatialized. */
@@ -97,6 +110,40 @@ export interface Spatializable {
    * {@link Spatializable.position}.
    */
   follow(node: SceneNode | null): void;
+  /** Distance-attenuation model. Default `'linear'`. */
+  distanceModel: DistanceModel;
+  /** Distance below which volume is at full strength. Default `50`. */
+  refDistance: number;
+  /** For the `'linear'` model: distance at which volume reaches zero. Default `1000`. */
+  maxDistance: number;
+  /** Falloff rate. Higher = steeper attenuation. Default `1`. */
+  rolloffFactor: number;
+  /**
+   * Per-voice panning model override. `null` (default) inherits the
+   * app-wide default from `app.audio.spatial.panningModel`.
+   */
+  panningModel: PanningModelType | null;
+  /**
+   * Facing direction for cone attenuation, in degrees — same convention as
+   * `SceneNode.rotation` (0° = local +X / "east", clockwise-positive on a
+   * Y-down screen). Has no audible effect unless `coneInnerAngle`/
+   * `coneOuterAngle` are narrowed below 360°. Default `0`.
+   */
+  orientation: number;
+  /** Full-gain cone half-angle in degrees. Default `360` (omnidirectional — no cone). */
+  coneInnerAngle: number;
+  /** Falloff-to-`coneOuterGain` cone half-angle in degrees. Default `360`. */
+  coneOuterAngle: number;
+  /** Gain applied outside `coneOuterAngle`. Default `0`. */
+  coneOuterGain: number;
+  /**
+   * World-space velocity of the source (world units/second), or `null`.
+   * Feeds the Doppler calculation (`app.audio.spatial.dopplerFactor`) —
+   * has no other effect. Explicit; when `null` and `follow(node)` is
+   * active, velocity is auto-derived each frame from the tracked node's
+   * position delta instead.
+   */
+  velocity: Vector | { x: number; y: number } | null;
 }
 
 /**
@@ -117,6 +164,28 @@ export interface PlayOptions {
   time?: number;
   /** Start muted (volume 0). */
   muted?: boolean;
+  /** Initial spatial position — equivalent to setting `voice.position` right after play. */
+  position?: { x: number; y: number } | Vector;
+  /** Initial distance-attenuation model. Default `'linear'`. */
+  distanceModel?: DistanceModel;
+  /** Initial reference distance. Default `50`. */
+  refDistance?: number;
+  /** Initial max distance (`'linear'` model only). Default `1000`. */
+  maxDistance?: number;
+  /** Initial rolloff factor. Default `1`. */
+  rolloffFactor?: number;
+  /** Per-play panning model override. Omit to inherit the app-wide default. */
+  panningModel?: PanningModelType;
+  /** Initial cone facing direction, in degrees (`SceneNode.rotation` convention). Default `0`. */
+  orientation?: number;
+  /** Initial full-gain cone half-angle. Default `360` (no cone). */
+  coneInnerAngle?: number;
+  /** Initial falloff cone half-angle. Default `360`. */
+  coneOuterAngle?: number;
+  /** Initial gain outside the outer cone. Default `0`. */
+  coneOuterGain?: number;
+  /** Initial velocity for Doppler. See {@link Spatializable.velocity}. */
+  velocity?: { x: number; y: number } | Vector;
 }
 
 /**

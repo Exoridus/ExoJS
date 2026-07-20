@@ -3,7 +3,14 @@ import { Vector } from '#math/Vector';
 import type { View } from '#rendering/View';
 
 import { getAudioContext, isAudioContextReady, onAudioContextReady } from './audio-context';
-import { createSpatialSmoothingSettings, SmoothedAudioParam, type SpatialSmoothingSettings } from './spatial-smoothing';
+import {
+  createSpatialSmoothingSettings,
+  createVelocitySample,
+  deriveVelocity,
+  SmoothedAudioParam,
+  type SpatialSmoothingSettings,
+  type VelocitySample,
+} from './spatial-smoothing';
 
 /**
  * Anything {@link AudioListener.target} can be set to. The listener reads
@@ -27,15 +34,18 @@ type WebAudioListener = globalThis.AudioListener;
  * `setPosition`) every frame from {@link AudioListener.position} —
  * which is in turn read from {@link AudioListener.target} when one is set.
  *
- * Owned by {@link AudioManager}; one instance per engine. `velocity` is a
- * placeholder for future Doppler support (currently not piped to the Web
- * Audio listener).
+ * Owned by {@link AudioManager}; one instance per engine. `velocity` feeds
+ * the Doppler calculation on every spatial {@link BaseVoice} — explicit when
+ * set, else auto-derived each frame from the listener's own position delta
+ * (same fallback {@link BaseVoice.velocity} uses).
  */
 export class AudioListener {
   public readonly position: Vector = new Vector(0, 0);
-  public readonly velocity: Vector = new Vector(0, 0);
   public target: AudioListenerTarget = null;
 
+  private readonly _velocity: Vector = new Vector(0, 0);
+  private _explicitVelocity = false;
+  private readonly _velocitySample: VelocitySample = createVelocitySample();
   private _audioListener: WebAudioListener | null = null;
   private _ctx: AudioContext | null = null;
   private readonly _settings: SpatialSmoothingSettings;
@@ -61,10 +71,24 @@ export class AudioListener {
     }
   }
 
+  public get velocity(): Vector {
+    return this._velocity;
+  }
+
+  public set velocity(value: { x: number; y: number } | Vector) {
+    this._velocity.set(value.x, value.y);
+    this._explicitVelocity = true;
+  }
+
   /** Internal: called by AudioManager.update() once per frame. */
   public _tick(): void {
     if (this.target !== null) {
       this._readTargetPosition();
+
+      if (!this._explicitVelocity && this._ctx !== null && this._settings.dopplerFactor !== 0) {
+        deriveVelocity(this._velocitySample, this.position.x, this.position.y, this._ctx.currentTime);
+        this._velocity.set(this._velocitySample.x, this._velocitySample.y);
+      }
     }
     if (this._audioListener !== null && this._ctx !== null) {
       const t = this._ctx.currentTime;

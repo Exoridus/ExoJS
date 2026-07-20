@@ -51,12 +51,39 @@ export interface SpatialSmoothingSettings {
    * {@link DEFAULT_TELEPORT_THRESHOLD}.
    */
   teleportThreshold: number;
+  /**
+   * App-wide default panning model for every spatial voice that doesn't set
+   * its own {@link Spatializable.panningModel} override. `'equalpower'`
+   * (cheap, works on any speaker setup) or `'HRTF'` (binaural, meaningfully
+   * more CPU-expensive per voice, only sounds convincingly directional
+   * through headphones). Default `'equalpower'`.
+   */
+  panningModel: PanningModelType;
+  /**
+   * Doppler pitch-shift strength multiplier. `0` (default) disables Doppler
+   * entirely — even when velocity data is available on a voice or the
+   * listener, no `playbackRate` modulation is applied unless this is set
+   * above zero. `1` is physically scaled (relative to {@link speedOfSound});
+   * many games deliberately exaggerate beyond `1` for player feedback.
+   */
+  dopplerFactor: number;
+  /**
+   * Reference speed (world units per second) used to scale the Doppler
+   * effect. World units have no fixed physical scale across different
+   * games (pixels, meters, tiles), so this is a tunable, not a physical
+   * constant — pick a value where your game's typical emitter/listener
+   * speeds produce a noticeable but not extreme shift.
+   */
+  speedOfSound: number;
 }
 
 /** Construct the default spatial smoothing settings. */
 export const createSpatialSmoothingSettings = (): SpatialSmoothingSettings => ({
   smoothing: DEFAULT_SPATIAL_SMOOTHING,
   teleportThreshold: DEFAULT_TELEPORT_THRESHOLD,
+  panningModel: 'equalpower',
+  dopplerFactor: 0,
+  speedOfSound: 1000,
 });
 
 /**
@@ -93,4 +120,67 @@ export class SmoothedAudioParam {
     this._hasWritten = false;
     this._last = 0;
   }
+}
+
+/**
+ * Floor applied to the elapsed time between two velocity samples (seconds).
+ * Guards {@link deriveVelocity} against a divide-by-zero (or a near-infinite
+ * velocity spike) when two samples land on the same `AudioContext.currentTime`
+ * — which is not just a test artifact: an explicit `voice.position = …`
+ * write immediately followed by `AudioManager.update()`'s per-frame tick can
+ * genuinely both land inside the same audio-render quantum, before
+ * `currentTime` has advanced at all.
+ */
+const MIN_VELOCITY_DT = 1e-3;
+
+/**
+ * Rolling velocity-sample state for one tracked point (a {@link BaseVoice}'s
+ * position, or the {@link AudioListener}'s). Owned and mutated in place by
+ * {@link deriveVelocity} — `x`/`y` are the last derived velocity components.
+ */
+export interface VelocitySample {
+  lastPosition: { x: number; y: number } | null;
+  lastTime: number;
+  x: number;
+  y: number;
+}
+
+/** Construct a fresh, never-sampled {@link VelocitySample}. */
+export const createVelocitySample = (): VelocitySample => ({ lastPosition: null, lastTime: 0, x: 0, y: 0 });
+
+/**
+ * Auto-derive a 2D velocity from the position delta since the last sample,
+ * updating `sample` in place. Shared by {@link BaseVoice} and
+ * {@link AudioListener} so both sides of a Doppler calculation resolve
+ * "auto-derived velocity" the same way.
+ *
+ * Below {@link POSITION_EPSILON} of movement, the sample is treated as
+ * stationary and is skipped entirely — the previously derived velocity is
+ * retained rather than snapped to zero, mirroring {@link SmoothedAudioParam}'s
+ * own stationary-skip. This means a source that stops moving keeps its last
+ * Doppler shift for one more tick instead of instantly zeroing it, and it
+ * means a real movement is never lost to a same-timestamp sample (see
+ * {@link MIN_VELOCITY_DT}) — the *next* distinctly-different position still
+ * measures its delta against the last position that was actually recorded.
+ */
+export function deriveVelocity(sample: VelocitySample, x: number, y: number, now: number): void {
+  if (sample.lastPosition === null) {
+    sample.x = 0;
+    sample.y = 0;
+    sample.lastPosition = { x, y };
+    sample.lastTime = now;
+    return;
+  }
+
+  const dx = x - sample.lastPosition.x;
+  const dy = y - sample.lastPosition.y;
+  if (Math.hypot(dx, dy) < POSITION_EPSILON) {
+    return;
+  }
+
+  const dt = Math.max(now - sample.lastTime, MIN_VELOCITY_DT);
+  sample.x = dx / dt;
+  sample.y = dy / dt;
+  sample.lastPosition = { x, y };
+  sample.lastTime = now;
 }

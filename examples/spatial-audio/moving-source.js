@@ -44,14 +44,8 @@ class MovingSourceScene extends Scene {
         // Sound below reads .audioBuffer synchronously, so await load() instead
         // of the deferred get() (whose placeholder audioBuffer is null until fill).
         const source = await this.loader.load(Asset.kind('sound', 'audio/demo-loop-main.ogg'));
-        this.sound = new Sound(source.audioBuffer, {
-            distanceModel: 'linear',
-            refDistance: REF_DISTANCE,
-            maxDistance: MAX_DISTANCE,
-            rolloffFactor: 1,
-        });
+        this.sound = new Sound(source.audioBuffer);
         this.listener = { x: width / 2, y: height / 2 };
-        this.sound.position = { x: this.listener.x + ORBIT_X, y: this.listener.y };
         app.audio.listener.target = this.listener;
         this.angle = 0;
         this.graphics = new Graphics();
@@ -70,7 +64,15 @@ class MovingSourceScene extends Scene {
         // Core defers playback until the AudioContext unlocks on the first
         // gesture, then starts automatically — just call play().
         // play() returns the narrow Voice interface; Sound voices are spatializable.
-        this.voice = app.audio.play(this.sound, { loop: true, volume: 1 });
+        this.voice = app.audio.play(this.sound, {
+            loop: true,
+            volume: 1,
+            position: { x: this.listener.x + ORBIT_X, y: this.listener.y },
+            distanceModel: 'linear',
+            refDistance: REF_DISTANCE,
+            maxDistance: MAX_DISTANCE,
+            rolloffFactor: 1,
+        });
         this.hud.setStatus('Source orbiting the listener');
     }
     update(delta) {
@@ -79,16 +81,13 @@ class MovingSourceScene extends Scene {
             x: this.listener.x + Math.cos(this.angle) * ORBIT_X,
             y: this.listener.y + Math.sin(this.angle) * ORBIT_Y,
         };
-        // sound.position only seeds NEW voices — the running loop moves via
-        // voice.position, so update both (descriptor + live voice).
-        this.sound.position = position;
         this.voice.position = position;
     }
     draw(context) {
         const app = this.app;
         if (app === null)
             throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const source = this.sound.position ?? { x: 0, y: 0 };
+        const source = this.voice.position ?? { x: 0, y: 0 };
         const dx = source.x - this.listener.x;
         const dy = source.y - this.listener.y;
         const dist = Math.sqrt(dx * dx + dy * dy);

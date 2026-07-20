@@ -34,6 +34,11 @@ describe('spatial-smoothing — defaults', () => {
     expect(DEFAULT_SPATIAL_SMOOTHING).toBe(0.02);
     expect(DEFAULT_TELEPORT_THRESHOLD).toBe(400);
   });
+
+  test('createSpatialSmoothingSettings() defaults panningModel to equalpower', () => {
+    const settings = createSpatialSmoothingSettings();
+    expect(settings.panningModel).toBe('equalpower');
+  });
 });
 
 describe('SmoothedAudioParam', () => {

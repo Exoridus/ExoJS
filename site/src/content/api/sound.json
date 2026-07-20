@@ -1,16 +1,16 @@
 {
   "title": "Sound",
-  "description": "Pre-decoded short audio clip backed by an `AudioBuffer`. Sound is a **data descriptor** — it holds the decoded audio buffer, sprite definitions, default playback parameters, and spatial configuration but does NOT start playback itself. Playback is driven by `AudioManager.play(sound, options)` which returns a Voice handle. Multiple concurrent plays of the same Sound are supported up to `poolSize`. When the pool is full the configured SoundPoolStrategy decides which active voice to evict. Use AudioStream for long-form streaming audio (single source, decoded lazily) — `Sound` is best for short, frequently-triggered clips.",
+  "description": "Pre-decoded short audio clip backed by an `AudioBuffer`. Sound is a **data descriptor** — it holds the decoded audio buffer, sprite definitions, and default playback parameters but does NOT start playback itself, and holds no per-playback spatial state (that lives on the Voice returned by playing it). Playback is driven by `AudioManager.play(sound, options)` which returns a Voice handle. Multiple concurrent plays of the same Sound are supported up to `poolSize`. When the pool is full the configured SoundPoolStrategy decides which active voice to evict. Use AudioStream for long-form streaming audio (single source, decoded lazily) — `Sound` is best for short, frequently-triggered clips.",
   "symbol": "Sound",
   "kind": "class",
   "subsystem": "audio",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 30,
+  "memberCount": 24,
   "counts": {
     "constructors": 1,
     "methods": 9,
-    "properties": 20,
+    "properties": 14,
     "events": 0
   },
   "sections": [
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Pre-decoded short audio clip backed by an `AudioBuffer`.",
-        "Sound is a **data descriptor** — it holds the decoded audio buffer, sprite definitions, default playback parameters, and spatial configuration but does NOT start playback itself. Playback is driven by `AudioManager.play(sound, options)` which returns a Voice handle.",
+        "Sound is a **data descriptor** — it holds the decoded audio buffer, sprite definitions, and default playback parameters but does NOT start playback itself, and holds no per-playback spatial state (that lives on the Voice returned by playing it). Playback is driven by `AudioManager.play(sound, options)` which returns a Voice handle.",
         "Multiple concurrent plays of the same Sound are supported up to `poolSize`. When the pool is full the configured SoundPoolStrategy decides which active voice to evict.",
         "Use AudioStream for long-form streaming audio (single source, decoded lazily) — `Sound` is best for short, frequently-triggered clips."
       ],
@@ -721,27 +721,6 @@
           "description": "The underlying decoded audio data, or null for a deferred handle whose payload hasn't finished loading yet. Useful for sharing a single decoded buffer across multiple Sound instances."
         },
         {
-          "name": "distanceModel",
-          "signature": "distanceModel: DistanceModel",
-          "signatureTokens": [
-            {
-              "text": "distanceModel",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "DistanceModel",
-              "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Distance-attenuation model."
-        },
-        {
           "name": "duration",
           "signature": "duration: number",
           "signatureTokens": [
@@ -846,27 +825,6 @@
           "description": "Load lifecycle of this sound. Directly constructed sounds are 'ready'; deferred handles returned by loader.get('theme.ogg') / loader.get(Asset.kind('sound', src)) start 'loading' and become 'ready' once the payload fills in, or 'failed' when the load errors."
         },
         {
-          "name": "maxDistance",
-          "signature": "maxDistance: number",
-          "signatureTokens": [
-            {
-              "text": "maxDistance",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Maximum distance for the 'linear' model — volume reaches zero here."
-        },
-        {
           "name": "poolSize",
           "signature": "poolSize: number",
           "signatureTokens": [
@@ -907,35 +865,6 @@
           "params": [],
           "returnType": null,
           "description": "The eviction strategy used when the pool is at capacity."
-        },
-        {
-          "name": "position",
-          "signature": "position: Vector | null",
-          "signatureTokens": [
-            {
-              "text": "position",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Vector",
-              "kind": "type"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "null",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
         },
         {
           "name": "priority",
@@ -980,48 +909,6 @@
           "description": "true exactly when state is 'ready'."
         },
         {
-          "name": "refDistance",
-          "signature": "refDistance: number",
-          "signatureTokens": [
-            {
-              "text": "refDistance",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Reference distance — volume is at full strength at and below this distance."
-        },
-        {
-          "name": "rolloffFactor",
-          "signature": "rolloffFactor: number",
-          "signatureTokens": [
-            {
-              "text": "rolloffFactor",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Falloff steepness. Higher values attenuate faster with distance."
-        },
-        {
           "name": "state",
           "signature": "state: LoadStateValue",
           "signatureTokens": [
@@ -1041,35 +928,6 @@
           "params": [],
           "returnType": null,
           "description": "Load lifecycle: 'idle' | 'loading' | 'ready' | 'failed' (asset-system v2 §6)."
-        },
-        {
-          "name": "velocity",
-          "signature": "velocity: Vector | null",
-          "signatureTokens": [
-            {
-              "text": "velocity",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Vector",
-              "kind": "type"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "null",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
         }
       ],
       "paragraphs": [],

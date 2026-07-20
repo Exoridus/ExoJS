@@ -6,11 +6,11 @@
   "subsystem": "audio",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 7,
+  "memberCount": 18,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 7,
+    "properties": 18,
     "events": 0
   },
   "sections": [
@@ -54,6 +54,81 @@
           "description": "Route this play through a specific AudioBus."
         },
         {
+          "name": "coneInnerAngle",
+          "signature": "coneInnerAngle?: number",
+          "signatureTokens": [
+            {
+              "text": "coneInnerAngle",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Initial full-gain cone half-angle. Default 360 (no cone)."
+        },
+        {
+          "name": "coneOuterAngle",
+          "signature": "coneOuterAngle?: number",
+          "signatureTokens": [
+            {
+              "text": "coneOuterAngle",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Initial falloff cone half-angle. Default 360."
+        },
+        {
+          "name": "coneOuterGain",
+          "signature": "coneOuterGain?: number",
+          "signatureTokens": [
+            {
+              "text": "coneOuterGain",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Initial gain outside the outer cone. Default 0."
+        },
+        {
           "name": "detune",
           "signature": "detune?: number",
           "signatureTokens": [
@@ -77,6 +152,31 @@
           "params": [],
           "returnType": null,
           "description": "Override pitch detune (cents) for this play instance."
+        },
+        {
+          "name": "distanceModel",
+          "signature": "distanceModel?: DistanceModel",
+          "signatureTokens": [
+            {
+              "text": "distanceModel",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "DistanceModel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Initial distance-attenuation model. Default 'linear'."
         },
         {
           "name": "loop",
@@ -104,6 +204,31 @@
           "description": "Override looping for this play instance."
         },
         {
+          "name": "maxDistance",
+          "signature": "maxDistance?: number",
+          "signatureTokens": [
+            {
+              "text": "maxDistance",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Initial max distance ('linear' model only). Default 1000."
+        },
+        {
           "name": "muted",
           "signature": "muted?: boolean",
           "signatureTokens": [
@@ -127,6 +252,56 @@
           "params": [],
           "returnType": null,
           "description": "Start muted (volume 0)."
+        },
+        {
+          "name": "orientation",
+          "signature": "orientation?: number",
+          "signatureTokens": [
+            {
+              "text": "orientation",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Initial cone facing direction, in degrees (SceneNode.rotation convention). Default 0."
+        },
+        {
+          "name": "panningModel",
+          "signature": "panningModel?: PanningModelType",
+          "signatureTokens": [
+            {
+              "text": "panningModel",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PanningModelType",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Per-play panning model override. Omit to inherit the app-wide default."
         },
         {
           "name": "playbackRate",
@@ -154,6 +329,121 @@
           "description": "Override playback rate for this play instance."
         },
         {
+          "name": "position",
+          "signature": "position?: Vector | { x: number; y: number }",
+          "signatureTokens": [
+            {
+              "text": "position",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Vector",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Initial spatial position — equivalent to setting voice.position right after play."
+        },
+        {
+          "name": "refDistance",
+          "signature": "refDistance?: number",
+          "signatureTokens": [
+            {
+              "text": "refDistance",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Initial reference distance. Default 50."
+        },
+        {
+          "name": "rolloffFactor",
+          "signature": "rolloffFactor?: number",
+          "signatureTokens": [
+            {
+              "text": "rolloffFactor",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Initial rolloff factor. Default 1."
+        },
+        {
           "name": "time",
           "signature": "time?: number",
           "signatureTokens": [
@@ -177,6 +467,71 @@
           "params": [],
           "returnType": null,
           "description": "Seek offset in seconds before starting playback."
+        },
+        {
+          "name": "velocity",
+          "signature": "velocity?: Vector | { x: number; y: number }",
+          "signatureTokens": [
+            {
+              "text": "velocity",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Vector",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Initial velocity for Doppler. See Spatializable.velocity."
         },
         {
           "name": "volume",

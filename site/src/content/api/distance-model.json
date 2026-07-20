@@ -70,11 +70,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/audio/Sound.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/Sound.ts"
+        "label": "src/audio/Playable.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/Playable.ts"
       }
     }
   ],
-  "sourcePath": "src/audio/Sound.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/Sound.ts"
+  "sourcePath": "src/audio/Playable.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/audio/Playable.ts"
 }

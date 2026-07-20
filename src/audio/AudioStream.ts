@@ -5,6 +5,7 @@ import { getAudioContext } from './audio-context';
 import type { AudioManager } from './AudioManager';
 import { AudioStreamVoice } from './AudioStreamVoice';
 import type { Playable, PlayOptions, Voice } from './Playable';
+import { seedVoiceFromPlayOptions } from './spatial-options';
 
 /**
  * Streaming long-form audio backed by an `HTMLAudioElement` — background
@@ -99,6 +100,8 @@ export class AudioStream implements Playable {
       playbackRate,
       ...(options.time !== undefined && { startTime: options.time }),
     });
+
+    seedVoiceFromPlayOptions(voice, options);
 
     this._activeVoice = voice;
     voice.onEnd.add((): void => {

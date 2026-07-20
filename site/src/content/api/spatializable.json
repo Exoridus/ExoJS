@@ -6,11 +6,11 @@
   "subsystem": "audio",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 2,
+  "memberCount": 12,
   "counts": {
     "constructors": 0,
     "methods": 1,
-    "properties": 1,
+    "properties": 11,
     "events": 0
   },
   "sections": [
@@ -92,6 +92,272 @@
       "id": "properties",
       "title": "Properties",
       "members": [
+        {
+          "name": "coneInnerAngle",
+          "signature": "coneInnerAngle: number",
+          "signatureTokens": [
+            {
+              "text": "coneInnerAngle",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Full-gain cone half-angle in degrees. Default 360 (omnidirectional — no cone)."
+        },
+        {
+          "name": "coneOuterAngle",
+          "signature": "coneOuterAngle: number",
+          "signatureTokens": [
+            {
+              "text": "coneOuterAngle",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Falloff-to-coneOuterGain cone half-angle in degrees. Default 360."
+        },
+        {
+          "name": "coneOuterGain",
+          "signature": "coneOuterGain: number",
+          "signatureTokens": [
+            {
+              "text": "coneOuterGain",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Gain applied outside coneOuterAngle. Default 0."
+        },
+        {
+          "name": "distanceModel",
+          "signature": "distanceModel: DistanceModel",
+          "signatureTokens": [
+            {
+              "text": "distanceModel",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "DistanceModel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Distance-attenuation model. Default 'linear'."
+        },
+        {
+          "name": "maxDistance",
+          "signature": "maxDistance: number",
+          "signatureTokens": [
+            {
+              "text": "maxDistance",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "For the 'linear' model: distance at which volume reaches zero. Default 1000."
+        },
+        {
+          "name": "orientation",
+          "signature": "orientation: number",
+          "signatureTokens": [
+            {
+              "text": "orientation",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Facing direction for cone attenuation, in degrees — same convention as SceneNode.rotation (0° = local +X / \"east\", clockwise-positive on a Y-down screen). Has no audible effect unless coneInnerAngle/ coneOuterAngle are narrowed below 360°. Default 0."
+        },
+        {
+          "name": "panningModel",
+          "signature": "panningModel: PanningModelType | null",
+          "signatureTokens": [
+            {
+              "text": "panningModel",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PanningModelType",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Per-voice panning model override. null (default) inherits the app-wide default from app.audio.spatial.panningModel."
+        },
+        {
+          "name": "refDistance",
+          "signature": "refDistance: number",
+          "signatureTokens": [
+            {
+              "text": "refDistance",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Distance below which volume is at full strength. Default 50."
+        },
+        {
+          "name": "rolloffFactor",
+          "signature": "rolloffFactor: number",
+          "signatureTokens": [
+            {
+              "text": "rolloffFactor",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Falloff rate. Higher = steeper attenuation. Default 1."
+        },
+        {
+          "name": "velocity",
+          "signature": "velocity: Vector | { x: number; y: number } | null",
+          "signatureTokens": [
+            {
+              "text": "velocity",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Vector",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "World-space velocity of the source (world units/second), or null. Feeds the Doppler calculation (app.audio.spatial.dopplerFactor) — has no other effect. Explicit; when null and follow(node) is active, velocity is auto-derived each frame from the tracked node's position delta instead."
+        },
         {
           "name": "position",
           "signature": "position: Vector | null",

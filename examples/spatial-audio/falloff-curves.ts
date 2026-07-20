@@ -77,16 +77,7 @@ class FalloffCurvesScene extends Scene {
         // shared source must be fully decoded first — await load() instead of
         // the deferred get() (whose placeholder audioBuffer is null until fill).
         const source = await this.loader.load(Asset.kind('sound', 'audio/impact-light.ogg'));
-        this.sounds = this.sources.map(({ model, x, y }) => {
-            const sound = new Sound(source.audioBuffer, {
-                distanceModel: model,
-                refDistance: REF_DISTANCE,
-                maxDistance: MAX_DISTANCE,
-                rolloffFactor: ROLLOFF,
-            });
-            sound.position = { x, y };
-            return sound;
-        });
+        this.sounds = this.sources.map(() => new Sound(source.audioBuffer));
 
         this.graphics = new Graphics();
         this.labels = this.sources.map(({ model, x, y }) => {
@@ -115,7 +106,18 @@ class FalloffCurvesScene extends Scene {
 
         // Core defers playback until the AudioContext unlocks on the first
         // gesture, then starts automatically — just call play().
-        for (const sound of this.sounds) app.audio.play(sound, { loop: true, volume: 0.5 });
+        for (let i = 0; i < this.sounds.length; i++) {
+            const { model, x, y } = this.sources[i];
+            app.audio.play(this.sounds[i], {
+                loop: true,
+                volume: 0.5,
+                position: { x, y },
+                distanceModel: model,
+                refDistance: REF_DISTANCE,
+                maxDistance: MAX_DISTANCE,
+                rolloffFactor: ROLLOFF,
+            });
+        }
         this.hud.setStatus('Move the pointer to relocate the listener');
     }
 
