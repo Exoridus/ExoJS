@@ -1,3 +1,11 @@
+import { Scene } from '#core/Scene';
+
+// SceneDirector is fully mocked in this file's harness (see
+// loadApplicationHarness) — its setScene is a plain vi.fn() that never
+// validates a registry, so any Scene subclass constructor works as a
+// start()/setScene() target here.
+class DummyScene extends Scene {}
+
 const setNavigatorGpu = (gpu: unknown): (() => void) => {
   const previousGpu = Object.getOwnPropertyDescriptor(navigator, 'gpu');
   const navigatorWithGpu = navigator as Navigator & Partial<Record<'gpu', unknown>>;
@@ -322,7 +330,7 @@ describe('Application', () => {
         canvas: { element: document.createElement('canvas') },
       });
 
-      await app.start({} as import('#core/Scene').Scene);
+      await app.start(DummyScene);
 
       expect(WebGpuBackendMock).toHaveBeenCalledTimes(1);
       expect(webgpuManager.initialize).toHaveBeenCalledTimes(1);
@@ -350,7 +358,7 @@ describe('Application', () => {
         backend: { type: 'webgpu' },
       });
 
-      await expect(app.start({} as import('#core/Scene').Scene)).rejects.toThrow(webgpuError);
+      await expect(app.start(DummyScene)).rejects.toThrow(webgpuError);
       expect(webgpuManager.initialize).toHaveBeenCalledTimes(1);
       expect(webgpuManager.destroy).not.toHaveBeenCalled();
       expect(BackendMock).not.toHaveBeenCalled();
@@ -518,7 +526,7 @@ describe('Application', () => {
     const rawApp = app as unknown as Record<string, unknown>;
     const sceneTeardownError = new Error('scene teardown failed');
     const sceneDirector = {
-      setScene: vi.fn().mockRejectedValue(sceneTeardownError),
+      _clearScene: vi.fn().mockRejectedValue(sceneTeardownError),
     };
     const activeClock = { stop: vi.fn() };
     const frameClock = { stop: vi.fn() };
@@ -535,7 +543,7 @@ describe('Application', () => {
     app.stop();
     await Promise.resolve();
 
-    expect(sceneDirector.setScene).toHaveBeenCalledWith(null);
+    expect(sceneDirector._clearScene).toHaveBeenCalledTimes(1);
     expect(cancelSpy).toHaveBeenCalledWith(99);
     expect(activeClock.stop).toHaveBeenCalledTimes(1);
     expect(frameClock.stop).toHaveBeenCalledTimes(1);
