@@ -7,7 +7,7 @@ import { Color } from './Color';
 import { logger } from './logging';
 import { Scene } from './Scene';
 import { SceneScope } from './SceneScope';
-import { SceneState } from './SceneState';
+import type { SceneState } from './SceneState';
 import { Signal } from './Signal';
 import type { Time } from './Time';
 
@@ -109,13 +109,13 @@ export class SceneDirector {
     return this._activeScope?.scene ?? null;
   }
 
+  public set currentScene(scene: Scene | null) {
+    void this.setScene(scene);
+  }
+
   /** The active scene's current {@link SceneState}, or `null` when no scene is active. */
   public get state(): SceneState | null {
     return this._activeScope?.state ?? null;
-  }
-
-  public set currentScene(scene: Scene | null) {
-    void this.setScene(scene);
   }
 
   /**
