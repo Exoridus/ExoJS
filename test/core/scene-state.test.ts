@@ -1,4 +1,4 @@
-import { canDestroy, canPause, canResume, canRestore, canSuspend, SceneState } from '#core/SceneState';
+import { canDestroy, canPause, canRestore, canResume, canSuspend, SceneState } from '#core/SceneState';
 
 describe('SceneState guards', () => {
   test('canPause is true only from Active', () => {

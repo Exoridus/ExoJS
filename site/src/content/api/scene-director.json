@@ -6,10 +6,10 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 17,
+  "memberCount": 19,
   "counts": {
     "constructors": 1,
-    "methods": 7,
+    "methods": 9,
     "properties": 2,
     "events": 7
   },
@@ -158,7 +158,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": ""
+          "description": "Tear down every owned resource: reject an in-flight fade transition, destroy the active scene, destroy every retained scene, then destroy the overlay and all Signals. Fires _dispose() (async teardown) and returns immediately — errors are reported through the app error pipeline rather than propagated, matching every other synchronous destroy() in the engine. An async shutdown path that needs to know teardown has fully finished may await SceneDirector._dispose directly instead of calling this method."
         },
         {
           "name": "draw",
@@ -282,6 +282,145 @@
           "params": [],
           "returnType": "boolean",
           "description": "Pause the active scene: Active → Paused. Its fixedUpdate/update stop running, but draw keeps rendering and input/interaction stay live — the canonical \"pause menu drawn over a frozen world\" shape. No-op (returns false) when no scene is active or it is not currently Active."
+        },
+        {
+          "name": "releaseScene",
+          "signature": "releaseScene(target: C): Promise<boolean>",
+          "signatureTokens": [
+            {
+              "text": "releaseScene",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "target",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "C",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "target",
+              "type": "C",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<boolean>",
+          "description": "Permanently end a retained (suspended) scene without reactivating it. Returns true if a retained instance existed for target, false otherwise (no-op, not an error)."
+        },
+        {
+          "name": "restoreScene",
+          "signature": "restoreScene(target: C, options: RestoreSceneOptions): Promise<SceneDirector>",
+          "signatureTokens": [
+            {
+              "text": "restoreScene",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "target",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "C",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RestoreSceneOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneDirector",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "target",
+              "type": "C",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "RestoreSceneOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<SceneDirector>",
+          "description": "Reactivate a scene previously retained via setScene(..., { retainCurrent: true }) or restoreScene(..., { retainCurrent: true }) — the same instance, returned to whichever of Active/Paused it had before suspension. load()/init() do not run again (definition §14.3). Rejects with ConcurrentSceneNavigationError when another navigation is already in flight; with RetainedSceneNotFoundError when target has no retained instance."
         },
         {
           "name": "resume",
@@ -414,7 +553,7 @@
             }
           ],
           "returnType": "Promise<SceneDirector>",
-          "description": "Switch to a fresh instance of target, ending the previously active scene permanently. Ordinary switching always creates a fresh instance (definition §11.4) — this differs from the old instance-based API's same-instance no-op check, which no longer applies. An optional fade transition runs the swap at full opacity. The new scene completes load()+init() before the old one is torn down, so there is no blank frame between them, and the outgoing scene keeps running until the switch boundary is crossed. Rejects (dev builds) with UnregisteredSceneError when target is not present in ApplicationOptions.scenes."
+          "description": "Switch to a fresh instance of target, ending the previously active scene permanently — unless options.retainCurrent is set, in which case the outgoing scene is suspended and retained (keyed by its constructor) for a later SceneDirector.restoreScene call instead. Ordinary switching always creates a fresh instance (definition §11.4) — this differs from the old instance-based API's same-instance no-op check, which no longer applies. An optional fade transition runs the swap at full opacity. The new scene completes load()+init() before the old one is torn down, so there is no blank frame between them, and the outgoing scene keeps running until the switch boundary is crossed. Rejects with ConcurrentSceneNavigationError when another navigation is already in flight (dev and production builds — no queueing, definition §11.5); with UnregisteredSceneError (dev builds) when target is not present in ApplicationOptions.scenes; with RetainedSceneConflictError when target already has a retained instance (restore or release it first)."
         },
         {
           "name": "update",

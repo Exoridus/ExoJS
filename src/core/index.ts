@@ -30,8 +30,24 @@ export type { InteractionCapture, InteractionObservation } from './scene/SceneIn
 export { SceneDirector } from './SceneDirector';
 export { SceneNode } from './SceneNode';
 export { SceneState } from './SceneState';
-export type { AnySceneConstructor, FadeSceneTransition, InferSceneData, SceneConstructor, SceneTransition, SetSceneArgs, SetSceneOptions } from './SceneTypes';
-export { DuplicateSceneRegistrationError, InvalidSceneRegistrationError, UnregisteredSceneError } from './SceneTypes';
+export type {
+  AnySceneConstructor,
+  FadeSceneTransition,
+  InferSceneData,
+  RestoreSceneOptions,
+  SceneConstructor,
+  SceneTransition,
+  SetSceneArgs,
+  SetSceneOptions,
+} from './SceneTypes';
+export {
+  ConcurrentSceneNavigationError,
+  DuplicateSceneRegistrationError,
+  InvalidSceneRegistrationError,
+  RetainedSceneConflictError,
+  RetainedSceneNotFoundError,
+  UnregisteredSceneError,
+} from './SceneTypes';
 export type { DeserializeContext, NodeSerializer, SerializeContext } from './serialization/NodeSerializer';
 export { Prefab } from './serialization/Prefab';
 export type { SceneNodeConstructor } from './serialization/SerializationRegistry';

@@ -168,7 +168,9 @@ export class UnregisteredSceneError extends Error {
  */
 export class ConcurrentSceneNavigationError extends Error {
   public constructor() {
-    super('A Scene switch or transition is already in progress. Concurrent navigation is not supported — await the in-flight operation before starting another.');
+    super(
+      'A Scene switch or transition is already in progress. Concurrent navigation is not supported — await the in-flight operation before starting another.',
+    );
     this.name = 'ConcurrentSceneNavigationError';
   }
 }
@@ -182,7 +184,9 @@ export class RetainedSceneConflictError extends Error {
   public readonly constructorName: string;
 
   public constructor(constructorName: string) {
-    super(`Scene constructor "${constructorName}" already has a retained (suspended) instance. Call restoreScene(...) or releaseScene(...) for it before starting a fresh activation.`);
+    super(
+      `Scene constructor "${constructorName}" already has a retained (suspended) instance. Call restoreScene(...) or releaseScene(...) for it before starting a fresh activation.`,
+    );
     this.name = 'RetainedSceneConflictError';
     this.constructorName = constructorName;
   }

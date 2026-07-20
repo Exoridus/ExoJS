@@ -1,6 +1,6 @@
 {
   "title": "SceneState",
-  "description": "Lifecycle state of one Scene activation, owned by its internal `SceneScope` and exposed read-only via Scene.state. State is read-only from user code — it changes only in response to director-driven lifecycle events (activation, teardown, and — from a later slice — pause and retention). | State | fixed/update | draw | input & interaction | |---|---:|---:|---| | `Preparing` | no | no | registrations accepted, dispatch gated | | `Active` | yes | yes | active | | `Paused` | no | yes | pause-policy filtered | | `Suspended` | no | no | disabled | | `Destroying` / `Destroyed` | no | no | disabled |",
+  "description": "Lifecycle state of one Scene activation, owned by its internal `SceneScope` and exposed read-only via Scene.state. State is read-only from user code — it changes only in response to director-driven lifecycle events: activation, pause/resume, retention (suspend/restore), and teardown. | State | fixed/update | draw | input & interaction | |---|---:|---:|---| | `Preparing` | no | no | registrations accepted, dispatch gated | | `Active` | yes | yes | active | | `Paused` | no | yes | pause-policy filtered | | `Suspended` | no | no | disabled | | `Destroying` / `Destroyed` | no | no | disabled |",
   "symbol": "SceneState",
   "kind": "enum",
   "subsystem": "core",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Lifecycle state of one Scene activation, owned by its internal `SceneScope` and exposed read-only via Scene.state. State is read-only from user code — it changes only in response to director-driven lifecycle events (activation, teardown, and — from a later slice — pause and retention).",
+        "Lifecycle state of one Scene activation, owned by its internal `SceneScope` and exposed read-only via Scene.state. State is read-only from user code — it changes only in response to director-driven lifecycle events: activation, pause/resume, retention (suspend/restore), and teardown.",
         "| State | fixed/update | draw | input & interaction | |---|---:|---:|---| | `Preparing` | no | no | registrations accepted, dispatch gated | | `Active` | yes | yes | active | | `Paused` | no | yes | pause-policy filtered | | `Suspended` | no | no | disabled | | `Destroying` / `Destroyed` | no | no | disabled |"
       ],
       "importLine": "import { SceneState } from '@codexo/exojs'",

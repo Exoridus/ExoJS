@@ -1,7 +1,7 @@
 {
-  "title": "SetSceneOptions",
-  "description": "Options passed to SceneDirector.setScene / Application.start.",
-  "symbol": "SetSceneOptions",
+  "title": "RestoreSceneOptions",
+  "description": "Options passed to SceneDirector.restoreScene.",
+  "symbol": "RestoreSceneOptions",
   "kind": "interface",
   "subsystem": "core",
   "importPath": "@codexo/exojs",
@@ -19,9 +19,9 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Options passed to SceneDirector.setScene / Application.start."
+        "Options passed to SceneDirector.restoreScene."
       ],
-      "importLine": "import { SetSceneOptions } from '@codexo/exojs'",
+      "importLine": "import { RestoreSceneOptions } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
@@ -51,7 +51,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Suspend the outgoing scene instead of ending it permanently, retaining it (keyed by its constructor) for a later SceneDirector.restoreScene call. The same scene instance and its state are preserved; load()/ init() do not re-run on restore."
+          "description": "Suspend the currently active scene (if any) instead of ending it permanently, retaining it for a later SceneDirector.restoreScene call — mirrors SetSceneOptions.retainCurrent."
         },
         {
           "name": "transition",
