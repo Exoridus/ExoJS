@@ -1,6 +1,6 @@
 {
   "title": "AnySceneConstructor",
-  "description": "A SceneConstructor for any activation-data type — used for registry storage and navigation targets whose `Data` is not statically known.",
+  "description": "A SceneConstructor for any activation-data type — used for registry storage and navigation targets whose `Data` is not statically known. Union of the `void` and `any` instantiations, not just `SceneConstructor<any>` alone: `Scene.load`/`Scene.init` take their data parameter as `Readonly<Data>`, and TypeScript's structural check for a construct signature's return type does not collapse `Readonly<any>` against a concrete subclass's `Readonly<void>` parameter once that subclass has any of its own members (true of virtually every real scene) — `SceneConstructor<any>` alone then silently rejects the single most common case, a plain `Scene` (`Data = void`) subclass. Including the `void` arm explicitly gives every void-data scene an exact-match branch, while `any` still covers every data-carrying scene.",
   "symbol": "AnySceneConstructor",
   "kind": "type",
   "subsystem": "core",
@@ -19,7 +19,8 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "A SceneConstructor for any activation-data type — used for registry storage and navigation targets whose `Data` is not statically known."
+        "A SceneConstructor for any activation-data type — used for registry storage and navigation targets whose `Data` is not statically known.",
+        "Union of the `void` and `any` instantiations, not just `SceneConstructor<any>` alone: `Scene.load`/`Scene.init` take their data parameter as `Readonly<Data>`, and TypeScript's structural check for a construct signature's return type does not collapse `Readonly<any>` against a concrete subclass's `Readonly<void>` parameter once that subclass has any of its own members (true of virtually every real scene) — `SceneConstructor<any>` alone then silently rejects the single most common case, a plain `Scene` (`Data = void`) subclass. Including the `void` arm explicitly gives every void-data scene an exact-match branch, while `any` still covers every data-carrying scene."
       ],
       "importLine": "import { AnySceneConstructor } from '@codexo/exojs'",
       "sourceLink": null
@@ -30,8 +31,16 @@
       "members": [
         {
           "name": "AnySceneConstructor",
-          "signature": "SceneConstructor<any>",
+          "signature": "SceneConstructor | SceneConstructor<any>",
           "signatureTokens": [
+            {
+              "text": "SceneConstructor",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
             {
               "text": "SceneConstructor",
               "kind": "type"

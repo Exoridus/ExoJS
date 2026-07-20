@@ -8,9 +8,22 @@ import type { Scene } from './Scene';
  */
 export type SceneConstructor<Data = void> = new () => Scene<Data>;
 
-/** A {@link SceneConstructor} for any activation-data type — used for registry storage and navigation targets whose `Data` is not statically known. */
+/**
+ * A {@link SceneConstructor} for any activation-data type — used for registry
+ * storage and navigation targets whose `Data` is not statically known.
+ *
+ * Union of the `void` and `any` instantiations, not just `SceneConstructor<any>`
+ * alone: `Scene.load`/`Scene.init` take their data parameter as `Readonly<Data>`,
+ * and TypeScript's structural check for a construct signature's return type does
+ * not collapse `Readonly<any>` against a concrete subclass's `Readonly<void>`
+ * parameter once that subclass has any of its own members (true of virtually
+ * every real scene) — `SceneConstructor<any>` alone then silently rejects the
+ * single most common case, a plain `Scene` (`Data = void`) subclass. Including
+ * the `void` arm explicitly gives every void-data scene an exact-match branch,
+ * while `any` still covers every data-carrying scene.
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- deliberately erases Data for heterogeneous registry storage; see spec §6.3.
-export type AnySceneConstructor = SceneConstructor<any>;
+export type AnySceneConstructor = SceneConstructor | SceneConstructor<any>;
 
 /** Extracts the activation-data type a {@link SceneConstructor} expects. */
 export type InferSceneData<C> = C extends SceneConstructor<infer Data> ? Data : never;
@@ -59,7 +72,8 @@ export type SetSceneArgs<Data> = [Data] extends [void] ? [options?: SetSceneOpti
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
 
-const looksLikeSetSceneOptions = (value: unknown): value is SetSceneOptions => isPlainObject(value) && Object.keys(value).every(key => setSceneOptionsKeys.has(key));
+const looksLikeSetSceneOptions = (value: unknown): value is SetSceneOptions =>
+  isPlainObject(value) && Object.keys(value).every(key => setSceneOptionsKeys.has(key));
 
 /**
  * Resolve the erased-at-runtime `(data?, options?)` tail of a `setScene`/
@@ -88,7 +102,9 @@ export class DuplicateSceneRegistrationError extends Error {
   public readonly keys: readonly [string, string];
 
   public constructor(constructorName: string, keys: readonly [string, string]) {
-    super(`Scene constructor "${constructorName}" is registered under more than one key in ApplicationOptions.scenes: "${keys[0]}" and "${keys[1]}". Each scene constructor may be registered only once.`);
+    super(
+      `Scene constructor "${constructorName}" is registered under more than one key in ApplicationOptions.scenes: "${keys[0]}" and "${keys[1]}". Each scene constructor may be registered only once.`,
+    );
     this.name = 'DuplicateSceneRegistrationError';
     this.constructorName = constructorName;
     this.keys = keys;
@@ -136,7 +152,10 @@ export class UnregisteredSceneError extends Error {
  * validation.
  * @internal
  */
-export function validateSceneRegistry(scenes: Record<string, AnySceneConstructor> | undefined, sceneBase: typeof Scene): ReadonlyMap<AnySceneConstructor, string> {
+export function validateSceneRegistry(
+  scenes: Record<string, AnySceneConstructor> | undefined,
+  sceneBase: typeof Scene,
+): ReadonlyMap<AnySceneConstructor, string> {
   const registry = new Map<AnySceneConstructor, string>();
 
   if (scenes === undefined) {

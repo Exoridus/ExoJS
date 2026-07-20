@@ -8,7 +8,15 @@ import { logger } from './logging';
 import { Scene } from './Scene';
 import { SceneScope } from './SceneScope';
 import type { SceneState } from './SceneState';
-import { type AnySceneConstructor, type InferSceneData, resolveSetSceneArgs, type SceneTransition, type SetSceneArgs, UnregisteredSceneError, validateSceneRegistry } from './SceneTypes';
+import {
+  type AnySceneConstructor,
+  type InferSceneData,
+  resolveSetSceneArgs,
+  type SceneTransition,
+  type SetSceneArgs,
+  UnregisteredSceneError,
+  validateSceneRegistry,
+} from './SceneTypes';
 import { Signal } from './Signal';
 import type { Time } from './Time';
 
