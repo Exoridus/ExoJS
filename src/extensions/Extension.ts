@@ -1,4 +1,6 @@
+import type { Application } from '#core/Application';
 import type { SceneNode } from '#core/SceneNode';
+import type { System } from '#core/System';
 import type { NodeSerializer } from '#core/serialization/NodeSerializer';
 import type { SceneNodeConstructor } from '#core/serialization/SerializationRegistry';
 import type { Drawable } from '#rendering/Drawable';
@@ -138,10 +140,24 @@ export interface SerializerBinding<T extends SceneNode = SceneNode> {
 }
 
 /**
+ * Produces an app-level {@link System} for one {@link Application} instance,
+ * or `undefined` to opt out for that instance. `create(app)` runs once per
+ * Application, after every core manager already exists on `app` — safe to
+ * read {@link Application.input}, {@link Application.interaction}, etc. The
+ * returned system is registered on {@link Application.systems} exactly like
+ * a user-added system, including reverse-order destruction. Extensions never
+ * inject scene-level systems or augment scenes — app-level only.
+ * @advanced
+ */
+export interface ApplicationSystemBinding {
+  create(app: Application): System | undefined;
+}
+
+/**
  * An ExoJS extension: an immutable descriptor that contributes renderer bindings,
- * asset bindings and/or serializer bindings. Holds no Application, backend, GPU,
- * or loader instances. Register via {@link ExtensionRegistry.register} (official
- * packages do this as an import side effect), or pass explicitly via
+ * asset bindings, serializer bindings and/or app-level systems. Holds no Application,
+ * backend, GPU, or loader instances. Register via {@link ExtensionRegistry.register}
+ * (official packages do this as an import side effect), or pass explicitly via
  * {@link ApplicationOptions.extensions}.
  * @advanced
  */
@@ -151,4 +167,5 @@ export interface Extension {
   readonly renderers?: readonly RendererBinding[];
   readonly assets?: readonly AssetBinding[];
   readonly serializers?: readonly SerializerBinding[];
+  readonly systems?: readonly ApplicationSystemBinding[];
 }
