@@ -1007,7 +1007,7 @@ export default defineConfig([
   },
 
   {
-    files: ['src/core/Application.ts', 'src/core/SceneManager.ts', 'src/animation/Tween.ts', 'src/rendering/webgl2/WebGl2Backend.ts'],
+    files: ['src/core/Application.ts', 'src/core/SceneDirector.ts', 'src/animation/Tween.ts', 'src/rendering/webgl2/WebGl2Backend.ts'],
     rules: {
       'no-console': 'off',
     },
