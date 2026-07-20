@@ -78,7 +78,7 @@ export class AudioListener {
     if (this.target !== null) {
       this._readTargetPosition();
 
-      if (!this._explicitVelocity && this._ctx !== null) {
+      if (!this._explicitVelocity && this._ctx !== null && this._settings.dopplerFactor !== 0) {
         deriveVelocity(this._velocitySample, this.position.x, this.position.y, this._ctx.currentTime);
         this._velocity.set(this._velocitySample.x, this._velocitySample.y);
       }

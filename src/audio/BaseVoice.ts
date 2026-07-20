@@ -39,8 +39,6 @@ export interface BaseVoiceInit {
   manager: AudioManager;
   /** Initial volume, range [0, 1]. */
   volume: number;
-  /** Spatial parameters; defaults are used for any omitted field. */
-  spatial?: Partial<VoiceSpatialConfig>;
   /**
    * Connect the output to the bus on construction. Default `true`. Pass `false`
    * for analysis-only voices (e.g. a live {@link InputVoice}) that should not be
@@ -112,7 +110,7 @@ export abstract class BaseVoice implements Voice, Spatializable, SpatialVoice {
     this._bus = init.bus;
     this._manager = init.manager;
     this._volume = clamp(init.volume, 0, 1);
-    this._spatialConfig = { ...defaultSpatialConfig, ...init.spatial };
+    this._spatialConfig = { ...defaultSpatialConfig };
 
     this._output.gain.setTargetAtTime(this._volume, this._audioContext.currentTime, 0.01);
     if (init.autoConnect !== false) {
@@ -635,6 +633,10 @@ export abstract class BaseVoice implements Voice, Spatializable, SpatialVoice {
     if (this._position !== null) {
       this._position.destroy();
       this._position = null;
+    }
+    if (this._velocity !== null) {
+      this._velocity.destroy();
+      this._velocity = null;
     }
     this._followNode = null;
 
