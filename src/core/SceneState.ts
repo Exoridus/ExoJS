@@ -2,8 +2,8 @@
  * Lifecycle state of one {@link Scene} activation, owned by its internal
  * `SceneScope` and exposed read-only via {@link Scene.state}. State is
  * read-only from user code — it changes only in response to director-driven
- * lifecycle events (activation, teardown, and — from a later slice — pause
- * and retention).
+ * lifecycle events: activation, pause/resume, retention (suspend/restore),
+ * and teardown.
  *
  * | State | fixed/update | draw | input & interaction |
  * |---|---:|---:|---|
@@ -41,6 +41,11 @@ export function canResume(state: SceneState): boolean {
 /** `true` when the scene can be suspended for retention (`Active` or `Paused` → `Suspended`). */
 export function canSuspend(state: SceneState): boolean {
   return state === SceneState.Active || state === SceneState.Paused;
+}
+
+/** `true` when the scene can be restored from retention (`Suspended` → its pre-suspend `Active`/`Paused`). */
+export function canRestore(state: SceneState): boolean {
+  return state === SceneState.Suspended;
 }
 
 /** `true` when the scene can begin permanent teardown — anything other than an already-destroying or already-destroyed scene. */

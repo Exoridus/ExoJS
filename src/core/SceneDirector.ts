@@ -10,8 +10,12 @@ import { SceneScope } from './SceneScope';
 import type { SceneState } from './SceneState';
 import {
   type AnySceneConstructor,
+  ConcurrentSceneNavigationError,
   type InferSceneData,
   resolveSetSceneArgs,
+  type RestoreSceneOptions,
+  RetainedSceneConflictError,
+  RetainedSceneNotFoundError,
   type SceneTransition,
   type SetSceneArgs,
   UnregisteredSceneError,
@@ -20,7 +24,8 @@ import {
 import { Signal } from './Signal';
 import type { Time } from './Time';
 
-export type { FadeSceneTransition, SceneTransition, SetSceneOptions } from './SceneTypes';
+export type { FadeSceneTransition, RestoreSceneOptions, SceneTransition, SetSceneOptions } from './SceneTypes';
+export { ConcurrentSceneNavigationError, RetainedSceneConflictError, RetainedSceneNotFoundError } from './SceneTypes';
 
 interface ActiveFadeTransition {
   readonly type: 'fade';
@@ -75,9 +80,12 @@ export class SceneDirector {
   private readonly _app: Application;
   private readonly _registry: ReadonlyMap<AnySceneConstructor, string>;
   private _activeScope: SceneScope | null = null;
+  private _activeScopeTarget: AnySceneConstructor | null = null;
+  private readonly _retained = new Map<AnySceneConstructor, SceneScope>();
   private readonly _transitionOverlay: TransitionOverlayMesh = createOverlayMesh();
   private _transition: ActiveFadeTransition | null = null;
   private _inputGateDepth = 0;
+  private _navigationInFlight = false;
 
   /** Fires whenever the active scene changes (set or clear). Payload is the new scene, or `null` when cleared. */
   public readonly onChangeScene = new Signal<[Scene | null]>();
@@ -122,33 +130,51 @@ export class SceneDirector {
 
   /**
    * Switch to a fresh instance of `target`, ending the previously active
-   * scene permanently. Ordinary switching always creates a fresh instance
-   * (definition §11.4) — this differs from the old instance-based API's
-   * same-instance no-op check, which no longer applies. An optional fade
-   * transition runs the swap at full opacity. The new scene completes
-   * `load()`+`init()` before the old one is torn down, so there is no blank
-   * frame between them, and the outgoing scene keeps running until the
-   * switch boundary is crossed.
+   * scene permanently — unless `options.retainCurrent` is set, in which
+   * case the outgoing scene is suspended and retained (keyed by its
+   * constructor) for a later {@link SceneDirector.restoreScene} call
+   * instead. Ordinary switching always creates a fresh instance (definition
+   * §11.4) — this differs from the old instance-based API's same-instance
+   * no-op check, which no longer applies. An optional fade transition runs
+   * the swap at full opacity. The new scene completes `load()`+`init()`
+   * before the old one is torn down, so there is no blank frame between
+   * them, and the outgoing scene keeps running until the switch boundary is
+   * crossed.
    *
-   * Rejects (dev builds) with {@link UnregisteredSceneError} when `target`
-   * is not present in `ApplicationOptions.scenes`.
+   * Rejects with {@link ConcurrentSceneNavigationError} when another
+   * navigation is already in flight (dev and production builds — no
+   * queueing, definition §11.5); with {@link UnregisteredSceneError} (dev
+   * builds) when `target` is not present in `ApplicationOptions.scenes`;
+   * with {@link RetainedSceneConflictError} when `target` already has a
+   * retained instance (restore or release it first).
    */
   public async setScene<C extends AnySceneConstructor>(target: C, ...args: SetSceneArgs<InferSceneData<C>>): Promise<this> {
-    if (__DEV__ && !this._registry.has(target)) {
-      throw new UnregisteredSceneError(target.name, [...this._registry.values()]);
-    }
-
     const { data, options } = resolveSetSceneArgs(args);
 
-    await this._runWithTransition(async () => {
+    await this._runWithNavigation(async () => {
+      if (__DEV__ && !this._registry.has(target)) {
+        throw new UnregisteredSceneError(target.name, [...this._registry.values()]);
+      }
+
+      if (this._retained.has(target)) {
+        throw new RetainedSceneConflictError(target.name);
+      }
+
       const scene = new target();
       const newScope = await this._prepareScene(scene, data);
       const previousScope = this._activeScope;
+      const previousTarget = this._activeScopeTarget;
 
       this._activeScope = newScope;
+      this._activeScopeTarget = target;
 
-      if (previousScope !== null) {
-        await this._disposeScene(previousScope);
+      try {
+        await this._handleOutgoingScope(previousScope, previousTarget, options.retainCurrent ?? false);
+      } catch (error) {
+        this._rollbackSwitch(previousScope, previousTarget);
+        newScope.destroyFailedActivation();
+
+        throw error;
       }
 
       newScope.activate();
@@ -168,10 +194,11 @@ export class SceneDirector {
    * constructor).
    */
   public async _clearScene(): Promise<this> {
-    await this._runWithTransition(async () => {
+    await this._runWithNavigation(async () => {
       const previousScope = this._activeScope;
 
       this._activeScope = null;
+      this._activeScopeTarget = null;
 
       if (previousScope !== null) {
         await this._disposeScene(previousScope);
@@ -181,6 +208,83 @@ export class SceneDirector {
     });
 
     return this;
+  }
+
+  /**
+   * Reactivate a scene previously retained via `setScene(..., { retainCurrent: true })`
+   * or `restoreScene(..., { retainCurrent: true })` — the same instance,
+   * returned to whichever of `Active`/`Paused` it had before suspension.
+   * `load()`/`init()` do not run again (definition §14.3).
+   *
+   * Rejects with {@link ConcurrentSceneNavigationError} when another
+   * navigation is already in flight; with {@link RetainedSceneNotFoundError}
+   * when `target` has no retained instance.
+   */
+  public async restoreScene<C extends AnySceneConstructor>(target: C, options: RestoreSceneOptions = {}): Promise<this> {
+    const retainedScope = this._retained.get(target);
+
+    if (retainedScope === undefined) {
+      throw new RetainedSceneNotFoundError(target.name);
+    }
+
+    // Eager, synchronous claim: remove the scope from `_retained` before any
+    // `await` so a concurrent restoreScene(target)/releaseScene(target) call
+    // targeting the same constructor can never also see it — this closes
+    // the race without needing releaseScene() to share the navigation lock.
+    this._retained.delete(target);
+
+    try {
+      await this._runWithNavigation(async () => {
+        const previousScope = this._activeScope;
+        const previousTarget = this._activeScopeTarget;
+
+        this._activeScope = retainedScope;
+        this._activeScopeTarget = target;
+
+        try {
+          await this._handleOutgoingScope(previousScope, previousTarget, options.retainCurrent ?? false);
+        } catch (error) {
+          this._rollbackSwitch(previousScope, previousTarget);
+
+          throw error;
+        }
+
+        const previousState = retainedScope.state;
+
+        retainedScope.restore();
+
+        this.onChangeScene.dispatch(retainedScope.scene as Scene);
+        this.onStateChange.dispatch(previousState, retainedScope.state, retainedScope.scene as Scene);
+      }, options.transition);
+    } catch (error) {
+      // Any failure (including a rejected concurrent-navigation guard, or
+      // the inner rollback above already having restored `_activeScope`)
+      // means the restore never committed — undo the eager claim so the
+      // scope remains available for a future restoreScene/releaseScene call.
+      this._retained.set(target, retainedScope);
+
+      throw error;
+    }
+
+    return this;
+  }
+
+  /**
+   * Permanently end a retained (suspended) scene without reactivating it.
+   * Returns `true` if a retained instance existed for `target`, `false`
+   * otherwise (no-op, not an error).
+   */
+  public async releaseScene<C extends AnySceneConstructor>(target: C): Promise<boolean> {
+    const scope = this._retained.get(target);
+
+    if (scope === undefined) {
+      return false;
+    }
+
+    this._retained.delete(target);
+    await this._disposeScene(scope);
+
+    return true;
   }
 
   /**
@@ -313,7 +417,31 @@ export class SceneDirector {
     this._activeScope?._endFrame();
   }
 
+  /**
+   * Tear down every owned resource: reject an in-flight fade transition,
+   * destroy the active scene, destroy every retained scene, then destroy
+   * the overlay and all Signals. Fires `_dispose()` (async teardown) and
+   * returns immediately — errors are reported through the app error
+   * pipeline rather than propagated, matching every other synchronous
+   * `destroy()` in the engine. An async shutdown path that needs to know
+   * teardown has fully finished may `await` {@link SceneDirector._dispose}
+   * directly instead of calling this method.
+   */
   public destroy(): void {
+    void this._dispose();
+  }
+
+  /**
+   * @internal Awaited teardown, in order: reject any in-flight fade
+   * transition → destroy the active scope (guarded, errors reported) →
+   * destroy every retained scope in reverse insertion order (guarded,
+   * errors reported) → destroy the transition overlay and every Signal.
+   * Signals are destroyed last so scene teardown (`unload()`, `onStopScene`
+   * listeners) can still use them while it runs. Does not participate in
+   * the `_navigationInFlight` guard — teardown must always proceed
+   * regardless of any in-flight navigation (definition §10.6).
+   */
+  public async _dispose(): Promise<void> {
     if (this._transition) {
       const transition = this._transition;
 
@@ -323,7 +451,30 @@ export class SceneDirector {
       transition.reject(new Error('SceneDirector was destroyed while a transition was active.'));
     }
 
-    void this._unloadActiveSceneOnDestroy();
+    const activeScope = this._activeScope;
+
+    this._activeScope = null;
+    this._activeScopeTarget = null;
+
+    if (activeScope !== null) {
+      try {
+        await this._disposeScene(activeScope);
+      } catch (error) {
+        logger.error('SceneDirector.destroy() failed to unload the active scene.', { source: 'SceneDirector', ...(error instanceof Error && { error }) });
+      }
+    }
+
+    const retainedInReverseInsertionOrder = [...this._retained.values()].reverse();
+
+    this._retained.clear();
+
+    for (const scope of retainedInReverseInsertionOrder) {
+      try {
+        await this._disposeScene(scope);
+      } catch (error) {
+        logger.error('SceneDirector.destroy() failed to destroy a retained scene.', { source: 'SceneDirector', ...(error instanceof Error && { error }) });
+      }
+    }
 
     this._transitionOverlay.destroy();
     this.onChangeScene.destroy();
@@ -369,31 +520,91 @@ export class SceneDirector {
     await scope.destroy();
   }
 
-  private async _unloadActiveSceneOnDestroy(): Promise<void> {
-    const scope = this._activeScope;
-
-    if (scope === null) {
+  /**
+   * Handle the outgoing scope at a switch boundary: suspend+retain it when
+   * `retainCurrent` is set, otherwise permanently dispose it. No-op when
+   * there is no outgoing scope (scene-less start). The only realistic
+   * throw source here is a user `onStopScene` (dispose path) or
+   * `onStateChange` (retain path) listener — `SceneScope.suspend()` and
+   * `scope.destroy()` are both internally guarded and never throw
+   * themselves.
+   */
+  private async _handleOutgoingScope(previousScope: SceneScope | null, previousTarget: AnySceneConstructor | null, retainCurrent: boolean): Promise<void> {
+    if (previousScope === null) {
       return;
     }
 
-    this._activeScope = null;
+    if (retainCurrent && previousTarget !== null) {
+      this._suspendAndRetain(previousTarget, previousScope);
 
-    try {
-      await this._disposeScene(scope);
-    } catch (error) {
-      logger.error('SceneDirector.destroy() failed to unload the active scene.', { source: 'SceneDirector', ...(error instanceof Error && { error }) });
+      return;
+    }
+
+    await this._disposeScene(previousScope);
+  }
+
+  /**
+   * Suspend `scope` and store it in `_retained` under `target`. `scope` is
+   * always the outgoing active scope here, which is always `Active` or
+   * `Paused` — {@link SceneScope.suspend} is therefore guaranteed to
+   * succeed (never skipped by its own state guard).
+   */
+  private _suspendAndRetain(target: AnySceneConstructor, scope: SceneScope): void {
+    const previousState = scope.state;
+
+    scope.suspend();
+    this._retained.set(target, scope);
+
+    this.onStateChange.dispatch(previousState, scope.state, scope.scene as Scene);
+  }
+
+  /**
+   * Undo a switch-boundary reassignment after `_handleOutgoingScope` threw:
+   * restore `_activeScope`/`_activeScopeTarget` to the previous scope, and —
+   * if that scope had already been suspended+retained as part of this same
+   * failed switch — remove it from `_retained` and un-suspend it. The
+   * incoming scope's own cleanup (`destroyFailedActivation()`) is the
+   * caller's responsibility (its exact call site differs between `setScene`,
+   * which always has an incoming scope, and `restoreScene`, whose "incoming"
+   * scope is the already-existing retained one and must not be destroyed on
+   * this path).
+   */
+  private _rollbackSwitch(previousScope: SceneScope | null, previousTarget: AnySceneConstructor | null): void {
+    this._activeScope = previousScope;
+    this._activeScopeTarget = previousTarget;
+
+    if (previousScope !== null && previousTarget !== null && this._retained.get(previousTarget) === previousScope) {
+      this._retained.delete(previousTarget);
+      previousScope.restore();
     }
   }
 
-  private async _runWithTransition(action: () => Promise<void>, transition?: SceneTransition): Promise<void> {
+  /**
+   * Run `action` as one atomic navigation step, guarded so at most one
+   * navigation (`setScene`/`restoreScene`/`_clearScene`, transitioned or
+   * not) is ever in flight at a time (definition §11.5 — a second request
+   * rejects rather than queueing). Does not guard {@link SceneDirector._dispose},
+   * which must always be able to proceed.
+   */
+  private async _runWithNavigation(action: () => Promise<void>, transition?: SceneTransition): Promise<void> {
+    if (this._navigationInFlight) {
+      throw new ConcurrentSceneNavigationError();
+    }
+
+    this._navigationInFlight = true;
+
+    try {
+      await this._runTransitionedAction(action, transition);
+    } finally {
+      this._navigationInFlight = false;
+    }
+  }
+
+  private async _runTransitionedAction(action: () => Promise<void>, transition?: SceneTransition): Promise<void> {
     if (transition?.type !== 'fade') {
       await action();
 
       return;
-    }
-
-    if (this._transition) {
-      throw new Error('Scene transition is already in progress.');
     }
 
     const durationMs = Math.max(0, transition.duration ?? defaultFadeTransitionDuration);
