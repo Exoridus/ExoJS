@@ -310,4 +310,135 @@ describe('SceneScope', () => {
       expect(update).not.toHaveBeenCalled();
     });
   });
+
+  describe('retention (definition §14)', () => {
+    const activate = async (app: Application, scene: Scene): Promise<SceneScope<void>> => {
+      const scope = new SceneScope(app, scene);
+
+      await scope.prepare(undefined);
+      scope.activate();
+
+      return scope;
+    };
+
+    test('suspend() transitions Active to Suspended and suspends every facility except the loader', async () => {
+      const app = createAppStub();
+      const scene = new Scene();
+      const scope = await activate(app, scene);
+
+      const inputsSuspendSpy = vi.spyOn(scope.inputs, 'suspend');
+      const interactionSuspendSpy = vi.spyOn(scope.interaction, 'suspend');
+      const tweensSuspendSpy = vi.spyOn(scope.tweens, 'suspend');
+      const audioSuspendSpy = vi.spyOn(scope.audio, 'suspend');
+
+      expect(scope.suspend()).toBe(true);
+
+      expect(scope.state).toBe(SceneState.Suspended);
+      expect(inputsSuspendSpy).toHaveBeenCalledTimes(1);
+      expect(interactionSuspendSpy).toHaveBeenCalledTimes(1);
+      expect(tweensSuspendSpy).toHaveBeenCalledTimes(1);
+      expect(audioSuspendSpy).toHaveBeenCalledTimes(1);
+    });
+
+    test('suspend() from Paused records Paused as the pre-suspend state', async () => {
+      const app = createAppStub();
+      const scene = new Scene();
+      const scope = await activate(app, scene);
+
+      scope.pause();
+      expect(scope.suspend()).toBe(true);
+      expect(scope.state).toBe(SceneState.Suspended);
+
+      expect(scope.restore()).toBe(true);
+      expect(scope.state).toBe(SceneState.Paused);
+    });
+
+    test('suspend() is a no-op outside Active/Paused', async () => {
+      const app = createAppStub();
+      const scene = new Scene();
+      const scope = new SceneScope(app, scene); // still Preparing
+
+      expect(scope.suspend()).toBe(false);
+      expect(scope.state).toBe(SceneState.Preparing);
+    });
+
+    test('restore() returns to Active when suspended from Active', async () => {
+      const app = createAppStub();
+      const scene = new Scene();
+      const scope = await activate(app, scene);
+
+      scope.suspend();
+
+      const inputsResumeSpy = vi.spyOn(scope.inputs, 'resume');
+      const interactionResumeSpy = vi.spyOn(scope.interaction, 'resume');
+      const tweensResumeSpy = vi.spyOn(scope.tweens, 'resume');
+      const audioResumeSpy = vi.spyOn(scope.audio, 'resume');
+
+      expect(scope.restore()).toBe(true);
+
+      expect(scope.state).toBe(SceneState.Active);
+      expect(inputsResumeSpy).toHaveBeenCalledTimes(1);
+      expect(interactionResumeSpy).toHaveBeenCalledTimes(1);
+      expect(tweensResumeSpy).toHaveBeenCalledTimes(1);
+      expect(audioResumeSpy).toHaveBeenCalledTimes(1);
+    });
+
+    test('restore() is a no-op outside Suspended', async () => {
+      const app = createAppStub();
+      const scene = new Scene();
+      const scope = await activate(app, scene);
+
+      expect(scope.restore()).toBe(false);
+      expect(scope.state).toBe(SceneState.Active);
+    });
+
+    test('fixedUpdate/update/draw never dispatch while Suspended', async () => {
+      const app = createAppStub();
+      const update = vi.fn();
+      const draw = vi.fn();
+      const scene = Object.assign(new Scene(), { update, draw });
+      const scope = await activate(app, scene);
+
+      scope.suspend();
+
+      scope.fixedUpdate(new Time(16));
+      scope.update(new Time(16));
+      scope.draw({} as never);
+
+      expect(update).not.toHaveBeenCalled();
+      expect(draw).not.toHaveBeenCalled();
+    });
+
+    test('a facility suspend() failure never blocks the state transition or the other facilities, and is reported through the app error pipeline', async () => {
+      const app = createAppStub();
+      const scene = new Scene();
+      const scope = await activate(app, scene);
+      const errorSpy = vi.fn();
+
+      app.onError.add(errorSpy);
+
+      vi.spyOn(scope.inputs, 'suspend').mockImplementation(() => {
+        throw new Error('inputs suspend failed');
+      });
+      const interactionSuspendSpy = vi.spyOn(scope.interaction, 'suspend');
+
+      expect(scope.suspend()).toBe(true);
+
+      expect(scope.state).toBe(SceneState.Suspended);
+      expect(interactionSuspendSpy).toHaveBeenCalledTimes(1);
+      expect(errorSpy).toHaveBeenCalledWith(expect.objectContaining({ message: 'inputs suspend failed' }));
+    });
+
+    test('suspend() then destroy() tears the scope down normally (retained-then-released path)', async () => {
+      const app = createAppStub();
+      const scene = new Scene();
+      const scope = await activate(app, scene);
+
+      scope.suspend();
+
+      await scope.destroy();
+
+      expect(scope.state).toBe(SceneState.Destroyed);
+    });
+  });
 });

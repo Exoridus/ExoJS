@@ -9,7 +9,7 @@ import { SceneInputs } from './scene/SceneInputs';
 import { SceneInteraction } from './scene/SceneInteraction';
 import { SceneLoader } from './scene/SceneLoader';
 import { SceneTweens } from './scene/SceneTweens';
-import { canDestroy, canPause, canResume, SceneState } from './SceneState';
+import { canDestroy, canPause, canRestore, canResume, canSuspend, SceneState } from './SceneState';
 import { SystemRegistry } from './SystemRegistry';
 import type { Time } from './Time';
 
@@ -28,9 +28,11 @@ const isThenable = (value: unknown): boolean => value instanceof Promise;
 /**
  * Internal owner of one {@link Scene} activation: constructs and attaches the
  * scene's facilities, runs `load()`/`init()`, gates per-frame dispatch by
- * {@link SceneState}, and runs permanent teardown in the normative order.
- * Not exported from the package root — `Scene` and `SceneDirector` are the
- * public surface; this class is their shared internal implementation detail.
+ * {@link SceneState}, supports retention ({@link SceneScope.suspend} /
+ * {@link SceneScope.restore}), and runs permanent teardown in the normative
+ * order. Not exported from the package root — `Scene` and `SceneDirector`
+ * are the public surface; this class is their shared internal implementation
+ * detail.
  * @internal
  */
 export class SceneScope<Data = unknown> {
@@ -47,6 +49,7 @@ export class SceneScope<Data = unknown> {
   private _rootsAttached = false;
   private _unloadCalled = false;
   private _destroyCalled = false;
+  private _visibleStateBeforeSuspend: SceneState.Active | SceneState.Paused | null = null;
 
   public constructor(app: Application, scene: Scene<Data>) {
     this._app = app;
@@ -129,6 +132,62 @@ export class SceneScope<Data = unknown> {
     }
 
     this._state = SceneState.Active;
+
+    return true;
+  }
+
+  /**
+   * Suspend this scope for retention: `Active`/`Paused` → `Suspended`.
+   * Records the pre-suspend state so {@link SceneScope.restore} can return
+   * to it. Suspends every facility except the loader — claims are never
+   * suspended (definition §14.2), so background asset loading continues.
+   * Every facility call is individually guarded; a single facility's
+   * failure never blocks the state transition or the others, and is
+   * reported through the app error pipeline rather than thrown. Returns
+   * whether the transition happened.
+   */
+  public suspend(): boolean {
+    if (!canSuspend(this._state)) {
+      return false;
+    }
+
+    this._visibleStateBeforeSuspend = this._state as SceneState.Active | SceneState.Paused;
+    this._state = SceneState.Suspended;
+
+    const errors: unknown[] = [];
+
+    this._guard(errors, () => this.inputs.suspend());
+    this._guard(errors, () => this.interaction.suspend());
+    this._guard(errors, () => this.tweens.suspend());
+    this._guard(errors, () => this.audio.suspend());
+
+    this._reportErrors(errors);
+
+    return true;
+  }
+
+  /**
+   * Restore this scope from retention: `Suspended` → the `Active`/`Paused`
+   * state it had before {@link SceneScope.suspend}. `load()`/`init()` do not
+   * run again (definition §14.3). Same error-guarding contract as
+   * {@link SceneScope.suspend}. Returns whether the transition happened.
+   */
+  public restore(): boolean {
+    if (!canRestore(this._state) || this._visibleStateBeforeSuspend === null) {
+      return false;
+    }
+
+    this._state = this._visibleStateBeforeSuspend;
+    this._visibleStateBeforeSuspend = null;
+
+    const errors: unknown[] = [];
+
+    this._guard(errors, () => this.inputs.resume());
+    this._guard(errors, () => this.interaction.resume());
+    this._guard(errors, () => this.tweens.resume());
+    this._guard(errors, () => this.audio.resume());
+
+    this._reportErrors(errors);
 
     return true;
   }
