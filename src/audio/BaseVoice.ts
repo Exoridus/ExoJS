@@ -6,12 +6,12 @@ import { Vector } from '#math/Vector';
 import type { AudioBus } from './AudioBus';
 import type { AudioEffect } from './AudioEffect';
 import type { AudioManager } from './AudioManager';
-import type { Spatializable, Voice } from './Playable';
+import type { DistanceModel, Spatializable, Voice } from './Playable';
 import { SmoothedAudioParam } from './spatial-smoothing';
 
 /** Distance-attenuation configuration for a spatial voice. */
 export interface VoiceSpatialConfig {
-  distanceModel: DistanceModelType;
+  distanceModel: DistanceModel;
   refDistance: number;
   maxDistance: number;
   rolloffFactor: number;
@@ -243,6 +243,53 @@ export abstract class BaseVoice implements Voice, Spatializable, SpatialVoice {
     if (node !== null) {
       this._ensurePanner();
       this._tickSpatial();
+    }
+  }
+
+  public get distanceModel(): DistanceModel {
+    return this._spatialConfig.distanceModel;
+  }
+
+  public set distanceModel(value: DistanceModel) {
+    this._spatialConfig.distanceModel = value;
+    if (this._panner !== null) {
+      this._panner.distanceModel = value;
+    }
+  }
+
+  public get refDistance(): number {
+    return this._spatialConfig.refDistance;
+  }
+
+  public set refDistance(value: number) {
+    const clamped = Math.max(0, value);
+    this._spatialConfig.refDistance = clamped;
+    if (this._panner !== null) {
+      this._panner.refDistance = clamped;
+    }
+  }
+
+  public get maxDistance(): number {
+    return this._spatialConfig.maxDistance;
+  }
+
+  public set maxDistance(value: number) {
+    const clamped = Math.max(0, value);
+    this._spatialConfig.maxDistance = clamped;
+    if (this._panner !== null) {
+      this._panner.maxDistance = clamped;
+    }
+  }
+
+  public get rolloffFactor(): number {
+    return this._spatialConfig.rolloffFactor;
+  }
+
+  public set rolloffFactor(value: number) {
+    const clamped = Math.max(0, value);
+    this._spatialConfig.rolloffFactor = clamped;
+    if (this._panner !== null) {
+      this._panner.rolloffFactor = clamped;
     }
   }
 

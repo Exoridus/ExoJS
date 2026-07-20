@@ -7,6 +7,7 @@ import type { Envelope } from './Envelope';
 import { NoopVoice } from './NoopVoice';
 import type { Playable, PlayOptions, Voice } from './Playable';
 import { SoundPoolStrategy } from './Sound';
+import { seedVoiceFromPlayOptions } from './spatial-options';
 
 export type OscillatorType = 'sine' | 'square' | 'sawtooth' | 'triangle';
 
@@ -162,6 +163,8 @@ export class AudioGenerator implements Playable {
       detune,
       envelope: this.envelope,
     });
+
+    seedVoiceFromPlayOptions(voice, options);
 
     const pooled: PooledGeneratorVoice = { voice, startedAt: audioContext.currentTime };
     voice.onEnd.add((): void => {

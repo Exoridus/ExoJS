@@ -56,11 +56,9 @@ describe('AudioManager.update()', () => {
     const mixer = new AudioManager();
     const sound1 = new Sound(createAudioBufferStub());
     const sound2 = new Sound(createAudioBufferStub());
-    sound1.position = { x: 0, y: 0 };
-    sound2.position = { x: 10, y: 10 };
 
-    const voice1 = mixer.play(sound1) as SoundVoice;
-    const voice2 = mixer.play(sound2) as SoundVoice;
+    const voice1 = mixer.play(sound1, { position: { x: 0, y: 0 } }) as SoundVoice;
+    const voice2 = mixer.play(sound2, { position: { x: 10, y: 10 } }) as SoundVoice;
 
     const tick1 = vi.spyOn(voice1, '_tickSpatial');
     const tick2 = vi.spyOn(voice2, '_tickSpatial');
@@ -158,8 +156,7 @@ describe('AudioManager.update()', () => {
     const pannerSpy = setupPannerSpy();
     const mixer = new AudioManager();
     const sound = new Sound(createAudioBufferStub());
-    sound.position = { x: 0, y: 0 };
-    const voice = mixer.play(sound);
+    const voice = mixer.play(sound, { position: { x: 0, y: 0 } });
     voice.stop(); // mark ended
 
     expect(() => mixer.update()).not.toThrow();
@@ -171,8 +168,7 @@ describe('AudioManager.update()', () => {
     const pannerSpy = setupPannerSpy();
     const mixer = new AudioManager();
     const sound = new Sound(createAudioBufferStub());
-    sound.position = { x: 0, y: 0 };
-    const voice = mixer.play(sound) as SoundVoice;
+    const voice = mixer.play(sound, { position: { x: 0, y: 0 } }) as SoundVoice;
 
     mixer.destroy();
 

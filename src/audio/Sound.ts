@@ -1,13 +1,13 @@
 import { LoadState, type LoadStateValue } from '#core/LoadState';
 import { logger } from '#core/logging';
 import { clamp } from '#math/utils';
-import { Vector } from '#math/Vector';
 
 import { getAudioContext, isAudioContextReady } from './audio-context';
 import type { AudioBus } from './AudioBus';
 import type { AudioManager } from './AudioManager';
 import { NoopVoice } from './NoopVoice';
 import type { Playable, PlayOptions, Voice } from './Playable';
+import { seedVoiceFromPlayOptions } from './spatial-options';
 import { SoundVoice, type SoundVoiceWindow } from './SoundVoice';
 
 /**
@@ -48,19 +48,6 @@ export interface AudioSpriteClip {
   loop?: boolean;
 }
 
-/**
- * Distance-attenuation model used by spatial sounds.
- *
- * Mirrors Web Audio's `PannerNode.distanceModel`:
- * - `'linear'` — `v = 1 - rolloffFactor * (d - refDistance) / (maxDistance - refDistance)`,
- *   clamped to [0, 1]. Reaches silence at `maxDistance`.
- * - `'inverse'` — `v = refDistance / (refDistance + rolloffFactor * (d - refDistance))`.
- *   Physically realistic; never reaches absolute silence.
- * - `'exponential'` — `v = (d / refDistance) ^ -rolloffFactor`. Steepest near
- *   the listener; useful for very intimate sources.
- */
-export type DistanceModel = 'linear' | 'inverse' | 'exponential';
-
 /** Construction options for {@link Sound}. */
 export interface SoundOptions {
   poolSize?: number;
@@ -75,14 +62,6 @@ export interface SoundOptions {
   playbackRate?: number;
   /** Default muted state. Default: false. */
   muted?: boolean;
-  /** Distance-attenuation model. Default: `'linear'`. */
-  distanceModel?: DistanceModel;
-  /** Distance below which volume is at full strength. Default: `50`. */
-  refDistance?: number;
-  /** For the `'linear'` model: distance at which volume reaches zero. Default: `1000`. */
-  maxDistance?: number;
-  /** Falloff rate. Higher = steeper attenuation. Default: `1`. */
-  rolloffFactor?: number;
 }
 
 /** Per-call overrides for {@link Sound.play} and {@link Sound.playSprite}. */
@@ -110,8 +89,9 @@ interface PooledVoice {
  * Pre-decoded short audio clip backed by an `AudioBuffer`.
  *
  * Sound is a **data descriptor** — it holds the decoded audio buffer, sprite
- * definitions, default playback parameters, and spatial configuration but does
- * NOT start playback itself. Playback is driven by
+ * definitions, and default playback parameters but does NOT start playback
+ * itself, and holds no per-playback spatial state (that lives on the
+ * {@link Voice} returned by playing it). Playback is driven by
  * `AudioManager.play(sound, options)` which returns a {@link Voice} handle.
  *
  * Multiple concurrent plays of the same Sound are supported up to `poolSize`.
@@ -143,14 +123,6 @@ export class Sound implements Playable {
   private _poolSize: number;
   private _poolStrategy: SoundPoolStrategy;
   private _priority: number;
-
-  // Spatial descriptor params — read by _createVoice to configure the PannerNode.
-  private _position: Vector | null = null;
-  private _velocity: Vector | null = null;
-  private _distanceModel: DistanceModel = 'linear';
-  private _refDistance = 50;
-  private _maxDistance = 1000;
-  private _rolloffFactor = 1;
 
   // Active voice pool — tracks concurrent voices for eviction logic.
   private readonly _activeVoices: PooledVoice[] = [];
@@ -237,85 +209,11 @@ export class Sound implements Playable {
     this._priority = value;
   }
 
-  public get position(): Vector | null {
-    return this._position;
-  }
-
-  public set position(value: { x: number; y: number } | Vector | null) {
-    if (value === null) {
-      if (this._position !== null) {
-        this._position.destroy();
-        this._position = null;
-      }
-      return;
-    }
-    if (this._position === null) {
-      this._position = new Vector(value.x, value.y);
-    } else {
-      this._position.set(value.x, value.y);
-    }
-  }
-
-  public get velocity(): Vector | null {
-    return this._velocity;
-  }
-
-  public set velocity(value: { x: number; y: number } | Vector | null) {
-    if (value === null) {
-      if (this._velocity !== null) {
-        this._velocity.destroy();
-        this._velocity = null;
-      }
-    } else {
-      if (this._velocity === null) {
-        this._velocity = new Vector(value.x, value.y);
-      } else {
-        this._velocity.set(value.x, value.y);
-      }
-    }
-  }
-
-  /** Distance-attenuation model. */
-  public get distanceModel(): DistanceModel {
-    return this._distanceModel;
-  }
-
-  public set distanceModel(value: DistanceModel) {
-    this._distanceModel = value;
-  }
-
-  /** Reference distance — volume is at full strength at and below this distance. */
-  public get refDistance(): number {
-    return this._refDistance;
-  }
-
-  public set refDistance(value: number) {
-    this._refDistance = Math.max(0, value);
-  }
-
-  /** Maximum distance for the `'linear'` model — volume reaches zero here. */
-  public get maxDistance(): number {
-    return this._maxDistance;
-  }
-
-  public set maxDistance(value: number) {
-    this._maxDistance = Math.max(0, value);
-  }
-
-  /** Falloff steepness. Higher values attenuate faster with distance. */
-  public get rolloffFactor(): number {
-    return this._rolloffFactor;
-  }
-
-  public set rolloffFactor(value: number) {
-    this._rolloffFactor = Math.max(0, value);
-  }
-
   public constructor(audioBuffer: AudioBuffer | null = null, options: SoundOptions = {}) {
     this._audioBuffer = audioBuffer;
     this._clipEnd = audioBuffer?.duration ?? 0;
 
-    const { poolSize, poolStrategy, priority, sprites, volume, loop, playbackRate, muted, distanceModel, refDistance, maxDistance, rolloffFactor } = options;
+    const { poolSize, poolStrategy, priority, sprites, volume, loop, playbackRate, muted } = options;
 
     this.volume = clamp(volume ?? 1, 0, 1);
     this.loop = loop ?? false;
@@ -325,19 +223,6 @@ export class Sound implements Playable {
     this._poolSize = Math.max(1, Math.floor(poolSize ?? 8));
     this._poolStrategy = poolStrategy ?? SoundPoolStrategy.FirstInFirstOut;
     this._priority = priority ?? 0;
-
-    if (distanceModel !== undefined) {
-      this._distanceModel = distanceModel;
-    }
-    if (refDistance !== undefined) {
-      this._refDistance = Math.max(0, refDistance);
-    }
-    if (maxDistance !== undefined) {
-      this._maxDistance = Math.max(0, maxDistance);
-    }
-    if (rolloffFactor !== undefined) {
-      this._rolloffFactor = Math.max(0, rolloffFactor);
-    }
 
     if (sprites) {
       this.setSprites(sprites);
@@ -429,10 +314,6 @@ export class Sound implements Playable {
       poolSize: this._poolSize,
       poolStrategy: this._poolStrategy,
       priority: this._priority,
-      distanceModel: this._distanceModel,
-      refDistance: this._refDistance,
-      maxDistance: this._maxDistance,
-      rolloffFactor: this._rolloffFactor,
     });
     clip._clipStart = start;
     clip._clipEnd = end;
@@ -553,7 +434,7 @@ export class Sound implements Playable {
   /**
    * Shared voice construction for full-buffer and sprite playback. Enforces the
    * pool limit, builds the {@link SoundVoice}, seeds spatialization from the
-   * descriptor's position, and tracks the voice for eviction.
+   * play-time options, and tracks the voice for eviction.
    */
   private _buildVoice(manager: AudioManager, options: PlayOptions, offset: number, window: SoundVoiceWindow): Voice {
     // @internal invariant: the buffer is non-null here. Both `_createVoice` and
@@ -592,12 +473,6 @@ export class Sound implements Playable {
       bus,
       manager,
       volume,
-      spatial: {
-        distanceModel: this._distanceModel,
-        refDistance: this._refDistance,
-        maxDistance: this._maxDistance,
-        rolloffFactor: this._rolloffFactor,
-      },
       buffer,
       loop,
       playbackRate,
@@ -606,11 +481,7 @@ export class Sound implements Playable {
       window,
     });
 
-    // Seed spatialization from the descriptor's position (initial value only;
-    // move a live voice via `voice.position` or `voice.follow(node)`).
-    if (this._position !== null) {
-      voice.position = this._position;
-    }
+    seedVoiceFromPlayOptions(voice, options);
 
     const startedAt = audioContext.currentTime;
     const effectiveDuration = loop ? Infinity : window.end - offset;
@@ -640,16 +511,6 @@ export class Sound implements Playable {
   public destroy(): void {
     this._stopAllVoices();
     this._sprites.clear();
-
-    if (this._position !== null) {
-      this._position.destroy();
-      this._position = null;
-    }
-
-    if (this._velocity !== null) {
-      this._velocity.destroy();
-      this._velocity = null;
-    }
   }
 
   private _pruneEndedVoices(): void {
