@@ -30,11 +30,12 @@
 - Modify: `src/audio/BaseVoice.ts`
 - Modify: `src/audio/AudioStream.ts`
 - Modify: `src/audio/AudioGenerator.ts`
+- Create: `src/audio/spatial-options.ts`
 - Rename + rewrite: `test/audio/sound-spatial.test.ts` → `test/audio/voice-spatial.test.ts`
 
 **Interfaces:**
-- Produces: `Spatializable` gains `distanceModel: DistanceModel`, `refDistance: number`, `maxDistance: number`, `rolloffFactor: number` (get/set pairs, alongside the existing `position`/`follow`). `PlayOptions` gains `position?: { x: number; y: number } | Vector`, `distanceModel?: DistanceModel`, `refDistance?: number`, `maxDistance?: number`, `rolloffFactor?: number`. `DistanceModel` type moves from `Sound.ts` to `Playable.ts` (still exported from the package root under the same name).
-- Consumed by: Task 3 (`panningModel`), Task 4 (`orientation`/cone), Task 5 (`velocity`) all extend the same `Spatializable`/`PlayOptions`/`BaseVoice` surface established here.
+- Produces: `Spatializable` gains `distanceModel: DistanceModel`, `refDistance: number`, `maxDistance: number`, `rolloffFactor: number` (get/set pairs, alongside the existing `position`/`follow`). `PlayOptions` gains `position?: { x: number; y: number } | Vector`, `distanceModel?: DistanceModel`, `refDistance?: number`, `maxDistance?: number`, `rolloffFactor?: number`. `DistanceModel` type moves from `Sound.ts` to `Playable.ts` (still exported from the package root under the same name). `seedVoiceFromPlayOptions(voice: Spatializable, options: PlayOptions): void` — a shared helper in the new `src/audio/spatial-options.ts`, applying every spatial `PlayOptions` field present on `options` to `voice` via its live public setters. Every `Playable._createVoice` implementation (`Sound`, `AudioStream`, `AudioGenerator`) calls it exactly once, right after constructing its voice, instead of hand-building spatial config or duplicating per-field seeding logic at each call site.
+- Consumed by: Task 3 (`panningModel`), Task 4 (`orientation`/cone), Task 5 (`velocity`) each add exactly one new field-check line to `seedVoiceFromPlayOptions` — they do NOT need to touch `Sound.ts`/`AudioStream.ts`/`AudioGenerator.ts` again, since those files' `_createVoice` implementations already call the shared helper unconditionally.
 
 - [ ] **Step 1: Move the `DistanceModel` type to `Playable.ts`**
 
@@ -284,22 +285,15 @@ In `clip()` (lines 416-441), remove the four spatial fields from the nested `new
   }
 ```
 
-In `_buildVoice()` (lines 558-629), replace the `spatial: {...}` block (lines 595-600) and the position-seeding block (lines 609-613) to read from `options` (the `PlayOptions` parameter) instead of `this`:
+In `_buildVoice()` (lines 558-629), remove the `spatial: {...}` block (lines 595-600) entirely from the `new SoundVoice({...})` call — the voice is now always constructed with its default spatial config, seeded afterward via the shared helper (Step 4a below):
 
 ```ts
-    const spatial: Partial<VoiceSpatialConfig> = {};
-    if (options.distanceModel !== undefined) spatial.distanceModel = options.distanceModel;
-    if (options.refDistance !== undefined) spatial.refDistance = options.refDistance;
-    if (options.maxDistance !== undefined) spatial.maxDistance = options.maxDistance;
-    if (options.rolloffFactor !== undefined) spatial.rolloffFactor = options.rolloffFactor;
-
     const voice = new SoundVoice({
       audioContext,
       output,
       bus,
       manager,
       volume,
-      spatial,
       buffer,
       loop,
       playbackRate,
@@ -308,17 +302,15 @@ In `_buildVoice()` (lines 558-629), replace the `spatial: {...}` block (lines 59
       window,
     });
 
-    // Seed spatialization from the per-play position option (initial value
-    // only; move a live voice via `voice.position` or `voice.follow(node)`).
-    if (options.position !== undefined) {
-      voice.position = options.position;
-    }
+    seedVoiceFromPlayOptions(voice, options);
 ```
 
-This needs `VoiceSpatialConfig` imported into `Sound.ts`:
+replacing the old position-seeding block (lines 609-613: `if (this._position !== null) { voice.position = this._position; }`) — that block referenced the descriptor's own `_position`, which no longer exists after this step.
+
+Add the import:
 
 ```ts
-import type { VoiceSpatialConfig } from './BaseVoice';
+import { seedVoiceFromPlayOptions } from './spatial-options';
 ```
 
 Remove the `position`/`velocity` cleanup from `destroy()` (lines 640-653), leaving:
@@ -330,31 +322,45 @@ Remove the `position`/`velocity` cleanup from `destroy()` (lines 640-653), leavi
   }
 ```
 
-- [ ] **Step 5: Wire the same `PlayOptions` spatial fields into `AudioStream` and `AudioGenerator`**
+- [ ] **Step 4a: Create the shared `seedVoiceFromPlayOptions` helper**
 
-Both already accept `spatial?: Partial<VoiceSpatialConfig>` through their constructors' inherited `BaseVoiceInit`, but neither `_createVoice` currently passes it (both omit `spatial` entirely, falling back to `defaultSpatialConfig`). Apply the identical conditional-key pattern from Step 4 to both, so a stream or generator voice can also be positioned in one `play()` call.
-
-In `src/audio/AudioStream.ts`'s `_createVoice` (around line 90), add before the `new AudioStreamVoice({...})` call:
+Create `src/audio/spatial-options.ts`:
 
 ```ts
-    const spatial: Partial<VoiceSpatialConfig> = {};
-    if (options.distanceModel !== undefined) spatial.distanceModel = options.distanceModel;
-    if (options.refDistance !== undefined) spatial.refDistance = options.refDistance;
-    if (options.maxDistance !== undefined) spatial.maxDistance = options.maxDistance;
-    if (options.rolloffFactor !== undefined) spatial.rolloffFactor = options.rolloffFactor;
+import type { PlayOptions, Spatializable } from './Playable';
+
+/**
+ * Apply every spatial {@link PlayOptions} field present on `options` to
+ * `voice`, via its live public setters — so a single `audio.play(sound,
+ * options)` call can fully configure a spatial emitter without a second
+ * step. Shared by every {@link Playable._createVoice} implementation
+ * (`Sound`, `AudioStream`, `AudioGenerator`) so a new spatial option only
+ * needs adding here once, not at every call site.
+ */
+export function seedVoiceFromPlayOptions(voice: Spatializable, options: PlayOptions): void {
+  if (options.distanceModel !== undefined) voice.distanceModel = options.distanceModel;
+  if (options.refDistance !== undefined) voice.refDistance = options.refDistance;
+  if (options.maxDistance !== undefined) voice.maxDistance = options.maxDistance;
+  if (options.rolloffFactor !== undefined) voice.rolloffFactor = options.rolloffFactor;
+  if (options.position !== undefined) voice.position = options.position;
+}
 ```
 
-and add `spatial,` to the `new AudioStreamVoice({...})` call's object literal, then after voice construction:
+(Distance-model fields are applied before `position` — though every field's own setter already independently handles "no panner yet" by caching onto `_spatialConfig`/its own private field, so this ordering is not required for correctness, only for readability: "configure how it attenuates, then place it".)
+
+- [ ] **Step 5: Call the shared helper from `AudioStream` and `AudioGenerator`**
+
+Neither `_createVoice` currently passes any spatial config (both omit the old `spatial` constructor field entirely) — add a single call to the new shared helper right after constructing the voice, exactly like Step 4's `Sound._buildVoice` change.
+
+In `src/audio/AudioStream.ts`'s `_createVoice` (around line 90), after the `new AudioStreamVoice({...})` call:
 
 ```ts
-    if (options.position !== undefined) {
-      voice.position = options.position;
-    }
+    seedVoiceFromPlayOptions(voice, options);
 ```
 
-(matching the exact placement pattern used in `Sound._buildVoice`). Add the import `import type { VoiceSpatialConfig } from './BaseVoice';` to `AudioStream.ts`.
+Add the import `import { seedVoiceFromPlayOptions } from './spatial-options';` to `AudioStream.ts`.
 
-Apply the identical change to `src/audio/AudioGenerator.ts`'s `_createVoice` (around line 154), before/after the `new AudioGeneratorVoice({...})` call, with the same import added.
+Apply the identical one-line addition to `src/audio/AudioGenerator.ts`'s `_createVoice` (around line 154), right after the `new AudioGeneratorVoice({...})` call, with the same import added.
 
 - [ ] **Step 6: Rewrite the spatial test file for the `Voice`-owned API**
 
@@ -708,8 +714,8 @@ Expected: all pass — this catches any other test file (e.g. `sound.test.ts`, `
 
 ```bash
 git add src/audio/Sound.ts src/audio/Playable.ts src/audio/BaseVoice.ts src/audio/AudioStream.ts src/audio/AudioGenerator.ts \
-        test/audio/voice-spatial.test.ts
-git status --short  # confirm sound-spatial.test.ts shows as deleted/renamed, voice-spatial.test.ts as added
+        src/audio/spatial-options.ts test/audio/voice-spatial.test.ts
+git status --short  # confirm sound-spatial.test.ts shows as deleted/renamed, voice-spatial.test.ts as added, spatial-options.ts as new
 git commit -m "$(cat <<'EOF'
 refactor(audio)!: move spatial descriptor state from Sound to Voice/PlayOptions
 
@@ -835,10 +841,11 @@ EOF
 - Modify: `src/audio/spatial-smoothing.ts`
 - Modify: `src/audio/BaseVoice.ts`
 - Modify: `src/audio/Playable.ts`
+- Modify: `src/audio/spatial-options.ts` (one line added to `seedVoiceFromPlayOptions`)
 - Test: `test/audio/voice-spatial.test.ts` (append), `test/audio/spatial-smoothing.test.ts` (append)
 
 **Interfaces:**
-- Consumes: `SpatialSmoothingSettings` (Task 1's `Spatializable`/`PlayOptions` extension pattern).
+- Consumes: `SpatialSmoothingSettings` (Task 1's `Spatializable`/`PlayOptions` extension pattern), `seedVoiceFromPlayOptions` (Task 1).
 - Produces: `SpatialSmoothingSettings.panningModel: 'equalpower' | 'HRTF'` (default `'equalpower'`). `Spatializable.panningModel: 'equalpower' | 'HRTF' | null` (`null` = inherit the app-wide default). `PlayOptions.panningModel?: 'equalpower' | 'HRTF'`.
 
 - [ ] **Step 1: Extend `SpatialSmoothingSettings`**
@@ -916,13 +923,13 @@ In `_ensurePanner()` (currently line 360, `panner.panningModel = 'equalpower';` 
     panner.panningModel = this._panningModel ?? this._manager.spatial.panningModel;
 ```
 
-Add `PanningModelType` handling to `PlayOptions` consumption: in `Sound.ts`'s `_buildVoice()` (and the identical spots added in `AudioStream.ts`/`AudioGenerator.ts` in Task 1 Step 5), after `voice.position = options.position;`, add:
+Add `panningModel` handling to the shared helper: in `src/audio/spatial-options.ts`, add one line to `seedVoiceFromPlayOptions` (after the `position` line):
 
 ```ts
-    if (options.panningModel !== undefined) {
-      voice.panningModel = options.panningModel;
-    }
+  if (options.panningModel !== undefined) voice.panningModel = options.panningModel;
 ```
+
+This is the ONLY change needed to propagate `panningModel` through every `Playable` type's `_createVoice` — `Sound.ts`/`AudioStream.ts`/`AudioGenerator.ts` are not touched again.
 
 - [ ] **Step 4: Tests**
 
@@ -1004,7 +1011,7 @@ Expected: all pass, no errors.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/audio/spatial-smoothing.ts src/audio/BaseVoice.ts src/audio/Playable.ts src/audio/Sound.ts src/audio/AudioStream.ts src/audio/AudioGenerator.ts \
+git add src/audio/spatial-smoothing.ts src/audio/BaseVoice.ts src/audio/Playable.ts src/audio/spatial-options.ts \
         test/audio/voice-spatial.test.ts test/audio/spatial-smoothing.test.ts
 git commit -m "$(cat <<'EOF'
 feat(audio): opt-in HRTF panning (app-wide default + per-voice override)
@@ -1024,6 +1031,7 @@ EOF
 **Files:**
 - Modify: `src/audio/BaseVoice.ts`
 - Modify: `src/audio/Playable.ts`
+- Modify: `src/audio/spatial-options.ts` (four lines added to `seedVoiceFromPlayOptions`)
 - Test: `test/audio/voice-spatial.test.ts` (append)
 
 **Interfaces:**
@@ -1170,24 +1178,18 @@ In `_ensurePanner()`, after the existing `panner.rolloffFactor = ...` line, add:
 
 and after `this._routeThroughPanner(panner);` / `this._panner = panner;`, call `this._writeOrientation();` once so a cone configured before the panner existed (e.g. via `PlayOptions.orientation`) is applied immediately rather than waiting for the next `_tickSpatial()`.
 
-- [ ] **Step 3: Wire `PlayOptions` cone fields into voice construction**
+- [ ] **Step 3: Wire the four cone fields into the shared helper**
 
-In `Sound.ts`'s `_buildVoice()` (and the matching spots in `AudioStream.ts`/`AudioGenerator.ts`), after the `panningModel` block from Task 3 Step 3, add:
+In `src/audio/spatial-options.ts`, add four lines to `seedVoiceFromPlayOptions` (after the `panningModel` line from Task 3):
 
 ```ts
-    if (options.orientation !== undefined) {
-      voice.orientation = options.orientation;
-    }
-    if (options.coneInnerAngle !== undefined) {
-      voice.coneInnerAngle = options.coneInnerAngle;
-    }
-    if (options.coneOuterAngle !== undefined) {
-      voice.coneOuterAngle = options.coneOuterAngle;
-    }
-    if (options.coneOuterGain !== undefined) {
-      voice.coneOuterGain = options.coneOuterGain;
-    }
+  if (options.orientation !== undefined) voice.orientation = options.orientation;
+  if (options.coneInnerAngle !== undefined) voice.coneInnerAngle = options.coneInnerAngle;
+  if (options.coneOuterAngle !== undefined) voice.coneOuterAngle = options.coneOuterAngle;
+  if (options.coneOuterGain !== undefined) voice.coneOuterGain = options.coneOuterGain;
 ```
+
+`Sound.ts`/`AudioStream.ts`/`AudioGenerator.ts` are not touched — every `_createVoice` already calls this same helper (Task 1).
 
 - [ ] **Step 4: Tests**
 
@@ -1271,7 +1273,7 @@ Expected: all pass, no errors.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/audio/BaseVoice.ts src/audio/Playable.ts src/audio/Sound.ts src/audio/AudioStream.ts src/audio/AudioGenerator.ts \
+git add src/audio/BaseVoice.ts src/audio/Playable.ts src/audio/spatial-options.ts \
         test/audio/voice-spatial.test.ts
 git commit -m "$(cat <<'EOF'
 feat(audio): directional cone emitters (orientation + native PannerNode cone)
@@ -1295,6 +1297,7 @@ EOF
 - Modify: `src/audio/Playable.ts`
 - Modify: `src/audio/SoundVoice.ts`
 - Modify: `src/audio/AudioStreamVoice.ts`
+- Modify: `src/audio/spatial-options.ts` (one line added to `seedVoiceFromPlayOptions`)
 - Test: `test/audio/voice-spatial.test.ts` (append), `test/audio/audio-listener.test.ts` (append)
 
 **Interfaces:**
@@ -1612,15 +1615,15 @@ Then add the Doppler hook, reading from the cached base rate (never the live ele
 
 Do NOT add an override to `AudioGeneratorVoice` (rate is already documented as inert there) or `InputVoice`/`NoopVoice` (no source rate to modulate) — they inherit `BaseVoice`'s no-op default.
 
-- [ ] **Step 6: Wire `PlayOptions.velocity` into voice construction**
+- [ ] **Step 6: Wire `velocity` into the shared helper**
 
-In `Sound.ts`'s `_buildVoice()` (and the matching spots in `AudioStream.ts`/`AudioGenerator.ts`), after the cone-fields block from Task 4 Step 3, add:
+In `src/audio/spatial-options.ts`, add one line to `seedVoiceFromPlayOptions` (after the cone fields from Task 4):
 
 ```ts
-    if (options.velocity !== undefined) {
-      voice.velocity = options.velocity;
-    }
+  if (options.velocity !== undefined) voice.velocity = options.velocity;
 ```
+
+`Sound.ts`/`AudioStream.ts`/`AudioGenerator.ts` are not touched — this completes the shared helper's full field set (position, distance model, panning model, cone/orientation, velocity), all seeded through one function call per `_createVoice` implementation, established once in Task 1.
 
 - [ ] **Step 7: Tests**
 
@@ -1699,7 +1702,7 @@ Expected: all pass, no errors.
 
 ```bash
 git add src/audio/spatial-smoothing.ts src/audio/BaseVoice.ts src/audio/AudioListener.ts src/audio/Playable.ts \
-        src/audio/SoundVoice.ts src/audio/AudioStreamVoice.ts src/audio/Sound.ts src/audio/AudioStream.ts src/audio/AudioGenerator.ts \
+        src/audio/SoundVoice.ts src/audio/AudioStreamVoice.ts src/audio/spatial-options.ts \
         test/audio/voice-spatial.test.ts test/audio/audio-listener.test.ts
 git commit -m "$(cat <<'EOF'
 feat(audio): Doppler shift (velocity-driven playbackRate modulation)
@@ -1779,4 +1782,5 @@ EOF
 - **Spec coverage:** Design spec §1 non-goals (no Z axis, no `ImpulseResponse`, no `View`-following emitters) — respected throughout; no task introduces any of them. §3 (Sound loses all spatial state, moves to Voice/PlayOptions) — Task 1. §4 (panningModel default/override, cone/orientation, explicit-not-auto-synced) — Tasks 3-4. §5 (Doppler, velocity explicit-or-auto, dopplerFactor default 0, not an AudioEffect) — Task 5. §6 (listener/View interaction) — no code change needed, confirmed unaffected by this plan's changes (the existing `AudioListenerTarget` handling in `AudioListener._readTargetPosition()` is untouched). §7 (migration impact, all 3 examples + guide) — Task 2. §8 (testing approach) — corrected from the design doc's over-broad mention of the `browser-audio-chromium` Playwright project (that infrastructure lives in `packages/exojs-audio-fx`, a different package, and Doppler here is pure JS parameter math, not sample-level DSP) to jsdom-level math verification tests matching this codebase's actual `test/audio/` conventions.
 - **Placeholder scan:** Every step gives exact code or an exact command, except the one explicitly-flagged exception in Task 5 Step 3 (the precise Doppler ratio formula), which is deliberately left as an implementer decision per the design spec's own framing ("the exact formula is a plan-level/implementation-level decision") — bounded by a concrete list of requirements (line-of-sight projection, `speedOfSound`/`dopplerFactor` tunables, sane clamp range) and a concrete test asserting the chosen formula's directional correctness.
 - **Type consistency:** `Spatializable.velocity`/`panningModel`/`orientation`/`coneInnerAngle`/`coneOuterAngle`/`coneOuterGain` match exactly between `Playable.ts`'s interface, `BaseVoice.ts`'s implementation, and every `PlayOptions` consumption site (`Sound.ts`, `AudioStream.ts`, `AudioGenerator.ts`) across Tasks 1, 3, 4, and 5. `DistanceModel` is moved (not duplicated) from `Sound.ts` to `Playable.ts` in Task 1 Step 1, and every later task's code samples reference it only via that new location.
+- **Duplication fix (pre-flight, owner-requested):** the original draft had each of Tasks 1/3/4/5 independently touching `Sound.ts`, `AudioStream.ts`, and `AudioGenerator.ts` to seed their own new `PlayOptions` field — 3 files × 4 tasks of near-identical conditional-assignment blocks. Replaced with a single shared `seedVoiceFromPlayOptions()` helper (`src/audio/spatial-options.ts`, introduced in Task 1), which each `_createVoice` implementation calls exactly once; Tasks 3/4/5 now only ever add lines to that one function.
 - **Correctness bug caught during self-review (fixed inline, Task 5 Step 5):** `AudioStreamVoice`'s existing `playbackRate` getter/setter has no separate base-rate cache — it reads/writes `this._element.playbackRate` directly. A naive `_applyDopplerRate` reading `this.playbackRate` would have compounded each tick's Doppler ratio onto the previous tick's already-modulated rate instead of the user's true base rate, drifting further off every frame. Fixed by adding a `_basePlaybackRate` cache mirroring `SoundVoice`'s existing (already-correct) pattern, and updating the existing getter/setter to route through it.
