@@ -98,6 +98,83 @@ voice.refDistance = 80;
 voice.rolloffFactor = 2;
 ```
 
+## Panning model: equalpower vs HRTF
+
+The `PannerNode` behind every spatial voice supports two panning algorithms. `'equalpower'` (the default) is a cheap constant-power pan — it works identically on any speaker setup and is what you want for the vast majority of sources. `'HRTF'` filters each source through a head-related transfer function, which sounds convincingly *directional* — behind you, above-ish, close — but only through headphones, and it costs meaningfully more CPU per voice than `'equalpower'`. Reserve it for a handful of sources that most benefit from it (a stalking enemy, a narrated whisper), not for every voice in a busy scene.
+
+Switch the app-wide default once:
+
+```js
+app.audio.spatial.panningModel = 'HRTF';
+```
+
+Or override it per source, leaving the app-wide default untouched for everything else:
+
+```js
+const voice = app.audio.play(footsteps, {
+    position: { x: npc.x, y: npc.y },
+    panningModel: 'HRTF',
+});
+```
+
+A voice's `panningModel` is also a live setter — set it back to `null` to drop the override and re-inherit `app.audio.spatial.panningModel`:
+
+```js
+voice.panningModel = null;
+```
+
+## Directional emitters (cone)
+
+A spatial voice can face a direction and attenuate sound outside a cone in front of it — useful for directional sources like a turret's alarm, a megaphone, or a flashlight-mounted speaker. `orientation` is in degrees and follows the same convention as [`SceneNode.rotation`](/ExoJS/en/api/scene-node/): `0°` is local +X ("east"), and positive values rotate clockwise.
+
+`orientation` alone has no audible effect — a source is omnidirectional until you narrow `coneInnerAngle`/`coneOuterAngle` below the default `360°`. Inside `coneInnerAngle` the source plays at full volume; between `coneInnerAngle` and `coneOuterAngle` it fades toward `coneOuterGain`; beyond `coneOuterAngle` it plays at `coneOuterGain`.
+
+```js
+const alarm = app.audio.play(alarmLoop, {
+    loop: true,
+    position: { x: turret.x, y: turret.y },
+    orientation: turret.rotation,
+    coneInnerAngle: 30,
+    coneOuterAngle: 90,
+    coneOuterGain: 0.1,
+});
+```
+
+<Callout type="warning" title="orientation is not auto-synced with follow()">
+`voice.follow(node)` keeps `position` in sync with a tracked node every frame, but it does **not** touch `orientation` — a rotating emitter's facing direction has no single obvious source (a turret's barrel and its base may rotate independently, for instance), so this stays an explicit, per-frame assignment you own:
+
+```js
+update(delta) {
+    voice.follow(this.turret);          // position tracks automatically...
+    voice.orientation = this.turret.rotation; // ...orientation does not
+}
+```
+</Callout>
+
+## Doppler shift
+
+Doppler pitch-shifting is off by default (`app.audio.spatial.dopplerFactor` is `0`) — enabling it costs nothing extra when unused, since the engine skips the calculation entirely while the factor is zero. Turn it on app-wide with:
+
+```js
+app.audio.spatial.dopplerFactor = 1;
+```
+
+`1` is a physically-scaled shift (relative to the tunable `app.audio.spatial.speedOfSound`); many games deliberately exaggerate beyond `1` for a punchier effect on fast-moving sources like vehicles or projectiles.
+
+The effect needs a velocity to work with. Set it explicitly on a voice:
+
+```js
+voice.velocity = { x: 120, y: 0 };
+```
+
+Or omit it entirely and let the engine derive it automatically each frame from the position deltas of a followed node:
+
+```js
+voice.follow(car); // no explicit velocity — derived from car's frame-to-frame position
+```
+
+The same explicit-or-derived rule applies symmetrically to the listener: set `app.audio.listener.velocity` directly, or leave it alone while `app.audio.listener.target` is set and it derives from the target's own movement.
+
 ## Practical use
 
 The most common pattern is to set the listener's target to the camera or player once in `init`, then pass a `position` in `PlayOptions` right before each one-shot play:

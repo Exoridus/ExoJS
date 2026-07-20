@@ -1,6 +1,6 @@
 {
   "title": "AudioListener",
-  "description": "Singleton observer position fed to the Web Audio panner nodes used by spatial sounds. Sets the listener orientation once at setup (forward = -Z, up = +Y for 2D scenes) and updates `positionX/Y/Z` (or legacy `setPosition`) every frame from AudioListener.position — which is in turn read from AudioListener.target when one is set. Owned by AudioManager; one instance per engine. `velocity` is a placeholder for future Doppler support (currently not piped to the Web Audio listener).",
+  "description": "Singleton observer position fed to the Web Audio panner nodes used by spatial sounds. Sets the listener orientation once at setup (forward = -Z, up = +Y for 2D scenes) and updates `positionX/Y/Z` (or legacy `setPosition`) every frame from AudioListener.position — which is in turn read from AudioListener.target when one is set. Owned by AudioManager; one instance per engine. `velocity` feeds the Doppler calculation on every spatial BaseVoice — explicit when set, else auto-derived each frame from the listener's own position delta (same fallback BaseVoice.velocity uses).",
   "symbol": "AudioListener",
   "kind": "class",
   "subsystem": "audio",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Singleton observer position fed to the Web Audio panner nodes used by spatial sounds. Sets the listener orientation once at setup (forward = -Z, up = +Y for 2D scenes) and updates `positionX/Y/Z` (or legacy `setPosition`) every frame from AudioListener.position — which is in turn read from AudioListener.target when one is set.",
-        "Owned by AudioManager; one instance per engine. `velocity` is a placeholder for future Doppler support (currently not piped to the Web Audio listener)."
+        "Owned by AudioManager; one instance per engine. `velocity` feeds the Doppler calculation on every spatial BaseVoice — explicit when set, else auto-derived each frame from the listener's own position delta (same fallback BaseVoice.velocity uses)."
       ],
       "importLine": "import { AudioListener } from '@codexo/exojs'",
       "sourceLink": null

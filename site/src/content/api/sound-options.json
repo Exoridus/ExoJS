@@ -6,11 +6,11 @@
   "subsystem": "audio",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 12,
+  "memberCount": 8,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 12,
+    "properties": 8,
     "events": 0
   },
   "sections": [
@@ -28,31 +28,6 @@
       "id": "properties",
       "title": "Properties",
       "members": [
-        {
-          "name": "distanceModel",
-          "signature": "distanceModel?: DistanceModel",
-          "signatureTokens": [
-            {
-              "text": "distanceModel",
-              "kind": "name"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "DistanceModel",
-              "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Distance-attenuation model. Default: 'linear'."
-        },
         {
           "name": "loop",
           "signature": "loop?: boolean",
@@ -77,31 +52,6 @@
           "params": [],
           "returnType": null,
           "description": "Default loop setting. Default: false."
-        },
-        {
-          "name": "maxDistance",
-          "signature": "maxDistance?: number",
-          "signatureTokens": [
-            {
-              "text": "maxDistance",
-              "kind": "name"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "For the 'linear' model: distance at which volume reaches zero. Default: 1000."
         },
         {
           "name": "muted",
@@ -227,56 +177,6 @@
           "params": [],
           "returnType": null,
           "description": ""
-        },
-        {
-          "name": "refDistance",
-          "signature": "refDistance?: number",
-          "signatureTokens": [
-            {
-              "text": "refDistance",
-              "kind": "name"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Distance below which volume is at full strength. Default: 50."
-        },
-        {
-          "name": "rolloffFactor",
-          "signature": "rolloffFactor?: number",
-          "signatureTokens": [
-            {
-              "text": "rolloffFactor",
-              "kind": "name"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Falloff rate. Higher = steeper attenuation. Default: 1."
         },
         {
           "name": "sprites",

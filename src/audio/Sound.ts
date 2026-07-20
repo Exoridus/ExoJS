@@ -7,8 +7,8 @@ import type { AudioBus } from './AudioBus';
 import type { AudioManager } from './AudioManager';
 import { NoopVoice } from './NoopVoice';
 import type { Playable, PlayOptions, Voice } from './Playable';
-import { seedVoiceFromPlayOptions } from './spatial-options';
 import { SoundVoice, type SoundVoiceWindow } from './SoundVoice';
+import { seedVoiceFromPlayOptions } from './spatial-options';
 
 /**
  * Eviction strategy used when the pool is full and a new play is requested.
