@@ -1,0 +1,219 @@
+{
+  "title": "InvalidSceneRegistrationError",
+  "description": "Thrown (dev builds only) when `ApplicationOptions.scenes` contains a value that is not a Scene subclass constructor.",
+  "symbol": "InvalidSceneRegistrationError",
+  "kind": "class",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 6,
+  "counts": {
+    "constructors": 1,
+    "methods": 0,
+    "properties": 5,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Thrown (dev builds only) when `ApplicationOptions.scenes` contains a value that is not a Scene subclass constructor."
+      ],
+      "importLine": "import { InvalidSceneRegistrationError } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(key: string): InvalidSceneRegistrationError",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "key",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "InvalidSceneRegistrationError",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "key",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "InvalidSceneRegistrationError",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "cause",
+          "signature": "cause?: unknown",
+          "signatureTokens": [
+            {
+              "text": "cause",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "key",
+          "signature": "key: string",
+          "signatureTokens": [
+            {
+              "text": "key",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "message",
+          "signature": "message: string",
+          "signatureTokens": [
+            {
+              "text": "message",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "name",
+          "signature": "name: string",
+          "signatureTokens": [
+            {
+              "text": "name",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "stack",
+          "signature": "stack?: string",
+          "signatureTokens": [
+            {
+              "text": "stack",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/SceneTypes.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneTypes.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/SceneTypes.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneTypes.ts"
+}

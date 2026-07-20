@@ -1,0 +1,136 @@
+{
+  "title": "SetSceneArgs",
+  "description": "Tuple type for the variadic tail of `setScene`/`start` calls, after the target constructor. When `Data` is `void` there is no data slot — only `options`. Otherwise `data` is required and `options` is optional. **Runtime caveat:** `Data` has no runtime representation (erased). A single tail argument is classified as *options* when it is a plain object whose keys are a subset of `{ transition, retainCurrent }` (see resolveSetSceneArgs) — otherwise it is classified as *data*. A scene whose `Data` shape's only keys happen to be named `transition` and/or `retainCurrent` would be misread as options; avoid that shape, or nest such fields one level deeper.",
+  "symbol": "SetSceneArgs",
+  "kind": "type",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Tuple type for the variadic tail of `setScene`/`start` calls, after the target constructor. When `Data` is `void` there is no data slot — only `options`. Otherwise `data` is required and `options` is optional.",
+        "**Runtime caveat:** `Data` has no runtime representation (erased). A single tail argument is classified as *options* when it is a plain object whose keys are a subset of `{ transition, retainCurrent }` (see resolveSetSceneArgs) — otherwise it is classified as *data*. A scene whose `Data` shape's only keys happen to be named `transition` and/or `retainCurrent` would be misread as options; avoid that shape, or nest such fields one level deeper."
+      ],
+      "importLine": "import { SetSceneArgs } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "SetSceneArgs",
+          "signature": "[Data] extends [void] ? [options] : [data, options]",
+          "signatureTokens": [
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Data",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "extends",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": " ? ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": " : ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "data",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/SceneTypes.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneTypes.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/SceneTypes.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneTypes.ts"
+}

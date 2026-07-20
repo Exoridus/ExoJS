@@ -1,7 +1,7 @@
 {
-  "title": "SceneTransition",
-  "description": "Discriminated union of supported SceneDirector transitions.",
-  "symbol": "SceneTransition",
+  "title": "AnySceneConstructor",
+  "description": "A SceneConstructor for any activation-data type — used for registry storage and navigation targets whose `Data` is not statically known.",
+  "symbol": "AnySceneConstructor",
   "kind": "type",
   "subsystem": "core",
   "importPath": "@codexo/exojs",
@@ -19,9 +19,9 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Discriminated union of supported SceneDirector transitions."
+        "A SceneConstructor for any activation-data type — used for registry storage and navigation targets whose `Data` is not statically known."
       ],
-      "importLine": "import { SceneTransition } from '@codexo/exojs'",
+      "importLine": "import { AnySceneConstructor } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
@@ -29,12 +29,24 @@
       "title": "Definition",
       "members": [
         {
-          "name": "SceneTransition",
-          "signature": "FadeSceneTransition",
+          "name": "AnySceneConstructor",
+          "signature": "SceneConstructor<any>",
           "signatureTokens": [
             {
-              "text": "FadeSceneTransition",
+              "text": "SceneConstructor",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "any",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             }
           ],
           "params": [],

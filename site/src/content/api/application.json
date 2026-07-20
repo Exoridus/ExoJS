@@ -6,10 +6,10 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 49,
+  "memberCount": 50,
   "counts": {
     "constructors": 1,
-    "methods": 8,
+    "methods": 9,
     "properties": 32,
     "events": 8
   },
@@ -393,7 +393,7 @@
         },
         {
           "name": "start",
-          "signature": "start(scene: Scene): Promise<Application>",
+          "signature": "start(): Promise<Application>",
           "signatureTokens": [
             {
               "text": "start",
@@ -404,7 +404,48 @@
               "kind": "punctuation"
             },
             {
-              "text": "scene",
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Application",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": "Promise<Application>",
+          "description": "Initialize the render backend, await capability detection, and start the per-frame loop without activating a scene. Use start(target, data?) to start directly into a registered scene. Idempotent — if the application is already running the call is a no-op. On error the status returns to Stopped and the error propagates."
+        },
+        {
+          "name": "start",
+          "signature": "start(target: C, args: SetSceneArgs<InferSceneData<C>>): Promise<Application>",
+          "signatureTokens": [
+            {
+              "text": "start",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "target",
               "kind": "param"
             },
             {
@@ -412,8 +453,48 @@
               "kind": "punctuation"
             },
             {
-              "text": "Scene",
+              "text": "C",
               "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "args",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SetSceneArgs",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "InferSceneData",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "C",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             },
             {
               "text": ")",
@@ -442,13 +523,18 @@
           ],
           "params": [
             {
-              "name": "scene",
-              "type": "Scene",
+              "name": "target",
+              "type": "C",
+              "optional": false
+            },
+            {
+              "name": "args",
+              "type": "SetSceneArgs<InferSceneData<C>>",
               "optional": false
             }
           ],
           "returnType": "Promise<Application>",
-          "description": "Initialize the render backend, await capability detection, set the initial scene, and start the per-frame loop. Idempotent — if the application is already running the call is a no-op. On error the status returns to Stopped and the error propagates."
+          "description": "Initialize the render backend, await capability detection, activate target (a constructor registered in ApplicationOptions.scenes), and start the per-frame loop. Idempotent — if the application is already running the call is a no-op. On error the status returns to Stopped and the error propagates."
         },
         {
           "name": "stop",

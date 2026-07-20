@@ -6,11 +6,11 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 10,
+  "memberCount": 11,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 10,
+    "properties": 11,
     "events": 0
   },
   "sections": [
@@ -262,6 +262,51 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "scenes",
+          "signature": "scenes?: Record<string, AnySceneConstructor>",
+          "signatureTokens": [
+            {
+              "text": "scenes",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AnySceneConstructor",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Registry of navigable Scene constructors, keyed by a diagnostics-only name (shown in UnregisteredSceneError messages and duplicate-registration errors). Required for any Application.start / SceneDirector.setScene call that targets a constructor — unregistered targets reject in development builds. Validated once at construction: every value must be a Scene subclass constructor (checked without instantiating it), and no constructor may appear under more than one key."
         },
         {
           "name": "seed",

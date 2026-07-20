@@ -1,7 +1,7 @@
 {
-  "title": "SceneTransition",
-  "description": "Discriminated union of supported SceneDirector transitions.",
-  "symbol": "SceneTransition",
+  "title": "SceneConstructor",
+  "description": "Zero-argument constructor for a Scene subclass. `Data` is the activation-data type this scene expects, inferred at navigation call sites via InferSceneData.",
+  "symbol": "SceneConstructor",
   "kind": "type",
   "subsystem": "core",
   "importPath": "@codexo/exojs",
@@ -19,9 +19,9 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Discriminated union of supported SceneDirector transitions."
+        "Zero-argument constructor for a Scene subclass. `Data` is the activation-data type this scene expects, inferred at navigation call sites via InferSceneData."
       ],
-      "importLine": "import { SceneTransition } from '@codexo/exojs'",
+      "importLine": "import { SceneConstructor } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
@@ -29,12 +29,32 @@
       "title": "Definition",
       "members": [
         {
-          "name": "SceneTransition",
-          "signature": "FadeSceneTransition",
+          "name": "SceneConstructor",
+          "signature": "() => Scene<Data>",
           "signatureTokens": [
             {
-              "text": "FadeSceneTransition",
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Scene",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Data",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             }
           ],
           "params": [],
