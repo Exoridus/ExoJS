@@ -1,18 +1,7 @@
 import { Application, Color, Graphics, type RenderingContext, Scene, Sprite } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: new Color(10, 12, 20),
-    loader: {
-        basePath: 'assets/',
-    },
-});
+
 
 // Everything the pointer pipeline reports, surfaced at once:
 //   - live position (onPointerMove)
@@ -101,4 +90,18 @@ class MouseAndPointerScene extends Scene {
     }
 }
 
-app.start(new MouseAndPointerScene());
+const app = new Application({
+    scenes: { MouseAndPointerScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: new Color(10, 12, 20),
+    loader: {
+        basePath: 'assets/',
+    },
+});
+
+app.start(MouseAndPointerScene);

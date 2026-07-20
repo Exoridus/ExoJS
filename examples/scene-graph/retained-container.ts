@@ -1,15 +1,7 @@
 import { Application, Color, Container, Rectangle, type RenderingContext, RetainedContainer, Scene, Sprite, Texture, type Time } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: new Color(6, 9, 18, 1),
-});
+
 
 // A decor field far larger than the viewport: thousands of sprites that are
 // authored ONCE and never mutated again — the exact shape the retained tier is
@@ -142,7 +134,18 @@ class RetainedContainerScene extends Scene {
     }
 }
 
-app.start(new RetainedContainerScene());
+const app = new Application({
+    scenes: { RetainedContainerScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: new Color(6, 9, 18, 1),
+});
+
+app.start(RetainedContainerScene);
 
 /** Draw a small 2x2 sprite atlas procedurally so the example needs no asset load. */
 function createAtlasTexture(): Texture {

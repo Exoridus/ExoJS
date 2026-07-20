@@ -11,15 +11,7 @@ const VIDEOS = [
     { name: 'hdr10',    label: 'HDR10 (webm)',     url: assets.demo.video.hdr10 },
 ];
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-});
+
 
 class VideoDrawableScene extends Scene {
     private video!: Video;
@@ -126,4 +118,15 @@ class VideoDrawableScene extends Scene {
     }
 }
 
-app.start(new VideoDrawableScene());
+const app = new Application({
+    scenes: { VideoDrawableScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+});
+
+app.start(VideoDrawableScene);

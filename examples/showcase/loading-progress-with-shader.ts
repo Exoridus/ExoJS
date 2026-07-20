@@ -1,17 +1,6 @@
 import { Application, Color, RenderBackendType, type RenderingContext, Scene, Sprite, Text, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
+
 
 const glsl = `#version 300 es
 precision mediump float; uniform float uProgress; in vec2 vUv; out vec4 fragColor;
@@ -63,4 +52,18 @@ class LoadingProgressWithShaderScene extends Scene {
     }
 }
 
-app.start(new LoadingProgressWithShaderScene());
+const app = new Application({
+    scenes: { LoadingProgressWithShaderScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+
+app.start(LoadingProgressWithShaderScene);

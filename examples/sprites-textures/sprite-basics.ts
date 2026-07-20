@@ -1,18 +1,7 @@
 import { Application, Color, type RenderingContext, Scene, Sprite, type Time } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: new Color(18, 20, 28),
-    loader: {
-        basePath: 'assets/',
-    },
-});
+
 
 class SpriteBasicsScene extends Scene {
     private ship!: Sprite;
@@ -71,4 +60,18 @@ class SpriteBasicsScene extends Scene {
     }
 }
 
-app.start(new SpriteBasicsScene());
+const app = new Application({
+    scenes: { SpriteBasicsScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: new Color(18, 20, 28),
+    loader: {
+        basePath: 'assets/',
+    },
+});
+
+app.start(SpriteBasicsScene);

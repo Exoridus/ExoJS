@@ -1,17 +1,5 @@
 // Auto-generated from texture-loader.ts — edit the .ts source, not this file.
 import { Application, Color, Graphics, Scene, Sprite, Text } from '@codexo/exojs';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
 class TextureLoaderScene extends Scene {
     sprites;
     textures;
@@ -64,4 +52,17 @@ class TextureLoaderScene extends Scene {
         }
     }
 }
-app.start(new TextureLoaderScene());
+const app = new Application({
+    scenes: { TextureLoaderScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+app.start(TextureLoaderScene);

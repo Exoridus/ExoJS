@@ -1,17 +1,5 @@
 // Auto-generated from tween-basics.ts — edit the .ts source, not this file.
 import { Application, Color, Scene, Sprite, Text } from '@codexo/exojs';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
 class TweenBasicsScene extends Scene {
     sprite;
     text;
@@ -46,4 +34,17 @@ class TweenBasicsScene extends Scene {
         context.render(this.text);
     }
 }
-app.start(new TweenBasicsScene());
+const app = new Application({
+    scenes: { TweenBasicsScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+app.start(TweenBasicsScene);

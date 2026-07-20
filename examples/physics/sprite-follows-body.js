@@ -6,15 +6,6 @@ import { mountControls } from '@examples/runtime';
 // collider and binds it to the node in one call. After every `world.step(...)`
 // the body's position and rotation are written onto the bound sprite, so the
 // sprite simply "follows the body". A static floor stops the falling actor.
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: new Color(18, 22, 33),
-});
 class SpriteFollowsBodyScene extends Scene {
     world;
     actor;
@@ -99,4 +90,14 @@ class SpriteFollowsBodyScene extends Scene {
         context.render(this.actor);
     }
 }
-app.start(new SpriteFollowsBodyScene());
+const app = new Application({
+    scenes: { SpriteFollowsBodyScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: new Color(18, 22, 33),
+});
+app.start(SpriteFollowsBodyScene);

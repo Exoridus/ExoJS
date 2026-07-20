@@ -1,15 +1,6 @@
 // Auto-generated from noise-vignette.ts — edit the .ts source, not this file.
 import { Application, Color, RenderBackendType, Scene, Sprite, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-});
 // A detailed full-frame texture so grain + vignette read as a screen-wide post
 // effect rather than decorating one small sprite.
 const UV_GRID = assets.technical.filtering.uvGrid256;
@@ -83,4 +74,14 @@ class NoiseVignetteScene extends Scene {
         context.render(this.sprite);
     }
 }
-app.start(new NoiseVignetteScene());
+const app = new Application({
+    scenes: { NoiseVignetteScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+});
+app.start(NoiseVignetteScene);

@@ -1,17 +1,5 @@
 // Auto-generated from stroke-and-shadow.ts — edit the .ts source, not this file.
 import { Application, Color, Scene, Text } from '@codexo/exojs';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
 class StrokeAndShadowScene extends Scene {
     title;
     init() {
@@ -38,4 +26,17 @@ class StrokeAndShadowScene extends Scene {
         context.render(this.title);
     }
 }
-app.start(new StrokeAndShadowScene());
+const app = new Application({
+    scenes: { StrokeAndShadowScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+app.start(StrokeAndShadowScene);

@@ -74,10 +74,6 @@ const C = {
     accent: new Color(100, 180, 255),
     black: new Color(0, 0, 0),
 };
-const app = new Application({
-    canvas: { width: W, height: H, mount: document.body, sizingMode: 'fit' },
-    clearColor: C.bg,
-});
 class AssetBrowserScene extends Scene {
     cat = 'textures';
     key = null;
@@ -1015,4 +1011,9 @@ class AssetBrowserScene extends Scene {
         context.render(this.txtAnimFrame);
     }
 }
-app.start(new AssetBrowserScene());
+const app = new Application({
+    scenes: { AssetBrowserScene },
+    canvas: { width: W, height: H, mount: document.body, sizingMode: 'fit' },
+    clearColor: C.bg,
+});
+app.start(AssetBrowserScene);

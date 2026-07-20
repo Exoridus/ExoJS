@@ -1,15 +1,5 @@
 // Auto-generated from gradient.ts — edit the .ts source, not this file.
 import { Application, Color, LinearGradient, RadialGradient, Scene, Sprite } from '@codexo/exojs';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    backend: { type: 'webgl2' },
-});
 class GradientScene extends Scene {
     backgroundGradient;
     background;
@@ -58,7 +48,18 @@ class GradientScene extends Scene {
         this.orbGradient?.destroy();
     }
 }
-app.start(new GradientScene()).catch(() => {
+const app = new Application({
+    scenes: { GradientScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    backend: { type: 'webgl2' },
+});
+app.start(GradientScene).catch(() => {
     app.canvas.remove();
     app.destroy();
 });

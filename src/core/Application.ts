@@ -32,8 +32,8 @@ import { FixedTimestep } from './FixedTimestep';
 import { computeLetterboxLayout } from './letterbox';
 import { hello, logger } from './logging';
 import { Perf } from './Perf';
-import type { Scene } from './Scene';
 import { SceneDirector } from './SceneDirector';
+import type { AnySceneConstructor, InferSceneData, SetSceneArgs } from './SceneTypes';
 import { defaultSerializationRegistry, SerializationRegistry } from './serialization/SerializationRegistry';
 import { Signal } from './Signal';
 import { SystemRegistry } from './SystemRegistry';
@@ -138,6 +138,17 @@ export interface ApplicationOptions {
    * already-constructed Applications.
    */
   extensions?: readonly Extension[];
+  /**
+   * Registry of navigable {@link Scene} constructors, keyed by a
+   * diagnostics-only name (shown in {@link UnregisteredSceneError} messages
+   * and duplicate-registration errors). Required for any
+   * {@link Application.start} / {@link SceneDirector.setScene} call that
+   * targets a constructor — unregistered targets reject in development
+   * builds. Validated once at construction: every value must be a
+   * {@link Scene} subclass constructor (checked without instantiating it),
+   * and no constructor may appear under more than one key.
+   */
+  scenes?: Record<string, AnySceneConstructor>;
 }
 
 export interface WebGl2BackendConfig {
@@ -442,7 +453,7 @@ export class Application {
     this.input = new InputManager(this);
     this.focus = new FocusManager(this);
     this.interaction = new InteractionManager(this);
-    this.scenes = new SceneDirector(this);
+    this.scenes = new SceneDirector(this, appSettings.scenes);
     this.random = new Random(this.options.seed);
     this._updateHandler = this.update.bind(this);
 
@@ -655,12 +666,22 @@ export class Application {
   }
 
   /**
-   * Initialize the render backend, await capability detection, set the
-   * initial scene, and start the per-frame loop. Idempotent — if the
-   * application is already running the call is a no-op. On error the
-   * status returns to `Stopped` and the error propagates.
+   * Initialize the render backend, await capability detection, and start the
+   * per-frame loop without activating a scene. Use `start(target, data?)` to
+   * start directly into a registered scene. Idempotent — if the application
+   * is already running the call is a no-op. On error the status returns to
+   * `Stopped` and the error propagates.
    */
-  public async start(scene: Scene): Promise<this> {
+  public async start(): Promise<this>;
+  /**
+   * Initialize the render backend, await capability detection, activate
+   * `target` (a constructor registered in `ApplicationOptions.scenes`), and
+   * start the per-frame loop. Idempotent — if the application is already
+   * running the call is a no-op. On error the status returns to `Stopped`
+   * and the error propagates.
+   */
+  public async start<C extends AnySceneConstructor>(target: C, ...args: SetSceneArgs<InferSceneData<C>>): Promise<this>;
+  public async start(target?: AnySceneConstructor, ...args: readonly unknown[]): Promise<this> {
     invariant(!this._destroyed, 'Application.start() was called after destroy(). Construct a new Application instead of reusing a destroyed one.');
 
     if (this._status === ApplicationStatus.Stopped) {
@@ -678,7 +699,11 @@ export class Application {
         }
 
         this._capabilities = await capabilitiesPromise;
-        await this.scenes.setScene(scene);
+
+        if (target !== undefined) {
+          await this.scenes.setScene(target, ...(args as SetSceneArgs<InferSceneData<typeof target>>));
+        }
+
         this._frameRequest = requestAnimationFrame(this._updateHandler);
         this._frameClock.restart();
         this._fixed.reset();
@@ -884,7 +909,7 @@ export class Application {
     if (this._status === ApplicationStatus.Running) {
       this._status = ApplicationStatus.Halting;
       cancelAnimationFrame(this._frameRequest);
-      void this.scenes.setScene(null).catch((error: unknown) => {
+      void this.scenes._clearScene().catch((error: unknown) => {
         logger.error('Application.stop() failed to unload the active scene.', { source: 'Application', ...(error instanceof Error && { error }) });
         this.onError?.dispatch(error instanceof Error ? error : new Error(String(error)));
       });

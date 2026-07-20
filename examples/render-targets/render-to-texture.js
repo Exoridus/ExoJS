@@ -1,17 +1,5 @@
 // Auto-generated from render-to-texture.ts — edit the .ts source, not this file.
 import { Application, Color, Container, RenderTexture, Scene, Sprite } from '@codexo/exojs';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
 class RenderToTextureScene extends Scene {
     container;
     renderTexture;
@@ -52,4 +40,17 @@ class RenderToTextureScene extends Scene {
         context.render(this.renderSprite);
     }
 }
-app.start(new RenderToTextureScene());
+const app = new Application({
+    scenes: { RenderToTextureScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+app.start(RenderToTextureScene);

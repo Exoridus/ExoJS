@@ -119,16 +119,6 @@ class CustomTriangleRenderer {
         return buffer;
     }
 }
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    backend: { type: 'webgpu' },
-});
 class CustomTriangleRendererScene extends Scene {
     triangleRenderer;
     init() {
@@ -144,7 +134,18 @@ class CustomTriangleRendererScene extends Scene {
         this.triangleRenderer?.destroy();
     }
 }
-app.start(new CustomTriangleRendererScene()).catch(() => {
+const app = new Application({
+    scenes: { CustomTriangleRendererScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    backend: { type: 'webgpu' },
+});
+app.start(CustomTriangleRendererScene).catch(() => {
     app.canvas.remove();
     app.destroy();
 });

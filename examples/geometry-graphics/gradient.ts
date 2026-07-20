@@ -1,15 +1,6 @@
 import { Application, Color, LinearGradient, RadialGradient, type RenderingContext, Scene, Sprite, type Time } from '@codexo/exojs';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    backend: { type: 'webgl2' },
-});
+
 
 class GradientScene extends Scene {
     private backgroundGradient!: LinearGradient;
@@ -72,7 +63,19 @@ class GradientScene extends Scene {
     }
 }
 
-app.start(new GradientScene()).catch(() => {
+const app = new Application({
+    scenes: { GradientScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    backend: { type: 'webgl2' },
+});
+
+app.start(GradientScene).catch(() => {
     app.canvas.remove();
     app.destroy();
 });

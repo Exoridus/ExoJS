@@ -1,17 +1,5 @@
 // Auto-generated from world-vs-screen-coords.ts — edit the .ts source, not this file.
 import { Application, Color, Graphics, Scene, Text, View } from '@codexo/exojs';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
 class WorldScreenScene extends Scene {
     view;
     grid;
@@ -62,4 +50,17 @@ class WorldScreenScene extends Scene {
         return this.view.screenToWorld(screenX, screenY);
     }
 }
-app.start(new WorldScreenScene());
+const app = new Application({
+    scenes: { WorldScreenScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+app.start(WorldScreenScene);

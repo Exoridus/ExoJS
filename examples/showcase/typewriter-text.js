@@ -1,17 +1,5 @@
 // Auto-generated from typewriter-text.ts — edit the .ts source, not this file.
 import { Application, Color, Scene, Text } from '@codexo/exojs';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
 const message = 'ExoJS gives you explicit rendering control with a compact scene and asset workflow.';
 class TypewriterTextScene extends Scene {
     sound;
@@ -56,4 +44,17 @@ class TypewriterTextScene extends Scene {
         }
     }
 }
-app.start(new TypewriterTextScene());
+const app = new Application({
+    scenes: { TypewriterTextScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+app.start(TypewriterTextScene);

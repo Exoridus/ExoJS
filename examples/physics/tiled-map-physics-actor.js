@@ -21,18 +21,6 @@ import { mountControls } from '@examples/runtime';
 const TILE = 64;
 const COLUMNS = 20;
 const ROWS = 11;
-const app = new Application({
-    canvas: {
-        width: COLUMNS * TILE,
-        height: ROWS * TILE,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: new Color(38, 46, 66),
-    // The tilemap extension wires the per-backend tile chunk renderers so
-    // TileMapNode can draw. Physics is a plain library — no extension needed.
-    extensions: [tilemapExtension],
-});
 class TiledMapPhysicsActorScene extends Scene {
     world;
     mapNode;
@@ -168,4 +156,17 @@ function rect(id, x, y, width, height, name) {
         properties: {},
     };
 }
-app.start(new TiledMapPhysicsActorScene());
+const app = new Application({
+    scenes: { TiledMapPhysicsActorScene },
+    canvas: {
+        width: COLUMNS * TILE,
+        height: ROWS * TILE,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: new Color(38, 46, 66),
+    // The tilemap extension wires the per-backend tile chunk renderers so
+    // TileMapNode can draw. Physics is a plain library — no extension needed.
+    extensions: [tilemapExtension],
+});
+app.start(TiledMapPhysicsActorScene);

@@ -8,27 +8,19 @@ import { logger } from './logging';
 import { Scene } from './Scene';
 import { SceneScope } from './SceneScope';
 import type { SceneState } from './SceneState';
+import {
+  type AnySceneConstructor,
+  type InferSceneData,
+  resolveSetSceneArgs,
+  type SceneTransition,
+  type SetSceneArgs,
+  UnregisteredSceneError,
+  validateSceneRegistry,
+} from './SceneTypes';
 import { Signal } from './Signal';
 import type { Time } from './Time';
 
-/**
- * Fade-to-color scene transition. The screen fades to `color` (default black)
- * over `duration` ms (default 220), the scene change happens at full
- * opacity, then the screen fades back in.
- */
-export interface FadeSceneTransition {
-  type: 'fade';
-  duration?: number;
-  color?: Color;
-}
-
-/** Discriminated union of supported {@link SceneDirector} transitions. */
-export type SceneTransition = FadeSceneTransition;
-
-/** Options passed to {@link SceneDirector.setScene}. */
-export interface SetSceneOptions {
-  transition?: SceneTransition;
-}
+export type { FadeSceneTransition, SceneTransition, SetSceneOptions } from './SceneTypes';
 
 interface ActiveFadeTransition {
   readonly type: 'fade';
@@ -81,7 +73,8 @@ const defaultFadeTransitionDuration = 220;
  */
 export class SceneDirector {
   private readonly _app: Application;
-  private _activeScope: SceneScope<void> | null = null;
+  private readonly _registry: ReadonlyMap<AnySceneConstructor, string>;
+  private _activeScope: SceneScope | null = null;
   private readonly _transitionOverlay: TransitionOverlayMesh = createOverlayMesh();
   private _transition: ActiveFadeTransition | null = null;
 
@@ -100,17 +93,14 @@ export class SceneDirector {
   /** Fires whenever the active scene's {@link SceneState} changes, as `(previous, next, scene)`. */
   public readonly onStateChange = new Signal<[SceneState, SceneState, Scene]>();
 
-  public constructor(app: Application) {
+  public constructor(app: Application, scenes?: Record<string, AnySceneConstructor>) {
     this._app = app;
+    this._registry = validateSceneRegistry(scenes, Scene);
   }
 
-  /** The active scene, or `null` when none is set. */
+  /** The active scene, or `null` when none is set. Read-only — see {@link SceneDirector.setScene} to change it. */
   public get currentScene(): Scene | null {
-    return this._activeScope?.scene ?? null;
-  }
-
-  public set currentScene(scene: Scene | null) {
-    void this.setScene(scene);
+    return (this._activeScope?.scene as Scene | undefined) ?? null;
   }
 
   /** The active scene's current {@link SceneState}, or `null` when no scene is active. */
@@ -119,25 +109,28 @@ export class SceneDirector {
   }
 
   /**
-   * Switch to `scene` (or clear to `null`), ending the previously active
-   * scene permanently. No-op when `scene` is already active. An optional
-   * fade transition runs the swap at full opacity. The new scene completes
+   * Switch to a fresh instance of `target`, ending the previously active
+   * scene permanently. Ordinary switching always creates a fresh instance
+   * (definition §11.4) — this differs from the old instance-based API's
+   * same-instance no-op check, which no longer applies. An optional fade
+   * transition runs the swap at full opacity. The new scene completes
    * `load()`+`init()` before the old one is torn down, so there is no blank
    * frame between them, and the outgoing scene keeps running until the
    * switch boundary is crossed.
+   *
+   * Rejects (dev builds) with {@link UnregisteredSceneError} when `target`
+   * is not present in `ApplicationOptions.scenes`.
    */
-  public async setScene(scene: Scene | null, options: SetSceneOptions = {}): Promise<this> {
+  public async setScene<C extends AnySceneConstructor>(target: C, ...args: SetSceneArgs<InferSceneData<C>>): Promise<this> {
+    if (__DEV__ && !this._registry.has(target)) {
+      throw new UnregisteredSceneError(target.name, [...this._registry.values()]);
+    }
+
+    const { data, options } = resolveSetSceneArgs(args);
+
     await this._runWithTransition(async () => {
-      if (scene === (this._activeScope?.scene ?? null)) {
-        return;
-      }
-
-      let newScope: SceneScope<void> | null = null;
-
-      if (scene !== null) {
-        newScope = await this._prepareScene(scene);
-      }
-
+      const scene = new target();
+      const newScope = await this._prepareScene(scene, data);
       const previousScope = this._activeScope;
 
       this._activeScope = newScope;
@@ -146,14 +139,34 @@ export class SceneDirector {
         await this._disposeScene(previousScope);
       }
 
-      newScope?.activate();
+      newScope.activate();
 
-      this.onChangeScene.dispatch(scene);
-
-      if (scene !== null) {
-        this.onStartScene.dispatch(scene);
-      }
+      this.onChangeScene.dispatch(scene as Scene);
+      this.onStartScene.dispatch(scene as Scene);
     }, options.transition);
+
+    return this;
+  }
+
+  /**
+   * @internal Clear the active scene (if any) without activating a new one.
+   * Replaces the old `setScene(null)` path — used only by
+   * {@link Application.stop} / {@link Application.destroy}, never part of
+   * the public navigation surface (navigation always targets a registered
+   * constructor).
+   */
+  public async _clearScene(): Promise<this> {
+    await this._runWithTransition(async () => {
+      const previousScope = this._activeScope;
+
+      this._activeScope = null;
+
+      if (previousScope !== null) {
+        await this._disposeScene(previousScope);
+      }
+
+      this.onChangeScene.dispatch(null);
+    });
 
     return this;
   }
@@ -175,8 +188,8 @@ export class SceneDirector {
     const changed = scope.pause();
 
     if (changed) {
-      this.onPause.dispatch(scope.scene);
-      this.onStateChange.dispatch(previous, scope.state, scope.scene);
+      this.onPause.dispatch(scope.scene as Scene);
+      this.onStateChange.dispatch(previous, scope.state, scope.scene as Scene);
     }
 
     return changed;
@@ -197,8 +210,8 @@ export class SceneDirector {
     const changed = scope.resume();
 
     if (changed) {
-      this.onResume.dispatch(scope.scene);
-      this.onStateChange.dispatch(previous, scope.state, scope.scene);
+      this.onResume.dispatch(scope.scene as Scene);
+      this.onStateChange.dispatch(previous, scope.state, scope.scene as Scene);
     }
 
     return changed;
@@ -231,7 +244,7 @@ export class SceneDirector {
 
     if (scope !== null) {
       scope.update(delta);
-      this.onUpdateScene.dispatch(scope.scene);
+      this.onUpdateScene.dispatch(scope.scene as Scene);
     }
 
     return this;
@@ -316,11 +329,11 @@ export class SceneDirector {
    * destroyed, loader claims released, `scene.destroy()` invoked, but
    * `unload()` is never called — and rethrows the original error unchanged.
    */
-  private async _prepareScene(scene: Scene): Promise<SceneScope<void>> {
+  private async _prepareScene<Data>(scene: Scene<Data>, data: Data): Promise<SceneScope<Data>> {
     const scope = new SceneScope(this._app, scene);
 
     try {
-      await scope.prepare();
+      await scope.prepare(data);
 
       if (scene.root.children.length > 0 && scene.draw === Scene.prototype.draw) {
         logger.warn(
@@ -338,8 +351,8 @@ export class SceneDirector {
   }
 
   /** Permanently end `scope`'s scene: dispatch {@link SceneDirector.onStopScene}, then run the scope's teardown sequence (definition §17). */
-  private async _disposeScene(scope: SceneScope<void>): Promise<void> {
-    this.onStopScene.dispatch(scope.scene);
+  private async _disposeScene(scope: SceneScope): Promise<void> {
+    this.onStopScene.dispatch(scope.scene as Scene);
     await scope.destroy();
   }
 

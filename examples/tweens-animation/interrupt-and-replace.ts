@@ -1,17 +1,6 @@
 import { Application, Color, type RenderingContext, Scene, Sprite, Tween } from '@codexo/exojs';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
+
 
 class InterruptAndReplaceScene extends Scene {
     private sprite!: Sprite;
@@ -37,4 +26,18 @@ class InterruptAndReplaceScene extends Scene {
     }
 }
 
-app.start(new InterruptAndReplaceScene());
+const app = new Application({
+    scenes: { InterruptAndReplaceScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+
+app.start(InterruptAndReplaceScene);

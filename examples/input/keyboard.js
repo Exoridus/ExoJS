@@ -1,18 +1,6 @@
 // Auto-generated from keyboard.ts — edit the .ts source, not this file.
 import { Application, Color, Graphics, Keyboard, Scene } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: new Color(10, 12, 20),
-    loader: {
-        basePath: 'assets/',
-    },
-});
 // Two ways to read the keyboard, shown side by side:
 //
 //   - on-event: `inputs.onStart` / `onStop` fire once on the press / release
@@ -84,4 +72,17 @@ class KeyboardScene extends Scene {
         context.render(this.square);
     }
 }
-app.start(new KeyboardScene());
+const app = new Application({
+    scenes: { KeyboardScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: new Color(10, 12, 20),
+    loader: {
+        basePath: 'assets/',
+    },
+});
+app.start(KeyboardScene);

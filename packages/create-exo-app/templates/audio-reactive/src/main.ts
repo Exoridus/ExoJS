@@ -2,6 +2,7 @@ import { Application, Color } from '@codexo/exojs';
 import { AudioReactiveScene } from './scenes/AudioReactiveScene';
 
 const app = new Application({
+  scenes: { AudioReactiveScene },
   canvas: {
     width: 800,
     height: 600,
@@ -11,4 +12,4 @@ const app = new Application({
 
 document.body.append(app.canvas);
 
-app.start(new AudioReactiveScene());
+app.start(AudioReactiveScene);

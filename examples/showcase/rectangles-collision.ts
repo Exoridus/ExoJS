@@ -1,18 +1,7 @@
 import { Application, Color, Graphics, type RenderingContext, Scene, Sprite, Texture } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
+
 
 const CLEAR_TINT = new Color(120, 200, 255);
 const OVERLAP_TINT = new Color(255, 90, 90);
@@ -97,4 +86,18 @@ class RectanglesCollisionScene extends Scene {
     }
 }
 
-app.start(new RectanglesCollisionScene());
+const app = new Application({
+    scenes: { RectanglesCollisionScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+
+app.start(RectanglesCollisionScene);

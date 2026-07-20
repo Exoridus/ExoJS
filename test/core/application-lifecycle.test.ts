@@ -11,6 +11,12 @@
  */
 
 import { Color } from '#core/Color';
+import { Scene } from '#core/Scene';
+
+// SceneDirector is fully mocked in this file's harness (see loadHarness) —
+// its setScene is a plain vi.fn() that never validates a registry, so any
+// Scene subclass constructor works as a start() target here.
+class DummyScene extends Scene {}
 
 // ---------------------------------------------------------------------------
 // ResizeObserver mock — jsdom does not implement it. Exposed as a class so
@@ -101,7 +107,7 @@ interface LifecycleHarness {
     onDeviceLost: { add: MockInstance };
     onDeviceRestored: { add: MockInstance };
   };
-  readonly sceneDirector: { update: MockInstance; setScene: MockInstance; destroy: MockInstance };
+  readonly sceneDirector: { update: MockInstance; setScene: MockInstance; _clearScene: MockInstance; destroy: MockInstance };
 }
 
 const loadHarness = async (options: LifecycleHarnessOptions = {}): Promise<LifecycleHarness> => {
@@ -147,6 +153,7 @@ const loadHarness = async (options: LifecycleHarnessOptions = {}): Promise<Lifec
   const sceneDirector = {
     update: vi.fn(),
     setScene: vi.fn().mockResolvedValue(undefined),
+    _clearScene: vi.fn().mockResolvedValue(undefined),
     destroy: vi.fn(),
   };
   const inputManager = {
@@ -337,7 +344,7 @@ describe('Application lifecycle / getters / sizing', () => {
       const rafSpy = vi.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 1);
 
       try {
-        await app.start({} as import('#core/Scene').Scene);
+        await app.start();
 
         expect(() => app.capabilities).not.toThrow();
         expect(typeof app.capabilities.webgl2).toBe('boolean');
@@ -997,11 +1004,11 @@ describe('Application lifecycle / getters / sizing', () => {
       const rafSpy = vi.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 1);
 
       try {
-        await app.start({} as import('#core/Scene').Scene);
+        await app.start(DummyScene);
         expect(webglManager.initialize).toHaveBeenCalledTimes(1);
         expect(sceneDirector.setScene).toHaveBeenCalledTimes(1);
 
-        await app.start({} as import('#core/Scene').Scene);
+        await app.start(DummyScene);
 
         expect(webglManager.initialize).toHaveBeenCalledTimes(1);
         expect(sceneDirector.setScene).toHaveBeenCalledTimes(1);
@@ -1017,7 +1024,7 @@ describe('Application lifecycle / getters / sizing', () => {
       const logSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
 
       try {
-        await app.start({} as import('#core/Scene').Scene);
+        await app.start();
 
         expect(logSpy).toHaveBeenCalled();
       } finally {
@@ -1033,7 +1040,7 @@ describe('Application lifecycle / getters / sizing', () => {
       const logSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
 
       try {
-        await app.start({} as import('#core/Scene').Scene);
+        await app.start();
 
         expect(logSpy).not.toHaveBeenCalled();
       } finally {
@@ -1053,7 +1060,7 @@ describe('Application lifecycle / getters / sizing', () => {
       const app = new Application({ backend: { type: 'webgl2' } });
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
       const teardownError = new Error('scene teardown failed');
-      sceneDirector.setScene.mockRejectedValueOnce(teardownError);
+      sceneDirector._clearScene.mockRejectedValueOnce(teardownError);
 
       (app as unknown as Record<string, unknown>)['_status'] = ApplicationStatus.Running;
       const errorHandler = vi.fn();
@@ -1071,7 +1078,7 @@ describe('Application lifecycle / getters / sizing', () => {
       const { Application, ApplicationStatus, sceneDirector } = await loadHarness();
       const app = new Application({ backend: { type: 'webgl2' } });
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-      sceneDirector.setScene.mockRejectedValueOnce('a plain string rejection');
+      sceneDirector._clearScene.mockRejectedValueOnce('a plain string rejection');
 
       (app as unknown as Record<string, unknown>)['_status'] = ApplicationStatus.Running;
       const errorHandler = vi.fn();
@@ -1146,7 +1153,7 @@ describe('Application lifecycle / getters / sizing', () => {
 
         app.options.rendering = undefined;
 
-        await app.start({} as import('#core/Scene').Scene);
+        await app.start();
 
         expect(webglManager.initialize).toHaveBeenCalledTimes(1);
         expect(app.backend).toBe(webglManager);

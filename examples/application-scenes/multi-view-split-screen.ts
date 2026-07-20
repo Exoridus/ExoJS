@@ -1,17 +1,6 @@
 import { Application, Color, Graphics, Keyboard, type RenderingContext, Scene, Sprite, Texture, type Time, View } from '@codexo/exojs';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
+
 
 class SplitScreenScene extends Scene {
     private texture!: Texture;
@@ -123,4 +112,18 @@ class SplitScreenScene extends Scene {
     }
 }
 
-app.start(new SplitScreenScene());
+const app = new Application({
+    scenes: { SplitScreenScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+
+app.start(SplitScreenScene);

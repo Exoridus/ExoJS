@@ -1,18 +1,7 @@
 import { Application, Color, Graphics, Keyboard, type RenderingContext, Scene, type Time } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: new Color(10, 12, 20),
-    loader: {
-        basePath: 'assets/',
-    },
-});
+
 
 // Two ways to read the keyboard, shown side by side:
 //
@@ -94,4 +83,18 @@ class KeyboardScene extends Scene {
     }
 }
 
-app.start(new KeyboardScene());
+const app = new Application({
+    scenes: { KeyboardScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: new Color(10, 12, 20),
+    loader: {
+        basePath: 'assets/',
+    },
+});
+
+app.start(KeyboardScene);

@@ -1,17 +1,6 @@
 import { Application, Asset, Color, type RenderingContext, Scene, Text, Time, Timer } from '@codexo/exojs';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
+
 
 // The scene lifecycle has two hooks:
 //   - `init(loader)`  — one-shot async setup, called once before the first frame.
@@ -81,4 +70,18 @@ class LifecycleScene extends Scene {
     }
 }
 
-app.start(new LifecycleScene());
+const app = new Application({
+    scenes: { LifecycleScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+
+app.start(LifecycleScene);

@@ -21,16 +21,7 @@ import { mountControls } from '@examples/runtime';
 const TILE = 64;
 const MOVE_SPEED = 480;
 
-const app = new Application({
-    canvas: { width: 1280, height: 720, mount: document.body, sizingMode: 'fit' },
-    clearColor: new Color(38, 82, 128), // deep-water blue behind unauthored/unloaded chunks
-    // tiledExtension depends on tilemapExtension, so registering it alone is
-    // enough for both loading (.tmj) and rendering (TileMapNode).
-    extensions: [tiledExtension],
-    loader: {
-        basePath: 'assets/',
-    },
-});
+
 
 class TiledInfiniteMapScene extends Scene {
     private camera!: View;
@@ -133,4 +124,16 @@ class TiledInfiniteMapScene extends Scene {
     }
 }
 
-app.start(new TiledInfiniteMapScene());
+const app = new Application({
+    scenes: { TiledInfiniteMapScene },
+    canvas: { width: 1280, height: 720, mount: document.body, sizingMode: 'fit' },
+    clearColor: new Color(38, 82, 128), // deep-water blue behind unauthored/unloaded chunks
+    // tiledExtension depends on tilemapExtension, so registering it alone is
+    // enough for both loading (.tmj) and rendering (TileMapNode).
+    extensions: [tiledExtension],
+    loader: {
+        basePath: 'assets/',
+    },
+});
+
+app.start(TiledInfiniteMapScene);

@@ -2,15 +2,6 @@
 import { Application, Asset, Color, Graphics, Scene, Text } from '@codexo/exojs';
 import { AudioAnalyser } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-});
 class VinylRecordScene extends Scene {
     music;
     musicVoice;
@@ -103,4 +94,14 @@ class VinylRecordScene extends Scene {
         }
     }
 }
-app.start(new VinylRecordScene());
+const app = new Application({
+    scenes: { VinylRecordScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+});
+app.start(VinylRecordScene);

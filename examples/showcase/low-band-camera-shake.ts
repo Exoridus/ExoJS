@@ -2,15 +2,7 @@ import { Application, Asset, AudioStream, Color, type RenderingContext, Scene, S
 import { AudioAnalyser } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-});
+
 
 class LowBandCameraShakeScene extends Scene {
     private music!: AudioStream;
@@ -82,4 +74,15 @@ class LowBandCameraShakeScene extends Scene {
     }
 }
 
-app.start(new LowBandCameraShakeScene());
+const app = new Application({
+    scenes: { LowBandCameraShakeScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+});
+
+app.start(LowBandCameraShakeScene);

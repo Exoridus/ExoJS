@@ -2,15 +2,6 @@
 import { Application, Asset, AudioBus, AudioGenerator, Color, Scene, Text } from '@codexo/exojs';
 import { VocoderEffect } from '@codexo/exojs-audio-fx';
 import { mountControlPanel, mountControls } from '@examples/runtime';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-});
 // Spoken phrases (Kenney Voiceover Pack, CC0) — a voice modulator is what makes
 // a vocoder recognisable as the classic "robot voice" effect.
 const PHRASES = [
@@ -98,4 +89,14 @@ class VocoderScene extends Scene {
         }
     }
 }
-app.start(new VocoderScene());
+const app = new Application({
+    scenes: { VocoderScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+});
+app.start(VocoderScene);

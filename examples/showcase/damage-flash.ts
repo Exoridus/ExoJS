@@ -1,18 +1,7 @@
 import { Application, Color, ColorFilter, type RenderingContext, Scene, Signal, Sprite } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
+
 
 class DamageFlashScene extends Scene {
     private hit!: Signal;
@@ -56,4 +45,18 @@ class DamageFlashScene extends Scene {
     }
 }
 
-app.start(new DamageFlashScene());
+const app = new Application({
+    scenes: { DamageFlashScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+
+app.start(DamageFlashScene);

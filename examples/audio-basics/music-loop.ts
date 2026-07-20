@@ -1,15 +1,7 @@
 import { Application, Asset, AudioStream, Color, Graphics, type Loopable, type Pausable, type RatePitched, type RenderingContext, Scene, type Seekable, Text, type Voice } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-});
+
 
 class MusicLoopScene extends Scene {
     private music!: AudioStream;
@@ -135,4 +127,15 @@ class MusicLoopScene extends Scene {
     }
 }
 
-app.start(new MusicLoopScene());
+const app = new Application({
+    scenes: { MusicLoopScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+});
+
+app.start(MusicLoopScene);

@@ -1,17 +1,5 @@
 // Auto-generated from pause-and-resume.ts — edit the .ts source, not this file.
 import { Application, Color, Keyboard, Scene, Sprite, Text } from '@codexo/exojs';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
 class PauseResumeScene extends Scene {
     sprite;
     label;
@@ -52,4 +40,17 @@ class PauseResumeScene extends Scene {
         context.render(this.label);
     }
 }
-app.start(new PauseResumeScene());
+const app = new Application({
+    scenes: { PauseResumeScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+app.start(PauseResumeScene);

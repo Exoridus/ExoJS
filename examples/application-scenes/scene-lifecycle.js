@@ -1,17 +1,5 @@
 // Auto-generated from scene-lifecycle.ts — edit the .ts source, not this file.
 import { Application, Color, Scene, Text, Time, Timer } from '@codexo/exojs';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
 // The scene lifecycle has two hooks:
 //   - `init(loader)`  — one-shot async setup, called once before the first frame.
 //                        Fetch/await assets here (`this.loader.get(...)` for
@@ -71,4 +59,17 @@ class LifecycleScene extends Scene {
         super.destroy();
     }
 }
-app.start(new LifecycleScene());
+const app = new Application({
+    scenes: { LifecycleScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+app.start(LifecycleScene);

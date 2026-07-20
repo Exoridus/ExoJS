@@ -1,17 +1,6 @@
 import { Application, BlendModes, BlurFilter, CallbackRenderPass, Color, type RenderingContext, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite, type Time } from '@codexo/exojs';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
+
 
 class BloomLiteScene extends Scene {
     private baseRt!: RenderTexture;
@@ -86,4 +75,18 @@ class BloomLiteScene extends Scene {
     }
 }
 
-app.start(new BloomLiteScene());
+const app = new Application({
+    scenes: { BloomLiteScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+
+app.start(BloomLiteScene);

@@ -3,16 +3,6 @@ import { Application, Asset, Color, Scene, Text, Vector } from '@codexo/exojs';
 import { AudioAnalyser, BeatDetector } from '@codexo/exojs-audio-fx';
 import { AlphaFadeOverLifetime, ConeDirection, Constant, particlesExtension, ParticleSystem, RateSpawn, } from '@codexo/exojs-particles';
 import { mountControls } from '@examples/runtime';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    extensions: [particlesExtension],
-});
 const colors = [new Color(255, 120, 140), new Color(120, 220, 255), new Color(130, 255, 170), new Color(255, 220, 120)];
 class AudioReactiveParticlesScene extends Scene {
     music;
@@ -102,4 +92,15 @@ class AudioReactiveParticlesScene extends Scene {
         }
     }
 }
-app.start(new AudioReactiveParticlesScene());
+const app = new Application({
+    scenes: { AudioReactiveParticlesScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    extensions: [particlesExtension],
+});
+app.start(AudioReactiveParticlesScene);

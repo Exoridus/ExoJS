@@ -1,17 +1,6 @@
 import { Application, Color, type RenderingContext, Scene, Sprite } from '@codexo/exojs';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
+
 
 // #region guide:first-scene
 class HelloWorldScene extends Scene {
@@ -34,4 +23,18 @@ class HelloWorldScene extends Scene {
 }
 // #endregion guide:first-scene
 
-app.start(new HelloWorldScene());
+const app = new Application({
+    scenes: { HelloWorldScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+
+app.start(HelloWorldScene);

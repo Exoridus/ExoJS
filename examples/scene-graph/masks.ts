@@ -1,14 +1,6 @@
 import { Application, Color, Graphics, Rectangle, type RenderingContext, Scene, Sprite, type Time } from '@codexo/exojs';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-});
+
 
 const ALPHA_RINGS = assets.technical.alpha.alphaGradientRings;
 
@@ -60,4 +52,15 @@ class MasksScene extends Scene {
     }
 }
 
-app.start(new MasksScene());
+const app = new Application({
+    scenes: { MasksScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+});
+
+app.start(MasksScene);

@@ -7,15 +7,7 @@ import { mountControls } from '@examples/runtime';
 // the body's position and rotation are written onto the bound sprite, so the
 // sprite simply "follows the body". A static floor stops the falling actor.
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: new Color(18, 22, 33),
-});
+
 
 class SpriteFollowsBodyScene extends Scene {
     private world!: PhysicsWorld;
@@ -118,4 +110,15 @@ class SpriteFollowsBodyScene extends Scene {
     }
 }
 
-app.start(new SpriteFollowsBodyScene());
+const app = new Application({
+    scenes: { SpriteFollowsBodyScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: new Color(18, 22, 33),
+});
+
+app.start(SpriteFollowsBodyScene);

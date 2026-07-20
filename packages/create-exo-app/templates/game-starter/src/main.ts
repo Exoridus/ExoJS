@@ -1,7 +1,9 @@
 import { Application, Color } from '@codexo/exojs';
+import { GameOverScene } from './scenes/GameOverScene';
 import { GameScene } from './scenes/GameScene';
 
 const app = new Application({
+  scenes: { GameScene, GameOverScene },
   canvas: {
     width: 800,
     height: 600,
@@ -11,4 +13,4 @@ const app = new Application({
 
 document.body.append(app.canvas);
 
-app.start(new GameScene());
+app.start(GameScene);

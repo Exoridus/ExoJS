@@ -59,9 +59,10 @@ export interface ScenesProps {
  * Declarative scene switch over the one-active-scene model. Renders a set of
  * {@link Scene} declarations and activates the one whose `name` equals `active`
  * via `app.start()` (first activation) or `app.scenes.setScene()` (subsequent
- * switches, with the optional `transition`). The active scene's React children
- * (HUD overlay) render alongside, and can read the instance via
- * {@link useActiveScene}.
+ * switches, with the optional `transition`) — the declaration's `component`
+ * constructor must be registered in `ApplicationOptions.scenes`. The active
+ * scene's React children (HUD overlay) render alongside, and can read the
+ * instance via {@link useActiveScene}.
  *
  * A failure in `app.start()`/`app.scenes.setScene()` (e.g. a scene's `onLoad`
  * rejects) is caught and routed to {@link Application.onError} rather than
@@ -101,27 +102,29 @@ export function Scenes({ active, transition, children }: ScenesProps): ReactElem
 
   useEffect(() => {
     if (SceneClass === null) {
+      // No matching <Scene name={active}> declaration. No public API switches
+      // the director back to scene-less mid-lifetime (definition §10.1) — the
+      // last-active scene keeps running underneath; only the React-rendered
+      // HUD overlay is cleared. This is a caller mismatch (an `active` name
+      // with no matching <Scene>), not a supported "show nothing" path.
+      console.warn(`<Scenes>: no <Scene name="${active}"> declaration found; the previously active scene (if any) keeps running.`);
       setInstance(null);
-      void app.scenes.setScene(null).catch((error: unknown) => {
-        app.onError.dispatch(error instanceof Error ? error : new Error(String(error)));
-      });
       return;
     }
 
     let cancelled = false;
-    const scene = new SceneClass();
 
     const apply = async (): Promise<void> => {
       try {
         if (app.status === ApplicationStatus.Stopped) {
           // First activation initializes the backend and starts the frame loop;
           // transitions only apply to subsequent switches.
-          await app.start(scene);
+          await app.start(SceneClass);
         } else {
-          await app.scenes.setScene(scene, transition !== undefined ? { transition } : {});
+          await app.scenes.setScene(SceneClass, transition !== undefined ? { transition } : {});
         }
         if (!cancelled) {
-          setInstance(scene);
+          setInstance(app.scenes.currentScene);
         }
       } catch (error) {
         // Route to Application.onError instead of leaving an unhandled

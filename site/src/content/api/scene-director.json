@@ -32,7 +32,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(app: Application): SceneDirector",
+          "signature": "new(app: Application, scenes?: Record<string, AnySceneConstructor>): SceneDirector",
           "signatureTokens": [
             {
               "text": "new",
@@ -55,6 +55,46 @@
               "kind": "type"
             },
             {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "scenes",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AnySceneConstructor",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
               "text": ")",
               "kind": "punctuation"
             },
@@ -72,6 +112,11 @@
               "name": "app",
               "type": "Application",
               "optional": false
+            },
+            {
+              "name": "scenes",
+              "type": "Record<string, AnySceneConstructor>",
+              "optional": true
             }
           ],
           "returnType": "SceneDirector",
@@ -269,7 +314,7 @@
         },
         {
           "name": "setScene",
-          "signature": "setScene(scene: Scene<void> | null, options: SetSceneOptions): Promise<SceneDirector>",
+          "signature": "setScene(target: C, args: SetSceneArgs<InferSceneData<C>>): Promise<SceneDirector>",
           "signatureTokens": [
             {
               "text": "setScene",
@@ -280,7 +325,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "scene",
+              "text": "target",
               "kind": "param"
             },
             {
@@ -288,7 +333,23 @@
               "kind": "punctuation"
             },
             {
-              "text": "Scene",
+              "text": "C",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "args",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SetSceneArgs",
               "kind": "type"
             },
             {
@@ -296,36 +357,24 @@
               "kind": "punctuation"
             },
             {
-              "text": "void",
-              "kind": "keyword"
+              "text": "InferSceneData",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "C",
+              "kind": "type"
             },
             {
               "text": ">",
               "kind": "punctuation"
             },
             {
-              "text": " | ",
+              "text": ">",
               "kind": "punctuation"
-            },
-            {
-              "text": "null",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "options",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "SetSceneOptions",
-              "kind": "type"
             },
             {
               "text": ")",
@@ -354,18 +403,18 @@
           ],
           "params": [
             {
-              "name": "scene",
-              "type": "Scene<void> | null",
+              "name": "target",
+              "type": "C",
               "optional": false
             },
             {
-              "name": "options",
-              "type": "SetSceneOptions",
+              "name": "args",
+              "type": "SetSceneArgs<InferSceneData<C>>",
               "optional": false
             }
           ],
           "returnType": "Promise<SceneDirector>",
-          "description": "Switch to scene (or clear to null), ending the previously active scene permanently. No-op when scene is already active. An optional fade transition runs the swap at full opacity. The new scene completes load()+init() before the old one is torn down, so there is no blank frame between them, and the outgoing scene keeps running until the switch boundary is crossed."
+          "description": "Switch to a fresh instance of target, ending the previously active scene permanently. Ordinary switching always creates a fresh instance (definition §11.4) — this differs from the old instance-based API's same-instance no-op check, which no longer applies. An optional fade transition runs the swap at full opacity. The new scene completes load()+init() before the old one is torn down, so there is no blank frame between them, and the outgoing scene keeps running until the switch boundary is crossed. Rejects (dev builds) with UnregisteredSceneError when target is not present in ApplicationOptions.scenes."
         },
         {
           "name": "update",
@@ -462,7 +511,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The active scene, or null when none is set."
+          "description": "The active scene, or null when none is set. Read-only — see SceneDirector.setScene to change it."
         },
         {
           "name": "state",

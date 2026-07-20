@@ -68,9 +68,9 @@ const boot = (type) => {
         app.canvas.remove();
         app = null;
     }
-    app = new Application({ ...options, backend: { type } });
+    app = new Application({ ...options, scenes: { DemoScene }, backend: { type } });
     overlay = new DebugOverlay(app);
     overlay.layers.performance.visible = true;
-    void app.start(new DemoScene());
+    void app.start(DemoScene);
 };
 boot(backendType);

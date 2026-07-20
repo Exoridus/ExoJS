@@ -1,15 +1,5 @@
 // Auto-generated from graphics-primitives.ts — edit the .ts source, not this file.
 import { Application, Color, Container, Graphics, Scene } from '@codexo/exojs';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.midnightBlue,
-    backend: { type: 'webgpu' },
-});
 class GraphicsPrimitivesScene extends Scene {
     sceneRoot;
     panel;
@@ -53,7 +43,18 @@ class GraphicsPrimitivesScene extends Scene {
         this.sceneRoot?.destroy();
     }
 }
-app.start(new GraphicsPrimitivesScene()).catch(() => {
+const app = new Application({
+    scenes: { GraphicsPrimitivesScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.midnightBlue,
+    backend: { type: 'webgpu' },
+});
+app.start(GraphicsPrimitivesScene).catch(() => {
     app.canvas.remove();
     app.destroy();
 });

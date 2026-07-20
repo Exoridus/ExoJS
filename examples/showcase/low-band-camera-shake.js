@@ -2,15 +2,6 @@
 import { Application, Asset, Color, Scene, Sprite, Text, View } from '@codexo/exojs';
 import { AudioAnalyser } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-});
 class LowBandCameraShakeScene extends Scene {
     music;
     musicVoice;
@@ -71,4 +62,14 @@ class LowBandCameraShakeScene extends Scene {
         }
     }
 }
-app.start(new LowBandCameraShakeScene());
+const app = new Application({
+    scenes: { LowBandCameraShakeScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+});
+app.start(LowBandCameraShakeScene);

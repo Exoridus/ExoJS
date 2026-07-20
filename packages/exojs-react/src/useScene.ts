@@ -1,19 +1,20 @@
-import { ApplicationStatus, type Scene } from '@codexo/exojs';
+import { ApplicationStatus, type Scene, type SceneConstructor } from '@codexo/exojs';
 import { type DependencyList, useEffect, useState } from 'react';
 
 import { useExoApp } from './useExoApp';
 
 /**
- * Creates an instance of `SceneClass`, activates it on the ExoJS
- * {@link Application}, and returns it once the scene is live.
+ * Activates `SceneClass` on the ExoJS {@link Application} and returns the
+ * resulting instance once it is live. `SceneClass` must be registered in
+ * `ApplicationOptions.scenes` (passed to {@link import('./useExoApplication').useExoApplication}
+ * / {@link import('./ExoCanvas').ExoCanvas}) — unregistered targets reject in
+ * development builds.
  *
- * On first call (engine not yet started) this hook calls `app.start(scene)`,
+ * On first call (engine not yet started) this hook calls `app.start(SceneClass)`,
  * which initializes the render backend and begins the per-frame loop. On
- * subsequent dep-change remounts it calls `app.scenes.setScene(scene)` to
- * switch scenes without restarting the engine.
- *
- * The scene is cleared (`setScene(null)`) when the component unmounts or
- * when `deps` change — mirroring `useEffect` semantics.
+ * subsequent dep-change remounts it calls `app.scenes.setScene(SceneClass)` to
+ * switch scenes without restarting the engine. Each activation constructs a
+ * fresh instance (definition §11.4) — this hook never reuses one across calls.
  *
  * A failure in `app.start()`/`app.scenes.setScene()` (e.g. a scene's `onLoad`
  * rejects) is caught and routed to {@link Application.onError} rather than
@@ -21,7 +22,7 @@ import { useExoApp } from './useExoApp';
  * `app.onError.add(...)` or the {@link import('./ExoCanvas').ExoCanvas}
  * `onError` prop to observe it.
  *
- * @param SceneClass - Constructor for the scene to instantiate.
+ * @param SceneClass - Constructor for the scene to activate.
  * @param deps - Extra deps that trigger scene replacement when changed, in
  *   addition to the stable `app` reference (same semantics as `useEffect`).
  * @returns The active scene instance, or `null` while it is loading.
@@ -42,20 +43,25 @@ export function useScene<T extends Scene>(SceneClass: new () => T, deps: Depende
 
   useEffect(() => {
     let cancelled = false;
-    const s = new SceneClass();
+    // This hook's contract has always been zero-arg activation only (no data
+    // parameter) — `T extends Scene` (Data defaults to void), but that generic
+    // `T` can't be distributed through the navigation call's conditional types
+    // (InferSceneData/SetSceneArgs) inside this function body, so it's pinned
+    // to its concrete void-data instantiation here.
+    const target = SceneClass as SceneConstructor;
 
     const apply = async (): Promise<void> => {
       try {
         if (app.status === ApplicationStatus.Stopped) {
           // First activation — initialize the backend and start the frame loop.
-          await app.start(s);
+          await app.start(target);
         } else {
           // Engine already running — switch scenes without restarting.
-          await app.scenes.setScene(s);
+          await app.scenes.setScene(target);
         }
 
         if (!cancelled) {
-          setScene(s);
+          setScene(app.scenes.currentScene as T);
         }
       } catch (error) {
         // Route to Application.onError instead of leaving an unhandled
@@ -70,11 +76,10 @@ export function useScene<T extends Scene>(SceneClass: new () => T, deps: Depende
     return () => {
       cancelled = true;
       setScene(null);
-      // Best-effort scene clear; the Application.destroy() called by
-      // ExoCanvas cleanup will also handle any remaining active scene.
-      void app.scenes.setScene(null).catch((error: unknown) => {
-        app.onError.dispatch(error instanceof Error ? error : new Error(String(error)));
-      });
+      // No public API switches the director back to scene-less mid-lifetime
+      // (definition §10.1 — navigation always targets a registered
+      // constructor). Application.destroy() (called by ExoCanvas cleanup)
+      // tears down whatever scene is still active.
     };
     // SceneClass is intentionally excluded from deps: a new class reference
     // (e.g. inline arrow class) on every render would recreate the scene

@@ -56,7 +56,7 @@ describe('<Scenes> / <Scene> / useActiveScene', () => {
 
     // start() is invoked synchronously inside the activation effect.
     expect(app.start).toHaveBeenCalledTimes(1);
-    expect(app.start.mock.calls[0]![0]).toBeInstanceOf(TitleScene);
+    expect(app.start.mock.calls[0]![0]).toBe(TitleScene);
     expect(app.scenes.setScene).not.toHaveBeenCalled();
 
     // The overlay + active-scene context appear once the start() promise resolves.
@@ -82,22 +82,27 @@ describe('<Scenes> / <Scene> / useActiveScene', () => {
 
     await waitFor(() => expect(app.scenes.setScene).toHaveBeenCalled());
     const lastCall = app.scenes.setScene.mock.calls.at(-1)!;
-    expect(lastCall[0]).toBeInstanceOf(GameScene);
+    expect(lastCall[0]).toBe(GameScene);
     expect(lastCall[1]).toEqual({ transition });
 
     expect((await view.findByTestId('hud')).textContent).toBe('game-hud');
     expect((await view.findByTestId('active')).textContent).toBe('GameScene');
   });
 
-  it('clears the active scene (setScene(null)) when the active name matches no <Scene>', async () => {
+  it('clears the local HUD overlay (without touching the director) when the active name matches no <Scene>', async () => {
     const app = makeApp();
     const view = render(<Tree app={app} active="title" />);
     await view.findByTestId('active');
 
+    const setSceneCallsBefore = app.scenes.setScene.mock.calls.length;
+
     view.rerender(<Tree app={app} active="does-not-exist" />);
 
-    await waitFor(() => expect(app.scenes.setScene).toHaveBeenCalledWith(null));
-    expect(view.queryByTestId('hud')).toBeNull();
+    // definition §10.1: no public API clears the director mid-lifetime — the
+    // last-active scene keeps running underneath; only the React-rendered
+    // overlay is cleared.
+    await waitFor(() => expect(view.queryByTestId('hud')).toBeNull());
+    expect(app.scenes.setScene.mock.calls.length).toBe(setSceneCallsBefore);
   });
 
   it('routes a rejected app.start() to app.onError instead of an unhandled rejection', async () => {
@@ -141,35 +146,6 @@ describe('<Scenes> / <Scene> / useActiveScene', () => {
     view.rerender(<Tree app={app} active="game" />);
 
     await waitFor(() => expect(onError).toHaveBeenCalledWith(new Error('switch failed as a plain string')));
-  });
-
-  it('routes a rejected app.scenes.setScene(null) (no matching <Scene>) to app.onError', async () => {
-    const app = makeApp();
-    const view = render(<Tree app={app} active="title" />);
-    await view.findByTestId('active');
-
-    const onError = vi.fn();
-    app.onError.add(onError);
-    const failure = new Error('clear failed');
-    app.scenes.setScene.mockRejectedValueOnce(failure);
-
-    view.rerender(<Tree app={app} active="does-not-exist" />);
-
-    await waitFor(() => expect(onError).toHaveBeenCalledWith(failure));
-  });
-
-  it('wraps a non-Error rejection from app.scenes.setScene(null) (no matching <Scene>) before dispatching it', async () => {
-    const app = makeApp();
-    const view = render(<Tree app={app} active="title" />);
-    await view.findByTestId('active');
-
-    const onError = vi.fn();
-    app.onError.add(onError);
-    app.scenes.setScene.mockRejectedValueOnce('clear failed as a plain string');
-
-    view.rerender(<Tree app={app} active="does-not-exist" />);
-
-    await waitFor(() => expect(onError).toHaveBeenCalledWith(new Error('clear failed as a plain string')));
   });
 
   it('wraps a non-Error rejection from the first app.start() activation before dispatching it', async () => {

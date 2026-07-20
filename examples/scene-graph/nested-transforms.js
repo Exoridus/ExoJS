@@ -1,17 +1,5 @@
 // Auto-generated from nested-transforms.ts — edit the .ts source, not this file.
 import { Application, Color, Container, Graphics, Scene } from '@codexo/exojs';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
 class NestedTransformsScene extends Scene {
     sun;
     planetOrbit;
@@ -51,4 +39,17 @@ class NestedTransformsScene extends Scene {
         context.render(this.planetOrbit);
     }
 }
-app.start(new NestedTransformsScene());
+const app = new Application({
+    scenes: { NestedTransformsScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+app.start(NestedTransformsScene);

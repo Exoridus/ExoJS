@@ -1,17 +1,5 @@
 // Auto-generated from custom-render-pass.ts — edit the .ts source, not this file.
 import { Application, CallbackRenderPass, Color, Graphics, RenderNodePass, RenderPipeline, Scene, Sprite } from '@codexo/exojs';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
 class CustomRenderPassScene extends Scene {
     back;
     front;
@@ -55,4 +43,17 @@ class CustomRenderPassScene extends Scene {
         this.pipeline.execute(context);
     }
 }
-app.start(new CustomRenderPassScene());
+const app = new Application({
+    scenes: { CustomRenderPassScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+app.start(CustomRenderPassScene);

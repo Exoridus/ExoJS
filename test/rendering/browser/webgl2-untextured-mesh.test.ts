@@ -159,13 +159,14 @@ describe('WebGL2 untextured mesh rendering', () => {
     }
 
     const app = new Application({
+      scenes: { ParityScene },
       canvas: { width: 128, height: 128, mount: container },
       clearColor: Color.black,
       rendering: { webglAttributes: { ...defaultWebGlAttributes } },
     } as ConstructorParameters<typeof Application>[0]);
 
     try {
-      await app.start(new ParityScene());
+      await app.start(ParityScene);
       // Let a few real frames run.
       await new Promise(resolve => setTimeout(resolve, 250));
 
@@ -255,6 +256,7 @@ describe('WebGL2 untextured mesh rendering', () => {
     }
 
     const app = new Application({
+      scenes: { BoxScene },
       canvas: { width: 128, height: 128, mount: container },
       clearColor: Color.black,
       rendering: { webglAttributes: { ...defaultWebGlAttributes } },
@@ -264,7 +266,7 @@ describe('WebGL2 untextured mesh rendering', () => {
     overlay.layers.boundingBoxes.visible = true;
 
     try {
-      await app.start(new BoxScene());
+      await app.start(BoxScene);
       await new Promise(resolve => setTimeout(resolve, 250));
 
       const backend = app.backend as WebGl2Backend;

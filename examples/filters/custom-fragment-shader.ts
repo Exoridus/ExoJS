@@ -1,15 +1,7 @@
 import { Application, Color, RenderBackendType, type RenderingContext, Scene, Sprite, type Time, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-});
+
 
 const HUE_RAMP = assets.technical.color.hueRamp;
 
@@ -67,4 +59,15 @@ class CustomFragmentShaderScene extends Scene {
     }
 }
 
-app.start(new CustomFragmentShaderScene());
+const app = new Application({
+    scenes: { CustomFragmentShaderScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+});
+
+app.start(CustomFragmentShaderScene);

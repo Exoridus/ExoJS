@@ -1,18 +1,7 @@
 import { Application, Color, Container, Graphics, type RenderingContext, Scene } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
+
 
 const scales = [0.03, 0.06, 0.1];
 const colors = [new Color(70, 90, 140), new Color(100, 140, 220), new Color(180, 220, 255)];
@@ -71,4 +60,18 @@ class MouseParallaxScene extends Scene {
     }
 }
 
-app.start(new MouseParallaxScene());
+const app = new Application({
+    scenes: { MouseParallaxScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+
+app.start(MouseParallaxScene);

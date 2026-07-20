@@ -3,19 +3,6 @@ import { Application, Asset, Color, Scene, Sprite, Text, Vector } from '@codexo/
 import { BeatDetector } from '@codexo/exojs-audio-fx';
 import { AlphaFadeOverLifetime, BurstSpawn, ConeDirection, Constant, particlesExtension, ParticleSystem, } from '@codexo/exojs-particles';
 import { mountControlPanel, mountControls } from '@examples/runtime';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-    extensions: [particlesExtension],
-});
 class BeatSyncPulseScene extends Scene {
     music;
     detector;
@@ -95,4 +82,18 @@ class BeatSyncPulseScene extends Scene {
         }
     }
 }
-app.start(new BeatSyncPulseScene());
+const app = new Application({
+    scenes: { BeatSyncPulseScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+    extensions: [particlesExtension],
+});
+app.start(BeatSyncPulseScene);

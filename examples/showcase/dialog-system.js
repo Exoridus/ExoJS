@@ -1,15 +1,6 @@
 // Auto-generated from dialog-system.ts — edit the .ts source, not this file.
 import { Application, Color, Scene, Sprite, Text } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-});
 const lines = [
     { speaker: 'Commander Vale', text: 'Commander, the anomaly has entered low orbit.' },
     { speaker: 'Commander Vale', text: 'All wings hold formation and await my signal.' },
@@ -128,4 +119,14 @@ class DialogSystemScene extends Scene {
         }
     }
 }
-app.start(new DialogSystemScene());
+const app = new Application({
+    scenes: { DialogSystemScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+});
+app.start(DialogSystemScene);

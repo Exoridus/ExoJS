@@ -1,17 +1,5 @@
 // Auto-generated from game-loop.ts — edit the .ts source, not this file.
 import { Application, Color, Scene, Sprite } from '@codexo/exojs';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
 class GameLoopScene extends Scene {
     sprite;
     init() {
@@ -31,4 +19,17 @@ class GameLoopScene extends Scene {
         context.render(this.sprite);
     }
 }
-app.start(new GameLoopScene());
+const app = new Application({
+    scenes: { GameLoopScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+app.start(GameLoopScene);

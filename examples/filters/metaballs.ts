@@ -1,15 +1,7 @@
 import { Application, BlurFilter, Color, Graphics, RenderBackendType, type RenderingContext, Scene, type Time, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-});
+
 
 // Threshold pass: render solid cyan where the (blurred) red field is dense
 // enough, with a smooth edge. The blur in front of this builds the scalar field
@@ -79,4 +71,15 @@ class MetaballsScene extends Scene {
     }
 }
 
-app.start(new MetaballsScene());
+const app = new Application({
+    scenes: { MetaballsScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+});
+
+app.start(MetaballsScene);

@@ -1,14 +1,6 @@
 import { Application, Color, type RenderingContext, Scene, Text } from '@codexo/exojs';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-});
+
 
 const paragraph = 'ExoJS text layout can render multiline content with configurable wrapping behavior and style.';
 const longToken = 'ExoJStextlayoutrendersaverylongunbrokentokenwithoutanyspacestobreakon';
@@ -64,4 +56,15 @@ class MultilineAndWrapScene extends Scene {
     }
 }
 
-app.start(new MultilineAndWrapScene());
+const app = new Application({
+    scenes: { MultilineAndWrapScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+});
+
+app.start(MultilineAndWrapScene);

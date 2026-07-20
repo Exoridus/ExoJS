@@ -1,18 +1,6 @@
 // Auto-generated from pause-blur.ts — edit the .ts source, not this file.
 import { Application, BlurFilter, Color, Keyboard, Label, Panel, Scene, Sprite } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
 const PAUSE_BLUR_RADIUS = 6;
 const PAUSE_FADE_SECONDS = 0.35;
 /**
@@ -83,4 +71,17 @@ class GameScene extends Scene {
         }
     }
 }
-void app.start(new GameScene());
+const app = new Application({
+    scenes: { GameScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+void app.start(GameScene);

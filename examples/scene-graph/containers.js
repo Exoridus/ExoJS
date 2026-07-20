@@ -1,17 +1,5 @@
 // Auto-generated from containers.ts — edit the .ts source, not this file.
 import { Application, Asset, Assets, Color, Container, Scene, Sprite } from '@codexo/exojs';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
 class ContainersScene extends Scene {
     rainbow;
     bunnies;
@@ -45,4 +33,17 @@ class ContainersScene extends Scene {
         context.render(this.bunnies);
     }
 }
-app.start(new ContainersScene());
+const app = new Application({
+    scenes: { ContainersScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+app.start(ContainersScene);

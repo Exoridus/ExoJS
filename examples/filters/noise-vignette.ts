@@ -1,15 +1,7 @@
 import { Application, Color, RenderBackendType, type RenderingContext, Scene, Sprite, type Time, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-});
+
 
 // A detailed full-frame texture so grain + vignette read as a screen-wide post
 // effect rather than decorating one small sprite.
@@ -95,4 +87,15 @@ class NoiseVignetteScene extends Scene {
     }
 }
 
-app.start(new NoiseVignetteScene());
+const app = new Application({
+    scenes: { NoiseVignetteScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+});
+
+app.start(NoiseVignetteScene);

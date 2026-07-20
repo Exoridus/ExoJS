@@ -1,17 +1,6 @@
 import { Application, Color, type RenderingContext, Scene, Sprite } from '@codexo/exojs';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
+
 
 class TweenWithYoyoScene extends Scene {
     private sprite!: Sprite;
@@ -32,4 +21,18 @@ class TweenWithYoyoScene extends Scene {
     }
 }
 
-app.start(new TweenWithYoyoScene());
+const app = new Application({
+    scenes: { TweenWithYoyoScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+
+app.start(TweenWithYoyoScene);

@@ -1,18 +1,6 @@
 // Auto-generated from pointer-to-world.ts — edit the .ts source, not this file.
 import { Application, Color, Graphics, Scene, View } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: new Color(10, 12, 20),
-    loader: {
-        basePath: 'assets/',
-    },
-});
 // The camera continuously pans (a slow figure-eight) and breathes its zoom, so
 // the same design-space pixel maps to a moving world point every frame.
 // `screenToWorld(x, y)` undoes the camera transform — pointer coordinates are
@@ -107,4 +95,17 @@ class PointerToWorldScene extends Scene {
         context.backend.setView(null);
     }
 }
-app.start(new PointerToWorldScene());
+const app = new Application({
+    scenes: { PointerToWorldScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: new Color(10, 12, 20),
+    loader: {
+        basePath: 'assets/',
+    },
+});
+app.start(PointerToWorldScene);

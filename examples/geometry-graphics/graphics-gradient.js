@@ -1,14 +1,5 @@
 // Auto-generated from graphics-gradient.ts — edit the .ts source, not this file.
 import { Application, Color, Container, Graphics, LinearGradient, RadialGradient, Scene } from '@codexo/exojs';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.midnightBlue,
-});
 class GraphicsGradientScene extends Scene {
     sceneRoot;
     panel;
@@ -67,7 +58,17 @@ class GraphicsGradientScene extends Scene {
         this.sceneRoot?.destroy();
     }
 }
-app.start(new GraphicsGradientScene()).catch(() => {
+const app = new Application({
+    scenes: { GraphicsGradientScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.midnightBlue,
+});
+app.start(GraphicsGradientScene).catch(() => {
     app.canvas.remove();
     app.destroy();
 });

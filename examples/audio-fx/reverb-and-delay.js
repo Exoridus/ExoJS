@@ -2,18 +2,6 @@
 import { Application, Color, Graphics, Scene, Text } from '@codexo/exojs';
 import { DelayEffect, ReverbEffect } from '@codexo/exojs-audio-fx';
 import { mountControlPanel, mountControls } from '@examples/runtime';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
 class ReverbAndDelayScene extends Scene {
     sound;
     reverb;
@@ -144,4 +132,17 @@ class ReverbAndDelayScene extends Scene {
         }
     }
 }
-app.start(new ReverbAndDelayScene());
+const app = new Application({
+    scenes: { ReverbAndDelayScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+app.start(ReverbAndDelayScene);

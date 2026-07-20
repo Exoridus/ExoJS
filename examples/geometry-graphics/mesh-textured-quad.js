@@ -1,14 +1,5 @@
 // Auto-generated from mesh-textured-quad.ts — edit the .ts source, not this file.
 import { Application, Color, Mesh, Scene } from '@codexo/exojs';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-});
 const UV_GRID = assets.technical.filtering.uvGrid256;
 const HALF = 300;
 class MeshTexturedQuadScene extends Scene {
@@ -43,4 +34,14 @@ class MeshTexturedQuadScene extends Scene {
         context.render(this.quad);
     }
 }
-app.start(new MeshTexturedQuadScene());
+const app = new Application({
+    scenes: { MeshTexturedQuadScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+});
+app.start(MeshTexturedQuadScene);

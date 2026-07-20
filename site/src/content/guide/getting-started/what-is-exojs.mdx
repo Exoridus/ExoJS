@@ -33,8 +33,8 @@ class MyScene extends Scene {
     }
 }
 
-const app = new Application();
-app.start(new MyScene());
+const app = new Application({ scenes: { MyScene } });
+app.start(MyScene);
 ```
 
 From there, the same shape scales up: add sprites, split logic across multiple scenes, attach input, play audio, render effects, and move code into reusable objects as the project grows.

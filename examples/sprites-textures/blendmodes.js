@@ -1,17 +1,6 @@
 // Auto-generated from blendmodes.ts — edit the .ts source, not this file.
 import { Application, Asset, BlendModes, Color, ScaleModes, Scene, Sprite } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    // A mid-tone backdrop so darkening modes (Subtract, Multiply, Darken) stay
-    // visible instead of compositing into a black canvas.
-    clearColor: new Color(48, 54, 68),
-});
 const ALPHA_RINGS = assets.technical.alpha.alphaGradientRings;
 // Every public blend mode, in enum order, paired with a display name.
 const BLEND_MODES = [
@@ -117,4 +106,16 @@ class BlendmodesScene extends Scene {
         context.render(this.right);
     }
 }
-app.start(new BlendmodesScene());
+const app = new Application({
+    scenes: { BlendmodesScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    // A mid-tone backdrop so darkening modes (Subtract, Multiply, Darken) stay
+    // visible instead of compositing into a black canvas.
+    clearColor: new Color(48, 54, 68),
+});
+app.start(BlendmodesScene);

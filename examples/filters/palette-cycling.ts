@@ -1,15 +1,7 @@
 import { Application, Color, LutFilter, type RenderingContext, Scene, Sprite, Texture, type Time } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-});
+
 
 const PRIMARY_RAMP = assets.technical.color.primaryRamp;
 
@@ -73,4 +65,15 @@ class PaletteCyclingScene extends Scene {
     }
 }
 
-app.start(new PaletteCyclingScene());
+const app = new Application({
+    scenes: { PaletteCyclingScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+});
+
+app.start(PaletteCyclingScene);

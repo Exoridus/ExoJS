@@ -1,16 +1,6 @@
 // Auto-generated from bonfire.ts — edit the .ts source, not this file.
 import { Application, BlendModes, Color, Scene } from '@codexo/exojs';
 import { ColorGradient, ColorOverLifetime, ConeDirection, Constant, particlesExtension, ParticleSystem, Range, RateSpawn, VectorRange, } from '@codexo/exojs-particles';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    extensions: [particlesExtension],
-});
 class BonfireScene extends Scene {
     fireSystem;
     smokeSystem;
@@ -56,4 +46,15 @@ class BonfireScene extends Scene {
         context.render(this.fireSystem);
     }
 }
-app.start(new BonfireScene());
+const app = new Application({
+    scenes: { BonfireScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    extensions: [particlesExtension],
+});
+app.start(BonfireScene);

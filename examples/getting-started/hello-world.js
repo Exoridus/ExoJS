@@ -1,17 +1,5 @@
 // Auto-generated from hello-world.ts — edit the .ts source, not this file.
 import { Application, Color, Scene, Sprite } from '@codexo/exojs';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
 // #region guide:first-scene
 class HelloWorldScene extends Scene {
     sprite;
@@ -30,4 +18,17 @@ class HelloWorldScene extends Scene {
     }
 }
 // #endregion guide:first-scene
-app.start(new HelloWorldScene());
+const app = new Application({
+    scenes: { HelloWorldScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+app.start(HelloWorldScene);

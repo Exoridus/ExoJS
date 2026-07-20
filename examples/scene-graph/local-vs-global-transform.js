@@ -1,17 +1,5 @@
 // Auto-generated from local-vs-global-transform.ts — edit the .ts source, not this file.
 import { Application, Color, Container, Scene, Sprite, Text } from '@codexo/exojs';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
 class LocalVsGlobalTransformScene extends Scene {
     parent;
     localSprite;
@@ -52,4 +40,17 @@ class LocalVsGlobalTransformScene extends Scene {
         context.render(this.globalLabel);
     }
 }
-app.start(new LocalVsGlobalTransformScene());
+const app = new Application({
+    scenes: { LocalVsGlobalTransformScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+app.start(LocalVsGlobalTransformScene);

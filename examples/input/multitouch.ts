@@ -1,18 +1,7 @@
 import { Application, Color, Graphics, type RenderingContext, Scene, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: new Color(10, 12, 20),
-    loader: {
-        basePath: 'assets/',
-    },
-});
+
 
 const MAX_TOUCHES = 10;
 
@@ -118,4 +107,18 @@ class MultitouchScene extends Scene {
     }
 }
 
-app.start(new MultitouchScene());
+const app = new Application({
+    scenes: { MultitouchScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: new Color(10, 12, 20),
+    loader: {
+        basePath: 'assets/',
+    },
+});
+
+app.start(MultitouchScene);

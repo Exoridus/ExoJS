@@ -1,15 +1,6 @@
 // Auto-generated from audio-buses.ts — edit the .ts source, not this file.
 import { Application, Asset, Color, Graphics, Scene, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-});
 // Each row drives one of the three engine-built-in busses. `master` is the
 // root; `music` and `sound` are its children, so the music/SFX bars scale
 // their own bus while the master bar scales everything downstream.
@@ -134,4 +125,14 @@ class AudioBusesScene extends Scene {
         }
     }
 }
-app.start(new AudioBusesScene());
+const app = new Application({
+    scenes: { AudioBusesScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+});
+app.start(AudioBusesScene);

@@ -153,11 +153,7 @@ self.onmessage = (event) => {
 `;
 }
 
-const app = new Application({
-    canvas: { width: 1280, height: 720, mount: document.body, sizingMode: 'fit' },
-    clearColor: new Color(38, 82, 128), // deep-water blue behind unloaded chunks
-    extensions: [tilemapExtension],
-});
+
 
 class WorkerStreamedTerrainScene extends Scene {
     private camera!: View;
@@ -349,4 +345,11 @@ class WorkerStreamedTerrainScene extends Scene {
     }
 }
 
-app.start(new WorkerStreamedTerrainScene());
+const app = new Application({
+    scenes: { WorkerStreamedTerrainScene },
+    canvas: { width: 1280, height: 720, mount: document.body, sizingMode: 'fit' },
+    clearColor: new Color(38, 82, 128), // deep-water blue behind unloaded chunks
+    extensions: [tilemapExtension],
+});
+
+app.start(WorkerStreamedTerrainScene);

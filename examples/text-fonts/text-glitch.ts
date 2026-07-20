@@ -1,17 +1,6 @@
 import { Application, Color, RenderBackendType, type RenderingContext, Scene, Text, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
+
 
 const glsl = `#version 300 es
 precision mediump float;
@@ -70,4 +59,18 @@ class TextGlitchScene extends Scene {
     }
 }
 
-app.start(new TextGlitchScene());
+const app = new Application({
+    scenes: { TextGlitchScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+
+app.start(TextGlitchScene);

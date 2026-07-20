@@ -8,19 +8,7 @@ import {
     ParticleSystem,
 } from '@codexo/exojs-particles';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-    extensions: [particlesExtension],
-});
+
 
 class ScreenShakeOnExplosionScene extends Scene {
     private view!: View;
@@ -65,4 +53,19 @@ class ScreenShakeOnExplosionScene extends Scene {
     }
 }
 
-app.start(new ScreenShakeOnExplosionScene());
+const app = new Application({
+    scenes: { ScreenShakeOnExplosionScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+    extensions: [particlesExtension],
+});
+
+app.start(ScreenShakeOnExplosionScene);

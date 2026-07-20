@@ -2,18 +2,7 @@ import { Application, Asset, Color, Graphics, Scene, Sound, Text } from '@codexo
 import type { RenderingContext, Spatializable, Voice } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
+
 
 // Spatial parameters tuned to the canvas so attenuation is visible across the
 // wide 1280px canvas. These mirror the Web Audio `linear` model (see
@@ -142,4 +131,18 @@ class ListenerAndSourceScene extends Scene {
     }
 }
 
-app.start(new ListenerAndSourceScene());
+const app = new Application({
+    scenes: { ListenerAndSourceScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+
+app.start(ListenerAndSourceScene);

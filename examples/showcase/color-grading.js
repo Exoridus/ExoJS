@@ -1,15 +1,6 @@
 // Auto-generated from color-grading.ts — edit the .ts source, not this file.
 import { Application, Color, Keyboard, LutFilter, Scene, Sprite } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-});
 const LUT_SIZE = 17;
 function buildLut3D(transform) {
     const width = LUT_SIZE * LUT_SIZE;
@@ -117,4 +108,14 @@ class ColorGradingScene extends Scene {
         context.render(this.sprite);
     }
 }
-app.start(new ColorGradingScene());
+const app = new Application({
+    scenes: { ColorGradingScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+});
+app.start(ColorGradingScene);

@@ -1,17 +1,6 @@
 import { Application, Color, type RenderingContext, Scene, Sprite, Text, Tween } from '@codexo/exojs';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
+
 
 class TweenBasicsScene extends Scene {
     private sprite!: Sprite;
@@ -50,4 +39,18 @@ class TweenBasicsScene extends Scene {
     }
 }
 
-app.start(new TweenBasicsScene());
+const app = new Application({
+    scenes: { TweenBasicsScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+
+app.start(TweenBasicsScene);

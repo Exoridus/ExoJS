@@ -1,17 +1,6 @@
 import { Application, Color, Container, type RenderingContext, Scene, Sprite, Text, type Time } from '@codexo/exojs';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
+
 
 class LocalVsGlobalTransformScene extends Scene {
     private parent!: Container;
@@ -58,4 +47,18 @@ class LocalVsGlobalTransformScene extends Scene {
     }
 }
 
-app.start(new LocalVsGlobalTransformScene());
+const app = new Application({
+    scenes: { LocalVsGlobalTransformScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+
+app.start(LocalVsGlobalTransformScene);

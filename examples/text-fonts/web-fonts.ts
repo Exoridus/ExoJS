@@ -1,17 +1,6 @@
 import { Application, Asset, Color, type RenderingContext, Scene, Text } from '@codexo/exojs';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
+
 
 class WebFontsScene extends Scene {
     private default!: Text;
@@ -39,4 +28,18 @@ class WebFontsScene extends Scene {
     }
 }
 
-app.start(new WebFontsScene());
+const app = new Application({
+    scenes: { WebFontsScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+
+app.start(WebFontsScene);

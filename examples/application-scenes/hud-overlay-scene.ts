@@ -1,14 +1,6 @@
 import { Application, Color, Graphics, Label, ProgressBar, type RenderingContext, Scene, type Time } from '@codexo/exojs';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-});
+
 
 /**
  * A screen-fixed HUD on `scene.ui` sits above the world automatically — no
@@ -54,4 +46,15 @@ class GameScene extends Scene {
     }
 }
 
-void app.start(new GameScene());
+const app = new Application({
+    scenes: { GameScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+});
+
+void app.start(GameScene);

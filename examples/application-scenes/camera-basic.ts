@@ -1,17 +1,6 @@
 import { Application, Color, Graphics, type RenderingContext, Scene, Sprite, type Time } from '@codexo/exojs';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
+
 
 class CameraBasicScene extends Scene {
     private bunny!: Sprite;
@@ -78,4 +67,18 @@ class CameraBasicScene extends Scene {
     }
 }
 
-app.start(new CameraBasicScene());
+const app = new Application({
+    scenes: { CameraBasicScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+
+app.start(CameraBasicScene);

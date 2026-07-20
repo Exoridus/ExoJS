@@ -1,15 +1,7 @@
 import { Application, Asset, AudioStream, Color, Graphics, Keyboard, type Pausable, type RenderingContext, Scene, type Seekable, Sprite, Text, type Time, View, type Voice } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-});
+
 
 const titleText = 'VOID EMPEROR';
 
@@ -162,4 +154,15 @@ class BossIntroCinematicScene extends Scene {
     }
 }
 
-app.start(new BossIntroCinematicScene());
+const app = new Application({
+    scenes: { BossIntroCinematicScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+});
+
+app.start(BossIntroCinematicScene);

@@ -1,14 +1,5 @@
 // Auto-generated from masks.ts — edit the .ts source, not this file.
 import { Application, Color, Graphics, Rectangle, Scene, Sprite } from '@codexo/exojs';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-});
 const ALPHA_RINGS = assets.technical.alpha.alphaGradientRings;
 class MasksScene extends Scene {
     rectSprite;
@@ -52,4 +43,14 @@ class MasksScene extends Scene {
         context.render(this.gfxSprite);
     }
 }
-app.start(new MasksScene());
+const app = new Application({
+    scenes: { MasksScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+});
+app.start(MasksScene);

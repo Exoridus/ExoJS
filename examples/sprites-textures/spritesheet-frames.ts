@@ -1,18 +1,7 @@
 import { Application, Asset, Color, type RenderingContext, Scene, Spritesheet, type SpritesheetData, type Time } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: new Color(24, 28, 38),
-    loader: {
-        basePath: 'assets/',
-    },
-});
+
 
 const CHARACTERS = ['beige', 'green', 'pink', 'purple', 'yellow'];
 
@@ -96,4 +85,18 @@ class SpritesheetFramesScene extends Scene {
     }
 }
 
-app.start(new SpritesheetFramesScene());
+const app = new Application({
+    scenes: { SpritesheetFramesScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: new Color(24, 28, 38),
+    loader: {
+        basePath: 'assets/',
+    },
+});
+
+app.start(SpritesheetFramesScene);

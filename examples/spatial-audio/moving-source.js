@@ -1,18 +1,6 @@
 // Auto-generated from moving-source.ts — edit the .ts source, not this file.
 import { Application, Asset, Color, Graphics, Scene, Sound, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
 // Orbit + attenuation tuned to the wide canvas so the readout reflects what you
 // hear.
 const ORBIT_X = 420;
@@ -116,4 +104,17 @@ class MovingSourceScene extends Scene {
         }
     }
 }
-app.start(new MovingSourceScene());
+const app = new Application({
+    scenes: { MovingSourceScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+app.start(MovingSourceScene);
