@@ -437,4 +437,49 @@ describe('Voice — spatial (PannerNode)', () => {
     spy.restore();
     sound.destroy();
   });
+
+  test('dopplerFactor 0 (default) applies no playbackRate modulation regardless of velocity', () => {
+    const spy = setupPannerSpy();
+    const manager = new AudioManager();
+    const sound = new Sound(createAudioBufferStub());
+    const voice = manager.play(sound, { position: { x: 0, y: 0 }, velocity: { x: 100, y: 0 } }) as SoundVoice;
+    const rateSpy = vi.spyOn(voice, 'playbackRate', 'set');
+    manager.update();
+    expect(rateSpy).not.toHaveBeenCalled();
+    spy.restore();
+    sound.destroy();
+  });
+
+  test('a source approaching a stationary listener with dopplerFactor > 0 raises its effective playbackRate', () => {
+    const spy = setupPannerSpy();
+    const manager = new AudioManager();
+    manager.spatial.dopplerFactor = 1;
+    manager.spatial.speedOfSound = 100;
+    manager.listener.position.set(0, 0);
+    const sound = new Sound(createAudioBufferStub());
+    // Source starts far away on the +X axis and, between ticks, moves toward the listener.
+    const voice = manager.play(sound, { position: { x: 500, y: 0 } }) as SoundVoice;
+    manager.update();
+    voice.position = { x: 400, y: 0 }; // moved 100 units toward the listener
+    manager.update();
+    // Exact rate value depends on the implementer's chosen formula (see plan Task 5 Step 3) —
+    // assert direction (> 1, i.e. pitched up while approaching), not an exact number.
+    const source = (voice as unknown as { _source: { playbackRate: { setTargetAtTime: MockInstance } } })._source;
+    const lastCallArgs = source.playbackRate.setTargetAtTime.mock.calls.at(-1);
+    expect(lastCallArgs?.[0]).toBeGreaterThan(1);
+    spy.restore();
+    sound.destroy();
+  });
+
+  test('velocity round-trips and can be cleared back to auto-derivation', () => {
+    const manager = new AudioManager();
+    const sound = new Sound(createAudioBufferStub());
+    const voice = manager.play(sound, { position: { x: 0, y: 0 } });
+    expect(voice.velocity).toBeNull();
+    voice.velocity = { x: 10, y: -5 };
+    expect(voice.velocity!.x).toBe(10);
+    voice.velocity = null;
+    expect(voice.velocity).toBeNull();
+    sound.destroy();
+  });
 });

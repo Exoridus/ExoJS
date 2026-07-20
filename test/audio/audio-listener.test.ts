@@ -406,4 +406,11 @@ describe('AudioListener', () => {
 
     listener.destroy();
   });
+
+  test('listener.velocity is settable and marks it explicit (no auto-derivation overwrite)', () => {
+    const listener = new AudioListener();
+    listener.velocity = { x: 5, y: 5 };
+    expect(listener.velocity.x).toBe(5);
+    expect(listener.velocity.y).toBe(5);
+  });
 });

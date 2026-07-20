@@ -7,7 +7,13 @@ import type { AudioBus } from './AudioBus';
 import type { AudioEffect } from './AudioEffect';
 import type { AudioManager } from './AudioManager';
 import type { DistanceModel, Spatializable, Voice } from './Playable';
-import { SmoothedAudioParam } from './spatial-smoothing';
+import { createVelocitySample, deriveVelocity, POSITION_EPSILON, SmoothedAudioParam, type SpatialSmoothingSettings, type VelocitySample } from './spatial-smoothing';
+
+/** Clamp range for the Doppler ratio applied to a voice's playback rate — a much
+ * tighter range than the general [0.1, 20] `playbackRate` clamp, since a wide
+ * Doppler swing alone would never sound like a desirable game-feel effect. */
+const MIN_DOPPLER_RATIO = 0.1;
+const MAX_DOPPLER_RATIO = 4;
 
 /** Distance-attenuation configuration for a spatial voice. */
 export interface VoiceSpatialConfig {
@@ -81,6 +87,9 @@ export abstract class BaseVoice implements Voice, Spatializable, SpatialVoice {
   private _panningModel: PanningModelType | null = null;
   private _followNode: SceneNode | null = null;
   private _spatialRegistered = false;
+  private _velocity: Vector | null = null;
+  private _explicitVelocity = false;
+  private readonly _velocitySample: VelocitySample = createVelocitySample();
   private readonly _smoothX = new SmoothedAudioParam();
   private readonly _smoothY = new SmoothedAudioParam();
   private readonly _smoothZ = new SmoothedAudioParam();
@@ -354,6 +363,30 @@ export abstract class BaseVoice implements Voice, Spatializable, SpatialVoice {
     }
   }
 
+  public get velocity(): Vector | null {
+    return this._velocity;
+  }
+
+  public set velocity(value: Vector | { x: number; y: number } | null) {
+    if (this._ended) return;
+
+    if (value === null) {
+      if (this._velocity !== null) {
+        this._velocity.destroy();
+        this._velocity = null;
+      }
+      this._explicitVelocity = false;
+      return;
+    }
+
+    if (this._velocity === null) {
+      this._velocity = new Vector(value.x, value.y);
+    } else {
+      this._velocity.set(value.x, value.y);
+    }
+    this._explicitVelocity = true;
+  }
+
   /** @internal Called once per frame by {@link AudioManager.update} for spatial voices. */
   public _tickSpatial(): void {
     if (this._panner === null || this._ended) return;
@@ -383,10 +416,10 @@ export abstract class BaseVoice implements Voice, Spatializable, SpatialVoice {
       setPosition: (x: number, y: number, z: number) => void;
     }>;
     const t = this._audioContext.currentTime;
+    const settings = this._manager.spatial;
     if (panner.positionX) {
       // Route through the smoothing layer (setTargetAtTime + epsilon-skip +
       // teleport-snap) to eliminate per-frame zipper noise on moving sources (AU4).
-      const settings = this._manager.spatial;
       this._smoothX.write(panner.positionX, x, t, settings);
       this._smoothY.write(panner.positionY!, y, t, settings);
       this._smoothZ.write(panner.positionZ!, 0, t, settings);
@@ -394,6 +427,66 @@ export abstract class BaseVoice implements Voice, Spatializable, SpatialVoice {
       // Legacy AudioParam-less API: snap only (no smoothing available).
       panner.setPosition(x, y, 0);
     }
+
+    this._writeOrientation();
+    this._tickDoppler(x, y, t, settings);
+  }
+
+  /**
+   * Resolve this tick's effective velocity (explicit {@link BaseVoice.velocity},
+   * else auto-derived from the position delta since the last tick), then
+   * compute and apply the Doppler ratio against the listener. No-op entirely
+   * when `dopplerFactor` is `0` (the default) — genuinely zero cost when the
+   * feature is unused.
+   *
+   * Ratio formula: classic Doppler is
+   * `f' = f * (c + v_listener_toward_source) / (c + v_source_away_from_listener)`.
+   * For game-scale velocities (which are typically small relative to the
+   * tunable {@link SpatialSmoothingSettings.speedOfSound} reference) this is
+   * linearized to
+   * `ratio = 1 + dopplerFactor * (listenerApproachSpeed - sourceRecedeSpeed) / speedOfSound`
+   * — a first-order Taylor approximation of the physical ratio around 1 that
+   * stays numerically well-behaved (no risk of a negative or exploding
+   * denominator) and lets `dopplerFactor` scale linearly as an exaggeration
+   * knob, then the result is clamped to a sane, tight positive range (see
+   * {@link MIN_DOPPLER_RATIO}/{@link MAX_DOPPLER_RATIO}) — a source or
+   * listener closing at or above `speedOfSound` pushes the *linearized* ratio
+   * arbitrarily high/low, so the clamp is what actually keeps that case sane,
+   * not the formula itself.
+   */
+  private _tickDoppler(x: number, y: number, now: number, settings: SpatialSmoothingSettings): void {
+    if (settings.dopplerFactor === 0) return;
+
+    let vx: number;
+    let vy: number;
+
+    if (this._explicitVelocity && this._velocity !== null) {
+      vx = this._velocity.x;
+      vy = this._velocity.y;
+    } else {
+      deriveVelocity(this._velocitySample, x, y, now);
+      vx = this._velocitySample.x;
+      vy = this._velocitySample.y;
+    }
+
+    const listener = this._manager.listener;
+    const dx = x - listener.position.x;
+    const dy = y - listener.position.y;
+    const distance = Math.hypot(dx, dy);
+    // Coincident with the listener — no defined line of sight to project onto.
+    if (distance < POSITION_EPSILON) return;
+
+    const ux = dx / distance;
+    const uy = dy / distance;
+
+    // Positive = source moving away from the listener along the line of sight.
+    const sourceRecedeSpeed = vx * ux + vy * uy;
+    const listenerVelocity = listener.velocity;
+    // Positive = listener moving toward the source along the same line.
+    const listenerApproachSpeed = listenerVelocity.x * ux + listenerVelocity.y * uy;
+
+    const rawRatio = 1 + settings.dopplerFactor * ((listenerApproachSpeed - sourceRecedeSpeed) / settings.speedOfSound);
+    this._applyDopplerRate(clamp(rawRatio, MIN_DOPPLER_RATIO, MAX_DOPPLER_RATIO));
   }
 
   /**
@@ -558,4 +651,17 @@ export abstract class BaseVoice implements Voice, Spatializable, SpatialVoice {
 
   /** Stop and disconnect the voice's source node(s). Called once from `_finish`. */
   protected abstract _teardownSource(): void;
+
+  /**
+   * Apply a Doppler pitch-shift multiplier on top of whatever playback rate
+   * the voice already has (never overwrite the user's own explicit rate —
+   * multiply it). Default no-op: voice types with no meaningful, live
+   * rate parameter (`AudioGeneratorVoice`'s rate is documented as inert;
+   * `InputVoice`/`NoopVoice` have no source to modulate) simply don't
+   * override this. Overridden by {@link SoundVoice} and
+   * {@link AudioStreamVoice}.
+   */
+  protected _applyDopplerRate(_ratio: number): void {
+    // no-op default
+  }
 }

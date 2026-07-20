@@ -136,6 +136,14 @@ export interface Spatializable {
   coneOuterAngle: number;
   /** Gain applied outside `coneOuterAngle`. Default `0`. */
   coneOuterGain: number;
+  /**
+   * World-space velocity of the source (world units/second), or `null`.
+   * Feeds the Doppler calculation (`app.audio.spatial.dopplerFactor`) —
+   * has no other effect. Explicit; when `null` and `follow(node)` is
+   * active, velocity is auto-derived each frame from the tracked node's
+   * position delta instead.
+   */
+  velocity: Vector | { x: number; y: number } | null;
 }
 
 /**
@@ -176,6 +184,8 @@ export interface PlayOptions {
   coneOuterAngle?: number;
   /** Initial gain outside the outer cone. Default `0`. */
   coneOuterGain?: number;
+  /** Initial velocity for Doppler. See {@link Spatializable.velocity}. */
+  velocity?: { x: number; y: number } | Vector;
 }
 
 /**

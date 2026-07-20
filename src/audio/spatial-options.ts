@@ -24,4 +24,5 @@ export function seedVoiceFromPlayOptions(voice: Spatializable, options: PlayOpti
   if (options.coneOuterGain !== undefined) voice.coneOuterGain = options.coneOuterGain;
   if (options.position !== undefined) voice.position = options.position;
   if (options.panningModel !== undefined) voice.panningModel = options.panningModel;
+  if (options.velocity !== undefined) voice.velocity = options.velocity;
 }

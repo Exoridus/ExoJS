@@ -165,6 +165,11 @@ export class SoundVoice extends BaseVoice implements Seekable, Loopable, RatePit
   // BaseVoice hooks
   // -------------------------------------------------------------------------
 
+  protected override _applyDopplerRate(ratio: number): void {
+    if (this._ended) return;
+    this._source.playbackRate.setTargetAtTime(this._playbackRate * ratio, this._audioContext.currentTime, 0.01);
+  }
+
   protected override _routeThroughPanner(panner: PannerNode): void {
     this._source.disconnect();
     this._source.connect(panner);

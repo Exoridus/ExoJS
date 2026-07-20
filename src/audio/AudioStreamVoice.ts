@@ -32,6 +32,14 @@ export class AudioStreamVoice extends BaseVoice implements Seekable, Pausable, L
   private readonly _element: HTMLMediaElement;
   private readonly _sourceNode: MediaElementAudioSourceNode;
   private _detune = 0;
+  /**
+   * User-facing base playback rate, cached independently of what's actually
+   * written to `_element.playbackRate` — {@link AudioStreamVoice._applyDopplerRate}
+   * multiplies from this cached base every tick, never from the live element
+   * value, so consecutive Doppler ticks never compound onto each other's
+   * already-modulated rate (mirrors {@link SoundVoice}'s `_playbackRate` cache).
+   */
+  private _basePlaybackRate: number;
   private readonly _onEnded = (): void => this._finish();
   private _unlockHandler: ((audioContext: AudioContext) => void) | null = null;
 
@@ -43,6 +51,7 @@ export class AudioStreamVoice extends BaseVoice implements Seekable, Pausable, L
     this._sourceNode.connect(this._output);
 
     this._element.loop = init.loop;
+    this._basePlaybackRate = init.playbackRate;
     this._element.playbackRate = init.playbackRate;
     if (init.startTime !== undefined) {
       this._element.currentTime = Math.max(0, init.startTime);
@@ -106,11 +115,12 @@ export class AudioStreamVoice extends BaseVoice implements Seekable, Pausable, L
   // -------------------------------------------------------------------------
 
   public get playbackRate(): number {
-    return this._element.playbackRate;
+    return this._basePlaybackRate;
   }
 
   public set playbackRate(value: number) {
-    this._element.playbackRate = clamp(value, 0.1, 20);
+    this._basePlaybackRate = clamp(value, 0.1, 20);
+    this._element.playbackRate = this._basePlaybackRate;
   }
 
   /**
@@ -129,6 +139,11 @@ export class AudioStreamVoice extends BaseVoice implements Seekable, Pausable, L
   // -------------------------------------------------------------------------
   // BaseVoice hooks
   // -------------------------------------------------------------------------
+
+  protected override _applyDopplerRate(ratio: number): void {
+    if (this._ended) return;
+    this._element.playbackRate = clamp(this._basePlaybackRate * ratio, 0.1, 20);
+  }
 
   protected override _routeThroughPanner(panner: PannerNode): void {
     this._sourceNode.disconnect();
