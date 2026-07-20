@@ -53,7 +53,7 @@ export class SceneScope<Data = unknown> {
     this.scene = scene;
     this.systems = new SystemRegistry();
     this.loader = new SceneLoader(app);
-    this.inputs = new SceneInputs(app);
+    this.inputs = new SceneInputs(app, () => this._state);
     this.interaction = new SceneInteraction(app);
     this.tweens = new SceneTweens(app);
     this.audio = new SceneAudio(app);

@@ -1,5 +1,6 @@
 ﻿import type { Application } from '#core/Application';
 import { Scene } from '#core/Scene';
+import { SceneState } from '#core/SceneState';
 import { Signal } from '#core/Signal';
 import type { InputManager } from '#input/InputManager';
 import type { InteractionEvent } from '#input/InteractionEvent';
@@ -111,6 +112,8 @@ const createApp = (): {
       get currentScene(): Scene | null {
         return scene;
       },
+      state: SceneState.Active as SceneState | null,
+      _transitionGateOpen: false,
     },
   } as unknown as Application;
 
@@ -154,6 +157,8 @@ const createAppNoScene = (
       get currentScene(): Scene | null {
         return null;
       },
+      state: null as SceneState | null,
+      _transitionGateOpen: false,
     },
   } as unknown as Application;
 
@@ -1738,5 +1743,120 @@ describe('InteractionManager — miscellaneous', () => {
     im.destroy();
     spriteA.destroy();
     spriteB.destroy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Dispatch gating (SceneState + transition gate)
+// ---------------------------------------------------------------------------
+
+describe('InteractionManager — dispatch gating', () => {
+  test('does not dispatch while state is Preparing (no active scope yet)', () => {
+    const { app, scene, signals } = createApp();
+    const appMutable = app as unknown as { scenes: { state: SceneState | null } };
+    appMutable.scenes.state = SceneState.Preparing;
+
+    const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
+    const sprite = new TestSprite().setBounds(0, 0, 100, 100);
+
+    sprite.interactive = true;
+    scene.addChild(sprite);
+
+    const onDown = vi.fn();
+    sprite.onPointerDown.add(onDown);
+
+    signals.onPointerDown.dispatch(makePointer({ x: 10, y: 10 }));
+    im.update();
+
+    expect(onDown).not.toHaveBeenCalled();
+
+    im.destroy();
+    sprite.destroy();
+  });
+
+  test('dispatches normally while state is Active', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
+    const sprite = new TestSprite().setBounds(0, 0, 100, 100);
+
+    sprite.interactive = true;
+    scene.addChild(sprite);
+
+    const onDown = vi.fn();
+    sprite.onPointerDown.add(onDown);
+
+    signals.onPointerDown.dispatch(makePointer({ x: 10, y: 10 }));
+    im.update();
+
+    expect(onDown).toHaveBeenCalledTimes(1);
+
+    im.destroy();
+    sprite.destroy();
+  });
+
+  test('dispatches normally while state is Paused', () => {
+    const { app, scene, signals } = createApp();
+    const appMutable = app as unknown as { scenes: { state: SceneState | null } };
+    appMutable.scenes.state = SceneState.Paused;
+
+    const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
+    const sprite = new TestSprite().setBounds(0, 0, 100, 100);
+
+    sprite.interactive = true;
+    scene.addChild(sprite);
+
+    const onDown = vi.fn();
+    sprite.onPointerDown.add(onDown);
+
+    signals.onPointerDown.dispatch(makePointer({ x: 10, y: 10 }));
+    im.update();
+
+    expect(onDown).toHaveBeenCalledTimes(1);
+
+    im.destroy();
+    sprite.destroy();
+  });
+
+  test('does not dispatch while the transition gate is open, and discards the stale event once it closes', () => {
+    const { app, scene, signals } = createApp();
+    const appMutable = app as unknown as { scenes: { _transitionGateOpen: boolean } };
+    appMutable.scenes._transitionGateOpen = true;
+
+    const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
+    const sprite = new TestSprite().setBounds(0, 0, 100, 100);
+
+    sprite.interactive = true;
+    scene.addChild(sprite);
+
+    const onDown = vi.fn();
+    sprite.onPointerDown.add(onDown);
+
+    signals.onPointerDown.dispatch(makePointer({ x: 10, y: 10 }));
+    im.update();
+    expect(onDown).not.toHaveBeenCalled();
+
+    appMutable.scenes._transitionGateOpen = false;
+    im.update(); // the stale queued event must NOT replay once the gate reopens
+
+    expect(onDown).not.toHaveBeenCalled();
+
+    im.destroy();
+    sprite.destroy();
+  });
+
+  test('pointer events are safely ignored when there is no current scene (state null)', () => {
+    const { app, signals } = createAppNoScene();
+    const im = new InteractionManager(app);
+
+    expect(() => {
+      signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
+      im.update();
+    }).not.toThrow();
+
+    im.destroy();
   });
 });

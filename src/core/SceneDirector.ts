@@ -77,6 +77,7 @@ export class SceneDirector {
   private _activeScope: SceneScope | null = null;
   private readonly _transitionOverlay: TransitionOverlayMesh = createOverlayMesh();
   private _transition: ActiveFadeTransition | null = null;
+  private _inputGateDepth = 0;
 
   /** Fires whenever the active scene changes (set or clear). Payload is the new scene, or `null` when cleared. */
   public readonly onChangeScene = new Signal<[Scene | null]>();
@@ -106,6 +107,17 @@ export class SceneDirector {
   /** The active scene's current {@link SceneState}, or `null` when no scene is active. */
   public get state(): SceneState | null {
     return this._activeScope?.state ?? null;
+  }
+
+  /**
+   * @internal `true` while an explicit fade transition is in flight — used
+   * by {@link SceneInputs} (`when` policy) and {@link InteractionManager}
+   * to suppress scene input/interaction dispatch for the transition's
+   * duration, regardless of `when: 'always'` (definition §13.6). A
+   * `setScene()` call with no `transition` option never opens this gate.
+   */
+  public get _transitionGateOpen(): boolean {
+    return this._inputGateDepth > 0;
   }
 
   /**
@@ -306,6 +318,7 @@ export class SceneDirector {
       const transition = this._transition;
 
       this._transition = null;
+      this._inputGateDepth--;
       transition.color.destroy();
       transition.reject(new Error('SceneDirector was destroyed while a transition was active.'));
     }
@@ -392,6 +405,7 @@ export class SceneDirector {
     }
 
     await new Promise<void>((resolve, reject) => {
+      this._inputGateDepth++;
       this._transition = {
         type: 'fade',
         durationMs,
@@ -442,6 +456,7 @@ export class SceneDirector {
     } catch (error) {
       if (this._transition === transition) {
         this._transition = null;
+        this._inputGateDepth--;
         transition.color.destroy();
         transition.reject(error);
       }
@@ -465,6 +480,7 @@ export class SceneDirector {
     const transition = this._transition;
 
     this._transition = null;
+    this._inputGateDepth--;
     transition.color.destroy();
     transition.resolve();
   }
