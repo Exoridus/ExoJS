@@ -50,14 +50,8 @@ class ListenerAndSourceScene extends Scene {
         // Sound below reads .audioBuffer synchronously, so await load() instead
         // of the deferred get() (whose placeholder audioBuffer is null until fill).
         const source = await this.loader.load(Asset.kind('sound', 'audio/demo-loop-main.ogg'));
-        this.sound = new Sound(source.audioBuffer, {
-            distanceModel: 'linear',
-            refDistance: REF_DISTANCE,
-            maxDistance: MAX_DISTANCE,
-            rolloffFactor: ROLLOFF,
-        });
+        this.sound = new Sound(source.audioBuffer);
         this.listener = { x: width / 2, y: height / 2 };
-        this.sound.position = { x: width / 2 + 220, y: height / 2 };
         app.audio.listener.target = this.listener;
 
         this.graphics = new Graphics();
@@ -78,7 +72,7 @@ class ListenerAndSourceScene extends Scene {
         });
 
         app.input.onPointerDown.add(pointer => {
-            const source = this.sound.position;
+            const source = this.voice.position;
             if (!source) return;
             const dx = pointer.x - source.x;
             const dy = pointer.y - source.y;
@@ -87,9 +81,6 @@ class ListenerAndSourceScene extends Scene {
         });
         app.input.onPointerMove.add(pointer => {
             if (!this.dragging) return;
-            // sound.position only seeds NEW voices - a live voice moves via
-            // voice.position, so update both (descriptor + running loop).
-            this.sound.position = { x: pointer.x, y: pointer.y };
             this.voice.position = { x: pointer.x, y: pointer.y };
         });
         app.input.onPointerUp.add(() => {
@@ -99,14 +90,22 @@ class ListenerAndSourceScene extends Scene {
         // Core defers playback until the AudioContext unlocks on the first
         // gesture, then starts automatically — just call play().
         // play() returns the narrow Voice interface; Sound voices are spatializable.
-        this.voice = app.audio.play(this.sound, { loop: true, volume: 1 }) as Voice & Spatializable;
+        this.voice = app.audio.play(this.sound, {
+            loop: true,
+            volume: 1,
+            position: { x: width / 2 + 220, y: height / 2 },
+            distanceModel: 'linear',
+            refDistance: REF_DISTANCE,
+            maxDistance: MAX_DISTANCE,
+            rolloffFactor: ROLLOFF,
+        }) as Voice & Spatializable;
         this.hud.setStatus('Drag the red source to move it');
     }
 
     override draw(context: RenderingContext): void {
         const app = this.app;
         if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const source = this.sound.position ?? { x: 0, y: 0 };
+        const source = this.voice.position ?? { x: 0, y: 0 };
         const dx = source.x - this.listener.x;
         const dy = source.y - this.listener.y;
         const dist = Math.sqrt(dx * dx + dy * dy);

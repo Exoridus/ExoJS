@@ -40,12 +40,11 @@ Valid target types are:
 
 ## Sound sources
 
-A `Sound` descriptor carries a `position`. When set, it seeds the spatial position of every voice played from that sound:
+`Sound` itself carries no spatial state — position and distance model live on the `Voice` that `app.audio.play()` returns. Seed the initial position via `PlayOptions`:
 
 ```js
 const pickup = loader.get('audio/pickup.wav');
-pickup.position = { x: 320, y: 180 };  // seeds the voice's initial position
-this.app.audio.play(pickup);
+const voice = this.app.audio.play(pickup, { position: { x: 320, y: 180 } });
 ```
 
 The audio pans left when the source is left of the listener, right when to the right. Volume attenuates with distance according to the configured distance model.
@@ -53,8 +52,6 @@ The audio pans left when the source is left of the listener, right when to the r
 To move a source *while it plays*, drive the live `Voice` — spatial voices are `Spatializable`, exposing `position` and `follow()`:
 
 ```js
-const voice = this.app.audio.play(pickup);
-
 // Move the live source each frame...
 voice.position = { x: item.x, y: item.y };
 
@@ -75,34 +72,35 @@ Three attenuation curves control how volume drops with distance:
 | `'inverse'` | Full volume at `refDistance`, inverse-proportional falloff beyond. Natural-sounding drop-off. |
 | `'exponential'` | Full volume at `refDistance`, exponential falloff beyond. Sharpest near-field drop-off. |
 
-Configure per-sound via constructor options or live setters:
+Configure per-voice via `PlayOptions` at play time, or live on the returned `Voice`:
 
 ```js no-check
 import { Sound } from '@codexo/exojs';
 
-const ambient = new Sound(audioBuffer, {
+const ambient = new Sound(audioBuffer);
+const voice = this.app.audio.play(ambient, {
+    loop: true,
+    position: { x: 0, y: 0 },
     distanceModel: 'exponential',
     refDistance: 100,      // pixels — full volume within this radius
     maxDistance: 800,      // pixels — silence beyond this (linear only)
     rolloffFactor: 1.5,    // steepness multiplier (all models)
 });
-ambient.position = { x: 0, y: 0 };
-this.app.audio.play(ambient, { loop: true });
 ```
 
 `refDistance` (default 50) is the radius around the listener where the sound plays at full volume. `maxDistance` (default 1000) only applies to the linear model. `rolloffFactor` (default 1) scales the steepness — higher values make the sound drop off faster.
 
-All four attenuation properties are live setters on the `Sound` descriptor; they apply to voices played afterwards:
+All four attenuation properties are also live setters on the `Voice` — reassign them to change the model or falloff of a sound that's already playing:
 
 ```js
-sound.distanceModel = 'inverse';
-sound.refDistance = 80;
-sound.rolloffFactor = 2;
+voice.distanceModel = 'inverse';
+voice.refDistance = 80;
+voice.rolloffFactor = 2;
 ```
 
 ## Practical use
 
-The most common pattern is to set the listener's target to the camera or player once in `init`, then assign a position to a spatial sound right before each one-shot play:
+The most common pattern is to set the listener's target to the camera or player once in `init`, then pass a `position` in `PlayOptions` right before each one-shot play:
 
 ```js
 init(loader) {
@@ -116,29 +114,30 @@ update(delta) {
     // ... game logic ...
 
     if (pickupCollected) {
-        this.pickupSfx.position = { x: item.x, y: item.y };
-        this.app.audio.play(this.pickupSfx);
+        this.app.audio.play(this.pickupSfx, { position: { x: item.x, y: item.y } });
     }
 }
 ```
 
 <Callout type="hint" title="Only spatialise the sounds that need it">
-A `Sound` you never give a `position` plays non-spatially — full volume in both channels, ignoring the listener. Assign a position only to sources that live in the world, and set a live voice's `position` back to `null` to drop it out of the pan field again.
+A voice played without a `position` plays non-spatially — full volume in both channels, ignoring the listener. Pass `position` only for sources that live in the world, and set a live voice's `position` back to `null` to drop it out of the pan field again.
 </Callout>
 
 For ambient sounds that should follow the listener's general area but not overlap, set a large `refDistance`:
 
 ```js
 const waterfall = loader.get('audio/waterfall.ogg');
-waterfall.distanceModel = 'inverse';
-waterfall.refDistance = 300;
-waterfall.position = { x: 600, y: 200 };
-this.app.audio.play(waterfall, { loop: true });
+const voice = this.app.audio.play(waterfall, {
+    loop: true,
+    position: { x: 600, y: 200 },
+    distanceModel: 'inverse',
+    refDistance: 300,
+});
 ```
 
 ## Sounds per frame
 
-Spatial updates happen automatically — each frame the `AudioManager` updates the listener from its target and ticks every spatial `Voice`, writing the resolved position to the Web Audio `PannerNode`. You do not need to call any per-frame update on spatial sources: assign a position (on the descriptor before play, or on the live voice after), or call `voice.follow(node)`, and the engine handles the rest.
+Spatial updates happen automatically — each frame the `AudioManager` updates the listener from its target and ticks every spatial `Voice`, writing the resolved position to the Web Audio `PannerNode`. You do not need to call any per-frame update on spatial sources: pass `position` in `PlayOptions` at play time, set it live on the returned `Voice`, or call `voice.follow(node)`, and the engine handles the rest.
 
 ## Browser constraints
 
