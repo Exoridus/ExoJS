@@ -1,4 +1,4 @@
-import { canDestroy, canPause, canResume, canSuspend, SceneState } from '#core/SceneState';
+import { canDestroy, canPause, canResume, canRestore, canSuspend, SceneState } from '#core/SceneState';
 
 describe('SceneState guards', () => {
   test('canPause is true only from Active', () => {
@@ -35,6 +35,15 @@ describe('SceneState guards', () => {
     expect(canDestroy(SceneState.Suspended)).toBe(true);
     expect(canDestroy(SceneState.Destroying)).toBe(false);
     expect(canDestroy(SceneState.Destroyed)).toBe(false);
+  });
+
+  test('canRestore is true only from Suspended', () => {
+    expect(canRestore(SceneState.Suspended)).toBe(true);
+    expect(canRestore(SceneState.Active)).toBe(false);
+    expect(canRestore(SceneState.Paused)).toBe(false);
+    expect(canRestore(SceneState.Preparing)).toBe(false);
+    expect(canRestore(SceneState.Destroying)).toBe(false);
+    expect(canRestore(SceneState.Destroyed)).toBe(false);
   });
 
   test('is a string enum (never const enum) — values are readable at runtime', () => {
