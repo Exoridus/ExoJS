@@ -7,7 +7,14 @@ import type { AudioBus } from './AudioBus';
 import type { AudioEffect } from './AudioEffect';
 import type { AudioManager } from './AudioManager';
 import type { DistanceModel, Spatializable, Voice } from './Playable';
-import { createVelocitySample, deriveVelocity, POSITION_EPSILON, SmoothedAudioParam, type SpatialSmoothingSettings, type VelocitySample } from './spatial-smoothing';
+import {
+  createVelocitySample,
+  deriveVelocity,
+  POSITION_EPSILON,
+  SmoothedAudioParam,
+  type SpatialSmoothingSettings,
+  type VelocitySample,
+} from './spatial-smoothing';
 
 /** Clamp range for the Doppler ratio applied to a voice's playback rate — a much
  * tighter range than the general [0.1, 20] `playbackRate` clamp, since a wide

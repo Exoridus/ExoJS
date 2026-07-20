@@ -25,6 +25,7 @@
 ## Task 1: Move spatial descriptor ownership from `Sound` to `Voice`/`PlayOptions`
 
 **Files:**
+
 - Modify: `src/audio/Sound.ts`
 - Modify: `src/audio/Playable.ts`
 - Modify: `src/audio/BaseVoice.ts`
@@ -34,6 +35,7 @@
 - Rename + rewrite: `test/audio/sound-spatial.test.ts` → `test/audio/voice-spatial.test.ts`
 
 **Interfaces:**
+
 - Produces: `Spatializable` gains `distanceModel: DistanceModel`, `refDistance: number`, `maxDistance: number`, `rolloffFactor: number` (get/set pairs, alongside the existing `position`/`follow`). `PlayOptions` gains `position?: { x: number; y: number } | Vector`, `distanceModel?: DistanceModel`, `refDistance?: number`, `maxDistance?: number`, `rolloffFactor?: number`. `DistanceModel` type moves from `Sound.ts` to `Playable.ts` (still exported from the package root under the same name). `seedVoiceFromPlayOptions(voice: Spatializable, options: PlayOptions): void` — a shared helper in the new `src/audio/spatial-options.ts`, applying every spatial `PlayOptions` field present on `options` to `voice` via its live public setters. Every `Playable._createVoice` implementation (`Sound`, `AudioStream`, `AudioGenerator`) calls it exactly once, right after constructing its voice, instead of hand-building spatial config or duplicating per-field seeding logic at each call site.
 - Consumed by: Task 3 (`panningModel`), Task 4 (`orientation`/cone), Task 5 (`velocity`) each add exactly one new field-check line to `seedVoiceFromPlayOptions` — they do NOT need to touch `Sound.ts`/`AudioStream.ts`/`AudioGenerator.ts` again, since those files' `_createVoice` implementations already call the shared helper unconditionally.
 
@@ -288,21 +290,21 @@ In `clip()` (lines 416-441), remove the four spatial fields from the nested `new
 In `_buildVoice()` (lines 558-629), remove the `spatial: {...}` block (lines 595-600) entirely from the `new SoundVoice({...})` call — the voice is now always constructed with its default spatial config, seeded afterward via the shared helper (Step 4a below):
 
 ```ts
-    const voice = new SoundVoice({
-      audioContext,
-      output,
-      bus,
-      manager,
-      volume,
-      buffer,
-      loop,
-      playbackRate,
-      detune,
-      offset,
-      window,
-    });
+const voice = new SoundVoice({
+  audioContext,
+  output,
+  bus,
+  manager,
+  volume,
+  buffer,
+  loop,
+  playbackRate,
+  detune,
+  offset,
+  window,
+});
 
-    seedVoiceFromPlayOptions(voice, options);
+seedVoiceFromPlayOptions(voice, options);
 ```
 
 replacing the old position-seeding block (lines 609-613: `if (this._position !== null) { voice.position = this._position; }`) — that block referenced the descriptor's own `_position`, which no longer exists after this step.
@@ -355,7 +357,7 @@ Neither `_createVoice` currently passes any spatial config (both omit the old `s
 In `src/audio/AudioStream.ts`'s `_createVoice` (around line 90), after the `new AudioStreamVoice({...})` call:
 
 ```ts
-    seedVoiceFromPlayOptions(voice, options);
+seedVoiceFromPlayOptions(voice, options);
 ```
 
 Add the import `import { seedVoiceFromPlayOptions } from './spatial-options';` to `AudioStream.ts`.
@@ -733,10 +735,12 @@ EOF
 ## Task 2: Migrate examples and the spatial-audio guide for Task 1's breaking change
 
 **Files:**
+
 - Modify: `examples/spatial-audio/falloff-curves.ts`, `examples/spatial-audio/listener-and-source.ts`, `examples/spatial-audio/moving-source.ts` (and their auto-generated `.js` twins, regenerated — not hand-edited)
 - Modify: `site/src/content/guide/audio/spatial-audio.mdx`
 
 **Interfaces:**
+
 - Consumes: `PlayOptions.position`/`distanceModel`/`refDistance`/`maxDistance`/`rolloffFactor` and `Voice.distanceModel`/`refDistance`/`maxDistance`/`rolloffFactor` from Task 1.
 
 - [ ] **Step 1: Migrate `falloff-curves.ts`**
@@ -744,45 +748,45 @@ EOF
 Read the current file at `examples/spatial-audio/falloff-curves.ts` first (its content is already known from earlier investigation but re-read before editing to catch any drift). Replace the `Sound` construction + play block:
 
 ```ts
-        this.sounds = this.sources.map(({ model, x, y }) => {
-            const sound = new Sound(source.audioBuffer, {
-                distanceModel: model,
-                refDistance: REF_DISTANCE,
-                maxDistance: MAX_DISTANCE,
-                rolloffFactor: ROLLOFF,
-            });
-            sound.position = { x, y };
-            return sound;
-        });
+this.sounds = this.sources.map(({ model, x, y }) => {
+  const sound = new Sound(source.audioBuffer, {
+    distanceModel: model,
+    refDistance: REF_DISTANCE,
+    maxDistance: MAX_DISTANCE,
+    rolloffFactor: ROLLOFF,
+  });
+  sound.position = { x, y };
+  return sound;
+});
 ```
 
 becomes:
 
 ```ts
-        this.sounds = this.sources.map(() => new Sound(source.audioBuffer));
+this.sounds = this.sources.map(() => new Sound(source.audioBuffer));
 ```
 
 and the play loop:
 
 ```ts
-        for (const sound of this.sounds) app.audio.play(sound, { loop: true, volume: 0.5 });
+for (const sound of this.sounds) app.audio.play(sound, { loop: true, volume: 0.5 });
 ```
 
 becomes:
 
 ```ts
-        for (let i = 0; i < this.sounds.length; i++) {
-            const { model, x, y } = this.sources[i];
-            app.audio.play(this.sounds[i], {
-                loop: true,
-                volume: 0.5,
-                position: { x, y },
-                distanceModel: model,
-                refDistance: REF_DISTANCE,
-                maxDistance: MAX_DISTANCE,
-                rolloffFactor: ROLLOFF,
-            });
-        }
+for (let i = 0; i < this.sounds.length; i++) {
+  const { model, x, y } = this.sources[i];
+  app.audio.play(this.sounds[i], {
+    loop: true,
+    volume: 0.5,
+    position: { x, y },
+    distanceModel: model,
+    refDistance: REF_DISTANCE,
+    maxDistance: MAX_DISTANCE,
+    rolloffFactor: ROLLOFF,
+  });
+}
 ```
 
 - [ ] **Step 2: Migrate `listener-and-source.ts`**
@@ -838,6 +842,7 @@ EOF
 ## Task 3: Panning model — `equalpower` default, `HRTF` opt-in
 
 **Files:**
+
 - Modify: `src/audio/spatial-smoothing.ts`
 - Modify: `src/audio/BaseVoice.ts`
 - Modify: `src/audio/Playable.ts`
@@ -845,6 +850,7 @@ EOF
 - Test: `test/audio/voice-spatial.test.ts` (append), `test/audio/spatial-smoothing.test.ts` (append)
 
 **Interfaces:**
+
 - Consumes: `SpatialSmoothingSettings` (Task 1's `Spatializable`/`PlayOptions` extension pattern), `seedVoiceFromPlayOptions` (Task 1).
 - Produces: `SpatialSmoothingSettings.panningModel: 'equalpower' | 'HRTF'` (default `'equalpower'`). `Spatializable.panningModel: 'equalpower' | 'HRTF' | null` (`null` = inherit the app-wide default). `PlayOptions.panningModel?: 'equalpower' | 'HRTF'`.
 
@@ -853,14 +859,14 @@ EOF
 In `src/audio/spatial-smoothing.ts`, add to the interface (after `teleportThreshold`):
 
 ```ts
-  /**
-   * App-wide default panning model for every spatial voice that doesn't set
-   * its own {@link Spatializable.panningModel} override. `'equalpower'`
-   * (cheap, works on any speaker setup) or `'HRTF'` (binaural, meaningfully
-   * more CPU-expensive per voice, only sounds convincingly directional
-   * through headphones). Default `'equalpower'`.
-   */
-  panningModel: PanningModelType;
+/**
+ * App-wide default panning model for every spatial voice that doesn't set
+ * its own {@link Spatializable.panningModel} override. `'equalpower'`
+ * (cheap, works on any speaker setup) or `'HRTF'` (binaural, meaningfully
+ * more CPU-expensive per voice, only sounds convincingly directional
+ * through headphones). Default `'equalpower'`.
+ */
+panningModel: PanningModelType;
 ```
 
 and to `createSpatialSmoothingSettings()`:
@@ -880,11 +886,11 @@ export const createSpatialSmoothingSettings = (): SpatialSmoothingSettings => ({
 In `src/audio/Playable.ts`, add to `Spatializable` (after `rolloffFactor`):
 
 ```ts
-  /**
-   * Per-voice panning model override. `null` (default) inherits the
-   * app-wide default from `app.audio.spatial.panningModel`.
-   */
-  panningModel: PanningModelType | null;
+/**
+ * Per-voice panning model override. `null` (default) inherits the
+ * app-wide default from `app.audio.spatial.panningModel`.
+ */
+panningModel: PanningModelType | null;
 ```
 
 and to `PlayOptions` (after `rolloffFactor?`):
@@ -920,13 +926,13 @@ Add the getter/setter (grouped with the other new accessors from Task 1 Step 3):
 In `_ensurePanner()` (currently line 360, `panner.panningModel = 'equalpower';` hardcoded), replace with:
 
 ```ts
-    panner.panningModel = this._panningModel ?? this._manager.spatial.panningModel;
+panner.panningModel = this._panningModel ?? this._manager.spatial.panningModel;
 ```
 
 Add `panningModel` handling to the shared helper: in `src/audio/spatial-options.ts`, add one line to `seedVoiceFromPlayOptions` (after the `position` line):
 
 ```ts
-  if (options.panningModel !== undefined) voice.panningModel = options.panningModel;
+if (options.panningModel !== undefined) voice.panningModel = options.panningModel;
 ```
 
 This is the ONLY change needed to propagate `panningModel` through every `Playable` type's `_createVoice` — `Sound.ts`/`AudioStream.ts`/`AudioGenerator.ts` are not touched again.
@@ -936,65 +942,65 @@ This is the ONLY change needed to propagate `panningModel` through every `Playab
 Append to `test/audio/voice-spatial.test.ts`:
 
 ```ts
-  test('panningModel defaults to the app-wide equalpower setting', () => {
-    const spy = setupPannerSpy();
-    const manager = new AudioManager();
-    const sound = new Sound(createAudioBufferStub());
-    manager.play(sound, { position: { x: 0, y: 0 } });
-    expect(spy.panners[0].panningModel).toBe('equalpower');
-    spy.restore();
-    sound.destroy();
-  });
+test('panningModel defaults to the app-wide equalpower setting', () => {
+  const spy = setupPannerSpy();
+  const manager = new AudioManager();
+  const sound = new Sound(createAudioBufferStub());
+  manager.play(sound, { position: { x: 0, y: 0 } });
+  expect(spy.panners[0].panningModel).toBe('equalpower');
+  spy.restore();
+  sound.destroy();
+});
 
-  test('PlayOptions.panningModel overrides the app-wide default for one voice', () => {
-    const spy = setupPannerSpy();
-    const manager = new AudioManager();
-    const sound = new Sound(createAudioBufferStub());
-    manager.play(sound, { position: { x: 0, y: 0 }, panningModel: 'HRTF' });
-    expect(spy.panners[0].panningModel).toBe('HRTF');
-    spy.restore();
-    sound.destroy();
-  });
+test('PlayOptions.panningModel overrides the app-wide default for one voice', () => {
+  const spy = setupPannerSpy();
+  const manager = new AudioManager();
+  const sound = new Sound(createAudioBufferStub());
+  manager.play(sound, { position: { x: 0, y: 0 }, panningModel: 'HRTF' });
+  expect(spy.panners[0].panningModel).toBe('HRTF');
+  spy.restore();
+  sound.destroy();
+});
 
-  test('voice.panningModel round-trips and writes through live to an existing panner', () => {
-    const spy = setupPannerSpy();
-    const manager = new AudioManager();
-    const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound, { position: { x: 0, y: 0 } });
+test('voice.panningModel round-trips and writes through live to an existing panner', () => {
+  const spy = setupPannerSpy();
+  const manager = new AudioManager();
+  const sound = new Sound(createAudioBufferStub());
+  const voice = manager.play(sound, { position: { x: 0, y: 0 } });
 
-    expect(voice.panningModel).toBeNull();
-    voice.panningModel = 'HRTF';
-    expect(voice.panningModel).toBe('HRTF');
-    expect(spy.panners[0].panningModel).toBe('HRTF');
+  expect(voice.panningModel).toBeNull();
+  voice.panningModel = 'HRTF';
+  expect(voice.panningModel).toBe('HRTF');
+  expect(spy.panners[0].panningModel).toBe('HRTF');
 
-    voice.panningModel = null;
-    expect(spy.panners[0].panningModel).toBe('equalpower');
+  voice.panningModel = null;
+  expect(spy.panners[0].panningModel).toBe('equalpower');
 
-    spy.restore();
-    sound.destroy();
-  });
+  spy.restore();
+  sound.destroy();
+});
 
-  test('changing app.audio.spatial.panningModel affects only voices with no per-voice override', () => {
-    const spy = setupPannerSpy();
-    const manager = new AudioManager();
-    manager.spatial.panningModel = 'HRTF';
-    const sound = new Sound(createAudioBufferStub());
-    manager.play(sound, { position: { x: 0, y: 0 } });
-    manager.play(sound, { position: { x: 0, y: 0 }, panningModel: 'equalpower' });
-    expect(spy.panners[0].panningModel).toBe('HRTF');
-    expect(spy.panners[1].panningModel).toBe('equalpower');
-    spy.restore();
-    sound.destroy();
-  });
+test('changing app.audio.spatial.panningModel affects only voices with no per-voice override', () => {
+  const spy = setupPannerSpy();
+  const manager = new AudioManager();
+  manager.spatial.panningModel = 'HRTF';
+  const sound = new Sound(createAudioBufferStub());
+  manager.play(sound, { position: { x: 0, y: 0 } });
+  manager.play(sound, { position: { x: 0, y: 0 }, panningModel: 'equalpower' });
+  expect(spy.panners[0].panningModel).toBe('HRTF');
+  expect(spy.panners[1].panningModel).toBe('equalpower');
+  spy.restore();
+  sound.destroy();
+});
 ```
 
 Append to `test/audio/spatial-smoothing.test.ts`:
 
 ```ts
-  test('createSpatialSmoothingSettings() defaults panningModel to equalpower', () => {
-    const settings = createSpatialSmoothingSettings();
-    expect(settings.panningModel).toBe('equalpower');
-  });
+test('createSpatialSmoothingSettings() defaults panningModel to equalpower', () => {
+  const settings = createSpatialSmoothingSettings();
+  expect(settings.panningModel).toBe('equalpower');
+});
 ```
 
 (Adjust the import at the top of `spatial-smoothing.test.ts` if `createSpatialSmoothingSettings` is not already imported there — check the file first.)
@@ -1029,12 +1035,14 @@ EOF
 ## Task 4: Directional cone emitters (`orientation` + native cone properties)
 
 **Files:**
+
 - Modify: `src/audio/BaseVoice.ts`
 - Modify: `src/audio/Playable.ts`
 - Modify: `src/audio/spatial-options.ts` (four lines added to `seedVoiceFromPlayOptions`)
 - Test: `test/audio/voice-spatial.test.ts` (append)
 
 **Interfaces:**
+
 - Consumes: `SmoothedAudioParam`/`SpatialSmoothingSettings` from `spatial-smoothing.ts` (Task 3), the existing position-tick pattern in `BaseVoice._tickSpatial()`.
 - Produces: `Spatializable.orientation: number` (degrees, `SceneNode.rotation` convention), `coneInnerAngle: number`, `coneOuterAngle: number`, `coneOuterGain: number`. Same four fields on `PlayOptions` (optional).
 
@@ -1043,19 +1051,19 @@ EOF
 In `src/audio/Playable.ts`, add to `Spatializable` (after `panningModel`):
 
 ```ts
-  /**
-   * Facing direction for cone attenuation, in degrees — same convention as
-   * `SceneNode.rotation` (0° = local +X / "east", clockwise-positive on a
-   * Y-down screen). Has no audible effect unless `coneInnerAngle`/
-   * `coneOuterAngle` are narrowed below 360°. Default `0`.
-   */
-  orientation: number;
-  /** Full-gain cone half-angle in degrees. Default `360` (omnidirectional — no cone). */
-  coneInnerAngle: number;
-  /** Falloff-to-`coneOuterGain` cone half-angle in degrees. Default `360`. */
-  coneOuterAngle: number;
-  /** Gain applied outside `coneOuterAngle`. Default `0`. */
-  coneOuterGain: number;
+/**
+ * Facing direction for cone attenuation, in degrees — same convention as
+ * `SceneNode.rotation` (0° = local +X / "east", clockwise-positive on a
+ * Y-down screen). Has no audible effect unless `coneInnerAngle`/
+ * `coneOuterAngle` are narrowed below 360°. Default `0`.
+ */
+orientation: number;
+/** Full-gain cone half-angle in degrees. Default `360` (omnidirectional — no cone). */
+coneInnerAngle: number;
+/** Falloff-to-`coneOuterGain` cone half-angle in degrees. Default `360`. */
+coneOuterAngle: number;
+/** Gain applied outside `coneOuterAngle`. Default `0`. */
+coneOuterGain: number;
 ```
 
 and to `PlayOptions` (after `panningModel?`):
@@ -1171,9 +1179,9 @@ Import `degreesToRadians`: change the existing `import { clamp } from '#math/uti
 In `_ensurePanner()`, after the existing `panner.rolloffFactor = ...` line, add:
 
 ```ts
-    panner.coneInnerAngle = this._coneInnerAngle;
-    panner.coneOuterAngle = this._coneOuterAngle;
-    panner.coneOuterGain = this._coneOuterGain;
+panner.coneInnerAngle = this._coneInnerAngle;
+panner.coneOuterAngle = this._coneOuterAngle;
+panner.coneOuterGain = this._coneOuterGain;
 ```
 
 and after `this._routeThroughPanner(panner);` / `this._panner = panner;`, call `this._writeOrientation();` once so a cone configured before the panner existed (e.g. via `PlayOptions.orientation`) is applied immediately rather than waiting for the next `_tickSpatial()`.
@@ -1183,10 +1191,10 @@ and after `this._routeThroughPanner(panner);` / `this._panner = panner;`, call `
 In `src/audio/spatial-options.ts`, add four lines to `seedVoiceFromPlayOptions` (after the `panningModel` line from Task 3):
 
 ```ts
-  if (options.orientation !== undefined) voice.orientation = options.orientation;
-  if (options.coneInnerAngle !== undefined) voice.coneInnerAngle = options.coneInnerAngle;
-  if (options.coneOuterAngle !== undefined) voice.coneOuterAngle = options.coneOuterAngle;
-  if (options.coneOuterGain !== undefined) voice.coneOuterGain = options.coneOuterGain;
+if (options.orientation !== undefined) voice.orientation = options.orientation;
+if (options.coneInnerAngle !== undefined) voice.coneInnerAngle = options.coneInnerAngle;
+if (options.coneOuterAngle !== undefined) voice.coneOuterAngle = options.coneOuterAngle;
+if (options.coneOuterGain !== undefined) voice.coneOuterGain = options.coneOuterGain;
 ```
 
 `Sound.ts`/`AudioStream.ts`/`AudioGenerator.ts` are not touched — every `_createVoice` already calls this same helper (Task 1).
@@ -1196,67 +1204,67 @@ In `src/audio/spatial-options.ts`, add four lines to `seedVoiceFromPlayOptions` 
 Append to `test/audio/voice-spatial.test.ts` (extend `MockPannerNode`/`setupPannerSpy` first to include `coneInnerAngle`/`coneOuterAngle`/`coneOuterGain` and `orientationX`/`orientationY`/`orientationZ` fields, mirroring the existing `positionX`/`positionY`/`positionZ` shape):
 
 ```ts
-  test('orientation and cone angles default to omnidirectional (no cone)', () => {
-    const spy = setupPannerSpy();
-    const manager = new AudioManager();
-    const sound = new Sound(createAudioBufferStub());
-    manager.play(sound, { position: { x: 0, y: 0 } });
-    const panner = spy.panners[0];
-    expect(panner.coneInnerAngle).toBe(360);
-    expect(panner.coneOuterAngle).toBe(360);
-    expect(panner.coneOuterGain).toBe(0);
-    spy.restore();
-    sound.destroy();
+test('orientation and cone angles default to omnidirectional (no cone)', () => {
+  const spy = setupPannerSpy();
+  const manager = new AudioManager();
+  const sound = new Sound(createAudioBufferStub());
+  manager.play(sound, { position: { x: 0, y: 0 } });
+  const panner = spy.panners[0];
+  expect(panner.coneInnerAngle).toBe(360);
+  expect(panner.coneOuterAngle).toBe(360);
+  expect(panner.coneOuterGain).toBe(0);
+  spy.restore();
+  sound.destroy();
+});
+
+test('PlayOptions cone fields configure the PannerNode at play time', () => {
+  const spy = setupPannerSpy();
+  const manager = new AudioManager();
+  const sound = new Sound(createAudioBufferStub());
+  manager.play(sound, {
+    position: { x: 0, y: 0 },
+    orientation: 90,
+    coneInnerAngle: 30,
+    coneOuterAngle: 60,
+    coneOuterGain: 0.2,
   });
+  const panner = spy.panners[0];
+  expect(panner.coneInnerAngle).toBe(30);
+  expect(panner.coneOuterAngle).toBe(60);
+  expect(panner.coneOuterGain).toBeCloseTo(0.2);
+  expect(panner.orientationX.setValueAtTime).toHaveBeenCalledWith(expect.closeTo(0, 5), expect.any(Number));
+  expect(panner.orientationY.setValueAtTime).toHaveBeenCalledWith(expect.closeTo(1, 5), expect.any(Number));
+  spy.restore();
+  sound.destroy();
+});
 
-  test('PlayOptions cone fields configure the PannerNode at play time', () => {
-    const spy = setupPannerSpy();
-    const manager = new AudioManager();
-    const sound = new Sound(createAudioBufferStub());
-    manager.play(sound, {
-      position: { x: 0, y: 0 },
-      orientation: 90,
-      coneInnerAngle: 30,
-      coneOuterAngle: 60,
-      coneOuterGain: 0.2,
-    });
-    const panner = spy.panners[0];
-    expect(panner.coneInnerAngle).toBe(30);
-    expect(panner.coneOuterAngle).toBe(60);
-    expect(panner.coneOuterGain).toBeCloseTo(0.2);
-    expect(panner.orientationX.setValueAtTime).toHaveBeenCalledWith(expect.closeTo(0, 5), expect.any(Number));
-    expect(panner.orientationY.setValueAtTime).toHaveBeenCalledWith(expect.closeTo(1, 5), expect.any(Number));
-    spy.restore();
-    sound.destroy();
-  });
+test('orientation degree 0 maps to the local +X axis (SceneNode.rotation convention)', () => {
+  const spy = setupPannerSpy();
+  const manager = new AudioManager();
+  const sound = new Sound(createAudioBufferStub());
+  manager.play(sound, { position: { x: 0, y: 0 }, orientation: 0, coneInnerAngle: 10 });
+  const panner = spy.panners[0];
+  expect(panner.orientationX.setValueAtTime).toHaveBeenCalledWith(expect.closeTo(1, 5), expect.any(Number));
+  expect(panner.orientationY.setValueAtTime).toHaveBeenCalledWith(expect.closeTo(0, 5), expect.any(Number));
+  spy.restore();
+  sound.destroy();
+});
 
-  test('orientation degree 0 maps to the local +X axis (SceneNode.rotation convention)', () => {
-    const spy = setupPannerSpy();
-    const manager = new AudioManager();
-    const sound = new Sound(createAudioBufferStub());
-    manager.play(sound, { position: { x: 0, y: 0 }, orientation: 0, coneInnerAngle: 10 });
-    const panner = spy.panners[0];
-    expect(panner.orientationX.setValueAtTime).toHaveBeenCalledWith(expect.closeTo(1, 5), expect.any(Number));
-    expect(panner.orientationY.setValueAtTime).toHaveBeenCalledWith(expect.closeTo(0, 5), expect.any(Number));
-    spy.restore();
-    sound.destroy();
-  });
+test('voice.orientation and cone setters round-trip and write through live', () => {
+  const spy = setupPannerSpy();
+  const manager = new AudioManager();
+  const sound = new Sound(createAudioBufferStub());
+  const voice = manager.play(sound, { position: { x: 0, y: 0 } });
 
-  test('voice.orientation and cone setters round-trip and write through live', () => {
-    const spy = setupPannerSpy();
-    const manager = new AudioManager();
-    const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound, { position: { x: 0, y: 0 } });
+  voice.coneInnerAngle = 45;
+  voice.coneOuterAngle = 90;
+  voice.coneOuterGain = 0.1;
+  expect(voice.coneInnerAngle).toBe(45);
+  expect(spy.panners[0].coneInnerAngle).toBe(45);
 
-    voice.coneInnerAngle = 45;
-    voice.coneOuterAngle = 90;
-    voice.coneOuterGain = 0.1;
-    expect(voice.coneInnerAngle).toBe(45);
-    expect(spy.panners[0].coneInnerAngle).toBe(45);
-
-    spy.restore();
-    sound.destroy();
-  });
+  spy.restore();
+  sound.destroy();
+});
 ```
 
 (`expect.closeTo` needs an explicit precision argument matching Vitest's API — verify the exact call signature (`expect.closeTo(value, numDigits)`) against the Vitest version in `package.json` before running; adjust if the installed version's typing differs.)
@@ -1291,6 +1299,7 @@ EOF
 ## Task 5: Doppler shift
 
 **Files:**
+
 - Modify: `src/audio/spatial-smoothing.ts`
 - Modify: `src/audio/BaseVoice.ts`
 - Modify: `src/audio/AudioListener.ts`
@@ -1301,6 +1310,7 @@ EOF
 - Test: `test/audio/voice-spatial.test.ts` (append), `test/audio/audio-listener.test.ts` (append)
 
 **Interfaces:**
+
 - Consumes: `SpatialSmoothingSettings` (Task 3), `BaseVoice._tickSpatial()`/position-tracking pattern (Task 1/4).
 - Produces: `Spatializable.velocity: Vector | { x: number; y: number } | null` (new — did not exist on `Voice` before this task). `AudioListener.velocity` becomes functionally real (the field already exists but was never used). `SpatialSmoothingSettings.dopplerFactor: number` (default `0`), `speedOfSound: number`. A new protected, overridable (non-abstract) `BaseVoice._applyDopplerRate(ratio: number): void` hook (default no-op), overridden by `SoundVoice` and `AudioStreamVoice` (the two voice types with a meaningful, live-adjustable playback rate — `AudioGeneratorVoice`'s rate is already documented as "inert", and `InputVoice`/`NoopVoice` have no source rate to modulate at all).
 
@@ -1309,22 +1319,22 @@ EOF
 In `src/audio/spatial-smoothing.ts`, add to the interface (after `panningModel`):
 
 ```ts
-  /**
-   * Doppler pitch-shift strength multiplier. `0` (default) disables Doppler
-   * entirely — even when velocity data is available on a voice or the
-   * listener, no `playbackRate` modulation is applied unless this is set
-   * above zero. `1` is physically scaled (relative to {@link speedOfSound});
-   * many games deliberately exaggerate beyond `1` for player feedback.
-   */
-  dopplerFactor: number;
-  /**
-   * Reference speed (world units per second) used to scale the Doppler
-   * effect. World units have no fixed physical scale across different
-   * games (pixels, meters, tiles), so this is a tunable, not a physical
-   * constant — pick a value where your game's typical emitter/listener
-   * speeds produce a noticeable but not extreme shift.
-   */
-  speedOfSound: number;
+/**
+ * Doppler pitch-shift strength multiplier. `0` (default) disables Doppler
+ * entirely — even when velocity data is available on a voice or the
+ * listener, no `playbackRate` modulation is applied unless this is set
+ * above zero. `1` is physically scaled (relative to {@link speedOfSound});
+ * many games deliberately exaggerate beyond `1` for player feedback.
+ */
+dopplerFactor: number;
+/**
+ * Reference speed (world units per second) used to scale the Doppler
+ * effect. World units have no fixed physical scale across different
+ * games (pixels, meters, tiles), so this is a tunable, not a physical
+ * constant — pick a value where your game's typical emitter/listener
+ * speeds produce a noticeable but not extreme shift.
+ */
+speedOfSound: number;
 ```
 
 and to `createSpatialSmoothingSettings()`:
@@ -1587,8 +1597,8 @@ If `_applyDopplerRate` multiplied `this.playbackRate` (the getter) directly, eac
 In the constructor, replace `this._element.playbackRate = init.playbackRate;` with:
 
 ```ts
-    this._basePlaybackRate = init.playbackRate;
-    this._element.playbackRate = init.playbackRate;
+this._basePlaybackRate = init.playbackRate;
+this._element.playbackRate = init.playbackRate;
 ```
 
 Replace the existing getter/setter:
@@ -1620,7 +1630,7 @@ Do NOT add an override to `AudioGeneratorVoice` (rate is already documented as i
 In `src/audio/spatial-options.ts`, add one line to `seedVoiceFromPlayOptions` (after the cone fields from Task 4):
 
 ```ts
-  if (options.velocity !== undefined) voice.velocity = options.velocity;
+if (options.velocity !== undefined) voice.velocity = options.velocity;
 ```
 
 `Sound.ts`/`AudioStream.ts`/`AudioGenerator.ts` are not touched — this completes the shared helper's full field set (position, distance model, panning model, cone/orientation, velocity), all seeded through one function call per `_createVoice` implementation, established once in Task 1.
@@ -1630,61 +1640,61 @@ In `src/audio/spatial-options.ts`, add one line to `seedVoiceFromPlayOptions` (a
 Append to `test/audio/voice-spatial.test.ts`:
 
 ```ts
-  test('dopplerFactor 0 (default) applies no playbackRate modulation regardless of velocity', () => {
-    const spy = setupPannerSpy();
-    const manager = new AudioManager();
-    const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound, { position: { x: 0, y: 0 }, velocity: { x: 100, y: 0 } }) as SoundVoice;
-    const rateSpy = vi.spyOn(voice, 'playbackRate', 'set');
-    manager.update();
-    expect(rateSpy).not.toHaveBeenCalled();
-    spy.restore();
-    sound.destroy();
-  });
+test('dopplerFactor 0 (default) applies no playbackRate modulation regardless of velocity', () => {
+  const spy = setupPannerSpy();
+  const manager = new AudioManager();
+  const sound = new Sound(createAudioBufferStub());
+  const voice = manager.play(sound, { position: { x: 0, y: 0 }, velocity: { x: 100, y: 0 } }) as SoundVoice;
+  const rateSpy = vi.spyOn(voice, 'playbackRate', 'set');
+  manager.update();
+  expect(rateSpy).not.toHaveBeenCalled();
+  spy.restore();
+  sound.destroy();
+});
 
-  test('a source approaching a stationary listener with dopplerFactor > 0 raises its effective playbackRate', () => {
-    const spy = setupPannerSpy();
-    const manager = new AudioManager();
-    manager.spatial.dopplerFactor = 1;
-    manager.spatial.speedOfSound = 100;
-    manager.listener.position.set(0, 0);
-    const sound = new Sound(createAudioBufferStub());
-    // Source starts far away on the +X axis and, between ticks, moves toward the listener.
-    const voice = manager.play(sound, { position: { x: 500, y: 0 } }) as SoundVoice;
-    manager.update();
-    voice.position = { x: 400, y: 0 }; // moved 100 units toward the listener
-    manager.update();
-    // Exact rate value depends on the implementer's chosen formula (see plan Task 5 Step 3) —
-    // assert direction (> 1, i.e. pitched up while approaching), not an exact number.
-    const source = (voice as unknown as { _source: { playbackRate: { setTargetAtTime: MockInstance } } })._source;
-    const lastCallArgs = source.playbackRate.setTargetAtTime.mock.calls.at(-1);
-    expect(lastCallArgs?.[0]).toBeGreaterThan(1);
-    spy.restore();
-    sound.destroy();
-  });
+test('a source approaching a stationary listener with dopplerFactor > 0 raises its effective playbackRate', () => {
+  const spy = setupPannerSpy();
+  const manager = new AudioManager();
+  manager.spatial.dopplerFactor = 1;
+  manager.spatial.speedOfSound = 100;
+  manager.listener.position.set(0, 0);
+  const sound = new Sound(createAudioBufferStub());
+  // Source starts far away on the +X axis and, between ticks, moves toward the listener.
+  const voice = manager.play(sound, { position: { x: 500, y: 0 } }) as SoundVoice;
+  manager.update();
+  voice.position = { x: 400, y: 0 }; // moved 100 units toward the listener
+  manager.update();
+  // Exact rate value depends on the implementer's chosen formula (see plan Task 5 Step 3) —
+  // assert direction (> 1, i.e. pitched up while approaching), not an exact number.
+  const source = (voice as unknown as { _source: { playbackRate: { setTargetAtTime: MockInstance } } })._source;
+  const lastCallArgs = source.playbackRate.setTargetAtTime.mock.calls.at(-1);
+  expect(lastCallArgs?.[0]).toBeGreaterThan(1);
+  spy.restore();
+  sound.destroy();
+});
 
-  test('velocity round-trips and can be cleared back to auto-derivation', () => {
-    const manager = new AudioManager();
-    const sound = new Sound(createAudioBufferStub());
-    const voice = manager.play(sound, { position: { x: 0, y: 0 } });
-    expect(voice.velocity).toBeNull();
-    voice.velocity = { x: 10, y: -5 };
-    expect(voice.velocity!.x).toBe(10);
-    voice.velocity = null;
-    expect(voice.velocity).toBeNull();
-    sound.destroy();
-  });
+test('velocity round-trips and can be cleared back to auto-derivation', () => {
+  const manager = new AudioManager();
+  const sound = new Sound(createAudioBufferStub());
+  const voice = manager.play(sound, { position: { x: 0, y: 0 } });
+  expect(voice.velocity).toBeNull();
+  voice.velocity = { x: 10, y: -5 };
+  expect(voice.velocity!.x).toBe(10);
+  voice.velocity = null;
+  expect(voice.velocity).toBeNull();
+  sound.destroy();
+});
 ```
 
 Append to `test/audio/audio-listener.test.ts` (read the file first to match its existing setup/mocking conventions before appending):
 
 ```ts
-  test('listener.velocity is settable and marks it explicit (no auto-derivation overwrite)', () => {
-    const listener = new AudioListener();
-    listener.velocity = { x: 5, y: 5 };
-    expect(listener.velocity.x).toBe(5);
-    expect(listener.velocity.y).toBe(5);
-  });
+test('listener.velocity is settable and marks it explicit (no auto-derivation overwrite)', () => {
+  const listener = new AudioListener();
+  listener.velocity = { x: 5, y: 5 };
+  expect(listener.velocity.x).toBe(5);
+  expect(listener.velocity.y).toBe(5);
+});
 ```
 
 (A full auto-derivation-from-target-movement test for the listener requires driving `_tick()` across two frames with a moving target and a real or stubbed `AudioContext.currentTime` — follow whatever `AudioContext`/`currentTime` stubbing pattern `audio-listener.test.ts` already establishes for its existing position-smoothing tests; do not invent a new stubbing approach if one already exists in the file.)
@@ -1721,10 +1731,12 @@ EOF
 ## Task 6: Guide docs, API docs regeneration, full verification gate
 
 **Files:**
+
 - Modify: `site/src/content/guide/audio/spatial-audio.mdx`
 - Regenerate: `site/src/content/api/*.json` (via `pnpm docs:api:generate`, never by hand)
 
 **Interfaces:**
+
 - Consumes: everything from Tasks 1-5 (this task only documents and verifies the already-implemented API).
 
 - [ ] **Step 1: Extend `spatial-audio.mdx` with panningModel, cone, and Doppler sections**
