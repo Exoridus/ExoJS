@@ -9,7 +9,7 @@ import { SceneInputs } from './scene/SceneInputs';
 import { SceneInteraction } from './scene/SceneInteraction';
 import { SceneLoader } from './scene/SceneLoader';
 import { SceneTweens } from './scene/SceneTweens';
-import { canDestroy, SceneState } from './SceneState';
+import { canDestroy, canPause, canResume, SceneState } from './SceneState';
 import { SystemRegistry } from './SystemRegistry';
 import type { Time } from './Time';
 
@@ -111,6 +111,28 @@ export class SceneScope<Data = unknown> {
     this._state = SceneState.Active;
   }
 
+  /** Pause this scope: `Active` → `Paused`. Returns whether the transition happened. */
+  public pause(): boolean {
+    if (!canPause(this._state)) {
+      return false;
+    }
+
+    this._state = SceneState.Paused;
+
+    return true;
+  }
+
+  /** Resume this scope: `Paused` → `Active`. Returns whether the transition happened. */
+  public resume(): boolean {
+    if (!canResume(this._state)) {
+      return false;
+    }
+
+    this._state = SceneState.Active;
+
+    return true;
+  }
+
   public fixedUpdate(step: Time): void {
     if (this._state !== SceneState.Active) {
       return;
@@ -168,7 +190,7 @@ export class SceneScope<Data = unknown> {
   }
 
   public draw(context: RenderingContext): void {
-    if (this._state !== SceneState.Active) {
+    if (this._state !== SceneState.Active && this._state !== SceneState.Paused) {
       return;
     }
 

@@ -2,6 +2,7 @@ import type { Application } from '#core/Application';
 import { logger } from '#core/logging';
 import { Scene } from '#core/Scene';
 import { SceneDirector } from '#core/SceneDirector';
+import { SceneState } from '#core/SceneState';
 import { Signal } from '#core/Signal';
 import { Time } from '#core/Time';
 import type { Pointer } from '#input/Pointer';
@@ -385,5 +386,101 @@ describe('SceneDirector', () => {
 
     manager.fixedUpdate(new Time(16));
     expect(fixedSystemUpdate).toHaveBeenCalledTimes(2);
+  });
+
+  test('pause() transitions Active to Paused, dispatches onPause and onStateChange, and stops update but not draw', async () => {
+    const app = createApplicationStub();
+    const director = new SceneDirector(app);
+    const update = vi.fn();
+    const draw = vi.fn();
+    const scene = makeScene({ update, draw });
+    const onPause = vi.fn();
+    const onStateChange = vi.fn();
+
+    director.onPause.add(onPause);
+    director.onStateChange.add(onStateChange);
+
+    await director.setScene(scene);
+
+    expect(director.pause()).toBe(true);
+    expect(director.state).toBe(SceneState.Paused);
+    expect(onPause).toHaveBeenCalledTimes(1);
+    expect(onPause).toHaveBeenCalledWith(scene);
+    expect(onStateChange).toHaveBeenCalledTimes(1);
+    expect(onStateChange).toHaveBeenCalledWith(SceneState.Active, SceneState.Paused, scene);
+
+    tick(director, app);
+    expect(update).not.toHaveBeenCalled();
+    expect(draw).toHaveBeenCalledTimes(1);
+  });
+
+  test('pause() is a no-op when no scene is active', () => {
+    const director = new SceneDirector(createApplicationStub());
+
+    expect(director.pause()).toBe(false);
+    expect(director.state).toBeNull();
+  });
+
+  test('pause() is a no-op when the active scene is already paused', async () => {
+    const app = createApplicationStub();
+    const director = new SceneDirector(app);
+    const onPause = vi.fn();
+
+    await director.setScene(makeScene({}));
+    director.pause();
+    director.onPause.add(onPause);
+
+    expect(director.pause()).toBe(false);
+    expect(onPause).not.toHaveBeenCalled();
+  });
+
+  test('resume() transitions Paused back to Active, dispatches onResume and onStateChange, and restores update', async () => {
+    const app = createApplicationStub();
+    const director = new SceneDirector(app);
+    const update = vi.fn();
+    const scene = makeScene({ update });
+    const onResume = vi.fn();
+    const onStateChange = vi.fn();
+
+    await director.setScene(scene);
+    director.pause();
+
+    director.onResume.add(onResume);
+    director.onStateChange.add(onStateChange);
+
+    expect(director.resume()).toBe(true);
+    expect(director.state).toBe(SceneState.Active);
+    expect(onResume).toHaveBeenCalledTimes(1);
+    expect(onResume).toHaveBeenCalledWith(scene);
+    expect(onStateChange).toHaveBeenCalledTimes(1);
+    expect(onStateChange).toHaveBeenCalledWith(SceneState.Paused, SceneState.Active, scene);
+
+    tick(director, app);
+    expect(update).toHaveBeenCalledTimes(1);
+  });
+
+  test('resume() is a no-op when the active scene is not paused', async () => {
+    const app = createApplicationStub();
+    const director = new SceneDirector(app);
+    const onResume = vi.fn();
+
+    await director.setScene(makeScene({}));
+    director.onResume.add(onResume);
+
+    expect(director.resume()).toBe(false);
+    expect(onResume).not.toHaveBeenCalled();
+  });
+
+  test('state getter reflects the active scope and is null once cleared', async () => {
+    const app = createApplicationStub();
+    const director = new SceneDirector(app);
+
+    expect(director.state).toBeNull();
+
+    await director.setScene(makeScene({}));
+    expect(director.state).toBe(SceneState.Active);
+
+    await director.setScene(null);
+    expect(director.state).toBeNull();
   });
 });

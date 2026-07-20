@@ -7,6 +7,7 @@ import { Color } from './Color';
 import { logger } from './logging';
 import { Scene } from './Scene';
 import { SceneScope } from './SceneScope';
+import { SceneState } from './SceneState';
 import { Signal } from './Signal';
 import type { Time } from './Time';
 
@@ -92,6 +93,12 @@ export class SceneDirector {
   public readonly onUpdateScene = new Signal<[Scene]>();
   /** Fires just before a scene is unloaded (`unload` then `destroy`). */
   public readonly onStopScene = new Signal<[Scene]>();
+  /** Fires after `pause()` actually transitions the active scene to `Paused`. */
+  public readonly onPause = new Signal<[Scene]>();
+  /** Fires after `resume()` actually transitions the active scene back to `Active`. */
+  public readonly onResume = new Signal<[Scene]>();
+  /** Fires whenever the active scene's {@link SceneState} changes, as `(previous, next, scene)`. */
+  public readonly onStateChange = new Signal<[SceneState, SceneState, Scene]>();
 
   public constructor(app: Application) {
     this._app = app;
@@ -100,6 +107,11 @@ export class SceneDirector {
   /** The active scene, or `null` when none is set. */
   public get currentScene(): Scene | null {
     return this._activeScope?.scene ?? null;
+  }
+
+  /** The active scene's current {@link SceneState}, or `null` when no scene is active. */
+  public get state(): SceneState | null {
+    return this._activeScope?.state ?? null;
   }
 
   public set currentScene(scene: Scene | null) {
@@ -144,6 +156,52 @@ export class SceneDirector {
     }, options.transition);
 
     return this;
+  }
+
+  /**
+   * Pause the active scene: `Active` → `Paused`. Its `fixedUpdate`/`update`
+   * stop running, but `draw` keeps rendering and input/interaction stay live
+   * — the canonical "pause menu drawn over a frozen world" shape. No-op
+   * (returns `false`) when no scene is active or it is not currently `Active`.
+   */
+  public pause(): boolean {
+    const scope = this._activeScope;
+
+    if (scope === null) {
+      return false;
+    }
+
+    const previous = scope.state;
+    const changed = scope.pause();
+
+    if (changed) {
+      this.onPause.dispatch(scope.scene);
+      this.onStateChange.dispatch(previous, scope.state, scope.scene);
+    }
+
+    return changed;
+  }
+
+  /**
+   * Resume a paused scene: `Paused` → `Active`. No-op (returns `false`) when
+   * no scene is active or it is not currently `Paused`.
+   */
+  public resume(): boolean {
+    const scope = this._activeScope;
+
+    if (scope === null) {
+      return false;
+    }
+
+    const previous = scope.state;
+    const changed = scope.resume();
+
+    if (changed) {
+      this.onResume.dispatch(scope.scene);
+      this.onStateChange.dispatch(previous, scope.state, scope.scene);
+    }
+
+    return changed;
   }
 
   /**
@@ -246,6 +304,9 @@ export class SceneDirector {
     this.onStartScene.destroy();
     this.onUpdateScene.destroy();
     this.onStopScene.destroy();
+    this.onPause.destroy();
+    this.onResume.destroy();
+    this.onStateChange.destroy();
   }
 
   /**
