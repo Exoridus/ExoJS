@@ -109,7 +109,12 @@ export class SceneInputs implements Destroyable {
   ): InputBinding {
     const when = options?.when ?? 'active';
     const forwarded: InputBindingOptions | undefined =
-      options === undefined ? undefined : { ...(options.threshold !== undefined && { threshold: options.threshold }), ...(options.gamepadSlot !== undefined && { gamepadSlot: options.gamepadSlot }) };
+      options === undefined
+        ? undefined
+        : {
+            ...(options.threshold !== undefined && { threshold: options.threshold }),
+            ...(options.gamepadSlot !== undefined && { gamepadSlot: options.gamepadSlot }),
+          };
 
     let primed = false;
 

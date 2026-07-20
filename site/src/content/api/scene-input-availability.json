@@ -1,0 +1,79 @@
+{
+  "title": "SceneInputAvailability",
+  "description": "Visible-scene states in which a SceneInputs binding may dispatch. Default: `'active'`.",
+  "symbol": "SceneInputAvailability",
+  "kind": "type",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Visible-scene states in which a SceneInputs binding may dispatch. Default: `'active'`."
+      ],
+      "importLine": "import { SceneInputAvailability } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "SceneInputAvailability",
+          "signature": "\"active\" | \"paused\" | \"always\"",
+          "signatureTokens": [
+            {
+              "text": "\"active\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"paused\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"always\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/scene/SceneInputs.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/scene/SceneInputs.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/scene/SceneInputs.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/scene/SceneInputs.ts"
+}

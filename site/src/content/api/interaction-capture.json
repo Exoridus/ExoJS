@@ -1,0 +1,138 @@
+{
+  "title": "InteractionCapture",
+  "description": "Handle returned by SceneInteraction.capture. While active, pointer hit-testing is confined to the captured root's subtree. Call InteractionCapture.release (or InteractionCapture.destroy, an alias) to end the capture — nested captures restore whichever capture was active before this one, regardless of release order. Idempotent; also released automatically when the owning scene ends permanently.",
+  "symbol": "InteractionCapture",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 2,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Handle returned by SceneInteraction.capture. While active, pointer hit-testing is confined to the captured root's subtree. Call InteractionCapture.release (or InteractionCapture.destroy, an alias) to end the capture — nested captures restore whichever capture was active before this one, regardless of release order. Idempotent; also released automatically when the owning scene ends permanently."
+      ],
+      "importLine": "import { InteractionCapture } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "release",
+          "signature": "release(): void",
+          "signatureTokens": [
+            {
+              "text": "release",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "End this capture. Idempotent alias for InteractionCapture.destroy."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "active",
+          "signature": "active: boolean",
+          "signatureTokens": [
+            {
+              "text": "active",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "true until this capture is released."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/scene/SceneInteraction.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/scene/SceneInteraction.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/scene/SceneInteraction.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/scene/SceneInteraction.ts"
+}
