@@ -14,7 +14,7 @@ interface FocusVisibilityHarness {
     canvasFocused: boolean;
     onCanvasFocusChange: Signal<[focused: boolean]>;
   };
-  readonly sceneManagerMock: {
+  readonly sceneDirectorMock: {
     _beginFrame: MockInstance;
     _endFrame: MockInstance;
     fixedUpdate: MockInstance;
@@ -42,7 +42,7 @@ const loadHarness = async (): Promise<FocusVisibilityHarness> => {
     onCanvasFocusChange,
   };
 
-  const sceneManagerMock = {
+  const sceneDirectorMock = {
     _beginFrame: vi.fn(),
     _endFrame: vi.fn(),
     fixedUpdate: vi.fn(),
@@ -131,7 +131,7 @@ const loadHarness = async (): Promise<FocusVisibilityHarness> => {
   }));
   vi.doMock('#core/SceneDirector', () => ({
     SceneDirector: vi.fn(function () {
-      return sceneManagerMock;
+      return sceneDirectorMock;
     }),
   }));
 
@@ -141,7 +141,7 @@ const loadHarness = async (): Promise<FocusVisibilityHarness> => {
     Application: mod.Application,
     ApplicationStatus: mod.ApplicationStatus,
     inputManagerMock,
-    sceneManagerMock,
+    sceneDirectorMock,
     interactionMock,
   };
 };
@@ -236,7 +236,7 @@ describe('Application focus / visibility', () => {
   });
 
   test('pauseOnHidden=true skips frame body but keeps rAF scheduled when hidden', async () => {
-    const { Application, ApplicationStatus, sceneManagerMock, interactionMock, inputManagerMock } = await loadHarness();
+    const { Application, ApplicationStatus, sceneDirectorMock, interactionMock, inputManagerMock } = await loadHarness();
     const app = new Application({ canvas: { element: document.createElement('canvas') } });
     const rawApp = app as unknown as Record<string, unknown>;
 
@@ -272,7 +272,7 @@ describe('Application focus / visibility', () => {
     expect(rafSpy).toHaveBeenCalledTimes(1);
     // But game-state subsystems NOT called
     expect(inputManagerMock.update).not.toHaveBeenCalled();
-    expect(sceneManagerMock.update).not.toHaveBeenCalled();
+    expect(sceneDirectorMock.update).not.toHaveBeenCalled();
     expect(interactionMock.update).not.toHaveBeenCalled();
 
     // Restore
@@ -287,7 +287,7 @@ describe('Application focus / visibility', () => {
   });
 
   test('pauseOnHidden=false (default) updates normally even when hidden', async () => {
-    const { Application, ApplicationStatus, sceneManagerMock, inputManagerMock } = await loadHarness();
+    const { Application, ApplicationStatus, sceneDirectorMock, inputManagerMock } = await loadHarness();
     const app = new Application({ canvas: { element: document.createElement('canvas') } });
     const rawApp = app as unknown as Record<string, unknown>;
 
@@ -328,7 +328,7 @@ describe('Application focus / visibility', () => {
     app.update();
 
     expect(inputManagerMock._prepareFrame).toHaveBeenCalledTimes(1);
-    expect(sceneManagerMock.update).toHaveBeenCalledTimes(1);
+    expect(sceneDirectorMock.update).toHaveBeenCalledTimes(1);
 
     // Restore
     Object.defineProperty(document, 'visibilityState', {

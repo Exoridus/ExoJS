@@ -101,7 +101,7 @@ interface LifecycleHarness {
     onDeviceLost: { add: MockInstance };
     onDeviceRestored: { add: MockInstance };
   };
-  readonly sceneManager: { update: MockInstance; setScene: MockInstance; destroy: MockInstance };
+  readonly sceneDirector: { update: MockInstance; setScene: MockInstance; destroy: MockInstance };
 }
 
 const loadHarness = async (options: LifecycleHarnessOptions = {}): Promise<LifecycleHarness> => {
@@ -144,7 +144,7 @@ const loadHarness = async (options: LifecycleHarnessOptions = {}): Promise<Lifec
     rendererRegistry,
     backendType: 'webgpu',
   };
-  const sceneManager = {
+  const sceneDirector = {
     update: vi.fn(),
     setScene: vi.fn().mockResolvedValue(undefined),
     destroy: vi.fn(),
@@ -218,7 +218,7 @@ const loadHarness = async (options: LifecycleHarnessOptions = {}): Promise<Lifec
   }));
   vi.doMock('#core/SceneDirector', () => ({
     SceneDirector: vi.fn(function () {
-      return sceneManager;
+      return sceneDirector;
     }),
   }));
 
@@ -232,7 +232,7 @@ const loadHarness = async (options: LifecycleHarnessOptions = {}): Promise<Lifec
     loader,
     webglManager,
     webgpuManager,
-    sceneManager,
+    sceneDirector,
   };
 };
 
@@ -992,19 +992,19 @@ describe('Application lifecycle / getters / sizing', () => {
 
   describe('start()', () => {
     test('is idempotent — a second call while already Running does not re-initialize', async () => {
-      const { Application, webglManager, sceneManager } = await loadHarness();
+      const { Application, webglManager, sceneDirector } = await loadHarness();
       const app = new Application({ backend: { type: 'webgl2' } });
       const rafSpy = vi.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 1);
 
       try {
         await app.start({} as import('#core/Scene').Scene);
         expect(webglManager.initialize).toHaveBeenCalledTimes(1);
-        expect(sceneManager.setScene).toHaveBeenCalledTimes(1);
+        expect(sceneDirector.setScene).toHaveBeenCalledTimes(1);
 
         await app.start({} as import('#core/Scene').Scene);
 
         expect(webglManager.initialize).toHaveBeenCalledTimes(1);
-        expect(sceneManager.setScene).toHaveBeenCalledTimes(1);
+        expect(sceneDirector.setScene).toHaveBeenCalledTimes(1);
       } finally {
         rafSpy.mockRestore();
       }
@@ -1049,11 +1049,11 @@ describe('Application lifecycle / getters / sizing', () => {
 
   describe('stop(): onError dispatch on scene-teardown failure', () => {
     test('dispatches the original Error instance when the rejection value is already an Error', async () => {
-      const { Application, ApplicationStatus, sceneManager } = await loadHarness();
+      const { Application, ApplicationStatus, sceneDirector } = await loadHarness();
       const app = new Application({ backend: { type: 'webgl2' } });
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
       const teardownError = new Error('scene teardown failed');
-      sceneManager.setScene.mockRejectedValueOnce(teardownError);
+      sceneDirector.setScene.mockRejectedValueOnce(teardownError);
 
       (app as unknown as Record<string, unknown>)['_status'] = ApplicationStatus.Running;
       const errorHandler = vi.fn();
@@ -1068,10 +1068,10 @@ describe('Application lifecycle / getters / sizing', () => {
     });
 
     test('wraps a non-Error rejection value into a new Error', async () => {
-      const { Application, ApplicationStatus, sceneManager } = await loadHarness();
+      const { Application, ApplicationStatus, sceneDirector } = await loadHarness();
       const app = new Application({ backend: { type: 'webgl2' } });
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-      sceneManager.setScene.mockRejectedValueOnce('a plain string rejection');
+      sceneDirector.setScene.mockRejectedValueOnce('a plain string rejection');
 
       (app as unknown as Record<string, unknown>)['_status'] = ApplicationStatus.Running;
       const errorHandler = vi.fn();

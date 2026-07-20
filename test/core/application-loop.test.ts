@@ -241,7 +241,7 @@ describe('Application.update() — loop timing', () => {
       expect(receivedDelta.seconds).toBeLessThanOrEqual(0.1);
     });
 
-    test('a very large raw delta is clamped before sceneManager.update receives it', () => {
+    test('a very large raw delta is clamped before sceneDirector.update receives it', () => {
       mockFrameElapsed(app, 30_000);
 
       const sceneUpdateSpy = vi.spyOn(app.scenes, 'update');
