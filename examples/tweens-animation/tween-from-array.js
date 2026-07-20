@@ -1,17 +1,5 @@
 // Auto-generated from tween-from-array.ts — edit the .ts source, not this file.
 import { Application, Color, Ease, Scene, Sprite } from '@codexo/exojs';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
 // A closed loop of waypoints expressed as fractions of the canvas so the path
 // spreads across the wider 16:9 frame instead of staying in an 800×600 box.
 const waypointFractions = [
@@ -61,4 +49,17 @@ class TweenFromArrayScene extends Scene {
         context.render(this.sprite);
     }
 }
-app.start(new TweenFromArrayScene());
+const app = new Application({
+    scenes: { TweenFromArrayScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+app.start(TweenFromArrayScene);

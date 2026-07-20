@@ -1,15 +1,6 @@
 // Auto-generated from easing-curves.ts — edit the .ts source, not this file.
 import { Application, Color, Ease, Graphics, Scene, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: new Color(18, 21, 30),
-});
 // Every built-in Ease function, in source order.
 const EASINGS = [
     ['linear', Ease.linear],
@@ -134,4 +125,14 @@ class EasingCurvesScene extends Scene {
         }
     }
 }
-app.start(new EasingCurvesScene());
+const app = new Application({
+    scenes: { EasingCurvesScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: new Color(18, 21, 30),
+});
+app.start(EasingCurvesScene);

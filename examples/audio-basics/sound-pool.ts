@@ -1,15 +1,7 @@
 import { Application, Color, Graphics, Keyboard, type RenderingContext, Scene, Sound, Text, type Time } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-});
+
 
 const POOL_SIZE = 12;
 const FIRE_INTERVAL = 0.04;
@@ -153,4 +145,15 @@ class SoundPoolScene extends Scene {
     }
 }
 
-app.start(new SoundPoolScene());
+const app = new Application({
+    scenes: { SoundPoolScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+});
+
+app.start(SoundPoolScene);

@@ -1,18 +1,6 @@
 // Auto-generated from key-rebinding.ts — edit the .ts source, not this file.
 import { Application, Color, Graphics, Keyboard, Scene } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: new Color(10, 12, 20),
-    loader: {
-        basePath: 'assets/',
-    },
-});
 // Reverse lookup from a Keyboard channel back to a human-readable key name, so
 // the binding is shown as "Space" rather than the raw channel number. The
 // Keyboard enum's reverse map (numeric value -> member name) gives this for free.
@@ -133,4 +121,17 @@ class KeyRebindingScene extends Scene {
         context.render(this.graphics);
     }
 }
-app.start(new KeyRebindingScene());
+const app = new Application({
+    scenes: { KeyRebindingScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: new Color(10, 12, 20),
+    loader: {
+        basePath: 'assets/',
+    },
+});
+app.start(KeyRebindingScene);

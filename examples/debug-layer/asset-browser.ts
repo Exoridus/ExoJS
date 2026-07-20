@@ -101,10 +101,7 @@ const C = {
     black:     new Color(0,   0,   0),
 };
 
-const app = new Application({
-    canvas: { width: W, height: H, mount: document.body, sizingMode: 'fit' },
-    clearColor: C.bg,
-});
+
 
 class AssetBrowserScene extends Scene {
     cat = 'textures';
@@ -1092,4 +1089,10 @@ class AssetBrowserScene extends Scene {
     }
 }
 
-app.start(new AssetBrowserScene());
+const app = new Application({
+    scenes: { AssetBrowserScene },
+    canvas: { width: W, height: H, mount: document.body, sizingMode: 'fit' },
+    clearColor: C.bg,
+});
+
+app.start(AssetBrowserScene);

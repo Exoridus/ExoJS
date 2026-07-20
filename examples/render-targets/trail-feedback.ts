@@ -1,17 +1,6 @@
 import { Application, CallbackRenderPass, Color, type RenderingContext, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite, type Time } from '@codexo/exojs';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
+
 
 class TrailFeedbackScene extends Scene {
     // Two render targets, ping-ponged each frame. Reading from and writing to
@@ -92,4 +81,18 @@ class TrailFeedbackScene extends Scene {
     }
 }
 
-app.start(new TrailFeedbackScene());
+const app = new Application({
+    scenes: { TrailFeedbackScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+
+app.start(TrailFeedbackScene);

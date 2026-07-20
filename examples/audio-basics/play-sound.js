@@ -1,14 +1,5 @@
 // Auto-generated from play-sound.ts — edit the .ts source, not this file.
 import { Application, Color, Scene, Text } from '@codexo/exojs';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-});
 // A small pool of different UI sounds so repeated taps stay interesting.
 const SOUND_KEYS = ['uiClick', 'uiConfirm', 'uiBong', 'impactLight', 'impactHeavy'];
 class PlaySoundScene extends Scene {
@@ -42,4 +33,14 @@ class PlaySoundScene extends Scene {
         context.render(this.text);
     }
 }
-app.start(new PlaySoundScene());
+const app = new Application({
+    scenes: { PlaySoundScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+});
+app.start(PlaySoundScene);

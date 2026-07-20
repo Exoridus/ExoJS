@@ -1,17 +1,6 @@
 import { Application, Color, type RenderingContext, Scene, Signal, Text, Time, Timer } from '@codexo/exojs';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
+
 
 class SignalBusInspectorScene extends Scene {
     private signals!: { spawn: Signal; damage: Signal; score: Signal };
@@ -59,4 +48,18 @@ class SignalBusInspectorScene extends Scene {
     }
 }
 
-app.start(new SignalBusInspectorScene());
+const app = new Application({
+    scenes: { SignalBusInspectorScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+
+app.start(SignalBusInspectorScene);

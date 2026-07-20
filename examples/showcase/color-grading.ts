@@ -1,15 +1,7 @@
 import { Application, Color, Keyboard, LutFilter, type RenderingContext, Scene, Sprite, Texture } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-});
+
 
 const LUT_SIZE = 17;
 
@@ -134,4 +126,15 @@ class ColorGradingScene extends Scene {
     }
 }
 
-app.start(new ColorGradingScene());
+const app = new Application({
+    scenes: { ColorGradingScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+});
+
+app.start(ColorGradingScene);

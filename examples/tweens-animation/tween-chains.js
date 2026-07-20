@@ -1,17 +1,5 @@
 // Auto-generated from tween-chains.ts — edit the .ts source, not this file.
 import { Application, Color, Scene, Sprite } from '@codexo/exojs';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
 class TweenChainsScene extends Scene {
     sprite;
     init() {
@@ -60,4 +48,17 @@ class TweenChainsScene extends Scene {
         context.render(this.sprite);
     }
 }
-app.start(new TweenChainsScene());
+const app = new Application({
+    scenes: { TweenChainsScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+app.start(TweenChainsScene);

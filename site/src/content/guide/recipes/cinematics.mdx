@@ -12,7 +12,7 @@ A cinematic (or cutscene) is a choreographed sequence where the camera moves, di
 
 ## Approach
 
-A cinematic is a scene. It owns the sequence. Tweens drive every timed element — camera pans, title reveals, character entrances, music fades. Navigate to the cinematic scene via `app.scenes.setScene(new CinematicScene())` to fully replace the game scene while the cutscene plays, and call `app.scenes.setScene(...)` again when the sequence ends to return to gameplay.
+A cinematic is a scene. It owns the sequence. Tweens drive every timed element — camera pans, title reveals, character entrances, music fades. Navigate to the cinematic scene via `app.scenes.setScene(CinematicScene)` to fully replace the game scene while the cutscene plays, and call `app.scenes.setScene(...)` again when the sequence ends to return to gameplay.
 
 The key technique: **tween chains and delays**. Each tween starts at a specific time offset. Together they form a timeline:
 
@@ -111,20 +111,20 @@ Each tween operates independently — they don't need to know about each other. 
 
 Navigate to the cinematic scene from the game to fully replace the active scene while the cutscene plays:
 
-```js
+```js no-check
 // From the game scene — switch to the cinematic:
-this.app.scenes.setScene(new CinematicScene());
+this.app.scenes.setScene(CinematicScene);
 ```
 
 Because the cinematic is now the only active scene, the game scene neither renders nor updates for the duration. When the cinematic ends, switch back:
 
-```js
+```js no-check
 // At the end of the sequence — chain a tween to transition back to the game:
 this.app.tweens.create(this.barSize)
     .to({ v: 70 }, 0.6)
     .delay(3.5) // start closing bars after the sequence plays
     .onComplete(() => {
-        this.app.scenes.setScene(new GameScene(), { transition: { type: 'fade' } });
+        this.app.scenes.setScene(GameScene, { transition: { type: 'fade' } });
     })
     .start();
 ```
@@ -163,31 +163,31 @@ Add a skip mechanism — press any confirm key (Space, Enter, gamepad Start) to 
 Staggering tweens with `Tween.delay()` is what turns independent animations into a timeline — no sequencer needed. To skip the whole cutscene, `app.tweens.clear()` stops every active tween at once so you can snap straight to the end state.
 </Callout>
 
-```js
+```js no-check
 init(loader) {
     // ... cinematic setup ...
 
     this.inputs.onTrigger(Keyboard.Space, () => {
-        this.app.scenes.setScene(new GameScene());
+        this.app.scenes.setScene(GameScene);
     });
 
     const pad = this.app.input.getGamepad(0);
     pad.onTrigger(GamepadButton.Start, () => {
-        this.app.scenes.setScene(new GameScene());
+        this.app.scenes.setScene(GameScene);
     });
 }
 ```
 
 For a smoother skip, fast-forward remaining tweens to completion rather than cutting hard:
 
-```js
+```js no-check
 this.inputs.onTrigger(Keyboard.Space, () => {
     // Jump all tweens to their end state
     this.app.tweens.clear(); // stops all active tweens
     this.musicVoice.volume = 0.85;
     this.boss.setScale(2.1, 2.1);
     // ... snap other properties ...
-    this.app.scenes.setScene(new GameScene());
+    this.app.scenes.setScene(GameScene);
 });
 ```
 

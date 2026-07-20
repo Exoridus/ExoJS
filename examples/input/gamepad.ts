@@ -1,17 +1,6 @@
 import { Application, Asset, Color, Container, type Gamepad, GamepadAxis, GamepadButton, type InputChannel, lerp, type RenderingContext, Scene, Sprite, Spritesheet, type SpritesheetData, Vector } from '@codexo/exojs';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
+
 
 class GamepadScene extends Scene {
     private activePad: Gamepad | null = null;
@@ -302,4 +291,18 @@ class GamepadScene extends Scene {
     }
 }
 
-app.start(new GamepadScene());
+const app = new Application({
+    scenes: { GamepadScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+
+app.start(GamepadScene);

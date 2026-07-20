@@ -2,16 +2,7 @@ import { Application, Color, Container, Rectangle, type RenderingContext, Scene,
 
 const GRID_COLUMNS = 50;
 const GRID_ROWS = 22;
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: new Color(0.018, 0.02, 0.04, 1),
-    backend: { type: 'webgpu' },
-});
+
 
 interface TextureInfo {
     texture: Texture;
@@ -98,7 +89,19 @@ class MultiTextureStressScene extends Scene {
     }
 }
 
-app.start(new MultiTextureStressScene()).catch(() => {
+const app = new Application({
+    scenes: { MultiTextureStressScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: new Color(0.018, 0.02, 0.04, 1),
+    backend: { type: 'webgpu' },
+});
+
+app.start(MultiTextureStressScene).catch(() => {
     app.canvas.remove();
     app.destroy();
 });

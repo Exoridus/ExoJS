@@ -1,15 +1,6 @@
 // Auto-generated from music-loop.ts — edit the .ts source, not this file.
 import { Application, Asset, Color, Graphics, Scene, Text } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-});
 class MusicLoopScene extends Scene {
     music;
     musicVoice;
@@ -119,4 +110,14 @@ class MusicLoopScene extends Scene {
         }
     }
 }
-app.start(new MusicLoopScene());
+const app = new Application({
+    scenes: { MusicLoopScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+});
+app.start(MusicLoopScene);

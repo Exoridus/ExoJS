@@ -1,14 +1,5 @@
 // Auto-generated from mesh-deformed-grid.ts — edit the .ts source, not this file.
 import { Application, Color, Mesh, Scene } from '@codexo/exojs';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-});
 const COLS = 16;
 const ROWS = 16;
 const SIZE = 460;
@@ -84,4 +75,14 @@ class MeshDeformedGridScene extends Scene {
         context.render(this.mesh);
     }
 }
-app.start(new MeshDeformedGridScene());
+const app = new Application({
+    scenes: { MeshDeformedGridScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+});
+app.start(MeshDeformedGridScene);

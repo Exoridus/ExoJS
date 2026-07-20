@@ -1,17 +1,6 @@
 import { Application, CallbackRenderPass, Color, RenderBackendType, type RenderingContext, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite, type Time, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
+
 
 const glsl = `#version 300 es
 precision mediump float; uniform sampler2D uTexture; uniform float uTime; in vec2 vUv; out vec4 fragColor;
@@ -89,4 +78,18 @@ class WaterMirrorScene extends Scene {
     }
 }
 
-app.start(new WaterMirrorScene());
+const app = new Application({
+    scenes: { WaterMirrorScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+
+app.start(WaterMirrorScene);

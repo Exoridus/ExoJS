@@ -1,14 +1,6 @@
 import { Application, Color, Container, Graphics, LinearGradient, RadialGradient, type RenderingContext, Scene, type Time } from '@codexo/exojs';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.midnightBlue,
-});
+
 
 class GraphicsGradientScene extends Scene {
     private sceneRoot!: Container;
@@ -89,7 +81,18 @@ class GraphicsGradientScene extends Scene {
     }
 }
 
-app.start(new GraphicsGradientScene()).catch(() => {
+const app = new Application({
+    scenes: { GraphicsGradientScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.midnightBlue,
+});
+
+app.start(GraphicsGradientScene).catch(() => {
     app.canvas.remove();
     app.destroy();
 });

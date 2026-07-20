@@ -1,14 +1,5 @@
 // Auto-generated from mesh-triangle.ts — edit the .ts source, not this file.
 import { Application, Color, Mesh, Scene } from '@codexo/exojs';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-});
 class MeshTriangleScene extends Scene {
     triangle;
     init() {
@@ -34,4 +25,14 @@ class MeshTriangleScene extends Scene {
         context.render(this.triangle);
     }
 }
-app.start(new MeshTriangleScene());
+const app = new Application({
+    scenes: { MeshTriangleScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+});
+app.start(MeshTriangleScene);

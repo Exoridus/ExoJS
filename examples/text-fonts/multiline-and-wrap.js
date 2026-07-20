@@ -1,14 +1,5 @@
 // Auto-generated from multiline-and-wrap.ts — edit the .ts source, not this file.
 import { Application, Color, Scene, Text } from '@codexo/exojs';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-});
 const paragraph = 'ExoJS text layout can render multiline content with configurable wrapping behavior and style.';
 const longToken = 'ExoJStextlayoutrendersaverylongunbrokentokenwithoutanyspacestobreakon';
 const titleColor = new Color(140, 170, 210);
@@ -55,4 +46,14 @@ class MultilineAndWrapScene extends Scene {
         context.render(this.textC);
     }
 }
-app.start(new MultilineAndWrapScene());
+const app = new Application({
+    scenes: { MultilineAndWrapScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+});
+app.start(MultilineAndWrapScene);

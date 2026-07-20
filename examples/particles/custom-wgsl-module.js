@@ -2,16 +2,6 @@
 import { Application, Color, Scene, Vector } from '@codexo/exojs';
 import { Constant, particlesExtension, ParticleSystem, RateSpawn, UpdateModule, } from '@codexo/exojs-particles';
 import { mountControls } from '@examples/runtime';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    extensions: [particlesExtension],
-});
 /**
  * A custom update module that nudges each particle's horizontal velocity with a
  * per-particle sine wave, producing a swaying rising column. It ships BOTH a CPU
@@ -89,4 +79,15 @@ class CustomWgslModuleScene extends Scene {
         context.render(this.system);
     }
 }
-app.start(new CustomWgslModuleScene());
+const app = new Application({
+    scenes: { CustomWgslModuleScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    extensions: [particlesExtension],
+});
+app.start(CustomWgslModuleScene);

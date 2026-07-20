@@ -1,17 +1,5 @@
 // Auto-generated from text-glitch.ts — edit the .ts source, not this file.
 import { Application, Color, RenderBackendType, Scene, Text, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
 const glsl = `#version 300 es
 precision mediump float;
 uniform sampler2D uTexture;
@@ -63,4 +51,17 @@ class TextGlitchScene extends Scene {
         context.render(this.text);
     }
 }
-app.start(new TextGlitchScene());
+const app = new Application({
+    scenes: { TextGlitchScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+app.start(TextGlitchScene);

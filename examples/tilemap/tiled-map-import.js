@@ -25,21 +25,6 @@ import { mountControlPanel, mountControls } from '@examples/runtime';
 const TILE = 64;
 const COLUMNS = 20;
 const ROWS = 12;
-const app = new Application({
-    canvas: {
-        width: COLUMNS * TILE,
-        height: ROWS * TILE,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: new Color(28, 36, 46),
-    // tiledExtension depends on tilemapExtension, so registering it alone is
-    // enough for both loading (.tmj) and rendering (TileMapNode).
-    extensions: [tiledExtension],
-    loader: {
-        basePath: 'assets/',
-    },
-});
 const FILTERS = [
     { label: 'all zones', query: {} },
     { label: 'type: water', query: { type: 'water' } },
@@ -113,4 +98,20 @@ class TiledMapImportScene extends Scene {
         context.render(this.overlay);
     }
 }
-app.start(new TiledMapImportScene());
+const app = new Application({
+    scenes: { TiledMapImportScene },
+    canvas: {
+        width: COLUMNS * TILE,
+        height: ROWS * TILE,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: new Color(28, 36, 46),
+    // tiledExtension depends on tilemapExtension, so registering it alone is
+    // enough for both loading (.tmj) and rendering (TileMapNode).
+    extensions: [tiledExtension],
+    loader: {
+        basePath: 'assets/',
+    },
+});
+app.start(TiledMapImportScene);

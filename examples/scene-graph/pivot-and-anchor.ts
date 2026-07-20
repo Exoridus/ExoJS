@@ -1,17 +1,6 @@
 import { Application, Color, Graphics, type RenderingContext, Scene, Sprite, Text, type Time } from '@codexo/exojs';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
+
 
 const modes = [
     { name: 'corner', anchor: [0, 0] as [number, number], origin: [0, 0] as [number, number] | null },
@@ -67,4 +56,18 @@ class PivotAndAnchorScene extends Scene {
     }
 }
 
-app.start(new PivotAndAnchorScene());
+const app = new Application({
+    scenes: { PivotAndAnchorScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+
+app.start(PivotAndAnchorScene);

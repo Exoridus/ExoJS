@@ -1,18 +1,7 @@
 import { Application, Color, GamepadAxis, type RenderingContext, Scene, Sprite, Text, type Time } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: new Color(10, 12, 20),
-    loader: {
-        basePath: 'assets/',
-    },
-});
+
 
 const tints = [new Color(255, 140, 140), new Color(140, 255, 170), new Color(150, 180, 255), new Color(255, 230, 140)];
 
@@ -109,4 +98,18 @@ class MultiGamepadScene extends Scene {
     }
 }
 
-app.start(new MultiGamepadScene());
+const app = new Application({
+    scenes: { MultiGamepadScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: new Color(10, 12, 20),
+    loader: {
+        basePath: 'assets/',
+    },
+});
+
+app.start(MultiGamepadScene);

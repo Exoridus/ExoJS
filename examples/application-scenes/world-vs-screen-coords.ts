@@ -1,17 +1,6 @@
 import { Application, Color, Graphics, type RenderingContext, Scene, Text, View } from '@codexo/exojs';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
+
 
 class WorldScreenScene extends Scene {
     private view!: View;
@@ -74,4 +63,18 @@ class WorldScreenScene extends Scene {
     }
 }
 
-app.start(new WorldScreenScene());
+const app = new Application({
+    scenes: { WorldScreenScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+
+app.start(WorldScreenScene);

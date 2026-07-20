@@ -1,14 +1,6 @@
 import { Application, Asset, BitmapText, BmFont, Color, type RenderingContext, Scene } from '@codexo/exojs';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: new Color(20, 24, 36),
-});
+
 
 class BitmapTextBasicScene extends Scene {
     private font!: BmFont;
@@ -59,4 +51,15 @@ class BitmapTextBasicScene extends Scene {
     }
 }
 
-app.start(new BitmapTextBasicScene());
+const app = new Application({
+    scenes: { BitmapTextBasicScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: new Color(20, 24, 36),
+});
+
+app.start(BitmapTextBasicScene);

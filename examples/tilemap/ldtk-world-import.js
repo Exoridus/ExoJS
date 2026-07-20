@@ -22,18 +22,6 @@ import { mountControlPanel, mountControls } from '@examples/runtime';
 // harbor-world.ldtk (examples/assets/json/maps/) defines two levels sharing
 // one tileset: "Level_Harbor" and "Level_Lighthouse", each with a Ground
 // tile layer, a Walls IntGrid layer (Wall / Water), and an Entities layer.
-const app = new Application({
-    canvas: {
-        width: 640,
-        height: 448,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: new Color(18, 22, 30),
-    // ldtkExtension depends on tilemapExtension, so registering it alone is
-    // enough for both loading (.ldtk) and rendering (TileMapNode).
-    extensions: [ldtkExtension],
-});
 class LdtkWorldImportScene extends Scene {
     world;
     content = new Container();
@@ -132,4 +120,17 @@ function hexToColor(hex, alpha) {
     const value = Number.parseInt(hex.replace('#', ''), 16);
     return new Color((value >> 16) & 0xff, (value >> 8) & 0xff, value & 0xff, alpha);
 }
-app.start(new LdtkWorldImportScene());
+const app = new Application({
+    scenes: { LdtkWorldImportScene },
+    canvas: {
+        width: 640,
+        height: 448,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: new Color(18, 22, 30),
+    // ldtkExtension depends on tilemapExtension, so registering it alone is
+    // enough for both loading (.ldtk) and rendering (TileMapNode).
+    extensions: [ldtkExtension],
+});
+app.start(LdtkWorldImportScene);

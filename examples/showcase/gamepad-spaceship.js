@@ -2,16 +2,6 @@
 import { Application, AudioGenerator, Color, GamepadAxis, GamepadButton, Graphics, Scene, Sprite, Text, Vector } from '@codexo/exojs';
 import { AlphaFadeOverLifetime, BurstSpawn, ConeDirection, Constant, particlesExtension, ParticleSystem, } from '@codexo/exojs-particles';
 import { mountControls } from '@examples/runtime';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: new Color(8, 10, 18),
-    extensions: [particlesExtension],
-});
 class GamepadSpaceshipScene extends Scene {
     ship;
     velocity = new Vector(0, 0);
@@ -178,4 +168,15 @@ class GamepadSpaceshipScene extends Scene {
         }
     }
 }
-app.start(new GamepadSpaceshipScene());
+const app = new Application({
+    scenes: { GamepadSpaceshipScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: new Color(8, 10, 18),
+    extensions: [particlesExtension],
+});
+app.start(GamepadSpaceshipScene);

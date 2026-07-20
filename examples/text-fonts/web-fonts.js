@@ -1,17 +1,5 @@
 // Auto-generated from web-fonts.ts — edit the .ts source, not this file.
 import { Application, Asset, Color, Scene, Text } from '@codexo/exojs';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
 class WebFontsScene extends Scene {
     default;
     loaded;
@@ -34,4 +22,17 @@ class WebFontsScene extends Scene {
         context.render(this.loaded);
     }
 }
-app.start(new WebFontsScene());
+const app = new Application({
+    scenes: { WebFontsScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+app.start(WebFontsScene);

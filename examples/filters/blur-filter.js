@@ -1,15 +1,6 @@
 // Auto-generated from blur-filter.ts — edit the .ts source, not this file.
 import { Application, BlurFilter, Color, Scene, Sprite } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-});
 // High-detail, high-contrast content so the blur visibly softens hard edges.
 const PIXEL_GRID = assets.technical.filtering.pixelGrid128;
 const MAX_RADIUS = 14;
@@ -73,4 +64,14 @@ class BlurFilterScene extends Scene {
         context.render(this.sprite);
     }
 }
-app.start(new BlurFilterScene());
+const app = new Application({
+    scenes: { BlurFilterScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+});
+app.start(BlurFilterScene);

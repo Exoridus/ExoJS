@@ -12,16 +12,7 @@ import {
 } from '@codexo/exojs-particles';
 import { mountControls } from '@examples/runtime';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    extensions: [particlesExtension],
-});
+
 
 const random = new Random();
 const autoLaunchInterval = Time.fromSeconds(2.2);
@@ -181,4 +172,16 @@ class FireworksScene extends Scene {
     }
 }
 
-app.start(new FireworksScene());
+const app = new Application({
+    scenes: { FireworksScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    extensions: [particlesExtension],
+});
+
+app.start(FireworksScene);

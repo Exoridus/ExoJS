@@ -2,18 +2,18 @@ import { Color, Keyboard, Scene, Text } from '@codexo/exojs';
 import type { RenderingContext } from '@codexo/exojs';
 import { GameScene } from './GameScene';
 
-export class GameOverScene extends Scene {
+export interface GameOverData {
+  readonly score: number;
+}
+
+export class GameOverScene extends Scene<GameOverData> {
   private _label!: Text;
 
-  public constructor(private readonly _score: number) {
-    super();
-  }
-
-  public override init(): void {
+  public override init(data: Readonly<GameOverData>): void {
     const { width, height } = this.app!.canvas;
 
     this._label = new Text(
-      `Game Over\nScore: ${this._score}\n\nPress Space to restart`,
+      `Game Over\nScore: ${data.score}\n\nPress Space to restart`,
       { align: 'center', fillColor: Color.white, fontSize: 26 },
     );
     this._label.setAnchor(0.5);
@@ -22,7 +22,7 @@ export class GameOverScene extends Scene {
     this.addChild(this._label);
 
     this.inputs.onTrigger(Keyboard.Space, () => {
-      void this.app!.scenes.setScene(new GameScene());
+      void this.app!.scenes.setScene(GameScene);
     });
   }
 

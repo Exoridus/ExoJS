@@ -1,20 +1,6 @@
 // Auto-generated from bounding-boxes.ts — edit the .ts source, not this file.
 import { Application, Color, Scene, Sprite } from '@codexo/exojs';
 import { DebugOverlay } from '@codexo/exojs/debug';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
-const debug = new DebugOverlay(app);
-debug.layers.boundingBoxes.visible = true;
 class BoundingBoxesScene extends Scene {
     sprites;
     time = 0;
@@ -52,4 +38,19 @@ class BoundingBoxesScene extends Scene {
         context.render(this.root);
     }
 }
-app.start(new BoundingBoxesScene());
+const app = new Application({
+    scenes: { BoundingBoxesScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+const debug = new DebugOverlay(app);
+debug.layers.boundingBoxes.visible = true;
+app.start(BoundingBoxesScene);

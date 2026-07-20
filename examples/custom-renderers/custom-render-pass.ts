@@ -1,17 +1,6 @@
 import { Application, CallbackRenderPass, Color, Graphics, type RenderingContext, RenderNodePass, RenderPipeline, Scene, Sprite, type Time } from '@codexo/exojs';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
+
 
 class CustomRenderPassScene extends Scene {
     private back!: Sprite;
@@ -63,4 +52,18 @@ class CustomRenderPassScene extends Scene {
     }
 }
 
-app.start(new CustomRenderPassScene());
+const app = new Application({
+    scenes: { CustomRenderPassScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+
+app.start(CustomRenderPassScene);

@@ -1,17 +1,6 @@
 import { Application, Color, Container, Keyboard, type RenderingContext, Scene, Sprite, Text } from '@codexo/exojs';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
+
 
 class ZOrderingScene extends Scene {
     private group!: Container;
@@ -61,4 +50,18 @@ class ZOrderingScene extends Scene {
     }
 }
 
-app.start(new ZOrderingScene());
+const app = new Application({
+    scenes: { ZOrderingScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+
+app.start(ZOrderingScene);

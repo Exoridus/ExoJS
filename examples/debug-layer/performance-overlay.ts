@@ -1,21 +1,7 @@
 import { Application, Color, Container, Keyboard, type RenderingContext, Scene, Sprite, type Time } from '@codexo/exojs';
 import { DebugOverlay } from '@codexo/exojs/debug';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
 
-const debug = new DebugOverlay(app);
-debug.layers.performance.visible = true;
 
 class PerformanceOverlayScene extends Scene {
     private sprites!: { sprite: Sprite; vx: number; vy: number }[];
@@ -64,4 +50,21 @@ class PerformanceOverlayScene extends Scene {
     }
 }
 
-app.start(new PerformanceOverlayScene());
+const app = new Application({
+    scenes: { PerformanceOverlayScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+
+const debug = new DebugOverlay(app);
+debug.layers.performance.visible = true;
+
+app.start(PerformanceOverlayScene);

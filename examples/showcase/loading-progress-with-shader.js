@@ -1,17 +1,5 @@
 // Auto-generated from loading-progress-with-shader.ts — edit the .ts source, not this file.
 import { Application, Color, RenderBackendType, Scene, Sprite, Text, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
 const glsl = `#version 300 es
 precision mediump float; uniform float uProgress; in vec2 vUv; out vec4 fragColor;
 void main(){ vec2 p=vUv-0.5; float r=length(p); float a=atan(p.y,p.x); float t=(a+3.1415926)/(6.2831852);
@@ -57,4 +45,17 @@ class LoadingProgressWithShaderScene extends Scene {
         context.render(this.label);
     }
 }
-app.start(new LoadingProgressWithShaderScene());
+const app = new Application({
+    scenes: { LoadingProgressWithShaderScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+app.start(LoadingProgressWithShaderScene);

@@ -2,16 +2,6 @@
 import { Application, BlendModes, Color, Random, Scene, Size, Sprite, Time, Timer, Vector } from '@codexo/exojs';
 import { AlphaFadeOverLifetime, ApplyForce, BurstSpawn, ConeDirection, Constant, Curve, particlesExtension, ParticleSystem, Range, } from '@codexo/exojs-particles';
 import { mountControls } from '@examples/runtime';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    extensions: [particlesExtension],
-});
 const random = new Random();
 const autoLaunchInterval = Time.fromSeconds(2.2);
 const tailDuration = 2.5;
@@ -133,4 +123,15 @@ class FireworksScene extends Scene {
         }
     }
 }
-app.start(new FireworksScene());
+const app = new Application({
+    scenes: { FireworksScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    extensions: [particlesExtension],
+});
+app.start(FireworksScene);

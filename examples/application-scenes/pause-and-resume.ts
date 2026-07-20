@@ -1,17 +1,6 @@
 import { Application, Color, Keyboard, type RenderingContext, Scene, Sprite, Text, type Time } from '@codexo/exojs';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
+
 
 class PauseResumeScene extends Scene {
     private sprite!: Sprite;
@@ -61,4 +50,18 @@ class PauseResumeScene extends Scene {
     }
 }
 
-app.start(new PauseResumeScene());
+const app = new Application({
+    scenes: { PauseResumeScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+
+app.start(PauseResumeScene);

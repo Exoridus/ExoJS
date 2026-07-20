@@ -1,15 +1,7 @@
 import { Application, Color, ColorFilter, RenderBackendType, type RenderingContext, Scene, Sprite, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-});
+
 
 // A full-hue ramp shows tint / desaturate / invert / brightness on every colour.
 const HUE_RAMP = assets.technical.color.hueRamp;
@@ -113,4 +105,15 @@ class ColorFilterScene extends Scene {
     }
 }
 
-app.start(new ColorFilterScene());
+const app = new Application({
+    scenes: { ColorFilterScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+});
+
+app.start(ColorFilterScene);

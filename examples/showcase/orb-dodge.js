@@ -8,16 +8,6 @@ const ORB_RADIUS = 14;
 const SPAWN_INTERVAL = 0.9;
 const ORB_SPEED_MIN = 80;
 const ORB_SPEED_MAX = 200;
-// #region guide:application-setup
-const app = new Application({
-    canvas: {
-        width: CANVAS_WIDTH,
-        height: CANVAS_HEIGHT,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: new Color(10, 14, 26),
-});
 class PlayScene extends Scene {
     world;
     player;
@@ -163,8 +153,7 @@ class PlayScene extends Scene {
         }
         this.orbs = gameEnded ? [] : survived;
         if (gameEnded) {
-            gameOver.setResult(this.score, this.elapsed);
-            void app.scenes.setScene(gameOver);
+            void app.scenes.setScene(GameOverScene, { score: this.score, time: this.elapsed });
             return;
         }
         this.timeText.text = `${this.elapsed.toFixed(1)} s`;
@@ -183,18 +172,11 @@ class PlayScene extends Scene {
         super.destroy();
     }
 }
-// #region guide:game-over-scene
 class GameOverScene extends Scene {
     title;
     stats;
     hint;
-    finalScore = 0;
-    finalTime = 0;
-    setResult(score, time) {
-        this.finalScore = score;
-        this.finalTime = time;
-    }
-    init() {
+    init(data) {
         const app = this.app;
         if (app === null)
             throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
@@ -206,7 +188,7 @@ class GameOverScene extends Scene {
         });
         this.title.setAnchor(0.5);
         this.title.setPosition(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 - 70);
-        this.stats = new Text(`Score: ${this.finalScore}   Time: ${this.finalTime.toFixed(1)} s`, {
+        this.stats = new Text(`Score: ${data.score}   Time: ${data.time.toFixed(1)} s`, {
             align: 'center',
             fillColor: Color.white,
             fontSize: 26,
@@ -221,7 +203,7 @@ class GameOverScene extends Scene {
         this.hint.setAnchor(0.5);
         this.hint.setPosition(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 70);
         const restart = () => {
-            void app.scenes.setScene(play);
+            void app.scenes.setScene(PlayScene);
         };
         this.inputs.onTrigger(Keyboard.Space, restart);
         this.inputs.onTrigger(Keyboard.R, restart);
@@ -234,6 +216,16 @@ class GameOverScene extends Scene {
     }
 }
 // #endregion guide:game-over-scene
-const play = new PlayScene();
-const gameOver = new GameOverScene();
-app.start(play);
+// #region guide:application-setup
+const app = new Application({
+    scenes: { PlayScene, GameOverScene },
+    canvas: {
+        width: CANVAS_WIDTH,
+        height: CANVAS_HEIGHT,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: new Color(10, 14, 26),
+});
+// #endregion guide:application-setup
+app.start(PlayScene);

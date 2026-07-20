@@ -2,15 +2,7 @@ import { Application, Asset, AudioStream, Color, type Pausable, type RenderingCo
 import { AudioAnalyser, BeatDetector } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-});
+
 
 class AudioVisualisationScene extends Scene {
     private music!: AudioStream;
@@ -160,4 +152,15 @@ class AudioVisualisationScene extends Scene {
     }
 }
 
-app.start(new AudioVisualisationScene());
+const app = new Application({
+    scenes: { AudioVisualisationScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+});
+
+app.start(AudioVisualisationScene);

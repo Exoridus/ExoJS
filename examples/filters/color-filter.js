@@ -1,15 +1,6 @@
 // Auto-generated from color-filter.ts — edit the .ts source, not this file.
 import { Application, Color, ColorFilter, RenderBackendType, Scene, Sprite, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-});
 // A full-hue ramp shows tint / desaturate / invert / brightness on every colour.
 const HUE_RAMP = assets.technical.color.hueRamp;
 // --- Desaturate: collapse RGB to luminance. ---------------------------------
@@ -94,4 +85,14 @@ class ColorFilterScene extends Scene {
         context.render(this.sprite);
     }
 }
-app.start(new ColorFilterScene());
+const app = new Application({
+    scenes: { ColorFilterScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+});
+app.start(ColorFilterScene);

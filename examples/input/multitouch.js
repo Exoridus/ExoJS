@@ -1,18 +1,6 @@
 // Auto-generated from multitouch.ts — edit the .ts source, not this file.
 import { Application, Color, Graphics, Scene, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: new Color(10, 12, 20),
-    loader: {
-        basePath: 'assets/',
-    },
-});
 const MAX_TOUCHES = 10;
 // Ten distinct hues so up to ten simultaneous fingers each get their own colour.
 const colors = [
@@ -93,4 +81,17 @@ class MultitouchScene extends Scene {
         }
     }
 }
-app.start(new MultitouchScene());
+const app = new Application({
+    scenes: { MultitouchScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: new Color(10, 12, 20),
+    loader: {
+        basePath: 'assets/',
+    },
+});
+app.start(MultitouchScene);

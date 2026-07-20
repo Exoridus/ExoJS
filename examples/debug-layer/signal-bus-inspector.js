@@ -1,17 +1,5 @@
 // Auto-generated from signal-bus-inspector.ts — edit the .ts source, not this file.
 import { Application, Color, Scene, Signal, Text, Time, Timer } from '@codexo/exojs';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
 class SignalBusInspectorScene extends Scene {
     signals;
     text;
@@ -56,4 +44,17 @@ class SignalBusInspectorScene extends Scene {
         context.render(this.text);
     }
 }
-app.start(new SignalBusInspectorScene());
+const app = new Application({
+    scenes: { SignalBusInspectorScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+app.start(SignalBusInspectorScene);

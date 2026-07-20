@@ -1,15 +1,7 @@
 import { Application, Color, RenderBackendType, type RenderingContext, Scene, Sprite, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-});
+
 
 // A dense checkerboard makes the per-channel RGB split read clearly along edges.
 const CHECKER = assets.technical.filtering.checker256;
@@ -96,4 +88,15 @@ class ChromaticAberrationScene extends Scene {
     }
 }
 
-app.start(new ChromaticAberrationScene());
+const app = new Application({
+    scenes: { ChromaticAberrationScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+});
+
+app.start(ChromaticAberrationScene);

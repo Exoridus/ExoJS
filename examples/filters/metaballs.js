@@ -1,15 +1,6 @@
 // Auto-generated from metaballs.ts — edit the .ts source, not this file.
 import { Application, BlurFilter, Color, Graphics, RenderBackendType, Scene, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-});
 // Threshold pass: render solid cyan where the (blurred) red field is dense
 // enough, with a smooth edge. The blur in front of this builds the scalar field
 // from the hard circles, so neighbouring blobs merge where their fields sum.
@@ -68,4 +59,14 @@ class MetaballsScene extends Scene {
         context.render(this.balls);
     }
 }
-app.start(new MetaballsScene());
+const app = new Application({
+    scenes: { MetaballsScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+});
+app.start(MetaballsScene);

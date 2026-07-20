@@ -67,11 +67,6 @@ function biomeTileId(value) {
         return TILE_ROCK;
     return TILE_SNOW;
 }
-const app = new Application({
-    canvas: { width: 1280, height: 720, mount: document.body, sizingMode: 'fit' },
-    clearColor: new Color(38, 82, 128), // deep-water blue behind unloaded chunks
-    extensions: [tilemapExtension],
-});
 class InfiniteTerrainScene extends Scene {
     camera;
     explorer;
@@ -189,4 +184,10 @@ class InfiniteTerrainScene extends Scene {
         context.render(this.worldRoot, { view: this.camera });
     }
 }
-app.start(new InfiniteTerrainScene());
+const app = new Application({
+    scenes: { InfiniteTerrainScene },
+    canvas: { width: 1280, height: 720, mount: document.body, sizingMode: 'fit' },
+    clearColor: new Color(38, 82, 128), // deep-water blue behind unloaded chunks
+    extensions: [tilemapExtension],
+});
+app.start(InfiniteTerrainScene);

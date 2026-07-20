@@ -2,18 +2,6 @@
 import { Application, Asset, Color, Graphics, Scene, Text } from '@codexo/exojs';
 import { AudioAnalyser } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: new Color(14, 16, 22),
-    loader: {
-        basePath: 'assets/',
-    },
-});
 // Eight perceptual frequency bands spanning the audible range, from the lowest
 // rumble to the airy top end. The FFT bins are linearly spaced over 0..nyquist,
 // so bucketing them onto log-spaced edges gives each band an equal share of the
@@ -126,4 +114,17 @@ class FrequencyBandsScene extends Scene {
         }
     }
 }
-app.start(new FrequencyBandsScene());
+const app = new Application({
+    scenes: { FrequencyBandsScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: new Color(14, 16, 22),
+    loader: {
+        basePath: 'assets/',
+    },
+});
+app.start(FrequencyBandsScene);

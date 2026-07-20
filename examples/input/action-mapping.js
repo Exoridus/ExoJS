@@ -1,18 +1,6 @@
 // Auto-generated from action-mapping.ts — edit the .ts source, not this file.
 import { Application, Color, GamepadAxis, GamepadButton, Keyboard, Scene, Sprite } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: new Color(10, 12, 20),
-    loader: {
-        basePath: 'assets/',
-    },
-});
 // The lesson: bind several *physical* inputs to a few *named actions*, then read
 // only the actions in the update loop. Keyboard and gamepad feed the same
 // `moveX` / `moveY` / `jump` values, so the gameplay code never branches on the
@@ -86,4 +74,17 @@ class ActionMappingScene extends Scene {
         context.render(this.sprite);
     }
 }
-app.start(new ActionMappingScene());
+const app = new Application({
+    scenes: { ActionMappingScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: new Color(10, 12, 20),
+    loader: {
+        basePath: 'assets/',
+    },
+});
+app.start(ActionMappingScene);

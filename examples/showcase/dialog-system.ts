@@ -1,15 +1,7 @@
 import { Application, Color, type RenderingContext, Scene, Sound, Sprite, Text, type Time } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-});
+
 
 interface DialogLine {
     speaker: string;
@@ -153,4 +145,15 @@ class DialogSystemScene extends Scene {
     }
 }
 
-app.start(new DialogSystemScene());
+const app = new Application({
+    scenes: { DialogSystemScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+});
+
+app.start(DialogSystemScene);

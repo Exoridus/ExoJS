@@ -142,8 +142,8 @@ class HelloScene extends Scene {
     }
 }
 
-const app = new Application();
-app.start(new HelloScene());
+const app = new Application({ scenes: { HelloScene } });
+app.start(HelloScene);
 ```
 
 The `app.start(scene)` call is asynchronous — it initializes the render backend, runs the scene's `load` hook, then `init`, then drives the frame loop until you stop it. You normally don't need to await the returned promise; fire-and-forget is the common pattern.

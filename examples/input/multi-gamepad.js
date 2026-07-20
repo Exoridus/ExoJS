@@ -1,18 +1,6 @@
 // Auto-generated from multi-gamepad.ts — edit the .ts source, not this file.
 import { Application, Color, GamepadAxis, Scene, Sprite, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: new Color(10, 12, 20),
-    loader: {
-        basePath: 'assets/',
-    },
-});
 const tints = [new Color(255, 140, 140), new Color(140, 255, 170), new Color(150, 180, 255), new Color(255, 230, 140)];
 // Each of the four stable gamepad slots gets its own ship and its own left-stick
 // bindings. Bindings persist across connect/disconnect, so we set them up once;
@@ -86,4 +74,17 @@ class MultiGamepadScene extends Scene {
         }
     }
 }
-app.start(new MultiGamepadScene());
+const app = new Application({
+    scenes: { MultiGamepadScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: new Color(10, 12, 20),
+    loader: {
+        basePath: 'assets/',
+    },
+});
+app.start(MultiGamepadScene);

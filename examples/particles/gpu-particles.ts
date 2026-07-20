@@ -11,28 +11,6 @@ import {
 } from '@codexo/exojs-particles';
 import { mountControls } from '@examples/runtime';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-    extensions: [particlesExtension],
-});
-
-// WebGPU runs the whole simulation on a compute shader, so it sustains hundreds
-// of thousands of particles smoothly; WebGL2 falls back to a CPU integrator, so
-// it uses a much smaller budget to stay at a comfortable frame rate. Both stay
-// well within what a modern machine handles without lag.
-const isWebGpu = app.backend.backendType === RenderBackendType.WebGpu;
-const CAPACITY = isWebGpu ? 320_000 : 20_000;
-const RATE = isWebGpu ? 75_000 : 3_000;
-
 class GpuParticlesScene extends Scene {
     private system!: ParticleSystem;
     private hud!: ReturnType<typeof mountControls>;
@@ -77,4 +55,27 @@ class GpuParticlesScene extends Scene {
     }
 }
 
-app.start(new GpuParticlesScene());
+const app = new Application({
+    scenes: { GpuParticlesScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+    extensions: [particlesExtension],
+});
+
+// WebGPU runs the whole simulation on a compute shader, so it sustains hundreds
+// of thousands of particles smoothly; WebGL2 falls back to a CPU integrator, so
+// it uses a much smaller budget to stay at a comfortable frame rate. Both stay
+// well within what a modern machine handles without lag.
+const isWebGpu = app.backend.backendType === RenderBackendType.WebGpu;
+const CAPACITY = isWebGpu ? 320_000 : 20_000;
+const RATE = isWebGpu ? 75_000 : 3_000;
+
+app.start(GpuParticlesScene);

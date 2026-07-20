@@ -1,15 +1,6 @@
 // Auto-generated from immediate-mode-rendering.ts — edit the .ts source, not this file.
 import { Application, Color, Geometry, Matrix, RenderBatch, Scene } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: new Color(6, 9, 18, 1),
-});
 // Number of instances drawn in the batched field. The whole field is one
 // instanced draw call no matter how large this is.
 const FIELD_COUNT = 2400;
@@ -195,4 +186,14 @@ class ImmediateModeScene extends Scene {
         }
     }
 }
-app.start(new ImmediateModeScene());
+const app = new Application({
+    scenes: { ImmediateModeScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: new Color(6, 9, 18, 1),
+});
+app.start(ImmediateModeScene);

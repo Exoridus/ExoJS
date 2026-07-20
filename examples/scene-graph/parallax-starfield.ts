@@ -1,17 +1,6 @@
 import { Application, Color, Graphics, type RenderingContext, Scene } from '@codexo/exojs';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
+
 
 const speeds = [0.15, 0.35, 0.6];
 const counts = [120, 80, 48];
@@ -60,4 +49,18 @@ class ParallaxStarfieldScene extends Scene {
     }
 }
 
-app.start(new ParallaxStarfieldScene());
+const app = new Application({
+    scenes: { ParallaxStarfieldScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+
+app.start(ParallaxStarfieldScene);

@@ -11,16 +11,7 @@ import {
 } from '@codexo/exojs-particles';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    extensions: [particlesExtension],
-});
+
 
 // Acceleration magnitude shared by both force modules (units / s²). Only the
 // active mode's module carries this strength; the inactive one is held at 0.
@@ -124,4 +115,16 @@ class CursorAttractorParticlesScene extends Scene {
     }
 }
 
-app.start(new CursorAttractorParticlesScene());
+const app = new Application({
+    scenes: { CursorAttractorParticlesScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    extensions: [particlesExtension],
+});
+
+app.start(CursorAttractorParticlesScene);

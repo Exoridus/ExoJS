@@ -1,18 +1,7 @@
 import { Application, Asset, Color, Graphics, type RenderingContext, Scene, Sound, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
+
 
 type FalloffModel = 'linear' | 'inverse' | 'exponential';
 
@@ -169,4 +158,18 @@ class FalloffCurvesScene extends Scene {
     }
 }
 
-app.start(new FalloffCurvesScene());
+const app = new Application({
+    scenes: { FalloffCurvesScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+
+app.start(FalloffCurvesScene);

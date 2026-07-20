@@ -1,21 +1,6 @@
 // Auto-generated from pointer-and-hittest.ts — edit the .ts source, not this file.
 import { Application, Color, Scene, Sprite } from '@codexo/exojs';
 import { DebugOverlay } from '@codexo/exojs/debug';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
-const debug = new DebugOverlay(app);
-debug.layers.hitTest.visible = true;
-debug.layers.pointerStack.visible = true;
 class PointerAndHittestScene extends Scene {
     sprites;
     init() {
@@ -44,4 +29,20 @@ class PointerAndHittestScene extends Scene {
         context.render(this.root);
     }
 }
-app.start(new PointerAndHittestScene());
+const app = new Application({
+    scenes: { PointerAndHittestScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+const debug = new DebugOverlay(app);
+debug.layers.hitTest.visible = true;
+debug.layers.pointerStack.visible = true;
+app.start(PointerAndHittestScene);

@@ -1,17 +1,6 @@
 import { Application, Color, type RenderingContext, Scene, Text } from '@codexo/exojs';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
+
 
 class StrokeAndShadowScene extends Scene {
     private title!: Text;
@@ -42,4 +31,18 @@ class StrokeAndShadowScene extends Scene {
     }
 }
 
-app.start(new StrokeAndShadowScene());
+const app = new Application({
+    scenes: { StrokeAndShadowScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+
+app.start(StrokeAndShadowScene);

@@ -1,17 +1,5 @@
 // Auto-generated from z-ordering.ts — edit the .ts source, not this file.
 import { Application, Color, Container, Keyboard, Scene, Sprite, Text } from '@codexo/exojs';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
 class ZOrderingScene extends Scene {
     group;
     label;
@@ -54,4 +42,17 @@ class ZOrderingScene extends Scene {
         context.render(this.label);
     }
 }
-app.start(new ZOrderingScene());
+const app = new Application({
+    scenes: { ZOrderingScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+app.start(ZOrderingScene);

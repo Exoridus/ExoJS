@@ -1,17 +1,6 @@
 import { Application, Color, Container, Graphics, type RenderingContext, Scene, type Time } from '@codexo/exojs';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
+
 
 class NestedTransformsScene extends Scene {
     private sun!: Graphics;
@@ -59,4 +48,18 @@ class NestedTransformsScene extends Scene {
     }
 }
 
-app.start(new NestedTransformsScene());
+const app = new Application({
+    scenes: { NestedTransformsScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+
+app.start(NestedTransformsScene);

@@ -1,17 +1,6 @@
 import { Application, Asset, Assets, Color, Container, type RenderingContext, Scene, Sprite, type Time } from '@codexo/exojs';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
+
 
 class ContainersScene extends Scene {
     private rainbow!: Sprite;
@@ -57,4 +46,18 @@ class ContainersScene extends Scene {
     }
 }
 
-app.start(new ContainersScene());
+const app = new Application({
+    scenes: { ContainersScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+
+app.start(ContainersScene);

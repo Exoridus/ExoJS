@@ -1,15 +1,6 @@
 // Auto-generated from crossfade-tracks.ts — edit the .ts source, not this file.
 import { Application, Asset, Color, crossFade, Graphics, Scene, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-});
 const PEAK = 0.7;
 const COLOR_A = new Color(120, 200, 255);
 const COLOR_B = new Color(255, 160, 120);
@@ -137,4 +128,14 @@ class CrossfadeTracksScene extends Scene {
         }
     }
 }
-app.start(new CrossfadeTracksScene());
+const app = new Application({
+    scenes: { CrossfadeTracksScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+});
+app.start(CrossfadeTracksScene);

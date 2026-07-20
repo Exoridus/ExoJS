@@ -184,7 +184,7 @@ this.timeText.text  = `${this.elapsed.toFixed(1)} s`;
 
 ## Game-over scene and restart
 
-`GameOverScene` receives the final score and time via a `setResult` method called just before `setScene`. This decouples data transfer from scene initialization — `init` always reads from `finalScore` / `finalTime`, whatever they were set to:
+`GameOverScene` declares its activation-data shape (`GameOverData`) and receives the final score and time as the second argument to `setScene` — `init(data)` reads `data.score` / `data.time` directly, so there's no separate mutator method or intermediate state to keep in sync:
 
 <SourceSnippet
   source="examples/showcase/orb-dodge.ts"
@@ -193,20 +193,22 @@ this.timeText.text  = `${this.elapsed.toFixed(1)} s`;
   title="examples/showcase/orb-dodge.ts — GameOverScene"
 />
 
-When the player restarts, `setScene(play)` switches back to `PlayScene`. `SceneDirector` calls `init()` on `play` again — the scene reinitializes from scratch, so no manual reset is needed. Input bindings registered in `init` via `this.inputs` are disposed and recreated automatically with each scene activation.
+When the player restarts, `setScene(PlayScene)` switches back. `SceneDirector` always constructs a fresh `PlayScene` instance and calls its `init()` — the scene starts from scratch, so no manual reset is needed. Input bindings registered in `init` via `this.inputs` are disposed and recreated automatically with each scene activation.
 
 ## How scenes reference each other
 
-Both scenes reference the same two instances at module level:
+Both scenes are registered by constructor in `ApplicationOptions.scenes`, and navigate to each other by constructor — never by a pre-built instance:
 
 ```js
-const play     = new PlayScene();
-const gameOver = new GameOverScene();
+const app = new Application({
+    scenes: { PlayScene, GameOverScene },
+    // ...
+});
 
-app.start(play);
+app.start(PlayScene);
 ```
 
-`PlayScene` calls `gameOver.setResult(...)` then `void this.app.scenes.setScene(gameOver)`. `GameOverScene` calls `void this.app.scenes.setScene(play)`. The forward reference is safe because both scenes exist before `app.start` is called.
+`PlayScene` calls `void this.app.scenes.setScene(GameOverScene, { score: this.score, time: this.elapsed })`. `GameOverScene` calls `void this.app.scenes.setScene(PlayScene)`. Each call constructs a brand-new instance of the target scene — there's no shared mutable state between activations, and no forward-reference ordering to worry about, since both classes are declared once and referenced by name.
 
 ## Cleanup in destroy
 

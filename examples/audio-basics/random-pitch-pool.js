@@ -1,15 +1,6 @@
 // Auto-generated from random-pitch-pool.ts — edit the .ts source, not this file.
 import { Application, Color, Graphics, Keyboard, Scene, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-});
 const DETUNE_RANGE = 200; // ± cents
 const FIRE_INTERVAL = 0.08;
 class RandomPitchPoolScene extends Scene {
@@ -111,4 +102,14 @@ class RandomPitchPoolScene extends Scene {
         }
     }
 }
-app.start(new RandomPitchPoolScene());
+const app = new Application({
+    scenes: { RandomPitchPoolScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+});
+app.start(RandomPitchPoolScene);

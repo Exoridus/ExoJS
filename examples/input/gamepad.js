@@ -1,17 +1,5 @@
 // Auto-generated from gamepad.ts — edit the .ts source, not this file.
 import { Application, Asset, Color, Container, GamepadAxis, GamepadButton, lerp, Scene, Spritesheet, Vector } from '@codexo/exojs';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
 class GamepadScene extends Scene {
     activePad = null;
     buttons;
@@ -235,4 +223,17 @@ class GamepadScene extends Scene {
         return container;
     }
 }
-app.start(new GamepadScene());
+const app = new Application({
+    scenes: { GamepadScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+app.start(GamepadScene);

@@ -13,17 +13,7 @@ import {
     VectorRange,
 } from '@codexo/exojs-particles';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: new Color(0.02 * 255, 0.02 * 255, 0.045 * 255, 1),
-    backend: { type: 'webgpu' },
-    extensions: [particlesExtension],
-});
+
 
 class TintCycle extends UpdateModule {
     private palette: Color[];
@@ -188,7 +178,20 @@ class ParticleStressScene extends Scene {
     }
 }
 
-app.start(new ParticleStressScene()).catch(() => {
+const app = new Application({
+    scenes: { ParticleStressScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: new Color(0.02 * 255, 0.02 * 255, 0.045 * 255, 1),
+    backend: { type: 'webgpu' },
+    extensions: [particlesExtension],
+});
+
+app.start(ParticleStressScene).catch(() => {
     app.canvas.remove();
     app.destroy();
 });

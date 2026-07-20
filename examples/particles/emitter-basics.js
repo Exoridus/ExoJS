@@ -2,16 +2,6 @@
 import { Application, Color, Scene } from '@codexo/exojs';
 import { ApplyForce, ColorGradient, ColorOverLifetime, ConeDirection, Constant, Curve, particlesExtension, ParticleSystem, Range, RateSpawn, ScaleOverLifetime, } from '@codexo/exojs-particles';
 import { mountControls } from '@examples/runtime';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    extensions: [particlesExtension],
-});
 class EmitterBasicsScene extends Scene {
     system;
     hud;
@@ -62,4 +52,15 @@ class EmitterBasicsScene extends Scene {
         context.render(this.system);
     }
 }
-app.start(new EmitterBasicsScene());
+const app = new Application({
+    scenes: { EmitterBasicsScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    extensions: [particlesExtension],
+});
+app.start(EmitterBasicsScene);

@@ -1,17 +1,5 @@
 // Auto-generated from multiple-scenes.ts — edit the .ts source, not this file.
 import { Application, Color, Keyboard, Scene, Text } from '@codexo/exojs';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
 class MenuScene extends Scene {
     label;
     onTap;
@@ -24,10 +12,10 @@ class MenuScene extends Scene {
         this.label.setAnchor(0.5);
         this.label.setPosition(width / 2, height / 2);
         this.inputs.onTrigger(Keyboard.Space, () => {
-            void app.scenes.setScene(gameScene);
+            void app.scenes.setScene(GameScene);
         });
         this.onTap = () => {
-            void app.scenes.setScene(gameScene);
+            void app.scenes.setScene(GameScene);
         };
         app.input.onPointerTap.add(this.onTap);
     }
@@ -54,7 +42,7 @@ class GameScene extends Scene {
         this.label.setAnchor(0.5);
         this.label.setPosition(width / 2, height / 2);
         this.inputs.onTrigger(Keyboard.Escape, () => {
-            void app.scenes.setScene(menuScene);
+            void app.scenes.setScene(MenuScene);
         });
     }
     draw(context) {
@@ -62,6 +50,17 @@ class GameScene extends Scene {
         context.render(this.label);
     }
 }
-const menuScene = new MenuScene();
-const gameScene = new GameScene();
-app.start(menuScene);
+const app = new Application({
+    scenes: { MenuScene, GameScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+app.start(MenuScene);

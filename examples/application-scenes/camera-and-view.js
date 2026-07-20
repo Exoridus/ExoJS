@@ -1,17 +1,5 @@
 // Auto-generated from camera-and-view.ts — edit the .ts source, not this file.
 import { Application, Color, Graphics, Keyboard, Scene, Text, View } from '@codexo/exojs';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
 class CameraViewScene extends Scene {
     camera;
     world;
@@ -89,4 +77,17 @@ class CameraViewScene extends Scene {
         context.render(this.overlay, { view: context.screenView });
     }
 }
-app.start(new CameraViewScene());
+const app = new Application({
+    scenes: { CameraViewScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+app.start(CameraViewScene);

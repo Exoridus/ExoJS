@@ -1,21 +1,7 @@
 import { Application, Color, type RenderingContext, Scene, Sprite, type Time } from '@codexo/exojs';
 import { DebugOverlay } from '@codexo/exojs/debug';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
 
-const debug = new DebugOverlay(app);
-debug.layers.boundingBoxes.visible = true;
 
 class BoundingBoxesScene extends Scene {
     private sprites!: { sprite: Sprite; speed: number }[];
@@ -58,4 +44,21 @@ class BoundingBoxesScene extends Scene {
     }
 }
 
-app.start(new BoundingBoxesScene());
+const app = new Application({
+    scenes: { BoundingBoxesScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+
+const debug = new DebugOverlay(app);
+debug.layers.boundingBoxes.visible = true;
+
+app.start(BoundingBoxesScene);

@@ -1,18 +1,6 @@
 // Auto-generated from mouse-and-pointer.ts — edit the .ts source, not this file.
 import { Application, Color, Graphics, Scene, Sprite } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: new Color(10, 12, 20),
-    loader: {
-        basePath: 'assets/',
-    },
-});
 // Everything the pointer pipeline reports, surfaced at once:
 //   - live position (onPointerMove)
 //   - pressed-button bitmask (Pointer.buttons: 1=left, 2=right, 4=middle)
@@ -87,4 +75,17 @@ class MouseAndPointerScene extends Scene {
         context.render(this.crosshair);
     }
 }
-app.start(new MouseAndPointerScene());
+const app = new Application({
+    scenes: { MouseAndPointerScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: new Color(10, 12, 20),
+    loader: {
+        basePath: 'assets/',
+    },
+});
+app.start(MouseAndPointerScene);

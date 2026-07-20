@@ -195,9 +195,6 @@ import { Asset, Application, AudioStream,
     Color, Graphics, Scene } from '@codexo/exojs';
 import { AudioAnalyser, BeatDetector } from '@codexo/exojs-audio-fx';
 
-const app = new Application({ canvas: { width: 800, height: 600 } });
-document.body.append(app.canvas);
-
 class AudioReactiveScene extends Scene {
     async load(loader) {
         this.music = await loader.load(Asset.kind('music', 'audio/track.ogg'));
@@ -248,7 +245,10 @@ class AudioReactiveScene extends Scene {
     }
 }
 
-app.start(new AudioReactiveScene());
+const app = new Application({ scenes: { AudioReactiveScene }, canvas: { width: 800, height: 600 } });
+document.body.append(app.canvas);
+
+app.start(AudioReactiveScene);
 ```
 
 ## Timing semantics

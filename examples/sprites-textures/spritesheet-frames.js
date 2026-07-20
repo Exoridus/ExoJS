@@ -1,18 +1,6 @@
 // Auto-generated from spritesheet-frames.ts — edit the .ts source, not this file.
 import { Application, Asset, Color, Scene, Spritesheet } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: new Color(24, 28, 38),
-    loader: {
-        basePath: 'assets/',
-    },
-});
 const CHARACTERS = ['beige', 'green', 'pink', 'purple', 'yellow'];
 class SpritesheetFramesScene extends Scene {
     spritesheet;
@@ -80,4 +68,17 @@ class SpritesheetFramesScene extends Scene {
         context.render(this.spritesheet.getFrameSprite(this.walkFrames()[this.frameIndex]));
     }
 }
-app.start(new SpritesheetFramesScene());
+const app = new Application({
+    scenes: { SpritesheetFramesScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: new Color(24, 28, 38),
+    loader: {
+        basePath: 'assets/',
+    },
+});
+app.start(SpritesheetFramesScene);

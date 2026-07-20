@@ -1,17 +1,5 @@
 // Auto-generated from svg-drawable.ts — edit the .ts source, not this file.
 import { Application, Asset, Color, Scene, Sprite, Texture } from '@codexo/exojs';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
 class SvgDrawableScene extends Scene {
     texture;
     sprite;
@@ -43,4 +31,17 @@ class SvgDrawableScene extends Scene {
         context.render(this.sprite);
     }
 }
-app.start(new SvgDrawableScene());
+const app = new Application({
+    scenes: { SvgDrawableScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+app.start(SvgDrawableScene);

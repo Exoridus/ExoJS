@@ -1,18 +1,6 @@
 // Auto-generated from sprite-basics.ts — edit the .ts source, not this file.
 import { Application, Color, Scene, Sprite } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: new Color(18, 20, 28),
-    loader: {
-        basePath: 'assets/',
-    },
-});
 class SpriteBasicsScene extends Scene {
     ship;
     // A single reusable tint colour whose alpha channel we animate each frame.
@@ -60,4 +48,17 @@ class SpriteBasicsScene extends Scene {
         context.render(this.ship);
     }
 }
-app.start(new SpriteBasicsScene());
+const app = new Application({
+    scenes: { SpriteBasicsScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: new Color(18, 20, 28),
+    loader: {
+        basePath: 'assets/',
+    },
+});
+app.start(SpriteBasicsScene);

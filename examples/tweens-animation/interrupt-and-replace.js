@@ -1,17 +1,5 @@
 // Auto-generated from interrupt-and-replace.ts — edit the .ts source, not this file.
 import { Application, Color, Scene, Sprite } from '@codexo/exojs';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
 class InterruptAndReplaceScene extends Scene {
     sprite;
     moveTween = null;
@@ -33,4 +21,17 @@ class InterruptAndReplaceScene extends Scene {
         context.render(this.sprite);
     }
 }
-app.start(new InterruptAndReplaceScene());
+const app = new Application({
+    scenes: { InterruptAndReplaceScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+app.start(InterruptAndReplaceScene);

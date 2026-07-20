@@ -1,14 +1,5 @@
 // Auto-generated from bitmap-text-basic.ts — edit the .ts source, not this file.
 import { Application, Asset, BitmapText, Color, Scene } from '@codexo/exojs';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: new Color(20, 24, 36),
-});
 class BitmapTextBasicScene extends Scene {
     font;
     title;
@@ -46,4 +37,14 @@ class BitmapTextBasicScene extends Scene {
         context.render(this.counter);
     }
 }
-app.start(new BitmapTextBasicScene());
+const app = new Application({
+    scenes: { BitmapTextBasicScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: new Color(20, 24, 36),
+});
+app.start(BitmapTextBasicScene);

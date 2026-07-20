@@ -1,18 +1,7 @@
 import { AnimatedSprite, Application, Asset, Color, type RenderingContext, Scene, Spritesheet, type SpritesheetData, type Time } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
+
 
 const walkFps = 8;
 
@@ -58,4 +47,18 @@ class FrameAnimationScene extends Scene {
     }
 }
 
-app.start(new FrameAnimationScene());
+const app = new Application({
+    scenes: { FrameAnimationScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+
+app.start(FrameAnimationScene);

@@ -1,17 +1,5 @@
 // Auto-generated from mini-map.ts — edit the .ts source, not this file.
 import { Application, Color, Container, Graphics, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite, View } from '@codexo/exojs';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
 class MiniMapScene extends Scene {
     worldContainer;
     world;
@@ -95,4 +83,17 @@ class MiniMapScene extends Scene {
         super.destroy();
     }
 }
-app.start(new MiniMapScene());
+const app = new Application({
+    scenes: { MiniMapScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+app.start(MiniMapScene);

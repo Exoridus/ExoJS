@@ -1,17 +1,6 @@
 import { Application, CallbackRenderPass, Color, Graphics, type RenderingContext, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite, type Time } from '@codexo/exojs';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
+
 
 class MinimapWithMaskScene extends Scene {
     private world!: Graphics;
@@ -110,4 +99,18 @@ class MinimapWithMaskScene extends Scene {
     }
 }
 
-app.start(new MinimapWithMaskScene());
+const app = new Application({
+    scenes: { MinimapWithMaskScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+
+app.start(MinimapWithMaskScene);

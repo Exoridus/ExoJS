@@ -1,14 +1,5 @@
 // Auto-generated from hud-and-widgets.ts — edit the .ts source, not this file.
 import { Application, Button, Color, Label, Panel, ProgressBar, Scene, Stack } from '@codexo/exojs';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: new Color(18, 22, 32),
-});
 /**
  * UI-Core showcase: a screen-fixed HUD and interactive widgets live on
  * `scene.ui`, which is auto-rendered above the world. Widgets anchor to the
@@ -71,4 +62,14 @@ class HudScene extends Scene {
         return button;
     }
 }
-void app.start(new HudScene());
+const app = new Application({
+    scenes: { HudScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: new Color(18, 22, 32),
+});
+void app.start(HudScene);

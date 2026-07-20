@@ -1,17 +1,6 @@
 import { Application, Color, Graphics, Keyboard, type RenderingContext, Scene, Text, type Time, View } from '@codexo/exojs';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
+
 
 class CameraViewScene extends Scene {
     private camera!: View;
@@ -93,4 +82,18 @@ class CameraViewScene extends Scene {
     }
 }
 
-app.start(new CameraViewScene());
+const app = new Application({
+    scenes: { CameraViewScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+
+app.start(CameraViewScene);

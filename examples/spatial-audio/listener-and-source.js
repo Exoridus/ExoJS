@@ -1,18 +1,6 @@
 // Auto-generated from listener-and-source.ts — edit the .ts source, not this file.
 import { Application, Asset, Color, Graphics, Scene, Sound, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
 // Spatial parameters tuned to the canvas so attenuation is visible across the
 // wide 1280px canvas. These mirror the Web Audio `linear` model (see
 // DistanceModel in src/audio/Sound.ts) so the on-screen readout matches what
@@ -129,4 +117,17 @@ class ListenerAndSourceScene extends Scene {
         }
     }
 }
-app.start(new ListenerAndSourceScene());
+const app = new Application({
+    scenes: { ListenerAndSourceScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+app.start(ListenerAndSourceScene);

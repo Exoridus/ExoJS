@@ -1,17 +1,5 @@
 // Auto-generated from picture-in-picture.ts — edit the .ts source, not this file.
 import { Application, Color, Graphics, Scene, Sprite, View } from '@codexo/exojs';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
 class PictureInPictureScene extends Scene {
     mainView;
     pipView;
@@ -50,4 +38,17 @@ class PictureInPictureScene extends Scene {
         context.render(this.frame, { view: context.screenView });
     }
 }
-app.start(new PictureInPictureScene());
+const app = new Application({
+    scenes: { PictureInPictureScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+app.start(PictureInPictureScene);

@@ -1,17 +1,5 @@
 // Auto-generated from post-processing-chain.ts — edit the .ts source, not this file.
 import { Application, BlurFilter, CallbackRenderPass, Color, ColorFilter, Graphics, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite } from '@codexo/exojs';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
 class PostProcessingChainScene extends Scene {
     scene;
     a;
@@ -67,4 +55,17 @@ class PostProcessingChainScene extends Scene {
         super.destroy();
     }
 }
-app.start(new PostProcessingChainScene());
+const app = new Application({
+    scenes: { PostProcessingChainScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+app.start(PostProcessingChainScene);

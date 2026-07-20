@@ -1,18 +1,7 @@
 import { Application, Color, Graphics, Keyboard, type RenderingContext, Scene, type Time } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: new Color(10, 12, 20),
-    loader: {
-        basePath: 'assets/',
-    },
-});
+
 
 // Reverse lookup from a Keyboard channel back to a human-readable key name, so
 // the binding is shown as "Space" rather than the raw channel number. The
@@ -160,4 +149,18 @@ class KeyRebindingScene extends Scene {
     }
 }
 
-app.start(new KeyRebindingScene());
+const app = new Application({
+    scenes: { KeyRebindingScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: new Color(10, 12, 20),
+    loader: {
+        basePath: 'assets/',
+    },
+});
+
+app.start(KeyRebindingScene);

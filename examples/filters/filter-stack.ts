@@ -1,15 +1,7 @@
 import { Application, BlurFilter, Color, ColorFilter, RenderBackendType, type RenderingContext, Scene, Sprite, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-});
+
 
 const PRIMARY_RAMP = assets.technical.color.primaryRamp;
 
@@ -99,4 +91,15 @@ class FilterStackScene extends Scene {
     }
 }
 
-app.start(new FilterStackScene());
+const app = new Application({
+    scenes: { FilterStackScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+});
+
+app.start(FilterStackScene);

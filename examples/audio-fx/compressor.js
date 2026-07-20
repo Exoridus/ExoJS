@@ -2,18 +2,6 @@
 import { Application, Asset, Color, Graphics, Scene, Text } from '@codexo/exojs';
 import { CompressorEffect } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
 const sliders = [
     { key: 'threshold', min: -60, max: 0 },
     { key: 'ratio', min: 1, max: 16 },
@@ -130,4 +118,17 @@ class CompressorScene extends Scene {
         }
     }
 }
-app.start(new CompressorScene());
+const app = new Application({
+    scenes: { CompressorScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+app.start(CompressorScene);

@@ -1,17 +1,6 @@
 import { Application, Asset, Color, type RenderingContext, Scene, Sprite, SvgAsset, Texture } from '@codexo/exojs';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
+
 
 class SvgDrawableScene extends Scene {
     private texture!: Texture;
@@ -48,4 +37,18 @@ class SvgDrawableScene extends Scene {
     }
 }
 
-app.start(new SvgDrawableScene());
+const app = new Application({
+    scenes: { SvgDrawableScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+
+app.start(SvgDrawableScene);

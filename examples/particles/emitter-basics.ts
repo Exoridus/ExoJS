@@ -14,16 +14,7 @@ import {
 } from '@codexo/exojs-particles';
 import { mountControls } from '@examples/runtime';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    extensions: [particlesExtension],
-});
+
 
 class EmitterBasicsScene extends Scene {
     private system!: ParticleSystem;
@@ -94,4 +85,16 @@ class EmitterBasicsScene extends Scene {
     }
 }
 
-app.start(new EmitterBasicsScene());
+const app = new Application({
+    scenes: { EmitterBasicsScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    extensions: [particlesExtension],
+});
+
+app.start(EmitterBasicsScene);

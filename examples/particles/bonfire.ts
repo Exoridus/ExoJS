@@ -11,16 +11,7 @@ import {
     VectorRange,
 } from '@codexo/exojs-particles';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    extensions: [particlesExtension],
-});
+
 
 class BonfireScene extends Scene {
     private fireSystem!: ParticleSystem;
@@ -88,4 +79,16 @@ class BonfireScene extends Scene {
     }
 }
 
-app.start(new BonfireScene());
+const app = new Application({
+    scenes: { BonfireScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    extensions: [particlesExtension],
+});
+
+app.start(BonfireScene);

@@ -1,15 +1,6 @@
 // Auto-generated from crt-scanlines.ts — edit the .ts source, not this file.
 import { Application, Color, RenderBackendType, Scene, Sprite, WebGl2ShaderFilter, WebGpuShaderFilter } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-});
 // A regular pixel grid makes the scanline darkening and barrel warp obvious.
 const PIXEL_GRID = assets.technical.filtering.pixelGrid128;
 const glsl = `#version 300 es
@@ -59,4 +50,14 @@ class CrtScanlinesScene extends Scene {
         context.render(this.sprite);
     }
 }
-app.start(new CrtScanlinesScene());
+const app = new Application({
+    scenes: { CrtScanlinesScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+});
+app.start(CrtScanlinesScene);

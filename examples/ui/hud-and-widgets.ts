@@ -1,14 +1,6 @@
 import { Application, Button, Color, Label, Panel, ProgressBar, type RenderingContext, Scene, Stack, type Time } from '@codexo/exojs';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: new Color(18, 22, 32),
-});
+
 
 /**
  * UI-Core showcase: a screen-fixed HUD and interactive widgets live on
@@ -84,4 +76,15 @@ class HudScene extends Scene {
     }
 }
 
-void app.start(new HudScene());
+const app = new Application({
+    scenes: { HudScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: new Color(18, 22, 32),
+});
+
+void app.start(HudScene);

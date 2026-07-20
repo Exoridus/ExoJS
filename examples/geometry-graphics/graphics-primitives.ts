@@ -1,15 +1,6 @@
 import { Application, Color, Container, Graphics, type RenderingContext, Scene, type Time } from '@codexo/exojs';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.midnightBlue,
-    backend: { type: 'webgpu' },
-});
+
 
 class GraphicsPrimitivesScene extends Scene {
     private sceneRoot!: Container;
@@ -63,7 +54,19 @@ class GraphicsPrimitivesScene extends Scene {
     }
 }
 
-app.start(new GraphicsPrimitivesScene()).catch(() => {
+const app = new Application({
+    scenes: { GraphicsPrimitivesScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.midnightBlue,
+    backend: { type: 'webgpu' },
+});
+
+app.start(GraphicsPrimitivesScene).catch(() => {
     app.canvas.remove();
     app.destroy();
 });

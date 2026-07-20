@@ -19,16 +19,6 @@ import { mountControls } from '@examples/runtime';
 // the clear color behind it reads as open water.
 const TILE = 64;
 const MOVE_SPEED = 480;
-const app = new Application({
-    canvas: { width: 1280, height: 720, mount: document.body, sizingMode: 'fit' },
-    clearColor: new Color(38, 82, 128), // deep-water blue behind unauthored/unloaded chunks
-    // tiledExtension depends on tilemapExtension, so registering it alone is
-    // enough for both loading (.tmj) and rendering (TileMapNode).
-    extensions: [tiledExtension],
-    loader: {
-        basePath: 'assets/',
-    },
-});
 class TiledInfiniteMapScene extends Scene {
     camera;
     mapNode;
@@ -114,4 +104,15 @@ class TiledInfiniteMapScene extends Scene {
         context.render(this.mapNode, { view: this.camera });
     }
 }
-app.start(new TiledInfiniteMapScene());
+const app = new Application({
+    scenes: { TiledInfiniteMapScene },
+    canvas: { width: 1280, height: 720, mount: document.body, sizingMode: 'fit' },
+    clearColor: new Color(38, 82, 128), // deep-water blue behind unauthored/unloaded chunks
+    // tiledExtension depends on tilemapExtension, so registering it alone is
+    // enough for both loading (.tmj) and rendering (TileMapNode).
+    extensions: [tiledExtension],
+    loader: {
+        basePath: 'assets/',
+    },
+});
+app.start(TiledInfiniteMapScene);

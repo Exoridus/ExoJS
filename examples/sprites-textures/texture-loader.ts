@@ -1,17 +1,6 @@
 import { Application, Color, Graphics, type RenderingContext, Scene, Sprite, Text, Texture } from '@codexo/exojs';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
+
 
 class TextureLoaderScene extends Scene {
     private sprites!: Sprite[];
@@ -73,4 +62,18 @@ class TextureLoaderScene extends Scene {
     }
 }
 
-app.start(new TextureLoaderScene());
+const app = new Application({
+    scenes: { TextureLoaderScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+
+app.start(TextureLoaderScene);

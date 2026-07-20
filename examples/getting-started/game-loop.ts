@@ -1,17 +1,6 @@
 import { Application, Color, type RenderingContext, Scene, Sprite, type Time } from '@codexo/exojs';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
+
 
 class GameLoopScene extends Scene {
     private sprite!: Sprite;
@@ -36,4 +25,18 @@ class GameLoopScene extends Scene {
     }
 }
 
-app.start(new GameLoopScene());
+const app = new Application({
+    scenes: { GameLoopScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+
+app.start(GameLoopScene);

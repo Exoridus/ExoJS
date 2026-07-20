@@ -1,17 +1,5 @@
 // Auto-generated from minimap-with-mask.ts — edit the .ts source, not this file.
 import { Application, CallbackRenderPass, Color, Graphics, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite } from '@codexo/exojs';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
 class MinimapWithMaskScene extends Scene {
     world;
     player;
@@ -92,4 +80,17 @@ class MinimapWithMaskScene extends Scene {
         super.destroy();
     }
 }
-app.start(new MinimapWithMaskScene());
+const app = new Application({
+    scenes: { MinimapWithMaskScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+app.start(MinimapWithMaskScene);

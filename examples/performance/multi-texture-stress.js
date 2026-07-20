@@ -2,16 +2,6 @@
 import { Application, Color, Container, Rectangle, Scene, Sprite, Texture } from '@codexo/exojs';
 const GRID_COLUMNS = 50;
 const GRID_ROWS = 22;
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: new Color(0.018, 0.02, 0.04, 1),
-    backend: { type: 'webgpu' },
-});
 class MultiTextureStressScene extends Scene {
     sprites;
     spriteLayer;
@@ -79,7 +69,18 @@ class MultiTextureStressScene extends Scene {
         this.spriteLayer?.destroy();
     }
 }
-app.start(new MultiTextureStressScene()).catch(() => {
+const app = new Application({
+    scenes: { MultiTextureStressScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: new Color(0.018, 0.02, 0.04, 1),
+    backend: { type: 'webgpu' },
+});
+app.start(MultiTextureStressScene).catch(() => {
     app.canvas.remove();
     app.destroy();
 });

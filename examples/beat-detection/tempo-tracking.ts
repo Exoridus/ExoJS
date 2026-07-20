@@ -2,18 +2,7 @@ import { Application, Asset, AudioStream, Color, Graphics, type RenderingContext
 import { BeatDetector } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: new Color(14, 16, 22),
-    loader: {
-        basePath: 'assets/',
-    },
-});
+
 
 class TempoTrackingScene extends Scene {
     private music!: AudioStream;
@@ -124,4 +113,18 @@ class TempoTrackingScene extends Scene {
     }
 }
 
-app.start(new TempoTrackingScene());
+const app = new Application({
+    scenes: { TempoTrackingScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: new Color(14, 16, 22),
+    loader: {
+        basePath: 'assets/',
+    },
+});
+
+app.start(TempoTrackingScene);

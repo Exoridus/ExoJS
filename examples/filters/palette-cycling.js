@@ -1,15 +1,6 @@
 // Auto-generated from palette-cycling.ts — edit the .ts source, not this file.
 import { Application, Color, LutFilter, Scene, Sprite } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-});
 const PRIMARY_RAMP = assets.technical.color.primaryRamp;
 const PALETTE_SIZE = 256;
 function buildPaletteCanvas(offset) {
@@ -63,4 +54,14 @@ class PaletteCyclingScene extends Scene {
         context.render(this.sprite);
     }
 }
-app.start(new PaletteCyclingScene());
+const app = new Application({
+    scenes: { PaletteCyclingScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+});
+app.start(PaletteCyclingScene);

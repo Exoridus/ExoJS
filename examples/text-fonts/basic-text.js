@@ -1,17 +1,5 @@
 // Auto-generated from basic-text.ts — edit the .ts source, not this file.
 import { Application, Asset, Color, Scene, Text, Time } from '@codexo/exojs';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
 class BasicTextScene extends Scene {
     time;
     text;
@@ -42,4 +30,17 @@ class BasicTextScene extends Scene {
         context.render(this.text);
     }
 }
-app.start(new BasicTextScene());
+const app = new Application({
+    scenes: { BasicTextScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+app.start(BasicTextScene);

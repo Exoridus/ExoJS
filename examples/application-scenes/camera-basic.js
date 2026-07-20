@@ -1,17 +1,5 @@
 // Auto-generated from camera-basic.ts — edit the .ts source, not this file.
 import { Application, Color, Graphics, Scene, Sprite } from '@codexo/exojs';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-});
 class CameraBasicScene extends Scene {
     bunny;
     grid;
@@ -67,4 +55,17 @@ class CameraBasicScene extends Scene {
         context.render(this.uiBar, { view: context.screenView });
     }
 }
-app.start(new CameraBasicScene());
+const app = new Application({
+    scenes: { CameraBasicScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+    loader: {
+        basePath: 'assets/',
+    },
+});
+app.start(CameraBasicScene);

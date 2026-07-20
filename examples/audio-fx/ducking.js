@@ -2,15 +2,6 @@
 import { Application, Asset, AudioBus, Color, Graphics, Scene, Text } from '@codexo/exojs';
 import { AudioAnalyser, DuckingEffect } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-});
 class DuckingScene extends Scene {
     music;
     voice;
@@ -118,4 +109,14 @@ class DuckingScene extends Scene {
         }
     }
 }
-app.start(new DuckingScene());
+const app = new Application({
+    scenes: { DuckingScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+});
+app.start(DuckingScene);

@@ -1,14 +1,6 @@
 import { Application, Color, type RenderingContext, Scene, Sound, Text } from '@codexo/exojs';
 
-const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-});
+
 
 // A small pool of different UI sounds so repeated taps stay interesting.
 const SOUND_KEYS = ['uiClick', 'uiConfirm', 'uiBong', 'impactLight', 'impactHeavy'] as const;
@@ -48,4 +40,15 @@ class PlaySoundScene extends Scene {
     }
 }
 
-app.start(new PlaySoundScene());
+const app = new Application({
+    scenes: { PlaySoundScene },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizingMode: 'fit',
+    },
+    clearColor: Color.black,
+});
+
+app.start(PlaySoundScene);
