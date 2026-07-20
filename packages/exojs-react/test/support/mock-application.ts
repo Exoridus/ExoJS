@@ -12,7 +12,7 @@ export function configureApplicationStatus(applicationStatus: { Stopped: number;
   status.running = applicationStatus.Running;
 }
 
-interface MockSceneManager {
+interface MockSceneDirector {
   current: unknown;
   setScene: ReturnType<typeof vi.fn>;
 }
@@ -102,17 +102,17 @@ export class MockApplication {
     this.destroyed = true;
   });
 
-  public readonly scene: MockSceneManager = {
+  public readonly scenes: MockSceneDirector = {
     current: null,
-    setScene: vi.fn(async (scene: unknown): Promise<MockSceneManager> => {
-      this.scene.current = scene;
-      return this.scene;
+    setScene: vi.fn(async (scene: unknown): Promise<MockSceneDirector> => {
+      this.scenes.current = scene;
+      return this.scenes;
     }),
   };
 
   public readonly start = vi.fn(async (scene: unknown): Promise<MockApplication> => {
     this.status = status.running;
-    this.scene.current = scene;
+    this.scenes.current = scene;
     return this;
   });
 

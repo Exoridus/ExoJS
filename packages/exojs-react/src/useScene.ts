@@ -9,13 +9,13 @@ import { useExoApp } from './useExoApp';
  *
  * On first call (engine not yet started) this hook calls `app.start(scene)`,
  * which initializes the render backend and begins the per-frame loop. On
- * subsequent dep-change remounts it calls `app.scene.setScene(scene)` to
+ * subsequent dep-change remounts it calls `app.scenes.setScene(scene)` to
  * switch scenes without restarting the engine.
  *
  * The scene is cleared (`setScene(null)`) when the component unmounts or
  * when `deps` change — mirroring `useEffect` semantics.
  *
- * A failure in `app.start()`/`app.scene.setScene()` (e.g. a scene's `onLoad`
+ * A failure in `app.start()`/`app.scenes.setScene()` (e.g. a scene's `onLoad`
  * rejects) is caught and routed to {@link Application.onError} rather than
  * left as an unhandled promise rejection — subscribe via
  * `app.onError.add(...)` or the {@link import('./ExoCanvas').ExoCanvas}
@@ -51,7 +51,7 @@ export function useScene<T extends Scene>(SceneClass: new () => T, deps: Depende
           await app.start(s);
         } else {
           // Engine already running — switch scenes without restarting.
-          await app.scene.setScene(s);
+          await app.scenes.setScene(s);
         }
 
         if (!cancelled) {
@@ -72,7 +72,7 @@ export function useScene<T extends Scene>(SceneClass: new () => T, deps: Depende
       setScene(null);
       // Best-effort scene clear; the Application.destroy() called by
       // ExoCanvas cleanup will also handle any remaining active scene.
-      void app.scene.setScene(null).catch((error: unknown) => {
+      void app.scenes.setScene(null).catch((error: unknown) => {
         app.onError.dispatch(error instanceof Error ? error : new Error(String(error)));
       });
     };

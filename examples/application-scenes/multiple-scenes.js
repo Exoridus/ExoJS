@@ -24,10 +24,10 @@ class MenuScene extends Scene {
         this.label.setAnchor(0.5);
         this.label.setPosition(width / 2, height / 2);
         this.inputs.onTrigger(Keyboard.Space, () => {
-            void app.scene.setScene(gameScene);
+            void app.scenes.setScene(gameScene);
         });
         this.onTap = () => {
-            void app.scene.setScene(gameScene);
+            void app.scenes.setScene(gameScene);
         };
         app.input.onPointerTap.add(this.onTap);
     }
@@ -54,7 +54,7 @@ class GameScene extends Scene {
         this.label.setAnchor(0.5);
         this.label.setPosition(width / 2, height / 2);
         this.inputs.onTrigger(Keyboard.Escape, () => {
-            void app.scene.setScene(menuScene);
+            void app.scenes.setScene(menuScene);
         });
     }
     draw(context) {
