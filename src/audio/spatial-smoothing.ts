@@ -51,12 +51,21 @@ export interface SpatialSmoothingSettings {
    * {@link DEFAULT_TELEPORT_THRESHOLD}.
    */
   teleportThreshold: number;
+  /**
+   * App-wide default panning model for every spatial voice that doesn't set
+   * its own {@link Spatializable.panningModel} override. `'equalpower'`
+   * (cheap, works on any speaker setup) or `'HRTF'` (binaural, meaningfully
+   * more CPU-expensive per voice, only sounds convincingly directional
+   * through headphones). Default `'equalpower'`.
+   */
+  panningModel: PanningModelType;
 }
 
 /** Construct the default spatial smoothing settings. */
 export const createSpatialSmoothingSettings = (): SpatialSmoothingSettings => ({
   smoothing: DEFAULT_SPATIAL_SMOOTHING,
   teleportThreshold: DEFAULT_TELEPORT_THRESHOLD,
+  panningModel: 'equalpower',
 });
 
 /**

@@ -14,4 +14,5 @@ export function seedVoiceFromPlayOptions(voice: Spatializable, options: PlayOpti
   if (options.maxDistance !== undefined) voice.maxDistance = options.maxDistance;
   if (options.rolloffFactor !== undefined) voice.rolloffFactor = options.rolloffFactor;
   if (options.position !== undefined) voice.position = options.position;
+  if (options.panningModel !== undefined) voice.panningModel = options.panningModel;
 }

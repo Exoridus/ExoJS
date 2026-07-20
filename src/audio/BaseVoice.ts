@@ -78,6 +78,7 @@ export abstract class BaseVoice implements Voice, Spatializable, SpatialVoice {
   private readonly _spatialConfig: VoiceSpatialConfig;
   protected _panner: PannerNode | null = null;
   private _position: Vector | null = null;
+  private _panningModel: PanningModelType | null = null;
   private _followNode: SceneNode | null = null;
   private _spatialRegistered = false;
   private readonly _smoothX = new SmoothedAudioParam();
@@ -293,6 +294,17 @@ export abstract class BaseVoice implements Voice, Spatializable, SpatialVoice {
     }
   }
 
+  public get panningModel(): PanningModelType | null {
+    return this._panningModel;
+  }
+
+  public set panningModel(value: PanningModelType | null) {
+    this._panningModel = value;
+    if (this._panner !== null) {
+      this._panner.panningModel = value ?? this._manager.spatial.panningModel;
+    }
+  }
+
   /** @internal Called once per frame by {@link AudioManager.update} for spatial voices. */
   public _tickSpatial(): void {
     if (this._panner === null || this._ended) return;
@@ -404,7 +416,7 @@ export abstract class BaseVoice implements Voice, Spatializable, SpatialVoice {
     if (this._panner !== null || this._ended) return;
 
     const panner = this._audioContext.createPanner();
-    panner.panningModel = 'equalpower';
+    panner.panningModel = this._panningModel ?? this._manager.spatial.panningModel;
     panner.distanceModel = this._spatialConfig.distanceModel;
     panner.refDistance = this._spatialConfig.refDistance;
     panner.maxDistance = this._spatialConfig.maxDistance;

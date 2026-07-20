@@ -312,4 +312,55 @@ describe('Voice — spatial (PannerNode)', () => {
 
     spy.restore();
   });
+
+  test('panningModel defaults to the app-wide equalpower setting', () => {
+    const spy = setupPannerSpy();
+    const manager = new AudioManager();
+    const sound = new Sound(createAudioBufferStub());
+    manager.play(sound, { position: { x: 0, y: 0 } });
+    expect(spy.panners[0].panningModel).toBe('equalpower');
+    spy.restore();
+    sound.destroy();
+  });
+
+  test('PlayOptions.panningModel overrides the app-wide default for one voice', () => {
+    const spy = setupPannerSpy();
+    const manager = new AudioManager();
+    const sound = new Sound(createAudioBufferStub());
+    manager.play(sound, { position: { x: 0, y: 0 }, panningModel: 'HRTF' });
+    expect(spy.panners[0].panningModel).toBe('HRTF');
+    spy.restore();
+    sound.destroy();
+  });
+
+  test('voice.panningModel round-trips and writes through live to an existing panner', () => {
+    const spy = setupPannerSpy();
+    const manager = new AudioManager();
+    const sound = new Sound(createAudioBufferStub());
+    const voice = manager.play(sound, { position: { x: 0, y: 0 } });
+
+    expect(voice.panningModel).toBeNull();
+    voice.panningModel = 'HRTF';
+    expect(voice.panningModel).toBe('HRTF');
+    expect(spy.panners[0].panningModel).toBe('HRTF');
+
+    voice.panningModel = null;
+    expect(spy.panners[0].panningModel).toBe('equalpower');
+
+    spy.restore();
+    sound.destroy();
+  });
+
+  test('changing app.audio.spatial.panningModel affects only voices with no per-voice override', () => {
+    const spy = setupPannerSpy();
+    const manager = new AudioManager();
+    manager.spatial.panningModel = 'HRTF';
+    const sound = new Sound(createAudioBufferStub());
+    manager.play(sound, { position: { x: 0, y: 0 } });
+    manager.play(sound, { position: { x: 0, y: 0 }, panningModel: 'equalpower' });
+    expect(spy.panners[0].panningModel).toBe('HRTF');
+    expect(spy.panners[1].panningModel).toBe('equalpower');
+    spy.restore();
+    sound.destroy();
+  });
 });

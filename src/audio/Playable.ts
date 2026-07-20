@@ -118,6 +118,11 @@ export interface Spatializable {
   maxDistance: number;
   /** Falloff rate. Higher = steeper attenuation. Default `1`. */
   rolloffFactor: number;
+  /**
+   * Per-voice panning model override. `null` (default) inherits the
+   * app-wide default from `app.audio.spatial.panningModel`.
+   */
+  panningModel: PanningModelType | null;
 }
 
 /**
@@ -148,6 +153,8 @@ export interface PlayOptions {
   maxDistance?: number;
   /** Initial rolloff factor. Default `1`. */
   rolloffFactor?: number;
+  /** Per-play panning model override. Omit to inherit the app-wide default. */
+  panningModel?: PanningModelType;
 }
 
 /**
