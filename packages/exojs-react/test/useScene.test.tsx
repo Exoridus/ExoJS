@@ -40,7 +40,7 @@ describe('useScene', () => {
     const { findByText } = render(provide(app, <SceneProbe sceneClass={LevelScene} />));
 
     expect(app.start).toHaveBeenCalledTimes(1);
-    expect(app.start.mock.calls[0]![0]).toBeInstanceOf(LevelScene);
+    expect(app.start.mock.calls[0]![0]).toBe(LevelScene);
     expect(app.scenes.setScene).not.toHaveBeenCalled();
 
     expect(await findByText('LevelScene')).toBeTruthy();
@@ -54,18 +54,21 @@ describe('useScene', () => {
     view.rerender(provide(app, <SceneProbe sceneClass={LevelScene} deps={[2]} />));
 
     // The new scene is installed through setScene; the engine is NOT started again.
-    await waitFor(() => expect(app.scenes.setScene.mock.calls.some(call => call[0] instanceof LevelScene)).toBe(true));
+    await waitFor(() => expect(app.scenes.setScene.mock.calls.some(call => call[0] === LevelScene)).toBe(true));
     expect(app.start).toHaveBeenCalledTimes(1);
   });
 
-  it('clears the scene (setScene(null)) on unmount', async () => {
+  it('does not call setScene when the component unmounts (no public API clears the director mid-lifetime)', async () => {
     const app = makeApp();
     const view = render(provide(app, <SceneProbe sceneClass={LevelScene} />));
     await view.findByText('LevelScene');
 
     view.unmount();
 
-    expect(app.scenes.setScene).toHaveBeenCalledWith(null);
+    // definition §10.1: navigation always targets a registered constructor —
+    // there is no public "clear to scene-less" call. Application.destroy()
+    // (owned by ExoCanvas) is the actual teardown path for a still-active scene.
+    expect(app.scenes.setScene).not.toHaveBeenCalled();
   });
 
   it('routes a rejected app.start() to app.onError instead of an unhandled rejection', async () => {
@@ -106,20 +109,6 @@ describe('useScene', () => {
     render(provide(app, <SceneProbe sceneClass={LevelScene} />));
 
     await waitFor(() => expect(onError).toHaveBeenCalledWith(new Error('start failed as a plain string')));
-  });
-
-  it('wraps a non-Error rejection from the best-effort setScene(null) cleanup on unmount before dispatching it', async () => {
-    const app = makeApp();
-    const view = render(provide(app, <SceneProbe sceneClass={LevelScene} />));
-    await view.findByText('LevelScene');
-
-    const onError = vi.fn();
-    app.onError.add(onError);
-    app.scenes.setScene.mockRejectedValueOnce('clear failed as a plain string');
-
-    view.unmount();
-
-    await waitFor(() => expect(onError).toHaveBeenCalledWith(new Error('clear failed as a plain string')));
   });
 
   it('does not install the scene when the component unmounts before app.start() resolves', async () => {
