@@ -543,4 +543,52 @@ describe('SceneDirector', () => {
     await director._clearScene();
     expect(director.state).toBeNull();
   });
+
+  test('_transitionGateOpen is true only while a fade transition is in flight, including on failure', async () => {
+    const app = createApplicationStub();
+    const TestScene = makeSceneClass();
+    const OtherScene = makeSceneClass();
+    const manager = new SceneDirector(app, { test: TestScene, other: OtherScene });
+
+    await manager.setScene(TestScene);
+    expect((manager as unknown as { _transitionGateOpen: boolean })._transitionGateOpen).toBe(false);
+
+    const transitionPromise = manager.setScene(OtherScene, {
+      transition: { type: 'fade', duration: 60 },
+    });
+
+    expect((manager as unknown as { _transitionGateOpen: boolean })._transitionGateOpen).toBe(true);
+
+    tick(manager, app, 60);
+    for (let i = 0; i < 8; i++) {
+      await Promise.resolve();
+      tick(manager, app, 60);
+    }
+    await transitionPromise;
+
+    expect((manager as unknown as { _transitionGateOpen: boolean })._transitionGateOpen).toBe(false);
+  });
+
+  test('_transitionGateOpen closes even when the transition target fails to activate', async () => {
+    const app = createApplicationStub();
+    const TestScene = makeSceneClass();
+    const FailScene = makeSceneClass({
+      init() {
+        throw new Error('boom');
+      },
+    });
+    const manager = new SceneDirector(app, { test: TestScene, fail: FailScene });
+
+    await manager.setScene(TestScene);
+
+    const transitionPromise = manager.setScene(FailScene, {
+      transition: { type: 'fade', duration: 60 },
+    });
+
+    tick(manager, app, 60);
+    await Promise.resolve();
+
+    await expect(transitionPromise).rejects.toThrow('boom');
+    expect((manager as unknown as { _transitionGateOpen: boolean })._transitionGateOpen).toBe(false);
+  });
 });
