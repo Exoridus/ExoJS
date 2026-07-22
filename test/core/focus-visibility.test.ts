@@ -97,6 +97,7 @@ const loadHarness = async (): Promise<FocusVisibilityHarness> => {
     }),
   }));
   vi.doMock('#extensions/materialize', () => ({
+    materializeApplicationSystems: vi.fn(),
     materializeAssetBindings: vi.fn(),
     materializeRendererBindings: vi.fn(),
     materializeSerializerBindings: vi.fn(),

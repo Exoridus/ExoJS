@@ -1,4 +1,4 @@
-import type { AssetBinding, Extension, RendererBinding, SerializerBinding } from './Extension';
+import type { ApplicationSystemBinding, AssetBinding, Extension, RendererBinding, SerializerBinding } from './Extension';
 
 // @internal
 export interface ExtensionSnapshot {
@@ -6,6 +6,7 @@ export interface ExtensionSnapshot {
   readonly renderers: readonly RendererBinding[];
   readonly assets: readonly AssetBinding[];
   readonly serializers: readonly SerializerBinding[];
+  readonly systems: readonly ApplicationSystemBinding[];
 }
 
 // Shared empty singleton — zero allocation for extensions: [] selection.
@@ -14,6 +15,7 @@ const emptySnapshot: ExtensionSnapshot = Object.freeze({
   renderers: Object.freeze([]),
   assets: Object.freeze([]),
   serializers: Object.freeze([]),
+  systems: Object.freeze([]),
 });
 
 export { emptySnapshot as EMPTY_SNAPSHOT };
@@ -66,6 +68,14 @@ export function freezeExtension(ext: Extension): void {
     Object.freeze(ext.serializers);
 
     for (const binding of ext.serializers) {
+      Object.freeze(binding);
+    }
+  }
+
+  if (ext.systems) {
+    Object.freeze(ext.systems);
+
+    for (const binding of ext.systems) {
       Object.freeze(binding);
     }
   }
@@ -138,6 +148,7 @@ export function buildSnapshot(input: readonly Extension[]): ExtensionSnapshot {
   const renderers: RendererBinding[] = [];
   const assets: AssetBinding[] = [];
   const serializers: SerializerBinding[] = [];
+  const systems: ApplicationSystemBinding[] = [];
 
   for (const ext of ordered) {
     if (ext.renderers) {
@@ -157,6 +168,12 @@ export function buildSnapshot(input: readonly Extension[]): ExtensionSnapshot {
         serializers.push(binding);
       }
     }
+
+    if (ext.systems) {
+      for (const binding of ext.systems) {
+        systems.push(binding);
+      }
+    }
   }
 
   return Object.freeze({
@@ -164,5 +181,6 @@ export function buildSnapshot(input: readonly Extension[]): ExtensionSnapshot {
     renderers: Object.freeze(renderers),
     assets: Object.freeze(assets),
     serializers: Object.freeze(serializers),
+    systems: Object.freeze(systems),
   });
 }

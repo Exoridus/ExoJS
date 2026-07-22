@@ -1,0 +1,105 @@
+{
+  "title": "ApplicationSystemBinding",
+  "description": "Produces an app-level System for one Application instance, or `undefined` to opt out for that instance. `create(app)` runs once per Application, after every core manager already exists on `app` — safe to read Application.input, Application.interaction, etc. The returned system is registered on Application.systems exactly like a user-added system, including reverse-order destruction. Extensions never inject scene-level systems or augment scenes — app-level only.",
+  "symbol": "ApplicationSystemBinding",
+  "kind": "interface",
+  "subsystem": "extensions",
+  "importPath": "@codexo/exojs/extensions",
+  "tier": "advanced",
+  "memberCount": 1,
+  "counts": {
+    "constructors": 0,
+    "methods": 1,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Produces an app-level System for one Application instance, or `undefined` to opt out for that instance. `create(app)` runs once per Application, after every core manager already exists on `app` — safe to read Application.input, Application.interaction, etc. The returned system is registered on Application.systems exactly like a user-added system, including reverse-order destruction. Extensions never inject scene-level systems or augment scenes — app-level only."
+      ],
+      "importLine": "import { ApplicationSystemBinding } from '@codexo/exojs/extensions'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "create",
+          "signature": "create(app: Application): System | undefined",
+          "signatureTokens": [
+            {
+              "text": "create",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "app",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Application",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "System",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "app",
+              "type": "Application",
+              "optional": false
+            }
+          ],
+          "returnType": "System | undefined",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/extensions/Extension.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/extensions/Extension.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/extensions/Extension.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/extensions/Extension.ts"
+}

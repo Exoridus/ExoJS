@@ -1,16 +1,16 @@
 {
   "title": "Extension",
-  "description": "An ExoJS extension: an immutable descriptor that contributes renderer bindings, asset bindings and/or serializer bindings. Holds no Application, backend, GPU, or loader instances. Register via ExtensionRegistry.register (official packages do this as an import side effect), or pass explicitly via ApplicationOptions.extensions.",
+  "description": "An ExoJS extension: an immutable descriptor that contributes renderer bindings, asset bindings, serializer bindings and/or app-level systems. Holds no Application, backend, GPU, or loader instances. Register via ExtensionRegistry.register (official packages do this as an import side effect), or pass explicitly via ApplicationOptions.extensions.",
   "symbol": "Extension",
   "kind": "interface",
   "subsystem": "extensions",
   "importPath": "@codexo/exojs/extensions",
   "tier": "advanced",
-  "memberCount": 5,
+  "memberCount": 6,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 5,
+    "properties": 6,
     "events": 0
   },
   "sections": [
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "An ExoJS extension: an immutable descriptor that contributes renderer bindings, asset bindings and/or serializer bindings. Holds no Application, backend, GPU, or loader instances. Register via ExtensionRegistry.register (official packages do this as an import side effect), or pass explicitly via ApplicationOptions.extensions."
+        "An ExoJS extension: an immutable descriptor that contributes renderer bindings, asset bindings, serializer bindings and/or app-level systems. Holds no Application, backend, GPU, or loader instances. Register via ExtensionRegistry.register (official packages do this as an import side effect), or pass explicitly via ApplicationOptions.extensions."
       ],
       "importLine": "import { Extension } from '@codexo/exojs/extensions'",
       "sourceLink": null
@@ -231,6 +231,43 @@
             {
               "text": ">",
               "kind": "punctuation"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "systems",
+          "signature": "systems?: readonly ApplicationSystemBinding[]",
+          "signatureTokens": [
+            {
+              "text": "systems",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ApplicationSystemBinding",
+              "kind": "type"
             },
             {
               "text": "[]",
