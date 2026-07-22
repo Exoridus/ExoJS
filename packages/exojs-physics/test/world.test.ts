@@ -603,3 +603,53 @@ describe('PhysicsWorld.attach: defaults to the node\'s world position (P2f)', ()
     expect(body.y).toBe(0);
   });
 });
+
+describe('PhysicsWorld.fixedUpdate()', () => {
+  it('advances exactly one fixed step per call, matching step() with a delta equal to fixedDelta', () => {
+    const worldA = new PhysicsWorld({ gravity: { x: 0, y: 900 } });
+    const bodyA = worldA.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [new Collider({ shape: new BoxShape(10, 10) })] }));
+
+    const worldB = new PhysicsWorld({ gravity: { x: 0, y: 900 } });
+    const bodyB = worldB.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [new Collider({ shape: new BoxShape(10, 10) })] }));
+
+    worldA.step(1 / 60);
+    worldB.fixedUpdate({ seconds: 1 / 60 } as never);
+
+    expect(bodyB.y).toBeCloseTo(bodyA.y, 10);
+    expect(bodyB.linearVelocityY).toBeCloseTo(bodyA.linearVelocityY, 10);
+  });
+
+  it('is a no-op-safe repeatable call: N fixedUpdate() calls match N step() calls of the same size', () => {
+    const worldA = new PhysicsWorld({ gravity: { x: 0, y: 900 } });
+    const bodyA = worldA.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [new Collider({ shape: new BoxShape(10, 10) })] }));
+
+    const worldB = new PhysicsWorld({ gravity: { x: 0, y: 900 } });
+    const bodyB = worldB.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [new Collider({ shape: new BoxShape(10, 10) })] }));
+
+    for (let i = 0; i < 5; i++) {
+      worldA.step(1 / 60);
+      worldB.fixedUpdate({ seconds: 1 / 60 } as never);
+    }
+
+    expect(bodyB.y).toBeCloseTo(bodyA.y, 8);
+  });
+
+  it('dispatches events after the step, same as step()', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 900 } });
+    const events: string[] = [];
+
+    world.onCollisionStart.add(() => events.push('start'));
+
+    const ground = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 100 }, colliders: [new Collider({ shape: new BoxShape(200, 20) })] }));
+    const box = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [new Collider({ shape: new BoxShape(10, 10) })] }));
+
+    void ground;
+    void box;
+
+    for (let i = 0; i < 60; i++) {
+      world.fixedUpdate({ seconds: 1 / 60 } as never);
+    }
+
+    expect(events).toContain('start');
+  });
+});

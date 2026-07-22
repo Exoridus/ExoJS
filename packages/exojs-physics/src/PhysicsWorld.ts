@@ -1,4 +1,4 @@
-import type { SceneNode } from '@codexo/exojs';
+import type { SceneNode, Time } from '@codexo/exojs';
 import { Signal, Vector } from '@codexo/exojs';
 
 import type { Aabb } from './Aabb';
@@ -401,22 +401,15 @@ export class PhysicsWorld implements BodyOwner {
    * restitution pass, then writes the accumulated motion into each body. Finally
    * dispatches events and writes bound node transforms.
    *
-   * **Fixed timestep against a variable render loop.** `frameDeltaSeconds` does
-   * **not** need to already be a fixed-size delta — `step` owns its own
-   * accumulator ({@link timeStepper}, a `TimeStepper`) that converts whatever
-   * you pass into a whole number of `fixedDelta`-sized sub-steps (dropping any
-   * backlog beyond {@link PhysicsWorldOptions.maxSubSteps} so a slow frame
-   * cannot spiral). Two equally valid ways to drive it:
-   * - **`Scene.fixedUpdate(delta)`** (recommended) — the engine's own
-   *   fixed-timestep accumulator already calls this hook a constant number of
-   *   times per rendered frame, so `step` typically consumes exactly one
-   *   sub-step per call. This is the idiomatic hook and keeps physics in step
-   *   with any other fixed-rate game logic.
-   * - **`Scene.update(delta)`** — passing the raw, variable per-frame
-   *   `delta.seconds` straight from the render loop also works correctly:
-   *   `step`'s internal accumulator still produces exactly the right number of
-   *   fixed sub-steps (0, 1 or several) regardless of how irregular the calls
-   *   are. Useful when you don't want a `fixedUpdate` split for anything else.
+   * **Prefer registering the world as a system instead**
+   * (`app.systems.add(world, { order: SystemOrder.Physics })` or the scene
+   * equivalent) so {@link fixedUpdate} drives stepping directly from the
+   * engine's own fixed-timestep scheduler — one call per fixed step, no
+   * accumulator duplication. `step` remains available here for manual/advanced
+   * driving (e.g. a fixed-but-non-standard rate, or stepping outside the
+   * normal frame loop entirely): pass any delta and this accumulator converts
+   * it into the right number of fixed sub-steps (0, 1, or several, clamped by
+   * {@link PhysicsWorldOptions.maxSubSteps}).
    *
    * Either way the simulation is frame-rate independent and deterministic —
    * the same sequence of deltas replays identically. `timeStepper.alpha`
@@ -442,77 +435,7 @@ export class PhysicsWorld implements BodyOwner {
       const hasBullets = this._hasBullets();
 
       for (let step = 0; step < steps; step++) {
-        // Detection runs once per fixed step (collider geometry is already current
-        // from the previous frame's finalize / attach / setTransform). TGS-Soft
-        // reuses the manifolds across the sub-steps below.
-        this._backend.detect(this._colliders);
-
-        // Sleep decision runs after detection (islands need the current contact
-        // set) and before the solver (so sleeping contacts are skipped, and a
-        // sleeping island touched by an awake body is woken first).
-        if (this.enableSleeping) {
-          this._updateSleeping(this.timeStepper.fixedDelta);
-        }
-
-        this._backend.prepareSolve(h, contactHertz, dampingRatio);
-
-        if (hasJoints) {
-          this._prepareJoints(h);
-        }
-
-        if (hasBullets) {
-          this._recordBulletPositions();
-        }
-
-        for (let subStep = 0; subStep < subStepCount; subStep++) {
-          // Integrate gravity/forces over the sub-step (forces persist across
-          // sub-steps; cleared once per frame by `_finalizePosition`).
-          for (const body of this._bodies) {
-            body._integrateVelocity(h, gravityX, gravityY);
-          }
-
-          // Warm-start every sub-step (Box2D-v3 soft step): the relax pass leaves
-          // each contact's normal velocity at zero, so re-applying the
-          // accumulated impulse re-balances exactly this sub-step's gravity — the
-          // impulse converges to the per-sub-step load (m·h·g), not the per-frame
-          // load, which is what keeps tall stacks from pumping energy.
-          this._backend.warmStart();
-
-          if (hasJoints) {
-            this._warmStartJoints();
-          }
-
-          // Main soft-bias velocity solve, integrate positions (accumulating
-          // per-body delta), then the bias-free relax pass. Joints solve right
-          // after the contacts in each pass (contacts are the stiffer constraint).
-          this._backend.solveVelocities(true);
-
-          if (hasJoints) {
-            this._solveJoints(true);
-          }
-
-          for (const body of this._bodies) {
-            body._integratePosition(h);
-          }
-
-          this._backend.solveVelocities(false);
-
-          if (hasJoints) {
-            this._solveJoints(false);
-          }
-        }
-
-        // Separate restitution pass, then write the accumulated delta into each
-        // body's transform and re-sync collider geometry.
-        this._backend.applyRestitution();
-
-        for (const body of this._bodies) {
-          body._finalizePosition();
-        }
-
-        if (hasBullets) {
-          this._advanceBullets();
-        }
+        this._stepOnce(h, subStepCount, gravityX, gravityY, contactHertz, dampingRatio, hasJoints, hasBullets);
       }
 
       this._dispatchEvents();
@@ -520,6 +443,111 @@ export class PhysicsWorld implements BodyOwner {
 
     this._bindings.sync();
     this._drainCommands();
+  }
+
+  /**
+   * Advance by exactly one fixed step, driven directly by the engine's own
+   * fixed-timestep scheduler when this world is registered as a `System`
+   * (`app.systems.add(world, { order: SystemOrder.Physics })` or the scene
+   * equivalent) — bypasses {@link timeStepper}'s variable-delta accumulator
+   * entirely, since the caller has already decided exactly when a fixed step
+   * occurs. Prefer this over manual {@link step} once the world is
+   * system-registered; `step` remains available for advanced manual driving.
+   */
+  public fixedUpdate(_step: Time): void {
+    this._assertAlive();
+
+    const subStepCount = this.subStepCount;
+    const h = this.timeStepper.fixedDelta / subStepCount;
+
+    this._stepOnce(h, subStepCount, this.gravity.x, this.gravity.y, this.contactHertz, this.dampingRatio, this._joints.length > 0, this._hasBullets());
+
+    this._dispatchEvents();
+    this._bindings.sync();
+    this._drainCommands();
+  }
+
+  private _stepOnce(
+    h: number,
+    subStepCount: number,
+    gravityX: number,
+    gravityY: number,
+    contactHertz: number,
+    dampingRatio: number,
+    hasJoints: boolean,
+    hasBullets: boolean,
+  ): void {
+    // Detection runs once per fixed step (collider geometry is already current
+    // from the previous frame's finalize / attach / setTransform). TGS-Soft
+    // reuses the manifolds across the sub-steps below.
+    this._backend.detect(this._colliders);
+
+    // Sleep decision runs after detection (islands need the current contact
+    // set) and before the solver (so sleeping contacts are skipped, and a
+    // sleeping island touched by an awake body is woken first).
+    if (this.enableSleeping) {
+      this._updateSleeping(this.timeStepper.fixedDelta);
+    }
+
+    this._backend.prepareSolve(h, contactHertz, dampingRatio);
+
+    if (hasJoints) {
+      this._prepareJoints(h);
+    }
+
+    if (hasBullets) {
+      this._recordBulletPositions();
+    }
+
+    for (let subStep = 0; subStep < subStepCount; subStep++) {
+      // Integrate gravity/forces over the sub-step (forces persist across
+      // sub-steps; cleared once per frame by `_finalizePosition`).
+      for (const body of this._bodies) {
+        body._integrateVelocity(h, gravityX, gravityY);
+      }
+
+      // Warm-start every sub-step (Box2D-v3 soft step): the relax pass leaves
+      // each contact's normal velocity at zero, so re-applying the
+      // accumulated impulse re-balances exactly this sub-step's gravity — the
+      // impulse converges to the per-sub-step load (m·h·g), not the per-frame
+      // load, which is what keeps tall stacks from pumping energy.
+      this._backend.warmStart();
+
+      if (hasJoints) {
+        this._warmStartJoints();
+      }
+
+      // Main soft-bias velocity solve, integrate positions (accumulating
+      // per-body delta), then the bias-free relax pass. Joints solve right
+      // after the contacts in each pass (contacts are the stiffer constraint).
+      this._backend.solveVelocities(true);
+
+      if (hasJoints) {
+        this._solveJoints(true);
+      }
+
+      for (const body of this._bodies) {
+        body._integratePosition(h);
+      }
+
+      this._backend.solveVelocities(false);
+
+      if (hasJoints) {
+        this._solveJoints(false);
+      }
+    }
+
+    // Separate restitution pass, then write the accumulated delta into each
+    // body's transform and re-sync collider geometry.
+    this._backend.applyRestitution();
+
+    for (const body of this._bodies) {
+      body._finalizePosition();
+    }
+
+    if (hasBullets) {
+      this._advanceBullets();
+    }
   }
 
   // ── binding ────────────────────────────────────────────────────────────
