@@ -1,8 +1,8 @@
 import type { Application } from '#core/Application';
 import type { SceneNode } from '#core/SceneNode';
-import type { System } from '#core/System';
 import type { NodeSerializer } from '#core/serialization/NodeSerializer';
 import type { SceneNodeConstructor } from '#core/serialization/SerializationRegistry';
+import type { System } from '#core/System';
 import type { Drawable } from '#rendering/Drawable';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { DrawableConstructor, Renderer } from '#rendering/Renderer';
