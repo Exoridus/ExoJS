@@ -1,4 +1,4 @@
-import { Application, Asset, Color, type RenderingContext, Scene, Sprite, Spritesheet, type SpritesheetData, TextureRegion, type Time, Vector } from '@codexo/exojs';
+import { Application, Asset, Color, type RenderingContext, Scene, Sprite, Spritesheet, type SpritesheetData, SystemOrder, Texture, TextureRegion, type Time, Vector } from '@codexo/exojs';
 import { BoxShape, type PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
 import { PhysicsDebugDraw } from '@codexo/exojs-physics/debug';
 import { ObjectKind, ObjectLayer, type RectangleObject, TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, tilemapExtension, TileMapNode, TileSet } from '@codexo/exojs-tilemap';
@@ -32,18 +32,26 @@ class TiledMapPhysicsActorScene extends Scene {
     private actorBody!: PhysicsBody;
     private debug!: PhysicsDebugDraw;
     private hud!: ReturnType<typeof mountControls>;
+    private tilesTexture!: Texture;
+    private spritesheetData!: SpritesheetData;
 
-    override async init(): Promise<void> {
+    override async load(): Promise<void> {
+        this.tilesTexture = await this.loader.load(Asset.kind('texture', assets.demo.tilesets.map.image));
+        this.spritesheetData = (await this.loader.load(Asset.kind('json', assets.demo.spritesheets.platformerCharacters.data))) as SpritesheetData;
+    }
+
+    override init(): void {
         const app = this.app;
         if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         this.world = new PhysicsWorld({ gravity: { x: 0, y: 1500 } });
+        this.systems.add(this.world, { order: SystemOrder.Physics });
 
         // ── Tileset + a single ground tile layer ──────────────────────────
         // The map-pack tilesheet is a uniform 64×64 grid (17 columns), so it
         // works as a classic grid tileset. We only need one solid-looking tile.
         // Await the atlas load: TileSet needs a TextureRegion with real
         // dimensions, so a not-yet-hydrated `loader.get()` handle is not enough.
-        const tilesTexture = await this.loader.load(Asset.kind('texture', assets.demo.tilesets.map.image));
+        const tilesTexture = this.tilesTexture;
         const tileset = new TileSet({
             name: 'map',
             texture: new TextureRegion(tilesTexture, { x: 0, y: 0, width: tilesTexture.width, height: tilesTexture.height }),
@@ -114,10 +122,7 @@ class TiledMapPhysicsActorScene extends Scene {
         }
 
         // ── Dynamic actor ─────────────────────────────────────────────────
-        const characters = new Spritesheet(
-            this.loader.get(assets.demo.spritesheets.platformerCharacters.image),
-            (await this.loader.load(Asset.kind('json', assets.demo.spritesheets.platformerCharacters.data))) as SpritesheetData,
-        );
+        const characters = new Spritesheet(this.loader.get(assets.demo.spritesheets.platformerCharacters.image), this.spritesheetData);
 
         this.actor = characters.getFrameSprite('character_green_front').setAnchor(0.5);
         this.actorBody = this.world.attach(this.actor, {
@@ -134,10 +139,9 @@ class TiledMapPhysicsActorScene extends Scene {
         this.debug = new PhysicsDebugDraw(app, this.world, { drawShapes: true, drawCenters: true });
     }
 
-    override update(delta: Time): void {
+    override update(_delta: Time): void {
         const app = this.app;
         if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        this.world.step(delta.seconds);
 
         const { width, height } = app.canvas;
         const body = this.actorBody;

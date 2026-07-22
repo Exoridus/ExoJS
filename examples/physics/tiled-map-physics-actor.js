@@ -1,5 +1,5 @@
 // Auto-generated from tiled-map-physics-actor.ts — edit the .ts source, not this file.
-import { Application, Asset, Color, Scene, Spritesheet, TextureRegion, Vector } from '@codexo/exojs';
+import { Application, Asset, Color, Scene, Spritesheet, SystemOrder, TextureRegion, Vector } from '@codexo/exojs';
 import { BoxShape, PhysicsWorld } from '@codexo/exojs-physics';
 import { PhysicsDebugDraw } from '@codexo/exojs-physics/debug';
 import { ObjectKind, ObjectLayer, TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, tilemapExtension, TileMapNode, TileSet } from '@codexo/exojs-tilemap';
@@ -28,17 +28,24 @@ class TiledMapPhysicsActorScene extends Scene {
     actorBody;
     debug;
     hud;
-    async init() {
+    tilesTexture;
+    spritesheetData;
+    async load() {
+        this.tilesTexture = await this.loader.load(Asset.kind('texture', assets.demo.tilesets.map.image));
+        this.spritesheetData = (await this.loader.load(Asset.kind('json', assets.demo.spritesheets.platformerCharacters.data)));
+    }
+    init() {
         const app = this.app;
         if (app === null)
             throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         this.world = new PhysicsWorld({ gravity: { x: 0, y: 1500 } });
+        this.systems.add(this.world, { order: SystemOrder.Physics });
         // ── Tileset + a single ground tile layer ──────────────────────────
         // The map-pack tilesheet is a uniform 64×64 grid (17 columns), so it
         // works as a classic grid tileset. We only need one solid-looking tile.
         // Await the atlas load: TileSet needs a TextureRegion with real
         // dimensions, so a not-yet-hydrated `loader.get()` handle is not enough.
-        const tilesTexture = await this.loader.load(Asset.kind('texture', assets.demo.tilesets.map.image));
+        const tilesTexture = this.tilesTexture;
         const tileset = new TileSet({
             name: 'map',
             texture: new TextureRegion(tilesTexture, { x: 0, y: 0, width: tilesTexture.width, height: tilesTexture.height }),
@@ -101,7 +108,7 @@ class TiledMapPhysicsActorScene extends Scene {
             });
         }
         // ── Dynamic actor ─────────────────────────────────────────────────
-        const characters = new Spritesheet(this.loader.get(assets.demo.spritesheets.platformerCharacters.image), (await this.loader.load(Asset.kind('json', assets.demo.spritesheets.platformerCharacters.data))));
+        const characters = new Spritesheet(this.loader.get(assets.demo.spritesheets.platformerCharacters.image), this.spritesheetData);
         this.actor = characters.getFrameSprite('character_green_front').setAnchor(0.5);
         this.actorBody = this.world.attach(this.actor, {
             type: 'dynamic',
@@ -115,11 +122,10 @@ class TiledMapPhysicsActorScene extends Scene {
         // is visible on top of the rendered tiles.
         this.debug = new PhysicsDebugDraw(app, this.world, { drawShapes: true, drawCenters: true });
     }
-    update(delta) {
+    update(_delta) {
         const app = this.app;
         if (app === null)
             throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        this.world.step(delta.seconds);
         const { width, height } = app.canvas;
         const body = this.actorBody;
         // Loop the demo: nudge the actor again once it settles, and rescue it if

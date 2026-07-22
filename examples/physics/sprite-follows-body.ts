@@ -1,13 +1,14 @@
-import { Application, Asset, Color, type RenderingContext, Scene, Sprite, Spritesheet, type SpritesheetData, type Time, Vector } from '@codexo/exojs';
+import { Application, Asset, Color, type RenderingContext, Scene, Sprite, Spritesheet, type SpritesheetData, SystemOrder, type Time, Vector } from '@codexo/exojs';
 import { BoxShape, type PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
 import { mountControls } from '@examples/runtime';
 
 // The minimal physics binding: `world.attach(node, { ... })` builds a body +
-// collider and binds it to the node in one call. After every `world.step(...)`
-// the body's position and rotation are written onto the bound sprite, so the
-// sprite simply "follows the body". A static floor stops the falling actor.
-
-
+// collider and binds it to the node in one call. Registering the world as a
+// system (`this.systems.add(this.world, { order: SystemOrder.Physics })`)
+// drives it from the engine's fixed-timestep scheduler — no manual step()
+// call needed. After every fixed step the body's position and rotation are
+// written onto the bound sprite, so the sprite simply "follows the body". A
+// static floor stops the falling actor.
 
 class SpriteFollowsBodyScene extends Scene {
     private world!: PhysicsWorld;
@@ -17,19 +18,22 @@ class SpriteFollowsBodyScene extends Scene {
     private floorY = 0;
     private settled = 0;
     private hud!: ReturnType<typeof mountControls>;
+    private spritesheetData!: SpritesheetData;
 
-    override async init(): Promise<void> {
+    override async load(): Promise<void> {
+        this.spritesheetData = (await this.loader.load(Asset.kind('json', assets.demo.spritesheets.platformerCharacters.data))) as SpritesheetData;
+    }
+
+    override init(): void {
         const app = this.app;
         if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const { width, height } = app.canvas;
 
         // Gravity in px/s², +Y down — matches the engine's screen space.
         this.world = new PhysicsWorld({ gravity: { x: 0, y: 1400 } });
+        this.systems.add(this.world, { order: SystemOrder.Physics });
 
-        const characters = new Spritesheet(
-            this.loader.get(assets.demo.spritesheets.platformerCharacters.image),
-            (await this.loader.load(Asset.kind('json', assets.demo.spritesheets.platformerCharacters.data))) as SpritesheetData,
-        );
+        const characters = new Spritesheet(this.loader.get(assets.demo.spritesheets.platformerCharacters.image), this.spritesheetData);
 
         this.floorY = height - 80;
 
@@ -53,7 +57,7 @@ class SpriteFollowsBodyScene extends Scene {
         // ── Dynamic actor ─────────────────────────────────────────────────
         // A dynamic body dropped from above. Its collider is a box sized to the
         // character art; `world.attach` binds the sprite, so it falls, lands and
-        // tracks the body (position + rotation) every step.
+        // tracks the body (position + rotation) every fixed step.
         this.actor = characters.getFrameSprite('character_beige_front').setAnchor(0.5).setScale(1.1);
         this.actorBody = this.world.attach(this.actor, {
             type: 'dynamic',
@@ -70,15 +74,13 @@ class SpriteFollowsBodyScene extends Scene {
             title: 'Sprite Follows Body',
             controls: [{ keys: 'Auto', action: 'actor falls and lands on the floor' }],
             status: 'Dropping…',
-            hint: 'world.attach(sprite, { … }) creates a body + collider and binds it; world.step writes the body transform onto the sprite each frame.',
+            hint: 'world.attach(sprite, { … }) creates a body + collider and binds it; the world, registered as a system, writes the body transform onto the sprite every fixed step.',
         });
     }
 
     override update(delta: Time): void {
         const app = this.app;
         if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        // Advance the simulation; bound sprites are synced inside step().
-        this.world.step(delta.seconds);
 
         const { width, height } = app.canvas;
         const body = this.actorBody;
