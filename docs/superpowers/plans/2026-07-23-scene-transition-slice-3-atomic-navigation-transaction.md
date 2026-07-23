@@ -6,20 +6,21 @@
 
 **Architecture:**
 
-This slice does **not** touch `SceneScope.ts` — no changes are needed there. `SceneScope.prepare()`/`.activate()`/`.suspend()`/`.restore()`/`.destroy()` already have exactly the call shape this slice needs (Slice 2, assumed merged, only changed what happens *inside* `prepare()`/`activate()` — ending in `Ready` instead of `Preparing` before `activate()` runs — which is transparent to `SceneDirector`'s calling code).
+This slice does **not** touch `SceneScope.ts` — no changes are needed there. `SceneScope.prepare()`/`.activate()`/`.suspend()`/`.restore()`/`.destroy()` already have exactly the call shape this slice needs (Slice 2, assumed merged, only changed what happens _inside_ `prepare()`/`activate()` — ending in `Ready` instead of `Preparing` before `activate()` runs — which is transparent to `SceneDirector`'s calling code).
 
-The atomic commit boundary is extracted into a new, narrowly-scoped collaborator, `SceneNavigationTransaction` (`src/core/scene/SceneNavigationTransaction.ts`), rather than inlined into `SceneDirector.change()`/`restore()` directly. Reasoning, since the task explicitly calls for this File Structure decision to be made and justified here: `SceneDirector.ts` is 740 lines today and both `change()`/`restore()` need the *identical* outgoing-scope disposition logic (suspend+retain vs. begin-permanent-teardown, plus the guarded post-commit signal dispatch) — today that logic is `_handleOutgoingScope()`/`_suspendAndRetain()`/`_rollbackSwitch()`, about 60 lines duplicating concerns across two call sites. Slice 5's own scope note explicitly identifies "the `environment.commit()` hook point is exactly your atomic commit boundary" — i.e., Slice 5's transition-session runner needs to call into precisely this logic too, from a different call site (its session-driving loop) that doesn't naturally live inside `change()`'s/`restore()`'s own method bodies. Giving this logic one small, dedicated, already-unit-tested class with two precisely-specified methods (`beginOutgoingDisposition`/`finishOutgoingDisposition`) gives Slice 5 a stable, narrow seam to call through instead of reaching into `SceneDirector`'s private methods or duplicating the logic a third time. `SceneDirector` remains the sole owner of `_activeScope`/`_activeScopeTarget`/`_retained` — the transaction collaborator is handed `_retained` and the two Director signals it needs to dispatch (`onStopScene`, `onStateChange`) at construction time and holds no other state.
+The atomic commit boundary is extracted into a new, narrowly-scoped collaborator, `SceneNavigationTransaction` (`src/core/scene/SceneNavigationTransaction.ts`), rather than inlined into `SceneDirector.change()`/`restore()` directly. Reasoning, since the task explicitly calls for this File Structure decision to be made and justified here: `SceneDirector.ts` is 740 lines today and both `change()`/`restore()` need the _identical_ outgoing-scope disposition logic (suspend+retain vs. begin-permanent-teardown, plus the guarded post-commit signal dispatch) — today that logic is `_handleOutgoingScope()`/`_suspendAndRetain()`/`_rollbackSwitch()`, about 60 lines duplicating concerns across two call sites. Slice 5's own scope note explicitly identifies "the `environment.commit()` hook point is exactly your atomic commit boundary" — i.e., Slice 5's transition-session runner needs to call into precisely this logic too, from a different call site (its session-driving loop) that doesn't naturally live inside `change()`'s/`restore()`'s own method bodies. Giving this logic one small, dedicated, already-unit-tested class with two precisely-specified methods (`beginOutgoingDisposition`/`finishOutgoingDisposition`) gives Slice 5 a stable, narrow seam to call through instead of reaching into `SceneDirector`'s private methods or duplicating the logic a third time. `SceneDirector` remains the sole owner of `_activeScope`/`_activeScopeTarget`/`_retained` — the transaction collaborator is handed `_retained` and the two Director signals it needs to dispatch (`onStopScene`, `onStateChange`) at construction time and holds no other state.
 
 Every lifecycle-signal dispatch this slice's code performs — `onChangeScene`, `onStartScene`, `onStopScene`, `onStateChange` (both the `SceneScope`-internal transitions routed through the callback wired up in `_prepareScene`, and the Director-driven suspend/restore edges) — is wrapped in a small local guard (`_dispatchGuarded`/`_reportNavigationError` on `SceneDirector`, mirrored inside `SceneNavigationTransaction`) that reports a throwing listener through `Application.onError` instead of letting it propagate. This is required by the atomic model itself, independent of whatever Signal-level exception-isolation Slice 2 may or may not already provide generically (§2.2.1 assigns that to Slice 2's "Scene lifecycle signal rework," but this slice cannot depend on its exact shape without knowing it — see the assumption note below): once `change()`/`restore()` cross the commit boundary (§3.5 step 7), nothing may cause the returned promise to reject or leave `_activeScope` pointing at a half-committed scope, and a throwing lifecycle listener is exactly the one realistic way that could otherwise happen. This is also precisely why the current `test/core/scene-director.test.ts` "switch-phase rollback" describe block (two tests, asserting a throwing `onStopScene`/`onStateChange` listener rolls the switch back) is deleted, not renamed: under the atomic model there is nothing to roll back to — the new scene is already live and committed by the time either signal fires — so this slice replaces those two tests with two that assert the opposite (and complementary) property: the switch stays committed, `change()`/`restore()` still resolve, and the error surfaces via `Application.onError`.
 
 **Explicit, load-bearing assumption about Slices 1 and 2 (both merged ahead of this slice, per the dependency order):**
+
 - **Slice 2** (`Ready` state, `Scene.onActivate`/`onSuspend`, cold facilities): `SceneScope.prepare()` ends in `Ready`; a separate `SceneScope.activate()` call moves `Ready → Active`. This slice's code calls `prepare()` then `activate()` in exactly the same two-step shape the current (pre-Slice-2) code already uses — nothing here needs to change for that reason alone.
 - **Slice 1** (bidirectional key↔constructor registry, `Application<Registry>`): this slice assumes `SceneDirector` is already declared as `SceneDirector<Registry extends SceneRegistryShape<Registry> = Record<string, never>>` (spec §6.1), and that its internal `_registry` field — today a one-way `ReadonlyMap<AnySceneConstructor, string>` built by `validateSceneRegistry()` — has been extended with **one** new capability this slice actually calls: resolving a registered string key back to its constructor, referenced below as `this._registry.resolve(key: string): AnySceneConstructor | undefined`. Every other existing use of `this._registry` in today's file (`.has(ctor)`, `[...this._registry.values()]` for the registered-name list passed to `UnregisteredSceneError`) is left completely unchanged, on the assumption Slice 1 preserved that shape. **Before starting Task 3, read the actual, by-then-merged `SceneTypes.ts`/`SceneDirector.ts` and confirm this** — if Slice 1's real method/property names differ from `.resolve(key)`, rename only that one call site to match; every other assumption and every other line of this plan is unaffected by Slice 1's exact naming choices.
 - This slice does **not** assume Slice 1 added the `{ scene, transition }` registry-descriptor form (spec §6.1's `SceneRegistration` union) — that form's `transition` field only makes sense once `SceneTransitionSelection` exists (Slice 5+), so it is out of scope here regardless of whether Slice 1 already stubbed it in. `SceneRegistryShape<Registry>` is assumed to be the simpler `{ readonly [K in keyof Registry]: AnySceneConstructor }` for this slice's purposes.
 
-**Deliberately out of scope for this slice** (confirmed against the 8-slice breakdown): preload (`_preloaded`, Slice 4), the real `SceneTransition`/`PhasedSceneTransition`/`SceneTransitionSession` runtime and its `environment.commit()` (Slice 5), phase composition/rendering (Slice 6), built-in transitions and the `Application.start()` §3.7 startup-sequencing fix (Slice 7), and migrating examples/docs/guides off `setScene`/`retainCurrent` (Slice 8). The existing hardcoded fade machinery (`_transitionOverlay`, `_advanceTransition`, `_executeTransitionAction`, `_finishTransition`, `_getTransitionAlpha`, `_renderTransitionOverlay`, `_runTransitionedAction`, the `ActiveFadeTransition`/`TransitionOverlayMesh` types, and the old `FadeSceneTransition`/`SceneTransition` union in `SceneTypes.ts`) is untouched line-for-line — only *how it's reached* changes (via the new methods' names, through the bridge type below).
+**Deliberately out of scope for this slice** (confirmed against the 8-slice breakdown): preload (`_preloaded`, Slice 4), the real `SceneTransition`/`PhasedSceneTransition`/`SceneTransitionSession` runtime and its `environment.commit()` (Slice 5), phase composition/rendering (Slice 6), built-in transitions and the `Application.start()` §3.7 startup-sequencing fix (Slice 7), and migrating examples/docs/guides off `setScene`/`retainCurrent` (Slice 8). The existing hardcoded fade machinery (`_transitionOverlay`, `_advanceTransition`, `_executeTransitionAction`, `_finishTransition`, `_getTransitionAlpha`, `_renderTransitionOverlay`, `_runTransitionedAction`, the `ActiveFadeTransition`/`TransitionOverlayMesh` types, and the old `FadeSceneTransition`/`SceneTransition` union in `SceneTypes.ts`) is untouched line-for-line — only _how it's reached_ changes (via the new methods' names, through the bridge type below).
 
-**Tech Stack:** TypeScript (strict), Vitest. Builds on `SceneScope`/`SceneState`/`SceneTypes` as they exist after Slices 1–2 (assumed merged, per above); baseline for everything this plan does *not* assume changed is `pnpm test:core` green at 318 files / 5083 tests / 0 failures on `origin/main @ b5aad1a3`.
+**Tech Stack:** TypeScript (strict), Vitest. Builds on `SceneScope`/`SceneState`/`SceneTypes` as they exist after Slices 1–2 (assumed merged, per above); baseline for everything this plan does _not_ assume changed is `pnpm test:core` green at 318 files / 5083 tests / 0 failures on `origin/main @ b5aad1a3`.
 
 ## Global Constraints
 
@@ -31,7 +32,7 @@ Every lifecycle-signal dispatch this slice's code performs — `onChangeScene`, 
 - JSDoc conventions: see `[[feedback-jsdoc-conventions]]` memory — every public export gets a doc comment; `@internal` for engine-only surface.
 - `pnpm docs:api:generate` must be run and committed before the final push (push-gated).
 - Every task ends green on its own scoped test command before moving to the next.
-- Director-level signal *names* (`onChangeScene`/`onStartScene`/`onStopScene`/`onStateChange`) are unchanged — only navigation *methods* are renamed.
+- Director-level signal _names_ (`onChangeScene`/`onStartScene`/`onStopScene`/`onStateChange`) are unchanged — only navigation _methods_ are renamed.
 
 ---
 
@@ -225,7 +226,7 @@ super(
 );
 ```
 
-Update the JSDoc directly above the class from `@link SceneDirector.restoreScene}` to `{@link SceneDirector.restore}`. Do the same for `ConcurrentSceneNavigationError`'s doc comment (`` `setScene`/`restoreScene` `` → `` `change`/`restore` ``) and `RetainedSceneConflictError`'s doc comment (`` Thrown when `setScene` targets... `` → `` Thrown when `change` targets... ``, `` `restoreScene` `` → `` `restore` ``) and `RetainedSceneNotFoundError`'s doc comment (`` `restoreScene` `` → `` `restore` ``).
+Update the JSDoc directly above the class from `@link SceneDirector.restoreScene}` to `{@link SceneDirector.restore}`. Do the same for `ConcurrentSceneNavigationError`'s doc comment (`` `setScene`/`restoreScene` `` → `` `change`/`restore` ``) and `RetainedSceneConflictError`'s doc comment (``Thrown when `setScene` targets...`` → ``Thrown when `change` targets...``, `` `restoreScene` `` → `` `restore` ``) and `RetainedSceneNotFoundError`'s doc comment (`` `restoreScene` `` → `` `restore` ``).
 
 - [ ] **Step 5: Typecheck**
 
@@ -519,7 +520,7 @@ Expected: PASS.
 - [ ] **Step 5: Typecheck + lint**
 
 Run: `pnpm typecheck && pnpm lint`
-Expected: the pre-existing `SceneDirector.ts`/`Application.ts` failures from Task 1 Step 5 are still present (untouched until Task 3) — confirm no *new* errors come from this task's own two files.
+Expected: the pre-existing `SceneDirector.ts`/`Application.ts` failures from Task 1 Step 5 are still present (untouched until Task 3) — confirm no _new_ errors come from this task's own two files.
 
 - [ ] **Step 6: Commit**
 
@@ -834,7 +835,7 @@ Add these three private methods (placed near `_prepareScene`):
 
 ### 3.6 — Guard `_prepareScene()`'s `onStateChange` callback
 
-This one change protects *every* `onStateChange` dispatch for *every* scope's entire lifecycle (fresh activation, failed activation, and — since the outgoing scope in `change()`/`restore()` was itself originally created through this same method — its own eventual `Destroying`/`Destroyed` edges too), because every `SceneScope` is always constructed here.
+This one change protects _every_ `onStateChange` dispatch for _every_ scope's entire lifecycle (fresh activation, failed activation, and — since the outgoing scope in `change()`/`restore()` was itself originally created through this same method — its own eventual `Destroying`/`Destroyed` edges too), because every `SceneScope` is always constructed here.
 
 Change:
 
@@ -859,11 +860,11 @@ Delete `_handleOutgoingScope()`, `_suspendAndRetain()`, and `_rollbackSwitch()` 
 `releaseScene()`'s behavior and signature are unchanged this slice. Only update its doc comment's cross-reference:
 
 ```ts
-  /**
-   * Permanently end a retained (suspended) scene without reactivating it.
-   * Returns `true` if a retained instance existed for `target`, `false`
-   * otherwise (no-op, not an error).
-   */
+/**
+ * Permanently end a retained (suspended) scene without reactivating it.
+ * Returns `true` if a retained instance existed for `target`, `false`
+ * otherwise (no-op, not an error).
+ */
 ```
 
 stays word-for-word (it already doesn't mention `restoreScene`/`setScene` by name) — no edit needed here beyond confirming this during review.
@@ -970,11 +971,11 @@ describe('SceneDirector — post-commit signal isolation', () => {
 
 - [ ] **Step 4: Add a "key-based navigation" describe block**
 
-Add, after the "destroy() / _dispose()" describe block:
+Add, after the "destroy() / \_dispose()" describe block:
 
 ```ts
 describe('SceneDirector — key-based navigation', () => {
-  test('change() accepts a registered string key and resolves to that key\'s constructor', async () => {
+  test("change() accepts a registered string key and resolves to that key's constructor", async () => {
     const app = createApplicationStub();
     const FirstScene = makeSceneClass();
     const director = new SceneDirector(app, { first: FirstScene });
@@ -1121,17 +1122,17 @@ to:
 Change:
 
 ```ts
-        if (target !== undefined) {
-          await this.scenes.setScene(target, ...(args as SetSceneArgs<InferSceneData<typeof target>>));
-        }
+if (target !== undefined) {
+  await this.scenes.setScene(target, ...(args as SetSceneArgs<InferSceneData<typeof target>>));
+}
 ```
 
 to:
 
 ```ts
-        if (target !== undefined) {
-          await this.scenes.change(target, ...(args as ChangeSceneArgs<InferSceneData<typeof target>>));
-        }
+if (target !== undefined) {
+  await this.scenes.change(target, ...(args as ChangeSceneArgs<InferSceneData<typeof target>>));
+}
 ```
 
 (This task deliberately does not accept a registry key in `start()`'s own overload — `start()`'s first parameter today is typed `AnySceneConstructor`, matching `SceneDirector.change()`'s constructor overload exactly; extending `start()` itself to also take a key is a reasonable follow-up but isn't required by this slice's scope and isn't exercised by any existing test, so it's left alone here to keep this task's diff minimal and mechanical.)
@@ -1152,7 +1153,7 @@ Expected: clean.
 - [ ] **Step 5: Run the Application test suite**
 
 Run: `pnpm vitest run test/core/application.test.ts`
-Expected: PASS, unchanged — this task is a pure rename with no behavior change, so no test edits are expected here. If any existing `Application` test calls `app.start(SomeScene, { retainCurrent: true })`-shaped options directly (unlikely — `retainCurrent`/`suspendCurrent` is scene-*switch* semantics, not meaningful for the very first `start()` activation), grep for `retainCurrent` in that test file too and rename to `suspendCurrent` if found.
+Expected: PASS, unchanged — this task is a pure rename with no behavior change, so no test edits are expected here. If any existing `Application` test calls `app.start(SomeScene, { retainCurrent: true })`-shaped options directly (unlikely — `retainCurrent`/`suspendCurrent` is scene-_switch_ semantics, not meaningful for the very first `start()` activation), grep for `retainCurrent` in that test file too and rename to `suspendCurrent` if found.
 
 ```bash
 grep -rn "retainCurrent" test/core/application.test.ts
@@ -1261,7 +1262,7 @@ gh pr merge --auto --squash
 
 ## Self-Review Notes (from the plan-writing pass)
 
-**Spec coverage check:** §3.5 (commit/rollback boundary, steps 1-9 as they apply to the no-transition fast path — steps 1-3 and the transition-session-specific parts of 4/9 are explicitly Slice 5's, not reproduced here) — Task 3's `change()`/`restore()` bodies plus `SceneNavigationTransaction` (Task 2). §3.5.1 ("four distinct pre-commit-failure concepts, not one" — active-scope rollback eliminated; failed-preparation cleanup unchanged via `_prepareScene`'s existing `destroyFailedActivation()` call; `Ready`-scope cleanup and preload claim-restoration are explicitly Slice 4/5 concerns per the abort contract in §3.7, out of scope here; retained-claim restoration is `restore()`'s existing catch-block, carried forward) — covered, with the two slice-5/4-only sub-cases explicitly called out as out of scope in the Architecture section. §3.5.2 (`commit()` non-reentrancy) — not applicable to this slice; there is no `environment.commit()` yet, only the direct fast path, which per §3.3 "is not an instance of this hazard." §6.3 (navigation renames, single options object, `suspendCurrent` rename) — Task 1 + Task 3. §11.4/§11.5 (fresh-instance-always, concurrent-navigation rejection) — unchanged, already correct from the prior (Slice E) implementation, preserved verbatim in `_runWithNavigation` (untouched by this slice). §6.1 (key-based navigation) — Task 3's two-overload `change()`/`restore()` plus `_resolveNavigationTarget()`, consuming Slice 1's assumed registry extension. §14.3 (restore preserves instance identity, no `load()`/`init()` re-run, returns to pre-suspend `Active`/`Paused`) — unaffected by this slice, since `SceneScope.restore()` itself is untouched (Slice 2's territory) and this slice only changes *how* `SceneDirector.restore()` reaches the commit point, not what `SceneScope.restore()` does once called.
+**Spec coverage check:** §3.5 (commit/rollback boundary, steps 1-9 as they apply to the no-transition fast path — steps 1-3 and the transition-session-specific parts of 4/9 are explicitly Slice 5's, not reproduced here) — Task 3's `change()`/`restore()` bodies plus `SceneNavigationTransaction` (Task 2). §3.5.1 ("four distinct pre-commit-failure concepts, not one" — active-scope rollback eliminated; failed-preparation cleanup unchanged via `_prepareScene`'s existing `destroyFailedActivation()` call; `Ready`-scope cleanup and preload claim-restoration are explicitly Slice 4/5 concerns per the abort contract in §3.7, out of scope here; retained-claim restoration is `restore()`'s existing catch-block, carried forward) — covered, with the two slice-5/4-only sub-cases explicitly called out as out of scope in the Architecture section. §3.5.2 (`commit()` non-reentrancy) — not applicable to this slice; there is no `environment.commit()` yet, only the direct fast path, which per §3.3 "is not an instance of this hazard." §6.3 (navigation renames, single options object, `suspendCurrent` rename) — Task 1 + Task 3. §11.4/§11.5 (fresh-instance-always, concurrent-navigation rejection) — unchanged, already correct from the prior (Slice E) implementation, preserved verbatim in `_runWithNavigation` (untouched by this slice). §6.1 (key-based navigation) — Task 3's two-overload `change()`/`restore()` plus `_resolveNavigationTarget()`, consuming Slice 1's assumed registry extension. §14.3 (restore preserves instance identity, no `load()`/`init()` re-run, returns to pre-suspend `Active`/`Paused`) — unaffected by this slice, since `SceneScope.restore()` itself is untouched (Slice 2's territory) and this slice only changes _how_ `SceneDirector.restore()` reaches the commit point, not what `SceneScope.restore()` does once called.
 
 **Explicitly out of scope for this plan** (confirmed against the 8-slice breakdown in the dispatch prompt): preload (`_preloaded`, Slice 4), the real transition runtime and `environment.commit()`/`SceneTransitionSession` (Slice 5), phase composition/rendering (Slice 6), built-in transitions and the `Application.start()` §3.7 fix (Slice 7), migrating examples/docs/guides (Slice 8). `releaseScene()` is intentionally left as-is (Task 3.8) — Slice 4 replaces it with `unload()`.
 

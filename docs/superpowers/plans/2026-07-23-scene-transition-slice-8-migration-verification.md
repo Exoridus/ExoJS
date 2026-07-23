@@ -16,8 +16,8 @@
 - `site/src/content/api/*.json` are generated, never hand-edited. Regenerate via `pnpm docs:api:generate` (aliases to `pnpm site:build:api`, itself `pnpm --filter @codexo/exojs-examples build:api`); verify sync via `pnpm docs:api:check` (`tsx scripts/check-api-docs-sync.ts`).
 - Every touched public method/type keeps this repo's JSDoc convention: lead with what+why in 2-4 lines, no noise `@param`/`@returns`, `@internal` for exported-but-not-public, cross-reference with `{@link}` (see `[[feedback-jsdoc-conventions]]`).
 - `pnpm typecheck:examples` / `pnpm typecheck:guides` / `pnpm typecheck:packages` / `pnpm docs:api:check` / the full `pnpm test` all gate the final commit (the pre-push hook's `verify:quick` runs the first four) — Task 13 runs the entire gate explicitly so failures surface before the push, not during it.
-- `CHANGELOG.md`'s existing `## [0.17.0] - Unreleased` section (lines 7–123 as of this plan's writing) already describes a *different*, already-merged v0.17 initiative (multiphase `System`, typed scene registry, pause, retention) using the OLD names (`setScene`/`restoreScene`/`releaseScene`/`retainCurrent`) this spec renames. Task 12 rewrites that section in place to describe the final, post-redesign API — it is not historical text to leave alone.
-- `site/src/content/guide/shipping/v0-8-x-to-v0-9-0.mdx` is a versioned migration guide documenting an old (`v0.8`→`v0.9`) API rename — its `app.sceneManager.setScene(new TitleScene())` code block is deliberately historical (BEFORE/AFTER for a *different, already-released* transition) and is explicitly **not** touched by this slice, exactly like `CHANGELOG.md`'s already-released version entries below the `[0.17.0]` section.
+- `CHANGELOG.md`'s existing `## [0.17.0] - Unreleased` section (lines 7–123 as of this plan's writing) already describes a _different_, already-merged v0.17 initiative (multiphase `System`, typed scene registry, pause, retention) using the OLD names (`setScene`/`restoreScene`/`releaseScene`/`retainCurrent`) this spec renames. Task 12 rewrites that section in place to describe the final, post-redesign API — it is not historical text to leave alone.
+- `site/src/content/guide/shipping/v0-8-x-to-v0-9-0.mdx` is a versioned migration guide documenting an old (`v0.8`→`v0.9`) API rename — its `app.sceneManager.setScene(new TitleScene())` code block is deliberately historical (BEFORE/AFTER for a _different, already-released_ transition) and is explicitly **not** touched by this slice, exactly like `CHANGELOG.md`'s already-released version entries below the `[0.17.0]` section.
 
 ---
 
@@ -85,6 +85,7 @@ grep -rn "\.onLoad\b\|\.onUnload\b" src/ test/ examples/ site/src/ packages/
 Every hit from Step 1 must fall into exactly one of these buckets. Anything **not** on this list is a surprise — stop and investigate before continuing (it may be a genuine Slice 1–7 gap, not a Slice 8 sweep item; if so, name the file/line and the minimal fix rather than silently patching around it).
 
 **Expected `setScene`/`restoreScene`/`releaseScene`/`retainCurrent` hits (fixed by Tasks 2–11 below):**
+
 - `examples/application-scenes/multiple-scenes.ts` / `.js` (Task 2)
 - `examples/showcase/orb-dodge.ts` / `.js` (Task 3)
 - `packages/exojs-react/src/Scenes.tsx`, `src/useScene.ts` (Task 8)
@@ -95,11 +96,13 @@ Every hit from Step 1 must fall into exactly one of these buckets. Anything **no
 - `CHANGELOG.md` lines 7–123 (the `[0.17.0] - Unreleased` section) — rewritten by Task 12, not a stray reference.
 
 **Expected, deliberately excluded (do not touch):**
+
 - `site/src/content/guide/shipping/v0-8-x-to-v0-9-0.mdx` — historical `v0.8`→`v0.9` migration doc, unrelated API generation (see Global Constraints).
 - `CHANGELOG.md` below line 125 (`[0.15.2]` and earlier) — already-released version history.
 - Anything under `docs/superpowers/plans/` or `.workspace/` — planning documents, not shipped code or docs; a grep scoped to the paths in Step 1 should not touch them anyway (neither is included in the grep), which is intentional — don't widen the grep to include them.
 
 **Expected zero hits (confirms Slices 1–7 did their own job cleanly):**
+
 - `SetSceneOptions`, `RestoreSceneOptions`, `resolveSetSceneArgs`, `_rollbackSwitch`, `InstantSceneTransition` anywhere in `src/`, `test/`, `packages/`, `examples/`, `site/src/` outside the generated API-doc JSON files already listed above.
 - `SceneState.Paused`, `canPause(`, `canResume(` anywhere (these were never introduced by this spec — `Scene.onPause`/`onResume` are an orthogonal boolean flag, not state-machine values; a hit here means something reintroduced a state that was removed before Slice 1, which is a bug to fix in this slice, not a missed rename to sweep).
 - `Scene.onLoad`/`Scene.onUnload` **outside** `examples/application-scenes/scene-lifecycle.ts`/`.js` — that file is Task 4's the "one stale example" the spec (§2, revision note) names explicitly; every other hit is a bug.
@@ -113,10 +116,12 @@ No commit for this task — it is a checkpoint. Proceed to Task 2 only once ever
 ### Task 2: `examples/application-scenes/multiple-scenes.ts` — `setScene` → `change`
 
 **Files:**
+
 - Modify: `examples/application-scenes/multiple-scenes.ts`
 - Modify (generated): `examples/application-scenes/multiple-scenes.js`
 
 **Interfaces:**
+
 - Consumes: `SceneDirector.change<C>(target: C, options?: ChangeSceneOptions<InferSceneData<C>>): Promise<this>` (Slice 3).
 
 - [ ] **Step 1: Rewrite the two navigation call sites**
@@ -126,13 +131,13 @@ In `examples/application-scenes/multiple-scenes.ts`, both scenes call `setScene`
 `MenuScene.init()` currently has:
 
 ```ts
-        this.inputs.onTrigger(Keyboard.Space, () => {
-            void app.scenes.setScene(GameScene);
-        });
+this.inputs.onTrigger(Keyboard.Space, () => {
+  void app.scenes.setScene(GameScene);
+});
 
-        this.onTap = () => {
-            void app.scenes.setScene(GameScene);
-        };
+this.onTap = () => {
+  void app.scenes.setScene(GameScene);
+};
 ```
 
 Change both occurrences of `app.scenes.setScene(GameScene)` to `app.scenes.change(GameScene)`.
@@ -140,9 +145,9 @@ Change both occurrences of `app.scenes.setScene(GameScene)` to `app.scenes.chang
 `GameScene.init()` currently has:
 
 ```ts
-        this.inputs.onTrigger(Keyboard.Escape, () => {
-            void app.scenes.setScene(MenuScene);
-        });
+this.inputs.onTrigger(Keyboard.Escape, () => {
+  void app.scenes.setScene(MenuScene);
+});
 ```
 
 Change to `app.scenes.change(MenuScene)`.
@@ -174,10 +179,12 @@ git commit -m "fix(examples): migrate multiple-scenes to change() navigation (sc
 ### Task 3: `examples/showcase/orb-dodge.ts` — `setScene` → `change` + data wrapping
 
 **Files:**
+
 - Modify: `examples/showcase/orb-dodge.ts`
 - Modify (generated): `examples/showcase/orb-dodge.js`
 
 **Interfaces:**
+
 - Consumes: `SceneDirector.change<C>(target: C, options?: ChangeSceneOptions<InferSceneData<C>>): Promise<this>` (Slice 3). `GameOverData` (this file's own local interface, unchanged) becomes the `data` field of the options object rather than a bare second argument.
 
 - [ ] **Step 1: Rewrite the game-over transition (data-carrying call)**
@@ -185,19 +192,19 @@ git commit -m "fix(examples): migrate multiple-scenes to change() navigation (sc
 `PlayScene.update()` currently has:
 
 ```ts
-        if (gameEnded) {
-            void app.scenes.setScene(GameOverScene, { score: this.score, time: this.elapsed });
-            return;
-        }
+if (gameEnded) {
+  void app.scenes.setScene(GameOverScene, { score: this.score, time: this.elapsed });
+  return;
+}
 ```
 
 Change to:
 
 ```ts
-        if (gameEnded) {
-            void app.scenes.change(GameOverScene, { data: { score: this.score, time: this.elapsed } });
-            return;
-        }
+if (gameEnded) {
+  void app.scenes.change(GameOverScene, { data: { score: this.score, time: this.elapsed } });
+  return;
+}
 ```
 
 - [ ] **Step 2: Rewrite the restart transition (no-data call)**
@@ -205,17 +212,17 @@ Change to:
 `GameOverScene.init()` currently has:
 
 ```ts
-        const restart = (): void => {
-            void app.scenes.setScene(PlayScene);
-        };
+const restart = (): void => {
+  void app.scenes.setScene(PlayScene);
+};
 ```
 
 Change to:
 
 ```ts
-        const restart = (): void => {
-            void app.scenes.change(PlayScene);
-        };
+const restart = (): void => {
+  void app.scenes.change(PlayScene);
+};
 ```
 
 - [ ] **Step 3: Regenerate the `.js` sibling**
@@ -245,6 +252,7 @@ git commit -m "fix(examples): migrate orb-dodge to change() navigation with wrap
 ### Task 4: `examples/application-scenes/scene-lifecycle.ts` — replace removed `onLoad`/`onUnload`, fix illegal `async init()`
 
 **Files:**
+
 - Modify: `examples/application-scenes/scene-lifecycle.ts`
 - Modify (generated): `examples/application-scenes/scene-lifecycle.js`
 - Modify: `site/src/content/guide/runtime/scenes-and-lifecycle.mdx` (its lifecycle-hooks-in-order prose, so the two stay consistent — folded into this task rather than Task 5 since both describe the exact same removed/added hooks)
@@ -274,75 +282,75 @@ import { Application, Color, type RenderingContext, Scene, Text, Time, Timer } f
 // point for cross-cutting concerns (audio cues, analytics, HUD toggles) that
 // shouldn't live inside `init`/`destroy` themselves.
 class LifecycleScene extends Scene {
-    private events!: string[];
-    private counter = 0;
-    private drawCount = 0;
-    private timer!: Timer;
-    private text!: Text;
+  private events!: string[];
+  private counter = 0;
+  private drawCount = 0;
+  private timer!: Timer;
+  private text!: Text;
 
-    override async load(): Promise<void> {
-        // This scene is procedural — nothing to fetch — but a real scene would
-        // resolve its assets here before touching the scene graph, e.g.:
-        //   const data = (await this.loader.load(Asset.kind('json', 'level.json'))) as LevelData;
-        this.events = ['load'];
+  override async load(): Promise<void> {
+    // This scene is procedural — nothing to fetch — but a real scene would
+    // resolve its assets here before touching the scene graph, e.g.:
+    //   const data = (await this.loader.load(Asset.kind('json', 'level.json'))) as LevelData;
+    this.events = ['load'];
+  }
+
+  override init(): void {
+    const app = this.app;
+    if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
+    const { width, height } = app.canvas;
+
+    this.events.push('init');
+
+    this.onActivate.add(() => {
+      this.events.push('onActivate');
+    });
+
+    this.onSuspend.add(() => {
+      this.events.push('onSuspend');
+    });
+
+    this.timer = new Timer(Time.fromSeconds(1), true);
+
+    this.text = new Text('', { fillColor: Color.white, fontSize: 18 });
+    this.text.setAnchor(0.5);
+    this.text.setPosition(width / 2, height / 2);
+  }
+
+  override update(): void {
+    if (this.timer.expired) {
+      this.counter++;
+      this.events.push(`update ${this.counter}`);
+      this.timer.restart();
     }
+  }
 
-    override init(): void {
-        const app = this.app;
-        if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const { width, height } = app.canvas;
+  override draw(context: RenderingContext): void {
+    this.drawCount++;
+    context.backend.clear();
+    this.text.text = [...this.events.slice(-8), `draw ${this.drawCount}`].join('\n');
+    context.render(this.text);
+  }
 
-        this.events.push('init');
-
-        this.onActivate.add(() => {
-            this.events.push('onActivate');
-        });
-
-        this.onSuspend.add(() => {
-            this.events.push('onSuspend');
-        });
-
-        this.timer = new Timer(Time.fromSeconds(1), true);
-
-        this.text = new Text('', { fillColor: Color.white, fontSize: 18 });
-        this.text.setAnchor(0.5);
-        this.text.setPosition(width / 2, height / 2);
-    }
-
-    override update(): void {
-        if (this.timer.expired) {
-            this.counter++;
-            this.events.push(`update ${this.counter}`);
-            this.timer.restart();
-        }
-    }
-
-    override draw(context: RenderingContext): void {
-        this.drawCount++;
-        context.backend.clear();
-        this.text.text = [...this.events.slice(-8), `draw ${this.drawCount}`].join('\n');
-        context.render(this.text);
-    }
-
-    override destroy(): void {
-        // destroy() is the final teardown hook — no separate unload() step
-        // needed here since this scene holds no scene-private assets.
-        this.events.push('destroy');
-    }
+  override destroy(): void {
+    // destroy() is the final teardown hook — no separate unload() step
+    // needed here since this scene holds no scene-private assets.
+    this.events.push('destroy');
+  }
 }
 
 const app = new Application({
-    scenes: { LifecycleScene },
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizingMode: 'fit',
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
+  scenes: { LifecycleScene },
+  canvas: {
+    width: 1280,
+    height: 720,
+    mount: document.body,
+    sizingMode: 'fit',
+  },
+  clearColor: Color.black,
+  loader: {
+    basePath: 'assets/',
+  },
 });
 
 app.start(LifecycleScene);
@@ -423,6 +431,7 @@ git commit -m "fix(examples): replace removed Scene.onLoad/onUnload with onActiv
 ### Task 5: Guide sweep — `runtime/scenes-and-lifecycle.mdx` (switching-scenes section)
 
 **Files:**
+
 - Modify: `site/src/content/guide/runtime/scenes-and-lifecycle.mdx`
 
 **Context:** Task 4 already fixed this file's lifecycle-hooks-in-order section. This task fixes the remaining stale material: the "Switching scenes" section (instance-based `setScene` calls, predates even the already-shipped constructor-based navigation), the `init(loader)`/`load(loader)` code samples in the "load"/"init" sections, and the "unload and destroy" section's `setScene` mention and `unload(loader)` signature.
@@ -431,12 +440,14 @@ git commit -m "fix(examples): replace removed Scene.onLoad/onUnload with onActiv
 
 Line 47–50 currently:
 
-```md
+````md
 ```js
 const app = new Application();
 app.start(new TitleScene());
 ```
-```
+````
+
+````
 
 Change to:
 
@@ -444,8 +455,9 @@ Change to:
 ```js
 const app = new Application({ scenes: { TitleScene } });
 app.start(TitleScene);
-```
-```
+````
+
+````
 
 - [ ] **Step 2: Fix "Switching scenes"**
 
@@ -460,12 +472,13 @@ await app.scenes.setScene(new GameScene());
 
 // Replace with a fade transition
 await app.scenes.setScene(new GameScene(), { transition: { type: 'fade' } });
-```
+````
 
 `setScene` ends the current scene — running `unload` and `destroy` — and starts the new one. The optional `transition` argument adds a brief cross-fade so the cut is not jarring.
 
 For a typical app: a `MenuScene` calls `setScene(new GameScene())` when the player clicks Start. `app.scenes.currentScene` always reflects the currently active scene.
-```
+
+````
 
 Change to:
 
@@ -480,12 +493,13 @@ await app.scenes.change(GameScene);
 
 // Replace with a fade transition
 await app.scenes.change(GameScene, { transition: new FadeSceneTransition() });
-```
+````
 
 `change` ends the current scene — running `unload` and `destroy` — and starts a fresh instance of the target. The optional `transition` option (a `SceneTransition` instance, e.g. `FadeSceneTransition`) adds a brief cross-fade so the cut is not jarring.
 
 For a typical app: a `MenuScene` calls `this.app.scenes.change(GameScene)` when the player clicks Start. `app.scenes.currentScene` always reflects the currently active scene.
-```
+
+````
 
 - [ ] **Step 3: Fix the `init(loader)` code sample**
 
@@ -501,8 +515,9 @@ init(loader) {
     this.hero.setPosition(400, 300);
     this.addChild(this.hero);
 }
-```
-```
+````
+
+````
 
 Change to:
 
@@ -516,8 +531,9 @@ init() {
     this.hero.setPosition(400, 300);
     this.addChild(this.hero);
 }
-```
-```
+````
+
+````
 
 - [ ] **Step 4: Fix the `load(loader)` code sample**
 
@@ -535,8 +551,9 @@ class GameScene extends Scene {
         ]);
     }
 }
-```
-```
+````
+
+````
 
 Change to:
 
@@ -552,8 +569,9 @@ class GameScene extends Scene {
         ]);
     }
 }
-```
-```
+````
+
+````
 
 - [ ] **Step 5: Fix "unload and destroy"**
 
@@ -561,7 +579,7 @@ Line 304 currently:
 
 ```md
 The `unload` hook runs when the scene is replaced by `setScene` or when the application shuts down. Use it to release assets the scene was holding that no other scene needs.
-```
+````
 
 Change to:
 
@@ -571,7 +589,7 @@ The `unload` hook runs when the scene ends permanently — replaced by `change`/
 
 - [ ] **Step 6: Fix the two Examples-section prose mentions**
 
-Line 316 currently: `Switching between two scenes — a menu and a game — using \`app.scenes.setScene\`.` Change `app.scenes.setScene` to `app.scenes.change`.
+Line 316 currently: `Switching between two scenes — a menu and a game — using \`app.scenes.setScene\`.`Change`app.scenes.setScene`to`app.scenes.change`.
 
 Line 328 currently: `` `app.scenes.pause()`/`resume()` gate `update`; `draw` keeps running. `` — unaffected by this spec, leave as-is (pause/resume are a different, orthogonal feature this spec does not touch).
 
@@ -592,6 +610,7 @@ git commit -m "docs(guide): migrate scenes-and-lifecycle to change()/FadeSceneTr
 ### Task 6: Guide sweep — `runtime/application.mdx`
 
 **Files:**
+
 - Modify: `site/src/content/guide/runtime/application.mdx`
 
 - [ ] **Step 1: Fix the "Subsystems on the application" bullet**
@@ -625,6 +644,7 @@ git commit -m "docs(guide): fix stale setScene mention in application.mdx (scene
 ### Task 7: Guide sweep — `recipes/pause-menu.mdx` and `recipes/cinematics.mdx`
 
 **Files:**
+
 - Modify: `site/src/content/guide/recipes/pause-menu.mdx`
 - Modify: `site/src/content/guide/recipes/cinematics.mdx`
 
@@ -654,21 +674,23 @@ Change `app.scenes.setScene(...)` to `app.scenes.change(...)`.
 
 Lines 111–125 currently:
 
-```md
+````md
 If the pause menu offers options like "Return to main menu" or "Quit", use `app.scenes.setScene(...)` to navigate away — it unloads the current scene and loads the next one, optionally with a fade transition:
 
 ```js
 // Inside a resume button's onClick handler:
 resumeButton.onClick.add(() => {
-    this.togglePause(); // unpause first
+  this.togglePause(); // unpause first
 });
 
 // Inside a "main menu" button's onClick handler:
 mainMenuButton.onClick.add(() => {
-    this.app.scenes.setScene(MainMenuScene, { transition: { type: 'fade' } });
+  this.app.scenes.setScene(MainMenuScene, { transition: { type: 'fade' } });
 });
 ```
-```
+````
+
+````
 
 Change to:
 
@@ -685,8 +707,9 @@ resumeButton.onClick.add(() => {
 mainMenuButton.onClick.add(() => {
     this.app.scenes.change(MainMenuScene, { transition: new FadeSceneTransition() });
 });
-```
-```
+````
+
+````
 
 - [ ] **Step 4: Typecheck `pause-menu.mdx`**
 
@@ -698,11 +721,11 @@ Expected: no errors.
 ```bash
 git add site/src/content/guide/recipes/pause-menu.mdx
 git commit -m "docs(guide): migrate pause-menu recipe to change()/FadeSceneTransition (scene-transition slice 8)"
-```
+````
 
 - [ ] **Step 6: Fix `cinematics.mdx`'s intro paragraph and "Approach" section**
 
-Line 11 currently: `` ...and `app.scenes.setScene(...)` for transitioning between game states. `` — change `app.scenes.setScene(...)` to `app.scenes.change(...)`.
+Line 11 currently: ``...and `app.scenes.setScene(...)` for transitioning between game states.`` — change `app.scenes.setScene(...)` to `app.scenes.change(...)`.
 
 Line 15 currently:
 
@@ -720,12 +743,14 @@ A cinematic is a scene. It owns the sequence. Tweens drive every timed element �
 
 Lines 114–117 currently:
 
-```md
+````md
 ```js no-check
 // From the game scene — switch to the cinematic:
 this.app.scenes.setScene(CinematicScene);
 ```
-```
+````
+
+````
 
 Change `this.app.scenes.setScene(CinematicScene);` to `this.app.scenes.change(CinematicScene);`.
 
@@ -741,8 +766,9 @@ this.app.tweens.create(this.barSize)
         this.app.scenes.setScene(GameScene, { transition: { type: 'fade' } });
     })
     .start();
-```
-```
+````
+
+````
 
 Change the inner call to `this.app.scenes.change(GameScene, { transition: new FadeSceneTransition() });`.
 
@@ -766,8 +792,9 @@ init() {
         this.app.scenes.setScene(GameScene);
     });
 }
-```
-```
+````
+
+````
 
 Change both `this.app.scenes.setScene(GameScene);` occurrences to `this.app.scenes.change(GameScene);`.
 
@@ -783,8 +810,9 @@ this.inputs.onTrigger(Keyboard.Space, () => {
     // ... snap other properties ...
     this.app.scenes.setScene(GameScene);
 });
-```
-```
+````
+
+````
 
 Change `this.app.scenes.setScene(GameScene);` to `this.app.scenes.change(GameScene);`.
 
@@ -798,13 +826,14 @@ Expected: no errors for the main (non-`no-check`) fenced block; the `no-check` b
 ```bash
 git add site/src/content/guide/recipes/cinematics.mdx
 git commit -m "docs(guide): migrate cinematics recipe to change()/FadeSceneTransition (scene-transition slice 8)"
-```
+````
 
 ---
 
 ### Task 8: `packages/exojs-react` — `Scenes.tsx`, `useScene.ts`, and their tests
 
 **Files:**
+
 - Modify: `packages/exojs-react/src/Scenes.tsx`
 - Modify: `packages/exojs-react/src/useScene.ts`
 - Modify: `packages/exojs-react/test/Scenes.test.tsx`
@@ -812,6 +841,7 @@ git commit -m "docs(guide): migrate cinematics recipe to change()/FadeSceneTrans
 - Modify: `packages/exojs-react/test/support/mock-application.ts`
 
 **Interfaces:**
+
 - Consumes: `SceneDirector.change<C>(target: C, options?: ChangeSceneOptions<InferSceneData<C>>): Promise<this>` (Slice 3); `SceneTransitionSelection` (Slice 6, the union type covering `SceneTransition | SceneTransitionPhases | false`, used for the `transition` option since a React-side `<Scenes transition={...}>` should accept the same range of values `change()` itself accepts); `FadeSceneTransition` (Slice 7).
 
 - [ ] **Step 1: Rewrite `mock-application.ts`'s `MockSceneDirector`**
@@ -889,6 +919,7 @@ Change the `ScenesProps.transition` field type. Currently:
 ```ts
 import { ApplicationStatus, type Scene as ExoScene, type SceneTransition } from '@codexo/exojs';
 ```
+
 ```ts
 /** Props for the {@link Scenes} switch. */
 export interface ScenesProps {
@@ -906,6 +937,7 @@ Change to:
 ```ts
 import { ApplicationStatus, type Scene as ExoScene, type SceneTransitionSelection } from '@codexo/exojs';
 ```
+
 ```ts
 /** Props for the {@link Scenes} switch. */
 export interface ScenesProps {
@@ -920,7 +952,7 @@ export interface ScenesProps {
 
 Update the class JSDoc and `@example` (currently references `app.scenes.setScene()` and the old `{ type: 'fade' }` config object):
 
-```ts
+````ts
  * via `app.start()` (first activation) or `app.scenes.setScene()` (subsequent
  * switches, with the optional `transition`) — the declaration's `component`
  * constructor must be registered in `ApplicationOptions.scenes`. The active
@@ -944,11 +976,11 @@ Update the class JSDoc and `@example` (currently references `app.scenes.setScene
  * </ExoCanvas>
  * ```
  */
-```
+````
 
 to:
 
-```ts
+````ts
  * via `app.start()` (first activation) or `app.scenes.change()` (subsequent
  * switches, with the optional `transition`) — the declaration's `component`
  * constructor must be registered in `ApplicationOptions.scenes`. The active
@@ -974,7 +1006,7 @@ to:
  * </ExoCanvas>
  * ```
  */
-```
+````
 
 Update the `apply()` body and its catch-block comment:
 
@@ -1182,6 +1214,7 @@ git commit -m "fix(exojs-react): migrate to change()/FadeSceneTransition navigat
 ### Task 9: `packages/create-exo-app` game-starter template
 
 **Files:**
+
 - Modify: `packages/create-exo-app/templates/game-starter/src/scenes/GameScene.ts`
 - Modify: `packages/create-exo-app/templates/game-starter/src/scenes/GameOverScene.ts`
 
@@ -1190,13 +1223,13 @@ git commit -m "fix(exojs-react): migrate to change()/FadeSceneTransition navigat
 Line 43 currently:
 
 ```ts
-      void this.app!.scenes.setScene(GameOverScene, { score: Math.floor(this._elapsed) });
+void this.app!.scenes.setScene(GameOverScene, { score: Math.floor(this._elapsed) });
 ```
 
 Change to:
 
 ```ts
-      void this.app!.scenes.change(GameOverScene, { data: { score: Math.floor(this._elapsed) } });
+void this.app!.scenes.change(GameOverScene, { data: { score: Math.floor(this._elapsed) } });
 ```
 
 - [ ] **Step 2: Rewrite `GameOverScene.ts`'s navigation call**
@@ -1204,13 +1237,13 @@ Change to:
 Line 25 currently:
 
 ```ts
-      void this.app!.scenes.setScene(GameScene);
+void this.app!.scenes.setScene(GameScene);
 ```
 
 Change to:
 
 ```ts
-      void this.app!.scenes.change(GameScene);
+void this.app!.scenes.change(GameScene);
 ```
 
 - [ ] **Step 3: Typecheck the template**
@@ -1232,6 +1265,7 @@ git commit -m "fix(create-exo-app): migrate game-starter template to change() na
 ### Task 10: Guide sweep — `recipes/build-orb-dodge.mdx` and `integrations/react.mdx`
 
 **Files:**
+
 - Modify: `site/src/content/guide/recipes/build-orb-dodge.mdx`
 - Modify: `site/src/content/guide/integrations/react.mdx`
 
@@ -1239,11 +1273,11 @@ git commit -m "fix(create-exo-app): migrate game-starter template to change() na
 
 - [ ] **Step 1: Fix `build-orb-dodge.mdx`'s three prose mentions**
 
-Line 163 currently: `` Orbs that leave the canvas are also removed. After the loop, if `gameEnded` is true, call `setScene` to switch to the game-over screen. `` — change `` `setScene` `` to `` `change` ``.
+Line 163 currently: ``Orbs that leave the canvas are also removed. After the loop, if `gameEnded` is true, call `setScene` to switch to the game-over screen.`` — change `` `setScene` `` to `` `change` ``.
 
-Line 187 currently: `` `GameOverScene` declares its activation-data shape (`GameOverData`) and receives the final score and time as the second argument to `setScene` — `init(data)` reads `data.score` / `data.time` directly... `` — change to: `` ...and receives the final score and time via `change`'s `data` option — `init(data)` reads `data.score` / `data.time` directly... ``
+Line 187 currently: `` `GameOverScene` declares its activation-data shape (`GameOverData`) and receives the final score and time as the second argument to `setScene` — `init(data)` reads `data.score` / `data.time` directly... `` — change to: ``...and receives the final score and time via `change`'s `data` option — `init(data)` reads `data.score` / `data.time` directly...``
 
-Line 196 currently: `` When the player restarts, `setScene(PlayScene)` switches back. `` — change to: `` When the player restarts, `change(PlayScene)` switches back. ``
+Line 196 currently: ``When the player restarts, `setScene(PlayScene)` switches back.`` — change to: ``When the player restarts, `change(PlayScene)` switches back.``
 
 Line 211 currently:
 
@@ -1301,7 +1335,7 @@ applies to switches, not the first start.
 Line 256 currently:
 
 ```md
-  chapter explains `app.start`, `app.scenes.setScene`, transitions, and the hooks the React layer
+chapter explains `app.start`, `app.scenes.setScene`, transitions, and the hooks the React layer
 ```
 
 Change `` `app.scenes.setScene` `` to `` `app.scenes.change` ``.
@@ -1351,6 +1385,7 @@ git commit -m "docs(guide): migrate react integration guide to change()/FadeScen
 ### Task 11: Regenerate API docs
 
 **Files:**
+
 - Modify (generated): `site/src/content/api/*.json`
 
 **Context:** Slices 1–7 changed the engine's public export surface substantially (`SceneDirector.change`/`.restore`/`.unload`/`.preload` replace `setScene`/`restoreScene`/`releaseScene`; `SceneTransition`/`PhasedSceneTransition`/`SceneTransitionSession`/`FadeSceneTransition`/`CrossFadeSceneTransition`/`SlideSceneTransition` replace the old fade-only machinery; `Scene.onActivate`/`onSuspend` replace `onLoad`/`onUnload`; new error classes `AmbiguousSceneInstanceError` alongside the retained ones). The generated JSON under `site/src/content/api/` still reflects the pre-redesign surface (confirmed by Task 1's audit finding `set-scene-args.json`, `set-scene-options.json`, `retained-scene-conflict-error.json`, etc.) and must be regenerated wholesale — this is a mechanical build-artifact refresh, not a hand-edit.
@@ -1384,9 +1419,10 @@ If Step 1 produces no changes at all (every prior slice already regenerated docs
 ### Task 12: `CHANGELOG.md` — rewrite the `[0.17.0] - Unreleased` section
 
 **Files:**
+
 - Modify: `CHANGELOG.md`
 
-**Context:** The existing `[0.17.0] - Unreleased` section (lines 7–123) documents a different, already-merged v0.17 initiative (multiphase `System`, typed scene registry, pause, retention) using this spec's *old* names. This task rewrites it to describe the state after this redesign, keeping every bullet that describes behavior this spec doesn't touch (multiphase `System`, pause/`when`-policy, extension system bindings, `SceneInteraction`/`SceneAudio` facades, `PhysicsWorld.fixedUpdate`, scene-less applications) and updating or replacing every bullet this spec's renames/reworks affect.
+**Context:** The existing `[0.17.0] - Unreleased` section (lines 7–123) documents a different, already-merged v0.17 initiative (multiphase `System`, typed scene registry, pause, retention) using this spec's _old_ names. This task rewrites it to describe the state after this redesign, keeping every bullet that describes behavior this spec doesn't touch (multiphase `System`, pause/`when`-policy, extension system bindings, `SceneInteraction`/`SceneAudio` facades, `PhysicsWorld.fixedUpdate`, scene-less applications) and updating or replacing every bullet this spec's renames/reworks affect.
 
 - [ ] **Step 1: Re-check the current top of the file**
 

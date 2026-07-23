@@ -7,7 +7,7 @@
 **Architecture:**
 Group A adds three new files under `src/core/transitions/`, each a thin, focused subclass: `FadeSceneTransition`/`SlideSceneTransition` extend Slice 6's `PhasedSceneTransition` (declare `getPhaseRequirements()`, override `enter()`/`exit()`); `CrossFadeSceneTransition` extends Slice 5's full `SceneTransition` directly with its own private `SceneTransitionSession` implementation, per spec §3.9.2 (a true crossfade needs simultaneous snapshot+live blending, which the phase-split model cannot express). All three are pure rendering/timing logic with no navigation-lifecycle concerns of their own — the commit/rollback/claim machinery they ride on top of is entirely Slice 5/6's responsibility, already merged.
 
-Group B rewrites `Application.ts`'s startup/shutdown sequencing: a new private `_frameLoopActive` boolean becomes the *only* thing the per-frame `update()` method's top-level gate checks (replacing `this._status === ApplicationStatus.Running`), so the loop can run — and reschedule itself — while `_status` is still `Loading`, letting a frame-driven transition session progress during the very first `start()` call. Two new private helpers, `_startFrameLoop()`/`_stopFrameLoop()`, centralize every place the flag flips; `_stopFrameLoop()` additionally asks `SceneDirector` to abort whatever navigation is currently in flight (a new `SceneDirector._abortInFlightNavigation()` method, generalizing the existing "reject an in-flight fade's promise on destroy" pattern already shipped in `SceneDirector._dispose()`) before the loop's own bookkeeping is torn down, so a transition-driven `change()`/`restore()`/`start()` call in progress at shutdown time rejects cleanly instead of hanging.
+Group B rewrites `Application.ts`'s startup/shutdown sequencing: a new private `_frameLoopActive` boolean becomes the _only_ thing the per-frame `update()` method's top-level gate checks (replacing `this._status === ApplicationStatus.Running`), so the loop can run — and reschedule itself — while `_status` is still `Loading`, letting a frame-driven transition session progress during the very first `start()` call. Two new private helpers, `_startFrameLoop()`/`_stopFrameLoop()`, centralize every place the flag flips; `_stopFrameLoop()` additionally asks `SceneDirector` to abort whatever navigation is currently in flight (a new `SceneDirector._abortInFlightNavigation()` method, generalizing the existing "reject an in-flight fade's promise on destroy" pattern already shipped in `SceneDirector._dispose()`) before the loop's own bookkeeping is torn down, so a transition-driven `change()`/`restore()`/`start()` call in progress at shutdown time rejects cleanly instead of hanging.
 
 **Tech Stack:** TypeScript (strict), Vitest. Builds on the `SceneTransition`/`PhasedSceneTransition`/`SceneTransitionSession` runtime and the `change()`/`restore()`/`_navigationInFlight` navigation machinery from Slices 1–6 (merged, per this project's dependency ordering) and on `Easing`/`Ease` (`src/animation/Easing.ts`, already shipped, unrelated to this redesign).
 
@@ -16,6 +16,7 @@ Group B rewrites `Application.ts`'s startup/shutdown sequencing: a new private `
 This plan was written in a worktree branched directly off `origin/main @ b5aad1a3` — **before** Slices 1–6 of this same redesign exist in the codebase. Everything this plan cites as "the current `SceneDirector`/`Scene`/`SceneTypes`" (retention, `_navigationInFlight`, `_retained`, the old `{ type: 'fade' }` config-object `SceneTransition`, `Scene.onLoad`/`onUnload`, the `_transition`/`TransitionOverlayMesh` hardcoded-fade machinery in `SceneDirector.ts`) is the **pre-Slice-1 baseline**, not the code this slice actually executes against. By the time this plan is executed, Slices 1–6 will have replaced large parts of `SceneDirector.ts`/`SceneTypes.ts`/`Scene.ts` with the class-based `SceneTransition`/`PhasedSceneTransition` runtime, a `Ready` state, `change()`/`restore()` (renamed from `setScene()`/`restoreScene()`), preload, and `unload()`.
 
 Concretely, before starting **any** task below:
+
 1. Re-read `src/core/SceneDirector.ts`, `src/core/SceneTransition.ts` (or wherever Slice 5 placed it — grep for `class SceneTransition`), `src/core/PhasedSceneTransition.ts` (or wherever Slice 6 placed it — grep for `class PhasedSceneTransition`), and `src/core/SceneTypes.ts` **as they actually exist** at execution time.
 2. Confirm the exact navigation method names (`change`/`restore` vs. this plan's occasional `setScene`/`restoreScene` references — use whatever the merged code actually calls them), the exact `SceneTransition`/`PhasedSceneTransition` public/protected member names, and the exact internal fields `SceneDirector` uses to track an in-flight navigation, a claimed preload entry, a retained entry, and the active `SceneTransitionSession`.
 3. Where this plan's code differs from what you find, **the behavioral contract described in prose (and cited spec section) is authoritative — adapt names/call sites to match the real merged code**, not the other way around.
@@ -25,6 +26,7 @@ The "Assumed cross-slice API surface" section immediately below lists every plac
 ### Assumed cross-slice API surface (re-verify before implementing)
 
 **High confidence — spec gives literal code, Slices 5/6 produce this verbatim (spec §3, §3.9):**
+
 - `SceneTransitionOperation`, `SceneTransitionContext`, `SceneTransitionRequirements`, `SceneTransitionEnvironment`, `SceneTransitionFrame`, `SceneTransitionSession` — types.
 - `abstract class SceneTransition { getRequirements(context): SceneTransitionRequirements; beginSession(environment): SceneTransitionSession; protected abstract createSession(environment): SceneTransitionSession; }`.
 - `PhasedSceneTransitionOptions { duration?, easing?, placement? }`, `SceneTransitionPhaseRequirements { outgoingFrame, currentFrame }`, `SceneTransitionPhaseContext { phase, progress, easedProgress, presence, frame, rendering }`.
@@ -32,12 +34,14 @@ The "Assumed cross-slice API surface" section immediately below lists every plac
 - Assumed file locations: `src/core/SceneTransition.ts` (barrel-exported as `#core/SceneTransition`), `src/core/PhasedSceneTransition.ts` (`#core/PhasedSceneTransition`). **Grep for `class SceneTransition` / `class PhasedSceneTransition` first — adjust every import path in Group A below if Slice 5/6 chose different files.**
 
 **Medium confidence — reasonable rendering primitives Slice 5/6 must have added for phase-authored transitions to draw anything, exact names invented by this plan:**
+
 - `RenderingContext.drawOverlay(options: { color: Color; alpha: number }): void` — draws a fullscreen, screen-space solid-color quad. This is the natural replacement for the hardcoded `TransitionOverlayMesh`/`_renderTransitionOverlay()` machinery that lives in the **pre-Slice-1** `SceneDirector.ts` (read in full during this repo's verification pass — `Color.black` default, `220`ms default duration, linear progress, no easing curve applied) — used directly in the spec's own `FadeSceneTransition` code example (§3.9). **Grep `RenderingContext.ts` for `drawOverlay` — if Slice 5 named it differently (e.g. `drawFullscreenOverlay`, or exposed it only via `drawGeometry` + a full-screen quad), adapt Task 1/2's `enter()`/`exit()` bodies to call the real method with equivalent semantics (a screen-space quad tinted `color` at `alpha`).**
-- `RenderingContext.drawTexture(texture: RenderTexture, options?: { x?: number; y?: number; alpha?: number }): void` — draws a previously-captured/pooled `SceneTransitionFrame.outgoing`/`.current` texture at a pixel offset with optional alpha, used by `SlideSceneTransition` (texture translation) and `CrossFadeSceneTransition` (blend). **Grep for `drawTexture` / any texture-compositing helper on `RenderingContext` — Slice 5 needed *some* such primitive to implement `currentFrame: 'texture'` promotion (spec §3.9.1) at all, so one exists; adapt the call sites in Tasks 2/3 to its real signature.**
+- `RenderingContext.drawTexture(texture: RenderTexture, options?: { x?: number; y?: number; alpha?: number }): void` — draws a previously-captured/pooled `SceneTransitionFrame.outgoing`/`.current` texture at a pixel offset with optional alpha, used by `SlideSceneTransition` (texture translation) and `CrossFadeSceneTransition` (blend). **Grep for `drawTexture` / any texture-compositing helper on `RenderingContext` — Slice 5 needed _some_ such primitive to implement `currentFrame: 'texture'` promotion (spec §3.9.1) at all, so one exists; adapt the call sites in Tasks 2/3 to its real signature.**
 - `RenderingContext.screenView.getBounds(): Rectangle` (`{ left, top, right, bottom }`) — already shipped today (used by the pre-Slice-1 `SceneDirector._renderTransitionOverlay()` via `backend.view.getBounds()`); this plan uses the public `context.rendering.screenView.getBounds()` accessor (confirmed present on `RenderingContext` today: `public get screenView(): View`, `View.getBounds(): Rectangle`) to compute screen width/height for `SlideSceneTransition`'s off-screen offsets.
 
 **Low confidence — SceneDirector's internal in-flight-navigation state, invented by this plan for Task 9's `_abortInFlightNavigation()`, since Slice 5's exact field names for "the active session" / "a claimed preload entry" / "a claimed retained entry" don't exist anywhere yet to read:**
-- This plan assumes `SceneDirector` (post-Slice-5) holds *some* field referencing the currently-in-flight `SceneTransitionSession` (this plan calls it `_activeSession`), *some* per-navigation "was this specific claim (preload entry / retained entry) taken by the in-flight navigation" bookkeeping, and *some* way to reject the pending `change()`/`restore()`/`unload()` promise and flip a per-navigation `aborted` flag. Task 9 below spells out the exact shape it needs and is written so its own tests fail loudly (not silently pass) if the assumed shape doesn't match — **read this task's preamble carefully and adjust the private field names before writing any code.**
+
+- This plan assumes `SceneDirector` (post-Slice-5) holds _some_ field referencing the currently-in-flight `SceneTransitionSession` (this plan calls it `_activeSession`), _some_ per-navigation "was this specific claim (preload entry / retained entry) taken by the in-flight navigation" bookkeeping, and _some_ way to reject the pending `change()`/`restore()`/`unload()` promise and flip a per-navigation `aborted` flag. Task 9 below spells out the exact shape it needs and is written so its own tests fail loudly (not silently pass) if the assumed shape doesn't match — **read this task's preamble carefully and adjust the private field names before writing any code.**
 
 ---
 
@@ -94,10 +98,12 @@ test/core/
 ## Task 1: `FadeSceneTransition`
 
 **Files:**
+
 - Create: `src/core/transitions/FadeSceneTransition.ts`
 - Test: `test/core/transitions/fade-scene-transition.test.ts`
 
 **Interfaces:**
+
 - Consumes: `PhasedSceneTransition`, `PhasedSceneTransitionOptions`, `SceneTransitionPhaseContext`, `SceneTransitionPhaseRequirements` (`#core/PhasedSceneTransition` — verify exact path first, see the "Assumed cross-slice API surface" section), `Color` (`#core/Color`), `RenderingContext.drawOverlay` (verify exact name first).
 - Produces: `class FadeSceneTransition extends PhasedSceneTransition` — `public constructor(color?: Color, options?: PhasedSceneTransitionOptions)`, `public readonly color: Color`. Consumed by Task 4 (barrel export) and Task 10 (capstone integration test).
 
@@ -173,7 +179,7 @@ describe('FadeSceneTransition', () => {
     expect(fade.getRequirements(navContext)).toEqual({ outgoingFrame: 'none', currentFrame: 'direct' });
   });
 
-  test('exit(): draws the overlay at alpha = 1 - presence, in this transition\'s color', () => {
+  test("exit(): draws the overlay at alpha = 1 - presence, in this transition's color", () => {
     const fade = new TestableFadeSceneTransition();
     const drawOverlay = vi.fn();
     const context = stubContext({ phase: 'exit', presence: 0.25, rendering: { drawOverlay } as never });
@@ -283,20 +289,22 @@ git commit -m "feat(core): FadeSceneTransition built-in (Slice 7 Group A)"
 ## Task 2: `SlideSceneTransition`
 
 **Files:**
+
 - Create: `src/core/transitions/SlideSceneTransition.ts`
 - Test: `test/core/transitions/slide-scene-transition.test.ts`
 
 **Interfaces:**
+
 - Consumes: same `PhasedSceneTransition` surface as Task 1, plus `RenderingContext.drawTexture` (verify exact name), `View.getBounds()` (`#rendering/View`, already shipped) via `context.rendering.screenView.getBounds()`.
 - Produces: `SlideDirection = 'left' | 'right' | 'up' | 'down'`, `SlideMode = 'push' | 'cover' | 'reveal'`, `SlideSceneTransitionOptions extends PhasedSceneTransitionOptions { direction?: SlideDirection; mode?: SlideMode }`, `class SlideSceneTransition extends PhasedSceneTransition`.
 
-**Design decision (this task's own — the spec fixes only the constructor shape and mode/direction vocabulary in §8, not per-mode visual algorithms):** all three modes need `currentFrame: 'texture'` for at least one phase, because a `PhasedSceneTransition` can only *composite on top of* the live surface in `render()` — it cannot retroactively move already-drawn scene content, so any translation of the live scene requires the "current" surface to be a texture the transition can draw at an offset, never `'direct'`.
+**Design decision (this task's own — the spec fixes only the constructor shape and mode/direction vocabulary in §8, not per-mode visual algorithms):** all three modes need `currentFrame: 'texture'` for at least one phase, because a `PhasedSceneTransition` can only _composite on top of_ the live surface in `render()` — it cannot retroactively move already-drawn scene content, so any translation of the live scene requires the "current" surface to be a texture the transition can draw at an offset, never `'direct'`.
 
-- **`push`** (both phases animated, simplification documented below): exit slides the outgoing scene fully off-screen toward `direction`; enter slides the incoming scene in from the *opposite* edge to (0,0). Both phases: `{ outgoingFrame: 'none', currentFrame: 'texture' }`. Because `PhasedSceneTransition` phase-splits at the commit boundary (spec §3.9.2 — no simultaneous two-scene compositing outside a full `SceneTransition`), there is a one-frame gap at the exact commit instant where neither scene is on-screen (both fully off, briefly showing the clear color) — an accepted, documented simplification, the same category of known limitation the spec itself calls out for phase composition (§3.9's `placement` "pop" corollary).
+- **`push`** (both phases animated, simplification documented below): exit slides the outgoing scene fully off-screen toward `direction`; enter slides the incoming scene in from the _opposite_ edge to (0,0). Both phases: `{ outgoingFrame: 'none', currentFrame: 'texture' }`. Because `PhasedSceneTransition` phase-splits at the commit boundary (spec §3.9.2 — no simultaneous two-scene compositing outside a full `SceneTransition`), there is a one-frame gap at the exact commit instant where neither scene is on-screen (both fully off, briefly showing the clear color) — an accepted, documented simplification, the same category of known limitation the spec itself calls out for phase composition (§3.9's `placement` "pop" corollary).
 - **`reveal`** (only exit animated): the outgoing scene slides away toward `direction` to reveal the incoming scene once committed; enter is a no-op cut (the incoming scene is simply already there once the exit finishes and commit happens). Exit: `{ outgoingFrame: 'none', currentFrame: 'texture' }`; enter: `{ outgoingFrame: 'none', currentFrame: 'direct' }` (nothing to animate).
 - **`cover`** (only enter animated, mirror of reveal): the outgoing scene stays static and untouched during exit (a plain cut, `currentFrame: 'direct'`, empty `exit()` body); once committed, a frozen snapshot of the outgoing scene is drawn as a static background and the incoming scene's live texture slides in from `direction`'s opposite edge on top of it. Exit: `{ outgoingFrame: 'none', currentFrame: 'direct' }`; enter: `{ outgoingFrame: 'snapshot', currentFrame: 'texture' }`.
 
-`direction` names the edge the *outgoing* content exits toward (`'left'` ⇒ outgoing exits left, incoming — for `push` — enters from the right).
+`direction` names the edge the _outgoing_ content exits toward (`'left'` ⇒ outgoing exits left, incoming — for `push` — enters from the right).
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -319,7 +327,10 @@ class TestableSlideSceneTransition extends SlideSceneTransition {
 
 const navContext: SceneTransitionContext = { operation: 'change', hasOutgoingScene: true, hasIncomingScene: true };
 
-const stubRendering = (): { drawTexture: ReturnType<typeof vi.fn>; screenView: { getBounds: () => { left: number; top: number; right: number; bottom: number } } } => ({
+const stubRendering = (): {
+  drawTexture: ReturnType<typeof vi.fn>;
+  screenView: { getBounds: () => { left: number; top: number; right: number; bottom: number } };
+} => ({
   drawTexture: vi.fn(),
   screenView: { getBounds: () => ({ left: 0, top: 0, right: 800, bottom: 600 }) },
 });
@@ -607,16 +618,18 @@ git commit -m "feat(core): SlideSceneTransition built-in (Slice 7 Group A)"
 ## Task 3: `CrossFadeSceneTransition`
 
 **Files:**
+
 - Create: `src/core/transitions/CrossFadeSceneTransition.ts`
 - Test: `test/core/transitions/cross-fade-scene-transition.test.ts`
 
 **Interfaces:**
+
 - Consumes: `SceneTransition`, `SceneTransitionContext`, `SceneTransitionEnvironment`, `SceneTransitionFrame`, `SceneTransitionRequirements`, `SceneTransitionSession` (`#core/SceneTransition`), `RenderingContext`/`RenderingContext.drawTexture`, `Time` (`#core/Time`), `EasingFunction`/`Ease` (`#animation/Easing`).
 - Produces: `CrossFadeSceneTransitionOptions { duration?, easing? }`, `class CrossFadeSceneTransition extends SceneTransition`.
 
 Per spec §3.9.2, a true crossfade is **not** phase-split — it needs one continuous blend between a snapshot of the outgoing scene and the live incoming scene, with no "exit half"/"enter half" seam. It's a full `SceneTransition` subclass with its own hand-written `createSession()`.
 
-**Design decision (this task's own — spec fixes only `getRequirements()`'s values and `placement: 'scene'` in §8/§3.6, not the exact blend timing):** `environment.commit()` is called synchronously from inside `createSession()` (legal per spec §3.5.2 — `commit()` may be called synchronously from `createSession()`/`update()`/`render()`) so the incoming scene starts preparing immediately, with no "hold" phase the way `FadeSceneTransition` holds at its midpoint. The visible blend's `duration` timer starts counting only once `environment.committed` becomes `true`, not from session creation — otherwise an unpredictable fraction of the configured duration could elapse invisibly while `prepare()` is still in flight, making the actually-visible crossfade shorter than configured for slow-loading targets. Before commit, `frame.current` is still the *outgoing* scene (§3.7a: "before commit: the outgoing scene"), so `render()` simply draws it at full opacity and does not start blending yet. This also means `done` can only become `true` once `committed` is already `true` (never before), satisfying the spec's "`done` must never be true before `committed`" invariant (§3.5) by construction, not by an extra guard.
+**Design decision (this task's own — spec fixes only `getRequirements()`'s values and `placement: 'scene'` in §8/§3.6, not the exact blend timing):** `environment.commit()` is called synchronously from inside `createSession()` (legal per spec §3.5.2 — `commit()` may be called synchronously from `createSession()`/`update()`/`render()`) so the incoming scene starts preparing immediately, with no "hold" phase the way `FadeSceneTransition` holds at its midpoint. The visible blend's `duration` timer starts counting only once `environment.committed` becomes `true`, not from session creation — otherwise an unpredictable fraction of the configured duration could elapse invisibly while `prepare()` is still in flight, making the actually-visible crossfade shorter than configured for slow-loading targets. Before commit, `frame.current` is still the _outgoing_ scene (§3.7a: "before commit: the outgoing scene"), so `render()` simply draws it at full opacity and does not start blending yet. This also means `done` can only become `true` once `committed` is already `true` (never before), satisfying the spec's "`done` must never be true before `committed`" invariant (§3.5) by construction, not by an extra guard.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -774,12 +787,7 @@ Expected: FAIL — `#core/transitions/CrossFadeSceneTransition` does not exist y
 // src/core/transitions/CrossFadeSceneTransition.ts — full file
 import type { EasingFunction } from '#animation/Easing';
 import { Ease } from '#animation/Easing';
-import type {
-  SceneTransitionEnvironment,
-  SceneTransitionFrame,
-  SceneTransitionRequirements,
-  SceneTransitionSession,
-} from '#core/SceneTransition';
+import type { SceneTransitionEnvironment, SceneTransitionFrame, SceneTransitionRequirements, SceneTransitionSession } from '#core/SceneTransition';
 import { SceneTransition } from '#core/SceneTransition';
 import type { Time } from '#core/Time';
 import type { RenderingContext } from '#rendering/RenderingContext';
@@ -899,10 +907,12 @@ git commit -m "feat(core): CrossFadeSceneTransition built-in (Slice 7 Group A)"
 ## Task 4: Barrel exports
 
 **Files:**
+
 - Create: `src/core/transitions/index.ts`
 - Modify: `src/core/index.ts`
 
 **Interfaces:**
+
 - Consumes: Tasks 1–3's three classes and their `*Options` types.
 - Produces: `FadeSceneTransition`, `SlideSceneTransition`, `SlideDirection`, `SlideMode`, `SlideSceneTransitionOptions`, `CrossFadeSceneTransition`, `CrossFadeSceneTransitionOptions` importable from the package root, and from `#core/transitions`.
 
@@ -927,7 +937,7 @@ export { FadeSceneTransition } from './transitions/FadeSceneTransition';
 export { SlideSceneTransition, type SlideDirection, type SlideMode, type SlideSceneTransitionOptions } from './transitions/SlideSceneTransition';
 ```
 
-**Note:** the pre-Slice-1 baseline already has a *type-only* `FadeSceneTransition` exported from `./SceneTypes` (the old `{ type: 'fade' }` config-object interface) at this same barrel file — Slice 5/6 will already have removed that export as part of replacing the config-object transition model with the class-based one (spec §3.2/§3.3), so no name collision is expected by the time this task runs; if one is still present, that's a sign Slice 5/6 didn't fully land yet — stop and re-verify before proceeding, don't paper over it with a rename.
+**Note:** the pre-Slice-1 baseline already has a _type-only_ `FadeSceneTransition` exported from `./SceneTypes` (the old `{ type: 'fade' }` config-object interface) at this same barrel file — Slice 5/6 will already have removed that export as part of replacing the config-object transition model with the class-based one (spec §3.2/§3.3), so no name collision is expected by the time this task runs; if one is still present, that's a sign Slice 5/6 didn't fully land yet — stop and re-verify before proceeding, don't paper over it with a rename.
 
 - [ ] **Step 3: Typecheck**
 
@@ -953,10 +963,12 @@ git commit -m "feat(core): export built-in scene transitions from the package ro
 ## Task 5: `_frameLoopActive` flag, `_startFrameLoop()`, decouple `update()`'s gate, rewire `start()`
 
 **Files:**
+
 - Modify: `src/core/Application.ts`
 - Test: `test/core/application-frame-loop.test.ts` (new)
 
 **Interfaces:**
+
 - Produces: `private _frameLoopActive: boolean`, `private _startFrameLoop(): void`. Consumed by Task 6 (`_stopFrameLoop()`), Task 7, Task 8, Task 9.
 
 Re-verify against the actual merged `Application.ts` before starting: this task's line-number references below are from this worktree's pre-Slice-1 baseline (`Application.ts`, 1260 lines) — Slice 5/6 may have touched `start()`'s body already (e.g. renaming `this.scenes.setScene(...)` to `this.scenes.change(...)`, per the drift note at the top of this plan). Apply this task's diff against whatever `start()`/`update()` actually look like, preserving their surrounding logic untouched.
@@ -1145,27 +1157,28 @@ to:
     if (this._frameLoopActive) {
 ```
 
-Change the two `if (this._status === ApplicationStatus.Running)` checks that guard rescheduling *inside* `update()` (the `pauseOnHidden` early-return branch, and the `finally` block's reschedule) to `if (this._frameLoopActive)` as well — both currently duplicate the outer gate's condition and must stay in lockstep with it:
+Change the two `if (this._status === ApplicationStatus.Running)` checks that guard rescheduling _inside_ `update()` (the `pauseOnHidden` early-return branch, and the `finally` block's reschedule) to `if (this._frameLoopActive)` as well — both currently duplicate the outer gate's condition and must stay in lockstep with it:
 
 ```ts
-      if (this.pauseOnHidden && !this._documentVisible) {
-        this._frameClock.restart();
-        this._fixed.reset();
-        this._frameRequest = requestAnimationFrame(this._updateHandler);
+if (this.pauseOnHidden && !this._documentVisible) {
+  this._frameClock.restart();
+  this._fixed.reset();
+  this._frameRequest = requestAnimationFrame(this._updateHandler);
 
-        return this;
-      }
+  return this;
+}
 ```
+
 (this inner branch has no status/flag check of its own today — leave it as-is, it already only runs inside the now-`_frameLoopActive`-gated outer `if`)
 
 ```ts
-        // RAF rescheduling always happens unless the guard halted the loop —
-        // this is what keeps the canvas alive through a throwing frame.
-        if (this._frameLoopActive) {
-          this._frameRequest = requestAnimationFrame(this._updateHandler);
-          this._frameClock.restart();
-          this._frameCount++;
-        }
+// RAF rescheduling always happens unless the guard halted the loop —
+// this is what keeps the canvas alive through a throwing frame.
+if (this._frameLoopActive) {
+  this._frameRequest = requestAnimationFrame(this._updateHandler);
+  this._frameClock.restart();
+  this._frameCount++;
+}
 ```
 
 Rewire `start()`:
@@ -1244,11 +1257,13 @@ the very first activation instead of deadlocking (definition spec §3.7)."
 ## Task 6: `_stopFrameLoop()` — fatal frame error, `stop()`, `destroy()` during `Loading`
 
 **Files:**
+
 - Modify: `src/core/Application.ts`
 - Modify: `test/core/application-frame-guard.test.ts` (fix the now-expected `_frameLoopActive` gap from Task 5, Step 5)
 - Test: `test/core/application-frame-loop.test.ts` (extend)
 
 **Interfaces:**
+
 - Consumes: `_frameLoopActive` (Task 5).
 - Produces: `private _stopFrameLoop(): void`. Consumed by Task 7 (fatal error path), Task 8/9 (navigation abort).
 
@@ -1390,21 +1405,21 @@ Add the private helper next to `_startFrameLoop()`:
 Update `_handleFrameError`'s fatal branch:
 
 ```ts
-    if (fatal) {
-      cancelAnimationFrame(this._frameRequest);
-      this._status = ApplicationStatus.Stopped;
-      logger.error(`Frame loop halted after ${maxConsecutiveFrameErrors} consecutive frame errors.`, { source: 'core', error: normalized });
-    }
+if (fatal) {
+  cancelAnimationFrame(this._frameRequest);
+  this._status = ApplicationStatus.Stopped;
+  logger.error(`Frame loop halted after ${maxConsecutiveFrameErrors} consecutive frame errors.`, { source: 'core', error: normalized });
+}
 ```
 
 to:
 
 ```ts
-    if (fatal) {
-      this._stopFrameLoop();
-      this._status = ApplicationStatus.Stopped;
-      logger.error(`Frame loop halted after ${maxConsecutiveFrameErrors} consecutive frame errors.`, { source: 'core', error: normalized });
-    }
+if (fatal) {
+  this._stopFrameLoop();
+  this._status = ApplicationStatus.Stopped;
+  logger.error(`Frame loop halted after ${maxConsecutiveFrameErrors} consecutive frame errors.`, { source: 'core', error: normalized });
+}
 ```
 
 Update `stop()`:
@@ -1496,11 +1511,13 @@ startup window instead of silently no-op'ing (definition spec §3.7)."
 ## Task 7: `SceneDirector._abortInFlightNavigation()`
 
 **Files:**
+
 - Modify: `src/core/SceneDirector.ts`
 - Modify: `src/core/SceneTypes.ts`
 - Test: `test/core/scene-director.test.ts` (extend)
 
 **Interfaces:**
+
 - Consumes: whatever Slice 5 actually named its in-flight-navigation/session/claim-tracking internals — **read the "Assumed cross-slice API surface" section's "Low confidence" bullet before starting this task and adjust every private-field reference below to match the real code.**
 - Produces: `SceneNavigationAbortedError` (new, `SceneTypes.ts`), `SceneDirector._abortInFlightNavigation(reason: Error): boolean` (`@internal`) — returns `true` if a navigation was actually in flight and got aborted, `false` if there was nothing to abort (the ordinary case — no navigation in flight at all, or a navigation already past its atomic commit boundary with no session left to interrupt). Consumed by Task 8 (`Application._stopFrameLoop()` wiring).
 
@@ -1701,10 +1718,12 @@ spec §3.5.1 rather than discarding them (definition spec §3.7)."
 ## Task 8: Wire `Application._stopFrameLoop()` to the abort mechanism
 
 **Files:**
+
 - Modify: `src/core/Application.ts`
 - Modify: `test/core/application-lifecycle.test.ts` (mocked-`SceneDirector` harness)
 
 **Interfaces:**
+
 - Consumes: `SceneDirector._abortInFlightNavigation(reason)` (Task 7), `SceneNavigationAbortedError` (Task 7).
 - Produces: `_stopFrameLoop()` now calls `this.scenes._abortInFlightNavigation(...)`; `stop()` skips its own `_clearScene()` call when the abort already handled everything (nothing committed to unload).
 
@@ -1715,13 +1734,13 @@ This task is the Application-side half of Task 7's contract, tested with `applic
 In `test/core/application-lifecycle.test.ts`, find `const sceneDirector = { update: vi.fn(), setScene: vi.fn()..., _clearScene: vi.fn()..., destroy: vi.fn() };` (rename `setScene` to whatever Slice 1–6 actually calls it by execution time) and add:
 
 ```ts
-  const sceneDirector = {
-    update: vi.fn(),
-    setScene: vi.fn().mockResolvedValue(undefined),
-    _clearScene: vi.fn().mockResolvedValue(undefined),
-    _abortInFlightNavigation: vi.fn().mockReturnValue(false),
-    destroy: vi.fn(),
-  };
+const sceneDirector = {
+  update: vi.fn(),
+  setScene: vi.fn().mockResolvedValue(undefined),
+  _clearScene: vi.fn().mockResolvedValue(undefined),
+  _abortInFlightNavigation: vi.fn().mockReturnValue(false),
+  destroy: vi.fn(),
+};
 ```
 
 - [ ] **Step 2: Write the failing tests**
@@ -1847,11 +1866,11 @@ Update `stop()`:
 Update `_handleFrameError`'s fatal branch, which currently ignores `_stopFrameLoop()`'s return value (correct — a fatal frame error must never call `_clearScene()`/unload the scene per the existing, deliberate design; it only needs the loop halted and the abort mechanism run for whatever the return value's side effect already did):
 
 ```ts
-    if (fatal) {
-      this._stopFrameLoop();
-      this._status = ApplicationStatus.Stopped;
-      logger.error(`Frame loop halted after ${maxConsecutiveFrameErrors} consecutive frame errors.`, { source: 'core', error: normalized });
-    }
+if (fatal) {
+  this._stopFrameLoop();
+  this._status = ApplicationStatus.Stopped;
+  logger.error(`Frame loop halted after ${maxConsecutiveFrameErrors} consecutive frame errors.`, { source: 'core', error: normalized });
+}
 ```
 
 (unchanged from Task 6 — `_stopFrameLoop()`'s new `boolean` return is simply unused here, which is fine; TypeScript does not require consuming a non-`void` return value.)
@@ -1888,9 +1907,11 @@ left the pending change()/restore() promise hanging forever."
 ## Task 9: Integration test — abort mechanism with a real `SceneDirector` and a custom test `SceneTransition`
 
 **Files:**
+
 - Test: `test/core/application-frame-loop.test.ts` (extend)
 
 **Interfaces:**
+
 - Consumes: real `Application`, real `SceneDirector` (only WebGL2/WebGPU backends mocked, matching `application-start.test.ts`'s pattern), a custom `SceneTransition` subclass with a controllable `update()` (per this slice's brief — this test needs no built-in transition to exist, proving Group B stands on its own).
 
 This is the test the prompt calls out explicitly: prove the full contract end-to-end using nothing but the base `SceneTransition` class (already shipped by Slice 5), without depending on Group A's `FadeSceneTransition`/`SlideSceneTransition`/`CrossFadeSceneTransition` at all.
@@ -1981,9 +2002,11 @@ git commit -m "test(core): end-to-end coverage for aborting a mid-transition app
 ## Task 10: Capstone — a real `FadeSceneTransition` drives the very first `start()` call end-to-end
 
 **Files:**
+
 - Test: `test/core/application-transition-startup.test.ts` (new)
 
 **Interfaces:**
+
 - Consumes: `Application` (Group B), `FadeSceneTransition` (Group A Task 1), `Scene`.
 
 This is the integration test that ties Group A and Group B together — the scenario the prompt calls out as "what makes 'use a real Fade on the very first `start()` call' actually work end-to-end." Nothing in Tasks 1–9 individually proves this; each proves its own half of the contract in isolation.
@@ -2120,6 +2143,7 @@ no longer deadlocks on the first frame-driven session (definition spec §3.7)."
 ## Self-Review
 
 **1. Spec coverage.**
+
 - §8 (`FadeSceneTransition`, `CrossFadeSceneTransition`, `SlideSceneTransition`) → Tasks 1, 3, 2 respectively. ✓
 - §3.9/§3.9.1 (`PhasedSceneTransition` authoring surface, requirements lattice, `direct → texture` promotion) → consumed (not re-implemented) by Tasks 1/2; Task 2's `push` mode documents the one-frame commit-boundary gap the phase-split model implies, matching §3.9's own "placement pop" precedent for known, documented phase-composition limitations. ✓
 - §3.9.2 (why CrossFade is a full `SceneTransition`, not phase-split) → Task 3's design-decision note cites this directly and implements accordingly. ✓

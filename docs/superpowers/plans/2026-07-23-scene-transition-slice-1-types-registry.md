@@ -4,14 +4,14 @@
 
 **Goal:** Land the pure type-level foundation the other 7 slices of `.workspace/specs/2026-07-23-scene-transition-lifecycle-design.md` build on, with **zero navigation-behavior change**: `Scene<Data, AppLike>` + `ApplicationOf<T>` (§6.2) so project code can type `this.app` as its own `Application` subclass; `SceneRegistryShape<Registry>` / `SceneRegistration<C>` / `ConstructorOf<R>` (§6.1) so `ApplicationOptions.scenes` becomes a real, bidirectional, typed registry instead of a diagnostics-only `Record<string, AnySceneConstructor>`; `Application<Registry>` as a generic class; and a bidirectional (constructor ↔ key) registry index inside `SceneDirector`, stored but not yet consumed by any navigation method. `setScene()` / `restoreScene()` / `releaseScene()` keep their exact current signatures and behavior — every existing test in `scene-director.test.ts`, `scene.test.ts`, and `application.test.ts` must keep passing completely unmodified.
 
-**Architecture:** Six tasks, ordered strictly by compile dependency (each task must leave the whole repo green before the next starts — there is a real ordering constraint here, not just a stylistic one, detailed below). `SceneTypes.ts` first gains the pure registry-shape types (`SceneRegistration`/`SceneRegistryShape`/`ConstructorOf`), which have no dependency on `Application`. Next, `SceneTypes.ts`'s `validateSceneRegistry()` is rewritten to accept the new descriptor form and return a bidirectional `SceneRegistryIndex` (`byConstructor`/`byKey`), and `SceneDirector` becomes `SceneDirector<Registry>` to store it — these two changes are inseparable (they're the only producer/consumer pair in the codebase) and land in one task. Only *then* can `Application` become `Application<Registry>` (it needs `SceneDirector<Registry>` to already exist for its own `scenes` field type). Only *then* can `SceneTypes.ts` add `ApplicationLike`/`ApplicationOf<T>` (they reference `Application<any>`, which doesn't type-check against a non-generic `Application`). Only *then* can `Scene<Data, AppLike>` be added to `Scene.ts` (its default type parameter is `Application`, which must already accept a type argument). A final task exports everything from `src/core/index.ts`, regenerates the two root-export snapshot tests and the API docs, and runs the full verification gate.
+**Architecture:** Six tasks, ordered strictly by compile dependency (each task must leave the whole repo green before the next starts — there is a real ordering constraint here, not just a stylistic one, detailed below). `SceneTypes.ts` first gains the pure registry-shape types (`SceneRegistration`/`SceneRegistryShape`/`ConstructorOf`), which have no dependency on `Application`. Next, `SceneTypes.ts`'s `validateSceneRegistry()` is rewritten to accept the new descriptor form and return a bidirectional `SceneRegistryIndex` (`byConstructor`/`byKey`), and `SceneDirector` becomes `SceneDirector<Registry>` to store it — these two changes are inseparable (they're the only producer/consumer pair in the codebase) and land in one task. Only _then_ can `Application` become `Application<Registry>` (it needs `SceneDirector<Registry>` to already exist for its own `scenes` field type). Only _then_ can `SceneTypes.ts` add `ApplicationLike`/`ApplicationOf<T>` (they reference `Application<any>`, which doesn't type-check against a non-generic `Application`). Only _then_ can `Scene<Data, AppLike>` be added to `Scene.ts` (its default type parameter is `Application`, which must already accept a type argument). A final task exports everything from `src/core/index.ts`, regenerates the two root-export snapshot tests and the API docs, and runs the full verification gate.
 
 **Tech Stack:** TypeScript (strict), Vitest. Builds on `origin/main @ b5aad1a3` (this worktree's base, includes PR #402/#403 — scene-pause flag separation, `onStateChange` coverage). Baseline: `pnpm test:core` green at 318 files / 5083 tests / 0 failures.
 
 ## Global Constraints
 
 - Clean breaks only — no deprecated aliases, no shims (pre-1.0 policy). This slice is purely additive, though: every new generic parameter has a default that reproduces today's exact behavior for existing call sites, so nothing existing needs a migration in this slice.
-- **No navigation-method changes.** `SceneDirector.setScene()`/`restoreScene()`/`releaseScene()` keep their exact current signatures, JSDoc, and behavior. Every pre-existing test in `test/core/scene-director.test.ts`, `test/core/scene.test.ts`, and `test/core/application.test.ts` must keep passing byte-for-byte unmodified — this plan only *adds* tests to those files, it never edits an existing one.
+- **No navigation-method changes.** `SceneDirector.setScene()`/`restoreScene()`/`releaseScene()` keep their exact current signatures, JSDoc, and behavior. Every pre-existing test in `test/core/scene-director.test.ts`, `test/core/scene.test.ts`, and `test/core/application.test.ts` must keep passing byte-for-byte unmodified — this plan only _adds_ tests to those files, it never edits an existing one.
 - `SceneRegistration<C>`'s `transition` field is typed `unknown` for this slice, with a `// TODO(slice 6): SceneTransitionSelection` comment — Slice 6's own plan (`2026-07-23-scene-transition-slice-6-phase-composition-rendering.md`, Task 6) already greps for and replaces exactly this placeholder shape, so the comment text and field shape below must match verbatim.
 - The bidirectional registry (`SceneRegistryIndex.byKey`) is stored but **not consumed by any public method yet** — reserved for Slice 3's key-based `change()`/`restore()`. Slice 3's own plan already anticipates Slice 1 may not name this exactly as it guessed (`.resolve(key)`) and explicitly instructs its own implementer to adapt to whatever Slice 1 actually shipped — so this plan is free to use the clearer `byConstructor`/`byKey` map pair (matching this slice's own brief: "storage/lookup needs to become bidirectional (key ↔ constructor)") without needing to match that guess.
 - `Application<Registry extends SceneRegistryShape<Registry> = {}>` — the default is `{}`, exactly as specified in spec §6.1's own code block. (Slice 3's plan independently guessed `Record<string, never>` as a placeholder default while explicitly flagging it as an assumption to verify against Slice 1's real code — `{}` is correct per the authoritative spec and is what this plan uses throughout.)
@@ -401,10 +401,7 @@ const isSceneRegistrationDescriptor = (value: unknown): value is { scene: AnySce
  * key, in either form. Dev builds only; production builds skip validation.
  * @internal
  */
-export function validateSceneRegistry(
-  scenes: Record<string, SceneRegistration<AnySceneConstructor>> | undefined,
-  sceneBase: typeof Scene,
-): SceneRegistryIndex {
+export function validateSceneRegistry(scenes: Record<string, SceneRegistration<AnySceneConstructor>> | undefined, sceneBase: typeof Scene): SceneRegistryIndex {
   const byConstructor = new Map<AnySceneConstructor, string>();
   const byKey = new Map<string, AnySceneConstructor>();
 
@@ -516,17 +513,17 @@ to:
 Change the two `_registry` usages inside `setScene()`:
 
 ```ts
-      if (__DEV__ && !this._registry.has(target)) {
-        throw new UnregisteredSceneError(target.name, [...this._registry.values()]);
-      }
+if (__DEV__ && !this._registry.has(target)) {
+  throw new UnregisteredSceneError(target.name, [...this._registry.values()]);
+}
 ```
 
 to:
 
 ```ts
-      if (__DEV__ && !this._registry.byConstructor.has(target)) {
-        throw new UnregisteredSceneError(target.name, [...this._registry.byConstructor.values()]);
-      }
+if (__DEV__ && !this._registry.byConstructor.has(target)) {
+  throw new UnregisteredSceneError(target.name, [...this._registry.byConstructor.values()]);
+}
 ```
 
 Finally, add one sentence to the class-level JSDoc (currently starting `"Single-active-scene controller owned by {@link Application}. Holds at most one active {@link Scene} ..."`) — insert after the existing first paragraph, before the "There is no scene stack" paragraph:
@@ -573,26 +570,26 @@ import {
 Append a new `describe` block, right after the existing `'constructor throws DuplicateSceneRegistrationError naming both conflicting keys'` test:
 
 ```ts
-  describe('registry — descriptor form (spec §6.1)', () => {
-    test('accepts a descriptor-form registration ({ scene, transition }) exactly like a bare constructor', async () => {
-      const TestScene = makeSceneClass();
-      const manager = new SceneDirector(createApplicationStub(), { test: { scene: TestScene, transition: 'placeholder' } });
+describe('registry — descriptor form (spec §6.1)', () => {
+  test('accepts a descriptor-form registration ({ scene, transition }) exactly like a bare constructor', async () => {
+    const TestScene = makeSceneClass();
+    const manager = new SceneDirector(createApplicationStub(), { test: { scene: TestScene, transition: 'placeholder' } });
 
-      await expect(manager.setScene(TestScene)).resolves.toBe(manager);
-    });
-
-    test('rejects a duplicate constructor registered under two keys across mixed forms', () => {
-      const DupScene = makeSceneClass();
-
-      expect(() => new SceneDirector(createApplicationStub(), { first: DupScene, second: { scene: DupScene } })).toThrow(DuplicateSceneRegistrationError);
-    });
-
-    test('rejects an invalid descriptor whose scene is not a Scene subclass', () => {
-      class NotAScene {}
-
-      expect(() => new SceneDirector(createApplicationStub(), { bad: { scene: NotAScene as never } })).toThrow(InvalidSceneRegistrationError);
-    });
+    await expect(manager.setScene(TestScene)).resolves.toBe(manager);
   });
+
+  test('rejects a duplicate constructor registered under two keys across mixed forms', () => {
+    const DupScene = makeSceneClass();
+
+    expect(() => new SceneDirector(createApplicationStub(), { first: DupScene, second: { scene: DupScene } })).toThrow(DuplicateSceneRegistrationError);
+  });
+
+  test('rejects an invalid descriptor whose scene is not a Scene subclass', () => {
+    class NotAScene {}
+
+    expect(() => new SceneDirector(createApplicationStub(), { bad: { scene: NotAScene as never } })).toThrow(InvalidSceneRegistrationError);
+  });
+});
 ```
 
 - [ ] **Step 8: Run to verify the new tests pass**
@@ -851,13 +848,13 @@ to:
 Change the `SceneDirector` construction call:
 
 ```ts
-    this.scenes = new SceneDirector(this, appSettings.scenes);
+this.scenes = new SceneDirector(this, appSettings.scenes);
 ```
 
 to:
 
 ```ts
-    this.scenes = new SceneDirector<Registry>(this, appSettings.scenes);
+this.scenes = new SceneDirector<Registry>(this, appSettings.scenes);
 ```
 
 Leave every other line of `Application.ts` — including both `start()` overloads, `AnySceneConstructor`'s other use there, and everything else in the 1260-line file — completely untouched.
@@ -915,7 +912,16 @@ to:
 ```ts
 import { Application } from '#core/Application';
 import { Scene } from '#core/Scene';
-import type { AnySceneConstructor, ApplicationLike, ApplicationOf, ConstructorOf, InferSceneData, SceneRegistration, SceneRegistryShape, SetSceneArgs } from '#core/SceneTypes';
+import type {
+  AnySceneConstructor,
+  ApplicationLike,
+  ApplicationOf,
+  ConstructorOf,
+  InferSceneData,
+  SceneRegistration,
+  SceneRegistryShape,
+  SetSceneArgs,
+} from '#core/SceneTypes';
 ```
 
 Then append, before the final `export {};`:
@@ -1000,14 +1006,13 @@ export type ApplicationLike = Application<any> | (abstract new (...args: any[]) 
  * The cross-file `import type` this introduces is a type-only module cycle —
  * unproblematic, erased entirely at compile time.
  */
-export type ApplicationOf<T extends ApplicationLike> =
-  T extends abstract new (...args: any[]) => infer Instance
-    ? Instance extends Application<any>
-      ? Instance
-      : never
-    : T extends Application<any>
-      ? T
-      : never;
+export type ApplicationOf<T extends ApplicationLike> = T extends abstract new (...args: any[]) => infer Instance
+  ? Instance extends Application<any>
+    ? Instance
+    : never
+  : T extends Application<any>
+    ? T
+    : never;
 /* eslint-enable @typescript-eslint/no-explicit-any */
 ```
 
@@ -1067,17 +1072,17 @@ declare class CustomApp extends Application {}
 Then append a new `describe` block right after the existing `describe('app accessor', ...)` block (after its closing `});` around line 189):
 
 ```ts
-  describe('app accessor with a project-specific AppLike (compile-time-only distinction)', () => {
-    class CustomAppScene extends Scene<void, CustomApp> {}
+describe('app accessor with a project-specific AppLike (compile-time-only distinction)', () => {
+  class CustomAppScene extends Scene<void, CustomApp> {}
 
-    test('returns the same attached instance regardless of the declared AppLike generic', () => {
-      const scene = new CustomAppScene();
+  test('returns the same attached instance regardless of the declared AppLike generic', () => {
+    const scene = new CustomAppScene();
 
-      scene._attach(fakeApp, makeFakeScope());
+    scene._attach(fakeApp, makeFakeScope());
 
-      expect(scene.app).toBe(fakeApp);
-    });
+    expect(scene.app).toBe(fakeApp);
   });
+});
 ```
 
 (`declare class CustomApp` produces no runtime code — it exists only as a type argument for `Scene<void, CustomApp>`; the test still constructs a real `CustomAppScene` and attaches the file's existing `fakeApp` stub, proving the getter's actual runtime behavior — return `this._app`, or throw before attachment — is unaffected by which `AppLike` a subclass declares. `declare class` is restricted to module/namespace scope in TypeScript — confirmed via `error TS1184: Modifiers cannot appear here` when attempted directly inside a block — hence its placement at the top of the file rather than inside the `describe` callback.)
@@ -1478,6 +1483,7 @@ git commit -m "docs: export scene-registry/AppLike types from package root; rege
 **Type consistency check:** `SceneRegistryIndex` (Task 2) is used identically in `SceneDirector.ts`'s field type and both call sites (`.byConstructor`); `SceneRegistration<C>`/`ConstructorOf<R>` (Task 1) use the exact same field name (`scene`) the real spec code and Slice 6's plan both use; `ApplicationOf<AppLike>` (Task 4) is used identically for `Scene`'s `_app` field, `app` getter return type, and `_attach`'s internal cast (Task 5) — no name drifted between where a type is produced and where it's consumed. `Application<Registry>`'s default (`= {}`) and `SceneDirector<Registry>`'s default (`= {}`) match each other and the spec exactly.
 
 **Empirically verified during planning (not just reasoned about), via throwaway `tsc --noEmit --strict` repros against isolated snippets in the scratchpad directory — never against the real engine source, and no engine file was modified to produce these results:**
+
 1. An `interface` with no index signature satisfies `Registry extends SceneRegistryShape<Registry>` as both an inferred argument and an explicit type argument.
 2. A `Registry`-typed generic value is assignable to a plainly-typed `Record<string, SceneRegistration<AnySceneConstructor>>` parameter (this is why `validateSceneRegistry` itself stays non-generic — Task 2).
 3. `Object.entries()` on an unconstrained generic `Registry` parameter loses its value type to `unknown` (confirmed this is why `SceneDirector`'s constructor delegates to the concretely-typed `validateSceneRegistry` rather than iterating `Registry` directly itself).
@@ -1485,4 +1491,4 @@ git commit -m "docs: export scene-registry/AppLike types from package root; rege
 5. The internal `_attach` cast (`app as ApplicationOf<AppLike>`) compiles without an intermediate `unknown` cast.
 6. A subclass with a narrower `AppLike` (e.g. `Scene<GameData, GameApplication>`) is still assignable everywhere the engine passes a `Scene<Data>` value (e.g. into `SceneScope`'s constructor) — confirms Task 5 requires no change to `SceneScope.ts`.
 7. `this` inside `Application<Registry>`'s own constructor, and an externally-held concrete `Application<SomeRegistry>` instance, are both still assignable to every existing bare-`Application`-typed parameter across the engine (`SceneDirector`, `InteractionManager`, etc.) — confirms Task 3 requires no changes anywhere outside `Application.ts` itself.
-8. Against a *structurally trivial* stand-in `Scene` class (no members), invalid-registry-entry rejection silently does not fire (everything is assignable to an empty type) — this was a real false negative caught during planning and corrected by re-testing against a `Scene` stand-in with real members before finalizing Task 3's and Task 2's `@ts-expect-error` assertions; the real engine `Scene` class has substantially more members than either stand-in, so the corrected (passing) result is the reliable one.
+8. Against a _structurally trivial_ stand-in `Scene` class (no members), invalid-registry-entry rejection silently does not fire (everything is assignable to an empty type) — this was a real false negative caught during planning and corrected by re-testing against a `Scene` stand-in with real members before finalizing Task 3's and Task 2's `@ts-expect-error` assertions; the real engine `Scene` class has substantially more members than either stand-in, so the corrected (passing) result is the reliable one.

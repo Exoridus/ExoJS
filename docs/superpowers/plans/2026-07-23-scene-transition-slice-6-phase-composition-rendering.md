@@ -4,15 +4,16 @@
 
 **Goal:** Implement `PhasedSceneTransition` — the single-class `enter()`/`exit()` authoring layer over `SceneTransition` (spec §3.9) — plus the requirements-lattice merge/promotion rule (§3.9.1), the `SceneTransitionPhases`/`SceneTransitionSelection` types (§3.10), and registry-level default-transition resolution wired into scene navigation, per the exact per-operation resolution order in §3.10.
 
-**Architecture:** `PhasedSceneTransition` (new file, `src/core/PhasedSceneTransition.ts`) is a concrete-enough abstract base class over Slice 5's `SceneTransition`: authors override `getPhaseRequirements()`/`enter()`/`exit()` (both `protected`) and the base class does the rest — driving one continuous session (exit 0→1 → `commit()` → hold at the exit end-state → enter 0→1 → done) via an internal `PhasedSceneTransitionSession`. Because the Director (and, for `{ enter, exit }` composition, a *different* `PhasedSceneTransition` instance's own session driver) needs to call into an arbitrary instance it does not share a class hierarchy with, every one of `getPhaseRequirements()`/`enter()`/`exit()` gets a `public` wrapper (`getRequirementsForPhase()`, `runPhase()`) that does nothing but forward to the `protected` hook — the exact same shape as `beginSession()`/`createSession()` in Slice 5 (§3.1a). `SceneTransitionPhases`/`SceneTransitionSelection` (new types, added to `SceneTypes.ts`) model a registry-level or call-site transition choice; `resolveSceneTransitionSelection()` (new file, `src/core/SceneTransitionResolution.ts`) is a small pure function implementing §3.10's four-rule resolution order plus the "unload never consults the registry default" carve-out, and is wired into `SceneDirector`'s navigation methods.
+**Architecture:** `PhasedSceneTransition` (new file, `src/core/PhasedSceneTransition.ts`) is a concrete-enough abstract base class over Slice 5's `SceneTransition`: authors override `getPhaseRequirements()`/`enter()`/`exit()` (both `protected`) and the base class does the rest — driving one continuous session (exit 0→1 → `commit()` → hold at the exit end-state → enter 0→1 → done) via an internal `PhasedSceneTransitionSession`. Because the Director (and, for `{ enter, exit }` composition, a _different_ `PhasedSceneTransition` instance's own session driver) needs to call into an arbitrary instance it does not share a class hierarchy with, every one of `getPhaseRequirements()`/`enter()`/`exit()` gets a `public` wrapper (`getRequirementsForPhase()`, `runPhase()`) that does nothing but forward to the `protected` hook — the exact same shape as `beginSession()`/`createSession()` in Slice 5 (§3.1a). `SceneTransitionPhases`/`SceneTransitionSelection` (new types, added to `SceneTypes.ts`) model a registry-level or call-site transition choice; `resolveSceneTransitionSelection()` (new file, `src/core/SceneTransitionResolution.ts`) is a small pure function implementing §3.10's four-rule resolution order plus the "unload never consults the registry default" carve-out, and is wired into `SceneDirector`'s navigation methods.
 
 **Tech Stack:** TypeScript (strict), Vitest, `#core`/`#animation`/`#rendering` subpath imports. Builds on Slices 1–5 of `.workspace/specs/2026-07-23-scene-transition-lifecycle-design.md` (assumed merged — see "Dependency note" below).
 
 ## Dependency note — this plan targets code that does not exist in this worktree yet
 
-This worktree is branched directly off `origin/main @ b5aad1a3`, which predates Slices 1–5 of this redesign entirely (no `PhasedSceneTransition`, no `SceneTransition` base class, no `change()`/`restore()`/`preload()`/`unload()`, no scene registry descriptor with a `transition` field — `SceneDirector` still has the pre-redesign `setScene()`/`restoreScene()`/fade-only `SceneTransition` union). Every type this plan imports from Slice 5 (`SceneTransition`, `SceneTransitionSession`, `SceneTransitionEnvironment`, `SceneTransitionFrame`, `SceneTransitionContext`, `SceneTransitionRequirements`, `SceneTransitionOperation`) is quoted **verbatim from the spec's own §3 code block**, which is Slice 5's exact deliverable — there is no ambiguity to resolve there. Task 8 (wiring into `SceneDirector`) is the one task whose *exact* surrounding code this plan cannot pin down (Slices 1–4 haven't landed either) — that task gives the precise invariant to satisfy and a grep-first step to locate the real insertion point; do not skip the grep step even if the file looks like it matches.
+This worktree is branched directly off `origin/main @ b5aad1a3`, which predates Slices 1–5 of this redesign entirely (no `PhasedSceneTransition`, no `SceneTransition` base class, no `change()`/`restore()`/`preload()`/`unload()`, no scene registry descriptor with a `transition` field — `SceneDirector` still has the pre-redesign `setScene()`/`restoreScene()`/fade-only `SceneTransition` union). Every type this plan imports from Slice 5 (`SceneTransition`, `SceneTransitionSession`, `SceneTransitionEnvironment`, `SceneTransitionFrame`, `SceneTransitionContext`, `SceneTransitionRequirements`, `SceneTransitionOperation`) is quoted **verbatim from the spec's own §3 code block**, which is Slice 5's exact deliverable — there is no ambiguity to resolve there. Task 8 (wiring into `SceneDirector`) is the one task whose _exact_ surrounding code this plan cannot pin down (Slices 1–4 haven't landed either) — that task gives the precise invariant to satisfy and a grep-first step to locate the real insertion point; do not skip the grep step even if the file looks like it matches.
 
 Assumed filenames for prior-slice deliverables (confirm with a quick `ls`/grep before Task 8; adjust import paths in earlier tasks too if wrong — they're independent of Task 8's uncertainty):
+
 - `src/core/SceneTransition.ts` — Slice 5's `SceneTransition` abstract class + session/environment/frame/context/requirements types.
 - `src/core/SceneTypes.ts` — already exists (pre-redesign); Slice 1 adds `SceneRegistration<C>`/`SceneRegistryShape<Registry>` here (registry descriptor types, §6.1) and leaves `transition?: unknown` as a placeholder per this plan's brief.
 - `src/core/SceneDirector.ts` — already exists; Slices 3/4 rename `setScene`/`restoreScene` to `change`/`restore`, add `preload`/`unload`.
@@ -24,7 +25,7 @@ Assumed filenames for prior-slice deliverables (confirm with a quick `ls`/grep b
 - `pnpm docs:api:generate` must be run and committed before the final push (push-gated).
 - Every task ends green on its own scoped test command before moving to the next.
 - **`getPhaseRequirements()`, `enter()`, `exit()` are `protected` on `PhasedSceneTransition`; every one of them gets a `public` wrapper method with an identical parameter list, forwarding as its entire body.** This is not optional polish — a `protected` method on a class the caller doesn't share a hierarchy with is simply uncallable from that caller, confirmed by an empirical `tsc --strict` check in Task 2 and Task 3 below (see each task's compiler-verification step). Do not call `getPhaseRequirements()`/`enter()`/`exit()` from `SceneDirector`, `SceneTransitionResolution.ts`, or any composed-session driver — always go through the public wrapper.
-- **`PhasedSceneTransition`'s own constructor must be `public`, never `protected`.** An abstract class with a `protected` constructor is still non-instantiable on its own (that's what `abstract` already does) — but the modifier is *inherited*: a concrete subclass that declares no constructor of its own (the common case for a minimal `enter()`/`exit()`-only transition) inherits the `protected` constructor and becomes uninstantiable from outside the module too. Verified empirically in Task 2.
+- **`PhasedSceneTransition`'s own constructor must be `public`, never `protected`.** An abstract class with a `protected` constructor is still non-instantiable on its own (that's what `abstract` already does) — but the modifier is _inherited_: a concrete subclass that declares no constructor of its own (the common case for a minimal `enter()`/`exit()`-only transition) inherits the `protected` constructor and becomes uninstantiable from outside the module too. Verified empirically in Task 2.
 - **Compile-time verification, not runtime-only:** this repo's Vitest transform (esbuild-based) strips TypeScript access modifiers without re-verifying them — a `protected` constructor or method would still let a plain `.test.ts` file call it at runtime with zero test failures, even though the code is invalid TypeScript. Every task touching visibility modifiers must include a `pnpm typecheck` step and treat it (not the Vitest run) as the actual gate for that requirement.
 - `SceneTransitionPhases` is a **union of two variants** (`{ enter: X; exit?: Y }` or `{ enter?: X; exit: Y }`), never an interface with both fields optional — confirmed in Task 5 that the interface form type-checks `{}` as valid (a real, verified TypeScript `--strict` bug: a call-site `transition: {}` would silently suppress a scene's registry default while looking like a no-op), while the union form correctly rejects it.
 
@@ -68,14 +69,16 @@ One test file per new source file (`phased-scene-transition.test.ts` ↔ `Phased
 ## Task 1: `mergeSceneTransitionRequirements()` — the requirements lattice
 
 **Files:**
+
 - Create: `src/core/PhasedSceneTransition.ts` (this task only adds the merge function and its supporting types; the class comes in Task 2)
 - Test: `test/core/phased-scene-transition.test.ts` (new)
 
 **Interfaces:**
+
 - Consumes: nothing from prior tasks (first task in this slice).
 - Produces: `SceneTransitionPhaseRequirements` interface, `mergeSceneTransitionRequirements(a, b): SceneTransitionRequirements` (pure function). Consumed by Task 2 (`PhasedSceneTransition.getRequirements()`) and Task 4 (`composePhasedSceneTransition`).
 
-This is spec §3.9.1's merge function, taken verbatim — the stronger requirement wins on each axis independently (`direct` exit + `texture` enter → session-wide `texture`). This single function *is* the entire "direct → texture identity-composite promotion" rule: once the merged value is `'texture'`, Slice 5's existing per-frame "live surface → pooled texture" render (§3.4, already built, unconditional whenever a session declares `currentFrame: 'texture'`) automatically populates `frame.current` for a promoted phase with no phase-level code change required — there is no separate pixel-compositing mechanism for this plan to add.
+This is spec §3.9.1's merge function, taken verbatim — the stronger requirement wins on each axis independently (`direct` exit + `texture` enter → session-wide `texture`). This single function _is_ the entire "direct → texture identity-composite promotion" rule: once the merged value is `'texture'`, Slice 5's existing per-frame "live surface → pooled texture" render (§3.4, already built, unconditional whenever a session declares `currentFrame: 'texture'`) automatically populates `frame.current` for a promoted phase with no phase-level code change required — there is no separate pixel-compositing mechanism for this plan to add.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -152,10 +155,7 @@ const currentFrameRank = { none: 0, direct: 1, texture: 2 } as const;
  * `texture`-requesting session — a promoted phase that itself only
  * declared `direct` never needs to know it was promoted.
  */
-export function mergeSceneTransitionRequirements(
-  a: SceneTransitionPhaseRequirements,
-  b: SceneTransitionPhaseRequirements,
-): SceneTransitionRequirements {
+export function mergeSceneTransitionRequirements(a: SceneTransitionPhaseRequirements, b: SceneTransitionPhaseRequirements): SceneTransitionRequirements {
   return {
     outgoingFrame: outgoingFrameRank[a.outgoingFrame] >= outgoingFrameRank[b.outgoingFrame] ? a.outgoingFrame : b.outgoingFrame,
     currentFrame: currentFrameRank[a.currentFrame] >= currentFrameRank[b.currentFrame] ? a.currentFrame : b.currentFrame,
@@ -185,10 +185,12 @@ git commit -m "feat(core): requirements-lattice merge for PhasedSceneTransition 
 ## Task 2: `PhasedSceneTransition` base class shell — public constructor, public `getRequirementsForPhase()`
 
 **Files:**
+
 - Modify: `src/core/PhasedSceneTransition.ts`
 - Test: `test/core/phased-scene-transition.test.ts`
 
 **Interfaces:**
+
 - Consumes: `mergeSceneTransitionRequirements()`/`SceneTransitionPhaseRequirements` (Task 1); `SceneTransition`, `SceneTransitionContext`, `SceneTransitionRequirements` (Slice 5, `./SceneTransition`); `EasingFunction`, `Easing` (`#animation/types`, `#animation/Easing`).
 - Produces: `PhasedSceneTransitionOptions` interface, `PhasedSceneTransition` abstract class with `duration`/`easing`/`placement` public readonly fields, a **public** constructor, `getRequirementsForPhase(phase, context): SceneTransitionPhaseRequirements` (public wrapper), `protected abstract getPhaseRequirements(...)`, `public override getRequirements(context): SceneTransitionRequirements`. Consumed by Task 3 (session driving), Task 4 (composition), and Slice 7 (built-in transitions).
 
@@ -251,7 +253,7 @@ describe('PhasedSceneTransition', () => {
     expect(directorLikeCaller(instance)).toEqual({ outgoingFrame: 'none', currentFrame: 'direct' });
   });
 
-  test('getRequirements() merges the instance\'s own exit/enter requirements (no promotion when they match)', () => {
+  test("getRequirements() merges the instance's own exit/enter requirements (no promotion when they match)", () => {
     const instance = new MinimalPhase();
 
     expect(instance.getRequirements(fakeContext)).toEqual({ outgoingFrame: 'none', currentFrame: 'direct' });
@@ -369,25 +371,28 @@ git commit -m "feat(core): PhasedSceneTransition base class — public construct
 ## Task 3: `SceneTransitionPhaseContext` (`progress`/`easedProgress`/`presence`) + `runPhase()` + single-instance session driving
 
 **Files:**
+
 - Modify: `src/core/PhasedSceneTransition.ts`
 - Test: `test/core/phased-scene-transition.test.ts`
 
 **Interfaces:**
+
 - Consumes: `PhasedSceneTransition` (Task 2); `SceneTransitionSession`, `SceneTransitionEnvironment`, `SceneTransitionFrame` (Slice 5, `./SceneTransition`); `RenderingContext` (`#rendering/RenderingContext`); `Time` (`./Time`).
 - Produces: `SceneTransitionPhaseContext` interface, `PhasedSceneTransition.runPhase(phase, context): void` (public wrapper around `enter()`/`exit()`), `PhasedSceneTransitionSession` class (implements `SceneTransitionSession`), `PhasedSceneTransition`'s concrete `protected createSession()` override. Consumed by Task 4 (`composePhasedSceneTransition` reuses `PhasedSceneTransitionSession` directly for the two-different-instance case).
 
-**Why `runPhase()` is needed (a second instance of the same access-modifier bug class the spec calls out for `getRequirementsForPhase()`):** `enter()`/`exit()` are `protected`. `PhasedSceneTransitionSession` — the class that actually drives a session frame-by-frame — is *not* a subclass of `PhasedSceneTransition` (it's a session, not a transition), so it cannot call `somePhaseInstance.exit(context)` directly, for exactly the same reason `SceneDirector` cannot call `getPhaseRequirements()` directly. This was verified empirically before writing this plan:
+**Why `runPhase()` is needed (a second instance of the same access-modifier bug class the spec calls out for `getRequirementsForPhase()`):** `enter()`/`exit()` are `protected`. `PhasedSceneTransitionSession` — the class that actually drives a session frame-by-frame — is _not_ a subclass of `PhasedSceneTransition` (it's a session, not a transition), so it cannot call `somePhaseInstance.exit(context)` directly, for exactly the same reason `SceneDirector` cannot call `getPhaseRequirements()` directly. This was verified empirically before writing this plan:
 
 ```ts
 // scratch check — a class outside the PhasedSceneTransition hierarchy
 class SessionDriver {
   driveExit(phase: PhasedSceneTransitionLike) {
-    phase.exit();               // TS2445: Property 'exit' is protected and only
-                                 // accessible within class '...' and its subclasses.
+    phase.exit(); // TS2445: Property 'exit' is protected and only
+    // accessible within class '...' and its subclasses.
     phase.getRequirementsForPhase('exit', ctx); // OK — public wrapper.
   }
 }
 ```
+
 `tsc --noEmit --strict` on this exact shape reproduced `TS2445` on the direct `.exit()` call and reported no error on the wrapper call — confirming the fix is the same wrapper pattern, applied to `enter`/`exit` too.
 
 - [ ] **Step 1: Write the failing tests**
@@ -447,7 +452,14 @@ class RecordingPhase extends PhasedSceneTransition {
 describe('PhasedSceneTransition — single-instance session driving', () => {
   test('runPhase() is callable from outside the class hierarchy and forwards to enter()/exit()', () => {
     const instance = new RecordingPhase({ duration: 10 });
-    const context: SceneTransitionPhaseContext = { phase: 'exit', progress: 1, easedProgress: 1, presence: 0, frame: fakeFrame, rendering: fakeRenderingContext };
+    const context: SceneTransitionPhaseContext = {
+      phase: 'exit',
+      progress: 1,
+      easedProgress: 1,
+      presence: 0,
+      frame: fakeFrame,
+      rendering: fakeRenderingContext,
+    };
 
     // sessionLikeCaller does not extend PhasedSceneTransition.
     const sessionLikeCaller = (phase: PhasedSceneTransition): void => phase.runPhase('exit', context);
@@ -489,7 +501,7 @@ describe('PhasedSceneTransition — single-instance session driving', () => {
     expect(environment.commitCalls).toBe(1); // never called a second time
   });
 
-  test('session.placement reflects the instance\'s own placement throughout (single-instance case)', () => {
+  test("session.placement reflects the instance's own placement throughout (single-instance case)", () => {
     const phase = new RecordingPhase({ duration: 10, placement: 'scene' });
     const session = phase.beginSession(new TestEnvironment());
 
@@ -676,7 +688,7 @@ Expected: PASS.
 - [ ] **Step 5: Typecheck**
 
 Run: `pnpm typecheck`
-Expected: clean. As in Task 2, temporarily mark `enter`/`exit` `public` instead of `protected`, confirm `pnpm typecheck` still passes (it will — this doesn't catch an *overly* permissive modifier, only an overly restrictive one), then temporarily change `runPhase()` to call a *non-existent* wrapper (delete `runPhase()` entirely and have the test's `sessionLikeCaller` call `phase.exit(context)` directly) and confirm `pnpm typecheck` now fails with the protected-access error — then restore the real implementation and confirm clean again.
+Expected: clean. As in Task 2, temporarily mark `enter`/`exit` `public` instead of `protected`, confirm `pnpm typecheck` still passes (it will — this doesn't catch an _overly_ permissive modifier, only an overly restrictive one), then temporarily change `runPhase()` to call a _non-existent_ wrapper (delete `runPhase()` entirely and have the test's `sessionLikeCaller` call `phase.exit(context)` directly) and confirm `pnpm typecheck` now fails with the protected-access error — then restore the real implementation and confirm clean again.
 
 - [ ] **Step 6: Commit**
 
@@ -690,10 +702,12 @@ git commit -m "feat(core): PhasedSceneTransition session driving — runPhase() 
 ## Task 4: `composePhasedSceneTransition()` — two-different-instance composition + `NoOpPhasedSceneTransition`
 
 **Files:**
+
 - Modify: `src/core/PhasedSceneTransition.ts`
 - Test: `test/core/phased-scene-transition.test.ts`
 
 **Interfaces:**
+
 - Consumes: `PhasedSceneTransition`, `PhasedSceneTransitionSession`, `mergeSceneTransitionRequirements` (Tasks 1–3); `SceneTransition`, `SceneTransitionContext`, `SceneTransitionEnvironment`, `SceneTransitionRequirements`, `SceneTransitionSession` (Slice 5).
 - Produces: `composePhasedSceneTransition(exit, enter): SceneTransition`, `resolvePhasedSelection(exit, enter): SceneTransition` (takes `PhasedSceneTransition | undefined` for either side — deliberately decoupled from `SceneTransitionPhases`, defined in Task 5, so this task has no forward dependency on it). Consumed by Task 7 (`resolveSceneTransitionSelection`).
 
@@ -720,7 +734,7 @@ class TexturePhase extends RecordingPhase {
 }
 
 describe('composePhasedSceneTransition', () => {
-  test('merges the two instances\' own requirements via getRequirementsForPhase (§3.9.1)', () => {
+  test("merges the two instances' own requirements via getRequirementsForPhase (§3.9.1)", () => {
     const exitPhase = new DirectPhase({ duration: 10 });
     const enterPhase = new TexturePhase({ duration: 10 });
     const composed = composePhasedSceneTransition(exitPhase, enterPhase);
@@ -749,7 +763,7 @@ describe('composePhasedSceneTransition', () => {
     expect(enterPhase.calls.length).toBeGreaterThan(0);
   });
 
-  test('session.placement switches from the exit instance\'s to the enter instance\'s at the commit boundary', () => {
+  test("session.placement switches from the exit instance's to the enter instance's at the commit boundary", () => {
     const exitPhase = new RecordingPhase({ duration: 10, placement: 'screen' });
     const enterPhase = new RecordingPhase({ duration: 10, placement: 'scene' });
     const composed = composePhasedSceneTransition(exitPhase, enterPhase);
@@ -875,10 +889,12 @@ git commit -m "feat(core): composePhasedSceneTransition() + NoOpPhasedSceneTrans
 ## Task 5: `SceneTransitionPhases` (union) + `SceneTransitionSelection`
 
 **Files:**
+
 - Modify: `src/core/SceneTypes.ts`
 - Test: `test/type-tests/scene-transition-phases.type-test.ts` (new)
 
 **Interfaces:**
+
 - Consumes: `PhasedSceneTransition` (Task 2, `./PhasedSceneTransition`); `SceneTransition` (Slice 5, `./SceneTransition`).
 - Produces: `SceneTransitionPhases`, `SceneTransitionSelection`. Consumed by Task 6 (registry descriptor), Task 7 (`resolveSceneTransitionSelection`), and Slice 3/4's navigation option types (already-shipped by the time this task runs, per this plan's dependency assumption — this task only adds the types, Task 8 wires them into `SceneDirector`).
 
@@ -973,22 +989,26 @@ git commit -m "feat(core): SceneTransitionPhases union + SceneTransitionSelectio
 ## Task 6: Registry descriptor `transition` field — `unknown` placeholder → `SceneTransitionSelection`
 
 **Files:**
+
 - Modify: `src/core/SceneTypes.ts` (the `SceneRegistration<C>` type Slice 1 introduced)
 - Modify: `src/core/Application.ts` (only if it references the placeholder type directly — verify via grep)
 
 **Interfaces:**
+
 - Consumes: `SceneTransitionSelection` (Task 5).
 - Produces: `SceneRegistration<C>.transition: SceneTransitionSelection | undefined` (was `unknown`). Consumed by Task 8 (`SceneDirector` reads a target's registered default through this field).
 
-This is the one place in this task list touching code produced by an *earlier* slice (Slice 1) rather than new code — locate it first.
+This is the one place in this task list touching code produced by an _earlier_ slice (Slice 1) rather than new code — locate it first.
 
 - [ ] **Step 1: Locate the placeholder**
 
 Run:
+
 ```bash
 grep -n "transition" src/core/SceneTypes.ts
 grep -rn "SceneRegistration\b" src/core --include="*.ts"
 ```
+
 Expected: a type (named `SceneRegistration` per spec §6.1, though Slice 1 may have named it differently — check the grep output) with a field shaped like `transition?: unknown` and an inline comment noting it's a placeholder pending this slice.
 
 - [ ] **Step 2: Replace the placeholder type**
@@ -996,17 +1016,13 @@ Expected: a type (named `SceneRegistration` per spec §6.1, though Slice 1 may h
 Change (exact surrounding lines depend on Slice 1's actual output — this is the shape the spec's §6.1 code block gives, which Slice 1 is expected to have followed):
 
 ```ts
-export type SceneRegistration<C extends AnySceneConstructor> =
-  | C
-  | { readonly scene: C; readonly transition?: unknown }; // TODO(slice 6): SceneTransitionSelection
+export type SceneRegistration<C extends AnySceneConstructor> = C | { readonly scene: C; readonly transition?: unknown }; // TODO(slice 6): SceneTransitionSelection
 ```
 
 to:
 
 ```ts
-export type SceneRegistration<C extends AnySceneConstructor> =
-  | C
-  | { readonly scene: C; readonly transition?: SceneTransitionSelection };
+export type SceneRegistration<C extends AnySceneConstructor> = C | { readonly scene: C; readonly transition?: SceneTransitionSelection };
 ```
 
 Remove any `TODO`/placeholder comment left by Slice 1 alongside this field.
@@ -1036,20 +1052,24 @@ Replaces Slice 1's unknown-typed placeholder now that SceneTransitionSelection e
 ## Task 7: `resolveSceneTransitionSelection()` — §3.10 resolution order
 
 **Files:**
+
 - Create: `src/core/SceneTransitionResolution.ts`
 - Test: `test/core/scene-transition-resolution.test.ts` (new)
 
 **Interfaces:**
+
 - Consumes: `SceneTransition` (Slice 5, `./SceneTransition`); `SceneTransitionOperation` (Slice 5); `SceneTransitionSelection`, `SceneTransitionPhases` (Task 5, `./SceneTypes`); `resolvePhasedSelection` (Task 4, `./PhasedSceneTransition`).
 - Produces: `resolveSceneTransitionSelection(operation, callSiteTransition, registryDefault): SceneTransition | null`. Consumed by Task 8 (`SceneDirector`).
 
 **Resolution order, from spec §3.10** (this function implements exactly this table):
+
 ```
 1. Call-site transition: SceneTransition or SceneTransitionPhases → used as-is, no merging with the registry default
 2. Call-site transition: false                                    → no transition, full stop
 3. Call-site transition not specified                              → the target's registry-level default (if any)
 4. No call-site value and no registry default                      → no transition (§3.3 fast path)
 ```
+
 **Which operations consult the registry default:** `start`/`change`/`restore` do; `unload` never does, regardless of match kind (spec §3.10). Note: `start()` delegates to `change()` internally (spec §3.7 step 5), so `SceneTransitionOperation` itself only ever needs `'change' | 'restore' | 'unload'` — there is no separate `'start'` operation value to handle here; `start()`'s registry-default consultation happens for free by virtue of calling `change()`.
 
 - [ ] **Step 1: Write the failing tests**
@@ -1125,7 +1145,7 @@ describe('resolveSceneTransitionSelection', () => {
     expect(resolved).toBeNull();
   });
 
-  test("unload never consults the registry default, even though it would otherwise apply", () => {
+  test('unload never consults the registry default, even though it would otherwise apply', () => {
     const resolved = resolveSceneTransitionSelection('unload', undefined, registryDefault);
 
     expect(resolved).toBeNull();
@@ -1137,7 +1157,7 @@ describe('resolveSceneTransitionSelection', () => {
     expect(resolved).toBe(callSiteTransition);
   });
 
-  test("restore consults the registry default exactly like change", () => {
+  test('restore consults the registry default exactly like change', () => {
     const resolved = resolveSceneTransitionSelection('restore', undefined, registryDefault);
 
     expect(resolved).toBe(registryDefault);
@@ -1231,10 +1251,12 @@ git commit -m "feat(core): resolveSceneTransitionSelection() — per-operation r
 ## Task 8: Wire registry-default resolution into `SceneDirector`
 
 **Files:**
+
 - Modify: `src/core/SceneDirector.ts`
 - Test: `test/core/scene-director.test.ts`
 
 **Interfaces:**
+
 - Consumes: `resolveSceneTransitionSelection` (Task 7); the target's registered `SceneRegistration.transition` (Task 6); whatever navigation methods Slices 3/4 produced (assumed `change()`/`restore()`/`preload()`/`unload()`, `SceneTransitionOperation`-typed internally).
 
 **This is the one task in this plan whose exact insertion point cannot be pinned down from this worktree** (Slices 1–4 haven't landed here — see the "Dependency note" at the top of this plan). The invariant to satisfy, regardless of exact surrounding code:
@@ -1244,9 +1266,11 @@ git commit -m "feat(core): resolveSceneTransitionSelection() — per-operation r
 - [ ] **Step 1: Locate the current wiring**
 
 Run:
+
 ```bash
 grep -n "async change\|async restore\|async unload\|async preload\|options.transition\|SceneTransitionOperation" src/core/SceneDirector.ts
 ```
+
 Read the full body of each matched method before editing — the exact variable names holding the resolved target constructor, the registry map, and `options.transition` will differ from any snippet this plan could give.
 
 - [ ] **Step 2: Write the failing tests**
@@ -1269,7 +1293,7 @@ class RecordingPhaseForDirectorTest extends PhasedSceneTransition {
 }
 
 describe('SceneDirector — registry-default transition resolution (spec §3.10)', () => {
-  test('change() uses the target\'s registered default transition when no call-site transition is given', async () => {
+  test("change() uses the target's registered default transition when no call-site transition is given", async () => {
     const registeredDefault = new RecordingPhaseForDirectorTest({ duration: 0 });
     const app = createApplicationStub();
     const GameScene = makeSceneClass();
@@ -1331,7 +1355,7 @@ const registeredDefault = this._registry.get(target)?.transition; // adapt to th
 const transition = resolveSceneTransitionSelection('change', options.transition, registeredDefault); // 'restore'/'unload' in their own methods
 ```
 
-The rest of each method (the no-transition-fast-path vs. `beginSession()` branch from spec §3.3) is unchanged — it already needs to handle `transition` being possibly absent; this task only changes *how* that value is computed.
+The rest of each method (the no-transition-fast-path vs. `beginSession()` branch from spec §3.3) is unchanged — it already needs to handle `transition` being possibly absent; this task only changes _how_ that value is computed.
 
 - [ ] **Step 5: Run to verify it passes**
 
@@ -1359,6 +1383,7 @@ consults it."
 ## Task 9: Public exports + full-slice verification
 
 **Files:**
+
 - Modify: `src/core/index.ts`
 
 **Interfaces:** none new — this task only wires the public export surface and runs the full verification gate for the slice.
@@ -1432,10 +1457,11 @@ redesign."
 ## Self-Review
 
 **1. Spec coverage.**
+
 - §3.9 `PhasedSceneTransition` (options, public constructor, `enter`/`exit`, `getRequirements()` override) — Tasks 2–3.
 - §3.9's `progress`/`easedProgress`/`presence` semantics — Task 3, with an explicit test asserting the exact `presence` values at 0%/50%/100% for both phases.
 - §3.9.1 requirements lattice + `direct → texture` promotion — Task 1 (merge function) and Task 4 (composition uses it); the plan explicitly documents why no separate pixel-compositing code is needed (Slice 5's existing `frame.current` population already covers it).
-- §3.9.2 (why full `SceneTransition` remains for Crossfade) — no task needed; this is a design-rationale section about a *different* slice's (7) built-in, not something Slice 6 implements. Confirmed no gap: `PhasedSceneTransition` doesn't attempt to model Crossfade.
+- §3.9.2 (why full `SceneTransition` remains for Crossfade) — no task needed; this is a design-rationale section about a _different_ slice's (7) built-in, not something Slice 6 implements. Confirmed no gap: `PhasedSceneTransition` doesn't attempt to model Crossfade.
 - §3.10 `SceneTransitionPhases`/`SceneTransitionSelection` — Task 5; registry-level default + resolution order + the `unload` carve-out — Tasks 6–8.
 - The two compiler-verified bugs named in the brief (protected-constructor inheritance; `getRequirementsForPhase` needing to be public) — Task 2, with an empirical before/after `pnpm typecheck` check for each, plus the additionally-discovered third instance of the same bug class (`enter`/`exit` needing `runPhase()`) — Task 3, verified the same way.
 - §6.1's registry descriptor `transition` field — Task 6.
@@ -1443,6 +1469,7 @@ redesign."
 **2. Placeholder scan.** No "TBD"/"add appropriate handling"/"similar to Task N"-without-code patterns found. Task 8 is the one task that cannot give exact pre-existing line numbers (the code it modifies doesn't exist in this worktree yet, per the dependency note) — but every step in it still gives complete, concrete code to write and a precise invariant to verify against, with an explicit grep-first step rather than a vague "figure it out."
 
 **3. Type consistency.** Traced through all 9 tasks:
+
 - `SceneTransitionPhaseRequirements` (Task 1) is the type every `getPhaseRequirements()`/`getRequirementsForPhase()` override and call in Tasks 2–4 uses consistently.
 - `PhasedSceneTransition.getRequirementsForPhase(phase, context)` (Task 2) — same name/signature used in Task 3 (`runPhase` mirrors it), Task 4 (`composePhasedSceneTransition`'s merge call), and the type-tests (Task 5's compile check references it implicitly via `PhasedSceneTransition`'s public surface).
 - `PhasedSceneTransitionSession` (Task 3) is reused as-is (not re-implemented) by `ComposedPhasedSceneTransition` in Task 4 — confirmed both construct it with `(exitPhase, enterPhase, environment)` in the same argument order.

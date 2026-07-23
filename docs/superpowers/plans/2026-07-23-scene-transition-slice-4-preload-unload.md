@@ -4,7 +4,7 @@
 
 **Goal:** Add transparent scene `preload()` (a `_preloaded` map, backed by the `Ready` state, with in-flight sharing and `Object.is()`-matched consumption by `change()`) and replace `releaseScene()` with a unified `unload(Target, options?)` that discards whatever is parked/active for a constructor, throwing `AmbiguousSceneInstanceError` instead of applying a silent priority order when more than one candidate (active/retained/preloaded) exists.
 
-**Architecture:** `SceneDirector` gains a `_preloaded: Map<AnySceneConstructor, PreloadEntry>` field (same storage shape as the already-shipped `_retained` map) plus a `preload()` method that inserts an entry synchronously — before its first `await` — so a racing second `preload()`/`change()` call can see and share it. `change()`'s existing claim/prepare step (built by Slice 3) is taught to check `_preloaded` first: a synchronous, pre-`await` claim on an `Object.is()`-matched entry, mirroring the eager-claim-before-first-`await` pattern `restore()` already uses for `_retained`. `unload()` computes which of `{active, retained, preloaded}` match a target *synchronously* (no state mutation, no `await`) and either resolves the single candidate, throws `AmbiguousSceneInstanceError` when more than one exists and `options.instance` wasn't given, or targets exactly the requested one. The active-scope case reuses `_clearScene()` (extended with an optional `transition` parameter) rather than building new transition-dispatch logic — Slice 5 will replace that bridge wholesale once the real transition runtime exists. `preload()`/`unload()`'s retained/preloaded branches never take the `_navigationInFlight` lock (they don't touch `_activeScope`); only `unload()`'s active-scope branch does, via `_clearScene()`.
+**Architecture:** `SceneDirector` gains a `_preloaded: Map<AnySceneConstructor, PreloadEntry>` field (same storage shape as the already-shipped `_retained` map) plus a `preload()` method that inserts an entry synchronously — before its first `await` — so a racing second `preload()`/`change()` call can see and share it. `change()`'s existing claim/prepare step (built by Slice 3) is taught to check `_preloaded` first: a synchronous, pre-`await` claim on an `Object.is()`-matched entry, mirroring the eager-claim-before-first-`await` pattern `restore()` already uses for `_retained`. `unload()` computes which of `{active, retained, preloaded}` match a target _synchronously_ (no state mutation, no `await`) and either resolves the single candidate, throws `AmbiguousSceneInstanceError` when more than one exists and `options.instance` wasn't given, or targets exactly the requested one. The active-scope case reuses `_clearScene()` (extended with an optional `transition` parameter) rather than building new transition-dispatch logic — Slice 5 will replace that bridge wholesale once the real transition runtime exists. `preload()`/`unload()`'s retained/preloaded branches never take the `_navigationInFlight` lock (they don't touch `_activeScope`); only `unload()`'s active-scope branch does, via `_clearScene()`.
 
 **Tech Stack:** TypeScript (strict), Vitest. Builds on Slices 1–3 (Public Types & Registry Foundation; `Ready` State & Facility Dormancy; Atomic Navigation Transaction) — assumed merged ahead of this plan's execution. See "Assumptions about Slices 1–3's output" below; Task 1 re-verifies every one of them against the real merged code before any other task starts.
 
@@ -16,7 +16,7 @@
 - Preload/retained coexistence is unrestricted: `preload(Target)` while `Target` is already retained, or while a different `Target` instance is active, is always allowed — the two maps (`_retained`, `_preloaded`) and the active scope are read independently and never cross-check each other except where explicitly noted (§4.3).
 - `change()`'s preload match uses `Object.is()` on the activation data — reference/primitive identity, never a deep-equality check. Two separate `{ level: 2 }` object literals never match.
 - `unload()` racing an in-flight `preload()` must never call `scope.destroy()` (or any teardown) concurrently with an in-progress `prepare()` — mark the entry `cancelling` synchronously, then await the same `ready` promise `preload()`'s caller is awaiting, before tearing anything down (spec §4.3's last bullet).
-- A preloaded scope that is discarded (via `unload()`, or superseded by a mismatched-data `preload()`/`change()` call) while it never reached `Active` must run `Scene.unload()` (it *did* finish preparing) but must **not** dispatch `SceneDirector.onStopScene` (spec §2.1: "`onStopScene` fires only for a scope activated at least once").
+- A preloaded scope that is discarded (via `unload()`, or superseded by a mismatched-data `preload()`/`change()` call) while it never reached `Active` must run `Scene.unload()` (it _did_ finish preparing) but must **not** dispatch `SceneDirector.onStopScene` (spec §2.1: "`onStopScene` fires only for a scope activated at least once").
 - `options.transition` on `unload()` only materializes for an active-scope match — a retained or preloaded match always runs the direct, non-transitioned teardown path regardless of what `options.transition` was given (spec §5).
 - `unload()`'s registry-level default transition (spec §3.10) never applies, regardless of match kind — out of scope for this slice anyway, since the registry-level-default-transition resolution machinery doesn't exist until Slice 5/6.
 - `preload()`/`unload()`'s retained/preloaded code paths do **not** take the `_navigationInFlight` lock — only `unload()`'s active-scope branch does (via `_clearScene()`), so a `preload()` call can freely run concurrently with an in-flight `change()`/`restore()` navigation.
@@ -33,17 +33,17 @@ This plan was written by reading the actual, current `src/core/SceneDirector.ts`
 
 This plan is therefore written **against that real, current code**, transformed by the specific, spec-mandated renames/removals Slices 1–3 are expected to apply. Every task below states its diffs as edits to the code exactly as read (renamed per the table below). **Before starting Task 2, re-read the actual merged `SceneDirector.ts`/`SceneTypes.ts`/`SceneState.ts` in this worktree and reconcile:**
 
-| Assumed (this plan) | Pre-Slice-1-3 baseline (confirmed, read directly) | Expected post-Slice-1-3 (per spec — verify!) |
-|---|---|---|
-| `SceneState.Ready` exists | Not present (`Preparing\|Active\|Suspended\|Destroying\|Destroyed`) | Added by Slice 2 (§4.2) |
-| `SceneDirector.change()` | `SceneDirector.setScene()` | Renamed by Slice 3 (§6.3) |
-| `SceneDirector.restore()` | `SceneDirector.restoreScene()` | Renamed by Slice 3 (§6.3) |
-| `ChangeSceneOptions<Data>` / `ChangeSceneArgs<Data>` (single options object, `{ data, transition, suspendCurrent }`) | `SetSceneOptions` / `SetSceneArgs<Data>` (separate `data`/`options` tail, `retainCurrent`) | Collapsed by Slice 3 (§6.3) — exact type names are a guess; find the real ones |
-| No `_rollbackSwitch()` — atomic commit boundary, nothing to roll back for `_activeScope` itself | `_rollbackSwitch()` exists, called from both `setScene()`/`restoreScene()`'s catch blocks | Removed by Slice 3 (§3.5.1) |
-| `_activeScope`, `_activeScopeTarget`, `_retained`, `_prepareScene()`, `_disposeScene()`, `_handleOutgoingScope()`, `_suspendAndRetain()`, `_runWithNavigation()`, `_clearScene()` | All present, same names, same shapes | Spec does not call for renaming any of these — assume unchanged unless Task 1 finds otherwise |
-| `RetainedSceneConflictError`, `RetainedSceneNotFoundError`, `UnregisteredSceneError`, `ConcurrentSceneNavigationError` | All present, same names | Unchanged |
+| Assumed (this plan)                                                                                                                                                               | Pre-Slice-1-3 baseline (confirmed, read directly)                                          | Expected post-Slice-1-3 (per spec — verify!)                                                  |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------- |
+| `SceneState.Ready` exists                                                                                                                                                         | Not present (`Preparing\|Active\|Suspended\|Destroying\|Destroyed`)                        | Added by Slice 2 (§4.2)                                                                       |
+| `SceneDirector.change()`                                                                                                                                                          | `SceneDirector.setScene()`                                                                 | Renamed by Slice 3 (§6.3)                                                                     |
+| `SceneDirector.restore()`                                                                                                                                                         | `SceneDirector.restoreScene()`                                                             | Renamed by Slice 3 (§6.3)                                                                     |
+| `ChangeSceneOptions<Data>` / `ChangeSceneArgs<Data>` (single options object, `{ data, transition, suspendCurrent }`)                                                              | `SetSceneOptions` / `SetSceneArgs<Data>` (separate `data`/`options` tail, `retainCurrent`) | Collapsed by Slice 3 (§6.3) — exact type names are a guess; find the real ones                |
+| No `_rollbackSwitch()` — atomic commit boundary, nothing to roll back for `_activeScope` itself                                                                                   | `_rollbackSwitch()` exists, called from both `setScene()`/`restoreScene()`'s catch blocks  | Removed by Slice 3 (§3.5.1)                                                                   |
+| `_activeScope`, `_activeScopeTarget`, `_retained`, `_prepareScene()`, `_disposeScene()`, `_handleOutgoingScope()`, `_suspendAndRetain()`, `_runWithNavigation()`, `_clearScene()` | All present, same names, same shapes                                                       | Spec does not call for renaming any of these — assume unchanged unless Task 1 finds otherwise |
+| `RetainedSceneConflictError`, `RetainedSceneNotFoundError`, `UnregisteredSceneError`, `ConcurrentSceneNavigationError`                                                            | All present, same names                                                                    | Unchanged                                                                                     |
 
-**If any assumed name/shape differs from the real merged code, apply the *behavior* described in this plan's tasks against the *real* names/shapes — the exact identifiers below are illustrative, not authoritative. The spec section numbers cited in each task are authoritative.**
+**If any assumed name/shape differs from the real merged code, apply the _behavior_ described in this plan's tasks against the _real_ names/shapes — the exact identifiers below are illustrative, not authoritative. The spec section numbers cited in each task are authoritative.**
 
 ---
 
@@ -67,7 +67,7 @@ test/core/
                                           releaseScene()'s two existing tests are rewritten as unload() tests
 ```
 
-**No new test file.** `_retained` — the structurally identical existing precedent — has never had its own test file; its tests live directly in `scene-director.test.ts` because retention/preload/unload all reason about the *same* `SceneDirector` instance's combined state (`_activeScope`/`_retained`/`_preloaded` together, which is exactly what `unload()`'s disambiguation needs to exercise). Splitting preload into its own file would need its own `createApplicationStub()` copy and the disambiguation tests would need to import from both files anyway — no isolation benefit, only duplication.
+**No new test file.** `_retained` — the structurally identical existing precedent — has never had its own test file; its tests live directly in `scene-director.test.ts` because retention/preload/unload all reason about the _same_ `SceneDirector` instance's combined state (`_activeScope`/`_retained`/`_preloaded` together, which is exactly what `unload()`'s disambiguation needs to exercise). Splitting preload into its own file would need its own `createApplicationStub()` copy and the disambiguation tests would need to import from both files anyway — no isolation benefit, only duplication.
 
 ---
 
@@ -80,46 +80,56 @@ test/core/
 - [ ] **Step 1: Confirm `Ready` exists**
 
 Run:
+
 ```bash
 grep -n "Ready" src/core/SceneState.ts
 ```
+
 Expected: a `Ready = 'ready'` enum member exists in `SceneState`, between `Preparing` and `Active` conceptually (per spec §4.2's `Preparing → Ready → Active` chain). If it is missing, Slice 2 has not landed — stop and flag this to the user before proceeding; this slice cannot be implemented without it (`preload()`'s entries must live in `Ready`, not a stretched `_retained`-shaped state).
 
 - [ ] **Step 2: Confirm the navigation method names**
 
 Run:
+
 ```bash
 grep -n "public async change\|public async restore\|public async setScene\|public async restoreScene\|releaseScene" src/core/SceneDirector.ts
 ```
+
 Expected: `change()` and `restore()` exist; `setScene()`/`restoreScene()` do not (fully renamed, not aliased — clean-break policy); `releaseScene()` still exists (Slice 3 does not touch it — confirmed by this plan's own brief).
 
 - [ ] **Step 3: Confirm `_rollbackSwitch()` is gone**
 
 Run:
+
 ```bash
 grep -n "_rollbackSwitch" src/core/SceneDirector.ts
 ```
+
 Expected: no output (removed per spec §3.5.1 — the atomic commit boundary leaves nothing to roll back for `_activeScope` itself).
 
 - [ ] **Step 4: Confirm the options-object shape `change()` takes**
 
 Run:
+
 ```bash
 grep -n "interface.*Options\|type.*Args" src/core/SceneTypes.ts
 ```
+
 Read whichever type(s) actually replaced `SetSceneOptions`/`SetSceneArgs`. Note the exact name(s) — Task 2 below calls the assumed name `ChangeSceneOptions<Data>`/`ChangeSceneArgs<Data>`; substitute the real name everywhere in Tasks 2–7 if it differs. The three fields it carries (`data`, `transition`, `suspendCurrent` — spec §6.3) matter more than the type's name.
 
 - [ ] **Step 5: Confirm the remaining fields/methods this plan builds on are unchanged**
 
 Run:
+
 ```bash
 grep -n "_activeScope\b\|_activeScopeTarget\|_retained\b\|_prepareScene\|_disposeScene\|_handleOutgoingScope\|_suspendAndRetain\|_runWithNavigation\|_clearScene" src/core/SceneDirector.ts
 ```
+
 Confirm all of these still exist with recognizably the same responsibilities described in this plan's Architecture section (exact line numbers will have shifted — that's expected and fine).
 
 - [ ] **Step 6: Record deltas**
 
-If every check above matches this plan's assumptions, proceed directly to Task 2. If any differ, write down the actual name/shape for each (a short note at the top of your working notes, not committed anywhere) and substitute it consistently through every remaining task — the code shown in Tasks 2–8 is the intended *behavior*; adapt identifiers to match reality.
+If every check above matches this plan's assumptions, proceed directly to Task 2. If any differ, write down the actual name/shape for each (a short note at the top of your working notes, not committed anywhere) and substitute it consistently through every remaining task — the code shown in Tasks 2–8 is the intended _behavior_; adapt identifiers to match reality.
 
 No commit for this task (nothing changed).
 
@@ -280,7 +290,7 @@ SceneDirector wiring is the next tasks."
 - Consumes: nothing new.
 - Produces: `_prepareScene<Data>(scene, data, scope?)` gains an optional third parameter (a pre-built `SceneScope` to prepare, instead of always constructing a fresh one) — consumed by Task 4. `_disposeScene(scope, options?)` gains an optional `{ dispatchStopScene?: boolean }` second parameter (default `true`, unchanged behavior for every existing call site) — consumed by Task 4/6.
 
-This task changes two private helpers' signatures without changing any existing caller's observable behavior — it's covered entirely by the *existing* test suite (no new assertions needed yet), so this task's "test" step is running the existing suite to confirm nothing broke, not adding new tests.
+This task changes two private helpers' signatures without changing any existing caller's observable behavior — it's covered entirely by the _existing_ test suite (no new assertions needed yet), so this task's "test" step is running the existing suite to confirm nothing broke, not adding new tests.
 
 - [ ] **Step 1: Widen `_prepareScene`'s signature**
 
@@ -702,77 +712,77 @@ commit."
 - Consumes: `_preloaded`/`PreloadEntry` (Task 4), Slice 3's already-merged `change()` implementation.
 - Produces: `change()`'s behavior extends — no signature change.
 
-**This task edits Slice 3's already-merged `change()` method — it does not add a parallel path.** Re-read the actual current body of `change()` before applying this diff (Task 1 already asked you to locate it; do so again now if time has passed and more code has landed in the meantime). The edit below is expressed against the *pre-Slice-3* `setScene()` body (the only concrete text available while this plan was written), restructured per spec §3.5.1's atomic-commit shape (no `_rollbackSwitch()`, no early `_activeScope` reassignment) — apply the equivalent edit to whatever the real, already-atomic `change()` body looks like: the new logic is "claim from `_preloaded` synchronously, before the first `await`, in place of always constructing+preparing a fresh scope."
+**This task edits Slice 3's already-merged `change()` method — it does not add a parallel path.** Re-read the actual current body of `change()` before applying this diff (Task 1 already asked you to locate it; do so again now if time has passed and more code has landed in the meantime). The edit below is expressed against the _pre-Slice-3_ `setScene()` body (the only concrete text available while this plan was written), restructured per spec §3.5.1's atomic-commit shape (no `_rollbackSwitch()`, no early `_activeScope` reassignment) — apply the equivalent edit to whatever the real, already-atomic `change()` body looks like: the new logic is "claim from `_preloaded` synchronously, before the first `await`, in place of always constructing+preparing a fresh scope."
 
 - [ ] **Step 1: Write the failing tests**
 
 Add to `test/core/scene-director.test.ts`, inside (or right after) the new preload `describe` block from Task 4:
 
 ```ts
-  test('change() consumes a matching preload without re-running load()/init()', async () => {
-    const app = createApplicationStub();
-    const load = vi.fn(async () => undefined);
-    const init = vi.fn();
-    const GameScene = makeSceneClass({ load, init });
-    const director = new SceneDirector(app, { game: GameScene });
+test('change() consumes a matching preload without re-running load()/init()', async () => {
+  const app = createApplicationStub();
+  const load = vi.fn(async () => undefined);
+  const init = vi.fn();
+  const GameScene = makeSceneClass({ load, init });
+  const director = new SceneDirector(app, { game: GameScene });
 
-    await director.preload(GameScene);
-    expect(load).toHaveBeenCalledTimes(1);
-    expect(init).toHaveBeenCalledTimes(1);
+  await director.preload(GameScene);
+  expect(load).toHaveBeenCalledTimes(1);
+  expect(init).toHaveBeenCalledTimes(1);
 
-    await director.change(GameScene);
+  await director.change(GameScene);
 
-    expect(load).toHaveBeenCalledTimes(1); // not re-run
-    expect(init).toHaveBeenCalledTimes(1); // not re-run
-    expect(director.state).toBe(SceneState.Active);
-  });
+  expect(load).toHaveBeenCalledTimes(1); // not re-run
+  expect(init).toHaveBeenCalledTimes(1); // not re-run
+  expect(director.state).toBe(SceneState.Active);
+});
 
-  test('change() with data matching (Object.is) a preload consumes it; mismatched data ignores it and prepares fresh', async () => {
-    const app = createApplicationStub();
-    const seenData: unknown[] = [];
-    class DataScene extends Scene<{ level: number }> {
-      public override init(data: Readonly<{ level: number }>): void {
-        seenData.push(data);
-      }
+test('change() with data matching (Object.is) a preload consumes it; mismatched data ignores it and prepares fresh', async () => {
+  const app = createApplicationStub();
+  const seenData: unknown[] = [];
+  class DataScene extends Scene<{ level: number }> {
+    public override init(data: Readonly<{ level: number }>): void {
+      seenData.push(data);
     }
-    const director = new SceneDirector(app, { game: DataScene as unknown as SceneConstructor<void> });
-    const sharedData = { level: 3 };
+  }
+  const director = new SceneDirector(app, { game: DataScene as unknown as SceneConstructor<void> });
+  const sharedData = { level: 3 };
 
-    await director.preload(DataScene, { data: sharedData });
-    await director.change(DataScene, { data: sharedData }); // same reference — Object.is() match
+  await director.preload(DataScene, { data: sharedData });
+  await director.change(DataScene, { data: sharedData }); // same reference — Object.is() match
 
-    expect(seenData).toEqual([{ level: 3 }]); // init() ran exactly once — from the preload, not re-run by change()
-    expect(director.currentScene).toBeInstanceOf(DataScene);
-  });
+  expect(seenData).toEqual([{ level: 3 }]); // init() ran exactly once — from the preload, not re-run by change()
+  expect(director.currentScene).toBeInstanceOf(DataScene);
+});
 
-  test('change() ignores a preload with different (non-Object.is-matching) data and prepares fresh instead', async () => {
-    const app = createApplicationStub();
-    const seenData: unknown[] = [];
-    class DataScene extends Scene<{ level: number }> {
-      public override init(data: Readonly<{ level: number }>): void {
-        seenData.push(data);
-      }
+test('change() ignores a preload with different (non-Object.is-matching) data and prepares fresh instead', async () => {
+  const app = createApplicationStub();
+  const seenData: unknown[] = [];
+  class DataScene extends Scene<{ level: number }> {
+    public override init(data: Readonly<{ level: number }>): void {
+      seenData.push(data);
     }
-    const director = new SceneDirector(app, { game: DataScene as unknown as SceneConstructor<void> });
+  }
+  const director = new SceneDirector(app, { game: DataScene as unknown as SceneConstructor<void> });
 
-    await director.preload(DataScene, { data: { level: 1 } });
-    await director.change(DataScene, { data: { level: 2 } }); // different object literal
+  await director.preload(DataScene, { data: { level: 1 } });
+  await director.change(DataScene, { data: { level: 2 } }); // different object literal
 
-    expect(seenData).toEqual([{ level: 1 }, { level: 2 }]); // preload's init() AND change()'s own fresh init() both ran
-    expect(director.currentScene).toBeInstanceOf(DataScene);
-  });
+  expect(seenData).toEqual([{ level: 1 }, { level: 2 }]); // preload's init() AND change()'s own fresh init() both ran
+  expect(director.currentScene).toBeInstanceOf(DataScene);
+});
 
-  test('change() with no matching preload behaves exactly as before (fresh prepare)', async () => {
-    const app = createApplicationStub();
-    const init = vi.fn();
-    const GameScene = makeSceneClass({ init });
-    const director = new SceneDirector(app, { game: GameScene });
+test('change() with no matching preload behaves exactly as before (fresh prepare)', async () => {
+  const app = createApplicationStub();
+  const init = vi.fn();
+  const GameScene = makeSceneClass({ init });
+  const director = new SceneDirector(app, { game: GameScene });
 
-    await director.change(GameScene);
+  await director.change(GameScene);
 
-    expect(init).toHaveBeenCalledTimes(1);
-    expect(director.state).toBe(SceneState.Active);
-  });
+  expect(init).toHaveBeenCalledTimes(1);
+  expect(director.state).toBe(SceneState.Active);
+});
 ```
 
 - [ ] **Step 2: Run to verify the new assertions fail**
@@ -785,23 +795,23 @@ Expected: FAIL — `load`/`init` are each called twice today (`change()` doesn't
 Locate the point in `change()`'s body where the incoming scope is currently always constructed fresh — in the pre-Slice-3 baseline this was:
 
 ```ts
-      const scene = new target();
-      const newScope = await this._prepareScene(scene, data);
+const scene = new target();
+const newScope = await this._prepareScene(scene, data);
 ```
 
-Replace with a synchronous claim check performed *before* this point (still before the method's own first `await` — the registry/retained-conflict checks above it are already synchronous, so this slots in directly after them):
+Replace with a synchronous claim check performed _before_ this point (still before the method's own first `await` — the registry/retained-conflict checks above it are already synchronous, so this slots in directly after them):
 
 ```ts
-      const preloadEntry = this._preloaded.get(target);
-      const claimedEntry = preloadEntry !== undefined && preloadEntry.status !== 'cancelling' && Object.is(preloadEntry.data, data) ? preloadEntry : null;
+const preloadEntry = this._preloaded.get(target);
+const claimedEntry = preloadEntry !== undefined && preloadEntry.status !== 'cancelling' && Object.is(preloadEntry.data, data) ? preloadEntry : null;
 
-      if (claimedEntry !== null) {
-        this._preloaded.delete(target);
-        claimedEntry.status = 'claimed';
-      }
+if (claimedEntry !== null) {
+  this._preloaded.delete(target);
+  claimedEntry.status = 'claimed';
+}
 
-      const scene = claimedEntry !== null ? (claimedEntry.scope.scene as Scene) : new target();
-      const newScope = claimedEntry !== null ? await this._awaitClaimedPreload(claimedEntry) : await this._prepareScene(scene, data);
+const scene = claimedEntry !== null ? (claimedEntry.scope.scene as Scene) : new target();
+const newScope = claimedEntry !== null ? await this._awaitClaimedPreload(claimedEntry) : await this._prepareScene(scene, data);
 ```
 
 Add the small helper this calls:
@@ -825,18 +835,18 @@ Add the small helper this calls:
   }
 ```
 
-**Claim restoration (spec §3.5.1) — deliberately not exercised by a test in this slice.** If the navigation aborts *after* a successful claim but *before* the atomic commit boundary, the claimed entry should go back into `_preloaded` as `ready` rather than being destroyed. Wherever `change()`'s existing pre-commit failure handling lives (whatever replaced the removed `_rollbackSwitch()` — Task 1 Step 3), add this alongside it:
+**Claim restoration (spec §3.5.1) — deliberately not exercised by a test in this slice.** If the navigation aborts _after_ a successful claim but _before_ the atomic commit boundary, the claimed entry should go back into `_preloaded` as `ready` rather than being destroyed. Wherever `change()`'s existing pre-commit failure handling lives (whatever replaced the removed `_rollbackSwitch()` — Task 1 Step 3), add this alongside it:
 
 ```ts
-      // Inside change()'s existing pre-commit catch block, alongside whatever
-      // Slice 3 already does for a failed-preparation/aborted-navigation case:
-      if (claimedEntry !== null && claimedEntry.status === 'claimed' && !this._preloaded.has(target)) {
-        claimedEntry.status = 'ready';
-        this._preloaded.set(target, claimedEntry);
-      }
+// Inside change()'s existing pre-commit catch block, alongside whatever
+// Slice 3 already does for a failed-preparation/aborted-navigation case:
+if (claimedEntry !== null && claimedEntry.status === 'claimed' && !this._preloaded.has(target)) {
+  claimedEntry.status = 'ready';
+  this._preloaded.set(target, claimedEntry);
+}
 ```
 
-This branch is real, correct code — but per spec §3.5.1, "the only way to reach [a pre-commit failure after a successful claim] is §3.7's abort scenario," and §3.7 (the frame-loop-abort mechanism) is Slice 7's job, built on Slice 5's transition sessions. With Slice 2's exception-isolating lifecycle-signal dispatch already in place (guarding `onStopScene`/`onStateChange` against a throwing listener) and no real transition session existing yet, there is no way to *force* this branch to run from a test written at this point in the slice sequence — it is forward-compatible dead code until Slice 7 lands. Do not spend time contriving a fake failure injection point to exercise it; a comment citing §3.5.1 (above) is sufficient documentation of intent.
+This branch is real, correct code — but per spec §3.5.1, "the only way to reach [a pre-commit failure after a successful claim] is §3.7's abort scenario," and §3.7 (the frame-loop-abort mechanism) is Slice 7's job, built on Slice 5's transition sessions. With Slice 2's exception-isolating lifecycle-signal dispatch already in place (guarding `onStopScene`/`onStateChange` against a throwing listener) and no real transition session existing yet, there is no way to _force_ this branch to run from a test written at this point in the slice sequence — it is forward-compatible dead code until Slice 7 lands. Do not spend time contriving a fake failure injection point to exercise it; a comment citing §3.5.1 (above) is sufficient documentation of intent.
 
 - [ ] **Step 4: Run to verify it passes**
 
@@ -901,16 +911,20 @@ Delete the method:
 In `test/core/scene-director.test.ts`, delete these two existing tests (they will be replaced by `unload()`-targeting equivalents in Step 2 below):
 
 ```ts
-  test('releaseScene() permanently destroys the retained scene and returns true', async () => { /* ... */ });
+test('releaseScene() permanently destroys the retained scene and returns true', async () => {
+  /* ... */
+});
 
-  test('releaseScene() returns false for a constructor with nothing retained', async () => { /* ... */ });
+test('releaseScene() returns false for a constructor with nothing retained', async () => {
+  /* ... */
+});
 ```
 
 Also update the test at line ~813 (`'a suspended scene keeps its loader claims — releasing it releases them'`) to call `director.unload(FirstScene)` instead of `director.releaseScene(FirstScene)` — this call has exactly one candidate (retained only), so no `instance` option is needed.
 
 - [ ] **Step 2: Write the failing tests**
 
-Add a new `describe` block. Note on the ambiguity tests: a single constructor can simultaneously be **retained** and **preloaded** (spec §4.3: "Coexistence with a retained scope: `preload(Target)` while `Target` is already retained is allowed"), and separately can be **active** and **preloaded** (§4.3: "Coexistence with an active scope") — two candidates is enough to exercise `AmbiguousSceneInstanceError`. All three at once for one constructor is deliberately not exercised: it isn't buildable through the public API (an active+retained combination for the *same* constructor would require `change()` to retain and immediately reuse it, which `RetainedSceneConflictError` specifically forbids), and isn't needed to prove the disambiguation logic — the two-candidate cases already exercise both branches of it.
+Add a new `describe` block. Note on the ambiguity tests: a single constructor can simultaneously be **retained** and **preloaded** (spec §4.3: "Coexistence with a retained scope: `preload(Target)` while `Target` is already retained is allowed"), and separately can be **active** and **preloaded** (§4.3: "Coexistence with an active scope") — two candidates is enough to exercise `AmbiguousSceneInstanceError`. All three at once for one constructor is deliberately not exercised: it isn't buildable through the public API (an active+retained combination for the _same_ constructor would require `change()` to retain and immediately reuse it, which `RetainedSceneConflictError` specifically forbids), and isn't needed to prove the disambiguation logic — the two-candidate cases already exercise both branches of it.
 
 ```ts
 describe('SceneDirector — unload', () => {
@@ -1294,9 +1308,11 @@ Expected: clean.
 - [ ] **Step 8: Grep-confirm `releaseScene` is fully gone**
 
 Run:
+
 ```bash
 grep -rn "releaseScene" src test
 ```
+
 Expected: no output.
 
 - [ ] **Step 9: Commit**
@@ -1325,84 +1341,84 @@ priority order. releaseScene() is removed, not aliased (clean-break policy)."
 Add to the `'SceneDirector — unload'` describe block from Task 6, using the repo's established pattern for manually-controlling an in-flight async hook (see e.g. `SlowScene`/`load: () => new Promise<void>(() => {})` elsewhere in this file — here the promise needs to be externally resolvable, not permanently pending):
 
 ```ts
-  test('unload() racing an in-flight preload() cancels it: waits for prepare() to settle, never destroys concurrently with prepare(), then still runs unload() (Ready-scope cleanup)', async () => {
-    const app = createApplicationStub();
-    let resolveLoad!: () => void;
-    const initSpy = vi.fn();
-    const unloadHook = vi.fn(async () => undefined);
-    const destroySpy = vi.spyOn(Scene.prototype, 'destroy');
-    const SlowScene = makeSceneClass({
-      load: () =>
-        new Promise<void>(resolve => {
-          resolveLoad = resolve;
-        }),
-      init: initSpy,
-      unload: unloadHook,
-    });
-    const director = new SceneDirector(app, { slow: SlowScene });
-
-    const preloadPromise = director.preload(SlowScene);
-    const unloadPromise = director.unload(SlowScene);
-
-    // Still mid-load() — unload() must be waiting on prepare() to settle,
-    // not tearing anything down yet.
-    await Promise.resolve();
-    await Promise.resolve();
-    expect(destroySpy).not.toHaveBeenCalled();
-    expect(unloadHook).not.toHaveBeenCalled();
-    expect(initSpy).not.toHaveBeenCalled(); // load() hasn't even resolved yet
-
-    resolveLoad();
-
-    await expect(preloadPromise).resolves.toBeUndefined(); // prepare() itself still succeeds
-    await expect(unloadPromise).resolves.toBe(true);
-
-    expect(initSpy).toHaveBeenCalledTimes(1); // prepare() ran to completion (reached Ready), not aborted mid-way
-    expect(unloadHook).toHaveBeenCalledTimes(1); // Ready-scope cleanup: unload() DOES run (spec §2.1/§3.5.1)
-    expect(destroySpy).toHaveBeenCalledTimes(1);
-
-    destroySpy.mockRestore();
+test('unload() racing an in-flight preload() cancels it: waits for prepare() to settle, never destroys concurrently with prepare(), then still runs unload() (Ready-scope cleanup)', async () => {
+  const app = createApplicationStub();
+  let resolveLoad!: () => void;
+  const initSpy = vi.fn();
+  const unloadHook = vi.fn(async () => undefined);
+  const destroySpy = vi.spyOn(Scene.prototype, 'destroy');
+  const SlowScene = makeSceneClass({
+    load: () =>
+      new Promise<void>(resolve => {
+        resolveLoad = resolve;
+      }),
+    init: initSpy,
+    unload: unloadHook,
   });
+  const director = new SceneDirector(app, { slow: SlowScene });
 
-  test('a fresh preload() call racing an in-flight unload()-cancellation of the same target does not interfere with it', async () => {
-    const app = createApplicationStub();
-    let resolveFirstLoad!: () => void;
-    const firstUnloadHook = vi.fn(async () => undefined);
-    const secondInit = vi.fn();
-    let loadCallCount = 0;
-    const RacyScene = makeSceneClass({
-      load: () => {
-        loadCallCount += 1;
+  const preloadPromise = director.preload(SlowScene);
+  const unloadPromise = director.unload(SlowScene);
 
-        if (loadCallCount === 1) {
-          return new Promise<void>(resolve => {
-            resolveFirstLoad = resolve;
-          });
-        }
+  // Still mid-load() — unload() must be waiting on prepare() to settle,
+  // not tearing anything down yet.
+  await Promise.resolve();
+  await Promise.resolve();
+  expect(destroySpy).not.toHaveBeenCalled();
+  expect(unloadHook).not.toHaveBeenCalled();
+  expect(initSpy).not.toHaveBeenCalled(); // load() hasn't even resolved yet
 
-        return undefined;
-      },
-      init: secondInit,
-      unload: firstUnloadHook,
-    });
-    const director = new SceneDirector(app, { racy: RacyScene });
+  resolveLoad();
 
-    const firstPreload = director.preload(RacyScene);
-    const cancellingUnload = director.unload(RacyScene); // marks the first entry 'cancelling'
+  await expect(preloadPromise).resolves.toBeUndefined(); // prepare() itself still succeeds
+  await expect(unloadPromise).resolves.toBe(true);
 
-    const secondPreload = director.preload(RacyScene); // starts an independent, fresh preload for the same constructor
+  expect(initSpy).toHaveBeenCalledTimes(1); // prepare() ran to completion (reached Ready), not aborted mid-way
+  expect(unloadHook).toHaveBeenCalledTimes(1); // Ready-scope cleanup: unload() DOES run (spec §2.1/§3.5.1)
+  expect(destroySpy).toHaveBeenCalledTimes(1);
 
-    resolveFirstLoad();
+  destroySpy.mockRestore();
+});
 
-    await Promise.all([firstPreload, cancellingUnload, secondPreload]);
+test('a fresh preload() call racing an in-flight unload()-cancellation of the same target does not interfere with it', async () => {
+  const app = createApplicationStub();
+  let resolveFirstLoad!: () => void;
+  const firstUnloadHook = vi.fn(async () => undefined);
+  const secondInit = vi.fn();
+  let loadCallCount = 0;
+  const RacyScene = makeSceneClass({
+    load: () => {
+      loadCallCount += 1;
 
-    expect(firstUnloadHook).toHaveBeenCalledTimes(1); // the cancelled entry's own scene was torn down
-    expect(secondInit).toHaveBeenCalledTimes(1); // the second preload's scene reached Ready independently
+      if (loadCallCount === 1) {
+        return new Promise<void>(resolve => {
+          resolveFirstLoad = resolve;
+        });
+      }
 
-    // The second preload is still available for a later change() to consume —
-    // confirmed by its state, not yet activated:
-    expect(director.currentScene).toBeNull();
+      return undefined;
+    },
+    init: secondInit,
+    unload: firstUnloadHook,
   });
+  const director = new SceneDirector(app, { racy: RacyScene });
+
+  const firstPreload = director.preload(RacyScene);
+  const cancellingUnload = director.unload(RacyScene); // marks the first entry 'cancelling'
+
+  const secondPreload = director.preload(RacyScene); // starts an independent, fresh preload for the same constructor
+
+  resolveFirstLoad();
+
+  await Promise.all([firstPreload, cancellingUnload, secondPreload]);
+
+  expect(firstUnloadHook).toHaveBeenCalledTimes(1); // the cancelled entry's own scene was torn down
+  expect(secondInit).toHaveBeenCalledTimes(1); // the second preload's scene reached Ready independently
+
+  // The second preload is still available for a later change() to consume —
+  // confirmed by its state, not yet activated:
+  expect(director.currentScene).toBeNull();
+});
 ```
 
 - [ ] **Step 2: Run**
@@ -1472,18 +1488,20 @@ SceneDirector entry (preload/unload replace releaseScene)."
 ## Self-Review
 
 **1. Spec coverage** — walked every subsection this slice owns:
+
 - §4.1 (dormancy problem) — not this slice's concern; assumed fixed by Slice 2, only consumed here (facilities stay cold through `Ready`).
 - §4.2 (`Ready` state, facility-dormancy table) — assumed shipped by Slice 2; Task 1 verifies it exists before anything else proceeds.
 - §4.3 (preload design) — `_preloaded` map (Task 4), synchronous pre-`await` insertion (Task 4 Step 4), in-flight sharing (Task 4 Step 1 test 2), `Object.is()`-mismatch discard (Task 4 Step 1 test 3, Task 4 Step 4 `_discardStalePreload`), consumption by `change()` (Task 5), coexistence with active/retained (Task 4 Step 1 test 5, Task 6 ambiguity tests), `unload()`-vs-in-flight-`preload()` cancelling (Task 6 `_unloadPreloaded`, Task 7's dedicated race tests).
 - §5 (`unload()`) — single unified entry point (Task 6), exactly-one-candidate resolves directly (Task 6 tests 1–3), `AmbiguousSceneInstanceError` with no priority order (Task 6 tests 5–6), `instance` targeting + `'all'` (Task 6 tests 7–9), `options.transition` only for active match (Task 6 test 10), `releaseScene()` removed not aliased (Task 6 Step 1/9).
 - §2.1's `onStopScene`-never-for-never-activated rule, as it specifically applies to a discarded preload — Task 3 Step 2 (`_disposeScene`'s new flag), Task 6 test 11.
-- §3.5.1's claim-restoration for preload — implemented in Task 5 (code shown, wired to whatever pre-commit-failure path Slice 3 already has), explicitly *not* forced into a test, with the reasoning stated inline (unreachable before Slice 7's abort path exists).
+- §3.5.1's claim-restoration for preload — implemented in Task 5 (code shown, wired to whatever pre-commit-failure path Slice 3 already has), explicitly _not_ forced into a test, with the reasoning stated inline (unreachable before Slice 7's abort path exists).
 - Scope note "unload()'s active-scope-match case should just delegate to whatever change() in Slice 3 already does with a transition option" — satisfied by reusing `_clearScene()` (Task 3 Step 3, Task 6's `_unloadInstance`'s `'active'` branch) rather than building new transition-dispatch logic.
 - §6.3-adjacent naming (`change()`/`restore()`) — not built by this slice, only consumed; Task 1 verifies the assumption before any code is written against it.
 
-**2. Placeholder scan** — no "TBD"/"handle appropriately"/bare prose-only steps; every code step shows complete, real TypeScript. The one place this plan deliberately does *not* force a test (§3.5.1's claim-restoration branch, Task 5) states the concrete reason (unreachable until Slice 7) rather than hand-waving it away, and still shows the real implementation code — it is not an unimplemented placeholder, only an untested-for-now branch with a stated reason.
+**2. Placeholder scan** — no "TBD"/"handle appropriately"/bare prose-only steps; every code step shows complete, real TypeScript. The one place this plan deliberately does _not_ force a test (§3.5.1's claim-restoration branch, Task 5) states the concrete reason (unreachable until Slice 7) rather than hand-waving it away, and still shows the real implementation code — it is not an unimplemented placeholder, only an untested-for-now branch with a stated reason.
 
 **3. Type consistency** — checked every later reference against its introducing task:
+
 - `PreloadEntry`/`PreloadStatus` (Task 4) used identically in Task 5 (`_awaitClaimedPreload`) and Task 6 (`_unloadPreloaded`).
 - `_preloaded: Map<AnySceneConstructor, PreloadEntry>` (Task 4) — same field name/type used in Task 5's claim check and Task 6's candidate computation.
 - `SceneInstanceKind`/`UnloadOptions`/`AmbiguousSceneInstanceError`/`SceneInstanceNotFoundError` (Task 2) — names match their Task 6 usage exactly (constructor argument order: `(constructorName, candidates)` / `(constructorName, instance)`, matching the classes' actual constructors).

@@ -13,7 +13,7 @@
 - Clean breaks only — no deprecated aliases, no shims (pre-1.0 policy).
 - **Scope boundary, not an oversight:** this slice does NOT touch `SceneDirector`'s navigation orchestration shape — no rename of `setScene`/`restoreScene`/`releaseScene`, no atomic commit boundary, no removal of `_rollbackSwitch()`/the optimistic `_activeScope` reassignment. `_prepareScene()` still calls `scope.prepare(data)` then the caller still calls `newScope.activate()` immediately afterward, exactly as synchronously-sequenced as today — this slice only inserts a real `Ready` checkpoint into that existing sequence. Slice 3 owns restructuring the orchestration itself.
 - **Known, deliberate, temporary inconsistency (documented, not fixed here):** after this slice, `_rollbackSwitch()`'s catch-block callers (`setScene`/`restoreScene`) become effectively unreachable in practice, because their only throw source — `_handleOutgoingScope()`'s `onStopScene`/`onStateChange` dispatches — is converted to non-throwing isolated dispatch by this same slice (§2.2.1). `_rollbackSwitch()` itself is left in place, unchanged, for Slice 3 to formally remove ("no `_rollbackSwitch()`" is explicitly Slice 3's job per the 8-slice breakdown). Likewise, a `Ready` scope discarded via the existing `newScope.destroyFailedActivation()` call in `setScene()`'s catch block skips `unload()` — spec §3.5.1's "Ready-scope cleanup" (normal `destroy()`, with `unload()`) is the eventual correct behavior, but wiring that in requires the abort/claim machinery Slice 3+ introduces. Both are noted inline in the affected files' JSDoc/comments so a future reader doesn't mistake them for accidental gaps.
-- **Facility dormancy invariant (spec §4.2, applied uniformly):** a scene-bound facility may accept registrations while its owning scope is not `Active` (`Preparing`, `Ready`, `Suspended`), but must not produce an application-wide runtime effect until the scope is `Active`. `Suspended` is included deliberately — a *new* registration made while already suspended (not just while `Preparing`/`Ready`) must also buffer, not attach.
+- **Facility dormancy invariant (spec §4.2, applied uniformly):** a scene-bound facility may accept registrations while its owning scope is not `Active` (`Preparing`, `Ready`, `Suspended`), but must not produce an application-wide runtime effect until the scope is `Active`. `Suspended` is included deliberately — a _new_ registration made while already suspended (not just while `Preparing`/`Ready`) must also buffer, not attach.
 - **`SceneLoader` is the one deliberate exception** — untouched by this slice. Loader claims and background asset loading already keep working through every non-terminal state; nothing here changes that.
 - A never-attached registration released before its owning scope ever activates (or while suspended) must never call the corresponding app-wide detach/remove function at all — not attach-then-immediately-detach, a true no-op (spec §4.2's explicit test invariant).
 - JSDoc conventions: see `[[feedback-jsdoc-conventions]]` memory — every public export gets a doc comment; `@internal` for engine-only surface.
@@ -88,30 +88,30 @@ test/core/
 Add to `test/core/scene-state.test.ts`, inside the existing `describe('SceneState guards', ...)` block:
 
 ```ts
-  test('canSuspend is false for Ready — a scope that never activated has nothing live to suspend', () => {
-    expect(canSuspend(SceneState.Ready)).toBe(false);
-  });
+test('canSuspend is false for Ready — a scope that never activated has nothing live to suspend', () => {
+  expect(canSuspend(SceneState.Ready)).toBe(false);
+});
 
-  test('canRestore is false for Ready', () => {
-    expect(canRestore(SceneState.Ready)).toBe(false);
-  });
+test('canRestore is false for Ready', () => {
+  expect(canRestore(SceneState.Ready)).toBe(false);
+});
 
-  test('canDestroy is true for Ready', () => {
-    expect(canDestroy(SceneState.Ready)).toBe(true);
-  });
+test('canDestroy is true for Ready', () => {
+  expect(canDestroy(SceneState.Ready)).toBe(true);
+});
 ```
 
 And update the existing string-enum test:
 
 ```ts
-  test('is a string enum (never const enum) — values are readable at runtime', () => {
-    expect(SceneState.Preparing).toBe('preparing');
-    expect(SceneState.Ready).toBe('ready');
-    expect(SceneState.Active).toBe('active');
-    expect(SceneState.Suspended).toBe('suspended');
-    expect(SceneState.Destroying).toBe('destroying');
-    expect(SceneState.Destroyed).toBe('destroyed');
-  });
+test('is a string enum (never const enum) — values are readable at runtime', () => {
+  expect(SceneState.Preparing).toBe('preparing');
+  expect(SceneState.Ready).toBe('ready');
+  expect(SceneState.Active).toBe('active');
+  expect(SceneState.Suspended).toBe('suspended');
+  expect(SceneState.Destroying).toBe('destroying');
+  expect(SceneState.Destroyed).toBe('destroyed');
+});
 ```
 
 - [ ] **Step 2: Run to verify it fails**
@@ -723,6 +723,7 @@ git commit -m "feat(animation): TweenSequencer._attachManager (mirrors Tween._at
 - Produces: `SceneTweens` constructor gains a required second parameter `getState: () => SceneState` (breaking change to an internal-only constructor — every call site is `SceneScope`, updated in Task 9). `create()`/`add()`/`createSequencer()` behavior widens (same public signatures). `restore()`'s existing behavior widens to also flush cold-buffered entries — consumed by Task 9 (`SceneScope.activate()` now also calls `this.tweens.restore()`, not only `SceneScope.restore()`).
 
 **Design (spec §4.2 — "create(), add(), createSequencer(), and Tween.start() must not participate in the manager's update loop until Active"):**
+
 - `create()` while not `Active`: construct a bare `new Tween(target)` **without** attaching it to the app-wide manager (skip `this._app.tweens.create()` entirely) — track it in a new `_cold` set. Since `Tween.start()`'s `this._manager?.add(this)` is a no-op when `_manager` is `null`, a synchronous `create().to(...).start()` call made entirely within a dormant `init()` produces zero application-wide effect. At the next `Active` transition, every cold tween is attached for real via `this._app.tweens.add(tween)`, in whatever state it's currently in.
 - `createSequencer()` while not `Active`: construct `new TweenSequencer()` with no manager (same reasoning — `TweenSequencer.start()`'s `this._manager?.addTicker(this)` no-ops), tracked in a new `_coldSequencers` set, bound to the real manager via `_attachManager()` (Task 5) at the next `Active` transition.
 - `add()` while not `Active`: the tween may already be genuinely live (constructed via `app.tweens.create()` directly and handed here) — transferring ownership means pausing it immediately if it's currently `Active`-state (mirrors the existing `suspend()`/`restore()` pause idiom exactly), tracked in a new `_coldPaused` set, resumed at the next `Active` transition only if still in the exact state this left it in. The tween is still attached to the manager immediately (harmless once paused — `Tween.update()` no-ops for a non-`Active`-state tween regardless of whether it's present in the manager's array).
@@ -1245,7 +1246,7 @@ git commit -m "fix(core): make SceneTweens dormant until Active (create/add/crea
 
 - Produces: `SceneInteraction` constructor gains a required second parameter `getState: () => SceneState` (internal-only, every call site is `SceneScope`, updated in Task 9). `observe()`/`capture()`/`suspend()`/`resume()`/`destroy()` behavior widens (same public signatures).
 
-Verified (`SceneScope.ts:453-460` today): `_attachAutoRoots()` calls `this._app.interaction.attachRoot(...)` unconditionally from `prepare()` — moved to `activate()` in Task 9. This task fixes the *other* half of spec §4.1's bug: `SceneInteraction.observe()`/`.capture()` themselves also attach eagerly, regardless of the owning scope's state.
+Verified (`SceneScope.ts:453-460` today): `_attachAutoRoots()` calls `this._app.interaction.attachRoot(...)` unconditionally from `prepare()` — moved to `activate()` in Task 9. This task fixes the _other_ half of spec §4.1's bug: `SceneInteraction.observe()`/`.capture()` themselves also attach eagerly, regardless of the owning scope's state.
 
 **Design:** replace the single `_suspended` boolean with a per-entry `attached: boolean` flag. `observe()`/`capture()` consult `getState() === Active` at call time: if live, attach immediately (as today); if not, track without attaching. `suspend()` detaches every currently-attached entry (setting `attached = false`) without discarding tracking. `resume()` attaches every entry that isn't currently attached, in tracking order — this single operation correctly covers both a fresh activation flushing cold registrations and a retention restore reinstating what `suspend()` detached, since by the time either runs every entry is uniformly in the same attached/unattached state (entries only ever attach while truly `Active`, and `suspend()` uniformly clears them all together — see the inline comment in the implementation for why a mixed state can't arise in practice). Releasing a never-attached entry must not call the app-wide detach/pop functions at all.
 
@@ -1254,13 +1255,13 @@ Verified (`SceneScope.ts:453-460` today): `_attachAutoRoots()` calls `this._app.
 In `test/core/scene/scene-interaction.test.ts`, replace every occurrence of:
 
 ```ts
-new SceneInteraction(app)
+new SceneInteraction(app);
 ```
 
 with:
 
 ```ts
-new SceneInteraction(app, () => SceneState.Active)
+new SceneInteraction(app, () => SceneState.Active);
 ```
 
 (18 occurrences — use a project-wide find/replace across this one file; every existing test exercises the "live" facade, so passing `Active` preserves current behavior/assertions unchanged.)
@@ -1782,25 +1783,25 @@ with:
 Replace:
 
 ```ts
-        this.onLoad.add(() => {
-            this.events.push('onLoad');
-        });
+this.onLoad.add(() => {
+  this.events.push('onLoad');
+});
 
-        this.onUnload.add(() => {
-            this.events.push('onUnload');
-        });
+this.onUnload.add(() => {
+  this.events.push('onUnload');
+});
 ```
 
 with:
 
 ```ts
-        this.onActivate.add(() => {
-            this.events.push('onActivate');
-        });
+this.onActivate.add(() => {
+  this.events.push('onActivate');
+});
 
-        this.onSuspend.add(() => {
-            this.events.push('onSuspend');
-        });
+this.onSuspend.add(() => {
+  this.events.push('onSuspend');
+});
 ```
 
 Apply the identical change (same comment text, same two `add()` blocks, adjusted for the file's already-compiled JS syntax — no type annotations) to `examples/application-scenes/scene-lifecycle.js`.
@@ -1870,158 +1871,158 @@ In `test/core/scene-scope.test.ts`, first update the import line to include `Rea
 Replace the existing test (lines 64–90, "runs load() then init() in order..., attaches roots, and dispatches onLoad only after both complete"):
 
 ```ts
-    test('runs load() then init() in order (definition §5.1), ends in Ready — no facility attachment or Scene signal yet', async () => {
-      const app = createAppStub();
-      const events: string[] = [];
+test('runs load() then init() in order (definition §5.1), ends in Ready — no facility attachment or Scene signal yet', async () => {
+  const app = createAppStub();
+  const events: string[] = [];
 
-      class RecordingScene extends Scene {
-        public override async load(): Promise<void> {
-          events.push('load:start');
-          await Promise.resolve();
-          events.push('load:end');
-        }
+  class RecordingScene extends Scene {
+    public override async load(): Promise<void> {
+      events.push('load:start');
+      await Promise.resolve();
+      events.push('load:end');
+    }
 
-        public override init(): void {
-          events.push('init');
-        }
-      }
+    public override init(): void {
+      events.push('init');
+    }
+  }
 
-      const scene = new RecordingScene();
+  const scene = new RecordingScene();
 
-      scene.onActivate.add(() => events.push('onActivate'));
+  scene.onActivate.add(() => events.push('onActivate'));
 
-      const scope = new SceneScope(app, scene);
+  const scope = new SceneScope(app, scene);
 
-      await scope.prepare(undefined);
+  await scope.prepare(undefined);
 
-      expect(events).toEqual(['load:start', 'load:end', 'init']);
-      expect(scope.state).toBe(SceneState.Ready);
-      // Roots/onActivate are deferred to activate() — the Ready checkpoint
-      // itself produces no application-wide effect (definition §4.1/§4.2).
-      expect(app.interaction.attachRoot).not.toHaveBeenCalled();
-    });
+  expect(events).toEqual(['load:start', 'load:end', 'init']);
+  expect(scope.state).toBe(SceneState.Ready);
+  // Roots/onActivate are deferred to activate() — the Ready checkpoint
+  // itself produces no application-wide effect (definition §4.1/§4.2).
+  expect(app.interaction.attachRoot).not.toHaveBeenCalled();
+});
 ```
 
 Replace the existing test (lines 117–133, "activate() transitions Preparing to Active; frame methods only dispatch once Active"):
 
 ```ts
-    test('activate() transitions Ready to Active; frame methods only dispatch once Active', async () => {
-      const app = createAppStub();
-      const update = vi.fn();
-      const scene = Object.assign(new Scene(), { update });
-      const scope = new SceneScope(app, scene);
+test('activate() transitions Ready to Active; frame methods only dispatch once Active', async () => {
+  const app = createAppStub();
+  const update = vi.fn();
+  const scene = Object.assign(new Scene(), { update });
+  const scope = new SceneScope(app, scene);
 
-      await scope.prepare(undefined);
-      expect(scope.state).toBe(SceneState.Ready);
+  await scope.prepare(undefined);
+  expect(scope.state).toBe(SceneState.Ready);
 
-      scope.update(new Time(16));
-      expect(update).not.toHaveBeenCalled(); // still Ready
+  scope.update(new Time(16));
+  expect(update).not.toHaveBeenCalled(); // still Ready
 
-      scope.activate();
-      expect(scope.state).toBe(SceneState.Active);
+  scope.activate();
+  expect(scope.state).toBe(SceneState.Active);
 
-      scope.update(new Time(16));
-      expect(update).toHaveBeenCalledTimes(1);
-    });
+  scope.update(new Time(16));
+  expect(update).toHaveBeenCalledTimes(1);
+});
 
-    test('activate() attaches the scene root to interaction dispatch (deferred from prepare(), definition §4.1)', async () => {
-      const app = createAppStub();
-      const scene = new Scene();
-      const scope = new SceneScope(app, scene);
+test('activate() attaches the scene root to interaction dispatch (deferred from prepare(), definition §4.1)', async () => {
+  const app = createAppStub();
+  const scene = new Scene();
+  const scope = new SceneScope(app, scene);
 
-      await scope.prepare(undefined);
-      expect(app.interaction.attachRoot).not.toHaveBeenCalled();
+  await scope.prepare(undefined);
+  expect(app.interaction.attachRoot).not.toHaveBeenCalled();
 
-      scope.activate();
-      expect(app.interaction.attachRoot).toHaveBeenCalledWith(scene.root);
-    });
+  scope.activate();
+  expect(app.interaction.attachRoot).toHaveBeenCalledWith(scene.root);
+});
 
-    test('activate() dispatches Scene.onActivate after facility activation, before reporting the state change', async () => {
-      const app = createAppStub();
-      const scene = new Scene();
-      const events: string[] = [];
-      const scope = new SceneScope(app, scene, () => events.push('onStateChange'));
+test('activate() dispatches Scene.onActivate after facility activation, before reporting the state change', async () => {
+  const app = createAppStub();
+  const scene = new Scene();
+  const events: string[] = [];
+  const scope = new SceneScope(app, scene, () => events.push('onStateChange'));
 
-      vi.spyOn(app.interaction, 'attachRoot').mockImplementation(() => events.push('attachRoot'));
-      scene.onActivate.add(() => events.push('onActivate'));
+  vi.spyOn(app.interaction, 'attachRoot').mockImplementation(() => events.push('attachRoot'));
+  scene.onActivate.add(() => events.push('onActivate'));
 
-      await scope.prepare(undefined);
-      scope.activate();
+  await scope.prepare(undefined);
+  scope.activate();
 
-      expect(events).toEqual(['attachRoot', 'onActivate', 'onStateChange']);
-    });
+  expect(events).toEqual(['attachRoot', 'onActivate', 'onStateChange']);
+});
 ```
 
 Replace the existing test (lines 135–146, "activate() reports the Preparing to Active transition via the injected onStateChange callback"):
 
 ```ts
-    test('prepare() reports Preparing to Ready, activate() reports Ready to Active, via the injected onStateChange callback', async () => {
-      const app = createAppStub();
-      const scene = new Scene();
-      const onStateChange = vi.fn();
-      const scope = new SceneScope(app, scene, onStateChange);
+test('prepare() reports Preparing to Ready, activate() reports Ready to Active, via the injected onStateChange callback', async () => {
+  const app = createAppStub();
+  const scene = new Scene();
+  const onStateChange = vi.fn();
+  const scope = new SceneScope(app, scene, onStateChange);
 
-      await scope.prepare(undefined);
-      expect(onStateChange).toHaveBeenCalledTimes(1);
-      expect(onStateChange).toHaveBeenNthCalledWith(1, SceneState.Preparing, SceneState.Ready);
+  await scope.prepare(undefined);
+  expect(onStateChange).toHaveBeenCalledTimes(1);
+  expect(onStateChange).toHaveBeenNthCalledWith(1, SceneState.Preparing, SceneState.Ready);
 
-      scope.activate();
-      expect(onStateChange).toHaveBeenCalledTimes(2);
-      expect(onStateChange).toHaveBeenNthCalledWith(2, SceneState.Ready, SceneState.Active);
-    });
+  scope.activate();
+  expect(onStateChange).toHaveBeenCalledTimes(2);
+  expect(onStateChange).toHaveBeenNthCalledWith(2, SceneState.Ready, SceneState.Active);
+});
 
-    test('a throwing Scene.onActivate listener is reported through the app error pipeline and does not block activation', async () => {
-      const app = createAppStub();
-      const scene = new Scene();
-      const errorSpy = vi.fn();
+test('a throwing Scene.onActivate listener is reported through the app error pipeline and does not block activation', async () => {
+  const app = createAppStub();
+  const scene = new Scene();
+  const errorSpy = vi.fn();
 
-      app.onError.add(errorSpy);
-      scene.onActivate.add(() => {
-        throw new Error('onActivate listener failed');
-      });
+  app.onError.add(errorSpy);
+  scene.onActivate.add(() => {
+    throw new Error('onActivate listener failed');
+  });
 
-      const scope = new SceneScope(app, scene);
+  const scope = new SceneScope(app, scene);
 
-      await scope.prepare(undefined);
-      scope.activate();
+  await scope.prepare(undefined);
+  scope.activate();
 
-      expect(scope.state).toBe(SceneState.Active);
-      expect(errorSpy).toHaveBeenCalledWith(expect.objectContaining({ message: 'onActivate listener failed' }));
-    });
+  expect(scope.state).toBe(SceneState.Active);
+  expect(errorSpy).toHaveBeenCalledWith(expect.objectContaining({ message: 'onActivate listener failed' }));
+});
 ```
 
 Add a new test to the `describe('retention (definition §14)', ...)` block, after the existing `suspend()` tests:
 
 ```ts
-    test('suspend() dispatches Scene.onSuspend after facility suspension', async () => {
-      const app = createAppStub();
-      const scene = new Scene();
-      const scope = await activate(app, scene);
-      const events: string[] = [];
+test('suspend() dispatches Scene.onSuspend after facility suspension', async () => {
+  const app = createAppStub();
+  const scene = new Scene();
+  const scope = await activate(app, scene);
+  const events: string[] = [];
 
-      vi.spyOn(scope.interaction, 'suspend').mockImplementation(() => events.push('interaction.suspend'));
-      scene.onSuspend.add(() => events.push('onSuspend'));
+  vi.spyOn(scope.interaction, 'suspend').mockImplementation(() => events.push('interaction.suspend'));
+  scene.onSuspend.add(() => events.push('onSuspend'));
 
-      scope.suspend();
+  scope.suspend();
 
-      expect(events).toEqual(['interaction.suspend', 'onSuspend']);
-    });
+  expect(events).toEqual(['interaction.suspend', 'onSuspend']);
+});
 
-    test('restore() flushes pending audio and dispatches Scene.onActivate', async () => {
-      const app = createAppStub();
-      const scene = new Scene();
-      const scope = await activate(app, scene);
-      const events: string[] = [];
+test('restore() flushes pending audio and dispatches Scene.onActivate', async () => {
+  const app = createAppStub();
+  const scene = new Scene();
+  const scope = await activate(app, scene);
+  const events: string[] = [];
 
-      scope.suspend();
+  scope.suspend();
 
-      vi.spyOn(scope.audio, '_flushPending').mockImplementation(() => events.push('audio._flushPending'));
-      scene.onActivate.add(() => events.push('onActivate'));
+  vi.spyOn(scope.audio, '_flushPending').mockImplementation(() => events.push('audio._flushPending'));
+  scene.onActivate.add(() => events.push('onActivate'));
 
-      scope.restore();
+  scope.restore();
 
-      expect(events).toEqual(['audio._flushPending', 'onActivate']);
-    });
+  expect(events).toEqual(['audio._flushPending', 'onActivate']);
+});
 ```
 
 - [ ] **Step 2: Run to verify it fails**
@@ -2257,15 +2258,15 @@ with:
 Update the constructor to pass `getState` to `SceneInteraction`/`SceneTweens` (both now require it):
 
 ```ts
-    this.interaction = new SceneInteraction(app);
-    this.tweens = new SceneTweens(app);
+this.interaction = new SceneInteraction(app);
+this.tweens = new SceneTweens(app);
 ```
 
 to:
 
 ```ts
-    this.interaction = new SceneInteraction(app, () => this._state);
-    this.tweens = new SceneTweens(app, () => this._state);
+this.interaction = new SceneInteraction(app, () => this._state);
+this.tweens = new SceneTweens(app, () => this._state);
 ```
 
 Add the singular `_reportError` helper (used above), and have the existing `_reportErrors` delegate to it — change:
@@ -2368,6 +2369,7 @@ git commit -m "feat(core): wire the Ready checkpoint into SceneScope.prepare()/a
 - Produces: no public signature changes. `onChangeScene`/`onStartScene`/`onStopScene`/`onStateChange` all keep dispatching the exact same payloads, just through `dispatchIsolated` instead of `dispatch`.
 
 Six call sites convert from `.dispatch(...)` to `.dispatchIsolated(error => this._reportLifecycleError(error), ...)`:
+
 1. `_prepareScene()`'s `onStateChange` callback lambda.
 2. `setScene()`'s `onChangeScene`/`onStartScene` (two calls).
 3. `_clearScene()`'s `onChangeScene`.
@@ -2382,87 +2384,87 @@ This is a **deliberate behavior change**, per spec §2.2.1: today, a throwing `o
 **1a.** Update the two `onStateChange`-count assertions affected by Task 9's `Preparing → Ready → Active` split. Replace (around line 258–270):
 
 ```ts
-  test('setScene() dispatches onStateChange for the fresh Preparing to Active activation', async () => {
-    const TestScene = makeSceneClass();
-    const manager = new SceneDirector(createApplicationStub(), { test: TestScene });
-    const onStateChange = vi.fn();
+test('setScene() dispatches onStateChange for the fresh Preparing to Active activation', async () => {
+  const TestScene = makeSceneClass();
+  const manager = new SceneDirector(createApplicationStub(), { test: TestScene });
+  const onStateChange = vi.fn();
 
-    manager.onStateChange.add(onStateChange);
+  manager.onStateChange.add(onStateChange);
 
-    await manager.setScene(TestScene);
-    const scene = manager.currentScene;
+  await manager.setScene(TestScene);
+  const scene = manager.currentScene;
 
-    expect(onStateChange).toHaveBeenCalledTimes(1);
-    expect(onStateChange).toHaveBeenCalledWith(SceneState.Preparing, SceneState.Active, scene);
-  });
+  expect(onStateChange).toHaveBeenCalledTimes(1);
+  expect(onStateChange).toHaveBeenCalledWith(SceneState.Preparing, SceneState.Active, scene);
+});
 ```
 
 with:
 
 ```ts
-  test('setScene() dispatches onStateChange for Preparing to Ready, then Ready to Active', async () => {
-    const TestScene = makeSceneClass();
-    const manager = new SceneDirector(createApplicationStub(), { test: TestScene });
-    const onStateChange = vi.fn();
+test('setScene() dispatches onStateChange for Preparing to Ready, then Ready to Active', async () => {
+  const TestScene = makeSceneClass();
+  const manager = new SceneDirector(createApplicationStub(), { test: TestScene });
+  const onStateChange = vi.fn();
 
-    manager.onStateChange.add(onStateChange);
+  manager.onStateChange.add(onStateChange);
 
-    await manager.setScene(TestScene);
-    const scene = manager.currentScene;
+  await manager.setScene(TestScene);
+  const scene = manager.currentScene;
 
-    expect(onStateChange).toHaveBeenCalledTimes(2);
-    expect(onStateChange).toHaveBeenNthCalledWith(1, SceneState.Preparing, SceneState.Ready, scene);
-    expect(onStateChange).toHaveBeenNthCalledWith(2, SceneState.Ready, SceneState.Active, scene);
-  });
+  expect(onStateChange).toHaveBeenCalledTimes(2);
+  expect(onStateChange).toHaveBeenNthCalledWith(1, SceneState.Preparing, SceneState.Ready, scene);
+  expect(onStateChange).toHaveBeenNthCalledWith(2, SceneState.Ready, SceneState.Active, scene);
+});
 ```
 
 Replace (around line 272–290):
 
 ```ts
-  test('switching scenes dispatches onStateChange for the outgoing scope Destroying and Destroyed transitions', async () => {
-    const First = makeSceneClass();
-    const Second = makeSceneClass();
-    const manager = new SceneDirector(createApplicationStub(), { first: First, second: Second });
+test('switching scenes dispatches onStateChange for the outgoing scope Destroying and Destroyed transitions', async () => {
+  const First = makeSceneClass();
+  const Second = makeSceneClass();
+  const manager = new SceneDirector(createApplicationStub(), { first: First, second: Second });
 
-    await manager.setScene(First);
-    const first = manager.currentScene;
-    const onStateChange = vi.fn();
+  await manager.setScene(First);
+  const first = manager.currentScene;
+  const onStateChange = vi.fn();
 
-    manager.onStateChange.add(onStateChange);
+  manager.onStateChange.add(onStateChange);
 
-    await manager.setScene(Second);
-    const second = manager.currentScene;
+  await manager.setScene(Second);
+  const second = manager.currentScene;
 
-    expect(onStateChange).toHaveBeenCalledTimes(3);
-    expect(onStateChange).toHaveBeenCalledWith(SceneState.Active, SceneState.Destroying, first);
-    expect(onStateChange).toHaveBeenCalledWith(SceneState.Destroying, SceneState.Destroyed, first);
-    expect(onStateChange).toHaveBeenCalledWith(SceneState.Preparing, SceneState.Active, second);
-  });
+  expect(onStateChange).toHaveBeenCalledTimes(3);
+  expect(onStateChange).toHaveBeenCalledWith(SceneState.Active, SceneState.Destroying, first);
+  expect(onStateChange).toHaveBeenCalledWith(SceneState.Destroying, SceneState.Destroyed, first);
+  expect(onStateChange).toHaveBeenCalledWith(SceneState.Preparing, SceneState.Active, second);
+});
 ```
 
 with:
 
 ```ts
-  test('switching scenes dispatches onStateChange for the outgoing scope Destroying and Destroyed transitions, and the incoming Preparing→Ready→Active', async () => {
-    const First = makeSceneClass();
-    const Second = makeSceneClass();
-    const manager = new SceneDirector(createApplicationStub(), { first: First, second: Second });
+test('switching scenes dispatches onStateChange for the outgoing scope Destroying and Destroyed transitions, and the incoming Preparing→Ready→Active', async () => {
+  const First = makeSceneClass();
+  const Second = makeSceneClass();
+  const manager = new SceneDirector(createApplicationStub(), { first: First, second: Second });
 
-    await manager.setScene(First);
-    const first = manager.currentScene;
-    const onStateChange = vi.fn();
+  await manager.setScene(First);
+  const first = manager.currentScene;
+  const onStateChange = vi.fn();
 
-    manager.onStateChange.add(onStateChange);
+  manager.onStateChange.add(onStateChange);
 
-    await manager.setScene(Second);
-    const second = manager.currentScene;
+  await manager.setScene(Second);
+  const second = manager.currentScene;
 
-    expect(onStateChange).toHaveBeenCalledTimes(4);
-    expect(onStateChange).toHaveBeenCalledWith(SceneState.Active, SceneState.Destroying, first);
-    expect(onStateChange).toHaveBeenCalledWith(SceneState.Destroying, SceneState.Destroyed, first);
-    expect(onStateChange).toHaveBeenCalledWith(SceneState.Preparing, SceneState.Ready, second);
-    expect(onStateChange).toHaveBeenCalledWith(SceneState.Ready, SceneState.Active, second);
-  });
+  expect(onStateChange).toHaveBeenCalledTimes(4);
+  expect(onStateChange).toHaveBeenCalledWith(SceneState.Active, SceneState.Destroying, first);
+  expect(onStateChange).toHaveBeenCalledWith(SceneState.Destroying, SceneState.Destroyed, first);
+  expect(onStateChange).toHaveBeenCalledWith(SceneState.Preparing, SceneState.Ready, second);
+  expect(onStateChange).toHaveBeenCalledWith(SceneState.Ready, SceneState.Active, second);
+});
 ```
 
 (The third existing test in this group, `'a failed activation dispatches onStateChange for Preparing to Destroying to Destroyed'`, needs no change — a failed `prepare()` never reaches `Ready`.)
@@ -2470,126 +2472,126 @@ with:
 **1b.** Replace the two obsolete rollback tests. In `describe('SceneDirector — switch-phase rollback', ...)`, replace both tests:
 
 ```ts
-  test('a throwing onStopScene listener rolls back to the previous scope and rethrows', async () => {
-    const app = createApplicationStub();
-    const FirstScene = makeSceneClass();
-    const SecondScene = makeSceneClass();
-    const director = new SceneDirector(app, { first: FirstScene, second: SecondScene });
+test('a throwing onStopScene listener rolls back to the previous scope and rethrows', async () => {
+  const app = createApplicationStub();
+  const FirstScene = makeSceneClass();
+  const SecondScene = makeSceneClass();
+  const director = new SceneDirector(app, { first: FirstScene, second: SecondScene });
 
-    await director.setScene(FirstScene);
-    const firstInstance = director.currentScene;
+  await director.setScene(FirstScene);
+  const firstInstance = director.currentScene;
 
-    const failure = new Error('onStopScene listener failed');
+  const failure = new Error('onStopScene listener failed');
 
-    director.onStopScene.add(() => {
-      throw failure;
-    });
-
-    await expect(director.setScene(SecondScene)).rejects.toThrow(failure);
-
-    expect(director.currentScene).toBe(firstInstance); // rolled back
-    expect(director.state).toBe(SceneState.Active);
+  director.onStopScene.add(() => {
+    throw failure;
   });
 
-  test('a throwing onStopScene listener during a retainCurrent switch un-suspends the previous scope', async () => {
-    const app = createApplicationStub();
-    const FirstScene = makeSceneClass();
-    const SecondScene = makeSceneClass();
-    const director = new SceneDirector(app, { first: FirstScene, second: SecondScene });
+  await expect(director.setScene(SecondScene)).rejects.toThrow(failure);
 
-    await director.setScene(FirstScene);
-    const firstInstance = director.currentScene;
+  expect(director.currentScene).toBe(firstInstance); // rolled back
+  expect(director.state).toBe(SceneState.Active);
+});
 
-    const failure = new Error('onStateChange listener failed');
+test('a throwing onStopScene listener during a retainCurrent switch un-suspends the previous scope', async () => {
+  const app = createApplicationStub();
+  const FirstScene = makeSceneClass();
+  const SecondScene = makeSceneClass();
+  const director = new SceneDirector(app, { first: FirstScene, second: SecondScene });
 
-    director.onStateChange.add(() => {
-      throw failure;
-    });
+  await director.setScene(FirstScene);
+  const firstInstance = director.currentScene;
 
-    await expect(director.setScene(SecondScene, { retainCurrent: true })).rejects.toThrow(failure);
+  const failure = new Error('onStateChange listener failed');
 
-    expect(director.currentScene).toBe(firstInstance);
-    expect(firstInstance?.state).toBe(SceneState.Active); // un-suspended, not left dangling in _retained
-    await expect(director.restoreScene(FirstScene)).rejects.toThrow(RetainedSceneNotFoundError); // proves it's NOT in _retained
+  director.onStateChange.add(() => {
+    throw failure;
   });
+
+  await expect(director.setScene(SecondScene, { retainCurrent: true })).rejects.toThrow(failure);
+
+  expect(director.currentScene).toBe(firstInstance);
+  expect(firstInstance?.state).toBe(SceneState.Active); // un-suspended, not left dangling in _retained
+  await expect(director.restoreScene(FirstScene)).rejects.toThrow(RetainedSceneNotFoundError); // proves it's NOT in _retained
+});
 ```
 
 with:
 
 ```ts
-  test('a throwing onStopScene listener no longer aborts the switch — isolated, reported via onError, switch completes (definition §2.2.1)', async () => {
-    const app = createApplicationStub();
-    const FirstScene = makeSceneClass();
-    const SecondScene = makeSceneClass();
-    const director = new SceneDirector(app, { first: FirstScene, second: SecondScene });
+test('a throwing onStopScene listener no longer aborts the switch — isolated, reported via onError, switch completes (definition §2.2.1)', async () => {
+  const app = createApplicationStub();
+  const FirstScene = makeSceneClass();
+  const SecondScene = makeSceneClass();
+  const director = new SceneDirector(app, { first: FirstScene, second: SecondScene });
 
-    await director.setScene(FirstScene);
+  await director.setScene(FirstScene);
 
-    const failure = new Error('onStopScene listener failed');
-    const errorSpy = vi.fn();
+  const failure = new Error('onStopScene listener failed');
+  const errorSpy = vi.fn();
 
-    director.onStopScene.add(() => {
-      throw failure;
-    });
-    app.onError.add(errorSpy);
-
-    await expect(director.setScene(SecondScene)).resolves.toBe(director);
-
-    expect(director.currentScene).toBeInstanceOf(SecondScene);
-    expect(director.state).toBe(SceneState.Active);
-    expect(errorSpy).toHaveBeenCalledWith(failure);
+  director.onStopScene.add(() => {
+    throw failure;
   });
+  app.onError.add(errorSpy);
 
-  test('a throwing onStateChange listener during a retainCurrent switch no longer un-suspends the previous scope — isolated, reported via onError, retention completes', async () => {
-    const app = createApplicationStub();
-    const FirstScene = makeSceneClass();
-    const SecondScene = makeSceneClass();
-    const director = new SceneDirector(app, { first: FirstScene, second: SecondScene });
+  await expect(director.setScene(SecondScene)).resolves.toBe(director);
 
-    await director.setScene(FirstScene);
-    const firstInstance = director.currentScene;
+  expect(director.currentScene).toBeInstanceOf(SecondScene);
+  expect(director.state).toBe(SceneState.Active);
+  expect(errorSpy).toHaveBeenCalledWith(failure);
+});
 
-    const failure = new Error('onStateChange listener failed');
-    const errorSpy = vi.fn();
+test('a throwing onStateChange listener during a retainCurrent switch no longer un-suspends the previous scope — isolated, reported via onError, retention completes', async () => {
+  const app = createApplicationStub();
+  const FirstScene = makeSceneClass();
+  const SecondScene = makeSceneClass();
+  const director = new SceneDirector(app, { first: FirstScene, second: SecondScene });
 
-    director.onStateChange.add(() => {
-      throw failure;
-    });
-    app.onError.add(errorSpy);
+  await director.setScene(FirstScene);
+  const firstInstance = director.currentScene;
 
-    await expect(director.setScene(SecondScene, { retainCurrent: true })).resolves.toBe(director);
+  const failure = new Error('onStateChange listener failed');
+  const errorSpy = vi.fn();
 
-    expect(director.currentScene).toBeInstanceOf(SecondScene);
-    expect(firstInstance?.state).toBe(SceneState.Suspended); // retained normally, not rolled back
-    expect(errorSpy).toHaveBeenCalledWith(failure);
-
-    await expect(director.restoreScene(FirstScene)).resolves.toBe(director); // proves it IS in _retained
+  director.onStateChange.add(() => {
+    throw failure;
   });
+  app.onError.add(errorSpy);
 
-  test('a throwing onChangeScene/onStartScene listener does not abort setScene() or block later listeners', async () => {
-    const app = createApplicationStub();
-    const TestScene = makeSceneClass();
-    const director = new SceneDirector(app, { test: TestScene });
-    const errorSpy = vi.fn();
-    const laterChangeListener = vi.fn();
-    const laterStartListener = vi.fn();
+  await expect(director.setScene(SecondScene, { retainCurrent: true })).resolves.toBe(director);
 
-    director.onChangeScene.add(() => {
-      throw new Error('onChangeScene listener failed');
-    });
-    director.onChangeScene.add(laterChangeListener);
-    director.onStartScene.add(() => {
-      throw new Error('onStartScene listener failed');
-    });
-    director.onStartScene.add(laterStartListener);
-    app.onError.add(errorSpy);
+  expect(director.currentScene).toBeInstanceOf(SecondScene);
+  expect(firstInstance?.state).toBe(SceneState.Suspended); // retained normally, not rolled back
+  expect(errorSpy).toHaveBeenCalledWith(failure);
 
-    await expect(director.setScene(TestScene)).resolves.toBe(director);
+  await expect(director.restoreScene(FirstScene)).resolves.toBe(director); // proves it IS in _retained
+});
 
-    expect(laterChangeListener).toHaveBeenCalledTimes(1);
-    expect(laterStartListener).toHaveBeenCalledTimes(1);
-    expect(errorSpy).toHaveBeenCalledTimes(2);
+test('a throwing onChangeScene/onStartScene listener does not abort setScene() or block later listeners', async () => {
+  const app = createApplicationStub();
+  const TestScene = makeSceneClass();
+  const director = new SceneDirector(app, { test: TestScene });
+  const errorSpy = vi.fn();
+  const laterChangeListener = vi.fn();
+  const laterStartListener = vi.fn();
+
+  director.onChangeScene.add(() => {
+    throw new Error('onChangeScene listener failed');
   });
+  director.onChangeScene.add(laterChangeListener);
+  director.onStartScene.add(() => {
+    throw new Error('onStartScene listener failed');
+  });
+  director.onStartScene.add(laterStartListener);
+  app.onError.add(errorSpy);
+
+  await expect(director.setScene(TestScene)).resolves.toBe(director);
+
+  expect(laterChangeListener).toHaveBeenCalledTimes(1);
+  expect(laterStartListener).toHaveBeenCalledTimes(1);
+  expect(errorSpy).toHaveBeenCalledTimes(2);
+});
 ```
 
 - [ ] **Step 2: Run to verify it fails**
@@ -2621,59 +2623,59 @@ In `src/core/SceneDirector.ts`, add the private helper, placed just above `_prep
 Change the `_prepareScene` scope construction:
 
 ```ts
-    const scope = new SceneScope(this._app, scene, (previous, next) => this.onStateChange.dispatch(previous, next, scene as Scene));
+const scope = new SceneScope(this._app, scene, (previous, next) => this.onStateChange.dispatch(previous, next, scene as Scene));
 ```
 
 to:
 
 ```ts
-    const scope = new SceneScope(this._app, scene, (previous, next) =>
-      this.onStateChange.dispatchIsolated(error => this._reportLifecycleError(error), previous, next, scene as Scene),
-    );
+const scope = new SceneScope(this._app, scene, (previous, next) =>
+  this.onStateChange.dispatchIsolated(error => this._reportLifecycleError(error), previous, next, scene as Scene),
+);
 ```
 
 Change `setScene()`'s dispatch pair:
 
 ```ts
-      newScope.activate();
+newScope.activate();
 
-      this.onChangeScene.dispatch(scene as Scene);
-      this.onStartScene.dispatch(scene as Scene);
+this.onChangeScene.dispatch(scene as Scene);
+this.onStartScene.dispatch(scene as Scene);
 ```
 
 to:
 
 ```ts
-      newScope.activate();
+newScope.activate();
 
-      this.onChangeScene.dispatchIsolated(error => this._reportLifecycleError(error), scene as Scene);
-      this.onStartScene.dispatchIsolated(error => this._reportLifecycleError(error), scene as Scene);
+this.onChangeScene.dispatchIsolated(error => this._reportLifecycleError(error), scene as Scene);
+this.onStartScene.dispatchIsolated(error => this._reportLifecycleError(error), scene as Scene);
 ```
 
 Change `_clearScene()`'s dispatch:
 
 ```ts
-      this.onChangeScene.dispatch(null);
+this.onChangeScene.dispatch(null);
 ```
 
 to:
 
 ```ts
-      this.onChangeScene.dispatchIsolated(error => this._reportLifecycleError(error), null);
+this.onChangeScene.dispatchIsolated(error => this._reportLifecycleError(error), null);
 ```
 
 Change `restoreScene()`'s dispatch pair:
 
 ```ts
-        this.onChangeScene.dispatch(retainedScope.scene as Scene);
-        this.onStateChange.dispatch(previousState, retainedScope.state, retainedScope.scene as Scene);
+this.onChangeScene.dispatch(retainedScope.scene as Scene);
+this.onStateChange.dispatch(previousState, retainedScope.state, retainedScope.scene as Scene);
 ```
 
 to:
 
 ```ts
-        this.onChangeScene.dispatchIsolated(error => this._reportLifecycleError(error), retainedScope.scene as Scene);
-        this.onStateChange.dispatchIsolated(error => this._reportLifecycleError(error), previousState, retainedScope.state, retainedScope.scene as Scene);
+this.onChangeScene.dispatchIsolated(error => this._reportLifecycleError(error), retainedScope.scene as Scene);
+this.onStateChange.dispatchIsolated(error => this._reportLifecycleError(error), previousState, retainedScope.state, retainedScope.scene as Scene);
 ```
 
 Change `_disposeScene()`'s dispatch:
@@ -2840,6 +2842,7 @@ git commit -m "docs: mark Slice 2 plan complete"
 ## Self-Review
 
 **1. Spec coverage.**
+
 - §2 (remove `onLoad`/`onUnload`, add `onActivate`/`onSuspend`) — Task 8.
 - §2.1 (exact signal/dispatch ordering for fresh activation, restore, suspend, teardown) — Task 9 (`SceneScope.activate()`/`restore()`/`suspend()` reordered exactly per the table); teardown ordering itself is unchanged (already correct) and untouched.
 - §2.2 (lifecycle signal error semantics — never rolls back, never blocks remaining listeners, reported via `onError`) — Task 2 (`dispatchIsolated`) + Tasks 9–10 (every lifecycle dispatch site converted).
@@ -2851,6 +2854,7 @@ git commit -m "docs: mark Slice 2 plan complete"
 **2. Placeholder scan.** Every step above contains complete, real code (full method bodies, full test files/blocks) — no "TODO", no "add appropriate handling," no "similar to Task N" without the actual code shown. Task 6's `TweenSequencerType` alias note is the one place where I called out a construction detail explicitly (to avoid a double-import bug) rather than silently leaving it implicit — reviewed and it resolves to concrete, unambiguous instructions (collapse to a single import, substitute the name), not a placeholder.
 
 **3. Type consistency.**
+
 - `SceneInteraction` constructor: `(app: Application, getState: () => SceneState)` — consistent across Task 7's implementation, Task 9's call site (`new SceneInteraction(app, () => this._state)`), and Task 7's test updates.
 - `SceneTweens` constructor: `(app: Application, getState: () => SceneState)` — consistent across Task 6's implementation, Task 9's call site, and Task 6's test updates.
 - `Signal.dispatchIsolated(onError: (error: unknown) => void, ...params: Args): this` — consistent across Task 2's implementation and every call site in Tasks 9–10 (`error => this._reportError(error)` / `error => this._reportLifecycleError(error)`).

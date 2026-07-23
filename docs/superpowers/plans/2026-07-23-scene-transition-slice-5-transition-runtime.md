@@ -16,7 +16,7 @@
 - **Reconciliation precondition (read before starting Task 1):** this plan was written and its code samples verified against `origin/main @ b5aad1a3`, in which Slices 1–4 (public types/registry, `Ready` state/facility dormancy, atomic navigation transaction, preload/explicit `unload()`) have **not yet landed** in this worktree — `SceneDirector.ts` still has `setScene()`/`restoreScene()`/`_clearScene()` (not yet renamed `change()`/`restore()`), `SetSceneOptions.retainCurrent` (not yet renamed `suspendCurrent`), no `Ready` state, and no `preload()`/`unload()`. Task 1's Step 0 is a mandatory re-diff against the actual merged Slice 1–4 code before any edit — see that step for exactly what to check and how to adapt names if they differ from what is written here. The **shapes** (atomic commit boundary, no `_rollbackSwitch()`, background-teardown-await contract) must hold regardless of surface naming.
 - No `InstantSceneTransition` class and no config-object transition form — `transition` is `undefined` (direct fast path, §3.3) or an instance of the new `SceneTransition` class. `SceneTransitionSelection` (the `false` / `{ enter, exit }` union) and registry-level default transitions are **out of scope** — that is Slice 6's `§3.10` territory; this slice's `transition` option type stays a plain `SceneTransition | undefined`.
 - `PhasedSceneTransition`, `FadeSceneTransition`, `CrossFadeSceneTransition`, `SlideSceneTransition` are **out of scope** (Slices 6/7) — this slice ships the abstract contract and its Director-side runtime only; no concrete `SceneTransition` subclass is authored here. Tests use minimal hand-written fake subclasses.
-- **Frame-loop startup limitation (temporary, removed by Slice 7):** `Application.start()` still `await`s its initial navigation *before* starting the `requestAnimationFrame` loop (§3.7's fix is Slice 7's job, explicitly not this slice's). A transitioned navigation started during `Application.start()` would deadlock (nothing drives `session.update()`/`render()` yet). This slice's own tests never exercise a transitioned navigation through `Application.start()` — they drive `SceneDirector` directly, manually ticking `update()`/`_updateTransition()`/`draw()`/`_renderTransition()` (mirroring the existing `tick()` helper already used by the pre-existing fade tests). Note this limitation in the new `_runTransitionedAction` JSDoc.
+- **Frame-loop startup limitation (temporary, removed by Slice 7):** `Application.start()` still `await`s its initial navigation _before_ starting the `requestAnimationFrame` loop (§3.7's fix is Slice 7's job, explicitly not this slice's). A transitioned navigation started during `Application.start()` would deadlock (nothing drives `session.update()`/`render()` yet). This slice's own tests never exercise a transitioned navigation through `Application.start()` — they drive `SceneDirector` directly, manually ticking `update()`/`_updateTransition()`/`draw()`/`_renderTransition()` (mirroring the existing `tick()` helper already used by the pre-existing fade tests). Note this limitation in the new `_runTransitionedAction` JSDoc.
 - **Explicitly deferred to Slice 7 (do not implement here):** the full abort-during-in-flight-`prepare()` machinery (§3.7's `_frameLoopActive`-driven abort flag, restoring a claimed preload/retained scope on `Application.stop()`/`destroy()` interrupting a navigation still awaiting `prepare()`). This slice's `SceneDirector._dispose()` handling only covers the straightforward case — a session that exists and hasn't finished gets destroyed and its outer promise rejected — without the generation-counter/abort-flag generalization Slice 7 adds. Task 5 states this gap explicitly in code comments.
 - Required test coverage for this slice's new lifecycle/timing surface (do not treat any of these as optional):
   - `environment.commit()` called a second time on the same session is a dev-mode lifecycle error (`SceneTransitionLifecycleError`, reason `'commit-reentrant'`) and a **production no-op** (`__DEV__` gate) — §3.5.2.
@@ -79,6 +79,7 @@ test/rendering/
 ## Task 1: Remove the old fade machinery and the old `SceneTransition` union; land the new `SceneTransition.ts` contract
 
 **Files:**
+
 - Create: `src/core/SceneTransition.ts`
 - Modify: `src/core/SceneTypes.ts`
 - Modify: `src/core/SceneDirector.ts`
@@ -87,18 +88,20 @@ test/rendering/
 - New: `test/core/scene-transition.test.ts`
 
 **Interfaces:**
+
 - Produces: `SceneTransitionOperation`, `SceneTransitionContext`, `SceneTransitionRequirements`, `SceneTransitionEnvironment`, `SceneTransitionFrame`, `SceneTransitionSession`, `SceneTransition` (abstract class with `getRequirements()` abstract, `beginSession()` public/concrete, `createSession()` protected/abstract), `SceneTransitionLifecycleError`. Consumed by every later task in this plan and by Slice 6 (`PhasedSceneTransition extends SceneTransition`).
 - Consumes: nothing new — `Time`/`RenderingContext`/`RenderTexture` types already exist.
 
 ### Step 0 — Mandatory reconciliation check (do this before editing anything)
 
 Read the actual current `src/core/SceneDirector.ts`, `src/core/SceneTypes.ts`, `src/core/SceneScope.ts`, `src/core/SceneState.ts` in this worktree. Confirm, or note deltas from, the following (all true as of `b5aad1a3`, the baseline this plan's code samples are written against):
-- `SceneDirector` has `setScene()`, `restoreScene()`, `_clearScene()` (not `change()`/`restore()`) and a `_navigationInFlight` guard (`_runWithNavigation`) already wrapping every one of them — Slice 3's atomic-commit rename may have landed by the time you execute this; if `change()`/`restore()` already exist, apply every diff below to those names instead, and skip re-doing anything Slice 3 already did (the atomic commit boundary, `_rollbackSwitch()` removal) — only continue if the *shape* differs from what's described here.
+
+- `SceneDirector` has `setScene()`, `restoreScene()`, `_clearScene()` (not `change()`/`restore()`) and a `_navigationInFlight` guard (`_runWithNavigation`) already wrapping every one of them — Slice 3's atomic-commit rename may have landed by the time you execute this; if `change()`/`restore()` already exist, apply every diff below to those names instead, and skip re-doing anything Slice 3 already did (the atomic commit boundary, `_rollbackSwitch()` removal) — only continue if the _shape_ differs from what's described here.
 - `SetSceneOptions`/`RestoreSceneOptions` have `retainCurrent?: boolean` (not yet `suspendCurrent`) — Slice 3 owns that rename (§6.3); if it already landed, use `suspendCurrent` everywhere this plan says `retainCurrent`.
 - No `Ready` state, no `preload()`/`_preloaded`, no `unload()` method exist yet — if Slice 2/4 landed, `SceneState` gains `Ready` and `SceneDirector` gains `preload()`/`unload()`; this does not change anything in Task 1–6 of this plan, but affects Task 7 (composability) — see that task's own reconciliation note.
 - `src/core/SceneDirector.ts` still contains, verbatim: `ActiveFadeTransition` (interface), `TransitionOverlayMesh` (class), `createOverlayMesh()`, `defaultFadeTransitionDuration`, the `_transitionOverlay`/`_transition` fields, and the methods `_drawTransition`, `_advanceTransition`, `_executeTransitionAction`, `_finishTransition`, `_getTransitionAlpha`, `_renderTransitionOverlay`, `_runTransitionedAction` (old fade-driving version). If any of these are already gone, someone has already started this work — stop and reconcile with them instead of duplicating.
 
-If your re-check finds different names than this plan uses, substitute consistently through every remaining task — the target *shapes* (atomic commit, session-driving, no `_rollbackSwitch`) do not change.
+If your re-check finds different names than this plan uses, substitute consistently through every remaining task — the target _shapes_ (atomic commit, session-driving, no `_rollbackSwitch`) do not change.
 
 ### Step 1 — Write the new contract file (no test needed for a pure type/abstract-class declaration — Step 2 exercises it)
 
@@ -377,6 +380,7 @@ Leave every reference to `SceneTransition` in `SetSceneOptions.transition?: Scen
 ### Step 5 — Gut the old fade machinery from `SceneDirector.ts`, land the direct-switch-only interim shape
 
 Delete, in full, from `src/core/SceneDirector.ts`:
+
 - The `ActiveFadeTransition` interface.
 - The `TransitionOverlayMesh` class and `createOverlayMesh()` function.
 - The `defaultFadeTransitionDuration` constant.
@@ -547,6 +551,7 @@ to:
 ### Step 6 — Delete the obsolete old-fade tests, update `_transitionGateOpen`'s temporary meaning, update the `tick()` helper
 
 In `test/core/scene-director.test.ts`:
+
 - Delete the two tests `'fade transition runs and completes around setScene'` and `'transition failure rejects and leaves manager in a valid state'` in full — the capability they exercised no longer exists until Task 3.
 - Delete the two tests `'_transitionGateOpen is true only while a fade transition is in flight, including on failure'` and `'_transitionGateOpen closes even when the transition target fails to activate'` in full — Task 3 reintroduces equivalent coverage against the new session-driven gate.
 - Update the `tick()` helper, which currently calls the now-deleted `_drawTransition`:
@@ -607,6 +612,7 @@ Expected at this point: the retained-scope and general-navigation tests in `scen
 Run: `pnpm exec vitest run test/core/root-index-type-inventory.test.ts --updateSnapshot`
 
 Then read the diff (`git diff test/core/__snapshots__/root-index-type-inventory.test.ts.snap`) and confirm exactly this shape of change:
+
 - `"FadeSceneTransition: interface",` removed.
 - `"SceneTransition: type alias",` becomes `"SceneTransition: class",`.
 - Seven new lines inserted in alphabetical order immediately after `"SceneTransition: class",`: `"SceneTransitionContext: interface",`, `"SceneTransitionEnvironment: interface",`, `"SceneTransitionFrame: interface",`, `"SceneTransitionLifecycleError: class",`, `"SceneTransitionOperation: type alias",`, `"SceneTransitionRequirements: interface",`, `"SceneTransitionSession: interface",`.
@@ -653,10 +659,12 @@ session-driving runtime lands in the next task."
 ## Task 2: `RenderingContext._renderSurfaceInto()` — generalized render-target redirect
 
 **Files:**
+
 - Modify: `src/rendering/RenderingContext.ts`
 - Test: `test/rendering/rendering-context.test.ts`
 
 **Interfaces:**
+
 - Consumes: `RenderPassCoordinatorHost._passCoordinator` (existing, `#rendering/pass/RenderPassCoordinator`), `RenderBackend.setRenderTarget`/`setView`/`clear` (existing).
 - Produces: `RenderingContext._renderSurfaceInto(target: RenderTexture, clear: Color | undefined, draw: () => void): void`. Consumed by Task 4 (`SceneDirector`'s outgoing-snapshot capture and live-surface texture redirect).
 
@@ -830,11 +838,13 @@ render surface for SceneTransition resource provisioning."
 ## Task 3: Session-driving core — environment, commit boundary, per-frame driving, `Application` wiring
 
 **Files:**
+
 - Modify: `src/core/SceneDirector.ts`
 - Modify: `src/core/Application.ts`
 - Modify: `test/core/scene-director.test.ts`
 
 **Interfaces:**
+
 - Consumes: `SceneTransition`/`SceneTransitionSession`/`SceneTransitionEnvironment`/`SceneTransitionContext`/`SceneTransitionLifecycleError` (Task 1).
 - Produces: `SceneDirector._updateTransition(delta: Time): void`, `SceneDirector._transitionPlacement(): 'scene' | 'screen' | null`, `SceneDirector._renderTransition(context: RenderingContext): void` — all called by `Application.update()`. Consumed by Task 4 (resource provisioning wires into these same three methods) and Task 5 (lifecycle-error enforcement lives inside them).
 
@@ -1316,28 +1326,28 @@ Keep the existing `_transitionGateOpen` getter (`_inputGateDepth > 0`) exactly a
 In `src/core/Application.ts`, replace:
 
 ```ts
-        this.scenes.update(frameDelta);
+this.scenes.update(frameDelta);
 
-        this.scenes.draw(this._rendering);
-        this.systems._draw(this._rendering);
-        this.scenes._drawTransition(this._rendering, frameDelta);
+this.scenes.draw(this._rendering);
+this.systems._draw(this._rendering);
+this.scenes._drawTransition(this._rendering, frameDelta);
 ```
 
 with:
 
 ```ts
-        this.scenes.update(frameDelta);
-        this.scenes._updateTransition(frameDelta);
+this.scenes.update(frameDelta);
+this.scenes._updateTransition(frameDelta);
 
-        if (this.scenes._transitionPlacement() === 'scene') {
-          this.scenes.draw(this._rendering);
-          this.scenes._renderTransition(this._rendering);
-          this.systems._draw(this._rendering);
-        } else {
-          this.scenes.draw(this._rendering);
-          this.systems._draw(this._rendering);
-          this.scenes._renderTransition(this._rendering);
-        }
+if (this.scenes._transitionPlacement() === 'scene') {
+  this.scenes.draw(this._rendering);
+  this.scenes._renderTransition(this._rendering);
+  this.systems._draw(this._rendering);
+} else {
+  this.scenes.draw(this._rendering);
+  this.systems._draw(this._rendering);
+  this.scenes._renderTransition(this._rendering);
+}
 ```
 
 Update `Application.update()`'s doc comment (currently: `"4. Draw — the scene draws (plus its systems and UI layer), then app.systems draw phase (app draw systems render above scene output), then the transition overlay (always topmost)."`) to:
@@ -1522,94 +1532,94 @@ describe('SceneDirector — transition session driving', () => {
 Note: the middle test above (`SceneTransitionContext reflects operation/...`) is intentionally left in an unresolved-navigation state to keep the example focused on asserting `getRequirements`'s input — replace it before committing with the fully-resolving version below, which is the one actually added to the file (the plan text above walks through the reasoning; only the final version ships):
 
 ```ts
-  test('SceneTransitionContext reflects operation/hasOutgoingScene/hasIncomingScene for a transitioned setScene()', async () => {
-    const app = createApplicationStub();
-    const First = makeSceneClass();
-    const Second = makeSceneClass();
-    const manager = new SceneDirector(app, { first: First, second: Second });
+test('SceneTransitionContext reflects operation/hasOutgoingScene/hasIncomingScene for a transitioned setScene()', async () => {
+  const app = createApplicationStub();
+  const First = makeSceneClass();
+  const Second = makeSceneClass();
+  const manager = new SceneDirector(app, { first: First, second: Second });
 
-    let firstEnvironment: SceneTransitionEnvironment | null = null;
-    const firstTransition = new (class extends SceneTransition {
-      public getRequirements(context: SceneTransitionContext): SceneTransitionRequirements {
-        expect(context).toEqual({ operation: 'change', hasOutgoingScene: false, hasIncomingScene: true });
+  let firstEnvironment: SceneTransitionEnvironment | null = null;
+  const firstTransition = new (class extends SceneTransition {
+    public getRequirements(context: SceneTransitionContext): SceneTransitionRequirements {
+      expect(context).toEqual({ operation: 'change', hasOutgoingScene: false, hasIncomingScene: true });
 
-        return { outgoingFrame: 'none', currentFrame: 'none' };
-      }
-      protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
-        firstEnvironment = environment;
+      return { outgoingFrame: 'none', currentFrame: 'none' };
+    }
+    protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
+      firstEnvironment = environment;
 
-        return new FakeSession();
-      }
-    })();
+      return new FakeSession();
+    }
+  })();
 
-    const firstNavigation = manager.setScene(First, { transition: firstTransition });
+  const firstNavigation = manager.setScene(First, { transition: firstTransition });
 
-    firstEnvironment?.commit();
-    await Promise.resolve();
-    await Promise.resolve();
-    (firstEnvironment as unknown as { session?: FakeSession }); // no-op, keeps TS happy about unused-narrowing
-    await firstNavigation; // FakeSession.done defaults false — see below for why this resolves
+  firstEnvironment?.commit();
+  await Promise.resolve();
+  await Promise.resolve();
+  firstEnvironment as unknown as { session?: FakeSession }; // no-op, keeps TS happy about unused-narrowing
+  await firstNavigation; // FakeSession.done defaults false — see below for why this resolves
 
-    // FakeSession.done is false by default; a session that never reaches done
-    // would hang this test. Use a session that flips done true right after
-    // commit for this assertion instead:
-  });
+  // FakeSession.done is false by default; a session that never reaches done
+  // would hang this test. Use a session that flips done true right after
+  // commit for this assertion instead:
+});
 ```
 
 Given the fragility of hand-waving a "session that self-completes," replace this test with a self-contained version using a session whose `update()` marks `done = true` once committed:
 
 ```ts
-  test('SceneTransitionContext reflects operation/hasOutgoingScene/hasIncomingScene for a transitioned setScene()', async () => {
-    const app = createApplicationStub();
-    const First = makeSceneClass();
-    const Second = makeSceneClass();
-    const manager = new SceneDirector(app, { first: First, second: Second });
+test('SceneTransitionContext reflects operation/hasOutgoingScene/hasIncomingScene for a transitioned setScene()', async () => {
+  const app = createApplicationStub();
+  const First = makeSceneClass();
+  const Second = makeSceneClass();
+  const manager = new SceneDirector(app, { first: First, second: Second });
 
-    await manager.setScene(First);
+  await manager.setScene(First);
 
-    let capturedContext: SceneTransitionContext | null = null;
-    let environmentRef: SceneTransitionEnvironment | null = null;
+  let capturedContext: SceneTransitionContext | null = null;
+  let environmentRef: SceneTransitionEnvironment | null = null;
 
-    class SelfCommittingSession implements SceneTransitionSession {
-      public done = false;
-      public placement: 'scene' | 'screen' = 'screen';
-      public constructor(private readonly environment: SceneTransitionEnvironment) {
-        this.environment.commit();
-      }
-      public update(_delta: Time): void {
-        if (this.environment.committed) {
-          this.done = true;
-        }
-      }
-      public render(): void {}
-      public destroy(): void {}
+  class SelfCommittingSession implements SceneTransitionSession {
+    public done = false;
+    public placement: 'scene' | 'screen' = 'screen';
+    public constructor(private readonly environment: SceneTransitionEnvironment) {
+      this.environment.commit();
     }
-
-    const transition = new (class extends SceneTransition {
-      public getRequirements(context: SceneTransitionContext): SceneTransitionRequirements {
-        capturedContext = context;
-
-        return { outgoingFrame: 'none', currentFrame: 'none' };
+    public update(_delta: Time): void {
+      if (this.environment.committed) {
+        this.done = true;
       }
-      protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
-        environmentRef = environment;
+    }
+    public render(): void {}
+    public destroy(): void {}
+  }
 
-        return new SelfCommittingSession(environment);
-      }
-    })();
+  const transition = new (class extends SceneTransition {
+    public getRequirements(context: SceneTransitionContext): SceneTransitionRequirements {
+      capturedContext = context;
 
-    const navigation = manager.setScene(Second, { transition });
+      return { outgoingFrame: 'none', currentFrame: 'none' };
+    }
+    protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
+      environmentRef = environment;
 
-    expect(capturedContext).toEqual({ operation: 'change', hasOutgoingScene: true, hasIncomingScene: true });
+      return new SelfCommittingSession(environment);
+    }
+  })();
 
-    await Promise.resolve();
-    await Promise.resolve();
-    tick(manager, app);
-    await navigation;
+  const navigation = manager.setScene(Second, { transition });
 
-    expect(environmentRef?.committed).toBe(true);
-    expect(manager.currentScene).toBeInstanceOf(Second);
-  });
+  expect(capturedContext).toEqual({ operation: 'change', hasOutgoingScene: true, hasIncomingScene: true });
+
+  await Promise.resolve();
+  await Promise.resolve();
+  tick(manager, app);
+  await navigation;
+
+  expect(environmentRef?.committed).toBe(true);
+  expect(manager.currentScene).toBeInstanceOf(Second);
+});
 ```
 
 - [ ] **Step 1: Add the above to `test/core/scene-director.test.ts`** (the three tests: session-driving happy path, `SceneTransitionContext` correctness via `SelfCommittingSession`, `_transitionGateOpen` + post-commit failure). Import `SceneTransition`, `SceneTransitionContext`, `SceneTransitionEnvironment`, `SceneTransitionFrame`, `SceneTransitionRequirements`, `SceneTransitionSession` from `#core/SceneTransition` at the top of the file.
@@ -1651,10 +1661,12 @@ awaits it last, after the session itself finishes."
 ## Task 4: Resource provisioning — pooled texture + one-time outgoing snapshot (§3.4, §3.7a)
 
 **Files:**
+
 - Modify: `src/core/SceneDirector.ts`
 - Modify: `test/core/scene-director.test.ts`
 
 **Interfaces:**
+
 - Consumes: `RenderingContext._renderSurfaceInto` (Task 2), `RenderBackend.acquireRenderTexture`/`releaseRenderTexture` (existing), `Application.onResize` (existing `Signal<[number, number, Application]>`), `Application.canvas` (existing `HTMLCanvasElement`).
 - Produces: `SceneDirector` private `_provisionTransitionResources`/`_releaseTransitionResources`/`_captureOutgoingSnapshot`, wired into `_runTransitionedAction` (replacing the `void requirements;` placeholder from Task 3) and `draw()`/`_renderTransition()` (populating real `frame.outgoing`/`frame.current`).
 
@@ -2120,10 +2132,12 @@ requests currentFrame: 'texture'."
 ## Task 5: Lifecycle contract enforcement — reentrant commit, done-before-commit, post-commit failure, `destroy()` contract, Director-destroyed-mid-session
 
 **Files:**
+
 - Modify: `src/core/SceneDirector.ts`
 - Modify: `test/core/scene-director.test.ts`
 
 **Interfaces:**
+
 - Consumes: `DirectorTransitionEnvironment` (Task 3, already enforces `commit-reentrant` internally), `SceneTransitionLifecycleError` (Task 1).
 - Produces: `SceneDirector._dispose()` now also destroys an in-flight session; no new public API.
 
@@ -2334,9 +2348,11 @@ general, abort — Slice 7 adds the in-flight-prepare() generalization)."
 ## Task 6: Pre-commit failure semantics minus abort-in-flight-prepare (§3.5.1)
 
 **Files:**
+
 - Modify: `test/core/scene-director.test.ts`
 
 **Interfaces:**
+
 - Consumes: everything from Tasks 1–5. No production code changes in this task — it is purely a targeted-coverage task confirming the three testable §3.5.1 concepts and documenting the one deferred concept.
 
 ### Step 1 — Write the failing (or confirmatory) tests
@@ -2482,46 +2498,46 @@ describe('SceneDirector — pre-commit failure semantics (§3.5.1)', () => {
 The first test in this block (`active-scope rollback is eliminated`) has three leftover, unused setup lines at its start (an artifact of drafting against a `retainCurrent` name that turned out unnecessary for that specific test) — **delete the three lines `await manager.setScene(First, ...)`, `await manager.setScene(Second)`, `await manager.setScene(First, ...)` inside the `'claim restoration'` test before the real `managerB` setup** (they were reasoning scaffolding, not part of the actual test — the actual test only needs `managerB`). Ship the cleaned-up version below in place of the draft above:
 
 ```ts
-  test('claim restoration: a transitioned restoreScene() that fails pre-commit puts the scope back into _retained', async () => {
-    const First = makeSceneClass();
-    const Second = makeSceneClass();
-    const managerB = new SceneDirector(createApplicationStub(), { first: First, second: Second });
+test('claim restoration: a transitioned restoreScene() that fails pre-commit puts the scope back into _retained', async () => {
+  const First = makeSceneClass();
+  const Second = makeSceneClass();
+  const managerB = new SceneDirector(createApplicationStub(), { first: First, second: Second });
 
-    await managerB.setScene(First);
-    await managerB.setScene(Second, { retainCurrent: true }); // First is now retained
+  await managerB.setScene(First);
+  await managerB.setScene(Second, { retainCurrent: true }); // First is now retained
 
-    let environmentRef: SceneTransitionEnvironment | null = null;
-    const session = new FakeSession();
-    const transition = new (class extends SceneTransition {
-      public getRequirements(): SceneTransitionRequirements {
-        return { outgoingFrame: 'none', currentFrame: 'none' };
-      }
-      protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
-        environmentRef = environment;
-
-        return session;
-      }
-    })();
-
-    managerB.onStateChange.add(() => {
-      throw new Error('onStateChange listener failed');
-    });
-
-    const navigation = managerB.restoreScene(First, { transition });
-
-    environmentRef?.commit();
-    await Promise.resolve();
-    await Promise.resolve();
-
-    try {
-      await navigation;
-      expect((managerB as unknown as { _retained: Map<unknown, unknown> })._retained.has(First)).toBe(false);
-      expect(managerB.currentScene).toBeInstanceOf(First);
-    } catch {
-      expect((managerB as unknown as { _retained: Map<unknown, unknown> })._retained.has(First)).toBe(true);
-      expect(managerB.currentScene).not.toBeInstanceOf(First);
+  let environmentRef: SceneTransitionEnvironment | null = null;
+  const session = new FakeSession();
+  const transition = new (class extends SceneTransition {
+    public getRequirements(): SceneTransitionRequirements {
+      return { outgoingFrame: 'none', currentFrame: 'none' };
     }
+    protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
+      environmentRef = environment;
+
+      return session;
+    }
+  })();
+
+  managerB.onStateChange.add(() => {
+    throw new Error('onStateChange listener failed');
   });
+
+  const navigation = managerB.restoreScene(First, { transition });
+
+  environmentRef?.commit();
+  await Promise.resolve();
+  await Promise.resolve();
+
+  try {
+    await navigation;
+    expect((managerB as unknown as { _retained: Map<unknown, unknown> })._retained.has(First)).toBe(false);
+    expect(managerB.currentScene).toBeInstanceOf(First);
+  } catch {
+    expect((managerB as unknown as { _retained: Map<unknown, unknown> })._retained.has(First)).toBe(true);
+    expect(managerB.currentScene).not.toBeInstanceOf(First);
+  }
+});
 ```
 
 Add, as plain prose (not a test — a documented, deliberate gap), a comment directly above this `describe` block:
@@ -2567,10 +2583,12 @@ flag, not silently skipped."
 ## Task 7: Composability — transitioned `restore()`, `unload()` active-scope path, operation correctness (§3.8)
 
 **Files:**
+
 - Modify: `src/core/SceneDirector.ts` (only if `unload()` already exists — see reconciliation note below)
 - Modify: `test/core/scene-director.test.ts`
 
 **Interfaces:**
+
 - Consumes: everything from Tasks 1–6, plus (provisionally) `SceneDirector.unload()` from Slice 4.
 
 **Reconciliation note (mandatory, read first):** as verified during this plan's research pass, `unload()`/`preload()`/`_preloaded`/the `Ready` state do **not** exist anywhere in this worktree's `src/` at the time this plan was written (Slice 4 has not landed). This task's `unload()`-related work is therefore written against the shape spec §5 describes, clearly marked provisional, and must be re-verified against the actual merged Slice 4 code before implementing. If `unload()` does not exist yet when you reach this task, implement only the `restore()`-composability half (Step A below) and leave the `unload()` half (Step B) as a follow-up coordinated with whoever lands Slice 4 — do not fabricate a method signature no other code agrees on.
@@ -2765,9 +2783,11 @@ If `unload()` does not exist yet, skip this step entirely and leave a note in th
 ## Task 8: Full verification pass — remnant check, docs regeneration, full test gate
 
 **Files:**
+
 - No new source changes expected — this task verifies the whole slice.
 
 **Interfaces:**
+
 - N/A (verification only).
 
 - [ ] **Step 1: Confirm the old type/machinery is fully gone**
@@ -2840,6 +2860,7 @@ gh pr merge --auto --squash
 ## Self-Review Notes (from the plan-writing pass)
 
 **Spec coverage check:**
+
 - §3.1 definition/session split — Task 1 (`SceneTransition` abstract class, `SceneTransitionSession` interface, both immutable-definition-vs-mutable-session by construction).
 - §3.1a `createSession()` protected / `beginSession()` public wrapper — Task 1's abstract class body, tested directly in `scene-transition.test.ts`.
 - §3.2 class-only, no config-object — enforced structurally (the `transition` option's type is `SceneTransition | undefined`; a plain object literal cannot satisfy the abstract class's required methods, a compile-time guarantee, not a runtime check).
