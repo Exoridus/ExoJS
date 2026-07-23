@@ -207,7 +207,7 @@ describe('recordability predicate (S3-D5): v1 records default-path flagged rende
     backend.destroy();
   });
 
-  test('a geometry-snapped drawable makes the fragment non-recordable (S3-D5.3)', () => {
+  test('a geometry-snapped drawable stays recordable (snapping is resolved in-shader, S3-D5.3)', () => {
     const backend = createTestBackend();
     const group = new RetainedContainer();
     const snapped = new RecordableLeaf('a');
@@ -217,7 +217,7 @@ describe('recordability predicate (S3-D5): v1 records default-path flagged rende
 
     const fragment = captureFragment(group, backend);
 
-    expect(fragment.isRecordable(backend)).toBe(false);
+    expect(fragment.isRecordable(backend)).toBe(true);
 
     group.parent!.destroy();
     backend.destroy();

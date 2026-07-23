@@ -420,7 +420,7 @@ describe('WebGL2 retained instruction set: record + splice ladder (Tasks 6/7)', 
     });
   });
 
-  it('a pixel-snapped draw inside an open capture poisons the recording: the set never validates (S3-D5.3 belt-and-braces)', () => {
+  it('a pixel-snapped draw inside an open capture validates normally: snapping is resolved in-shader, not on the CPU (S3-D5.3 belt-and-braces)', () => {
     withHarness(harness => {
       const [texture] = makeTextures(1);
       const backend = harness.backend;
@@ -437,10 +437,11 @@ describe('WebGL2 retained instruction set: record + splice ladder (Tasks 6/7)', 
       backend._endRetainedCapture(set);
       set.commitRecording();
 
-      // The batch WAS appended (the draw is real), but the poison instruction
-      // keeps the set from ever validating -> permanent entry-replay fallback.
+      // Both pixel-snap modes are resolved in the vertex shaders from the
+      // transform row flag, so the uploaded rows/quads stay view-independent
+      // — a snapped draw is fully recordable, no poison instruction needed.
       expect(set.hasRecording).toBe(true);
-      expect(set.isValidFor(backend)).toBe(false);
+      expect(set.isValidFor(backend)).toBe(true);
 
       snapped.destroy();
     });
