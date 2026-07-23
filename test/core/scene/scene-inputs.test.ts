@@ -82,7 +82,11 @@ describe('SceneInputs construction', () => {
 
   test('every SceneInputs.onXxx() call constructs exactly one underlying binding via a single app.input.onStart call', () => {
     const { app } = createAppStub();
-    const inputs = new SceneInputs(app, () => SceneState.Active, () => false);
+    const inputs = new SceneInputs(
+      app,
+      () => SceneState.Active,
+      () => false,
+    );
 
     inputs.onTrigger(1, () => undefined);
 
@@ -107,7 +111,11 @@ describe('SceneInputs — when policy availability matrix', () => {
     ['always', SceneState.Suspended, false, false],
   ] as const)('when: "%s" at state %s, paused %s allows onActive dispatch: %s', (when, state, paused, expected) => {
     const { app, bindings } = createAppStub();
-    const inputs = new SceneInputs(app, () => state, () => paused);
+    const inputs = new SceneInputs(
+      app,
+      () => state,
+      () => paused,
+    );
     const onActive = vi.fn();
 
     inputs.onActive(1, onActive, { when });
@@ -122,7 +130,11 @@ describe('SceneInputs — when policy availability matrix', () => {
 
   test('when option defaults to "active" and is stripped before forwarding to app.input', () => {
     const { app, bindings } = createAppStub();
-    const inputs = new SceneInputs(app, () => SceneState.Active, () => true);
+    const inputs = new SceneInputs(
+      app,
+      () => SceneState.Active,
+      () => true,
+    );
     const onStart = vi.fn();
 
     inputs.onStart(1, onStart, { when: 'active', threshold: 500 });
@@ -136,7 +148,11 @@ describe('SceneInputs — when policy availability matrix', () => {
 
   test('the transition gate suppresses dispatch even for when: "always"', () => {
     const { app, bindings, transitionGateOpen } = createAppStub();
-    const inputs = new SceneInputs(app, () => SceneState.Active, () => false);
+    const inputs = new SceneInputs(
+      app,
+      () => SceneState.Active,
+      () => false,
+    );
     const onActive = vi.fn();
 
     inputs.onActive(1, onActive, { when: 'always' });
@@ -153,7 +169,11 @@ describe('SceneInputs — edge rules', () => {
   test('press while unpaused, release while paused: no trigger', () => {
     let currentPaused = false;
     const { app, bindings } = createAppStub();
-    const inputs = new SceneInputs(app, () => SceneState.Active, () => currentPaused);
+    const inputs = new SceneInputs(
+      app,
+      () => SceneState.Active,
+      () => currentPaused,
+    );
     const onTrigger = vi.fn();
 
     inputs.onTrigger(1, onTrigger, { when: 'active' });
@@ -171,7 +191,11 @@ describe('SceneInputs — edge rules', () => {
   test('press while paused (when: "active"), resume, release while unpaused: no trigger (press edge was disallowed)', () => {
     let currentPaused = true;
     const { app, bindings } = createAppStub();
-    const inputs = new SceneInputs(app, () => SceneState.Active, () => currentPaused);
+    const inputs = new SceneInputs(
+      app,
+      () => SceneState.Active,
+      () => currentPaused,
+    );
     const onTrigger = vi.fn();
 
     inputs.onTrigger(1, onTrigger, { when: 'active' });
@@ -188,7 +212,11 @@ describe('SceneInputs — edge rules', () => {
   test('press while unpaused, pause mid-hold before release: no trigger (reset on the first disallowed onActive tick), even if resumed before release', () => {
     let currentPaused = false;
     const { app, bindings } = createAppStub();
-    const inputs = new SceneInputs(app, () => SceneState.Active, () => currentPaused);
+    const inputs = new SceneInputs(
+      app,
+      () => SceneState.Active,
+      () => currentPaused,
+    );
     const onTrigger = vi.fn();
 
     inputs.onTrigger(1, onTrigger, { when: 'active' });
@@ -207,7 +235,11 @@ describe('SceneInputs — edge rules', () => {
 
   test('press and release both while unpaused: onTrigger fires normally', () => {
     const { app, bindings } = createAppStub();
-    const inputs = new SceneInputs(app, () => SceneState.Active, () => false);
+    const inputs = new SceneInputs(
+      app,
+      () => SceneState.Active,
+      () => false,
+    );
     const onTrigger = vi.fn();
 
     inputs.onTrigger(1, onTrigger, { when: 'active' });
@@ -221,7 +253,11 @@ describe('SceneInputs — edge rules', () => {
 
   test('onStop fires when both press and release are in an allowed state', () => {
     const { app, bindings } = createAppStub();
-    const inputs = new SceneInputs(app, () => SceneState.Active, () => false);
+    const inputs = new SceneInputs(
+      app,
+      () => SceneState.Active,
+      () => false,
+    );
     const onStop = vi.fn();
 
     inputs.onStop(1, onStop, { when: 'active' });
@@ -235,7 +271,11 @@ describe('SceneInputs — edge rules', () => {
   test('a binding with no when option behaves exactly like "active" (the default)', () => {
     let currentPaused = true;
     const { app, bindings } = createAppStub();
-    const inputs = new SceneInputs(app, () => SceneState.Active, () => currentPaused);
+    const inputs = new SceneInputs(
+      app,
+      () => SceneState.Active,
+      () => currentPaused,
+    );
     const onStart = vi.fn();
 
     inputs.onStart(1, onStart);
@@ -252,7 +292,11 @@ describe('SceneInputs — edge rules', () => {
 describe('SceneInputs — suspend()/resume()', () => {
   test('suspend() disables dispatch regardless of when', () => {
     const { app, bindings } = createAppStub();
-    const inputs = new SceneInputs(app, () => SceneState.Active, () => false);
+    const inputs = new SceneInputs(
+      app,
+      () => SceneState.Active,
+      () => false,
+    );
     const onActive = vi.fn();
 
     inputs.onActive(1, onActive, { when: 'always' });
@@ -265,7 +309,11 @@ describe('SceneInputs — suspend()/resume()', () => {
 
   test('resume() restores dispatch for a fresh press/release cycle', () => {
     const { app, bindings } = createAppStub();
-    const inputs = new SceneInputs(app, () => SceneState.Active, () => false);
+    const inputs = new SceneInputs(
+      app,
+      () => SceneState.Active,
+      () => false,
+    );
     const onActive = vi.fn();
 
     inputs.onActive(1, onActive, { when: 'always' });
@@ -282,7 +330,11 @@ describe('SceneInputs — suspend()/resume()', () => {
 describe('SceneInputs — destroy()', () => {
   test('unbinds every tracked binding', () => {
     const { app, bindings } = createAppStub();
-    const inputs = new SceneInputs(app, () => SceneState.Active, () => false);
+    const inputs = new SceneInputs(
+      app,
+      () => SceneState.Active,
+      () => false,
+    );
 
     inputs.onStart(1, () => undefined);
     inputs.onTrigger(1, () => undefined);

@@ -135,8 +135,7 @@ export class SceneInputs implements Destroyable {
 
     let primed = false;
 
-    const allowedNow = (): boolean =>
-      !this._suspended && !this._app.scenes._transitionGateOpen && whenPolicyAllows(when, this._getState(), this._getPaused());
+    const allowedNow = (): boolean => !this._suspended && !this._app.scenes._transitionGateOpen && whenPolicyAllows(when, this._getState(), this._getPaused());
 
     // Anchor call — see the BindingKind comment above for why `onStart`
     // specifically is used regardless of `kind`.
