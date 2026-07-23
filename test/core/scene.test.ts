@@ -13,6 +13,12 @@ import { RenderTexture } from '#rendering/texture/RenderTexture';
 
 class DummyDrawable extends Drawable {}
 
+// Ambient (erased at runtime) — exists only as a type argument for
+// Scene<void, CustomApp> below. `declare class` is only legal at module
+// scope, which is why this sits here rather than inside the describe block
+// that uses it.
+declare class CustomApp extends Application {}
+
 const createRuntime = (): { backend: RenderBackend; context: RenderingContext } => {
   const renderTarget = new RenderTarget(200, 200, true);
   const stats = createRenderStats();
@@ -185,6 +191,18 @@ describe('Scene', () => {
       scene._teardownInternals();
       expect(scene.attached).toBe(false);
       expect(() => scene.app).toThrow();
+    });
+  });
+
+  describe('app accessor with a project-specific AppLike (compile-time-only distinction)', () => {
+    class CustomAppScene extends Scene<void, CustomApp> {}
+
+    test('returns the same attached instance regardless of the declared AppLike generic', () => {
+      const scene = new CustomAppScene();
+
+      scene._attach(fakeApp, makeFakeScope());
+
+      expect(scene.app).toBe(fakeApp);
     });
   });
 

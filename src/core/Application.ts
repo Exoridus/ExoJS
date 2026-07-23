@@ -33,7 +33,7 @@ import { computeLetterboxLayout } from './letterbox';
 import { hello, logger } from './logging';
 import { Perf } from './Perf';
 import { SceneDirector } from './SceneDirector';
-import type { AnySceneConstructor, InferSceneData, SetSceneArgs } from './SceneTypes';
+import type { AnySceneConstructor, InferSceneData, SceneRegistryShape, SetSceneArgs } from './SceneTypes';
 import { defaultSerializationRegistry, SerializationRegistry } from './serialization/SerializationRegistry';
 import { Signal } from './Signal';
 import { SystemRegistry } from './SystemRegistry';
@@ -108,7 +108,8 @@ export interface InputApplicationOptions {
   pointerDistanceThreshold?: number;
 }
 
-export interface ApplicationOptions {
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- empty registry is a valid default
+export interface ApplicationOptions<Registry extends SceneRegistryShape<Registry> = {}> {
   clearColor?: Color;
   backend?: BackendConfig;
   canvas?: CanvasApplicationOptions;
@@ -139,16 +140,21 @@ export interface ApplicationOptions {
    */
   extensions?: readonly Extension[];
   /**
-   * Registry of navigable {@link Scene} constructors, keyed by a
-   * diagnostics-only name (shown in {@link UnregisteredSceneError} messages
-   * and duplicate-registration errors). Required for any
-   * {@link Application.start} / {@link SceneDirector.setScene} call that
-   * targets a constructor — unregistered targets reject in development
-   * builds. Validated once at construction: every value must be a
-   * {@link Scene} subclass constructor (checked without instantiating it),
-   * and no constructor may appear under more than one key.
+   * Registry of navigable {@link Scene} constructors, keyed by a name used
+   * for diagnostics (shown in {@link UnregisteredSceneError} messages and
+   * duplicate-registration errors) and, in a later slice, key-based
+   * navigation. Each value is either a bare {@link Scene} subclass
+   * constructor, or a `{ scene, transition? }` descriptor pairing one with a
+   * target-bound default transition — see {@link SceneRegistration}
+   * (`transition`'s real type ships with the transition runtime; it is an
+   * inert placeholder until then). Required for any {@link Application.start}
+   * / {@link SceneDirector.setScene} call that targets a constructor —
+   * unregistered targets reject in development builds. Validated once at
+   * construction: every value must resolve to a {@link Scene} subclass
+   * constructor (checked without instantiating it), and no constructor may
+   * appear under more than one key.
    */
-  scenes?: Record<string, AnySceneConstructor>;
+  scenes?: Registry;
 }
 
 export interface WebGl2BackendConfig {
@@ -273,14 +279,15 @@ const defaultInputSettings: Required<InputApplicationOptions> = {
  * scene update + render). Useful for games; leave off for tools and
  * background-active simulations.
  */
-export class Application {
-  public readonly options: ApplicationOptions;
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- empty registry is a valid default
+export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
+  public readonly options: ApplicationOptions<Registry>;
   public readonly canvas: HTMLCanvasElement;
   public readonly loader: Loader;
   public readonly input: InputManager;
   public readonly focus: FocusManager;
   public readonly interaction: InteractionManager;
-  public readonly scenes: SceneDirector;
+  public readonly scenes: SceneDirector<Registry>;
   /** Per-Application seedable RNG. Isolated from other Applications and from the global `rand()`. */
   public readonly random: Random;
   public readonly tweens: TweenManager = new TweenManager();
@@ -356,7 +363,7 @@ export class Application {
   private _sizingMode: CanvasSizingMode = 'fixed';
   private readonly _audio: AudioManager = new AudioManager();
 
-  public constructor(appSettings: ApplicationOptions = {}) {
+  public constructor(appSettings: ApplicationOptions<Registry> = {}) {
     const canvasOptions = appSettings.canvas ?? {};
     const loaderOptions = appSettings.loader ?? {};
     const renderingOptions = appSettings.rendering ?? {};
@@ -453,7 +460,7 @@ export class Application {
     this.input = new InputManager(this);
     this.focus = new FocusManager(this);
     this.interaction = new InteractionManager(this);
-    this.scenes = new SceneDirector(this, appSettings.scenes);
+    this.scenes = new SceneDirector<Registry>(this, appSettings.scenes);
     this.random = new Random(this.options.seed);
     this._updateHandler = this.update.bind(this);
 

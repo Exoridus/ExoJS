@@ -1,3 +1,4 @@
+import type { Application } from './Application';
 import type { Color } from './Color';
 import type { Scene } from './Scene';
 
@@ -27,6 +28,89 @@ export type AnySceneConstructor = SceneConstructor | SceneConstructor<any>;
 
 /** Extracts the activation-data type a {@link SceneConstructor} expects. */
 export type InferSceneData<C> = C extends SceneConstructor<infer Data> ? Data : never;
+
+/**
+ * A single `ApplicationOptions.scenes` registry entry: either a bare
+ * {@link Scene} subclass constructor, or a descriptor pairing one with a
+ * target-bound default transition. Both forms register identically —
+ * `title: TitleScene` and `title: { scene: TitleScene }` are equivalent.
+ */
+export type SceneRegistration<C extends AnySceneConstructor> =
+  | C
+  | {
+      readonly scene: C;
+      /**
+       * Default transition used whenever navigation targets this
+       * constructor without its own call-site `transition` option (spec
+       * §3.10).
+       */
+      // TODO(slice 6): SceneTransitionSelection
+      readonly transition?: unknown;
+    };
+
+/**
+ * Structural constraint for an `ApplicationOptions.scenes` registry: every
+ * value must be a {@link SceneRegistration}. A mapped-type constraint, not
+ * `Record<string, SceneRegistration<AnySceneConstructor>>` — `Record<K, V>`
+ * requires an index signature to structurally match, which a plain
+ * `interface GameScenes { title: typeof TitleScene; ... }` does not have (a
+ * `type` alias with the identical shape happens to satisfy it, an
+ * `interface` does not — confirmed against this project's TypeScript
+ * version, `--strict`: "Index signature for type 'string' is missing"). The
+ * public API must not depend on which of the two a caller wrote; a
+ * mapped-type constraint accepts both.
+ */
+export type SceneRegistryShape<Registry> = {
+  readonly [Key in keyof Registry]: SceneRegistration<AnySceneConstructor>;
+};
+
+/**
+ * Extracts the {@link Scene} subclass constructor a {@link SceneRegistration}
+ * resolves to — unwraps the descriptor form, passes a bare constructor
+ * through unchanged.
+ */
+export type ConstructorOf<R extends SceneRegistration<AnySceneConstructor>> = R extends { scene: infer C } ? C : R;
+
+/* eslint-disable @typescript-eslint/no-explicit-any -- ApplicationLike/ApplicationOf must accept `Application<any>` and an abstract constructor's erased argument list; see spec §6.2. */
+/**
+ * Anything that resolves to a concrete {@link Application} instance type: the
+ * instance itself, its constructor, or `typeof` an already-typed instance.
+ * {@link Scene}'s second generic accepts any of the three — see
+ * {@link ApplicationOf}.
+ */
+export type ApplicationLike = Application<any> | (abstract new (...args: any[]) => Application<any>);
+
+/**
+ * Normalizes an {@link ApplicationLike} to its concrete `Application`
+ * instance type, letting {@link Scene}'s second generic accept an
+ * `Application` instance type, its constructor, or `typeof someAppInstance`
+ * interchangeably (spec §6.2).
+ *
+ * `typeof someAppInstance` only works once the instance already has an
+ * explicit, non-inferred type — a fully-inferred `const app = new
+ * Application({ scenes: {...} })` cannot be threaded through a
+ * self-referential base-scene chain this way (confirmed: TS2506/TS7022 — the
+ * inference cycle runs through the un-annotated `const`'s own initializer,
+ * which ordinary lazy interface/type-alias resolution does not rescue).
+ * Break the cycle with an explicit fixed point instead — a named
+ * `Application` subclass with a hand-written registry type:
+ *
+ *   class GameApplication extends Application<GameScenes> {}
+ *   export const app: GameApplication = new GameApplication({ scenes: {...} });
+ *   // in a second module:
+ *   export abstract class AppScene<Data = void> extends Scene<Data, typeof app> {}
+ *
+ * The cross-file `import type` this introduces is a type-only module cycle —
+ * unproblematic, erased entirely at compile time.
+ */
+export type ApplicationOf<T extends ApplicationLike> = T extends abstract new (...args: any[]) => infer Instance
+  ? Instance extends Application<any>
+    ? Instance
+    : never
+  : T extends Application<any>
+    ? T
+    : never;
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 /**
  * Fade-to-color scene transition. The screen fades to `color` (default black)
@@ -131,13 +215,14 @@ export class DuplicateSceneRegistrationError extends Error {
 
 /**
  * Thrown (dev builds only) when `ApplicationOptions.scenes` contains a value
- * that is not a {@link Scene} subclass constructor.
+ * that is not a {@link SceneRegistration} — neither a {@link Scene} subclass
+ * constructor nor a `{ scene, transition? }` descriptor whose `scene` is one.
  */
 export class InvalidSceneRegistrationError extends Error {
   public readonly key: string;
 
   public constructor(key: string) {
-    super(`ApplicationOptions.scenes["${key}"] must be a Scene subclass constructor.`);
+    super(`ApplicationOptions.scenes["${key}"] must be a Scene subclass constructor, or a { scene, transition? } descriptor whose scene is one.`);
     this.name = 'InvalidSceneRegistrationError';
     this.key = key;
   }
@@ -207,37 +292,61 @@ export class RetainedSceneNotFoundError extends Error {
 }
 
 /**
- * Validate and index an `ApplicationOptions.scenes` record: every value must
- * be a function whose prototype chain includes {@link Scene} (checked via
- * `prototype instanceof Scene` — deliberately never constructs an instance,
- * since construction may have user side effects), and no constructor may
- * appear under more than one key. Dev builds only; production builds skip
- * validation.
+ * Bidirectional index built from `ApplicationOptions.scenes` by
+ * {@link validateSceneRegistry}. `byConstructor` backs the existing
+ * constructor-based navigation checks (`setScene`'s registration/diagnostics
+ * lookups); `byKey` is reserved for key-based navigation — not consumed by
+ * any navigation method yet.
  * @internal
  */
-export function validateSceneRegistry(
-  scenes: Record<string, AnySceneConstructor> | undefined,
-  sceneBase: typeof Scene,
-): ReadonlyMap<AnySceneConstructor, string> {
-  const registry = new Map<AnySceneConstructor, string>();
+export interface SceneRegistryIndex {
+  readonly byConstructor: ReadonlyMap<AnySceneConstructor, string>;
+  readonly byKey: ReadonlyMap<string, AnySceneConstructor>;
+}
+
+const isSceneRegistrationDescriptor = (value: unknown): value is { scene: AnySceneConstructor; transition?: unknown } =>
+  typeof value === 'object' && value !== null && 'scene' in value;
+
+/**
+ * Validate and index an `ApplicationOptions.scenes` record: every value must
+ * be a {@link SceneRegistration} — a function whose prototype chain includes
+ * {@link Scene} (checked via `prototype instanceof Scene` — deliberately
+ * never constructs an instance, since construction may have user side
+ * effects), or a `{ scene, transition? }` descriptor whose `scene` passes the
+ * same check — and no resolved constructor may appear under more than one
+ * key, in either form. Dev builds only; production builds skip validation.
+ * @internal
+ */
+export function validateSceneRegistry(scenes: Record<string, SceneRegistration<AnySceneConstructor>> | undefined, sceneBase: typeof Scene): SceneRegistryIndex {
+  const byConstructor = new Map<AnySceneConstructor, string>();
+  const byKey = new Map<string, AnySceneConstructor>();
 
   if (scenes === undefined) {
-    return registry;
+    return { byConstructor, byKey };
   }
 
-  for (const [key, ctor] of Object.entries(scenes)) {
+  for (const [key, registration] of Object.entries(scenes)) {
+    let ctor: AnySceneConstructor | undefined;
+    if (typeof registration === 'function') {
+      ctor = registration;
+    } else if (isSceneRegistrationDescriptor(registration)) {
+      ctor = registration.scene;
+    }
+
     if (__DEV__ && !(typeof ctor === 'function' && ctor.prototype instanceof sceneBase)) {
       throw new InvalidSceneRegistrationError(key);
     }
 
-    const existingKey = registry.get(ctor);
+    const resolvedCtor = ctor!;
+    const existingKey = byConstructor.get(resolvedCtor);
 
     if (__DEV__ && existingKey !== undefined) {
-      throw new DuplicateSceneRegistrationError(ctor.name, [existingKey, key]);
+      throw new DuplicateSceneRegistrationError(resolvedCtor.name, [existingKey, key]);
     }
 
-    registry.set(ctor, key);
+    byConstructor.set(resolvedCtor, key);
+    byKey.set(key, resolvedCtor);
   }
 
-  return registry;
+  return { byConstructor, byKey };
 }

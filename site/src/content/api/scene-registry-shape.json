@@ -1,0 +1,63 @@
+{
+  "title": "SceneRegistryShape",
+  "description": "Structural constraint for an `ApplicationOptions.scenes` registry: every value must be a SceneRegistration. A mapped-type constraint, not `Record<string, SceneRegistration<AnySceneConstructor>>` — `Record<K, V>` requires an index signature to structurally match, which a plain `interface GameScenes { title: typeof TitleScene; ... }` does not have (a `type` alias with the identical shape happens to satisfy it, an `interface` does not — confirmed against this project's TypeScript version, `--strict`: \"Index signature for type 'string' is missing\"). The public API must not depend on which of the two a caller wrote; a mapped-type constraint accepts both.",
+  "symbol": "SceneRegistryShape",
+  "kind": "type",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Structural constraint for an `ApplicationOptions.scenes` registry: every value must be a SceneRegistration. A mapped-type constraint, not `Record<string, SceneRegistration<AnySceneConstructor>>` — `Record<K, V>` requires an index signature to structurally match, which a plain `interface GameScenes { title: typeof TitleScene; ... }` does not have (a `type` alias with the identical shape happens to satisfy it, an `interface` does not — confirmed against this project's TypeScript version, `--strict`: \"Index signature for type 'string' is missing\"). The public API must not depend on which of the two a caller wrote; a mapped-type constraint accepts both."
+      ],
+      "importLine": "import { SceneRegistryShape } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "SceneRegistryShape",
+          "signature": "mapped",
+          "signatureTokens": [
+            {
+              "text": "mapped",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/SceneTypes.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneTypes.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/SceneTypes.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneTypes.ts"
+}

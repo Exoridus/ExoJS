@@ -1,6 +1,6 @@
 {
   "title": "Scene",
-  "description": "A scene's lifecycle host. Subclass to define scene behavior: class GameScene extends Scene { override init(): void { ... } override update(delta: Time): void { ... } override draw(context: RenderingContext): void { ... } } `Data` is this scene's activation-data type — the value passed to Scene.load and Scene.init. Scenes that need no activation data use the default: class TitleScene extends Scene { ... } A scene that needs typed data declares it through the generic: interface GameData { readonly level: number; } class GameScene extends Scene<GameData> { ... } Scene-bound facilities (Scene.systems, Scene.loader, Scene.inputs, Scene.interaction, Scene.tweens, Scene.audio) are unavailable during construction and class-field initialization — they become available once the scene is attached and remain available through Scene.load, Scene.init, the frame hooks, Scene.unload, and Scene.destroy.",
+  "description": "A scene's lifecycle host. Subclass to define scene behavior: class GameScene extends Scene { override init(): void { ... } override update(delta: Time): void { ... } override draw(context: RenderingContext): void { ... } } `Data` is this scene's activation-data type — the value passed to Scene.load and Scene.init. Scenes that need no activation data use the default: class TitleScene extends Scene { ... } A scene that needs typed data declares it through the generic: interface GameData { readonly level: number; } class GameScene extends Scene<GameData> { ... } `AppLike` (second generic, default Application) types Scene.app as the concrete Application subclass the scene runs under, so a project's own `Application` members are visible inside scene code, not just at the call site that constructs it: class AppScene<Data = void> extends Scene<Data, GameApplication> {} class TitleScene extends AppScene { ... } // this.app: GameApplication For a project whose own base scene needs `typeof app` (an already- constructed `Application` instance) rather than a named subclass, see ApplicationOf's doc for the explicit-fixed-point pattern required to avoid an unresolvable inference cycle. Scene-bound facilities (Scene.systems, Scene.loader, Scene.inputs, Scene.interaction, Scene.tweens, Scene.audio) are unavailable during construction and class-field initialization — they become available once the scene is attached and remain available through Scene.load, Scene.init, the frame hooks, Scene.unload, and Scene.destroy.",
   "symbol": "Scene",
   "kind": "class",
   "subsystem": "core",
@@ -25,6 +25,9 @@
         "class TitleScene extends Scene { ... }",
         "A scene that needs typed data declares it through the generic:",
         "interface GameData { readonly level: number; } class GameScene extends Scene<GameData> { ... }",
+        "`AppLike` (second generic, default Application) types Scene.app as the concrete Application subclass the scene runs under, so a project's own `Application` members are visible inside scene code, not just at the call site that constructs it:",
+        "class AppScene<Data = void> extends Scene<Data, GameApplication> {} class TitleScene extends AppScene { ... } // this.app: GameApplication",
+        "For a project whose own base scene needs `typeof app` (an already- constructed `Application` instance) rather than a named subclass, see ApplicationOf's doc for the explicit-fixed-point pattern required to avoid an unresolvable inference cycle.",
         "Scene-bound facilities (Scene.systems, Scene.loader, Scene.inputs, Scene.interaction, Scene.tweens, Scene.audio) are unavailable during construction and class-field initialization — they become available once the scene is attached and remain available through Scene.load, Scene.init, the frame hooks, Scene.unload, and Scene.destroy."
       ],
       "importLine": "import { Scene } from '@codexo/exojs'",
@@ -36,7 +39,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(): Scene<Data>",
+          "signature": "new(): Scene<Data, AppLike>",
           "signatureTokens": [
             {
               "text": "new",
@@ -67,12 +70,20 @@
               "kind": "type"
             },
             {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AppLike",
+              "kind": "type"
+            },
+            {
               "text": ">",
               "kind": "punctuation"
             }
           ],
           "params": [],
-          "returnType": "Scene<Data>",
+          "returnType": "Scene<Data, AppLike>",
           "description": ""
         }
       ],
@@ -669,7 +680,7 @@
       "members": [
         {
           "name": "app",
-          "signature": "app: Application",
+          "signature": "app: ApplicationOf<AppLike>",
           "signatureTokens": [
             {
               "text": "app",
@@ -680,8 +691,20 @@
               "kind": "punctuation"
             },
             {
-              "text": "Application",
+              "text": "ApplicationOf",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AppLike",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             }
           ],
           "params": [],
