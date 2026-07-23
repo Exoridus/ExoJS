@@ -57,6 +57,7 @@ interface TrackedCapture extends InteractionCapture {
 export class SceneInteraction implements Destroyable {
   private readonly _observations = new Set<TrackedObservation>();
   private readonly _captures: TrackedCapture[] = [];
+  private _suspended = false;
 
   public constructor(private readonly _app: Application) {}
 
@@ -108,18 +109,49 @@ export class SceneInteraction implements Destroyable {
   }
 
   /**
-   * Disable every tracked observation without detaching it. Reserved for
-   * retention (suspend/resume) — a later slice wires this to actual
-   * suspend/restore transitions.
+   * Detach every tracked observation and deactivate every capture (pop it
+   * from the manager's stack) without discarding local tracking, so
+   * {@link SceneInteraction.resume} can restore exactly the same set in the
+   * same order — a retained scene must not keep receiving pointer dispatch
+   * alongside whichever scope is now active (definition §8.2). Idempotent.
    * @internal
    */
   public suspend(): void {
-    // Wired by a later slice alongside retained-scene suspension.
+    if (this._suspended) {
+      return;
+    }
+
+    this._suspended = true;
+
+    for (const observation of this._observations) {
+      this._app.interaction.detachRoot(observation.root);
+    }
+
+    for (let i = this._captures.length - 1; i >= 0; i--) {
+      this._app.interaction.popInputCapture();
+    }
   }
 
-  /** Restore normal dispatch after {@link SceneInteraction.suspend}. @internal */
+  /**
+   * Reattach every tracked observation and re-push every tracked capture in
+   * its original order, undoing {@link SceneInteraction.suspend}. Idempotent
+   * — a no-op if not currently suspended.
+   * @internal
+   */
   public resume(): void {
-    // Wired by a later slice alongside retained-scene suspension.
+    if (!this._suspended) {
+      return;
+    }
+
+    this._suspended = false;
+
+    for (const observation of this._observations) {
+      this._app.interaction.attachRoot(observation.root);
+    }
+
+    for (const capture of this._captures) {
+      this._app.interaction.pushInputCapture(capture.root);
+    }
   }
 
   public destroy(): void {

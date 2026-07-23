@@ -440,5 +440,18 @@ describe('SceneScope', () => {
 
       expect(scope.state).toBe(SceneState.Destroyed);
     });
+
+    test('suspend() detaches the scene root from interaction, restore() reattaches it', async () => {
+      const app = createAppStub();
+      const scene = new Scene();
+      const scope = await activate(app, scene);
+
+      scope.suspend();
+      expect(app.interaction.detachRoot).toHaveBeenCalledWith(scope.scene.root);
+
+      (app.interaction.attachRoot as MockInstance).mockClear();
+      scope.restore();
+      expect(app.interaction.attachRoot).toHaveBeenCalledWith(scope.scene.root);
+    });
   });
 });

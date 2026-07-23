@@ -97,13 +97,7 @@ export class SceneScope<Data = unknown> {
       }
     }
 
-    this._app.interaction.attachRoot(this.scene.root);
-
-    const ui = this.scene._peekUI();
-
-    if (ui !== null) {
-      this._app.interaction.attachUIRoot(ui);
-    }
+    this._attachAutoRoots();
 
     this._rootsAttached = true;
     this.scene.onLoad.dispatch();
@@ -158,6 +152,11 @@ export class SceneScope<Data = unknown> {
 
     this._guard(errors, () => this.inputs.suspend());
     this._guard(errors, () => this.interaction.suspend());
+    this._guard(errors, () => {
+      if (this._rootsAttached) {
+        this._detachAutoRoots();
+      }
+    });
     this._guard(errors, () => this.tweens.suspend());
     this._guard(errors, () => this.audio.suspend());
 
@@ -184,6 +183,11 @@ export class SceneScope<Data = unknown> {
 
     this._guard(errors, () => this.inputs.resume());
     this._guard(errors, () => this.interaction.resume());
+    this._guard(errors, () => {
+      if (this._rootsAttached) {
+        this._attachAutoRoots();
+      }
+    });
     this._guard(errors, () => this.tweens.resume());
     this._guard(errors, () => this.audio.resume());
 
@@ -370,7 +374,20 @@ export class SceneScope<Data = unknown> {
     }
 
     this._rootsAttached = false;
+    this._detachAutoRoots();
+  }
 
+  private _attachAutoRoots(): void {
+    this._app.interaction.attachRoot(this.scene.root);
+
+    const ui = this.scene._peekUI();
+
+    if (ui !== null) {
+      this._app.interaction.attachUIRoot(ui);
+    }
+  }
+
+  private _detachAutoRoots(): void {
     const ui = this.scene._peekUI();
 
     if (ui !== null) {
