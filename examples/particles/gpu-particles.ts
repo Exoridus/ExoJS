@@ -21,6 +21,7 @@ class GpuParticlesScene extends Scene {
         const { width, height } = app.canvas;
 
         this.system = new ParticleSystem(this.loader.get('image/particle-light.png'), { capacity: CAPACITY });
+        this.systems.add(this.system);
         this.system.setPosition(width / 2, height - 80);
         this.system.addSpawnModule(
             new RateSpawn({
@@ -41,9 +42,7 @@ class GpuParticlesScene extends Scene {
         });
     }
 
-    override update(delta: Time): void {
-        this.system.update(delta);
-
+    override update(_delta: Time): void {
         const backend = this.system.gpuMode ? 'WebGPU (GPU compute)' : 'WebGL2 (CPU fallback)';
 
         this.hud.setStatus(`${this.system.aliveCount.toLocaleString()} live / ${CAPACITY.toLocaleString()} cap · ${backend}`);

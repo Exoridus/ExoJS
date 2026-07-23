@@ -141,10 +141,12 @@ class ParticleStressScene extends Scene {
             ),
         );
 
+        this.systems.add(system);
+
         return { instance: system, baseX: config.x, baseY: config.y };
     }
 
-    override update(delta: Time): void {
+    override update(_delta: Time): void {
         const app = this.app;
         if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const time = app.activeTime.seconds;
@@ -155,7 +157,6 @@ class ParticleStressScene extends Scene {
 
             entry.instance.setPosition(entry.baseX + Math.sin(wave * 1.4) * 18, entry.baseY + Math.cos(wave * 1.7) * 10);
             entry.instance.rotation = Math.sin(wave * 0.9) * 5;
-            entry.instance.update(delta);
         }
     }
 
@@ -172,7 +173,10 @@ class ParticleStressScene extends Scene {
     }
 
     private destroySystems(): void {
-        for (const entry of this.particleSystems) entry.instance?.destroy();
+        // The particle systems are registered via `this.systems.add(...)`
+        // (see `buildSystem`), so `SystemRegistry.destroy()` — invoked
+        // automatically during scene teardown — destroys each of them; no
+        // manual destroy loop needed here.
         this.particleSystems = null!;
         this.sharedTexture = null!;
     }

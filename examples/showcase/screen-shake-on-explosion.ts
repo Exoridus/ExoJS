@@ -1,4 +1,4 @@
-import { Application, Color, type RenderingContext, Scene, type Time, Vector, View } from '@codexo/exojs';
+import { Application, Color, type RenderingContext, Scene, Vector, View } from '@codexo/exojs';
 import {
     AlphaFadeOverLifetime,
     BurstSpawn,
@@ -23,6 +23,7 @@ class ScreenShakeOnExplosionScene extends Scene {
 
         this.view = new View(width / 2, height / 2, width, height);
         this.ps = new ParticleSystem(this.loader.get('image/particle-light.png'), { capacity: 5000 });
+        this.systems.add(this.ps);
         this.ps.setPosition(width / 2, height / 2);
         this.burstPos = new Vector(0, 0);
         this.burst = new BurstSpawn({
@@ -39,10 +40,6 @@ class ScreenShakeOnExplosionScene extends Scene {
             this.burst.reset();
             this.view.shake(22, 280, { frequency: 26, decay: true });
         });
-    }
-
-    override update(delta: Time): void {
-        this.ps.update(delta);
     }
 
     override draw(context: RenderingContext): void {

@@ -1,4 +1,4 @@
-import { Application, BlendModes, Color, type RenderingContext, Scene, type Time } from '@codexo/exojs';
+import { Application, BlendModes, Color, type RenderingContext, Scene } from '@codexo/exojs';
 import {
     ColorGradient,
     ColorOverLifetime,
@@ -23,6 +23,7 @@ class BonfireScene extends Scene {
         const { width, height } = app.canvas;
 
         this.fireSystem = new ParticleSystem(this.loader.get(assets.demo.textures.particleFlame));
+        this.systems.add(this.fireSystem);
         this.fireSystem.setPosition(width * 0.5, height * 0.75);
         this.fireSystem.setBlendMode(BlendModes.Additive);
 
@@ -45,6 +46,7 @@ class BonfireScene extends Scene {
         );
 
         this.smokeSystem = new ParticleSystem(this.loader.get(assets.demo.textures.particleSmoke));
+        this.systems.add(this.smokeSystem);
         this.smokeSystem.setPosition(width * 0.5, height * 0.75 - 40);
         this.smokeSystem.setBlendMode(BlendModes.Normal);
 
@@ -65,11 +67,6 @@ class BonfireScene extends Scene {
                 ]),
             ),
         );
-    }
-
-    override update(delta: Time): void {
-        this.fireSystem.update(delta);
-        this.smokeSystem.update(delta);
     }
 
     override draw(context: RenderingContext): void {

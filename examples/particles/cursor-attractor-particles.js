@@ -17,6 +17,7 @@ class CursorAttractorParticlesScene extends Scene {
             throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const { width, height } = app.canvas;
         this.system = new ParticleSystem(this.loader.get(assets.demo.textures.particleLight), { capacity: 32000 });
+        this.systems.add(this.system);
         this.system.setPosition(width / 2, height / 2);
         this.system.addSpawnModule(new RateSpawn({
             rate: new Constant(2200),
@@ -77,9 +78,6 @@ class CursorAttractorParticlesScene extends Scene {
             this.repeller.strength = forceStrength;
             this.hud.setStatus('Mode: Repel');
         }
-    }
-    update(delta) {
-        this.system.update(delta);
     }
     draw(context) {
         context.backend.clear();

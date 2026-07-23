@@ -40,6 +40,7 @@ class BeatSyncPulseScene extends Scene {
         });
 
         this.particles = new ParticleSystem(this.loader.get('image/particle-light.png'), { capacity: 3500 });
+        this.systems.add(this.particles);
         this.particles.setPosition(width / 2, height / 2);
         this.burst = new BurstSpawn({
             schedule: [{ time: 0, count: 90 }],
@@ -85,7 +86,6 @@ class BeatSyncPulseScene extends Scene {
     override update(delta: Time): void {
         this.pulse = Math.max(0, this.pulse - delta.seconds * 1.2);
         this.sprite.setScale(1 + this.pulse);
-        this.particles.update(delta);
     }
 
     override draw(context: RenderingContext): void {

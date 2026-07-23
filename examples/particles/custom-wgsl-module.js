@@ -48,6 +48,7 @@ class CustomWgslModuleScene extends Scene {
             throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const { width, height } = app.canvas;
         this.system = new ParticleSystem(this.loader.get(assets.demo.textures.particleLight), { capacity: 26000 });
+        this.systems.add(this.system);
         this.system.setPosition(width / 2, height - 60);
         this.system.addSpawnModule(new RateSpawn({
             rate: new Constant(1800),
@@ -65,8 +66,7 @@ class CustomWgslModuleScene extends Scene {
             hint: 'The SwayModule supplies both a CPU apply() and a GPU wgsl() body; the system picks one.',
         });
     }
-    update(delta) {
-        this.system.update(delta);
+    update(_delta) {
         // gpuMode is only meaningful after the first update() compiled the
         // pipeline. Report it once it has settled.
         if (!this.reportedMode) {

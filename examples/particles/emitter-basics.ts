@@ -1,4 +1,4 @@
-import { Application, Color, type RenderingContext, Scene, type Time } from '@codexo/exojs';
+import { Application, Color, type RenderingContext, Scene } from '@codexo/exojs';
 import {
     ApplyForce,
     ColorGradient,
@@ -26,6 +26,7 @@ class EmitterBasicsScene extends Scene {
         const { width, height } = app.canvas;
 
         this.system = new ParticleSystem(this.loader.get(assets.demo.textures.particleLight), { capacity: 4000 });
+        this.systems.add(this.system);
         this.system.setPosition(width / 2, height - 80);
 
         // Rate, lifetime, and a cone-shaped velocity spread: a fountain that
@@ -73,10 +74,6 @@ class EmitterBasicsScene extends Scene {
             status: 'Rate 180/s · lifetime 0.6–1.4s · gravity',
             hint: 'RateSpawn drives emission; ScaleOverLifetime sizes and ColorOverLifetime tints each particle as it ages.',
         });
-    }
-
-    override update(delta: Time): void {
-        this.system.update(delta);
     }
 
     override draw(context: RenderingContext): void {
