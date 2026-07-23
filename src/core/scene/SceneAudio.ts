@@ -119,10 +119,16 @@ class PendingVoice implements Voice {
     return this;
   }
 
-  /** Start real playback. No-op if already flushed or cancelled via {@link PendingVoice.stop}. */
-  public _flush(): void {
+  /**
+   * Start real playback. No-op if already flushed or cancelled via
+   * {@link PendingVoice.stop}. Returns the newly created real {@link Voice}
+   * so the caller (`SceneAudio._flushPending`) can swap its own tracking to
+   * the capability-bearing voice; returns `null` when there was nothing to
+   * flush.
+   */
+  public _flush(): Voice | null {
     if (this._cancelled || this._real !== null) {
-      return;
+      return null;
     }
 
     const real = this._createReal();
@@ -142,6 +148,8 @@ class PendingVoice implements Voice {
     real.onEnd.add((): void => {
       this.onEnd.dispatch();
     });
+
+    return real;
   }
 }
 
@@ -194,12 +202,20 @@ export class SceneAudio implements Destroyable {
 
   /**
    * Start every voice queued by {@link SceneAudio.play} while the scope was
-   * `Preparing`. Called once, by {@link SceneScope.activate}.
+   * `Preparing`. Called once, by {@link SceneScope.activate}. Swaps each
+   * flushed {@link PendingVoice} wrapper in `_tracked` for the real `Voice`
+   * it created, so `suspend()`/`resume()`/`destroy()` see the
+   * capability-bearing voice — the caller's own reference stays the wrapper,
+   * which forwards to the real voice transparently.
    * @internal
    */
   public _flushPending(): void {
     for (const pending of this._pending) {
-      pending._flush();
+      const real = pending._flush();
+
+      if (real !== null && this._tracked.delete(pending)) {
+        this._tracked.add(real);
+      }
     }
 
     this._pending.clear();

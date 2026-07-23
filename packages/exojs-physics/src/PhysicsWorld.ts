@@ -453,6 +453,11 @@ export class PhysicsWorld implements BodyOwner {
    * entirely, since the caller has already decided exactly when a fixed step
    * occurs. Prefer this over manual {@link step} once the world is
    * system-registered; `step` remains available for advanced manual driving.
+   * Always advances by exactly {@link timeStepper}'s configured `fixedDelta`,
+   * regardless of the caller's actual fixed-step interval — if the engine's
+   * `Application.fixedTimeStep` doesn't match this world's `fixedDelta`, the
+   * simulation stays deterministic but runs at the wrong wall-clock speed
+   * relative to real time.
    */
   public fixedUpdate(_step: Time): void {
     this._assertAlive();

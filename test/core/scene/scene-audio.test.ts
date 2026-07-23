@@ -205,4 +205,16 @@ describe('SceneAudio — Preparing gate', () => {
     expect(pending.ended).toBe(true);
     expect(app.audio.play).not.toHaveBeenCalled();
   });
+
+  test('_flushPending() swaps the tracked PendingVoice for its real voice, so suspend() can pause it', () => {
+    const real = makePausableVoice({ onEnd: new Signal() });
+    const app = createAppStub(real);
+    const audio = new SceneAudio(app, () => SceneState.Preparing);
+
+    audio.play(fakePlayable);
+    audio._flushPending();
+    audio.suspend();
+
+    expect(real.pause).toHaveBeenCalledTimes(1);
+  });
 });
