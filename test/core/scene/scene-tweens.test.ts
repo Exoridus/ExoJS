@@ -1,5 +1,8 @@
+import { Tween } from '#animation/Tween';
+import { TweenSequencer } from '#animation/TweenSequencer';
 import type { Application } from '#core/Application';
 import { SceneTweens } from '#core/scene/SceneTweens';
+import { SceneState } from '#core/SceneState';
 
 const createAppStub = (createResult: unknown, sequencerResult?: unknown): Application =>
   ({
@@ -37,7 +40,7 @@ describe('SceneTweens', () => {
   test('create() delegates to app.tweens.create and tracks the returned Tween', () => {
     const tween = makeStubTween();
     const app = createAppStub(tween);
-    const tweens = new SceneTweens(app);
+    const tweens = new SceneTweens(app, () => SceneState.Active);
     const target = {};
 
     const result = tweens.create(target);
@@ -48,7 +51,7 @@ describe('SceneTweens', () => {
 
   test('add() tracks an already-created Tween via app.tweens.add', () => {
     const app = createAppStub(makeStubTween());
-    const tweens = new SceneTweens(app);
+    const tweens = new SceneTweens(app, () => SceneState.Active);
     const external = makeStubTween();
 
     expect(tweens.add(external as never)).toBe(tweens);
@@ -59,7 +62,7 @@ describe('SceneTweens', () => {
     const tweenA = makeStubTween();
     const tweenB = makeStubTween();
     const app = createAppStub(tweenA);
-    const tweens = new SceneTweens(app);
+    const tweens = new SceneTweens(app, () => SceneState.Active);
 
     tweens.create({});
     tweens.add(tweenB as never);
@@ -74,7 +77,7 @@ describe('SceneTweens', () => {
     test('delegates to app.tweens.createSequencer and tracks the returned sequencer', () => {
       const sequencer = makeStubSequencer();
       const app = createAppStub(makeStubTween(), sequencer);
-      const tweens = new SceneTweens(app);
+      const tweens = new SceneTweens(app, () => SceneState.Active);
 
       const result = tweens.createSequencer();
 
@@ -85,7 +88,7 @@ describe('SceneTweens', () => {
     test('destroy() stops every tracked sequencer', () => {
       const sequencer = makeStubSequencer();
       const app = createAppStub(makeStubTween(), sequencer);
-      const tweens = new SceneTweens(app);
+      const tweens = new SceneTweens(app, () => SceneState.Active);
 
       tweens.createSequencer();
       tweens.destroy();
@@ -96,7 +99,7 @@ describe('SceneTweens', () => {
     test('suspend()/restore() covers tracked sequencers exactly like tweens', () => {
       const sequencer = makeStubSequencer('active');
       const app = createAppStub(makeStubTween(), sequencer);
-      const tweens = new SceneTweens(app);
+      const tweens = new SceneTweens(app, () => SceneState.Active);
 
       tweens.createSequencer();
 
@@ -114,7 +117,7 @@ describe('SceneTweens', () => {
       const alreadyPaused = makeStubTween('paused');
       const complete = makeStubTween('complete');
       const app = createAppStub(active);
-      const tweens = new SceneTweens(app);
+      const tweens = new SceneTweens(app, () => SceneState.Active);
 
       tweens.create({});
       tweens.add(alreadyPaused as never);
@@ -136,7 +139,7 @@ describe('SceneTweens', () => {
     test('restore() without a prior suspend() is a no-op', () => {
       const tween = makeStubTween('active');
       const app = createAppStub(tween);
-      const tweens = new SceneTweens(app);
+      const tweens = new SceneTweens(app, () => SceneState.Active);
 
       tweens.add(tween as never);
 
@@ -147,7 +150,7 @@ describe('SceneTweens', () => {
     test('a second suspend() call overwrites the tracked suspended set — an already-paused tween is not re-recorded', () => {
       const tween = makeStubTween('active');
       const app = createAppStub(tween);
-      const tweens = new SceneTweens(app);
+      const tweens = new SceneTweens(app, () => SceneState.Active);
 
       tweens.add(tween as never);
 
@@ -170,7 +173,7 @@ describe('SceneTweens', () => {
     test('when:"active" tween is frozen on pause() and resumed on resume()', () => {
       const tween = makeStubTween('active');
       const app = createAppStub(tween);
-      const tweens = new SceneTweens(app);
+      const tweens = new SceneTweens(app, () => SceneState.Active);
 
       tweens.create({}, { when: 'active' });
 
@@ -184,7 +187,7 @@ describe('SceneTweens', () => {
     test('when:"paused" tween (already sitting paused) is woken on pause() and re-frozen on resume()', () => {
       const tween = makeStubTween('paused');
       const app = createAppStub(tween);
-      const tweens = new SceneTweens(app);
+      const tweens = new SceneTweens(app, () => SceneState.Active);
 
       tweens.add(tween as never, { when: 'paused' });
 
@@ -198,7 +201,7 @@ describe('SceneTweens', () => {
     test('when:"always" (default) tween is never touched by pause()/resume()', () => {
       const tween = makeStubTween('active');
       const app = createAppStub(tween);
-      const tweens = new SceneTweens(app);
+      const tweens = new SceneTweens(app, () => SceneState.Active);
 
       tweens.create({});
 
@@ -212,7 +215,7 @@ describe('SceneTweens', () => {
     test('resume() does not resume a when:"active" tween the user paused manually in between', () => {
       const tween = makeStubTween('active');
       const app = createAppStub(tween);
-      const tweens = new SceneTweens(app);
+      const tweens = new SceneTweens(app, () => SceneState.Active);
 
       tweens.create({}, { when: 'active' });
 
@@ -228,7 +231,7 @@ describe('SceneTweens', () => {
     test('covers sequencers exactly like tweens', () => {
       const sequencer = makeStubSequencer('active');
       const app = createAppStub(makeStubTween(), sequencer);
-      const tweens = new SceneTweens(app);
+      const tweens = new SceneTweens(app, () => SceneState.Active);
 
       tweens.createSequencer({ when: 'active' });
 
@@ -238,5 +241,110 @@ describe('SceneTweens', () => {
       tweens.resume();
       expect(sequencer.resume).toHaveBeenCalledTimes(1);
     });
+  });
+});
+
+describe('SceneTweens — dormancy (create/add/createSequencer while not Active)', () => {
+  test('create() while Ready does not call app.tweens.create — the tween is never attached to the app-wide manager', () => {
+    const app = createAppStub(makeStubTween());
+    const tweens = new SceneTweens(app, () => SceneState.Ready);
+    const target = { x: 0 };
+
+    const tween = tweens.create(target);
+
+    expect(app.tweens.create).not.toHaveBeenCalled();
+    expect(tween).toBeInstanceOf(Tween);
+  });
+
+  test('a real Tween created and started while Ready produces no application-wide effect until activation', () => {
+    const app = createAppStub(makeStubTween());
+    let state: SceneState = SceneState.Ready;
+    const tweens = new SceneTweens(app, () => state);
+    const target = { x: 0 };
+
+    const tween = tweens.create(target).to({ x: 100 }, 1);
+
+    tween.start();
+    tween.update(0.5); // manual update — proves the app-wide manager never drives it
+
+    // The real app-wide manager was never told about this tween at all.
+    expect(app.tweens.add).not.toHaveBeenCalled();
+
+    state = SceneState.Active;
+    tweens.activate();
+
+    expect(app.tweens.add).toHaveBeenCalledWith(tween);
+  });
+
+  test('activate() attaches every cold tween to the app-wide manager, in whatever state it is currently in', () => {
+    const app = createAppStub(makeStubTween());
+    let state: SceneState = SceneState.Ready;
+    const tweens = new SceneTweens(app, () => state);
+
+    const idleTween = tweens.create({});
+
+    state = SceneState.Active;
+    tweens.activate();
+
+    expect(app.tweens.add).toHaveBeenCalledWith(idleTween);
+  });
+
+  test('add() while Suspended pauses an already-Active tween immediately and resumes it on activate() only if still Paused', () => {
+    const running = makeStubTween('active');
+    const app = createAppStub(makeStubTween());
+    let state: SceneState = SceneState.Suspended;
+    const tweens = new SceneTweens(app, () => state);
+
+    tweens.add(running as never);
+
+    expect(running.pause).toHaveBeenCalledTimes(1);
+
+    state = SceneState.Active;
+    tweens.activate();
+
+    expect(running.resume).toHaveBeenCalledTimes(1);
+  });
+
+  test('add() while Suspended does not resume a tween the caller stopped in the meantime', () => {
+    const running = makeStubTween('active');
+    const app = createAppStub(makeStubTween());
+    let state: SceneState = SceneState.Suspended;
+    const tweens = new SceneTweens(app, () => state);
+
+    tweens.add(running as never);
+    running.state = 'stopped'; // caller stopped it directly while still dormant
+
+    state = SceneState.Active;
+    tweens.activate();
+
+    expect(running.resume).not.toHaveBeenCalled();
+  });
+
+  test('createSequencer() while Ready constructs without a manager — start() does not tick', () => {
+    const sequencer = makeStubSequencer();
+    const app = createAppStub(makeStubTween(), sequencer as never);
+    let state: SceneState = SceneState.Ready;
+    const tweens = new SceneTweens(app, () => state);
+
+    const created = tweens.createSequencer();
+
+    expect(app.tweens.createSequencer).not.toHaveBeenCalled();
+    expect(created).toBeInstanceOf(TweenSequencer);
+
+    state = SceneState.Active;
+    tweens.activate();
+  });
+
+  test('create()/add()/createSequencer() delegate immediately, as before, once Active', () => {
+    const stubTween = makeStubTween();
+    const stubSequencer = makeStubSequencer();
+    const app = createAppStub(stubTween, stubSequencer as never);
+    const tweens = new SceneTweens(app, () => SceneState.Active);
+
+    tweens.create({});
+    tweens.createSequencer();
+
+    expect(app.tweens.create).toHaveBeenCalledTimes(1);
+    expect(app.tweens.createSequencer).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,7 +1,9 @@
-import type { Tween } from '#animation/Tween';
-import { type TweenSequencer, TweenSequencerState } from '#animation/TweenSequencer';
+import { Tween } from '#animation/Tween';
+import { TweenSequencer } from '#animation/TweenSequencer';
+import { TweenSequencerState } from '#animation/TweenSequencer';
 import { TweenState } from '#animation/types';
 import type { Application } from '#core/Application';
+import { SceneState } from '#core/SceneState';
 import type { Destroyable } from '#core/types';
 
 /** Availability of a tracked tween/sequencer relative to the owning scene's pause state. Default `'always'`. */
@@ -26,10 +28,24 @@ export interface SceneTweenOptions {
  * Scene-bound tween facade. Tweens and sequencers created or added here are
  * automatically stopped when the owning scene ends permanently. Access via
  * {@link Scene.tweens}.
+ *
+ * While the owning scope is not `Active` (`Preparing`, `Ready`, or
+ * `Suspended`), `create()`/`createSequencer()` construct their result
+ * without attaching it to the application-wide `TweenManager` at all, so a
+ * synchronous `.start()` call made while dormant produces zero
+ * application-wide effect (definition §4.2) — the manager only begins
+ * driving it once the scope becomes `Active` and this facade flushes it in.
+ * `add()` (which may be handed an already-live tween) instead pauses it
+ * immediately if needed, resuming it on activation only if it is still in
+ * the exact state this left it in — the same idiom already used by
+ * {@link SceneTweens.suspend}/{@link SceneTweens.restore} for retention.
  */
 export class SceneTweens implements Destroyable {
   private readonly _tweens = new Map<Tween, SceneTweenAvailability>();
   private readonly _sequencers = new Map<TweenSequencer, SceneTweenAvailability>();
+  private readonly _cold = new Set<Tween>();
+  private readonly _coldPaused = new Set<Tween>();
+  private readonly _coldSequencers = new Set<TweenSequencer>();
   private _suspendedTweens: Set<Tween> | null = null;
   private _suspendedSequencers: Set<TweenSequencer> | null = null;
   private _frozenTweens: Set<Tween> | null = null;
@@ -37,32 +53,82 @@ export class SceneTweens implements Destroyable {
   private _frozenSequencers: Set<TweenSequencer> | null = null;
   private _thawedSequencers: Set<TweenSequencer> | null = null;
 
-  public constructor(private readonly _app: Application) {}
+  public constructor(
+    private readonly _app: Application,
+    private readonly _getState: () => SceneState,
+  ) {}
 
-  /** Create a {@link Tween} targeting `target` through the application tween manager, tracked for scene-lifetime cleanup. */
+  /**
+   * Create a {@link Tween} targeting `target`, tracked for scene-lifetime
+   * cleanup. While the owning scope is not `Active`, the tween is
+   * constructed directly (not through `app.tweens.create`) so it is never
+   * attached to the application-wide manager until activation — see the
+   * class doc.
+   */
   public create<T extends object>(target: T, options?: SceneTweenOptions): Tween<T> {
+    const when = options?.when ?? 'always';
+
+    if (this._getState() !== SceneState.Active) {
+      const tween = new Tween(target);
+
+      this._tweens.set(tween, when);
+      this._cold.add(tween);
+
+      return tween;
+    }
+
     const tween = this._app.tweens.create(target);
-    this._tweens.set(tween, options?.when ?? 'always');
+
+    this._tweens.set(tween, when);
 
     return tween;
   }
 
-  /** Track an already-created {@link Tween} (e.g. built via `app.tweens.create(...)`) for scene-lifetime cleanup. Returns `this` for chaining. */
+  /**
+   * Track an already-created {@link Tween} (e.g. built via
+   * `app.tweens.create(...)`) for scene-lifetime cleanup. Passing a tween
+   * that is already running transfers runtime ownership to this facade —
+   * while the owning scope is not `Active`, that means pausing it
+   * immediately (mirrors {@link SceneTweens.suspend}'s own pattern),
+   * resumed on activation only if it is still in the exact state this left
+   * it in. Returns `this` for chaining.
+   */
   public add(tween: Tween, options?: SceneTweenOptions): this {
+    const when = options?.when ?? 'always';
+
     this._app.tweens.add(tween);
-    this._tweens.set(tween, options?.when ?? 'always');
+    this._tweens.set(tween, when);
+
+    if (this._getState() !== SceneState.Active && tween.state === TweenState.Active) {
+      tween.pause();
+      this._coldPaused.add(tween);
+    }
 
     return this;
   }
 
   /**
-   * Create a {@link TweenSequencer} through the application tween manager,
-   * tracked for scene-lifetime cleanup exactly like {@link SceneTweens.create}
-   * — auto-stopped on scene teardown and suspended/restored across retention.
+   * Create a {@link TweenSequencer}, tracked for scene-lifetime cleanup
+   * exactly like {@link SceneTweens.create} — auto-stopped on scene
+   * teardown and suspended/restored across retention. While the owning
+   * scope is not `Active`, constructed without a manager (same reasoning as
+   * {@link SceneTweens.create}) and bound to the real one at activation.
    */
   public createSequencer(options?: SceneTweenOptions): TweenSequencer {
+    const when = options?.when ?? 'always';
+
+    if (this._getState() !== SceneState.Active) {
+      const sequencer = new TweenSequencer();
+
+      this._sequencers.set(sequencer, when);
+      this._coldSequencers.add(sequencer);
+
+      return sequencer;
+    }
+
     const sequencer = this._app.tweens.createSequencer();
-    this._sequencers.set(sequencer, options?.when ?? 'always');
+
+    this._sequencers.set(sequencer, when);
 
     return sequencer;
   }
@@ -97,8 +163,30 @@ export class SceneTweens implements Destroyable {
     this._suspendedSequencers = runningSequencers;
   }
 
-  /** Restore exactly the tweens/sequencers paused by {@link SceneTweens.suspend}. @internal */
+  /**
+   * Called by `SceneScope` whenever this scope becomes `Active` — a fresh
+   * activation flushing whatever was created while `Ready` (or a still-cold
+   * `Suspended` registration), or a retention restore reinstating whatever
+   * {@link SceneTweens.suspend} paused. Both converge on the same
+   * operation: attach every cold tween/sequencer to the app-wide manager
+   * (in whatever state it's currently in), then resume exactly the set
+   * `suspend()` paused and exactly the set `add()` paused while dormant —
+   * each only if still in the exact state this facade left it in.
+   * @internal
+   */
   public restore(): void {
+    for (const tween of this._cold) {
+      this._app.tweens.add(tween);
+    }
+
+    this._cold.clear();
+
+    for (const sequencer of this._coldSequencers) {
+      sequencer._attachManager(this._app.tweens);
+    }
+
+    this._coldSequencers.clear();
+
     if (this._suspendedTweens !== null) {
       for (const tween of this._suspendedTweens) {
         if (tween.state === TweenState.Paused) {
@@ -118,6 +206,24 @@ export class SceneTweens implements Destroyable {
 
       this._suspendedSequencers = null;
     }
+
+    for (const tween of this._coldPaused) {
+      if (tween.state === TweenState.Paused) {
+        tween.resume();
+      }
+    }
+
+    this._coldPaused.clear();
+  }
+
+  /**
+   * Alias for {@link SceneTweens.restore}, used by `SceneScope.activate()`
+   * for the fresh-activation edge (`Ready`/`Suspended` → `Active`) — kept as
+   * a distinctly-named entry point so call sites read naturally regardless
+   * of which transition triggered them; both do the identical work. @internal
+   */
+  public activate(): void {
+    this.restore();
   }
 
   /**
@@ -223,6 +329,9 @@ export class SceneTweens implements Destroyable {
 
     this._tweens.clear();
     this._sequencers.clear();
+    this._cold.clear();
+    this._coldPaused.clear();
+    this._coldSequencers.clear();
     this._suspendedTweens = null;
     this._suspendedSequencers = null;
     this._frozenTweens = null;
