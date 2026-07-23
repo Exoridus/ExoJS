@@ -134,8 +134,10 @@ export class SceneScope<Data = unknown> {
 
     const errors: unknown[] = [];
 
-    this._guard(errors, () => this._attachAutoRoots());
-    this._rootsAttached = true;
+    this._guard(errors, () => {
+      this._attachAutoRoots();
+      this._rootsAttached = true;
+    });
     this._guard(errors, () => this.interaction.resume());
     this._guard(errors, () => this.tweens.activate());
     this._guard(errors, () => this.audio._flushPending());
@@ -514,7 +516,7 @@ export class SceneScope<Data = unknown> {
   private _reportError(error: unknown): void {
     const normalized = error instanceof Error ? error : new Error(String(error));
 
-    logger.error('A SceneScope cleanup stage failed.', { source: 'SceneScope', error: normalized });
+    logger.error('A SceneScope lifecycle stage failed.', { source: 'SceneScope', error: normalized });
     this._app.onError.dispatch(normalized);
   }
 
