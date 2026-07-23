@@ -255,6 +255,58 @@ describe('SceneDirector', () => {
     expect(first?.attached).toBe(false);
   });
 
+  test('setScene() dispatches onStateChange for the fresh Preparing to Active activation', async () => {
+    const TestScene = makeSceneClass();
+    const manager = new SceneDirector(createApplicationStub(), { test: TestScene });
+    const onStateChange = vi.fn();
+
+    manager.onStateChange.add(onStateChange);
+
+    await manager.setScene(TestScene);
+    const scene = manager.currentScene;
+
+    expect(onStateChange).toHaveBeenCalledTimes(1);
+    expect(onStateChange).toHaveBeenCalledWith(SceneState.Preparing, SceneState.Active, scene);
+  });
+
+  test('switching scenes dispatches onStateChange for the outgoing scope Destroying and Destroyed transitions', async () => {
+    const First = makeSceneClass();
+    const Second = makeSceneClass();
+    const manager = new SceneDirector(createApplicationStub(), { first: First, second: Second });
+
+    await manager.setScene(First);
+    const first = manager.currentScene;
+    const onStateChange = vi.fn();
+
+    manager.onStateChange.add(onStateChange);
+
+    await manager.setScene(Second);
+    const second = manager.currentScene;
+
+    expect(onStateChange).toHaveBeenCalledTimes(3);
+    expect(onStateChange).toHaveBeenCalledWith(SceneState.Active, SceneState.Destroying, first);
+    expect(onStateChange).toHaveBeenCalledWith(SceneState.Destroying, SceneState.Destroyed, first);
+    expect(onStateChange).toHaveBeenCalledWith(SceneState.Preparing, SceneState.Active, second);
+  });
+
+  test('a failed activation dispatches onStateChange for Preparing to Destroying to Destroyed', async () => {
+    const FailScene = makeSceneClass({
+      init() {
+        throw new Error('init failed');
+      },
+    });
+    const manager = new SceneDirector(createApplicationStub(), { fail: FailScene });
+    const onStateChange = vi.fn();
+
+    manager.onStateChange.add(onStateChange);
+
+    await expect(manager.setScene(FailScene)).rejects.toThrow('init failed');
+
+    expect(onStateChange).toHaveBeenCalledTimes(2);
+    expect(onStateChange).toHaveBeenCalledWith(SceneState.Preparing, SceneState.Destroying, expect.any(Object));
+    expect(onStateChange).toHaveBeenCalledWith(SceneState.Destroying, SceneState.Destroyed, expect.any(Object));
+  });
+
   test('fixedUpdate dispatches to the active scene', async () => {
     const fixedUpdate = vi.fn();
     const TestScene = makeSceneClass({ fixedUpdate });
@@ -461,11 +513,11 @@ describe('SceneDirector', () => {
     const onPause = vi.fn();
     const onStateChange = vi.fn();
 
-    director.onPause.add(onPause);
-    director.onStateChange.add(onStateChange);
-
     await director.setScene(TestScene);
     const scene = director.currentScene;
+
+    director.onPause.add(onPause);
+    director.onStateChange.add(onStateChange);
 
     expect(director.pause()).toBe(true);
     expect(director.state).toBe(SceneState.Active);

@@ -132,6 +132,19 @@ describe('SceneScope', () => {
       expect(update).toHaveBeenCalledTimes(1);
     });
 
+    test('activate() reports the Preparing to Active transition via the injected onStateChange callback', async () => {
+      const app = createAppStub();
+      const scene = new Scene();
+      const onStateChange = vi.fn();
+      const scope = new SceneScope(app, scene, onStateChange);
+
+      await scope.prepare(undefined);
+      scope.activate();
+
+      expect(onStateChange).toHaveBeenCalledTimes(1);
+      expect(onStateChange).toHaveBeenCalledWith(SceneState.Preparing, SceneState.Active);
+    });
+
     test('a synchronous init() (the common case) passes without a lifecycle error', async () => {
       const app = createAppStub();
       const scene = new Scene();
@@ -206,6 +219,25 @@ describe('SceneScope', () => {
 
       expect(destroySpy).toHaveBeenCalledTimes(1);
     });
+
+    test('reports Preparing to Destroying then Destroying to Destroyed via the injected onStateChange callback', async () => {
+      const app = createAppStub();
+      const scene = Object.assign(new Scene(), {
+        init(): void {
+          throw new Error('init failed');
+        },
+      });
+      const onStateChange = vi.fn();
+      const scope = new SceneScope(app, scene, onStateChange);
+
+      await expect(scope.prepare(undefined)).rejects.toThrow('init failed');
+
+      scope.destroyFailedActivation();
+
+      expect(onStateChange).toHaveBeenCalledTimes(2);
+      expect(onStateChange).toHaveBeenNthCalledWith(1, SceneState.Preparing, SceneState.Destroying);
+      expect(onStateChange).toHaveBeenNthCalledWith(2, SceneState.Destroying, SceneState.Destroyed);
+    });
   });
 
   describe('permanent teardown (definition §17)', () => {
@@ -217,6 +249,23 @@ describe('SceneScope', () => {
 
       return scope;
     };
+
+    test('reports Active to Destroying then Destroying to Destroyed via the injected onStateChange callback', async () => {
+      const app = createAppStub();
+      const scene = new Scene();
+      const onStateChange = vi.fn();
+      const scope = new SceneScope(app, scene, onStateChange);
+
+      await scope.prepare(undefined);
+      scope.activate();
+      onStateChange.mockClear(); // only interested in destroy()'s own transitions here
+
+      await scope.destroy();
+
+      expect(onStateChange).toHaveBeenCalledTimes(2);
+      expect(onStateChange).toHaveBeenNthCalledWith(1, SceneState.Active, SceneState.Destroying);
+      expect(onStateChange).toHaveBeenNthCalledWith(2, SceneState.Destroying, SceneState.Destroyed);
+    });
 
     test('runs in normative order: disable input/interaction, unload(), destroy systems, tweens+audio, inputs+interaction, detach roots, scene.destroy()+internals, loader claims last', async () => {
       const app = createAppStub();
