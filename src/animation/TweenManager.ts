@@ -79,7 +79,7 @@ export class TweenManager {
    *
    * @example
    * ```ts
-   * scene.tweens.createSequencer()
+   * app.tweens.createSequencer()
    *   .then(fadeIn)
    *   .wait(0.5)
    *   .then([moveLeft, scaleUp])
