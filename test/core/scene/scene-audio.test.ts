@@ -70,8 +70,8 @@ describe('SceneAudio', () => {
     expect(voiceB.stop).toHaveBeenCalledTimes(1);
   });
 
-  describe('suspend()/resume()', () => {
-    test('pauses currently-playing Pausable voices and resumes exactly that set', () => {
+  describe('suspend()/restore()', () => {
+    test('pauses currently-playing Pausable voices and restores exactly that set', () => {
       const playing = makePausableVoice();
       const alreadyPaused = makePausableVoice({ paused: true });
       const ended = makePausableVoice({ ended: true });
@@ -88,7 +88,7 @@ describe('SceneAudio', () => {
       expect(alreadyPaused.pause).not.toHaveBeenCalled(); // already paused — not part of the suspended set
       expect(ended.pause).not.toHaveBeenCalled(); // ended — nothing to pause
 
-      audio.resume();
+      audio.restore();
 
       expect(playing.resume).toHaveBeenCalledTimes(1);
       expect(alreadyPaused.resume).not.toHaveBeenCalled(); // was never suspended by us
@@ -103,17 +103,17 @@ describe('SceneAudio', () => {
       audio.add(nonPausable);
 
       expect(() => audio.suspend()).not.toThrow();
-      expect(() => audio.resume()).not.toThrow();
+      expect(() => audio.restore()).not.toThrow();
     });
 
-    test('resume() without a prior suspend() is a no-op', () => {
+    test('restore() without a prior suspend() is a no-op', () => {
       const voice = makePausableVoice();
       const app = createAppStub(voice);
       const audio = new SceneAudio(app, () => SceneState.Active);
 
       audio.add(voice);
 
-      expect(() => audio.resume()).not.toThrow();
+      expect(() => audio.restore()).not.toThrow();
       expect(voice.resume).not.toHaveBeenCalled();
     });
   });
@@ -214,6 +214,22 @@ describe('SceneAudio — Preparing gate', () => {
     audio.play(fakePlayable);
     audio._flushPending();
     audio.suspend();
+
+    expect(real.pause).toHaveBeenCalledTimes(1);
+  });
+
+  test('_flushPending() carries the `when` policy from the PendingVoice to the real voice', () => {
+    const real = makePausableVoice({ onEnd: new Signal() });
+    const app = createAppStub(real);
+    const audio = new SceneAudio(app, () => SceneState.Preparing);
+
+    audio.play(fakePlayable, { when: 'active' });
+    audio._flushPending();
+
+    // If the `when` policy were lost during the flush swap, pause() would
+    // never touch the real voice — asserting it does proves the policy
+    // survived the PendingVoice -> real Voice swap.
+    audio.pause();
 
     expect(real.pause).toHaveBeenCalledTimes(1);
   });
