@@ -61,7 +61,7 @@ describe('SceneScope', () => {
       expect(events).toEqual(['load:facilities-available', 'init:facilities-available']);
     });
 
-    test('runs load() then init() in order (definition §5.1), attaches roots, and dispatches onLoad only after both complete', async () => {
+    test('runs load() then init() in order (definition §5.1), ends in Ready — no facility attachment or Scene signal yet', async () => {
       const app = createAppStub();
       const events: string[] = [];
 
@@ -79,14 +79,17 @@ describe('SceneScope', () => {
 
       const scene = new RecordingScene();
 
-      scene.onLoad.add(() => events.push('onLoad'));
+      scene.onActivate.add(() => events.push('onActivate'));
 
       const scope = new SceneScope(app, scene);
 
       await scope.prepare(undefined);
 
-      expect(events).toEqual(['load:start', 'load:end', 'init', 'onLoad']);
-      expect(app.interaction.attachRoot).toHaveBeenCalledWith(scene.root);
+      expect(events).toEqual(['load:start', 'load:end', 'init']);
+      expect(scope.state).toBe(SceneState.Ready);
+      // Roots/onActivate are deferred to activate() — the Ready checkpoint
+      // itself produces no application-wide effect (definition §4.1/§4.2).
+      expect(app.interaction.attachRoot).not.toHaveBeenCalled();
     });
 
     test('the same data instance is passed to both load() and init()', async () => {
@@ -114,16 +117,17 @@ describe('SceneScope', () => {
       expect(seen[1]).toBe(data);
     });
 
-    test('activate() transitions Preparing to Active; frame methods only dispatch once Active', async () => {
+    test('activate() transitions Ready to Active; frame methods only dispatch once Active', async () => {
       const app = createAppStub();
       const update = vi.fn();
       const scene = Object.assign(new Scene(), { update });
       const scope = new SceneScope(app, scene);
 
       await scope.prepare(undefined);
+      expect(scope.state).toBe(SceneState.Ready);
 
       scope.update(new Time(16));
-      expect(update).not.toHaveBeenCalled(); // still Preparing
+      expect(update).not.toHaveBeenCalled(); // still Ready
 
       scope.activate();
       expect(scope.state).toBe(SceneState.Active);
@@ -132,17 +136,66 @@ describe('SceneScope', () => {
       expect(update).toHaveBeenCalledTimes(1);
     });
 
-    test('activate() reports the Preparing to Active transition via the injected onStateChange callback', async () => {
+    test('activate() attaches the scene root to interaction dispatch (deferred from prepare(), definition §4.1)', async () => {
+      const app = createAppStub();
+      const scene = new Scene();
+      const scope = new SceneScope(app, scene);
+
+      await scope.prepare(undefined);
+      expect(app.interaction.attachRoot).not.toHaveBeenCalled();
+
+      scope.activate();
+      expect(app.interaction.attachRoot).toHaveBeenCalledWith(scene.root);
+    });
+
+    test('activate() dispatches Scene.onActivate after facility activation, before reporting the state change', async () => {
+      const app = createAppStub();
+      const scene = new Scene();
+      const events: string[] = [];
+      const scope = new SceneScope(app, scene, () => events.push('onStateChange'));
+
+      vi.spyOn(app.interaction, 'attachRoot').mockImplementation(() => events.push('attachRoot'));
+      scene.onActivate.add(() => events.push('onActivate'));
+
+      await scope.prepare(undefined);
+      events.length = 0;
+      scope.activate();
+
+      expect(events).toEqual(['attachRoot', 'onActivate', 'onStateChange']);
+    });
+
+    test('prepare() reports Preparing to Ready, activate() reports Ready to Active, via the injected onStateChange callback', async () => {
       const app = createAppStub();
       const scene = new Scene();
       const onStateChange = vi.fn();
       const scope = new SceneScope(app, scene, onStateChange);
 
       await scope.prepare(undefined);
+      expect(onStateChange).toHaveBeenCalledTimes(1);
+      expect(onStateChange).toHaveBeenNthCalledWith(1, SceneState.Preparing, SceneState.Ready);
+
+      scope.activate();
+      expect(onStateChange).toHaveBeenCalledTimes(2);
+      expect(onStateChange).toHaveBeenNthCalledWith(2, SceneState.Ready, SceneState.Active);
+    });
+
+    test('a throwing Scene.onActivate listener is reported through the app error pipeline and does not block activation', async () => {
+      const app = createAppStub();
+      const scene = new Scene();
+      const errorSpy = vi.fn();
+
+      app.onError.add(errorSpy);
+      scene.onActivate.add(() => {
+        throw new Error('onActivate listener failed');
+      });
+
+      const scope = new SceneScope(app, scene);
+
+      await scope.prepare(undefined);
       scope.activate();
 
-      expect(onStateChange).toHaveBeenCalledTimes(1);
-      expect(onStateChange).toHaveBeenCalledWith(SceneState.Preparing, SceneState.Active);
+      expect(scope.state).toBe(SceneState.Active);
+      expect(errorSpy).toHaveBeenCalledWith(expect.objectContaining({ message: 'onActivate listener failed' }));
     });
 
     test('a synchronous init() (the common case) passes without a lifecycle error', async () => {
@@ -411,6 +464,36 @@ describe('SceneScope', () => {
 
       expect(scope.suspend()).toBe(false);
       expect(scope.state).toBe(SceneState.Preparing);
+    });
+
+    test('suspend() dispatches Scene.onSuspend after facility suspension', async () => {
+      const app = createAppStub();
+      const scene = new Scene();
+      const scope = await activate(app, scene);
+      const events: string[] = [];
+
+      vi.spyOn(scope.interaction, 'suspend').mockImplementation(() => events.push('interaction.suspend'));
+      scene.onSuspend.add(() => events.push('onSuspend'));
+
+      scope.suspend();
+
+      expect(events).toEqual(['interaction.suspend', 'onSuspend']);
+    });
+
+    test('restore() flushes pending audio and dispatches Scene.onActivate', async () => {
+      const app = createAppStub();
+      const scene = new Scene();
+      const scope = await activate(app, scene);
+      const events: string[] = [];
+
+      scope.suspend();
+
+      vi.spyOn(scope.audio, '_flushPending').mockImplementation(() => events.push('audio._flushPending'));
+      scene.onActivate.add(() => events.push('onActivate'));
+
+      scope.restore();
+
+      expect(events).toEqual(['audio._flushPending', 'onActivate']);
     });
 
     test('restore() returns to Active when suspended from Active', async () => {
