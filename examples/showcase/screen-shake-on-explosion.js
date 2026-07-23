@@ -13,6 +13,7 @@ class ScreenShakeOnExplosionScene extends Scene {
         const { width, height } = app.canvas;
         this.view = new View(width / 2, height / 2, width, height);
         this.ps = new ParticleSystem(this.loader.get('image/particle-light.png'), { capacity: 5000 });
+        this.systems.add(this.ps);
         this.ps.setPosition(width / 2, height / 2);
         this.burstPos = new Vector(0, 0);
         this.burst = new BurstSpawn({
@@ -29,9 +30,6 @@ class ScreenShakeOnExplosionScene extends Scene {
             this.burst.reset();
             this.view.shake(22, 280, { frequency: 26, decay: true });
         });
-    }
-    update(delta) {
-        this.ps.update(delta);
     }
     draw(context) {
         context.backend.clear();

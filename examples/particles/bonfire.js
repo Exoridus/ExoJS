@@ -10,6 +10,7 @@ class BonfireScene extends Scene {
             throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const { width, height } = app.canvas;
         this.fireSystem = new ParticleSystem(this.loader.get(assets.demo.textures.particleFlame));
+        this.systems.add(this.fireSystem);
         this.fireSystem.setPosition(width * 0.5, height * 0.75);
         this.fireSystem.setBlendMode(BlendModes.Additive);
         this.fireSystem.addSpawnModule(new RateSpawn({
@@ -23,6 +24,7 @@ class BonfireScene extends Scene {
             { t: 1, color: new Color(0, 0, 0, 0) },
         ])));
         this.smokeSystem = new ParticleSystem(this.loader.get(assets.demo.textures.particleSmoke));
+        this.systems.add(this.smokeSystem);
         this.smokeSystem.setPosition(width * 0.5, height * 0.75 - 40);
         this.smokeSystem.setBlendMode(BlendModes.Normal);
         this.smokeSystem.addSpawnModule(new RateSpawn({
@@ -35,10 +37,6 @@ class BonfireScene extends Scene {
             { t: 0, color: new Color(120, 100, 80, 0.4) },
             { t: 1, color: new Color(60, 55, 50, 0) },
         ])));
-    }
-    update(delta) {
-        this.fireSystem.update(delta);
-        this.smokeSystem.update(delta);
     }
     draw(context) {
         context.backend.clear();

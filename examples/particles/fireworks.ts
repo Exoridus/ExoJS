@@ -66,6 +66,7 @@ class FireworksScene extends Scene {
         // Single explosion system shared by every detonation. We reposition and
         // re-tint a single BurstSpawn, then reset() it to fire one burst.
         this.explosions = new ParticleSystem(this.rocketTexture, { capacity: 16384 });
+        this.systems.add(this.explosions);
         this.explosions.setBlendMode(BlendModes.Additive);
 
         this.burstPosition = new Vector(0, 0);
@@ -158,8 +159,6 @@ class FireworksScene extends Scene {
                 this.updateStatus();
             }
         }
-
-        this.explosions.update(delta);
     }
 
     override draw(context: RenderingContext): void {

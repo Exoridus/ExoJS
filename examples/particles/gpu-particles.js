@@ -11,6 +11,7 @@ class GpuParticlesScene extends Scene {
             throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const { width, height } = app.canvas;
         this.system = new ParticleSystem(this.loader.get('image/particle-light.png'), { capacity: CAPACITY });
+        this.systems.add(this.system);
         this.system.setPosition(width / 2, height - 80);
         this.system.addSpawnModule(new RateSpawn({
             rate: new Constant(RATE),
@@ -27,8 +28,7 @@ class GpuParticlesScene extends Scene {
                 : 'WebGL2 CPU fallback — a smaller budget keeps the CPU integrator smooth.',
         });
     }
-    update(delta) {
-        this.system.update(delta);
+    update(_delta) {
         const backend = this.system.gpuMode ? 'WebGPU (GPU compute)' : 'WebGL2 (CPU fallback)';
         this.hud.setStatus(`${this.system.aliveCount.toLocaleString()} live / ${CAPACITY.toLocaleString()} cap · ${backend}`);
     }

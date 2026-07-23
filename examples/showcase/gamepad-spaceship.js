@@ -27,6 +27,7 @@ class GamepadSpaceshipScene extends Scene {
         this.engine = app.audio.play(new AudioGenerator({ type: 'sawtooth', frequency: 90 }), { volume: 0 });
         this.fx = new Graphics();
         this.particles = new ParticleSystem(this.loader.get(assets.demo.textures.particleSpark), { capacity: 4000 });
+        this.systems.add(this.particles);
         this.burst = new BurstSpawn({
             schedule: [{ time: 0, count: 60 }],
             lifetime: new Constant(0.5),
@@ -137,7 +138,6 @@ class GamepadSpaceshipScene extends Scene {
                 }
             }
         }
-        this.particles.update(delta);
     }
     wrap(point, width, height) {
         if (point.x < -24)

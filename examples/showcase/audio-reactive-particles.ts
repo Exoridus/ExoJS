@@ -43,6 +43,7 @@ class AudioReactiveParticlesScene extends Scene {
         this.detector.source = app.audio.music;
 
         this.ps = new ParticleSystem(this.loader.get(assets.demo.textures.particleLight), { capacity: 6000 });
+        this.systems.add(this.ps);
         this.ps.setPosition(width / 2, height / 2);
 
         // The rate (density) and the cone speed range (spread) are mutated every
@@ -85,7 +86,7 @@ class AudioReactiveParticlesScene extends Scene {
         this.musicVoice = app.audio.play(this.music, { loop: true, volume: 0.8 });
     }
 
-    override update(delta: Time): void {
+    override update(_delta: Time): void {
         // Low band (bass) drives how MANY particles spawn this second.
         const low = this.analyser.getBandEnergy(20, 180);
         // High band (treble) drives how WIDE the velocity cone fans out.
@@ -101,8 +102,6 @@ class AudioReactiveParticlesScene extends Scene {
         if (this.musicVoice) {
             this.hud.setStatus(`bass ${(low * 100) | 0}%  treble ${(high * 100) | 0}%`);
         }
-
-        this.ps.update(delta);
     }
 
     override draw(context: RenderingContext): void {

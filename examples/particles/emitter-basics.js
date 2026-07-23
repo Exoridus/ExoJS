@@ -11,6 +11,7 @@ class EmitterBasicsScene extends Scene {
             throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const { width, height } = app.canvas;
         this.system = new ParticleSystem(this.loader.get(assets.demo.textures.particleLight), { capacity: 4000 });
+        this.systems.add(this.system);
         this.system.setPosition(width / 2, height - 80);
         // Rate, lifetime, and a cone-shaped velocity spread: a fountain that
         // shoots upward (-π/2) with a ±36° spread and 70–180 px/s speed.
@@ -43,9 +44,6 @@ class EmitterBasicsScene extends Scene {
             status: 'Rate 180/s · lifetime 0.6–1.4s · gravity',
             hint: 'RateSpawn drives emission; ScaleOverLifetime sizes and ColorOverLifetime tints each particle as it ages.',
         });
-    }
-    update(delta) {
-        this.system.update(delta);
     }
     draw(context) {
         context.backend.clear();

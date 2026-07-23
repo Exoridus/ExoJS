@@ -1,4 +1,4 @@
-import { Application, Color, type RenderingContext, Scene, type Time, Vector } from '@codexo/exojs';
+import { Application, Color, type RenderingContext, Scene, Vector } from '@codexo/exojs';
 import {
     AlphaFadeOverLifetime,
     AttractToPoint,
@@ -30,6 +30,7 @@ class CursorAttractorParticlesScene extends Scene {
         const { width, height } = app.canvas;
 
         this.system = new ParticleSystem(this.loader.get(assets.demo.textures.particleLight), { capacity: 32000 });
+        this.systems.add(this.system);
         this.system.setPosition(width / 2, height / 2);
 
         this.system.addSpawnModule(
@@ -103,10 +104,6 @@ class CursorAttractorParticlesScene extends Scene {
             this.repeller.strength = forceStrength;
             this.hud.setStatus('Mode: Repel');
         }
-    }
-
-    override update(delta: Time): void {
-        this.system.update(delta);
     }
 
     override draw(context: RenderingContext): void {

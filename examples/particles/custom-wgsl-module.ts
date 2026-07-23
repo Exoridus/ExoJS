@@ -63,6 +63,7 @@ class CustomWgslModuleScene extends Scene {
         const { width, height } = app.canvas;
 
         this.system = new ParticleSystem(this.loader.get(assets.demo.textures.particleLight), { capacity: 26000 });
+        this.systems.add(this.system);
         this.system.setPosition(width / 2, height - 60);
         this.system.addSpawnModule(
             new RateSpawn({
@@ -84,9 +85,7 @@ class CustomWgslModuleScene extends Scene {
         });
     }
 
-    override update(delta: Time): void {
-        this.system.update(delta);
-
+    override update(_delta: Time): void {
         // gpuMode is only meaningful after the first update() compiled the
         // pipeline. Report it once it has settled.
         if (!this.reportedMode) {
