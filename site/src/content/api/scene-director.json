@@ -977,7 +977,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Fires whenever the active scene's SceneState changes, as (previous, next, scene)."
+          "description": "Fires whenever the active scene's SceneState changes, as (previous, next, scene) — every edge in the state graph, including the initial Preparing → Active activation and the terminal Destroying → Destroyed teardown, not just pause/resume/retention."
         },
         {
           "name": "onStopScene",
