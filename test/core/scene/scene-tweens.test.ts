@@ -165,4 +165,78 @@ describe('SceneTweens', () => {
       expect(tween.resume).not.toHaveBeenCalled();
     });
   });
+
+  describe('pause()/resume() — when policy', () => {
+    test('when:"active" tween is frozen on pause() and resumed on resume()', () => {
+      const tween = makeStubTween('active');
+      const app = createAppStub(tween);
+      const tweens = new SceneTweens(app);
+
+      tweens.create({}, { when: 'active' });
+
+      tweens.pause();
+      expect(tween.pause).toHaveBeenCalledTimes(1);
+
+      tweens.resume();
+      expect(tween.resume).toHaveBeenCalledTimes(1);
+    });
+
+    test('when:"paused" tween (already sitting paused) is woken on pause() and re-frozen on resume()', () => {
+      const tween = makeStubTween('paused');
+      const app = createAppStub(tween);
+      const tweens = new SceneTweens(app);
+
+      tweens.add(tween as never, { when: 'paused' });
+
+      tweens.pause();
+      expect(tween.resume).toHaveBeenCalledTimes(1);
+
+      tweens.resume();
+      expect(tween.pause).toHaveBeenCalledTimes(1);
+    });
+
+    test('when:"always" (default) tween is never touched by pause()/resume()', () => {
+      const tween = makeStubTween('active');
+      const app = createAppStub(tween);
+      const tweens = new SceneTweens(app);
+
+      tweens.create({});
+
+      tweens.pause();
+      tweens.resume();
+
+      expect(tween.pause).not.toHaveBeenCalled();
+      expect(tween.resume).not.toHaveBeenCalled();
+    });
+
+    test('resume() does not resume a when:"active" tween the user paused manually in between', () => {
+      const tween = makeStubTween('active');
+      const app = createAppStub(tween);
+      const tweens = new SceneTweens(app);
+
+      tweens.create({}, { when: 'active' });
+
+      tweens.pause(); // freezes it, records it
+      tween.resume(); // user manually resumes it themselves before the scene resumes
+      tween.resume.mockClear();
+
+      tweens.resume(); // should NOT re-touch it — it's no longer Paused
+
+      expect(tween.resume).not.toHaveBeenCalled();
+    });
+
+    test('covers sequencers exactly like tweens', () => {
+      const sequencer = makeStubSequencer('active');
+      const app = createAppStub(makeStubTween(), sequencer);
+      const tweens = new SceneTweens(app);
+
+      tweens.createSequencer({ when: 'active' });
+
+      tweens.pause();
+      expect(sequencer.pause).toHaveBeenCalledTimes(1);
+
+      tweens.resume();
+      expect(sequencer.resume).toHaveBeenCalledTimes(1);
+    });
+  });
 });

@@ -32,6 +32,10 @@ export class SceneTweens implements Destroyable {
   private readonly _sequencers = new Map<TweenSequencer, SceneTweenAvailability>();
   private _suspendedTweens: Set<Tween> | null = null;
   private _suspendedSequencers: Set<TweenSequencer> | null = null;
+  private _frozenTweens: Set<Tween> | null = null;
+  private _thawedTweens: Set<Tween> | null = null;
+  private _frozenSequencers: Set<TweenSequencer> | null = null;
+  private _thawedSequencers: Set<TweenSequencer> | null = null;
 
   public constructor(private readonly _app: Application) {}
 
@@ -116,6 +120,98 @@ export class SceneTweens implements Destroyable {
     }
   }
 
+  /**
+   * Apply the `when` pause policy for every tracked tween/sequencer:
+   * `'active'` items currently running are frozen; `'paused'` items
+   * currently frozen are woken up early (they exist specifically for the
+   * paused state). Called by {@link SceneScope.pause}. Does not touch a
+   * `'paused'` item that happens to already be running — see the `when`
+   * option's own doc, a documented, accepted limitation.
+   * @internal
+   */
+  public pause(): void {
+    const frozenTweens = new Set<Tween>();
+    const thawedTweens = new Set<Tween>();
+
+    for (const [tween, when] of this._tweens) {
+      if (when === 'active' && tween.state === TweenState.Active) {
+        tween.pause();
+        frozenTweens.add(tween);
+      } else if (when === 'paused' && tween.state === TweenState.Paused) {
+        tween.resume();
+        thawedTweens.add(tween);
+      }
+    }
+
+    this._frozenTweens = frozenTweens;
+    this._thawedTweens = thawedTweens;
+
+    const frozenSequencers = new Set<TweenSequencer>();
+    const thawedSequencers = new Set<TweenSequencer>();
+
+    for (const [sequencer, when] of this._sequencers) {
+      if (when === 'active' && sequencer.state === TweenSequencerState.Active) {
+        sequencer.pause();
+        frozenSequencers.add(sequencer);
+      } else if (when === 'paused' && sequencer.state === TweenSequencerState.Paused) {
+        sequencer.resume();
+        thawedSequencers.add(sequencer);
+      }
+    }
+
+    this._frozenSequencers = frozenSequencers;
+    this._thawedSequencers = thawedSequencers;
+  }
+
+  /**
+   * Undo {@link SceneTweens.pause}: resumes everything it froze, re-freezes
+   * everything it woke up early — each only if still in the state this
+   * facade left it in, so a tween/sequencer the caller paused or resumed
+   * manually in between is left alone. Called by {@link SceneScope.resume}.
+   * @internal
+   */
+  public resume(): void {
+    if (this._frozenTweens !== null) {
+      for (const tween of this._frozenTweens) {
+        if (tween.state === TweenState.Paused) {
+          tween.resume();
+        }
+      }
+
+      this._frozenTweens = null;
+    }
+
+    if (this._thawedTweens !== null) {
+      for (const tween of this._thawedTweens) {
+        if (tween.state === TweenState.Active) {
+          tween.pause();
+        }
+      }
+
+      this._thawedTweens = null;
+    }
+
+    if (this._frozenSequencers !== null) {
+      for (const sequencer of this._frozenSequencers) {
+        if (sequencer.state === TweenSequencerState.Paused) {
+          sequencer.resume();
+        }
+      }
+
+      this._frozenSequencers = null;
+    }
+
+    if (this._thawedSequencers !== null) {
+      for (const sequencer of this._thawedSequencers) {
+        if (sequencer.state === TweenSequencerState.Active) {
+          sequencer.pause();
+        }
+      }
+
+      this._thawedSequencers = null;
+    }
+  }
+
   public destroy(): void {
     for (const tween of this._tweens.keys()) {
       tween.stop();
@@ -129,5 +225,9 @@ export class SceneTweens implements Destroyable {
     this._sequencers.clear();
     this._suspendedTweens = null;
     this._suspendedSequencers = null;
+    this._frozenTweens = null;
+    this._thawedTweens = null;
+    this._frozenSequencers = null;
+    this._thawedSequencers = null;
   }
 }
