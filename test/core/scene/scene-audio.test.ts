@@ -117,6 +117,77 @@ describe('SceneAudio', () => {
       expect(voice.resume).not.toHaveBeenCalled();
     });
   });
+
+  describe('pause()/resume() — when policy', () => {
+    test('when:"active" voice is frozen on pause() and resumed on resume()', () => {
+      const voice = makePausableVoice();
+      const app = createAppStub(voice);
+      const audio = new SceneAudio(app, () => SceneState.Active);
+
+      audio.add(voice, { when: 'active' });
+
+      audio.pause();
+      expect(voice.pause).toHaveBeenCalledTimes(1);
+
+      audio.resume();
+      expect(voice.resume).toHaveBeenCalledTimes(1);
+    });
+
+    test('when:"paused" voice (already sitting paused) is woken on pause() and re-frozen on resume()', () => {
+      const voice = makePausableVoice({ paused: true });
+      const app = createAppStub(voice);
+      const audio = new SceneAudio(app, () => SceneState.Active);
+
+      audio.add(voice, { when: 'paused' });
+
+      audio.pause();
+      expect(voice.resume).toHaveBeenCalledTimes(1);
+
+      audio.resume();
+      expect(voice.pause).toHaveBeenCalledTimes(1);
+    });
+
+    test('when:"always" (default) voice is never touched by pause()/resume()', () => {
+      const voice = makePausableVoice();
+      const app = createAppStub(voice);
+      const audio = new SceneAudio(app, () => SceneState.Active);
+
+      audio.add(voice);
+
+      audio.pause();
+      audio.resume();
+
+      expect(voice.pause).not.toHaveBeenCalled();
+      expect(voice.resume).not.toHaveBeenCalled();
+    });
+
+    test('a non-Pausable voice with when:"active" is left alone, no error', () => {
+      const voice = makeVoice(); // no pause()/resume()
+      const app = createAppStub(voice);
+      const audio = new SceneAudio(app, () => SceneState.Active);
+
+      audio.add(voice, { when: 'active' });
+
+      expect(() => audio.pause()).not.toThrow();
+      expect(() => audio.resume()).not.toThrow();
+    });
+
+    test('resume() does not resume a when:"active" voice the caller resumed manually in between', () => {
+      const voice = makePausableVoice();
+      const app = createAppStub(voice);
+      const audio = new SceneAudio(app, () => SceneState.Active);
+
+      audio.add(voice, { when: 'active' });
+
+      audio.pause(); // freezes it, records it
+      voice.resume(); // caller manually resumes it themselves before the scene resumes
+      (voice.resume as ReturnType<typeof vi.fn>).mockClear();
+
+      audio.resume(); // should NOT re-touch it — it's no longer paused
+
+      expect(voice.resume).not.toHaveBeenCalled();
+    });
+  });
 });
 
 describe('SceneAudio — Preparing gate', () => {

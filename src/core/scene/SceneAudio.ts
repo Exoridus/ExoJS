@@ -196,6 +196,8 @@ export class SceneAudio implements Destroyable {
   private readonly _tracked = new Map<Voice, SceneAudioAvailability>();
   private readonly _pending = new Set<PendingVoice>();
   private _suspended: Set<Voice & Pausable> | null = null;
+  private _frozenByPause: Set<Voice & Pausable> | null = null;
+  private _thawedByPause: Set<Voice & Pausable> | null = null;
 
   public constructor(
     private readonly _app: Application,
@@ -285,6 +287,66 @@ export class SceneAudio implements Destroyable {
     this._suspended = null;
   }
 
+  /**
+   * Apply the `when` pause policy for every tracked, `Pausable` voice:
+   * `'active'` voices currently playing are paused; `'paused'` voices
+   * currently paused are woken up early. Called by {@link SceneScope.pause}.
+   * Does not touch a `'paused'` voice that happens to already be playing —
+   * see {@link SceneAudioPlayOptions.when}, a documented, accepted
+   * limitation — or any non-`Pausable` voice.
+   * @internal
+   */
+  public pause(): void {
+    const frozen = new Set<Voice & Pausable>();
+    const thawed = new Set<Voice & Pausable>();
+
+    for (const [voice, when] of this._tracked) {
+      if (!isPausable(voice) || voice.ended) {
+        continue;
+      }
+
+      if (when === 'active' && !voice.paused) {
+        voice.pause();
+        frozen.add(voice);
+      } else if (when === 'paused' && voice.paused) {
+        voice.resume();
+        thawed.add(voice);
+      }
+    }
+
+    this._frozenByPause = frozen;
+    this._thawedByPause = thawed;
+  }
+
+  /**
+   * Undo {@link SceneAudio.pause}: resumes everything it froze, re-freezes
+   * everything it woke up early — each only if still in the state this
+   * facade left it in, so a voice the caller paused/resumed manually in
+   * between is left alone. Called by {@link SceneScope.resume}.
+   * @internal
+   */
+  public resume(): void {
+    if (this._frozenByPause !== null) {
+      for (const voice of this._frozenByPause) {
+        if (!voice.ended && voice.paused) {
+          voice.resume();
+        }
+      }
+
+      this._frozenByPause = null;
+    }
+
+    if (this._thawedByPause !== null) {
+      for (const voice of this._thawedByPause) {
+        if (!voice.ended && !voice.paused) {
+          voice.pause();
+        }
+      }
+
+      this._thawedByPause = null;
+    }
+  }
+
   public destroy(): void {
     for (const voice of this._tracked.keys()) {
       voice.stop();
@@ -292,6 +354,8 @@ export class SceneAudio implements Destroyable {
 
     this._tracked.clear();
     this._suspended = null;
+    this._frozenByPause = null;
+    this._thawedByPause = null;
     this._pending.clear();
   }
 }
