@@ -59,7 +59,7 @@ export class SceneScope<Data = unknown> {
     this.inputs = new SceneInputs(app, () => this._state);
     this.interaction = new SceneInteraction(app);
     this.tweens = new SceneTweens(app);
-    this.audio = new SceneAudio(app);
+    this.audio = new SceneAudio(app, () => this._state);
 
     scene._attach(app, this);
   }
@@ -106,6 +106,7 @@ export class SceneScope<Data = unknown> {
   /** Commit this scope as the active scene: `Preparing` → `Active`. Called by the director once the switch boundary is crossed. */
   public activate(): void {
     this._state = SceneState.Active;
+    this.audio._flushPending();
   }
 
   /** Pause this scope: `Active` → `Paused`. Returns whether the transition happened. */
