@@ -99,7 +99,12 @@ export class SceneDirector {
   public readonly onPause = new Signal<[Scene]>();
   /** Fires after `resume()` actually transitions the active scene back to `Active`. */
   public readonly onResume = new Signal<[Scene]>();
-  /** Fires whenever the active scene's {@link SceneState} changes, as `(previous, next, scene)`. */
+  /**
+   * Fires whenever the active scene's {@link SceneState} changes, as
+   * `(previous, next, scene)` — every edge in the state graph, including the
+   * initial `Preparing` → `Active` activation and the terminal
+   * `Destroying` → `Destroyed` teardown, not just pause/resume/retention.
+   */
   public readonly onStateChange = new Signal<[SceneState, SceneState, Scene]>();
 
   public constructor(app: Application, scenes?: Record<string, AnySceneConstructor>) {
@@ -494,7 +499,7 @@ export class SceneDirector {
    * `unload()` is never called — and rethrows the original error unchanged.
    */
   private async _prepareScene<Data>(scene: Scene<Data>, data: Data): Promise<SceneScope<Data>> {
-    const scope = new SceneScope(this._app, scene);
+    const scope = new SceneScope(this._app, scene, (previous, next) => this.onStateChange.dispatch(previous, next, scene as Scene));
 
     try {
       await scope.prepare(data);

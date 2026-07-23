@@ -45,14 +45,16 @@ export class SceneScope<Data = unknown> {
   public readonly audio: SceneAudio;
 
   private readonly _app: Application;
+  private readonly _onStateChange: (previous: SceneState, next: SceneState) => void;
   private _state: SceneState = SceneState.Preparing;
   private _rootsAttached = false;
   private _unloadCalled = false;
   private _destroyCalled = false;
   private _visibleStateBeforeSuspend: SceneState.Active | SceneState.Paused | null = null;
 
-  public constructor(app: Application, scene: Scene<Data>) {
+  public constructor(app: Application, scene: Scene<Data>, onStateChange: (previous: SceneState, next: SceneState) => void = () => {}) {
     this._app = app;
+    this._onStateChange = onStateChange;
     this.scene = scene;
     this.systems = new SystemRegistry();
     this.loader = new SceneLoader(app);
@@ -105,7 +107,10 @@ export class SceneScope<Data = unknown> {
 
   /** Commit this scope as the active scene: `Preparing` → `Active`. Called by the director once the switch boundary is crossed. */
   public activate(): void {
+    const previous = this._state;
+
     this._state = SceneState.Active;
+    this._onStateChange(previous, this._state);
     this.audio._flushPending();
   }
 
@@ -325,7 +330,10 @@ export class SceneScope<Data = unknown> {
       return;
     }
 
+    const previous = this._state;
+
     this._state = SceneState.Destroying;
+    this._onStateChange(previous, this._state);
 
     const errors: unknown[] = [];
 
@@ -339,6 +347,7 @@ export class SceneScope<Data = unknown> {
     this._guard(errors, () => this.scene._teardownInternals());
 
     this._state = SceneState.Destroyed;
+    this._onStateChange(SceneState.Destroying, this._state);
 
     this._reportErrors(errors);
   }
@@ -356,7 +365,10 @@ export class SceneScope<Data = unknown> {
       return;
     }
 
+    const previous = this._state;
+
     this._state = SceneState.Destroying;
+    this._onStateChange(previous, this._state);
 
     const errors: unknown[] = [];
 
@@ -380,6 +392,7 @@ export class SceneScope<Data = unknown> {
     this._guard(errors, () => this.loader.destroy());
 
     this._state = SceneState.Destroyed;
+    this._onStateChange(SceneState.Destroying, this._state);
 
     this._reportErrors(errors);
   }
