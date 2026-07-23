@@ -16,6 +16,8 @@ import {
   type RestoreSceneOptions,
   RetainedSceneConflictError,
   RetainedSceneNotFoundError,
+  type SceneRegistryIndex,
+  type SceneRegistryShape,
   type SceneTransition,
   type SetSceneArgs,
   UnregisteredSceneError,
@@ -63,6 +65,11 @@ const defaultFadeTransitionDuration = 220;
  * switches to a new scene — ending the previous one permanently — with an
  * optional fade transition.
  *
+ * The `Registry` generic (inferred from `ApplicationOptions.scenes`, spec
+ * §6.1) types the scene registry passed at construction. This class stores
+ * it bidirectionally (`byConstructor`/`byKey`) for later use by key-based
+ * navigation — no method here consumes `byKey` yet.
+ *
  * There is no scene stack: overlays, HUDs and pause menus belong on
  * {@link Scene.ui} (the screen-fixed UI layer). Each activation is owned
  * internally by a `SceneScope`, which attaches the scene's facilities, gates
@@ -76,9 +83,10 @@ const defaultFadeTransitionDuration = 220;
  * then {@link SceneDirector._drawTransition} last, so the fade overlay always
  * sits above both scene and app draw systems.
  */
-export class SceneDirector {
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- empty registry is a valid default
+export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
   private readonly _app: Application;
-  private readonly _registry: ReadonlyMap<AnySceneConstructor, string>;
+  private readonly _registry: SceneRegistryIndex;
   private _activeScope: SceneScope | null = null;
   private _activeScopeTarget: AnySceneConstructor | null = null;
   private readonly _retained = new Map<AnySceneConstructor, SceneScope>();
@@ -107,7 +115,7 @@ export class SceneDirector {
    */
   public readonly onStateChange = new Signal<[SceneState, SceneState, Scene]>();
 
-  public constructor(app: Application, scenes?: Record<string, AnySceneConstructor>) {
+  public constructor(app: Application, scenes?: Registry) {
     this._app = app;
     this._registry = validateSceneRegistry(scenes, Scene);
   }
@@ -162,8 +170,8 @@ export class SceneDirector {
     const { data, options } = resolveSetSceneArgs(args);
 
     await this._runWithNavigation(async () => {
-      if (__DEV__ && !this._registry.has(target)) {
-        throw new UnregisteredSceneError(target.name, [...this._registry.values()]);
+      if (__DEV__ && !this._registry.byConstructor.has(target)) {
+        throw new UnregisteredSceneError(target.name, [...this._registry.byConstructor.values()]);
       }
 
       if (this._retained.has(target)) {

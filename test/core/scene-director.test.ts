@@ -10,6 +10,7 @@ import type { SceneConstructor } from '#core/SceneTypes';
 import {
   ConcurrentSceneNavigationError,
   DuplicateSceneRegistrationError,
+  InvalidSceneRegistrationError,
   RetainedSceneConflictError,
   RetainedSceneNotFoundError,
   UnregisteredSceneError,
@@ -384,6 +385,27 @@ describe('SceneDirector', () => {
       expect(error).toBeInstanceOf(DuplicateSceneRegistrationError);
       expect((error as DuplicateSceneRegistrationError).keys).toEqual(['first', 'second']);
     }
+  });
+
+  describe('registry — descriptor form (spec §6.1)', () => {
+    test('accepts a descriptor-form registration ({ scene, transition }) exactly like a bare constructor', async () => {
+      const TestScene = makeSceneClass();
+      const manager = new SceneDirector(createApplicationStub(), { test: { scene: TestScene, transition: 'placeholder' } });
+
+      await expect(manager.setScene(TestScene)).resolves.toBe(manager);
+    });
+
+    test('rejects a duplicate constructor registered under two keys across mixed forms', () => {
+      const DupScene = makeSceneClass();
+
+      expect(() => new SceneDirector(createApplicationStub(), { first: DupScene, second: { scene: DupScene } })).toThrow(DuplicateSceneRegistrationError);
+    });
+
+    test('rejects an invalid descriptor whose scene is not a Scene subclass', () => {
+      class NotAScene {}
+
+      expect(() => new SceneDirector(createApplicationStub(), { bad: { scene: NotAScene as never } })).toThrow(InvalidSceneRegistrationError);
+    });
   });
 
   test('active scene updates, ticks its systems, and draws every frame', async () => {

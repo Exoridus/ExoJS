@@ -173,13 +173,14 @@ export class DuplicateSceneRegistrationError extends Error {
 
 /**
  * Thrown (dev builds only) when `ApplicationOptions.scenes` contains a value
- * that is not a {@link Scene} subclass constructor.
+ * that is not a {@link SceneRegistration} — neither a {@link Scene} subclass
+ * constructor nor a `{ scene, transition? }` descriptor whose `scene` is one.
  */
 export class InvalidSceneRegistrationError extends Error {
   public readonly key: string;
 
   public constructor(key: string) {
-    super(`ApplicationOptions.scenes["${key}"] must be a Scene subclass constructor.`);
+    super(`ApplicationOptions.scenes["${key}"] must be a Scene subclass constructor, or a { scene, transition? } descriptor whose scene is one.`);
     this.name = 'InvalidSceneRegistrationError';
     this.key = key;
   }
@@ -249,37 +250,64 @@ export class RetainedSceneNotFoundError extends Error {
 }
 
 /**
+ * Bidirectional index built from `ApplicationOptions.scenes` by
+ * {@link validateSceneRegistry}. `byConstructor` backs the existing
+ * constructor-based navigation checks (`setScene`'s registration/diagnostics
+ * lookups); `byKey` is reserved for key-based navigation — not consumed by
+ * any navigation method yet.
+ * @internal
+ */
+export interface SceneRegistryIndex {
+  readonly byConstructor: ReadonlyMap<AnySceneConstructor, string>;
+  readonly byKey: ReadonlyMap<string, AnySceneConstructor>;
+}
+
+const isSceneRegistrationDescriptor = (value: unknown): value is { scene: AnySceneConstructor; transition?: unknown } =>
+  typeof value === 'object' && value !== null && 'scene' in value;
+
+/**
  * Validate and index an `ApplicationOptions.scenes` record: every value must
- * be a function whose prototype chain includes {@link Scene} (checked via
- * `prototype instanceof Scene` — deliberately never constructs an instance,
- * since construction may have user side effects), and no constructor may
- * appear under more than one key. Dev builds only; production builds skip
- * validation.
+ * be a {@link SceneRegistration} — a function whose prototype chain includes
+ * {@link Scene} (checked via `prototype instanceof Scene` — deliberately
+ * never constructs an instance, since construction may have user side
+ * effects), or a `{ scene, transition? }` descriptor whose `scene` passes the
+ * same check — and no resolved constructor may appear under more than one
+ * key, in either form. Dev builds only; production builds skip validation.
  * @internal
  */
 export function validateSceneRegistry(
-  scenes: Record<string, AnySceneConstructor> | undefined,
+  scenes: Record<string, SceneRegistration<AnySceneConstructor>> | undefined,
   sceneBase: typeof Scene,
-): ReadonlyMap<AnySceneConstructor, string> {
-  const registry = new Map<AnySceneConstructor, string>();
+): SceneRegistryIndex {
+  const byConstructor = new Map<AnySceneConstructor, string>();
+  const byKey = new Map<string, AnySceneConstructor>();
 
   if (scenes === undefined) {
-    return registry;
+    return { byConstructor, byKey };
   }
 
-  for (const [key, ctor] of Object.entries(scenes)) {
+  for (const [key, registration] of Object.entries(scenes)) {
+    let ctor: AnySceneConstructor | undefined;
+    if (typeof registration === 'function') {
+      ctor = registration;
+    } else if (isSceneRegistrationDescriptor(registration)) {
+      ctor = registration.scene;
+    }
+
     if (__DEV__ && !(typeof ctor === 'function' && ctor.prototype instanceof sceneBase)) {
       throw new InvalidSceneRegistrationError(key);
     }
 
-    const existingKey = registry.get(ctor);
+    const resolvedCtor = ctor!;
+    const existingKey = byConstructor.get(resolvedCtor);
 
     if (__DEV__ && existingKey !== undefined) {
-      throw new DuplicateSceneRegistrationError(ctor.name, [existingKey, key]);
+      throw new DuplicateSceneRegistrationError(resolvedCtor.name, [existingKey, key]);
     }
 
-    registry.set(ctor, key);
+    byConstructor.set(resolvedCtor, key);
+    byKey.set(key, resolvedCtor);
   }
 
-  return registry;
+  return { byConstructor, byKey };
 }
