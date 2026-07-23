@@ -1135,7 +1135,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Fires whenever the active scene's SceneState changes, as (previous, next, scene) — every edge in the state graph, including the initial Preparing → Active activation and the terminal Destroying → Destroyed teardown, not just pause/resume/retention."
+          "description": "Fires whenever a scene's SceneState changes, as (previous, next, scene) — every edge in the state graph, including Preparing → Ready, Ready → Active, and the terminal Destroying → Destroyed teardown, not just pause/resume/retention. Pure observation: a throwing listener is reported through Application.onError and never aborts the transition or blocks the remaining listeners (definition §2.2/§2.2.1)."
         },
         {
           "name": "onStopScene",

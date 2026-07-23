@@ -952,11 +952,11 @@
       "title": "Events",
       "members": [
         {
-          "name": "onLoad",
-          "signature": "onLoad: Signal<[]>",
+          "name": "onActivate",
+          "signature": "onActivate: Signal<[]>",
           "signatureTokens": [
             {
-              "text": "onLoad",
+              "text": "onActivate",
               "kind": "name"
             },
             {
@@ -986,7 +986,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Dispatched after the scene finishes loading (after load() and init() complete)."
+          "description": "Dispatched after this scene becomes Active — a fresh activation (Ready → Active) or a retention restore (Suspended → Active). Exceptions thrown by a listener are isolated: reported through Application.onError, never propagated back to whatever triggered the activation, and never able to block the remaining listeners or the activation itself."
         },
         {
           "name": "onPause",
@@ -1063,11 +1063,11 @@
           "description": "Dispatched after this scene's Scene.paused flag is cleared. Same event as SceneDirector.onResume, exposed directly on the scene for convenience."
         },
         {
-          "name": "onUnload",
-          "signature": "onUnload: Signal<[]>",
+          "name": "onSuspend",
+          "signature": "onSuspend: Signal<[]>",
           "signatureTokens": [
             {
-              "text": "onUnload",
+              "text": "onSuspend",
               "kind": "name"
             },
             {
@@ -1097,7 +1097,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Dispatched when the scene is about to be unloaded."
+          "description": "Dispatched after this scene is suspended for retention (Active → Suspended). Same exception-isolation contract as Scene.onActivate."
         }
       ],
       "paragraphs": [],
