@@ -1,6 +1,19 @@
 {
     "application-scenes": [
         {
+            "slug": "scene-less-app",
+            "path": "application-scenes/scene-less-app.js",
+            "language": "typescript",
+            "title": "Scene-less App",
+            "description": "Run an Application with no Scene at all — a single app-level system drives update and draw directly, loading and rendering a sprite without ever touching Scene.",
+            "backend": "core",
+            "tags": [
+                "application",
+                "systems"
+            ],
+            "level": "intro"
+        },
+        {
             "slug": "scene-lifecycle",
             "path": "application-scenes/scene-lifecycle.js",
             "language": "typescript",

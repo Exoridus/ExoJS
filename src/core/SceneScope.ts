@@ -59,7 +59,7 @@ export class SceneScope<Data = unknown> {
     this.inputs = new SceneInputs(app, () => this._state);
     this.interaction = new SceneInteraction(app);
     this.tweens = new SceneTweens(app);
-    this.audio = new SceneAudio(app);
+    this.audio = new SceneAudio(app, () => this._state);
 
     scene._attach(app, this);
   }
@@ -97,13 +97,7 @@ export class SceneScope<Data = unknown> {
       }
     }
 
-    this._app.interaction.attachRoot(this.scene.root);
-
-    const ui = this.scene._peekUI();
-
-    if (ui !== null) {
-      this._app.interaction.attachUIRoot(ui);
-    }
+    this._attachAutoRoots();
 
     this._rootsAttached = true;
     this.scene.onLoad.dispatch();
@@ -112,6 +106,7 @@ export class SceneScope<Data = unknown> {
   /** Commit this scope as the active scene: `Preparing` → `Active`. Called by the director once the switch boundary is crossed. */
   public activate(): void {
     this._state = SceneState.Active;
+    this.audio._flushPending();
   }
 
   /** Pause this scope: `Active` → `Paused`. Returns whether the transition happened. */
@@ -141,10 +136,14 @@ export class SceneScope<Data = unknown> {
    * Records the pre-suspend state so {@link SceneScope.restore} can return
    * to it. Suspends every facility except the loader — claims are never
    * suspended (definition §14.2), so background asset loading continues.
-   * Every facility call is individually guarded; a single facility's
-   * failure never blocks the state transition or the others, and is
-   * reported through the app error pipeline rather than thrown. Returns
-   * whether the transition happened.
+   * Also detaches the scene's own automatic root and (if materialized) UI
+   * from interaction dispatch, so a retained scene stops receiving pointer
+   * events alongside whichever scope is now active — the same detachment
+   * {@link SceneScope.destroy} performs, just reversible via {@link
+   * SceneScope.restore}. Every facility call is individually guarded; a
+   * single facility's failure never blocks the state transition or the
+   * others, and is reported through the app error pipeline rather than
+   * thrown. Returns whether the transition happened.
    */
   public suspend(): boolean {
     if (!canSuspend(this._state)) {
@@ -158,6 +157,11 @@ export class SceneScope<Data = unknown> {
 
     this._guard(errors, () => this.inputs.suspend());
     this._guard(errors, () => this.interaction.suspend());
+    this._guard(errors, () => {
+      if (this._rootsAttached) {
+        this._detachAutoRoots();
+      }
+    });
     this._guard(errors, () => this.tweens.suspend());
     this._guard(errors, () => this.audio.suspend());
 
@@ -169,8 +173,11 @@ export class SceneScope<Data = unknown> {
   /**
    * Restore this scope from retention: `Suspended` → the `Active`/`Paused`
    * state it had before {@link SceneScope.suspend}. `load()`/`init()` do not
-   * run again (definition §14.3). Same error-guarding contract as
-   * {@link SceneScope.suspend}. Returns whether the transition happened.
+   * run again (definition §14.3). Also reattaches the scene's own automatic
+   * root and (if materialized) UI to interaction dispatch, undoing the
+   * detachment {@link SceneScope.suspend} performed. Same error-guarding
+   * contract as {@link SceneScope.suspend}. Returns whether the transition
+   * happened.
    */
   public restore(): boolean {
     if (!canRestore(this._state) || this._visibleStateBeforeSuspend === null) {
@@ -184,6 +191,11 @@ export class SceneScope<Data = unknown> {
 
     this._guard(errors, () => this.inputs.resume());
     this._guard(errors, () => this.interaction.resume());
+    this._guard(errors, () => {
+      if (this._rootsAttached) {
+        this._attachAutoRoots();
+      }
+    });
     this._guard(errors, () => this.tweens.resume());
     this._guard(errors, () => this.audio.resume());
 
@@ -192,6 +204,12 @@ export class SceneScope<Data = unknown> {
     return true;
   }
 
+  /**
+   * Forward one fixed step to the scene and its systems, gated to `Active`
+   * (§3 state table — `fixedUpdate` never runs while `Paused`, unlike
+   * {@link SceneScope.draw}). Warns (dev-only) if `Scene.fixedUpdate` returns
+   * a thenable — the hook must be synchronous.
+   */
   public fixedUpdate(step: Time): void {
     if (this._state !== SceneState.Active) {
       return;
@@ -220,6 +238,11 @@ export class SceneScope<Data = unknown> {
     }
   }
 
+  /**
+   * Forward one frame's update to the scene and its systems, gated to
+   * `Active`. Warns (dev-only) if `Scene.update` returns a thenable — the
+   * hook must be synchronous.
+   */
   public update(delta: Time): void {
     if (this._state !== SceneState.Active) {
       return;
@@ -248,6 +271,12 @@ export class SceneScope<Data = unknown> {
     }
   }
 
+  /**
+   * Forward one frame's draw to the scene, its systems, then the UI layer —
+   * gated to `Active` or `Paused` (a paused scene keeps rendering while
+   * simulation is frozen). Warns (dev-only) if `Scene.draw` returns a
+   * thenable — the hook must be synchronous.
+   */
   public draw(context: RenderingContext): void {
     if (this._state !== SceneState.Active && this._state !== SceneState.Paused) {
       return;
@@ -370,7 +399,20 @@ export class SceneScope<Data = unknown> {
     }
 
     this._rootsAttached = false;
+    this._detachAutoRoots();
+  }
 
+  private _attachAutoRoots(): void {
+    this._app.interaction.attachRoot(this.scene.root);
+
+    const ui = this.scene._peekUI();
+
+    if (ui !== null) {
+      this._app.interaction.attachUIRoot(ui);
+    }
+  }
+
+  private _detachAutoRoots(): void {
     const ui = this.scene._peekUI();
 
     if (ui !== null) {

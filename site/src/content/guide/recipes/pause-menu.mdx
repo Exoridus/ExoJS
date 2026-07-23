@@ -8,20 +8,20 @@ import Callout from '../../../components/Callout.astro';
 
 # Pause menu
 
-A pause menu can freeze the game, display a menu overlay, and resume cleanly when dismissed. In ExoJS, this is done entirely within a single scene: set `scene.paused = true` to freeze updates, show a pause overlay on `scene.ui`, and reverse both on resume.
+A pause menu can freeze the game, display a menu overlay, and resume cleanly when dismissed. In ExoJS, this is done entirely within a single scene: call `app.scenes.pause()`/`resume()` to freeze updates, show a pause overlay on `scene.ui`, and reverse both on resume.
 
 ## Approach
 
-One scene, one UI layer. The pause overlay (a `Panel` + `Label`) lives on `scene.ui` and is hidden until paused. Toggling `scene.paused` stops `update()` and all scene systems while the scene keeps drawing — so the world stays visible behind the overlay. A `BlurFilter` on `scene.root` provides visual separation.
+One scene, one UI layer. The pause overlay (a `Panel` + `Label`) lives on `scene.ui` and is hidden until paused. Pausing stops `update()` and all scene systems while the scene keeps drawing — so the world stays visible behind the overlay. A `BlurFilter` on `scene.root` provides visual separation.
 
 <Callout type="info" title="Tweens keep running while paused">
-`app.tweens` keeps advancing even when `scene.paused` is `true` — only `update()` and scene-level systems freeze. That is what lets a blur ramp or menu transition animate smoothly over the frozen world.
+`app.tweens` keeps advancing even while the scene is paused — only `update()` and scene-level systems freeze. That is what lets a blur ramp or menu transition animate smoothly over the frozen world.
 </Callout>
 
 ```js
 class GameScene extends Scene {
-    init(loader) {
-        this.player = new Sprite(loader.get('image/hero.png'));
+    init() {
+        this.player = new Sprite(this.loader.get('image/hero.png'));
         this.addChild(this.player);
         // ... game setup ...
 
@@ -38,11 +38,14 @@ class GameScene extends Scene {
         this.pauseLabel.visible = false;
         this.ui.addChild(this.pauseLabel);
 
-        this.inputs.onTrigger(Keyboard.Escape, () => this.togglePause());
+        // `when: 'always'` keeps this binding live in both Active and Paused —
+        // otherwise a 'active'-only binding (the default) would stop firing
+        // the moment the scene pauses, and Escape could never resume it.
+        this.inputs.onTrigger(Keyboard.Escape, () => this.togglePause(), { when: 'always' });
     }
 
     update(delta) {
-        // Not called while paused — SceneDirector skips update() + systems.
+        // Not called while paused — the director skips update() + systems.
         // ... normal game logic ...
     }
 
@@ -53,15 +56,21 @@ class GameScene extends Scene {
 
     destroy() {
         this.root.clearFilters();
-        super.destroy();
     }
 
     togglePause() {
-        this.paused = !this.paused;
-        this.pausePanel.visible = this.paused;
-        this.pauseLabel.visible = this.paused;
+        const pausing = this.state !== SceneState.Paused;
 
-        if (this.paused) {
+        if (pausing) {
+            this.app.scenes.pause();
+        } else {
+            this.app.scenes.resume();
+        }
+
+        this.pausePanel.visible = pausing;
+        this.pauseLabel.visible = pausing;
+
+        if (pausing) {
             this.blur.radius = 0;
             this.root.filters = [this.blur];
             this.tweens.create(this.blur).to({ radius: 6 }, 0.35).start();
@@ -71,22 +80,29 @@ class GameScene extends Scene {
     }
 }
 
-await app.start(new GameScene());
+const app = new Application({ scenes: { GameScene } /* , ...other options */ });
+
+await app.start(GameScene);
 ```
 
 <Callout type="warning" title="Clear filters in destroy">
 Any filter you set in `init` or `togglePause` — the `BlurFilter` here — must be cleared in `destroy`. Otherwise it stays attached to `scene.root` and bleeds into the next scene after `app.scenes.setScene(...)`.
 </Callout>
 
-## How `scene.paused` works
+<Callout type="hint" title="Modal menus that must block clicks">
+This recipe's overlay is informational only — `scene.ui` widgets stay clickable regardless of pause state, which is fine here since nothing else is interactive underneath. For a menu that must swallow clicks so they never reach gameplay nodes beneath it, wrap it with `this.interaction.capture(this.pausePanel)` and release the returned handle on resume.
+</Callout>
 
-Setting `scene.paused = true`:
+## How pausing works
 
-- **Freezes `update()`** — the SceneDirector skips `update()` and all scene-level systems. No game logic runs.
+`app.scenes.pause()` moves the active scene to `SceneState.Paused`:
+
+- **Freezes `update()`** — the director skips `update()` and all scene-level systems. No game logic runs.
 - **Keeps drawing** — the scene still renders every frame, so the world remains visible behind the overlay.
-- **Tweens on `app.tweens` still run** — tween managers at the application level are unaffected, so blur animations and UI transitions animate smoothly while the game is frozen.
+- **Tweens on `app.tweens` still run** — the application-level tween manager is unaffected, so blur animations and UI transitions animate smoothly while the game is frozen.
+- **Scene input bindings default to `'active'` only** — pass `{ when: 'paused' }` for a binding that should fire only while paused (e.g. a menu confirm button), or `{ when: 'always' }` for one that must work in both states (the Escape toggle above).
 
-`scene.ui` widgets are always interactive regardless of `scene.paused`, so the pause panel's buttons remain clickable during the pause.
+`scene.ui` widgets are always interactive regardless of pause state, so the pause panel's buttons remain clickable during the pause.
 
 ## Cleanup
 
@@ -104,7 +120,7 @@ resumeButton.onClick.add(() => {
 
 // Inside a "main menu" button's onClick handler:
 mainMenuButton.onClick.add(() => {
-    this.app.scenes.setScene(new MainMenuScene(), { transition: { type: 'fade' } });
+    this.app.scenes.setScene(MainMenuScene, { transition: { type: 'fade' } });
 });
 ```
 

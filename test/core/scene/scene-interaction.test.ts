@@ -80,15 +80,68 @@ describe('SceneInteraction', () => {
     expect(app.interaction.detachRoot).toHaveBeenCalledTimes(1);
   });
 
-  test('suspend()/resume() do not throw and do not detach observations (scaffold for a later slice)', () => {
+  test('suspend() detaches every tracked observation without removing its tracking', () => {
+    const app = createAppStub();
+    const interaction = new SceneInteraction(app);
+    const root = fakeRoot();
+
+    interaction.observe(root);
+    interaction.suspend();
+
+    expect(app.interaction.detachRoot).toHaveBeenCalledWith(root);
+  });
+
+  test('resume() reattaches every observation suspend() detached', () => {
+    const app = createAppStub();
+    const interaction = new SceneInteraction(app);
+    const root = fakeRoot();
+
+    interaction.observe(root);
+    interaction.suspend();
+    interaction.resume();
+
+    expect(app.interaction.attachRoot).toHaveBeenCalledTimes(2); // once for observe(), once for resume()
+    expect(app.interaction.attachRoot).toHaveBeenLastCalledWith(root);
+  });
+
+  test('suspend() is idempotent — a second call does not detach again', () => {
     const app = createAppStub();
     const interaction = new SceneInteraction(app);
 
     interaction.observe(fakeRoot());
+    interaction.suspend();
+    (app.interaction.detachRoot as MockInstance).mockClear();
 
-    expect(() => interaction.suspend()).not.toThrow();
-    expect(() => interaction.resume()).not.toThrow();
+    interaction.suspend();
+
     expect(app.interaction.detachRoot).not.toHaveBeenCalled();
+  });
+
+  test('resume() before any suspend() is a no-op', () => {
+    const app = createAppStub();
+    const interaction = new SceneInteraction(app);
+
+    interaction.observe(fakeRoot());
+    (app.interaction.attachRoot as MockInstance).mockClear();
+
+    interaction.resume();
+
+    expect(app.interaction.attachRoot).not.toHaveBeenCalled();
+  });
+
+  test('an observation released while suspended is not reattached by resume()', () => {
+    const app = createAppStub();
+    const interaction = new SceneInteraction(app);
+    const root = fakeRoot();
+
+    const observation = interaction.observe(root);
+    interaction.suspend();
+    observation.release();
+    (app.interaction.attachRoot as MockInstance).mockClear();
+
+    interaction.resume();
+
+    expect(app.interaction.attachRoot).not.toHaveBeenCalled();
   });
 });
 
@@ -178,5 +231,54 @@ describe('SceneInteraction.capture()', () => {
     interaction.destroy();
 
     expect(app.interaction.popInputCapture).toHaveBeenCalledTimes(2);
+  });
+
+  test('suspend() pops every active capture; resume() re-pushes them in original order', () => {
+    const app = createAppStub();
+    const interaction = new SceneInteraction(app);
+    const rootA = fakeRoot();
+    const rootB = fakeRoot();
+
+    interaction.capture(rootA);
+    interaction.capture(rootB);
+    (app.interaction.pushInputCapture as MockInstance).mockClear();
+
+    interaction.suspend();
+    expect(app.interaction.popInputCapture).toHaveBeenCalledTimes(2);
+
+    interaction.resume();
+    expect(app.interaction.pushInputCapture).toHaveBeenNthCalledWith(1, rootA);
+    expect(app.interaction.pushInputCapture).toHaveBeenNthCalledWith(2, rootB);
+  });
+
+  test('releasing a non-top capture while suspended only updates local bookkeeping; resume() re-pushes the corrected stack', () => {
+    const app = createAppStub();
+    const interaction = new SceneInteraction(app);
+    const rootA = fakeRoot();
+    const rootB = fakeRoot();
+    const rootC = fakeRoot();
+
+    const captureA = interaction.capture(rootA);
+    const captureB = interaction.capture(rootB);
+    const captureC = interaction.capture(rootC);
+
+    interaction.suspend();
+    (app.interaction.popInputCapture as MockInstance).mockClear();
+    (app.interaction.pushInputCapture as MockInstance).mockClear();
+
+    captureB.release(); // out-of-order release while suspended: must not touch the live manager at all
+
+    expect(app.interaction.popInputCapture).not.toHaveBeenCalled();
+    expect(app.interaction.pushInputCapture).not.toHaveBeenCalled();
+    expect(captureA.active).toBe(true);
+    expect(captureB.active).toBe(false);
+    expect(captureC.active).toBe(true);
+
+    interaction.resume();
+
+    // resume() re-pushes the corrected, deduplicated stack from scratch: A then C, not a stale/duplicated sequence.
+    expect(app.interaction.pushInputCapture).toHaveBeenCalledTimes(2);
+    expect(app.interaction.pushInputCapture).toHaveBeenNthCalledWith(1, rootA);
+    expect(app.interaction.pushInputCapture).toHaveBeenNthCalledWith(2, rootC);
   });
 });

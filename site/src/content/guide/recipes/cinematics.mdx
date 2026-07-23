@@ -18,17 +18,17 @@ The key technique: **tween chains and delays**. Each tween starts at a specific 
 
 ```js
 class CinematicScene extends Scene {
-    async load(loader) {
+    async load() {
         // AudioStream has no bare-path form, so use `.of(...)` — and since
         // `get(Asset.kind('music', ...))` isn't supported, keep the loaded
         // instances as direct references instead of looking them up later.
         [this.bossTexture, this.trackStream] = await Promise.all([
-            loader.load('image/boss.png'),
-            loader.load(Asset.kind('music', 'audio/track.ogg')),
+            this.loader.load('image/boss.png'),
+            this.loader.load(Asset.kind('music', 'audio/track.ogg')),
         ]);
     }
 
-    init(loader) {
+    init() {
         // Camera — pans from title position to boss reveal
         this.view = new View(220, 300, 800, 600);
 
@@ -136,7 +136,7 @@ The closing shutter bars animate over the scene, then `setScene(...)` transition
 If you want the shutter bars or subtitle text to stay in screen space and be immune to camera transforms, put them on `scene.ui` instead of rendering them in `draw`:
 
 ```js
-init(loader) {
+init() {
     // ... main cinematic setup ...
 
     // Letterbox bars as UI nodes — always screen-aligned.
@@ -164,7 +164,7 @@ Staggering tweens with `Tween.delay()` is what turns independent animations into
 </Callout>
 
 ```js no-check
-init(loader) {
+init() {
     // ... cinematic setup ...
 
     this.inputs.onTrigger(Keyboard.Space, () => {

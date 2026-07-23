@@ -14,6 +14,7 @@ export class SceneTweens implements Destroyable {
 
   public constructor(private readonly _app: Application) {}
 
+  /** Create a {@link Tween} targeting `target` through the application tween manager, tracked for scene-lifetime cleanup. */
   public create<T extends object>(target: T): Tween<T> {
     const tween = this._app.tweens.create(target);
     this._tweens.add(tween);
@@ -21,6 +22,7 @@ export class SceneTweens implements Destroyable {
     return tween;
   }
 
+  /** Track an already-created {@link Tween} (e.g. built via `app.tweens.create(...)`) for scene-lifetime cleanup. Returns `this` for chaining. */
   public add(tween: Tween): this {
     this._app.tweens.add(tween);
     this._tweens.add(tween);

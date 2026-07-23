@@ -1,11 +1,14 @@
 import type { Pausable, Playable, Voice } from '#audio/Playable';
 import type { Application } from '#core/Application';
 import { SceneAudio } from '#core/scene/SceneAudio';
+import { SceneState } from '#core/SceneState';
+import { Signal } from '#core/Signal';
 
 const makeVoice = (overrides: Partial<Voice> = {}): Voice =>
   ({
     stop: vi.fn(),
     ended: false,
+    onEnd: new Signal(),
     ...overrides,
   }) as unknown as Voice;
 
@@ -36,7 +39,7 @@ describe('SceneAudio', () => {
   test('play() delegates to app.audio.play and tracks the returned Voice', () => {
     const voice = makeVoice();
     const app = createAppStub(voice);
-    const audio = new SceneAudio(app);
+    const audio = new SceneAudio(app, () => SceneState.Active);
 
     const result = audio.play(fakePlayable, { volume: 0.5 });
 
@@ -46,7 +49,7 @@ describe('SceneAudio', () => {
 
   test('add() tracks an already-created Voice and returns it unchanged', () => {
     const app = createAppStub(makeVoice());
-    const audio = new SceneAudio(app);
+    const audio = new SceneAudio(app, () => SceneState.Active);
     const externalVoice = makeVoice();
 
     expect(audio.add(externalVoice)).toBe(externalVoice);
@@ -56,7 +59,7 @@ describe('SceneAudio', () => {
     const voiceA = makeVoice();
     const voiceB = makeVoice();
     const app = createAppStub(voiceA);
-    const audio = new SceneAudio(app);
+    const audio = new SceneAudio(app, () => SceneState.Active);
 
     audio.play(fakePlayable);
     audio.add(voiceB);
@@ -73,7 +76,7 @@ describe('SceneAudio', () => {
       const alreadyPaused = makePausableVoice({ paused: true });
       const ended = makePausableVoice({ ended: true });
       const app = createAppStub(playing);
-      const audio = new SceneAudio(app);
+      const audio = new SceneAudio(app, () => SceneState.Active);
 
       audio.add(playing);
       audio.add(alreadyPaused);
@@ -95,7 +98,7 @@ describe('SceneAudio', () => {
     test('leaves a non-Pausable voice playing (suspended "where supported")', () => {
       const nonPausable = makeVoice(); // no pause()/resume()
       const app = createAppStub(nonPausable);
-      const audio = new SceneAudio(app);
+      const audio = new SceneAudio(app, () => SceneState.Active);
 
       audio.add(nonPausable);
 
@@ -106,12 +109,112 @@ describe('SceneAudio', () => {
     test('resume() without a prior suspend() is a no-op', () => {
       const voice = makePausableVoice();
       const app = createAppStub(voice);
-      const audio = new SceneAudio(app);
+      const audio = new SceneAudio(app, () => SceneState.Active);
 
       audio.add(voice);
 
       expect(() => audio.resume()).not.toThrow();
       expect(voice.resume).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe('SceneAudio — Preparing gate', () => {
+  test('play() during Preparing does not call app.audio.play yet', () => {
+    const voice = makeVoice();
+    const app = createAppStub(voice);
+    const audio = new SceneAudio(app, () => SceneState.Preparing);
+
+    audio.play(fakePlayable);
+
+    expect(app.audio.play).not.toHaveBeenCalled();
+  });
+
+  test('play() during Preparing returns a Voice-shaped stand-in synchronously', () => {
+    const voice = makeVoice();
+    const app = createAppStub(voice);
+    const audio = new SceneAudio(app, () => SceneState.Preparing);
+
+    const pending = audio.play(fakePlayable);
+
+    expect(pending.ended).toBe(false);
+    expect(typeof pending.stop).toBe('function');
+    expect(typeof pending.fade).toBe('function');
+  });
+
+  test('_flushPending() starts every voice queued during Preparing, applying buffered volume', () => {
+    const voice = makeVoice({ volume: 1 });
+    const app = createAppStub(voice);
+    const audio = new SceneAudio(app, () => SceneState.Preparing);
+
+    const pending = audio.play(fakePlayable, { volume: 0.5 });
+    pending.volume = 0.3;
+
+    audio._flushPending();
+
+    expect(app.audio.play).toHaveBeenCalledTimes(1);
+    expect(voice.volume).toBe(0.3);
+  });
+
+  test('stop() before flush cancels playback — the real voice is never created', () => {
+    const voice = makeVoice();
+    const app = createAppStub(voice);
+    const audio = new SceneAudio(app, () => SceneState.Preparing);
+
+    const pending = audio.play(fakePlayable);
+    pending.stop();
+    audio._flushPending();
+
+    expect(app.audio.play).not.toHaveBeenCalled();
+    expect(pending.ended).toBe(true);
+  });
+
+  test('stop() before flush fires onEnd exactly once', () => {
+    const voice = makeVoice();
+    const app = createAppStub(voice);
+    const audio = new SceneAudio(app, () => SceneState.Preparing);
+    const pending = audio.play(fakePlayable);
+    const onEnd = vi.fn();
+
+    pending.onEnd.add(onEnd);
+    pending.stop();
+    pending.stop();
+
+    expect(onEnd).toHaveBeenCalledTimes(1);
+  });
+
+  test('play() once Active bypasses the gate entirely', () => {
+    const voice = makeVoice();
+    const app = createAppStub(voice);
+    const audio = new SceneAudio(app, () => SceneState.Active);
+
+    const result = audio.play(fakePlayable);
+
+    expect(app.audio.play).toHaveBeenCalledTimes(1);
+    expect(result).toBe(voice);
+  });
+
+  test('destroy() cancels any still-pending (never-flushed) voice', () => {
+    const voice = makeVoice();
+    const app = createAppStub(voice);
+    const audio = new SceneAudio(app, () => SceneState.Preparing);
+
+    const pending = audio.play(fakePlayable);
+    audio.destroy();
+
+    expect(pending.ended).toBe(true);
+    expect(app.audio.play).not.toHaveBeenCalled();
+  });
+
+  test('_flushPending() swaps the tracked PendingVoice for its real voice, so suspend() can pause it', () => {
+    const real = makePausableVoice({ onEnd: new Signal() });
+    const app = createAppStub(real);
+    const audio = new SceneAudio(app, () => SceneState.Preparing);
+
+    audio.play(fakePlayable);
+    audio._flushPending();
+    audio.suspend();
+
+    expect(real.pause).toHaveBeenCalledTimes(1);
   });
 });
