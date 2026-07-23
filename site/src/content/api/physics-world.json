@@ -560,7 +560,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Advance by exactly one fixed step, driven directly by the engine's own fixed-timestep scheduler when this world is registered as a System (app.systems.add(world, { order: SystemOrder.Physics }) or the scene equivalent) — bypasses timeStepper's variable-delta accumulator entirely, since the caller has already decided exactly when a fixed step occurs. Prefer this over manual step once the world is system-registered; step remains available for advanced manual driving."
+          "description": "Advance by exactly one fixed step, driven directly by the engine's own fixed-timestep scheduler when this world is registered as a System (app.systems.add(world, { order: SystemOrder.Physics }) or the scene equivalent) — bypasses timeStepper's variable-delta accumulator entirely, since the caller has already decided exactly when a fixed step occurs. Prefer this over manual step once the world is system-registered; step remains available for advanced manual driving. Always advances by exactly timeStepper's configured fixedDelta, regardless of the caller's actual fixed-step interval — if the engine's Application.fixedTimeStep doesn't match this world's fixedDelta, the simulation stays deterministic but runs at the wrong wall-clock speed relative to real time."
         },
         {
           "name": "forEachAabbHit",
