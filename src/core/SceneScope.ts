@@ -135,10 +135,14 @@ export class SceneScope<Data = unknown> {
    * Records the pre-suspend state so {@link SceneScope.restore} can return
    * to it. Suspends every facility except the loader — claims are never
    * suspended (definition §14.2), so background asset loading continues.
-   * Every facility call is individually guarded; a single facility's
-   * failure never blocks the state transition or the others, and is
-   * reported through the app error pipeline rather than thrown. Returns
-   * whether the transition happened.
+   * Also detaches the scene's own automatic root and (if materialized) UI
+   * from interaction dispatch, so a retained scene stops receiving pointer
+   * events alongside whichever scope is now active — the same detachment
+   * {@link SceneScope.destroy} performs, just reversible via {@link
+   * SceneScope.restore}. Every facility call is individually guarded; a
+   * single facility's failure never blocks the state transition or the
+   * others, and is reported through the app error pipeline rather than
+   * thrown. Returns whether the transition happened.
    */
   public suspend(): boolean {
     if (!canSuspend(this._state)) {
@@ -168,8 +172,11 @@ export class SceneScope<Data = unknown> {
   /**
    * Restore this scope from retention: `Suspended` → the `Active`/`Paused`
    * state it had before {@link SceneScope.suspend}. `load()`/`init()` do not
-   * run again (definition §14.3). Same error-guarding contract as
-   * {@link SceneScope.suspend}. Returns whether the transition happened.
+   * run again (definition §14.3). Also reattaches the scene's own automatic
+   * root and (if materialized) UI to interaction dispatch, undoing the
+   * detachment {@link SceneScope.suspend} performed. Same error-guarding
+   * contract as {@link SceneScope.suspend}. Returns whether the transition
+   * happened.
    */
   public restore(): boolean {
     if (!canRestore(this._state) || this._visibleStateBeforeSuspend === null) {

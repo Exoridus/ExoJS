@@ -183,6 +183,19 @@ export class SceneInteraction implements Destroyable {
 
     const index = this._captures.indexOf(capture);
 
+    if (this._suspended) {
+      // suspend() already popped every capture off the live manager stack,
+      // and resume() will re-push the full, corrected `_captures` array
+      // from scratch. Touching the manager here (pop/push) would reinstate
+      // this capture's slot on the live stack while the scope is still
+      // dormant — exactly the state leak retention suspension exists to
+      // prevent. Local bookkeeping only; the manager catches up on resume().
+      capture.released = true;
+      this._captures.splice(index, 1);
+
+      return;
+    }
+
     // Pop every still-active capture from the top down through (and
     // including) this one, then re-push everything that was above it, in
     // original order — restores the manager's stack as if `capture` had

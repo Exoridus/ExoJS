@@ -250,4 +250,35 @@ describe('SceneInteraction.capture()', () => {
     expect(app.interaction.pushInputCapture).toHaveBeenNthCalledWith(1, rootA);
     expect(app.interaction.pushInputCapture).toHaveBeenNthCalledWith(2, rootB);
   });
+
+  test('releasing a non-top capture while suspended only updates local bookkeeping; resume() re-pushes the corrected stack', () => {
+    const app = createAppStub();
+    const interaction = new SceneInteraction(app);
+    const rootA = fakeRoot();
+    const rootB = fakeRoot();
+    const rootC = fakeRoot();
+
+    const captureA = interaction.capture(rootA);
+    const captureB = interaction.capture(rootB);
+    const captureC = interaction.capture(rootC);
+
+    interaction.suspend();
+    (app.interaction.popInputCapture as MockInstance).mockClear();
+    (app.interaction.pushInputCapture as MockInstance).mockClear();
+
+    captureB.release(); // out-of-order release while suspended: must not touch the live manager at all
+
+    expect(app.interaction.popInputCapture).not.toHaveBeenCalled();
+    expect(app.interaction.pushInputCapture).not.toHaveBeenCalled();
+    expect(captureA.active).toBe(true);
+    expect(captureB.active).toBe(false);
+    expect(captureC.active).toBe(true);
+
+    interaction.resume();
+
+    // resume() re-pushes the corrected, deduplicated stack from scratch: A then C, not a stale/duplicated sequence.
+    expect(app.interaction.pushInputCapture).toHaveBeenCalledTimes(2);
+    expect(app.interaction.pushInputCapture).toHaveBeenNthCalledWith(1, rootA);
+    expect(app.interaction.pushInputCapture).toHaveBeenNthCalledWith(2, rootC);
+  });
 });
