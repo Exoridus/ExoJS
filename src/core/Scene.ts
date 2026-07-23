@@ -12,6 +12,7 @@ import type { SceneLoader } from './scene/SceneLoader';
 import type { SceneTweens } from './scene/SceneTweens';
 import type { SceneScope } from './SceneScope';
 import type { SceneState } from './SceneState';
+import type { ApplicationLike, ApplicationOf } from './SceneTypes';
 import { deserializeInto, migrate, serializeTree } from './serialization/serialize';
 import { SERIALIZATION_VERSION, type SerializedScene } from './serialization/types';
 import { Signal } from './Signal';
@@ -39,6 +40,19 @@ import type { Destroyable } from './types';
  *   interface GameData { readonly level: number; }
  *   class GameScene extends Scene<GameData> { ... }
  *
+ * `AppLike` (second generic, default {@link Application}) types
+ * {@link Scene.app} as the concrete {@link Application} subclass the scene
+ * runs under, so a project's own `Application` members are visible inside
+ * scene code, not just at the call site that constructs it:
+ *
+ *   class AppScene<Data = void> extends Scene<Data, GameApplication> {}
+ *   class TitleScene extends AppScene { ... } // this.app: GameApplication
+ *
+ * For a project whose own base scene needs `typeof app` (an already-
+ * constructed `Application` instance) rather than a named subclass, see
+ * {@link ApplicationOf}'s doc for the explicit-fixed-point pattern required
+ * to avoid an unresolvable inference cycle.
+ *
  * Scene-bound facilities ({@link Scene.systems}, {@link Scene.loader},
  * {@link Scene.inputs}, {@link Scene.interaction}, {@link Scene.tweens},
  * {@link Scene.audio}) are unavailable during construction and class-field
@@ -47,7 +61,7 @@ import type { Destroyable } from './types';
  * hooks, {@link Scene.unload}, and {@link Scene.destroy}.
  * @stable
  */
-export class Scene<Data = void> {
+export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
   /**
    * Type-only marker that keeps `Data` in the class's structural type so it
    * survives inference through a zero-argument constructor (used by scene
@@ -56,7 +70,7 @@ export class Scene<Data = void> {
    */
   declare private readonly _sceneData?: Data;
 
-  protected _app: Application | null = null;
+  protected _app: ApplicationOf<AppLike> | null = null;
   protected readonly _root = new Container();
 
   /** Dispatched after the scene finishes loading (after load() and init() complete). */
@@ -81,7 +95,7 @@ export class Scene<Data = void> {
    * {@link Scene.attached} for the rare "is it attached yet?" check that must not
    * throw.
    */
-  public get app(): Application {
+  public get app(): ApplicationOf<AppLike> {
     if (this._app === null) {
       throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
     }
@@ -396,10 +410,18 @@ export class Scene<Data = void> {
    * Attach this scene to `app` and its owning `scope`, making every
    * scene-bound facility getter resolve. Called once by `SceneScope` at the
    * start of activation.
+   *
+   * `app`'s parameter type stays the bare {@link Application} (not
+   * `AppLike`) because `SceneScope` — this method's only caller — is not
+   * itself parametrized over `AppLike`. The cast below reflects a
+   * construction invariant the framework guarantees (a scene is always
+   * attached to the actual `Application` instance it runs under; `AppLike`
+   * only names that instance's type more precisely for `this.app`'s
+   * callers), not a real type hole.
    * @internal
    */
   public _attach(app: Application, scope: SceneScope<Data>): void {
-    this._app = app;
+    this._app = app as ApplicationOf<AppLike>;
     this._scope = scope;
   }
 
