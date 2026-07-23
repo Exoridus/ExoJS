@@ -1,10 +1,8 @@
 import { logger } from '#core/logging';
 import { Rectangle } from '#math/Rectangle';
 import { Vector } from '#math/Vector';
-import { PixelSnapMode } from '#rendering/pixelSnap';
 import { Sprite } from '#rendering/sprite/Sprite';
 import type { Texture } from '#rendering/texture/Texture';
-import { View } from '#rendering/View';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -316,49 +314,6 @@ describe('Sprite', () => {
 
       expect(sprite.contains(-5, 5)).toBe(true);
       expect(sprite.contains(100, 100)).toBe(false);
-    });
-  });
-
-  describe('getRenderBounds', () => {
-    test('returns the raw local bounds for "none" mode', () => {
-      const sprite = new Sprite(makeTexture(16, 16));
-      const view = new View(50, 50, 100, 100);
-      const out = new Rectangle();
-
-      expect(sprite.getRenderBounds(view, 100, 100, out)).toBe(sprite.getLocalBounds());
-    });
-
-    test('snaps quad boundaries to the device grid in "geometry" mode when the transform is axis-aligned', () => {
-      const sprite = new Sprite(makeTexture(10, 10));
-
-      sprite.pixelSnapMode = PixelSnapMode.Geometry;
-      sprite.setPosition(1.4, 2.6);
-
-      const view = new View(50, 50, 100, 100);
-      const out = new Rectangle();
-
-      const result = sprite.getRenderBounds(view, 100, 100, out);
-
-      expect(result).toBe(out);
-      expect(result).not.toBe(sprite.getLocalBounds());
-    });
-
-    test('downgrades to unsnapped bounds and warns once when the transform is rotated', () => {
-      const sprite = new Sprite(makeTexture(10, 10));
-
-      sprite.pixelSnapMode = PixelSnapMode.Geometry;
-      sprite.setRotation(30);
-
-      const view = new View(50, 50, 100, 100);
-      const out = new Rectangle();
-      const warnSpy = vi.spyOn(logger, 'warn');
-
-      const result = sprite.getRenderBounds(view, 100, 100, out);
-
-      expect(result).toBe(sprite.getLocalBounds());
-      expect(warnSpy).toHaveBeenCalled();
-
-      warnSpy.mockRestore();
     });
   });
 

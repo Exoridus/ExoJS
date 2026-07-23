@@ -1,5 +1,4 @@
 import type { Drawable } from '#rendering/Drawable';
-import { PixelSnapMode } from '#rendering/pixelSnap';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { RenderNode } from '#rendering/RenderNode';
 
@@ -262,14 +261,13 @@ interface BackendWithRendererRegistry {
  * The v1 recordability predicate (S3-D5): a captured fragment can be recorded
  * as an instruction set iff every captured draw uses a renderer that opts in
  * via {@link RetainedBatchCapableRenderer}, has no own material (custom
- * uniforms re-upload live at flush and their mutation bumps no revision), and
- * does not geometry-snap (geometry instance words are view-dependent; position
- * snapping is resolved in-shader from the transform row flag, so a
- * position-snapped draw is recordable); and no
+ * uniforms re-upload live at flush and their mutation bumps no revision); and no
  * barrier record exists anywhere in the fragment (barriers re-dispatch live
  * per frame and cannot interleave with cached batch runs, S3-D5.4). Nested
  * plain/retained groups recurse. Anything non-recordable stays on the
- * Slice-2 entry-replay tier — correct, just not batch-cached.
+ * Slice-2 entry-replay tier — correct, just not batch-cached. Both pixel-snap
+ * modes are resolved in the vertex shaders from the transform row flag, so the
+ * uploaded rows/quads stay view-independent — a snapped draw is fully recordable.
  * @internal
  */
 export const isRetainedFragmentRecordable = (entries: readonly RetainedFragmentEntry[], backend: RenderBackend): boolean => {
@@ -298,7 +296,7 @@ const entriesRecordable = (entries: readonly RetainedFragmentEntry[], registry: 
 
     const drawable = entry.drawable;
 
-    if (drawableHasOwnMaterial(drawable) || drawable.pixelSnapMode === PixelSnapMode.Geometry) {
+    if (drawableHasOwnMaterial(drawable)) {
       return false;
     }
 

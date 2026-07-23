@@ -8,7 +8,6 @@ import type { RenderBackend } from '#rendering/RenderBackend';
 
 import { Container } from './Container';
 import type { Drawable } from './Drawable';
-import { PixelSnapMode } from './pixelSnap';
 import type { RetainedGroupBundle } from './plan/RetainedInstructionSet';
 import type { RenderNode } from './RenderNode';
 import { packTransformRow, TRANSFORM_FLOATS_PER_ROW } from './TransformBuffer';
@@ -480,13 +479,11 @@ export class RetainedContainer extends Container {
 
     const nodeIndex = this._fragment.directDrawNodeIndex(drawable);
 
-    // A recorded direct child may be position-snapped: its patched row carries
-    // the raw transform plus the snap flag (packTransformRow), and the shader
-    // rounds the device origin — the row stays view-independent. Only
-    // geometry-snapped nodes are excluded from recording (their instance words
-    // are view-dependent); guard them here belt-and-braces so an ineligible node
-    // drops to the re-record fallback.
-    if (nodeIndex === undefined || drawable.pixelSnapMode === PixelSnapMode.Geometry) {
+    // A recorded direct child may be pixel-snapped in either mode: its patched
+    // row carries the raw transform plus the snap flag (packTransformRow) and the
+    // shader rounds the device origin (and, in geometry mode, the quad edges), so
+    // the row stays view-independent and fully recordable.
+    if (nodeIndex === undefined) {
       return false;
     }
 

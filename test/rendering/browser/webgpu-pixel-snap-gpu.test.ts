@@ -32,6 +32,8 @@ import { SpriteMaterial } from '#rendering/material/SpriteMaterial';
 import { PixelSnapMode } from '#rendering/pixelSnap';
 import type { RenderNode } from '#rendering/RenderNode';
 import { RetainedContainer } from '#rendering/RetainedContainer';
+import { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
+import { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
@@ -264,6 +266,68 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
   });
 
   // -------------------------------------------------------------------------
+  // Case 4: Geometry mode under a FRACTIONAL zoom — the reason geometry snap
+  // exists. Position snap alone lands the ORIGIN on a device pixel but leaves
+  // the far quad edge at a fractional device coordinate (device width =
+  // 10 · 1.25 = 12.5 px), so under WebGPU's single-sample rasterizer (no MSAA
+  // path) the quad covers only floor(12.5) = 12 whole columns — its right edge
+  // sits on a pixel centre and the top-left fill rule drops that column.
+  // Geometry additionally rounds each local quad corner to the device grid IN
+  // THE VERTEX SHADER, so the far edge lands on a whole device pixel and the
+  // quad covers exactly round(12.5) = 13 columns. The contiguous run of fully
+  // covered columns therefore equals the snapped device width — one column
+  // wider than position snap alone, the discriminator that flips this RED→GREEN.
+  // -------------------------------------------------------------------------
+  test('Case 4: a fractional Geometry sprite snaps its quad edges under fractional zoom', async ctx => {
+    const backend = await setupBackend();
+    const texture = createSolidTexture('#ff0000', 10);
+    const root = new Container();
+    const sprite = new Sprite(texture);
+
+    try {
+      const zoom = 1.25; // non-integer scale: geometry snap must round edges to device px
+      const snappedWidth = Math.round(10 * zoom); // 13 device px — the geometry-snapped quad width
+
+      backend.view.setZoom(zoom);
+      sprite.setPosition(20.4, 20.6);
+      sprite.pixelSnapMode = PixelSnapMode.Geometry;
+      root.addChild(sprite);
+
+      if (!(await renderScene(ctx, backend, root))) {
+        return;
+      }
+
+      const pixels = snapshotCanvas(backend);
+
+      // Longest contiguous run of fully covered (red) columns along the row.
+      let longestRun = 0;
+      let run = 0;
+
+      for (let x = 0; x < canvasSize; x++) {
+        if (readPixelFrom(pixels, x, 26)[0] > 240) {
+          run += 1;
+          longestRun = Math.max(longestRun, run);
+        } else {
+          run = 0;
+        }
+      }
+
+      // Geometry snapped both quad edges to the device grid, so the covered span
+      // is exactly the snapped device width. Position snap alone would cover one
+      // fewer column (fractional far edge dropped by the top-left fill rule).
+      expect(longestRun).toBe(snappedWidth);
+
+      // Render-only: logical position untouched.
+      expect(sprite.x).toBe(20.4);
+      expect(sprite.y).toBe(20.6);
+    } finally {
+      root.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+
+  // -------------------------------------------------------------------------
   // Case 3: the control. With snapping OFF the same scene samples BETWEEN
   // texel centres, so the colour boundary column is a red/blue blend — proving
   // the snap branch is gated on the row flag (same position, opposite outcome).
@@ -294,6 +358,171 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
       expect(boundary[0]).toBeGreaterThan(16); // red bleeds in → not pure blue
       expect(boundary[0]).toBeLessThan(240); // not pure red either
       expect(boundary[2]).toBeGreaterThan(16); // blue present → a genuine blend
+    } finally {
+      root.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Case 5: NineSlice geometry snap under a FRACTIONAL zoom. NineSlice is the
+// first renderer with INTERNAL shared edges, so the seam guarantee is load-
+// bearing: the pure `snapBoundary` moves both neighbours of a shared edge
+// identically, keeping the covered span contiguous (no gap/overlap). Under the
+// single-sample rasterizer we discriminate through covered WIDTH, mirroring the
+// sprite Case 4 pattern but position-independently: with the origin snapped to
+// an integer device pixel and the 42-local panel spanning 52.5 device px, POSITION
+// snap alone leaves the far edge fractional and the fill rule covers 52 columns,
+// while GEOMETRY snap rounds the far edge out to a whole pixel and covers exactly
+// one more (53). Without the shader boundary block geometry would behave exactly
+// like position (RED: equal runs). A crack at an internal seam (were `snapBoundary`
+// impure) would split the run below 53 and also break the +1 relation.
+// ---------------------------------------------------------------------------
+
+describe('WebGPU GPU pixel snapping — NineSlice geometry seams', () => {
+  test('Case 5: a NineSlice geometry snap widens the covered span by one column vs position snap', async ctx => {
+    const backend = await setupBackend();
+    const texture = createSolidTexture('#00ff00', 24);
+    const root = new Container();
+    const panel = new NineSliceSprite(texture, { slices: 8, width: 42, height: 42 });
+
+    try {
+      backend.view.setZoom(1.25); // 42 · 1.25 = 52.5 device px: fractional far edge
+      panel.setPosition(10.3, 10.7);
+      root.addChild(panel);
+
+      // Longest contiguous run of fully covered (green) columns over the panel's
+      // mid-band — the row with the longest run is interior (no top/bottom edge).
+      const longestGreenRun = (): number => {
+        const pixels = snapshotCanvas(backend);
+        let best = 0;
+
+        for (let y = 0; y < canvasSize; y++) {
+          let run = 0;
+
+          for (let x = 0; x < canvasSize; x++) {
+            if (readPixelFrom(pixels, x, y)[1] > 240) {
+              run += 1;
+              best = Math.max(best, run);
+            } else {
+              run = 0;
+            }
+          }
+        }
+
+        return best;
+      };
+
+      // Position snap: the origin lands on an integer device pixel but the far
+      // panel edge stays at fractional 52.5 device x, dropped by the fill rule.
+      panel.pixelSnapMode = PixelSnapMode.Position;
+
+      if (!(await renderScene(ctx, backend, root))) {
+        return;
+      }
+
+      const positionRun = longestGreenRun();
+
+      // Geometry snap additionally rounds every quad edge (including the far
+      // outer edge) to a whole device pixel, so the contiguous covered span is
+      // exactly one column wider. Without the shader boundary block geometry
+      // would match position (RED).
+      panel.pixelSnapMode = PixelSnapMode.Geometry;
+
+      if (!(await renderScene(ctx, backend, root))) {
+        return;
+      }
+
+      const geometryRun = longestGreenRun();
+
+      expect(positionRun).toBeGreaterThan(0); // the panel drew
+      expect(geometryRun).toBe(positionRun + 1);
+
+      // Render-only: logical geometry untouched.
+      expect(panel.width).toBe(42);
+      expect(panel.x).toBe(10.3);
+    } finally {
+      root.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Case 6: RepeatingSprite (shader strategy) geometry snap under a FRACTIONAL
+// zoom. Repeating carries the destW-from-snapped-corners subtlety: the shader
+// derives the tiling destination width from the SNAPPED corners, so the far edge
+// snaps to a whole device pixel like NineSlice's outer edge. Mirroring Case 5's
+// single-sample differential: with the origin snapped and the 42-local quad
+// spanning 52.5 device px, POSITION snap leaves the far edge fractional (52
+// covered columns) while GEOMETRY snap rounds it out to 53. Without the shader
+// boundary block geometry would behave exactly like position (RED: equal runs).
+// A bad destW derivation (raw instead of snapped corners) would also break the
+// +1 relation by mis-sizing the tiled span.
+// ---------------------------------------------------------------------------
+
+describe('WebGPU GPU pixel snapping — RepeatingSprite geometry', () => {
+  test('Case 6: a shader-strategy RepeatingSprite widens the covered span by one column vs position snap', async ctx => {
+    const backend = await setupBackend();
+    const texture = createSolidTexture('#0000ff', 8); // bare Texture → shader strategy
+    const root = new Container();
+    const tiled = new RepeatingSprite(texture, { width: 42, height: 42, modeX: 'repeat', modeY: 'repeat' });
+
+    try {
+      backend.view.setZoom(1.25); // 42 · 1.25 = 52.5 device px: fractional far edge
+      tiled.setPosition(10.3, 10.7);
+      root.addChild(tiled);
+
+      // Longest contiguous run of fully covered (blue) columns over any row — the
+      // row with the longest run is interior (no top/bottom edge).
+      const longestBlueRun = (): number => {
+        const pixels = snapshotCanvas(backend);
+        let best = 0;
+
+        for (let y = 0; y < canvasSize; y++) {
+          let run = 0;
+
+          for (let x = 0; x < canvasSize; x++) {
+            if (readPixelFrom(pixels, x, y)[2] > 240) {
+              run += 1;
+              best = Math.max(best, run);
+            } else {
+              run = 0;
+            }
+          }
+        }
+
+        return best;
+      };
+
+      // Position snap: origin on an integer device pixel, far edge fractional 52.5.
+      tiled.pixelSnapMode = PixelSnapMode.Position;
+
+      if (!(await renderScene(ctx, backend, root))) {
+        return;
+      }
+
+      const positionRun = longestBlueRun();
+
+      // Geometry snap: the far edge rounds out to a whole device pixel (destW is
+      // re-derived from the snapped corners), covering exactly one more column.
+      tiled.pixelSnapMode = PixelSnapMode.Geometry;
+
+      if (!(await renderScene(ctx, backend, root))) {
+        return;
+      }
+
+      const geometryRun = longestBlueRun();
+
+      expect(positionRun).toBeGreaterThan(0); // the tiled quad drew
+      expect(geometryRun).toBe(positionRun + 1);
+
+      // Render-only: logical geometry untouched.
+      expect(tiled.width).toBe(42);
+      expect(tiled.x).toBe(10.3);
     } finally {
       root.destroy();
       texture.destroy();

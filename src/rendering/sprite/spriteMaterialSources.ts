@@ -50,6 +50,15 @@ out vec2 v_texcoord;
 out vec4 v_color;
 flat out uint v_textureSlot;
 
+// Round one local boundary coordinate to the device grid along an axis whose
+// local-to-device scale is scale: floor(L*scale + 0.5) / scale. Pure in the
+// boundary value, so two quads sharing a boundary snap identically — seams stay
+// closed. Identical to the default sprite vertex stage.
+float snapBoundary(float localValue, float scale) {
+    if (abs(scale) < 1e-6) return localValue;
+    return floor(localValue * scale + 0.5) / scale;
+}
+
 void main(void) {
     // gl_VertexID 0..3 → corner: 0=TL, 1=TR, 2=BL, 3=BR (TRIANGLE_STRIP order)
     int vid = gl_VertexID;
@@ -66,6 +75,26 @@ void main(void) {
     vec4 m0 = texelFetch(u_transforms, ivec2(0, row), 0);
     vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0);
     vec4 m2 = texelFetch(u_transforms, ivec2(2, row), 0);
+
+    // Geometry boundary snap (m1.z == 2.0, axis-aligned only): round each local
+    // corner to the device grid so the quad edges land on whole device pixels.
+    // The per-axis device scale is derived from the composed pipeline.
+    // Identical to the default sprite vertex stage.
+    if (m1.z == 2.0) {
+        vec2 vp = u_viewport.zw;
+        vec3 dO = u_projection * u_group * vec3(m1.x, m1.y, 1.0);
+        vec2 devO = u_viewport.xy + (dO.xy * 0.5 + 0.5) * vp;
+        vec3 dX = u_projection * u_group * vec3(m1.x + m0.x, m1.y + m0.z, 1.0);
+        vec3 dY = u_projection * u_group * vec3(m1.x + m0.y, m1.y + m0.w, 1.0);
+        vec2 devX = u_viewport.xy + (dX.xy * 0.5 + 0.5) * vp;
+        vec2 devY = u_viewport.xy + (dY.xy * 0.5 + 0.5) * vp;
+        float scaleX = devX.x - devO.x;
+        float scaleY = devY.y - devO.y;
+        if (abs(devX.y - devO.y) < 1e-3 && abs(devY.x - devO.x) < 1e-3) {
+            localX = snapBoundary(localX, scaleX);
+            localY = snapBoundary(localY, scaleY);
+        }
+    }
 
     float worldX = (m0.x * localX) + (m0.y * localY) + m1.x;
     float worldY = (m0.z * localX) + (m0.w * localY) + m1.y;
@@ -137,6 +166,17 @@ struct VertexOutput {
     @location(1) color: vec4<f32>,
 };
 
+// Round one local boundary coordinate to the device grid along an axis whose
+// local-to-device scale is scale: floor(L*scale + 0.5) / scale. Pure in the
+// boundary value, so two quads sharing a boundary snap identically — seams stay
+// closed. Identical to the default sprite vertex stage.
+fn snapBoundary(localValue: f32, scale: f32) -> f32 {
+    if (abs(scale) < 1e-6) {
+        return localValue;
+    }
+    return floor(localValue * scale + 0.5) / scale;
+}
+
 @vertex
 fn vertexMain(input: VertexInput, @builtin(vertex_index) vid: u32) -> VertexOutput {
     var output: VertexOutput;
@@ -144,13 +184,34 @@ fn vertexMain(input: VertexInput, @builtin(vertex_index) vid: u32) -> VertexOutp
     let cornerX = ((vid + 1u) >> 1u) & 1u;
     let cornerY = vid >> 1u;
 
-    let localX = select(input.localBounds.x, input.localBounds.z, cornerX == 1u);
-    let localY = select(input.localBounds.y, input.localBounds.w, cornerY == 1u);
+    var localX = select(input.localBounds.x, input.localBounds.z, cornerX == 1u);
+    var localY = select(input.localBounds.y, input.localBounds.w, cornerY == 1u);
 
     // Fetch this instance's world transform and tint from the shared storage
     // buffer, keyed by nodeIndex: m0 = (a, b, c, d), m1 = (tx, ty, snapMode, 0),
     // m2 = tint (rgb 0..1, a).
     let slot = transforms[input.nodeIndex];
+
+    // Geometry boundary snap (slot.m1.z == 2.0, axis-aligned only): round each
+    // local corner to the device grid so the quad edges land on whole device
+    // pixels. The per-axis device scale is derived from the composed pipeline.
+    // Identical to the default sprite stage.
+    if (slot.m1.z == 2.0) {
+        let vp = projection.viewport.zw;
+        let dO = projection.matrix * projection.group * vec4<f32>(slot.m1.x, slot.m1.y, 0.0, 1.0);
+        let devO = projection.viewport.xy + (dO.xy * 0.5 + vec2<f32>(0.5)) * vp;
+        let dX = projection.matrix * projection.group * vec4<f32>(slot.m1.x + slot.m0.x, slot.m1.y + slot.m0.z, 0.0, 1.0);
+        let dY = projection.matrix * projection.group * vec4<f32>(slot.m1.x + slot.m0.y, slot.m1.y + slot.m0.w, 0.0, 1.0);
+        let devX = projection.viewport.xy + (dX.xy * 0.5 + vec2<f32>(0.5)) * vp;
+        let devY = projection.viewport.xy + (dY.xy * 0.5 + vec2<f32>(0.5)) * vp;
+        let scaleX = devX.x - devO.x;
+        let scaleY = devY.y - devO.y;
+        if (abs(devX.y - devO.y) < 1e-3 && abs(devY.x - devO.x) < 1e-3) {
+            localX = snapBoundary(localX, scaleX);
+            localY = snapBoundary(localY, scaleY);
+        }
+    }
+
     let worldX = slot.m0.x * localX + slot.m0.y * localY + slot.m1.x;
     let worldY = slot.m0.z * localX + slot.m0.w * localY + slot.m1.y;
 

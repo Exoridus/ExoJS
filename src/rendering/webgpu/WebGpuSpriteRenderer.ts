@@ -1,10 +1,9 @@
 /// <reference types="@webgpu/types" />
 
 import { Matrix } from '#math/Matrix';
-import { Rectangle } from '#math/Rectangle';
+import type { Rectangle } from '#math/Rectangle';
 import { packAffineMat4 } from '#rendering/affinePacking';
 import type { SpriteMaterial } from '#rendering/material/SpriteMaterial';
-import { PixelSnapMode } from '#rendering/pixelSnap';
 import type { Sprite } from '#rendering/sprite/Sprite';
 import { spriteVertexWgsl } from '#rendering/sprite/spriteMaterialSources';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
@@ -171,6 +170,17 @@ struct VertexOutput {
     @location(3) @interpolate(flat) textureSlot: u32,
 };
 
+// Round one local boundary coordinate to the device grid along an axis whose
+// local-to-device scale is scale: floor(L*scale + 0.5) / scale. Pure in the
+// boundary value, so two quads sharing a boundary snap identically — seams stay
+// closed. Degenerate scales pass the value through unchanged.
+fn snapBoundary(localValue: f32, scale: f32) -> f32 {
+    if (abs(scale) < 1e-6) {
+        return localValue;
+    }
+    return floor(localValue * scale + 0.5) / scale;
+}
+
 @vertex
 fn vertexMain(input: VertexInput, @builtin(vertex_index) vid: u32) -> VertexOutput {
     var output: VertexOutput;
@@ -180,15 +190,37 @@ fn vertexMain(input: VertexInput, @builtin(vertex_index) vid: u32) -> VertexOutp
     let cornerX = ((vid + 1u) >> 1u) & 1u;
     let cornerY = vid >> 1u;
 
-    let localX = select(input.localBounds.x, input.localBounds.z, cornerX == 1u);
-    let localY = select(input.localBounds.y, input.localBounds.w, cornerY == 1u);
+    var localX = select(input.localBounds.x, input.localBounds.z, cornerX == 1u);
+    var localY = select(input.localBounds.y, input.localBounds.w, cornerY == 1u);
 
     // Fetch this instance's world transform and tint from the shared storage
-    // buffer, keyed by nodeIndex: m0 = (a, b, c, d), m1 = (tx, ty, 0, 0),
+    // buffer, keyed by nodeIndex: m0 = (a, b, c, d), m1 = (tx, ty, snapMode, 0),
     // m2 = tint (rgb 0..1, a). The node tint is this sprite's own tint, so
     // reading it here unifies with the mesh path and drops the per-instance
     // color stream.
     let slot = transforms[input.nodeIndex];
+
+    // Geometry boundary snap (slot.m1.z == 2.0, axis-aligned only): round each
+    // local corner to the device grid so the quad edges land on whole device
+    // pixels. The per-axis device scale is derived from the composed pipeline:
+    // device positions of the local origin and the two local unit axes give
+    // scaleX/scaleY and the cross-terms.
+    if (slot.m1.z == 2.0) {
+        let vp = projection.viewport.zw;
+        let dO = projection.matrix * projection.group * vec4<f32>(slot.m1.x, slot.m1.y, 0.0, 1.0);
+        let devO = projection.viewport.xy + (dO.xy * 0.5 + vec2<f32>(0.5)) * vp;
+        let dX = projection.matrix * projection.group * vec4<f32>(slot.m1.x + slot.m0.x, slot.m1.y + slot.m0.z, 0.0, 1.0);
+        let dY = projection.matrix * projection.group * vec4<f32>(slot.m1.x + slot.m0.y, slot.m1.y + slot.m0.w, 0.0, 1.0);
+        let devX = projection.viewport.xy + (dX.xy * 0.5 + vec2<f32>(0.5)) * vp;
+        let devY = projection.viewport.xy + (dY.xy * 0.5 + vec2<f32>(0.5)) * vp;
+        let scaleX = devX.x - devO.x;
+        let scaleY = devY.y - devO.y;
+        if (abs(devX.y - devO.y) < 1e-3 && abs(devY.x - devO.x) < 1e-3) {
+            localX = snapBoundary(localX, scaleX);
+            localY = snapBoundary(localY, scaleY);
+        }
+    }
+
     let worldX = slot.m0.x * localX + slot.m0.y * localY + slot.m1.x;
     let worldY = slot.m0.z * localX + slot.m0.w * localY + slot.m1.y;
 
@@ -364,9 +396,10 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
   private _customBaseTextureLayout: GPUBindGroupLayout | null = null;
   private _currentMaterial: SpriteMaterial | null = null;
   private _currentBaseTexture: Texture | RenderTexture | null = null;
-  // Reusable scratch for device-snapped local bounds (PixelSnapMode.Geometry), and the
-  // bounds resolved for the sprite currently being packed (snapped or logical).
-  private readonly _snapBounds: Rectangle = new Rectangle();
+  // Local bounds resolved for the sprite currently being packed. Geometry-mode
+  // boundary snapping now happens in the vertex shader, so this is always the
+  // sprite's logical local bounds; the field lets _packInstance read the value
+  // resolved once per render() call.
   private _activeBounds: Rectangle | null = null;
 
   protected onConnect(backend: WebGpuBackend): void {
@@ -514,14 +547,6 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
 
     const material = sprite.material;
 
-    // Defensive (S3-D5.3): geometry-snapped instance words are view-dependent —
-    // the recordability predicate excludes them at collect time, so a
-    // geometry-snapped sprite inside a capture window means the stream cannot be
-    // replayed. Position snapping is resolved in-shader and stays recordable.
-    if (sprite.pixelSnapMode === PixelSnapMode.Geometry && backend._retainedCaptureActive) {
-      backend._poisonActiveRetainedCaptures();
-    }
-
     // The transform lives in the shared storage buffer, keyed by the draw
     // command's stable nodeIndex (already packed at the draw-command boundary).
     // A direct, non-plan `backend.draw(sprite)` has no command — push the
@@ -529,7 +554,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     const command = backend.activeDrawCommand;
     const nodeIndex = command !== null ? command.nodeIndex : backend._pushTransform(sprite);
 
-    this._activeBounds = this._resolveBounds(sprite, backend);
+    this._activeBounds = this._resolveBounds(sprite);
 
     if (material === null) {
       this._renderDefault(sprite, texture, backend, nodeIndex);
@@ -539,19 +564,14 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
   }
 
   /**
-   * Local bounds to upload for `sprite` this draw: device-pixel-snapped in
-   * `PixelSnapMode.Geometry` (axis-aligned only), otherwise the sprite's
-   * logical local bounds. Reuses a scratch rectangle and never mutates logical
-   * state. Consumed synchronously by {@link _packInstance}.
+   * Local bounds to upload for `sprite` this draw: always the sprite's logical
+   * local bounds. Geometry-mode boundary snapping is resolved in the vertex
+   * shader (`snapBoundary` block, gated on the row's snap flag), so no CPU
+   * bounds-snap happens here and logical state is never mutated. Consumed
+   * synchronously by {@link _packInstance}.
    */
-  private _resolveBounds(sprite: Sprite, backend: WebGpuBackend): Rectangle {
-    if (sprite.pixelSnapMode !== PixelSnapMode.Geometry) {
-      return sprite.getLocalBounds();
-    }
-
-    const snap = backend._getSnapPixelSize();
-
-    return sprite.getRenderBounds(backend.view, snap.width, snap.height, this._snapBounds);
+  private _resolveBounds(sprite: Sprite): Rectangle {
+    return sprite.getLocalBounds();
   }
 
   /** Default multi-texture path: rotate the base texture through the device's batch slots. */

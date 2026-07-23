@@ -2,7 +2,6 @@
 
 import { Matrix } from '#math/Matrix';
 import { packAffineMat4 } from '#rendering/affinePacking';
-import { PixelSnapMode } from '#rendering/pixelSnap';
 import type { NineSliceQuad } from '#rendering/sprite/nineSlice';
 import type { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
@@ -61,6 +60,17 @@ struct VertexOutput {
     @location(1) color: vec4<f32>,
 };
 
+// Round one local boundary coordinate to the device grid along an axis whose
+// local-to-device scale is scale: floor(L*scale + 0.5) / scale. Pure in the
+// boundary value, so two quads sharing a boundary snap identically — seams stay
+// closed. Degenerate scales pass the value through unchanged.
+fn snapBoundary(localValue: f32, scale: f32) -> f32 {
+    if (abs(scale) < 1e-6) {
+        return localValue;
+    }
+    return floor(localValue * scale + 0.5) / scale;
+}
+
 @vertex
 fn vertexMain(input: VertexInput, @builtin(vertex_index) vid: u32) -> VertexOutput {
     var output: VertexOutput;
@@ -69,10 +79,34 @@ fn vertexMain(input: VertexInput, @builtin(vertex_index) vid: u32) -> VertexOutp
     let cornerX = ((vid + 1u) >> 1u) & 1u;
     let cornerY = vid >> 1u;
 
-    let localX = select(input.quadBounds.x, input.quadBounds.z, cornerX == 1u);
-    let localY = select(input.quadBounds.y, input.quadBounds.w, cornerY == 1u);
+    var localX = select(input.quadBounds.x, input.quadBounds.z, cornerX == 1u);
+    var localY = select(input.quadBounds.y, input.quadBounds.w, cornerY == 1u);
 
     let slot = transforms[input.nodeIndex];
+
+    // Geometry boundary snap (slot.m1.z == 2.0, axis-aligned only): round each
+    // local corner to the device grid so the quad edges land on whole device
+    // pixels. The per-axis device scale is derived from the composed pipeline:
+    // device positions of the local origin and the two local unit axes give
+    // scaleX/scaleY and the cross-terms. Shared
+    // nine-slice quad edges are the same local value, so this pure snap moves
+    // both neighbours identically — the internal seams stay closed.
+    if (slot.m1.z == 2.0) {
+        let vp = projection.viewport.zw;
+        let dO = projection.matrix * projection.group * vec4<f32>(slot.m1.x, slot.m1.y, 0.0, 1.0);
+        let devO = projection.viewport.xy + (dO.xy * 0.5 + vec2<f32>(0.5)) * vp;
+        let dX = projection.matrix * projection.group * vec4<f32>(slot.m1.x + slot.m0.x, slot.m1.y + slot.m0.z, 0.0, 1.0);
+        let dY = projection.matrix * projection.group * vec4<f32>(slot.m1.x + slot.m0.y, slot.m1.y + slot.m0.w, 0.0, 1.0);
+        let devX = projection.viewport.xy + (dX.xy * 0.5 + vec2<f32>(0.5)) * vp;
+        let devY = projection.viewport.xy + (dY.xy * 0.5 + vec2<f32>(0.5)) * vp;
+        let scaleX = devX.x - devO.x;
+        let scaleY = devY.y - devO.y;
+        if (abs(devX.y - devO.y) < 1e-3 && abs(devY.x - devO.x) < 1e-3) {
+            localX = snapBoundary(localX, scaleX);
+            localY = snapBoundary(localY, scaleY);
+        }
+    }
+
     let worldX = slot.m0.x * localX + slot.m0.y * localY + slot.m1.x;
     let worldY = slot.m0.z * localX + slot.m0.w * localY + slot.m1.y;
 
@@ -261,22 +295,12 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
       return;
     }
 
-    // Defensive (S3-D5.3): geometry-snapped instance words are view-dependent —
-    // the recordability predicate excludes them at collect time, so a
-    // geometry-snapped nine-slice inside a capture window means the stream cannot
-    // be replayed. Position snapping is resolved in-shader and stays recordable.
-    // Nine-slice has no custom-material path to guard.
-    if (sprite.pixelSnapMode === PixelSnapMode.Geometry && backend._retainedCaptureActive) {
-      backend._poisonActiveRetainedCaptures();
-    }
-
-    let quads: readonly NineSliceQuad[] = sprite.quads;
-
-    if (sprite.pixelSnapMode === PixelSnapMode.Geometry) {
-      const snap = backend._getSnapPixelSize();
-
-      quads = sprite.getRenderQuads(backend.view, snap.width, snap.height);
-    }
+    // Always upload the raw content quads. Geometry-mode boundary snapping is
+    // resolved in the WGSL vertex stage (the `snapBoundary` block, gated on the
+    // row's snap flag), so no CPU quad snap happens here and logical geometry is
+    // never mutated. Shared quad edges snap identically in-shader, keeping the
+    // internal seams closed.
+    const quads: readonly NineSliceQuad[] = sprite.quads;
 
     if (quads.length === 0) {
       return;
