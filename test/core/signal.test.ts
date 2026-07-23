@@ -158,9 +158,7 @@ describe('dispatchIsolated', () => {
   it('a listener removing itself mid-dispatch (via isolated dispatch) is still deferred correctly', () => {
     const signal = new Signal();
     const calls: string[] = [];
-    let selfRemoving: () => void;
-
-    selfRemoving = () => {
+    const selfRemoving: () => void = () => {
       calls.push('self');
       signal.remove(selfRemoving);
     };
