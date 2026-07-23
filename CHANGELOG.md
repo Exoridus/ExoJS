@@ -4,6 +4,110 @@ All notable changes to ExoJS are documented in this file.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.0] - Unreleased
+
+The scene-model release. `Application`'s frame loop, scene lifecycle, and
+navigation are rebuilt around a normative multiphase `System` contract, a
+typed scene registry, pause with a per-binding availability policy, and
+retention (suspend a scene instead of destroying it, restore it later without
+re-running `load()`/`init()`). This is a pre-1.0 release and includes
+intentional breaking changes; see **Changed** and **Removed**.
+
+### Added
+
+- **Multiphase `System` contract.** A `System` implements any subset of
+  `fixedUpdate`/`update`/`draw` (previously `update` + `destroy` were
+  required); `app.systems`/`scene.systems` dispatch each phase in ascending
+  `order`, ties broken by insertion order. Structural add/remove during a
+  frame is buffered to the next frame boundary (#390).
+- **Typed scene registry and navigation.** `new Application({ scenes: { game:
+GameScene } })` registers scene constructors; `app.start(GameScene, data?)`
+  and `app.scenes.setScene(GameScene, data?, options?)` take the constructor
+  directly — data and options are inferred from the scene's own generic,
+  rejecting a mismatched or missing payload at compile time. Unregistered or
+  duplicate registrations raise named errors (`UnregisteredSceneError`,
+  `DuplicateSceneRegistrationError`, `InvalidSceneRegistrationError`) (#392,
+  #396).
+- **`app.scenes.pause()`/`resume()`** move the active scene between `Active`
+  and `Paused` (`SceneState`) — the scene keeps drawing while paused but its
+  `update()`/systems stop. Scene input bindings accept `when:
+'active'|'paused'|'always'` (default `'active'`), with edge rules so a
+  press/release pair must both occur in an allowed state to trigger.
+  `this.interaction.capture(root)` confines pointer hit-testing to a subtree
+  for modal UI (#392, #397).
+- **Scene retention.** `setScene(X, { retainCurrent: true })` suspends the
+  outgoing scene instead of destroying it; `app.scenes.restoreScene(X)`
+  reactivates the same instance without re-running `load()`/`init()`,
+  returning to its pre-suspend `Active`/`Paused` state; `releaseScene(X)`
+  permanently ends a retained scene. Concurrent navigation calls are now
+  rejected with `ConcurrentSceneNavigationError` instead of racing silently
+  (#398).
+- **Extension app-system bindings.** An `Extension.systems` binding
+  (`ApplicationSystemBinding`) produces a `System` materialised once per
+  `Application`, after every core manager exists, registered on
+  `app.systems` — extensions can no longer only add renderers/assets/
+  serializers (#399).
+- **`Scene.interaction`/`Scene.audio` facades** (`SceneInteraction`,
+  `SceneAudio`) join the existing `Scene.inputs`/`Scene.tweens` — scene-scoped
+  pointer capture/observation and scene-scoped playback, both auto-cleaned up
+  on scene teardown and suspended/resumed across retention (#391).
+- **`PhysicsWorld.fixedUpdate()`** lets `@codexo/exojs-physics` register
+  directly as a system (`app.systems.add(world, { order: SystemOrder.Physics
+})`) instead of being stepped manually from `Scene.update()`.
+- **Scene-less applications.** `new Application({ /* no scenes */ })` +
+  `app.start()` runs the frame loop with no active scene at all —
+  `app.systems` still ticks and draws.
+
+### Changed
+
+- **BREAKING — `SceneManager` renamed `SceneDirector`, `app.scene` renamed
+  `app.scenes`.**
+- **BREAKING — scene construction and navigation are constructor-based, not
+  instance-based.** `app.start(new GameScene())` → `new Application({ scenes:
+{ game: GameScene } })` + `app.start(GameScene, data?)`;
+  `app.scene.setScene(instance, opts)` → `app.scenes.setScene(Ctor, data?,
+opts?)`; `setScene(null)` is gone (start another scene, or `app.stop()`).
+- **BREAKING — `scene.paused` is no longer a writable field.** Use
+  `app.scenes.pause()`/`resume()`; read `scene.state`.
+- **BREAKING — `load`/`init` hooks take `data`, not a `Loader`.**
+  `load(loader)`/`init(loader)` → `load(data)`/`init(data)`; access the
+  loader via `this.loader`/`this.app.loader`. `init()` must be synchronous
+  (a `Promise`-returning `init` is a dev-mode activation error) — move
+  asynchronous setup into `load()`.
+- **BREAKING — `System.destroy()` is optional**; a system implementing none
+  of `fixedUpdate`/`update`/`draw` is no longer valid (at least one phase is
+  required).
+- **BREAKING — user app systems no longer reserve order `100`-`500`.** Core
+  managers (input/interaction/audio/tweens/rendering) moved out of
+  `app.systems` into an internal prepare stage; any plain `order` value is
+  now safe for user systems.
+- **BREAKING — `scene.systems` is attach-gated.** Register scene systems from
+  `init()` — using `scene.systems` before the scene is attached now throws.
+- **`@codexo/exojs-physics`:** `PhysicsWorld` should be registered as a
+  system rather than stepped manually; `step()` remains available for
+  advanced manual driving.
+
+### Removed
+
+- **BREAKING — `super.destroy()` in a `Scene` subclass is no longer
+  necessary.** The base `Scene.destroy()` is now empty — existing
+  `super.destroy()` calls are harmless but can be deleted.
+
+### Fixed
+
+- **`SceneInteraction.suspend()`/`resume()`** now actually detach/reattach
+  observed roots and captures (previously no-op stubs) — a retained scene no
+  longer keeps receiving pointer dispatch alongside whichever scene is now
+  active.
+- **`SceneAudio.play()`** now gates playback requested while the scope is
+  `Preparing`, queuing it until the scene activates, instead of starting
+  audio for a scene that might never finish activating.
+
+### Docs
+
+- Migrated `examples/` and the `pause-menu`/`cinematics` recipe guides to the
+  v0.17 scene model; added a scene-less application example.
+
 ## [0.15.2] - 2026-07-04
 
 Bugfix release. Ten defects found by the coverage-fleet passes on the v0.16
