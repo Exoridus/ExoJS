@@ -448,7 +448,7 @@ describe('SceneDirector', () => {
     expect(fixedSystemUpdate).toHaveBeenCalledTimes(2);
   });
 
-  test('pause() transitions Active to Paused, dispatches onPause and onStateChange, and stops update but not draw', async () => {
+  test('pause() sets paused without changing state, dispatches onPause (not onStateChange), and stops update but not draw', async () => {
     const app = createApplicationStub();
     const update = vi.fn();
     const draw = vi.fn();
@@ -464,11 +464,11 @@ describe('SceneDirector', () => {
     const scene = director.currentScene;
 
     expect(director.pause()).toBe(true);
-    expect(director.state).toBe(SceneState.Paused);
+    expect(director.state).toBe(SceneState.Active);
+    expect(director.paused).toBe(true);
     expect(onPause).toHaveBeenCalledTimes(1);
     expect(onPause).toHaveBeenCalledWith(scene);
-    expect(onStateChange).toHaveBeenCalledTimes(1);
-    expect(onStateChange).toHaveBeenCalledWith(SceneState.Active, SceneState.Paused, scene);
+    expect(onStateChange).not.toHaveBeenCalled();
 
     tick(director, app);
     expect(update).not.toHaveBeenCalled();
@@ -496,7 +496,7 @@ describe('SceneDirector', () => {
     expect(onPause).not.toHaveBeenCalled();
   });
 
-  test('resume() transitions Paused back to Active, dispatches onResume and onStateChange, and restores update', async () => {
+  test('resume() clears paused without changing state, dispatches onResume (not onStateChange), and restores update', async () => {
     const app = createApplicationStub();
     const update = vi.fn();
     const TestScene = makeSceneClass({ update });
@@ -514,10 +514,10 @@ describe('SceneDirector', () => {
 
     expect(director.resume()).toBe(true);
     expect(director.state).toBe(SceneState.Active);
+    expect(director.paused).toBe(false);
     expect(onResume).toHaveBeenCalledTimes(1);
     expect(onResume).toHaveBeenCalledWith(scene);
-    expect(onStateChange).toHaveBeenCalledTimes(1);
-    expect(onStateChange).toHaveBeenCalledWith(SceneState.Paused, SceneState.Active, scene);
+    expect(onStateChange).not.toHaveBeenCalled();
 
     tick(director, app);
     expect(update).toHaveBeenCalledTimes(1);
@@ -648,7 +648,7 @@ describe('SceneDirector — retention', () => {
     expect(director.state).toBe(SceneState.Active);
   });
 
-  test('restoreScene() returns to Paused when the scene was Paused before suspension', async () => {
+  test('restoreScene() preserves the paused flag across suspension', async () => {
     const app = createApplicationStub();
     const FirstScene = makeSceneClass();
     const SecondScene = makeSceneClass();
@@ -659,7 +659,8 @@ describe('SceneDirector — retention', () => {
     await director.setScene(SecondScene, { retainCurrent: true });
     await director.restoreScene(FirstScene);
 
-    expect(director.state).toBe(SceneState.Paused);
+    expect(director.state).toBe(SceneState.Active);
+    expect(director.paused).toBe(true);
   });
 
   test('releaseScene() permanently destroys the retained scene and returns true', async () => {

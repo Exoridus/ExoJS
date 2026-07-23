@@ -59,7 +59,7 @@ class GameScene extends Scene {
     }
 
     togglePause() {
-        const pausing = this.state !== SceneState.Paused;
+        const pausing = !this.paused;
 
         if (pausing) {
             this.app.scenes.pause();
@@ -95,7 +95,7 @@ This recipe's overlay is informational only — `scene.ui` widgets stay clickabl
 
 ## How pausing works
 
-`app.scenes.pause()` moves the active scene to `SceneState.Paused`:
+`app.scenes.pause()` sets `app.scenes.paused` (and `scene.paused`) to `true` — the scene's `state` stays `Active`:
 
 - **Freezes `update()`** — the director skips `update()` and all scene-level systems. No game logic runs.
 - **Keeps drawing** — the scene still renders every frame, so the world remains visible behind the overlay.

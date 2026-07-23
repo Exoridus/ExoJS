@@ -6,12 +6,12 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 26,
+  "memberCount": 29,
   "counts": {
     "constructors": 1,
     "methods": 12,
-    "properties": 11,
-    "events": 2
+    "properties": 12,
+    "events": 4
   },
   "sections": [
     {
@@ -794,6 +794,27 @@
           "description": "Scene-scoped claim view over the application Loader. Assets claimed via this.loader.get/load(...) are held under this scene's own claim scope and released automatically when the scene ends permanently — scene-private assets are evicted on unload with zero manual bookkeeping. App-lifetime assets stay on app.loader. Throws if accessed before the scene is attached to an Application."
         },
         {
+          "name": "paused",
+          "signature": "paused: boolean",
+          "signatureTokens": [
+            {
+              "text": "paused",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "true while this scene is paused — only meaningful while Scene.state is Active; freezes fixedUpdate/update but not draw. Read-only — see SceneDirector.pause/SceneDirector.resume. Throws if accessed before the scene is attached to an Application."
+        },
+        {
           "name": "root",
           "signature": "root: Container",
           "signatureTokens": [
@@ -943,6 +964,80 @@
           "params": [],
           "returnType": null,
           "description": "Dispatched after the scene finishes loading (after load() and init() complete)."
+        },
+        {
+          "name": "onPause",
+          "signature": "onPause: Signal<[]>",
+          "signatureTokens": [
+            {
+              "text": "onPause",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Dispatched after this scene's Scene.paused flag is set. Same event as SceneDirector.onPause, exposed directly on the scene for convenience."
+        },
+        {
+          "name": "onResume",
+          "signature": "onResume: Signal<[]>",
+          "signatureTokens": [
+            {
+              "text": "onResume",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Dispatched after this scene's Scene.paused flag is cleared. Same event as SceneDirector.onResume, exposed directly on the scene for convenience."
         },
         {
           "name": "onUnload",

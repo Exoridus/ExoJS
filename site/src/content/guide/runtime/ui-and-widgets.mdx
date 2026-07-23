@@ -173,7 +173,7 @@ Options cover the delay before showing (`delay`, in seconds), the offset from th
 A pause menu is the canonical combination: freeze the world with `app.scenes.pause()` — which stops `update` and the scene's systems while it keeps drawing — and show an overlay built from widgets on `scene.ui`. Call `app.scenes.resume()` to unfreeze:
 
 ```js
-import { Keyboard, Label, Panel, Scene, SceneState } from '@codexo/exojs';
+import { Keyboard, Label, Panel, Scene } from '@codexo/exojs';
 
 class GameScene extends Scene {
     init() {
@@ -191,13 +191,13 @@ class GameScene extends Scene {
     }
 
     togglePause() {
-        if (this.app.scenes.state === SceneState.Paused) {
+        if (this.app.scenes.paused) {
             this.app.scenes.resume();
         } else {
             this.app.scenes.pause();
         }
 
-        const paused = this.app.scenes.state === SceneState.Paused;
+        const paused = this.app.scenes.paused;
         this.pausePanel.visible = paused;
         this.pauseLabel.visible = paused;
     }

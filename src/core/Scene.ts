@@ -63,6 +63,10 @@ export class Scene<Data = void> {
   public readonly onLoad = new Signal();
   /** Dispatched when the scene is about to be unloaded. */
   public readonly onUnload = new Signal();
+  /** Dispatched after this scene's {@link Scene.paused} flag is set. Same event as {@link SceneDirector.onPause}, exposed directly on the scene for convenience. */
+  public readonly onPause = new Signal();
+  /** Dispatched after this scene's {@link Scene.paused} flag is cleared. Same event as {@link SceneDirector.onResume}, exposed directly on the scene for convenience. */
+  public readonly onResume = new Signal();
 
   private _scope: SceneScope<Data> | null = null;
   private readonly _disposal = new DisposalScope();
@@ -187,6 +191,17 @@ export class Scene<Data = void> {
    */
   public get state(): SceneState {
     return this._requireScope('state').state;
+  }
+
+  /**
+   * `true` while this scene is paused — only meaningful while {@link
+   * Scene.state} is `Active`; freezes `fixedUpdate`/`update` but not `draw`.
+   * Read-only — see {@link SceneDirector.pause}/{@link SceneDirector.resume}.
+   *
+   * Throws if accessed before the scene is attached to an {@link Application}.
+   */
+  public get paused(): boolean {
+    return this._requireScope('paused').paused;
   }
 
   /**
@@ -401,6 +416,8 @@ export class Scene<Data = void> {
     this._disposal.destroy();
     this.onLoad.destroy();
     this.onUnload.destroy();
+    this.onPause.destroy();
+    this.onResume.destroy();
     this._root.destroy();
     this._app = null;
     this._scope = null;

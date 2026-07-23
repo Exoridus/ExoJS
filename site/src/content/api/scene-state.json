@@ -1,12 +1,12 @@
 {
   "title": "SceneState",
-  "description": "Lifecycle state of one Scene activation, owned by its internal `SceneScope` and exposed read-only via Scene.state. State is read-only from user code — it changes only in response to director-driven lifecycle events: activation, pause/resume, retention (suspend/restore), and teardown. | State | fixed/update | draw | input & interaction | |---|---:|---:|---| | `Preparing` | no | no | registrations accepted, dispatch gated | | `Active` | yes | yes | active | | `Paused` | no | yes | pause-policy filtered | | `Suspended` | no | no | disabled | | `Destroying` / `Destroyed` | no | no | disabled |",
+  "description": "Lifecycle state of one Scene activation, owned by its internal `SceneScope` and exposed read-only via Scene.state. State is read-only from user code — it changes only in response to director-driven lifecycle events: activation, retention (suspend/restore), and teardown. Pause is not a state — it is an orthogonal flag that only applies while `Active`; see Scene.paused. | State | fixed/update | draw | input & interaction | |---|---:|---:|---| | `Preparing` | no | no | registrations accepted, dispatch gated | | `Active` (not paused) | yes | yes | active | | `Active` (paused) | no | yes | pause-policy filtered | | `Suspended` | no | no | disabled | | `Destroying` / `Destroyed` | no | no | disabled |",
   "symbol": "SceneState",
   "kind": "enum",
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 6,
+  "memberCount": 5,
   "counts": {
     "constructors": 0,
     "methods": 0,
@@ -19,8 +19,8 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Lifecycle state of one Scene activation, owned by its internal `SceneScope` and exposed read-only via Scene.state. State is read-only from user code — it changes only in response to director-driven lifecycle events: activation, pause/resume, retention (suspend/restore), and teardown.",
-        "| State | fixed/update | draw | input & interaction | |---|---:|---:|---| | `Preparing` | no | no | registrations accepted, dispatch gated | | `Active` | yes | yes | active | | `Paused` | no | yes | pause-policy filtered | | `Suspended` | no | no | disabled | | `Destroying` / `Destroyed` | no | no | disabled |"
+        "Lifecycle state of one Scene activation, owned by its internal `SceneScope` and exposed read-only via Scene.state. State is read-only from user code — it changes only in response to director-driven lifecycle events: activation, retention (suspend/restore), and teardown. Pause is not a state — it is an orthogonal flag that only applies while `Active`; see Scene.paused.",
+        "| State | fixed/update | draw | input & interaction | |---|---:|---:|---| | `Preparing` | no | no | registrations accepted, dispatch gated | | `Active` (not paused) | yes | yes | active | | `Active` (paused) | no | yes | pause-policy filtered | | `Suspended` | no | no | disabled | | `Destroying` / `Destroyed` | no | no | disabled |"
       ],
       "importLine": "import { SceneState } from '@codexo/exojs'",
       "sourceLink": null
@@ -61,19 +61,6 @@
           "signatureTokens": [
             {
               "text": "Destroying",
-              "kind": "name"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
-        },
-        {
-          "name": "Paused",
-          "signature": "Paused",
-          "signatureTokens": [
-            {
-              "text": "Paused",
               "kind": "name"
             }
           ],
