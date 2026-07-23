@@ -29,6 +29,48 @@ export type AnySceneConstructor = SceneConstructor | SceneConstructor<any>;
 export type InferSceneData<C> = C extends SceneConstructor<infer Data> ? Data : never;
 
 /**
+ * A single `ApplicationOptions.scenes` registry entry: either a bare
+ * {@link Scene} subclass constructor, or a descriptor pairing one with a
+ * target-bound default transition. Both forms register identically —
+ * `title: TitleScene` and `title: { scene: TitleScene }` are equivalent.
+ */
+export type SceneRegistration<C extends AnySceneConstructor> =
+  | C
+  | {
+      readonly scene: C;
+      /**
+       * Default transition used whenever navigation targets this
+       * constructor without its own call-site `transition` option (spec
+       * §3.10).
+       */
+      // TODO(slice 6): SceneTransitionSelection
+      readonly transition?: unknown;
+    };
+
+/**
+ * Structural constraint for an `ApplicationOptions.scenes` registry: every
+ * value must be a {@link SceneRegistration}. A mapped-type constraint, not
+ * `Record<string, SceneRegistration<AnySceneConstructor>>` — `Record<K, V>`
+ * requires an index signature to structurally match, which a plain
+ * `interface GameScenes { title: typeof TitleScene; ... }` does not have (a
+ * `type` alias with the identical shape happens to satisfy it, an
+ * `interface` does not — confirmed against this project's TypeScript
+ * version, `--strict`: "Index signature for type 'string' is missing"). The
+ * public API must not depend on which of the two a caller wrote; a
+ * mapped-type constraint accepts both.
+ */
+export type SceneRegistryShape<Registry> = {
+  readonly [Key in keyof Registry]: SceneRegistration<AnySceneConstructor>;
+};
+
+/**
+ * Extracts the {@link Scene} subclass constructor a {@link SceneRegistration}
+ * resolves to — unwraps the descriptor form, passes a bare constructor
+ * through unchanged.
+ */
+export type ConstructorOf<R extends SceneRegistration<AnySceneConstructor>> = R extends { scene: infer C } ? C : R;
+
+/**
  * Fade-to-color scene transition. The screen fades to `color` (default black)
  * over `duration` ms (default 220), the scene change happens at full
  * opacity, then the screen fades back in.

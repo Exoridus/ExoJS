@@ -1,5 +1,5 @@
 import { Scene } from '#core/Scene';
-import type { AnySceneConstructor, InferSceneData, SetSceneArgs } from '#core/SceneTypes';
+import type { AnySceneConstructor, ConstructorOf, InferSceneData, SceneRegistration, SceneRegistryShape, SetSceneArgs } from '#core/SceneTypes';
 
 interface GameData {
   readonly level: number;
@@ -35,5 +35,27 @@ const _registry: Record<string, AnySceneConstructor> = { voidScene: VoidScene, d
 class NotAScene {}
 // @ts-expect-error — must be a Scene subclass constructor
 const _rejectsNonScene: AnySceneConstructor = NotAScene;
+
+// SceneRegistration / SceneRegistryShape / ConstructorOf
+class RegGameScene extends Scene<GameData> {}
+
+const _bareRegistration: SceneRegistration<typeof VoidScene> = VoidScene;
+const _descriptorRegistration: SceneRegistration<typeof RegGameScene> = { scene: RegGameScene };
+const _descriptorWithTransition: SceneRegistration<typeof RegGameScene> = { scene: RegGameScene, transition: 'placeholder' };
+
+// A plain interface (no index signature) satisfies the mapped-type constraint.
+interface GameScenesRegistry {
+  readonly voidScene: typeof VoidScene;
+  readonly gameScene: { readonly scene: typeof RegGameScene };
+}
+const _acceptsInterfaceRegistry: SceneRegistryShape<GameScenesRegistry> = {
+  voidScene: VoidScene,
+  gameScene: { scene: RegGameScene },
+};
+
+type BareCtorOf = ConstructorOf<typeof VoidScene>; // expect: typeof VoidScene
+type DescriptorCtorOf = ConstructorOf<{ scene: typeof RegGameScene }>; // expect: typeof RegGameScene
+const _bareCtorCheck: BareCtorOf = VoidScene;
+const _descriptorCtorCheck: DescriptorCtorOf = RegGameScene;
 
 export {};
