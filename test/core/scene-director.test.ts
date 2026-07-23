@@ -256,7 +256,7 @@ describe('SceneDirector', () => {
     expect(first?.attached).toBe(false);
   });
 
-  test('setScene() dispatches onStateChange for the fresh Preparing to Active activation', async () => {
+  test('setScene() dispatches onStateChange for Preparing to Ready, then Ready to Active', async () => {
     const TestScene = makeSceneClass();
     const manager = new SceneDirector(createApplicationStub(), { test: TestScene });
     const onStateChange = vi.fn();
@@ -266,11 +266,12 @@ describe('SceneDirector', () => {
     await manager.setScene(TestScene);
     const scene = manager.currentScene;
 
-    expect(onStateChange).toHaveBeenCalledTimes(1);
-    expect(onStateChange).toHaveBeenCalledWith(SceneState.Preparing, SceneState.Active, scene);
+    expect(onStateChange).toHaveBeenCalledTimes(2);
+    expect(onStateChange).toHaveBeenNthCalledWith(1, SceneState.Preparing, SceneState.Ready, scene);
+    expect(onStateChange).toHaveBeenNthCalledWith(2, SceneState.Ready, SceneState.Active, scene);
   });
 
-  test('switching scenes dispatches onStateChange for the outgoing scope Destroying and Destroyed transitions', async () => {
+  test('switching scenes dispatches onStateChange for the outgoing scope Destroying and Destroyed transitions, and the incoming Preparing→Ready→Active', async () => {
     const First = makeSceneClass();
     const Second = makeSceneClass();
     const manager = new SceneDirector(createApplicationStub(), { first: First, second: Second });
@@ -284,10 +285,11 @@ describe('SceneDirector', () => {
     await manager.setScene(Second);
     const second = manager.currentScene;
 
-    expect(onStateChange).toHaveBeenCalledTimes(3);
+    expect(onStateChange).toHaveBeenCalledTimes(4);
     expect(onStateChange).toHaveBeenCalledWith(SceneState.Active, SceneState.Destroying, first);
     expect(onStateChange).toHaveBeenCalledWith(SceneState.Destroying, SceneState.Destroyed, first);
-    expect(onStateChange).toHaveBeenCalledWith(SceneState.Preparing, SceneState.Active, second);
+    expect(onStateChange).toHaveBeenCalledWith(SceneState.Preparing, SceneState.Ready, second);
+    expect(onStateChange).toHaveBeenCalledWith(SceneState.Ready, SceneState.Active, second);
   });
 
   test('a failed activation dispatches onStateChange for Preparing to Destroying to Destroyed', async () => {
@@ -893,28 +895,30 @@ describe('SceneDirector — concurrent navigation', () => {
 });
 
 describe('SceneDirector — switch-phase rollback', () => {
-  test('a throwing onStopScene listener rolls back to the previous scope and rethrows', async () => {
+  test('a throwing onStopScene listener no longer aborts the switch — isolated, reported via onError, switch completes (definition §2.2.1)', async () => {
     const app = createApplicationStub();
     const FirstScene = makeSceneClass();
     const SecondScene = makeSceneClass();
     const director = new SceneDirector(app, { first: FirstScene, second: SecondScene });
 
     await director.setScene(FirstScene);
-    const firstInstance = director.currentScene;
 
     const failure = new Error('onStopScene listener failed');
+    const errorSpy = vi.fn();
 
     director.onStopScene.add(() => {
       throw failure;
     });
+    app.onError.add(errorSpy);
 
-    await expect(director.setScene(SecondScene)).rejects.toThrow(failure);
+    await expect(director.setScene(SecondScene)).resolves.toBe(director);
 
-    expect(director.currentScene).toBe(firstInstance); // rolled back
+    expect(director.currentScene).toBeInstanceOf(SecondScene);
     expect(director.state).toBe(SceneState.Active);
+    expect(errorSpy).toHaveBeenCalledWith(failure);
   });
 
-  test('a throwing onStopScene listener during a retainCurrent switch un-suspends the previous scope', async () => {
+  test('a throwing onStateChange listener during a retainCurrent switch no longer un-suspends the previous scope — isolated, reported via onError, retention completes', async () => {
     const app = createApplicationStub();
     const FirstScene = makeSceneClass();
     const SecondScene = makeSceneClass();
@@ -924,16 +928,45 @@ describe('SceneDirector — switch-phase rollback', () => {
     const firstInstance = director.currentScene;
 
     const failure = new Error('onStateChange listener failed');
+    const errorSpy = vi.fn();
 
     director.onStateChange.add(() => {
       throw failure;
     });
+    app.onError.add(errorSpy);
 
-    await expect(director.setScene(SecondScene, { retainCurrent: true })).rejects.toThrow(failure);
+    await expect(director.setScene(SecondScene, { retainCurrent: true })).resolves.toBe(director);
 
-    expect(director.currentScene).toBe(firstInstance);
-    expect(firstInstance?.state).toBe(SceneState.Active); // un-suspended, not left dangling in _retained
-    await expect(director.restoreScene(FirstScene)).rejects.toThrow(RetainedSceneNotFoundError); // proves it's NOT in _retained
+    expect(director.currentScene).toBeInstanceOf(SecondScene);
+    expect(firstInstance?.state).toBe(SceneState.Suspended); // retained normally, not rolled back
+    expect(errorSpy).toHaveBeenCalledWith(failure);
+
+    await expect(director.restoreScene(FirstScene)).resolves.toBe(director); // proves it IS in _retained
+  });
+
+  test('a throwing onChangeScene/onStartScene listener does not abort setScene() or block later listeners', async () => {
+    const app = createApplicationStub();
+    const TestScene = makeSceneClass();
+    const director = new SceneDirector(app, { test: TestScene });
+    const errorSpy = vi.fn();
+    const laterChangeListener = vi.fn();
+    const laterStartListener = vi.fn();
+
+    director.onChangeScene.add(() => {
+      throw new Error('onChangeScene listener failed');
+    });
+    director.onChangeScene.add(laterChangeListener);
+    director.onStartScene.add(() => {
+      throw new Error('onStartScene listener failed');
+    });
+    director.onStartScene.add(laterStartListener);
+    app.onError.add(errorSpy);
+
+    await expect(director.setScene(TestScene)).resolves.toBe(director);
+
+    expect(laterChangeListener).toHaveBeenCalledTimes(1);
+    expect(laterStartListener).toHaveBeenCalledTimes(1);
+    expect(errorSpy).toHaveBeenCalledTimes(2);
   });
 });
 

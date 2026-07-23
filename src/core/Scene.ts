@@ -73,10 +73,21 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
   protected _app: ApplicationOf<AppLike> | null = null;
   protected readonly _root = new Container();
 
-  /** Dispatched after the scene finishes loading (after load() and init() complete). */
-  public readonly onLoad = new Signal();
-  /** Dispatched when the scene is about to be unloaded. */
-  public readonly onUnload = new Signal();
+  /**
+   * Dispatched after this scene becomes `Active` — a fresh activation
+   * (`Ready` → `Active`) or a retention restore (`Suspended` → `Active`).
+   * Exceptions thrown by a listener are isolated: reported through
+   * {@link Application.onError}, never propagated back to whatever
+   * triggered the activation, and never able to block the remaining
+   * listeners or the activation itself.
+   */
+  public readonly onActivate = new Signal();
+  /**
+   * Dispatched after this scene is suspended for retention
+   * (`Active` → `Suspended`). Same exception-isolation contract as
+   * {@link Scene.onActivate}.
+   */
+  public readonly onSuspend = new Signal();
   /** Dispatched after this scene's {@link Scene.paused} flag is set. Same event as {@link SceneDirector.onPause}, exposed directly on the scene for convenience. */
   public readonly onPause = new Signal();
   /** Dispatched after this scene's {@link Scene.paused} flag is cleared. Same event as {@link SceneDirector.onResume}, exposed directly on the scene for convenience. */
@@ -436,8 +447,8 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
    */
   public _teardownInternals(): void {
     this._disposal.destroy();
-    this.onLoad.destroy();
-    this.onUnload.destroy();
+    this.onActivate.destroy();
+    this.onSuspend.destroy();
     this.onPause.destroy();
     this.onResume.destroy();
     this._root.destroy();

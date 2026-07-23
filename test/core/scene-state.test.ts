@@ -9,6 +9,18 @@ describe('SceneState guards', () => {
     expect(canSuspend(SceneState.Destroyed)).toBe(false);
   });
 
+  test('canSuspend is false for Ready — a scope that never activated has nothing live to suspend', () => {
+    expect(canSuspend(SceneState.Ready)).toBe(false);
+  });
+
+  test('canRestore is false for Ready', () => {
+    expect(canRestore(SceneState.Ready)).toBe(false);
+  });
+
+  test('canDestroy is true for Ready', () => {
+    expect(canDestroy(SceneState.Ready)).toBe(true);
+  });
+
   test('canDestroy is true from every state except Destroying and Destroyed', () => {
     expect(canDestroy(SceneState.Preparing)).toBe(true);
     expect(canDestroy(SceneState.Active)).toBe(true);
@@ -27,6 +39,7 @@ describe('SceneState guards', () => {
 
   test('is a string enum (never const enum) — values are readable at runtime', () => {
     expect(SceneState.Preparing).toBe('preparing');
+    expect(SceneState.Ready).toBe('ready');
     expect(SceneState.Active).toBe('active');
     expect(SceneState.Suspended).toBe('suspended');
     expect(SceneState.Destroying).toBe('destroying');

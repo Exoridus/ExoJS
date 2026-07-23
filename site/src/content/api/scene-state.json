@@ -1,12 +1,12 @@
 {
   "title": "SceneState",
-  "description": "Lifecycle state of one Scene activation, owned by its internal `SceneScope` and exposed read-only via Scene.state. State is read-only from user code — it changes only in response to director-driven lifecycle events: activation, retention (suspend/restore), and teardown. Pause is not a state — it is an orthogonal flag that only applies while `Active`; see Scene.paused. | State | fixed/update | draw | input & interaction | |---|---:|---:|---| | `Preparing` | no | no | registrations accepted, dispatch gated | | `Active` (not paused) | yes | yes | active | | `Active` (paused) | no | yes | pause-policy filtered | | `Suspended` | no | no | disabled | | `Destroying` / `Destroyed` | no | no | disabled |",
+  "description": "Lifecycle state of one Scene activation, owned by its internal `SceneScope` and exposed read-only via Scene.state. State is read-only from user code — it changes only in response to director-driven lifecycle events: preparation, activation, retention (suspend/restore), and teardown. Pause is not a state — it is an orthogonal flag that only applies while `Active`; see Scene.paused. | State | fixed/update | draw | input & interaction | meaning | |---|---:|---:|---|---| | `Preparing` | no | no | registrations accepted, dispatch gated | `load()`/`init()` running | | `Ready` | no | no | registrations accepted, dispatch gated | fully prepared, never yet activated | | `Active` (not paused) | yes | yes | active | live | | `Active` (paused) | no | yes | pause-policy filtered | live, simulation frozen | | `Suspended` | no | no | registrations accepted, dispatch gated | previously active, retained | | `Destroying` / `Destroyed` | no | no | disabled | permanent teardown |",
   "symbol": "SceneState",
   "kind": "enum",
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 5,
+  "memberCount": 6,
   "counts": {
     "constructors": 0,
     "methods": 0,
@@ -19,8 +19,8 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Lifecycle state of one Scene activation, owned by its internal `SceneScope` and exposed read-only via Scene.state. State is read-only from user code — it changes only in response to director-driven lifecycle events: activation, retention (suspend/restore), and teardown. Pause is not a state — it is an orthogonal flag that only applies while `Active`; see Scene.paused.",
-        "| State | fixed/update | draw | input & interaction | |---|---:|---:|---| | `Preparing` | no | no | registrations accepted, dispatch gated | | `Active` (not paused) | yes | yes | active | | `Active` (paused) | no | yes | pause-policy filtered | | `Suspended` | no | no | disabled | | `Destroying` / `Destroyed` | no | no | disabled |"
+        "Lifecycle state of one Scene activation, owned by its internal `SceneScope` and exposed read-only via Scene.state. State is read-only from user code — it changes only in response to director-driven lifecycle events: preparation, activation, retention (suspend/restore), and teardown. Pause is not a state — it is an orthogonal flag that only applies while `Active`; see Scene.paused.",
+        "| State | fixed/update | draw | input & interaction | meaning | |---|---:|---:|---|---| | `Preparing` | no | no | registrations accepted, dispatch gated | `load()`/`init()` running | | `Ready` | no | no | registrations accepted, dispatch gated | fully prepared, never yet activated | | `Active` (not paused) | yes | yes | active | live | | `Active` (paused) | no | yes | pause-policy filtered | live, simulation frozen | | `Suspended` | no | no | registrations accepted, dispatch gated | previously active, retained | | `Destroying` / `Destroyed` | no | no | disabled | permanent teardown |"
       ],
       "importLine": "import { SceneState } from '@codexo/exojs'",
       "sourceLink": null
@@ -74,6 +74,19 @@
           "signatureTokens": [
             {
               "text": "Preparing",
+              "kind": "name"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "Ready",
+          "signature": "Ready",
+          "signatureTokens": [
+            {
+              "text": "Ready",
               "kind": "name"
             }
           ],

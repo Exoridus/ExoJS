@@ -133,6 +133,74 @@ export class Signal<Args extends unknown[] = []> {
     return this;
   }
 
+  /**
+   * Notify every registered listener in registration order, isolating each
+   * listener's exceptions individually instead of letting the first throw
+   * abort the whole dispatch — used for lifecycle signals
+   * (`Scene.onActivate`/`onSuspend`, `SceneDirector.onStateChange`/
+   * `onChangeScene`/`onStartScene`/`onStopScene`) where a listener must
+   * never be able to abort a state transition that already happened, or
+   * silently prevent every listener registered after it from running.
+   *
+   * A throwing listener is reported to `onError` (itself guarded — a
+   * throwing `onError` callback never propagates back into this dispatch)
+   * and dispatch continues to the remaining listeners. A handler returning
+   * `false` still short-circuits the rest of the dispatch exactly as
+   * {@link Signal.dispatch} does — that contract is unaffected; only a
+   * *throw* is isolated. `_dispatching`/pending-removes bookkeeping is
+   * guaranteed via `finally`, so a throw here can never corrupt a later
+   * `dispatch()`/`add()`/`remove()` call on this Signal the way an
+   * unguarded throw inside {@link Signal.dispatch} would.
+   */
+  public dispatchIsolated(onError: (error: unknown) => void, ...params: Args): this {
+    const length = this._handlers.length;
+
+    if (!length) {
+      return this;
+    }
+
+    this._dispatching = true;
+
+    try {
+      for (let i = 0; i < length; i++) {
+        let result: void | boolean;
+
+        try {
+          result = this._handlers[i]!(...params);
+        } catch (error) {
+          try {
+            onError(error);
+          } catch {
+            // A throwing onError listener must never propagate back into
+            // the lifecycle dispatch that triggered it.
+          }
+
+          continue;
+        }
+
+        if (result === false) {
+          break;
+        }
+      }
+    } finally {
+      this._dispatching = false;
+
+      if (this._pendingRemoves !== null) {
+        for (const handler of this._pendingRemoves) {
+          const index = this._handlers.indexOf(handler);
+
+          if (index !== -1) {
+            removeArrayItems(this._handlers, index, 1);
+          }
+        }
+
+        this._pendingRemoves = null;
+      }
+    }
+
+    return this;
+  }
+
   public destroy(): void {
     this._handlers.length = 0;
     this._pendingRemoves = null;

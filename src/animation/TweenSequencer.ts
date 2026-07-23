@@ -58,7 +58,7 @@ export enum TweenSequencerState {
 export class TweenSequencer {
   private readonly _stages: Stage[] = [];
   private _state: TweenSequencerState = TweenSequencerState.Idle;
-  private readonly _manager: TweenManager | null;
+  private _manager: TweenManager | null;
 
   /** Index into `_stages` for the current pass (0-based). */
   private _currentStageIndex = 0;
@@ -81,6 +81,17 @@ export class TweenSequencer {
 
   public constructor(manager?: TweenManager) {
     this._manager = manager ?? null;
+  }
+
+  /**
+   * Attach this sequencer to a manager after construction — used by
+   * `SceneTweens` to bind a cold (buffered) sequencer, constructed without
+   * a manager while its owning scope was dormant, once the scope becomes
+   * `Active`. Mirrors {@link Tween._attachManager}.
+   * @internal
+   */
+  public _attachManager(manager: TweenManager): void {
+    this._manager = manager;
   }
 
   // ── State ────────────────────────────────────────────────────────────────

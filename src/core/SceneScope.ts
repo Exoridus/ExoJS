@@ -27,12 +27,15 @@ const isThenable = (value: unknown): boolean => value instanceof Promise;
 
 /**
  * Internal owner of one {@link Scene} activation: constructs and attaches the
- * scene's facilities, runs `load()`/`init()`, gates per-frame dispatch by
- * {@link SceneState}, supports retention ({@link SceneScope.suspend} /
- * {@link SceneScope.restore}), and runs permanent teardown in the normative
- * order. Not exported from the package root — `Scene` and `SceneDirector`
- * are the public surface; this class is their shared internal implementation
- * detail.
+ * scene's facilities, runs `load()`/`init()` (ending in {@link
+ * SceneState.Ready} — a cold checkpoint before any facility produces an
+ * application-wide effect), commits `Ready`/`Suspended` → `Active` via
+ * {@link SceneScope.activate}/{@link SceneScope.restore}, gates per-frame
+ * dispatch by {@link SceneState}, supports retention ({@link
+ * SceneScope.suspend}/{@link SceneScope.restore}), and runs permanent
+ * teardown in the normative order. Not exported from the package root —
+ * `Scene` and `SceneDirector` are the public surface; this class is their
+ * shared internal implementation detail.
  * @internal
  */
 export class SceneScope<Data = unknown> {
@@ -63,8 +66,8 @@ export class SceneScope<Data = unknown> {
       () => this._state,
       () => this._paused,
     );
-    this.interaction = new SceneInteraction(app);
-    this.tweens = new SceneTweens(app);
+    this.interaction = new SceneInteraction(app, () => this._state);
+    this.tweens = new SceneTweens(app, () => this._state);
     this.audio = new SceneAudio(app, () => this._state);
 
     scene._attach(app, this);
@@ -81,10 +84,12 @@ export class SceneScope<Data = unknown> {
 
   /**
    * Run `load()` then `init()` (definition §5.1 steps 5–7). Leaves the scope
-   * in `Preparing` on success — the caller commits the switch and calls
-   * {@link SceneScope.activate} once the previous scene has been disposed.
-   * Throws the original `load()`/`init()` error, or a dev-only lifecycle
-   * error when `init()` returns a thenable (it must be synchronous).
+   * in `Ready` on success — a cold checkpoint that produces no
+   * application-wide effect yet (definition §4.1/§4.2). The caller commits
+   * the switch and calls {@link SceneScope.activate} once the previous scene
+   * has been disposed. Throws the original `load()`/`init()` error, or a
+   * dev-only lifecycle error when `init()` returns a thenable (it must be
+   * synchronous).
    */
   public async prepare(data: Data): Promise<void> {
     await this.scene.load(data);
@@ -108,19 +113,39 @@ export class SceneScope<Data = unknown> {
       }
     }
 
-    this._attachAutoRoots();
+    const previous = this._state;
 
-    this._rootsAttached = true;
-    this.scene.onLoad.dispatch();
+    this._state = SceneState.Ready;
+    this._onStateChange(previous, this._state);
   }
 
-  /** Commit this scope as the active scene: `Preparing` → `Active`. Called by the director once the switch boundary is crossed. */
+  /**
+   * Commit this scope as the active scene: `Ready` → `Active` (definition
+   * §2.1's fresh-activation ordering). Called by the director once the
+   * switch boundary is crossed. Attaches the scene's automatic root/UI to
+   * interaction dispatch and flushes every facility registration buffered
+   * while dormant (definition §4.1/§4.2) before dispatching
+   * {@link Scene.onActivate}, then reports the state change last.
+   */
   public activate(): void {
     const previous = this._state;
 
     this._state = SceneState.Active;
+
+    const errors: unknown[] = [];
+
+    this._guard(errors, () => {
+      this._attachAutoRoots();
+      this._rootsAttached = true;
+    });
+    this._guard(errors, () => this.interaction.resume());
+    this._guard(errors, () => this.tweens.activate());
+    this._guard(errors, () => this.audio._flushPending());
+    this._guard(errors, () => this.scene.onActivate.dispatchIsolated(error => this._reportError(error)));
+
+    this._reportErrors(errors);
+
     this._onStateChange(previous, this._state);
-    this.audio._flushPending();
   }
 
   /**
@@ -205,6 +230,7 @@ export class SceneScope<Data = unknown> {
     });
     this._guard(errors, () => this.tweens.suspend());
     this._guard(errors, () => this.audio.suspend());
+    this._guard(errors, () => this.scene.onSuspend.dispatchIsolated(error => this._reportError(error)));
 
     this._reportErrors(errors);
 
@@ -238,6 +264,8 @@ export class SceneScope<Data = unknown> {
     });
     this._guard(errors, () => this.tweens.restore());
     this._guard(errors, () => this.audio.restore());
+    this._guard(errors, () => this.audio._flushPending());
+    this._guard(errors, () => this.scene.onActivate.dispatchIsolated(error => this._reportError(error)));
 
     this._reportErrors(errors);
 
@@ -412,7 +440,6 @@ export class SceneScope<Data = unknown> {
 
     if (!this._unloadCalled) {
       this._unloadCalled = true;
-      this._guard(errors, () => this.scene.onUnload.dispatch());
       await this._guardAsync(errors, () => this.scene.unload());
     }
 
@@ -486,12 +513,16 @@ export class SceneScope<Data = unknown> {
     }
   }
 
+  private _reportError(error: unknown): void {
+    const normalized = error instanceof Error ? error : new Error(String(error));
+
+    logger.error('A SceneScope lifecycle stage failed.', { source: 'SceneScope', error: normalized });
+    this._app.onError.dispatch(normalized);
+  }
+
   private _reportErrors(errors: unknown[]): void {
     for (const error of errors) {
-      const normalized = error instanceof Error ? error : new Error(String(error));
-
-      logger.error('A SceneScope cleanup stage failed.', { source: 'SceneScope', error: normalized });
-      this._app.onError.dispatch(normalized);
+      this._reportError(error);
     }
   }
 }
