@@ -7,10 +7,10 @@ import { Application, Color, Scene, Text, Time, Timer } from '@codexo/exojs';
 //                        value assets), then build the scene graph.
 //   - `destroy()`     — one-shot teardown, called once when the scene is
 //                        finally popped off the stack.
-// `update`/`draw` run every frame in between. Two signals bracket the same
-// span from the outside: `onLoad` fires right after `init()` resolves (the
-// scene is about to become active) and `onUnload` fires right before
-// `destroy()` runs (the scene is about to deactivate) — a hook point for
+// `update`/`draw` run every frame in between. Two signals bracket
+// activation from the outside: `onActivate` fires once the scene becomes
+// visible (fresh activation or a retention restore) and `onSuspend` fires
+// if the scene is ever retained instead of destroyed — a hook point for
 // cross-cutting concerns (audio cues, analytics, HUD toggles) that shouldn't
 // live inside `init`/`destroy` themselves.
 class LifecycleScene extends Scene {
@@ -29,11 +29,11 @@ class LifecycleScene extends Scene {
         //   const texture = this.loader.get('ship.png');
         //   const data = (await this.loader.load(Asset.kind('json', 'level.json'))) as LevelData;
         this.events = ['init'];
-        this.onLoad.add(() => {
-            this.events.push('onLoad');
+        this.onActivate.add(() => {
+            this.events.push('onActivate');
         });
-        this.onUnload.add(() => {
-            this.events.push('onUnload');
+        this.onSuspend.add(() => {
+            this.events.push('onSuspend');
         });
         this.timer = new Timer(Time.fromSeconds(1), true);
         this.text = new Text('', { fillColor: Color.white, fontSize: 18 });
