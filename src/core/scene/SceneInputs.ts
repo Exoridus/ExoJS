@@ -63,18 +63,33 @@ export class SceneInputs implements Destroyable {
     private readonly _getState: () => SceneState,
   ) {}
 
+  /**
+   * Fire `callback` on the channel's press edge (value crosses above the
+   * threshold), gated by `options.when` (default `'active'`) and the
+   * director's transition gate. Unbound automatically when the owning scene
+   * ends permanently.
+   */
   public onStart(channel: InputChannel | readonly InputChannel[], callback: (value: number) => void, options?: SceneInputBindingOptions): InputBinding {
     return this._bind('onStart', channel, callback, options);
   }
 
+  /** Fire `callback` every frame the channel stays held above the threshold, same `when`/edge-rule gating as {@link SceneInputs.onStart}. */
   public onActive(channel: InputChannel | readonly InputChannel[], callback: (value: number) => void, options?: SceneInputBindingOptions): InputBinding {
     return this._bind('onActive', channel, callback, options);
   }
 
+  /** Fire `callback` on the channel's release edge, same `when`/edge-rule gating as {@link SceneInputs.onStart}. */
   public onStop(channel: InputChannel | readonly InputChannel[], callback: (value: number) => void, options?: SceneInputBindingOptions): InputBinding {
     return this._bind('onStop', channel, callback, options);
   }
 
+  /**
+   * Fire `callback` once a press-then-release completes within the
+   * threshold window — a "tap" or "click" gesture. Both the press and
+   * release edges must have occurred in a `when`-allowed state for the
+   * trigger to fire (definition §13.2): pressing while allowed, then the
+   * scene pausing before release, does not trigger.
+   */
   public onTrigger(channel: InputChannel | readonly InputChannel[], callback: (value: number) => void, options?: SceneInputBindingOptions): InputBinding {
     return this._bind('onTrigger', channel, callback, options);
   }
@@ -93,6 +108,7 @@ export class SceneInputs implements Destroyable {
     this._suspended = false;
   }
 
+  /** Unbind every tracked binding. Called automatically when the owning scene ends permanently. */
   public destroy(): void {
     for (const binding of this._bindings) {
       binding.unbind();

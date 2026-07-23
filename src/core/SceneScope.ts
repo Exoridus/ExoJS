@@ -204,6 +204,12 @@ export class SceneScope<Data = unknown> {
     return true;
   }
 
+  /**
+   * Forward one fixed step to the scene and its systems, gated to `Active`
+   * (§3 state table — `fixedUpdate` never runs while `Paused`, unlike
+   * {@link SceneScope.draw}). Warns (dev-only) if `Scene.fixedUpdate` returns
+   * a thenable — the hook must be synchronous.
+   */
   public fixedUpdate(step: Time): void {
     if (this._state !== SceneState.Active) {
       return;
@@ -232,6 +238,11 @@ export class SceneScope<Data = unknown> {
     }
   }
 
+  /**
+   * Forward one frame's update to the scene and its systems, gated to
+   * `Active`. Warns (dev-only) if `Scene.update` returns a thenable — the
+   * hook must be synchronous.
+   */
   public update(delta: Time): void {
     if (this._state !== SceneState.Active) {
       return;
@@ -260,6 +271,12 @@ export class SceneScope<Data = unknown> {
     }
   }
 
+  /**
+   * Forward one frame's draw to the scene, its systems, then the UI layer —
+   * gated to `Active` or `Paused` (a paused scene keeps rendering while
+   * simulation is frozen). Warns (dev-only) if `Scene.draw` returns a
+   * thenable — the hook must be synchronous.
+   */
   public draw(context: RenderingContext): void {
     if (this._state !== SceneState.Active && this._state !== SceneState.Paused) {
       return;
