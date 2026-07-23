@@ -133,15 +133,21 @@ describe('dispatchIsolated', () => {
     expect(calls).toEqual(['a']);
   });
 
-  it('_dispatching is always cleared via finally, even after a throw — a later dispatch is not corrupted', () => {
+  it('_dispatching is always cleared via finally, even after a throw — remove()/add() work normally afterward', () => {
     const signal = new Signal();
-    const calls: string[] = [];
+    const thrower = (): void => {
+      throw new Error('boom');
+    };
 
-    signal.add(() => {
-      throw new Error('first dispatch boom');
-    });
-
+    signal.add(thrower);
     signal.dispatchIsolated(() => {});
+
+    expect(signal.has(thrower)).toBe(true); // isolation does not remove the listener
+
+    signal.remove(thrower);
+    expect(signal.has(thrower)).toBe(false); // removal applies immediately — proves _dispatching was cleared, not left stuck true (which would defer this removal into _pendingRemoves instead)
+
+    const calls: string[] = [];
 
     signal.add(() => calls.push('second-dispatch-listener'));
     signal.dispatch();

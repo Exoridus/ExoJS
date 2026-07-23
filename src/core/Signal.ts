@@ -175,9 +175,6 @@ export class Signal<Args extends unknown[] = []> {
             // the lifecycle dispatch that triggered it.
           }
 
-          // Listener threw; mark it for removal so it's not called again
-          (this._pendingRemoves ??= []).push(this._handlers[i]!);
-
           continue;
         }
 
