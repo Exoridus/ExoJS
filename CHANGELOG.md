@@ -39,6 +39,15 @@ GameScene } })` registers scene constructors; `app.start(GameScene, data?)`
   press/release pair must both occur in an allowed state to trigger.
   `this.interaction.capture(root)` confines pointer hit-testing to a subtree
   for modal UI (#392, #397).
+- **`when: 'active' | 'paused' | 'always'` on `scene.tweens`/`scene.audio`.**
+  `scene.tweens.create()`/`.add()`/`.createSequencer()` and `scene.audio.play()`/
+  `.add()` accept a `when` option (default `'always'`, unchanged behavior)
+  mirroring `SceneInputs`' existing policy — opt a specific tween, sequencer,
+  or voice into freezing (`'active'`) or exclusively running (`'paused'`)
+  across `app.scenes.pause()`/`resume()`. `SceneTweens.createSequencer()` is
+  new — sequencers are now tracked for scene-lifetime teardown and retention
+  suspend/restore, closing a previous gap where a sequencer obtained via
+  `app.tweens.createSequencer()` was never tracked at all.
 - **Scene retention.** `setScene(X, { retainCurrent: true })` suspends the
   outgoing scene instead of destroying it; `app.scenes.restoreScene(X)`
   reactivates the same instance without re-running `load()`/`init()`,

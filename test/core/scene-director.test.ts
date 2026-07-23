@@ -1,3 +1,4 @@
+import { TweenManager } from '#animation/TweenManager';
 import type { Application } from '#core/Application';
 import { logger } from '#core/logging';
 import { Scene } from '#core/Scene';
@@ -78,6 +79,7 @@ const createApplicationStub = (): Application & {
     input: createInputManagerStub(),
     interaction: { attachRoot: vi.fn(), detachRoot: vi.fn() },
     onError: new Signal<[Error]>(),
+    tweens: new TweenManager(),
     rendering: {
       backend: backendMock,
       render: vi.fn(),
@@ -661,6 +663,30 @@ describe('SceneDirector — retention', () => {
 
     expect(director.state).toBe(SceneState.Active);
     expect(director.paused).toBe(true);
+  });
+
+  test('a when:"active" tween stays frozen across pause -> retain -> restore, and resumes when the scene resumes', async () => {
+    const app = createApplicationStub();
+    const FirstScene = makeSceneClass({
+      init() {
+        this.tweens.create({}, { when: 'active' }).to({}, 1).start();
+      },
+    });
+    const SecondScene = makeSceneClass();
+    const director = new SceneDirector(app, { first: FirstScene, second: SecondScene });
+
+    await director.setScene(FirstScene);
+    director.pause();
+
+    await director.setScene(SecondScene, { retainCurrent: true });
+    await director.restoreScene(FirstScene);
+
+    expect(director.state).toBe(SceneState.Active);
+    expect(director.paused).toBe(true);
+
+    director.resume();
+
+    expect(director.paused).toBe(false);
   });
 
   test('releaseScene() permanently destroys the retained scene and returns true', async () => {
