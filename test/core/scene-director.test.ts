@@ -1,5 +1,5 @@
-import { TweenManager } from '#animation/TweenManager';
 import type { Tween } from '#animation/Tween';
+import { TweenManager } from '#animation/TweenManager';
 import { TweenState } from '#animation/types';
 import type { Application } from '#core/Application';
 import { logger } from '#core/logging';
