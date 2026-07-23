@@ -1,3 +1,4 @@
+import type { Application } from './Application';
 import type { Color } from './Color';
 import type { Scene } from './Scene';
 
@@ -69,6 +70,48 @@ export type SceneRegistryShape<Registry> = {
  * through unchanged.
  */
 export type ConstructorOf<R extends SceneRegistration<AnySceneConstructor>> = R extends { scene: infer C } ? C : R;
+
+/* eslint-disable @typescript-eslint/no-explicit-any -- ApplicationLike/ApplicationOf must accept `Application<any>` and an abstract constructor's erased argument list; see spec §6.2. */
+/**
+ * Anything that resolves to a concrete {@link Application} instance type: the
+ * instance itself, its constructor, or `typeof` an already-typed instance.
+ * {@link Scene}'s second generic accepts any of the three — see
+ * {@link ApplicationOf}.
+ */
+export type ApplicationLike = Application<any> | (abstract new (...args: any[]) => Application<any>);
+
+/**
+ * Normalizes an {@link ApplicationLike} to its concrete `Application`
+ * instance type, letting {@link Scene}'s second generic accept an
+ * `Application` instance type, its constructor, or `typeof someAppInstance`
+ * interchangeably (spec §6.2).
+ *
+ * `typeof someAppInstance` only works once the instance already has an
+ * explicit, non-inferred type — a fully-inferred `const app = new
+ * Application({ scenes: {...} })` cannot be threaded through a
+ * self-referential base-scene chain this way (confirmed: TS2506/TS7022 — the
+ * inference cycle runs through the un-annotated `const`'s own initializer,
+ * which ordinary lazy interface/type-alias resolution does not rescue).
+ * Break the cycle with an explicit fixed point instead — a named
+ * `Application` subclass with a hand-written registry type:
+ *
+ *   class GameApplication extends Application<GameScenes> {}
+ *   export const app: GameApplication = new GameApplication({ scenes: {...} });
+ *   // in a second module:
+ *   export abstract class AppScene<Data = void> extends Scene<Data, typeof app> {}
+ *
+ * The cross-file `import type` this introduces is a type-only module cycle —
+ * unproblematic, erased entirely at compile time.
+ */
+export type ApplicationOf<T extends ApplicationLike> =
+  T extends abstract new (...args: any[]) => infer Instance
+    ? Instance extends Application<any>
+      ? Instance
+      : never
+    : T extends Application<any>
+      ? T
+      : never;
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 /**
  * Fade-to-color scene transition. The screen fades to `color` (default black)

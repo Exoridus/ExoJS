@@ -1,5 +1,6 @@
+import { Application } from '#core/Application';
 import { Scene } from '#core/Scene';
-import type { AnySceneConstructor, ConstructorOf, InferSceneData, SceneRegistration, SceneRegistryShape, SetSceneArgs } from '#core/SceneTypes';
+import type { AnySceneConstructor, ApplicationLike, ApplicationOf, ConstructorOf, InferSceneData, SceneRegistration, SceneRegistryShape, SetSceneArgs } from '#core/SceneTypes';
 
 interface GameData {
   readonly level: number;
@@ -57,5 +58,31 @@ type BareCtorOf = ConstructorOf<typeof VoidScene>; // expect: typeof VoidScene
 type DescriptorCtorOf = ConstructorOf<{ scene: typeof RegGameScene }>; // expect: typeof RegGameScene
 const _bareCtorCheck: BareCtorOf = VoidScene;
 const _descriptorCtorCheck: DescriptorCtorOf = RegGameScene;
+
+// ApplicationLike / ApplicationOf, in isolation — Scene's own AppLike
+// generic is exercised end-to-end in scene-app-typing.type-test.ts (Task 5).
+class CustomApp extends Application {}
+
+// ApplicationLike accepts both instances and constructors
+const _appLikeInstance: ApplicationLike = new CustomApp({ scenes: {} });
+const _appLikeCtor: ApplicationLike = CustomApp;
+declare const baseApp: Application;
+const _appLikeBase: ApplicationLike = baseApp;
+
+type FromInstance = ApplicationOf<CustomApp>;
+type FromCtor = ApplicationOf<typeof CustomApp>;
+declare const customAppInstance: CustomApp;
+type FromTypeofInstance = ApplicationOf<typeof customAppInstance>;
+type FromBase = ApplicationOf<Application>;
+
+const _fromInstance: FromInstance = customAppInstance;
+const _fromCtor: FromCtor = customAppInstance;
+const _fromTypeofInstance: FromTypeofInstance = customAppInstance;
+const _fromBase: FromBase = baseApp;
+
+// A type not resolving to any Application shape is rejected by the constraint.
+class NotAnApp {}
+// @ts-expect-error — NotAnApp does not extend ApplicationLike
+type _rejectsNonApp = ApplicationOf<NotAnApp>;
 
 export {};
