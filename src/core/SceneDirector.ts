@@ -108,10 +108,13 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
   /** Fires after `resume()` actually clears the active scene's `paused` flag. */
   public readonly onResume = new Signal<[Scene]>();
   /**
-   * Fires whenever the active scene's {@link SceneState} changes, as
-   * `(previous, next, scene)` — every edge in the state graph, including the
-   * initial `Preparing` → `Active` activation and the terminal
+   * Fires whenever a scene's {@link SceneState} changes, as
+   * `(previous, next, scene)` — every edge in the state graph, including
+   * `Preparing` → `Ready`, `Ready` → `Active`, and the terminal
    * `Destroying` → `Destroyed` teardown, not just pause/resume/retention.
+   * Pure observation: a throwing listener is reported through
+   * {@link Application.onError} and never aborts the transition or blocks
+   * the remaining listeners (definition §2.2/§2.2.1).
    */
   public readonly onStateChange = new Signal<[SceneState, SceneState, Scene]>();
 
@@ -197,8 +200,8 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
 
       newScope.activate();
 
-      this.onChangeScene.dispatch(scene as Scene);
-      this.onStartScene.dispatch(scene as Scene);
+      this.onChangeScene.dispatchIsolated(error => this._reportLifecycleError(error), scene as Scene);
+      this.onStartScene.dispatchIsolated(error => this._reportLifecycleError(error), scene as Scene);
     }, options.transition);
 
     return this;
@@ -222,7 +225,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
         await this._disposeScene(previousScope);
       }
 
-      this.onChangeScene.dispatch(null);
+      this.onChangeScene.dispatchIsolated(error => this._reportLifecycleError(error), null);
     });
 
     return this;
@@ -271,8 +274,8 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
 
         retainedScope.restore();
 
-        this.onChangeScene.dispatch(retainedScope.scene as Scene);
-        this.onStateChange.dispatch(previousState, retainedScope.state, retainedScope.scene as Scene);
+        this.onChangeScene.dispatchIsolated(error => this._reportLifecycleError(error), retainedScope.scene as Scene);
+        this.onStateChange.dispatchIsolated(error => this._reportLifecycleError(error), previousState, retainedScope.state, retainedScope.scene as Scene);
       }, options.transition);
     } catch (error) {
       // Any failure (including a rejected concurrent-navigation guard, or
@@ -503,6 +506,21 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
   }
 
   /**
+   * Report an exception thrown by a lifecycle Signal listener — used as the
+   * `onError` callback for every `dispatchIsolated` call in this class
+   * (definition §2.2/§2.2.1): logged, then forwarded to
+   * {@link Application.onError}. Never propagates itself; `Signal.dispatchIsolated`
+   * additionally guards against a throwing `onError` callback, but this
+   * implementation does not throw regardless.
+   */
+  private _reportLifecycleError(error: unknown): void {
+    const normalized = error instanceof Error ? error : new Error(String(error));
+
+    logger.error('A SceneDirector lifecycle signal listener threw.', { source: 'SceneDirector', error: normalized });
+    this._app.onError.dispatch(normalized);
+  }
+
+  /**
    * Construct a `SceneScope` for `scene` and run its activation sequence
    * (attach → `Preparing` → `load()` → `init()`). On failure, runs the
    * definition §16 failed-activation cleanup — engine-managed registrations
@@ -510,7 +528,9 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * `unload()` is never called — and rethrows the original error unchanged.
    */
   private async _prepareScene<Data>(scene: Scene<Data>, data: Data): Promise<SceneScope<Data>> {
-    const scope = new SceneScope(this._app, scene, (previous, next) => this.onStateChange.dispatch(previous, next, scene as Scene));
+    const scope = new SceneScope(this._app, scene, (previous, next) =>
+      this.onStateChange.dispatchIsolated(error => this._reportLifecycleError(error), previous, next, scene as Scene),
+    );
 
     try {
       await scope.prepare(data);
@@ -532,7 +552,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
 
   /** Permanently end `scope`'s scene: dispatch {@link SceneDirector.onStopScene}, then run the scope's teardown sequence (definition §17). */
   private async _disposeScene(scope: SceneScope): Promise<void> {
-    this.onStopScene.dispatch(scope.scene as Scene);
+    this.onStopScene.dispatchIsolated(error => this._reportLifecycleError(error), scope.scene as Scene);
     await scope.destroy();
   }
 
@@ -571,7 +591,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
     scope.suspend();
     this._retained.set(target, scope);
 
-    this.onStateChange.dispatch(previousState, scope.state, scope.scene as Scene);
+    this.onStateChange.dispatchIsolated(error => this._reportLifecycleError(error), previousState, scope.state, scope.scene as Scene);
   }
 
   /**
