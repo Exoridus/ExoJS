@@ -23,13 +23,13 @@ class PauseResumeScene extends Scene {
         });
     }
     toggle() {
-        if (this.app.scenes.state === 'paused') {
+        if (this.app.scenes.paused) {
             this.app.scenes.resume();
         }
         else {
             this.app.scenes.pause();
         }
-        this.label.text = this.app.scenes.state === 'paused' ? 'Paused (draw running)' : 'Running';
+        this.label.text = this.app.scenes.paused ? 'Paused (draw running)' : 'Running';
     }
     update(delta) {
         this.sprite.rotate(delta.seconds * 180);

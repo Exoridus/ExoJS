@@ -14,7 +14,7 @@ export interface SceneInputBindingOptions extends InputBindingOptions {
 
 const gatedStates = new Set<SceneState>([SceneState.Preparing, SceneState.Suspended, SceneState.Destroying, SceneState.Destroyed]);
 
-function whenPolicyAllows(when: SceneInputAvailability, state: SceneState): boolean {
+function whenPolicyAllows(when: SceneInputAvailability, state: SceneState, paused: boolean): boolean {
   if (gatedStates.has(state)) {
     return false;
   }
@@ -23,7 +23,7 @@ function whenPolicyAllows(when: SceneInputAvailability, state: SceneState): bool
     return true;
   }
 
-  return when === 'active' ? state === SceneState.Active : state === SceneState.Paused;
+  return when === 'active' ? !paused : paused;
 }
 
 type BindingKind = 'onStart' | 'onActive' | 'onStop' | 'onTrigger';
@@ -61,6 +61,7 @@ export class SceneInputs implements Destroyable {
   public constructor(
     private readonly _app: Application,
     private readonly _getState: () => SceneState,
+    private readonly _getPaused: () => boolean,
   ) {}
 
   /**
@@ -134,7 +135,7 @@ export class SceneInputs implements Destroyable {
 
     let primed = false;
 
-    const allowedNow = (): boolean => !this._suspended && !this._app.scenes._transitionGateOpen && whenPolicyAllows(when, this._getState());
+    const allowedNow = (): boolean => !this._suspended && !this._app.scenes._transitionGateOpen && whenPolicyAllows(when, this._getState(), this._getPaused());
 
     // Anchor call — see the BindingKind comment above for why `onStart`
     // specifically is used regardless of `kind`.

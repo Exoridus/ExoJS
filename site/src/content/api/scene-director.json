@@ -6,11 +6,11 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 19,
+  "memberCount": 20,
   "counts": {
     "constructors": 1,
     "methods": 9,
-    "properties": 2,
+    "properties": 3,
     "events": 7
   },
   "sections": [
@@ -281,7 +281,7 @@
           ],
           "params": [],
           "returnType": "boolean",
-          "description": "Pause the active scene: Active → Paused. Its fixedUpdate/update stop running, but draw keeps rendering and input/interaction stay live — the canonical \"pause menu drawn over a frozen world\" shape. No-op (returns false) when no scene is active or it is not currently Active."
+          "description": "Pause the active scene. Its fixedUpdate/update stop running, but draw keeps rendering and input/interaction stay live — the canonical \"pause menu drawn over a frozen world\" shape. This does not change SceneDirector.state — see SceneDirector.paused instead. No-op (returns false) when no scene is active, it is not currently Active, or it is already paused."
         },
         {
           "name": "releaseScene",
@@ -420,7 +420,7 @@
             }
           ],
           "returnType": "Promise<SceneDirector>",
-          "description": "Reactivate a scene previously retained via setScene(..., { retainCurrent: true }) or restoreScene(..., { retainCurrent: true }) — the same instance, returned to whichever of Active/Paused it had before suspension. load()/init() do not run again (definition §14.3). Rejects with ConcurrentSceneNavigationError when another navigation is already in flight; with RetainedSceneNotFoundError when target has no retained instance."
+          "description": "Reactivate a scene previously retained via setScene(..., { retainCurrent: true }) or restoreScene(..., { retainCurrent: true }) — the same instance, returned to Active with whichever paused flag it had before suspension. load()/init() do not run again (definition §14.3). Rejects with ConcurrentSceneNavigationError when another navigation is already in flight; with RetainedSceneNotFoundError when target has no retained instance."
         },
         {
           "name": "resume",
@@ -449,7 +449,7 @@
           ],
           "params": [],
           "returnType": "boolean",
-          "description": "Resume a paused scene: Paused → Active. No-op (returns false) when no scene is active or it is not currently Paused."
+          "description": "Resume a paused scene, undoing SceneDirector.pause. No-op (returns false) when no scene is active or it is not currently paused."
         },
         {
           "name": "setScene",
@@ -653,6 +653,27 @@
           "description": "The active scene, or null when none is set. Read-only — see SceneDirector.setScene to change it."
         },
         {
+          "name": "paused",
+          "signature": "paused: boolean",
+          "signatureTokens": [
+            {
+              "text": "paused",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "true while the active scene is paused, or false when no scene is active. See SceneDirector.pause/SceneDirector.resume."
+        },
+        {
           "name": "state",
           "signature": "state: SceneState | null",
           "signatureTokens": [
@@ -802,7 +823,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Fires after pause() actually transitions the active scene to Paused."
+          "description": "Fires after pause() actually sets the active scene's paused flag."
         },
         {
           "name": "onResume",
@@ -855,7 +876,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Fires after resume() actually transitions the active scene back to Active."
+          "description": "Fires after resume() actually clears the active scene's paused flag."
         },
         {
           "name": "onStartScene",

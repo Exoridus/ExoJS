@@ -95,9 +95,9 @@ export class SceneDirector {
   public readonly onUpdateScene = new Signal<[Scene]>();
   /** Fires just before a scene is unloaded (`unload` then `destroy`). */
   public readonly onStopScene = new Signal<[Scene]>();
-  /** Fires after `pause()` actually transitions the active scene to `Paused`. */
+  /** Fires after `pause()` actually sets the active scene's `paused` flag. */
   public readonly onPause = new Signal<[Scene]>();
-  /** Fires after `resume()` actually transitions the active scene back to `Active`. */
+  /** Fires after `resume()` actually clears the active scene's `paused` flag. */
   public readonly onResume = new Signal<[Scene]>();
   /** Fires whenever the active scene's {@link SceneState} changes, as `(previous, next, scene)`. */
   public readonly onStateChange = new Signal<[SceneState, SceneState, Scene]>();
@@ -115,6 +115,11 @@ export class SceneDirector {
   /** The active scene's current {@link SceneState}, or `null` when no scene is active. */
   public get state(): SceneState | null {
     return this._activeScope?.state ?? null;
+  }
+
+  /** `true` while the active scene is paused, or `false` when no scene is active. See {@link SceneDirector.pause}/{@link SceneDirector.resume}. */
+  public get paused(): boolean {
+    return this._activeScope?.paused ?? false;
   }
 
   /**
@@ -213,8 +218,8 @@ export class SceneDirector {
   /**
    * Reactivate a scene previously retained via `setScene(..., { retainCurrent: true })`
    * or `restoreScene(..., { retainCurrent: true })` — the same instance,
-   * returned to whichever of `Active`/`Paused` it had before suspension.
-   * `load()`/`init()` do not run again (definition §14.3).
+   * returned to `Active` with whichever `paused` flag it had before
+   * suspension. `load()`/`init()` do not run again (definition §14.3).
    *
    * Rejects with {@link ConcurrentSceneNavigationError} when another
    * navigation is already in flight; with {@link RetainedSceneNotFoundError}
@@ -288,10 +293,12 @@ export class SceneDirector {
   }
 
   /**
-   * Pause the active scene: `Active` → `Paused`. Its `fixedUpdate`/`update`
-   * stop running, but `draw` keeps rendering and input/interaction stay live
-   * — the canonical "pause menu drawn over a frozen world" shape. No-op
-   * (returns `false`) when no scene is active or it is not currently `Active`.
+   * Pause the active scene. Its `fixedUpdate`/`update` stop running, but
+   * `draw` keeps rendering and input/interaction stay live — the canonical
+   * "pause menu drawn over a frozen world" shape. This does not change
+   * {@link SceneDirector.state} — see {@link SceneDirector.paused} instead.
+   * No-op (returns `false`) when no scene is active, it is not currently
+   * `Active`, or it is already paused.
    */
   public pause(): boolean {
     const scope = this._activeScope;
@@ -300,20 +307,18 @@ export class SceneDirector {
       return false;
     }
 
-    const previous = scope.state;
     const changed = scope.pause();
 
     if (changed) {
       this.onPause.dispatch(scope.scene as Scene);
-      this.onStateChange.dispatch(previous, scope.state, scope.scene as Scene);
     }
 
     return changed;
   }
 
   /**
-   * Resume a paused scene: `Paused` → `Active`. No-op (returns `false`) when
-   * no scene is active or it is not currently `Paused`.
+   * Resume a paused scene, undoing {@link SceneDirector.pause}. No-op
+   * (returns `false`) when no scene is active or it is not currently paused.
    */
   public resume(): boolean {
     const scope = this._activeScope;
@@ -322,12 +327,10 @@ export class SceneDirector {
       return false;
     }
 
-    const previous = scope.state;
     const changed = scope.resume();
 
     if (changed) {
       this.onResume.dispatch(scope.scene as Scene);
-      this.onStateChange.dispatch(previous, scope.state, scope.scene as Scene);
     }
 
     return changed;
@@ -545,8 +548,8 @@ export class SceneDirector {
 
   /**
    * Suspend `scope` and store it in `_retained` under `target`. `scope` is
-   * always the outgoing active scope here, which is always `Active` or
-   * `Paused` — {@link SceneScope.suspend} is therefore guaranteed to
+   * always the outgoing active scope here, which is always `Active`
+   * (paused or not) — {@link SceneScope.suspend} is therefore guaranteed to
    * succeed (never skipped by its own state guard).
    */
   private _suspendAndRetain(target: AnySceneConstructor, scope: SceneScope): void {

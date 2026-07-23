@@ -98,7 +98,7 @@ To freeze a scene without leaving it — the canonical pause menu — call `app.
 A pause overlay is just nodes on `scene.ui` that you show and hide in response to the state change:
 
 ```js
-import { Keyboard, Label, Panel, Scene, SceneState } from '@codexo/exojs';
+import { Keyboard, Label, Panel, Scene } from '@codexo/exojs';
 
 class GameScene extends Scene {
     init() {
@@ -117,13 +117,13 @@ class GameScene extends Scene {
     }
 
     togglePause() {
-        if (this.app.scenes.state === SceneState.Paused) {
+        if (this.app.scenes.paused) {
             this.app.scenes.resume();
         } else {
             this.app.scenes.pause();
         }
 
-        const paused = this.app.scenes.state === SceneState.Paused;
+        const paused = this.app.scenes.paused;
         this.pausePanel.visible = paused;
         this.pauseLabel.visible = paused;
     }

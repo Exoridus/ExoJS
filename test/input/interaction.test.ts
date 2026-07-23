@@ -1796,10 +1796,10 @@ describe('InteractionManager — dispatch gating', () => {
     sprite.destroy();
   });
 
-  test('dispatches normally while state is Paused', () => {
+  test('dispatches normally while the scene is paused — pause is not gated here, only SceneState is', () => {
     const { app, scene, signals } = createApp();
     const appMutable = app as unknown as { scenes: { state: SceneState | null } };
-    appMutable.scenes.state = SceneState.Paused;
+    appMutable.scenes.state = SceneState.Active;
 
     const im = new InteractionManager(app);
     im.attachRoot(scene.root);

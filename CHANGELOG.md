@@ -28,20 +28,33 @@ GameScene } })` registers scene constructors; `app.start(GameScene, data?)`
   duplicate registrations raise named errors (`UnregisteredSceneError`,
   `DuplicateSceneRegistrationError`, `InvalidSceneRegistrationError`) (#392,
   #396).
-- **`app.scenes.pause()`/`resume()`** move the active scene between `Active`
-  and `Paused` (`SceneState`) — the scene keeps drawing while paused but its
-  `update()`/systems stop. Scene input bindings accept `when:
+- **`app.scenes.pause()`/`resume()`** freeze/unfreeze the active scene without
+  changing its `SceneState` (which stays `Active`) — instead they toggle an
+  orthogonal `paused` flag, read via `app.scenes.paused`/`scene.paused`.
+  `update()`/systems stop while paused; `draw()`, interaction, and scene input
+  keep running. `onPause`/`onResume` fire on both `SceneDirector` and the
+  `Scene` itself; `onStateChange` does not fire for pause/resume (the state
+  hasn't changed). Scene input bindings accept `when:
 'active'|'paused'|'always'` (default `'active'`), with edge rules so a
   press/release pair must both occur in an allowed state to trigger.
   `this.interaction.capture(root)` confines pointer hit-testing to a subtree
   for modal UI (#392, #397).
+- **`when: 'active' | 'paused' | 'always'` on `scene.tweens`/`scene.audio`.**
+  `scene.tweens.create()`/`.add()`/`.createSequencer()` and `scene.audio.play()`/
+  `.add()` accept a `when` option (default `'always'`, unchanged behavior)
+  mirroring `SceneInputs`' existing policy — opt a specific tween, sequencer,
+  or voice into freezing (`'active'`) or exclusively running (`'paused'`)
+  across `app.scenes.pause()`/`resume()`. `SceneTweens.createSequencer()` is
+  new — sequencers are now tracked for scene-lifetime teardown and retention
+  suspend/restore, closing a previous gap where a sequencer obtained via
+  `app.tweens.createSequencer()` was never tracked at all.
 - **Scene retention.** `setScene(X, { retainCurrent: true })` suspends the
   outgoing scene instead of destroying it; `app.scenes.restoreScene(X)`
   reactivates the same instance without re-running `load()`/`init()`,
-  returning to its pre-suspend `Active`/`Paused` state; `releaseScene(X)`
-  permanently ends a retained scene. Concurrent navigation calls are now
-  rejected with `ConcurrentSceneNavigationError` instead of racing silently
-  (#398).
+  returning to `Active` with whichever `paused` flag it had before
+  suspension; `releaseScene(X)` permanently ends a retained scene. Concurrent
+  navigation calls are now rejected with `ConcurrentSceneNavigationError`
+  instead of racing silently (#398).
 - **Extension app-system bindings.** An `Extension.systems` binding
   (`ApplicationSystemBinding`) produces a `System` materialised once per
   `Application`, after every core manager exists, registered on
@@ -67,8 +80,9 @@ GameScene } })` registers scene constructors; `app.start(GameScene, data?)`
 { game: GameScene } })` + `app.start(GameScene, data?)`;
   `app.scene.setScene(instance, opts)` → `app.scenes.setScene(Ctor, data?,
 opts?)`; `setScene(null)` is gone (start another scene, or `app.stop()`).
-- **BREAKING — `scene.paused` is no longer a writable field.** Use
-  `app.scenes.pause()`/`resume()`; read `scene.state`.
+- **BREAKING — `scene.paused` is no longer a writable field.** It is now a
+  read-only getter (mirroring `SceneDirector.paused`) toggled only via
+  `app.scenes.pause()`/`resume()`.
 - **BREAKING — `load`/`init` hooks take `data`, not a `Loader`.**
   `load(loader)`/`init(loader)` → `load(data)`/`init(data)`; access the
   loader via `this.loader`/`this.app.loader`. `init()` must be synchronous

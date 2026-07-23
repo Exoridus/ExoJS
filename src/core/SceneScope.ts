@@ -9,7 +9,7 @@ import { SceneInputs } from './scene/SceneInputs';
 import { SceneInteraction } from './scene/SceneInteraction';
 import { SceneLoader } from './scene/SceneLoader';
 import { SceneTweens } from './scene/SceneTweens';
-import { canDestroy, canPause, canRestore, canResume, canSuspend, SceneState } from './SceneState';
+import { canDestroy, canRestore, canSuspend, SceneState } from './SceneState';
 import { SystemRegistry } from './SystemRegistry';
 import type { Time } from './Time';
 
@@ -46,17 +46,21 @@ export class SceneScope<Data = unknown> {
 
   private readonly _app: Application;
   private _state: SceneState = SceneState.Preparing;
+  private _paused = false;
   private _rootsAttached = false;
   private _unloadCalled = false;
   private _destroyCalled = false;
-  private _visibleStateBeforeSuspend: SceneState.Active | SceneState.Paused | null = null;
 
   public constructor(app: Application, scene: Scene<Data>) {
     this._app = app;
     this.scene = scene;
     this.systems = new SystemRegistry();
     this.loader = new SceneLoader(app);
-    this.inputs = new SceneInputs(app, () => this._state);
+    this.inputs = new SceneInputs(
+      app,
+      () => this._state,
+      () => this._paused,
+    );
     this.interaction = new SceneInteraction(app);
     this.tweens = new SceneTweens(app);
     this.audio = new SceneAudio(app, () => this._state);
@@ -66,6 +70,11 @@ export class SceneScope<Data = unknown> {
 
   public get state(): SceneState {
     return this._state;
+  }
+
+  /** `true` while the scene is paused — only meaningful while {@link SceneScope.state} is `Active`. See {@link SceneScope.pause}/{@link SceneScope.resume}. */
+  public get paused(): boolean {
+    return this._paused;
   }
 
   /**
@@ -109,48 +118,75 @@ export class SceneScope<Data = unknown> {
     this.audio._flushPending();
   }
 
-  /** Pause this scope: `Active` → `Paused`. Returns whether the transition happened. */
+  /**
+   * Pause this scope: freezes `fixedUpdate`/`update` while `Active`, applies
+   * the `when` pause policy to tweens/audio (see {@link SceneTweens.pause}/
+   * {@link SceneAudio.pause}), and dispatches {@link Scene.onPause}. Returns
+   * whether the flag actually changed.
+   */
   public pause(): boolean {
-    if (!canPause(this._state)) {
+    if (this._state !== SceneState.Active || this._paused) {
       return false;
     }
 
-    this._state = SceneState.Paused;
+    this._paused = true;
 
-    return true;
-  }
+    const errors: unknown[] = [];
 
-  /** Resume this scope: `Paused` → `Active`. Returns whether the transition happened. */
-  public resume(): boolean {
-    if (!canResume(this._state)) {
-      return false;
-    }
+    this._guard(errors, () => this.tweens.pause());
+    this._guard(errors, () => this.audio.pause());
 
-    this._state = SceneState.Active;
+    this._reportErrors(errors);
+
+    this.scene.onPause.dispatch();
 
     return true;
   }
 
   /**
-   * Suspend this scope for retention: `Active`/`Paused` → `Suspended`.
-   * Records the pre-suspend state so {@link SceneScope.restore} can return
-   * to it. Suspends every facility except the loader — claims are never
-   * suspended (definition §14.2), so background asset loading continues.
-   * Also detaches the scene's own automatic root and (if materialized) UI
-   * from interaction dispatch, so a retained scene stops receiving pointer
-   * events alongside whichever scope is now active — the same detachment
-   * {@link SceneScope.destroy} performs, just reversible via {@link
-   * SceneScope.restore}. Every facility call is individually guarded; a
-   * single facility's failure never blocks the state transition or the
-   * others, and is reported through the app error pipeline rather than
-   * thrown. Returns whether the transition happened.
+   * Resume this scope: undoes {@link SceneScope.pause} — including the
+   * tweens/audio `when` policy (see {@link SceneTweens.resume}/
+   * {@link SceneAudio.resume}) — and dispatches {@link Scene.onResume}.
+   * Returns whether the flag actually changed.
+   */
+  public resume(): boolean {
+    if (this._state !== SceneState.Active || !this._paused) {
+      return false;
+    }
+
+    this._paused = false;
+
+    const errors: unknown[] = [];
+
+    this._guard(errors, () => this.tweens.resume());
+    this._guard(errors, () => this.audio.resume());
+
+    this._reportErrors(errors);
+
+    this.scene.onResume.dispatch();
+
+    return true;
+  }
+
+  /**
+   * Suspend this scope for retention: `Active` → `Suspended`. The `paused`
+   * flag is left untouched, so a paused scene restores paused and an
+   * unpaused one restores unpaused. Suspends every facility except the
+   * loader — claims are never suspended (definition §14.2), so background
+   * asset loading continues. Also detaches the scene's own automatic root
+   * and (if materialized) UI from interaction dispatch, so a retained scene
+   * stops receiving pointer events alongside whichever scope is now active —
+   * the same detachment {@link SceneScope.destroy} performs, just reversible
+   * via {@link SceneScope.restore}. Every facility call is individually
+   * guarded; a single facility's failure never blocks the state transition
+   * or the others, and is reported through the app error pipeline rather
+   * than thrown. Returns whether the transition happened.
    */
   public suspend(): boolean {
     if (!canSuspend(this._state)) {
       return false;
     }
 
-    this._visibleStateBeforeSuspend = this._state as SceneState.Active | SceneState.Paused;
     this._state = SceneState.Suspended;
 
     const errors: unknown[] = [];
@@ -171,21 +207,20 @@ export class SceneScope<Data = unknown> {
   }
 
   /**
-   * Restore this scope from retention: `Suspended` → the `Active`/`Paused`
-   * state it had before {@link SceneScope.suspend}. `load()`/`init()` do not
-   * run again (definition §14.3). Also reattaches the scene's own automatic
-   * root and (if materialized) UI to interaction dispatch, undoing the
-   * detachment {@link SceneScope.suspend} performed. Same error-guarding
-   * contract as {@link SceneScope.suspend}. Returns whether the transition
-   * happened.
+   * Restore this scope from retention: `Suspended` → `Active`, preserving
+   * whichever `paused` flag it had before {@link SceneScope.suspend}.
+   * `load()`/`init()` do not run again (definition §14.3). Also reattaches
+   * the scene's own automatic root and (if materialized) UI to interaction
+   * dispatch, undoing the detachment {@link SceneScope.suspend} performed.
+   * Same error-guarding contract as {@link SceneScope.suspend}. Returns
+   * whether the transition happened.
    */
   public restore(): boolean {
-    if (!canRestore(this._state) || this._visibleStateBeforeSuspend === null) {
+    if (!canRestore(this._state)) {
       return false;
     }
 
-    this._state = this._visibleStateBeforeSuspend;
-    this._visibleStateBeforeSuspend = null;
+    this._state = SceneState.Active;
 
     const errors: unknown[] = [];
 
@@ -196,8 +231,8 @@ export class SceneScope<Data = unknown> {
         this._attachAutoRoots();
       }
     });
-    this._guard(errors, () => this.tweens.resume());
-    this._guard(errors, () => this.audio.resume());
+    this._guard(errors, () => this.tweens.restore());
+    this._guard(errors, () => this.audio.restore());
 
     this._reportErrors(errors);
 
@@ -206,12 +241,12 @@ export class SceneScope<Data = unknown> {
 
   /**
    * Forward one fixed step to the scene and its systems, gated to `Active`
-   * (§3 state table — `fixedUpdate` never runs while `Paused`, unlike
-   * {@link SceneScope.draw}). Warns (dev-only) if `Scene.fixedUpdate` returns
-   * a thenable — the hook must be synchronous.
+   * and unpaused (§3 state table — `fixedUpdate` never runs while paused,
+   * unlike {@link SceneScope.draw}). Warns (dev-only) if `Scene.fixedUpdate`
+   * returns a thenable — the hook must be synchronous.
    */
   public fixedUpdate(step: Time): void {
-    if (this._state !== SceneState.Active) {
+    if (this._state !== SceneState.Active || this._paused) {
       return;
     }
 
@@ -240,11 +275,11 @@ export class SceneScope<Data = unknown> {
 
   /**
    * Forward one frame's update to the scene and its systems, gated to
-   * `Active`. Warns (dev-only) if `Scene.update` returns a thenable — the
-   * hook must be synchronous.
+   * `Active` and unpaused. Warns (dev-only) if `Scene.update` returns a
+   * thenable — the hook must be synchronous.
    */
   public update(delta: Time): void {
-    if (this._state !== SceneState.Active) {
+    if (this._state !== SceneState.Active || this._paused) {
       return;
     }
 
@@ -273,12 +308,12 @@ export class SceneScope<Data = unknown> {
 
   /**
    * Forward one frame's draw to the scene, its systems, then the UI layer —
-   * gated to `Active` or `Paused` (a paused scene keeps rendering while
-   * simulation is frozen). Warns (dev-only) if `Scene.draw` returns a
+   * gated to `Active` regardless of `paused` (a paused scene keeps rendering
+   * while simulation is frozen). Warns (dev-only) if `Scene.draw` returns a
    * thenable — the hook must be synchronous.
    */
   public draw(context: RenderingContext): void {
-    if (this._state !== SceneState.Active && this._state !== SceneState.Paused) {
+    if (this._state !== SceneState.Active) {
       return;
     }
 
