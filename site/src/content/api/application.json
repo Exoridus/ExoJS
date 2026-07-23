@@ -33,7 +33,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(appSettings: ApplicationOptions): Application",
+          "signature": "new(appSettings: ApplicationOptions<Registry>): Application<Registry>",
           "signatureTokens": [
             {
               "text": "new",
@@ -56,6 +56,18 @@
               "kind": "type"
             },
             {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Registry",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
               "text": ")",
               "kind": "punctuation"
             },
@@ -66,16 +78,28 @@
             {
               "text": "Application",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Registry",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             }
           ],
           "params": [
             {
               "name": "appSettings",
-              "type": "ApplicationOptions",
+              "type": "ApplicationOptions<Registry>",
               "optional": false
             }
           ],
-          "returnType": "Application",
+          "returnType": "Application<Registry>",
           "description": ""
         }
       ],
@@ -393,7 +417,7 @@
         },
         {
           "name": "start",
-          "signature": "start(): Promise<Application>",
+          "signature": "start(): Promise<Application<Registry>>",
           "signatureTokens": [
             {
               "text": "start",
@@ -424,17 +448,29 @@
               "kind": "type"
             },
             {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Registry",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
               "text": ">",
               "kind": "punctuation"
             }
           ],
           "params": [],
-          "returnType": "Promise<Application>",
+          "returnType": "Promise<Application<Registry>>",
           "description": "Initialize the render backend, await capability detection, and start the per-frame loop without activating a scene. Use start(target, data?) to start directly into a registered scene. Idempotent — if the application is already running the call is a no-op. On error the status returns to Stopped and the error propagates."
         },
         {
           "name": "start",
-          "signature": "start(target: C, args: SetSceneArgs<InferSceneData<C>>): Promise<Application>",
+          "signature": "start(target: C, args: SetSceneArgs<InferSceneData<C>>): Promise<Application<Registry>>",
           "signatureTokens": [
             {
               "text": "start",
@@ -517,6 +553,18 @@
               "kind": "type"
             },
             {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Registry",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
               "text": ">",
               "kind": "punctuation"
             }
@@ -533,7 +581,7 @@
               "optional": false
             }
           ],
-          "returnType": "Promise<Application>",
+          "returnType": "Promise<Application<Registry>>",
           "description": "Initialize the render backend, await capability detection, activate target (a constructor registered in ApplicationOptions.scenes), and start the per-frame loop. Idempotent — if the application is already running the call is a no-op. On error the status returns to Stopped and the error propagates."
         },
         {
@@ -710,7 +758,7 @@
         },
         {
           "name": "options",
-          "signature": "options: ApplicationOptions",
+          "signature": "options: ApplicationOptions<Registry>",
           "signatureTokens": [
             {
               "text": "options",
@@ -723,6 +771,18 @@
             {
               "text": "ApplicationOptions",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Registry",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             }
           ],
           "params": [],
@@ -773,7 +833,7 @@
         },
         {
           "name": "scenes",
-          "signature": "scenes: SceneDirector",
+          "signature": "scenes: SceneDirector<Registry>",
           "signatureTokens": [
             {
               "text": "scenes",
@@ -786,6 +846,18 @@
             {
               "text": "SceneDirector",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Registry",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             }
           ],
           "params": [],
@@ -1536,7 +1608,7 @@
         },
         {
           "name": "onResize",
-          "signature": "onResize: Signal<[number, number, Application]>",
+          "signature": "onResize: Signal<[number, number, Application<object>]>",
           "signatureTokens": [
             {
               "text": "onResize",
@@ -1577,6 +1649,18 @@
             {
               "text": "Application",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "object",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             },
             {
               "text": "]",

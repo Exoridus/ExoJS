@@ -1,6 +1,6 @@
 {
   "title": "SceneDirector",
-  "description": "Single-active-scene controller owned by Application. Holds at most one active Scene (the current \"screen\"); SceneDirector.setScene switches to a new scene — ending the previous one permanently — with an optional fade transition. There is no scene stack: overlays, HUDs and pause menus belong on Scene.ui (the screen-fixed UI layer). Each activation is owned internally by a `SceneScope`, which attaches the scene's facilities, gates per-frame dispatch by SceneState, and runs teardown in the normative order; `SceneDirector` itself only tracks which scope is active and drives the transition machinery. Per-frame dispatch is split into four entry points, called by Application.update in normative order: SceneDirector.fixedUpdate (zero or more times), SceneDirector.update, SceneDirector.draw, then SceneDirector._drawTransition last, so the fade overlay always sits above both scene and app draw systems.",
+  "description": "Single-active-scene controller owned by Application. Holds at most one active Scene (the current \"screen\"); SceneDirector.setScene switches to a new scene — ending the previous one permanently — with an optional fade transition. The `Registry` generic (inferred from `ApplicationOptions.scenes`, spec §6.1) types the scene registry passed at construction. This class stores it bidirectionally (`byConstructor`/`byKey`) for later use by key-based navigation — no method here consumes `byKey` yet. There is no scene stack: overlays, HUDs and pause menus belong on Scene.ui (the screen-fixed UI layer). Each activation is owned internally by a `SceneScope`, which attaches the scene's facilities, gates per-frame dispatch by SceneState, and runs teardown in the normative order; `SceneDirector` itself only tracks which scope is active and drives the transition machinery. Per-frame dispatch is split into four entry points, called by Application.update in normative order: SceneDirector.fixedUpdate (zero or more times), SceneDirector.update, SceneDirector.draw, then SceneDirector._drawTransition last, so the fade overlay always sits above both scene and app draw systems.",
   "symbol": "SceneDirector",
   "kind": "class",
   "subsystem": "core",
@@ -20,6 +20,7 @@
       "members": [],
       "paragraphs": [
         "Single-active-scene controller owned by Application. Holds at most one active Scene (the current \"screen\"); SceneDirector.setScene switches to a new scene — ending the previous one permanently — with an optional fade transition.",
+        "The `Registry` generic (inferred from `ApplicationOptions.scenes`, spec §6.1) types the scene registry passed at construction. This class stores it bidirectionally (`byConstructor`/`byKey`) for later use by key-based navigation — no method here consumes `byKey` yet.",
         "There is no scene stack: overlays, HUDs and pause menus belong on Scene.ui (the screen-fixed UI layer). Each activation is owned internally by a `SceneScope`, which attaches the scene's facilities, gates per-frame dispatch by SceneState, and runs teardown in the normative order; `SceneDirector` itself only tracks which scope is active and drives the transition machinery.",
         "Per-frame dispatch is split into four entry points, called by Application.update in normative order: SceneDirector.fixedUpdate (zero or more times), SceneDirector.update, SceneDirector.draw, then SceneDirector._drawTransition last, so the fade overlay always sits above both scene and app draw systems."
       ],
@@ -32,7 +33,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(app: Application, scenes?: Record<string, AnySceneConstructor>): SceneDirector",
+          "signature": "new(app: Application, scenes?: Registry): SceneDirector<Registry>",
           "signatureTokens": [
             {
               "text": "new",
@@ -71,28 +72,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "Record",
+              "text": "Registry",
               "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "string",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "AnySceneConstructor",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
             },
             {
               "text": ")",
@@ -105,6 +86,18 @@
             {
               "text": "SceneDirector",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Registry",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             }
           ],
           "params": [
@@ -115,11 +108,11 @@
             },
             {
               "name": "scenes",
-              "type": "Record<string, AnySceneConstructor>",
+              "type": "Registry",
               "optional": true
             }
           ],
-          "returnType": "SceneDirector",
+          "returnType": "SceneDirector<Registry>",
           "description": ""
         }
       ],
@@ -344,7 +337,7 @@
         },
         {
           "name": "restoreScene",
-          "signature": "restoreScene(target: C, options: RestoreSceneOptions): Promise<SceneDirector>",
+          "signature": "restoreScene(target: C, options: RestoreSceneOptions): Promise<SceneDirector<Registry>>",
           "signatureTokens": [
             {
               "text": "restoreScene",
@@ -403,6 +396,18 @@
               "kind": "type"
             },
             {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Registry",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
               "text": ">",
               "kind": "punctuation"
             }
@@ -419,7 +424,7 @@
               "optional": false
             }
           ],
-          "returnType": "Promise<SceneDirector>",
+          "returnType": "Promise<SceneDirector<Registry>>",
           "description": "Reactivate a scene previously retained via setScene(..., { retainCurrent: true }) or restoreScene(..., { retainCurrent: true }) — the same instance, returned to Active with whichever paused flag it had before suspension. load()/init() do not run again (definition §14.3). Rejects with ConcurrentSceneNavigationError when another navigation is already in flight; with RetainedSceneNotFoundError when target has no retained instance."
         },
         {
@@ -453,7 +458,7 @@
         },
         {
           "name": "setScene",
-          "signature": "setScene(target: C, args: SetSceneArgs<InferSceneData<C>>): Promise<SceneDirector>",
+          "signature": "setScene(target: C, args: SetSceneArgs<InferSceneData<C>>): Promise<SceneDirector<Registry>>",
           "signatureTokens": [
             {
               "text": "setScene",
@@ -536,6 +541,18 @@
               "kind": "type"
             },
             {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Registry",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
               "text": ">",
               "kind": "punctuation"
             }
@@ -552,7 +569,7 @@
               "optional": false
             }
           ],
-          "returnType": "Promise<SceneDirector>",
+          "returnType": "Promise<SceneDirector<Registry>>",
           "description": "Switch to a fresh instance of target, ending the previously active scene permanently — unless options.retainCurrent is set, in which case the outgoing scene is suspended and retained (keyed by its constructor) for a later SceneDirector.restoreScene call instead. Ordinary switching always creates a fresh instance (definition §11.4) — this differs from the old instance-based API's same-instance no-op check, which no longer applies. An optional fade transition runs the swap at full opacity. The new scene completes load()+init() before the old one is torn down, so there is no blank frame between them, and the outgoing scene keeps running until the switch boundary is crossed. Rejects with ConcurrentSceneNavigationError when another navigation is already in flight (dev and production builds — no queueing, definition §11.5); with UnregisteredSceneError (dev builds) when target is not present in ApplicationOptions.scenes; with RetainedSceneConflictError when target already has a retained instance (restore or release it first)."
         },
         {
@@ -613,7 +630,7 @@
       "members": [
         {
           "name": "currentScene",
-          "signature": "currentScene: Scene<void> | null",
+          "signature": "currentScene: Scene<void, Application<object>> | null",
           "signatureTokens": [
             {
               "text": "currentScene",
@@ -634,6 +651,26 @@
             {
               "text": "void",
               "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Application",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "object",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             },
             {
               "text": ">",
@@ -713,7 +750,7 @@
       "members": [
         {
           "name": "onChangeScene",
-          "signature": "onChangeScene: Signal<[Scene<void> | null]>",
+          "signature": "onChangeScene: Signal<[Scene<void, Application<object>> | null]>",
           "signatureTokens": [
             {
               "text": "onChangeScene",
@@ -748,6 +785,26 @@
               "kind": "keyword"
             },
             {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Application",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "object",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
               "text": ">",
               "kind": "punctuation"
             },
@@ -774,7 +831,7 @@
         },
         {
           "name": "onPause",
-          "signature": "onPause: Signal<[Scene<void>]>",
+          "signature": "onPause: Signal<[Scene<void, Application<object>>]>",
           "signatureTokens": [
             {
               "text": "onPause",
@@ -809,6 +866,26 @@
               "kind": "keyword"
             },
             {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Application",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "object",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
               "text": ">",
               "kind": "punctuation"
             },
@@ -827,7 +904,7 @@
         },
         {
           "name": "onResume",
-          "signature": "onResume: Signal<[Scene<void>]>",
+          "signature": "onResume: Signal<[Scene<void, Application<object>>]>",
           "signatureTokens": [
             {
               "text": "onResume",
@@ -862,6 +939,26 @@
               "kind": "keyword"
             },
             {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Application",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "object",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
               "text": ">",
               "kind": "punctuation"
             },
@@ -880,7 +977,7 @@
         },
         {
           "name": "onStartScene",
-          "signature": "onStartScene: Signal<[Scene<void>]>",
+          "signature": "onStartScene: Signal<[Scene<void, Application<object>>]>",
           "signatureTokens": [
             {
               "text": "onStartScene",
@@ -915,6 +1012,26 @@
               "kind": "keyword"
             },
             {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Application",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "object",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
               "text": ">",
               "kind": "punctuation"
             },
@@ -933,7 +1050,7 @@
         },
         {
           "name": "onStateChange",
-          "signature": "onStateChange: Signal<[SceneState, SceneState, Scene<void>]>",
+          "signature": "onStateChange: Signal<[SceneState, SceneState, Scene<void, Application<object>>]>",
           "signatureTokens": [
             {
               "text": "onStateChange",
@@ -984,6 +1101,26 @@
               "kind": "keyword"
             },
             {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Application",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "object",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
               "text": ">",
               "kind": "punctuation"
             },
@@ -1002,7 +1139,7 @@
         },
         {
           "name": "onStopScene",
-          "signature": "onStopScene: Signal<[Scene<void>]>",
+          "signature": "onStopScene: Signal<[Scene<void, Application<object>>]>",
           "signatureTokens": [
             {
               "text": "onStopScene",
@@ -1037,6 +1174,26 @@
               "kind": "keyword"
             },
             {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Application",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "object",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
               "text": ">",
               "kind": "punctuation"
             },
@@ -1055,7 +1212,7 @@
         },
         {
           "name": "onUpdateScene",
-          "signature": "onUpdateScene: Signal<[Scene<void>]>",
+          "signature": "onUpdateScene: Signal<[Scene<void, Application<object>>]>",
           "signatureTokens": [
             {
               "text": "onUpdateScene",
@@ -1088,6 +1245,26 @@
             {
               "text": "void",
               "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Application",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "object",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             },
             {
               "text": ">",

@@ -32,10 +32,15 @@ export { SceneNode } from './SceneNode';
 export { SceneState } from './SceneState';
 export type {
   AnySceneConstructor,
+  ApplicationLike,
+  ApplicationOf,
+  ConstructorOf,
   FadeSceneTransition,
   InferSceneData,
   RestoreSceneOptions,
   SceneConstructor,
+  SceneRegistration,
+  SceneRegistryShape,
   SceneTransition,
   SetSceneArgs,
   SetSceneOptions,

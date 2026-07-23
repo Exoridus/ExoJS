@@ -103,14 +103,13 @@ export type ApplicationLike = Application<any> | (abstract new (...args: any[]) 
  * The cross-file `import type` this introduces is a type-only module cycle —
  * unproblematic, erased entirely at compile time.
  */
-export type ApplicationOf<T extends ApplicationLike> =
-  T extends abstract new (...args: any[]) => infer Instance
-    ? Instance extends Application<any>
-      ? Instance
-      : never
-    : T extends Application<any>
-      ? T
-      : never;
+export type ApplicationOf<T extends ApplicationLike> = T extends abstract new (...args: any[]) => infer Instance
+  ? Instance extends Application<any>
+    ? Instance
+    : never
+  : T extends Application<any>
+    ? T
+    : never;
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
 /**
@@ -318,10 +317,7 @@ const isSceneRegistrationDescriptor = (value: unknown): value is { scene: AnySce
  * key, in either form. Dev builds only; production builds skip validation.
  * @internal
  */
-export function validateSceneRegistry(
-  scenes: Record<string, SceneRegistration<AnySceneConstructor>> | undefined,
-  sceneBase: typeof Scene,
-): SceneRegistryIndex {
+export function validateSceneRegistry(scenes: Record<string, SceneRegistration<AnySceneConstructor>> | undefined, sceneBase: typeof Scene): SceneRegistryIndex {
   const byConstructor = new Map<AnySceneConstructor, string>();
   const byKey = new Map<string, AnySceneConstructor>();
 

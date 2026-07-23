@@ -1,0 +1,210 @@
+{
+  "title": "ApplicationOf",
+  "description": "Normalizes an ApplicationLike to its concrete `Application` instance type, letting Scene's second generic accept an `Application` instance type, its constructor, or `typeof someAppInstance` interchangeably (spec §6.2). `typeof someAppInstance` only works once the instance already has an explicit, non-inferred type — a fully-inferred `const app = new Application({ scenes: {...} })` cannot be threaded through a self-referential base-scene chain this way (confirmed: TS2506/TS7022 — the inference cycle runs through the un-annotated `const`'s own initializer, which ordinary lazy interface/type-alias resolution does not rescue). Break the cycle with an explicit fixed point instead — a named `Application` subclass with a hand-written registry type: class GameApplication extends Application<GameScenes> {} export const app: GameApplication = new GameApplication({ scenes: {...} }); // in a second module: export abstract class AppScene<Data = void> extends Scene<Data, typeof app> {} The cross-file `import type` this introduces is a type-only module cycle — unproblematic, erased entirely at compile time.",
+  "symbol": "ApplicationOf",
+  "kind": "type",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Normalizes an ApplicationLike to its concrete `Application` instance type, letting Scene's second generic accept an `Application` instance type, its constructor, or `typeof someAppInstance` interchangeably (spec §6.2).",
+        "`typeof someAppInstance` only works once the instance already has an explicit, non-inferred type — a fully-inferred `const app = new Application({ scenes: {...} })` cannot be threaded through a self-referential base-scene chain this way (confirmed: TS2506/TS7022 — the inference cycle runs through the un-annotated `const`'s own initializer, which ordinary lazy interface/type-alias resolution does not rescue). Break the cycle with an explicit fixed point instead — a named `Application` subclass with a hand-written registry type:",
+        "class GameApplication extends Application<GameScenes> {} export const app: GameApplication = new GameApplication({ scenes: {...} }); // in a second module: export abstract class AppScene<Data = void> extends Scene<Data, typeof app> {}",
+        "The cross-file `import type` this introduces is a type-only module cycle — unproblematic, erased entirely at compile time."
+      ],
+      "importLine": "import { ApplicationOf } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "ApplicationOf",
+          "signature": "T extends (args: any[]) => Instance ? Instance extends Application<any> ? Instance : never : T extends Application<any> ? T : never",
+          "signatureTokens": [
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "extends",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "args",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "any",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Instance",
+              "kind": "type"
+            },
+            {
+              "text": " ? ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Instance",
+              "kind": "type"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "extends",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Application",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "any",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " ? ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Instance",
+              "kind": "type"
+            },
+            {
+              "text": " : ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "never",
+              "kind": "keyword"
+            },
+            {
+              "text": " : ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "extends",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Application",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "any",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " ? ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": " : ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "never",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/SceneTypes.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneTypes.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/SceneTypes.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneTypes.ts"
+}

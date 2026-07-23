@@ -265,7 +265,7 @@
         },
         {
           "name": "scenes",
-          "signature": "scenes?: Record<string, AnySceneConstructor>",
+          "signature": "scenes?: Registry",
           "signatureTokens": [
             {
               "text": "scenes",
@@ -280,33 +280,13 @@
               "kind": "punctuation"
             },
             {
-              "text": "Record",
+              "text": "Registry",
               "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "string",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "AnySceneConstructor",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Registry of navigable Scene constructors, keyed by a diagnostics-only name (shown in UnregisteredSceneError messages and duplicate-registration errors). Required for any Application.start / SceneDirector.setScene call that targets a constructor — unregistered targets reject in development builds. Validated once at construction: every value must be a Scene subclass constructor (checked without instantiating it), and no constructor may appear under more than one key."
+          "description": "Registry of navigable Scene constructors, keyed by a name used for diagnostics (shown in UnregisteredSceneError messages and duplicate-registration errors) and, in a later slice, key-based navigation. Each value is either a bare Scene subclass constructor, or a { scene, transition? } descriptor pairing one with a target-bound default transition — see SceneRegistration (transition's real type ships with the transition runtime; it is an inert placeholder until then). Required for any Application.start / SceneDirector.setScene call that targets a constructor — unregistered targets reject in development builds. Validated once at construction: every value must resolve to a Scene subclass constructor (checked without instantiating it), and no constructor may appear under more than one key."
         },
         {
           "name": "seed",
