@@ -12,7 +12,7 @@ export interface SceneInputBindingOptions extends InputBindingOptions {
   readonly when?: SceneInputAvailability;
 }
 
-const gatedStates = new Set<SceneState>([SceneState.Preparing, SceneState.Suspended, SceneState.Destroying, SceneState.Destroyed]);
+const gatedStates = new Set<SceneState>([SceneState.Preparing, SceneState.Ready, SceneState.Suspended, SceneState.Destroying, SceneState.Destroyed]);
 
 function whenPolicyAllows(when: SceneInputAvailability, state: SceneState, paused: boolean): boolean {
   if (gatedStates.has(state)) {

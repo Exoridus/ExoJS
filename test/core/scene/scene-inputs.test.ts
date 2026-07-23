@@ -107,6 +107,8 @@ describe('SceneInputs — when policy availability matrix', () => {
     ['always', SceneState.Active, true, true],
     ['active', SceneState.Preparing, false, false],
     ['always', SceneState.Preparing, false, false],
+    ['active', SceneState.Ready, false, false],
+    ['always', SceneState.Ready, false, false],
     ['active', SceneState.Suspended, false, false],
     ['always', SceneState.Suspended, false, false],
   ] as const)('when: "%s" at state %s, paused %s allows onActive dispatch: %s', (when, state, paused, expected) => {
