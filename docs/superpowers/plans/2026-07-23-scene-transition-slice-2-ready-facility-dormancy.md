@@ -83,7 +83,7 @@ test/core/
 
 - Produces: `SceneState.Ready` (new enum member, string value `'ready'`). `canSuspend`/`canRestore`/`canDestroy` signatures unchanged — only their JSDoc gains a note about `Ready`. Consumed by every later task in this plan.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Add to `test/core/scene-state.test.ts`, inside the existing `describe('SceneState guards', ...)` block:
 
@@ -114,12 +114,12 @@ test('is a string enum (never const enum) — values are readable at runtime', (
 });
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `pnpm vitest run test/core/scene-state.test.ts`
 Expected: FAIL — `SceneState.Ready` is `undefined`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Replace the full contents of `src/core/SceneState.ts`:
 
@@ -188,12 +188,12 @@ export function canDestroy(state: SceneState): boolean {
 }
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `pnpm vitest run test/core/scene-state.test.ts`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/core/SceneState.ts test/core/scene-state.test.ts
@@ -215,7 +215,7 @@ git commit -m "feat(core): add SceneState.Ready"
 
 Verified against the current file (`src/core/Signal.ts:104-119`): `dispatch()` has no `try`/`catch` around the listener loop, never reaches `this._dispatching = false` if a listener throws (no `finally`), and never processes `_pendingRemoves` in that case either — exactly the three defects spec §2.2.1 names.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Add to `test/core/signal.test.ts`, as a new top-level `describe` block:
 
@@ -324,12 +324,12 @@ describe('dispatchIsolated', () => {
 });
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `pnpm vitest run test/core/signal.test.ts`
 Expected: FAIL — `signal.dispatchIsolated is not a function`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 In `src/core/Signal.ts`, add immediately after the existing `dispatch()` method (before `destroy()`):
 
@@ -403,17 +403,17 @@ In `src/core/Signal.ts`, add immediately after the existing `dispatch()` method 
   }
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `pnpm vitest run test/core/signal.test.ts`
 Expected: PASS.
 
-- [ ] **Step 5: Typecheck**
+- [x] **Step 5: Typecheck**
 
 Run: `pnpm typecheck`
 Expected: clean.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/core/Signal.ts test/core/signal.test.ts
@@ -435,7 +435,7 @@ git commit -m "feat(core): Signal.dispatchIsolated for exception-isolated lifecy
 
 Verified (`InteractionManager.update()`, `src/input/InteractionManager.ts:303-304`) that the app-wide interaction dispatch gate is already `state !== Active` (an inverse check, not an allowlist) — it already treats `Ready` correctly with zero changes needed. `SceneInputs.gatedStates`, by contrast, is an explicit blocklist and does need `Ready` added.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Add two rows to the existing table-driven test in `test/core/scene/scene-inputs.test.ts` (`describe('SceneInputs — when policy availability matrix', ...)`), in the `test.each([...])` array:
 
@@ -446,12 +446,12 @@ Add two rows to the existing table-driven test in `test/core/scene/scene-inputs.
 
 (Insert alongside the existing `SceneState.Preparing`/`SceneState.Suspended` rows — same table, same assertion shape.)
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `pnpm vitest run test/core/scene/scene-inputs.test.ts`
 Expected: FAIL — with `state = Ready`, `whenPolicyAllows` does not gate (since `gatedStates` doesn't contain it yet), so `onActive` fires when it shouldn't.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 In `src/core/scene/SceneInputs.ts`, change:
 
@@ -465,12 +465,12 @@ to:
 const gatedStates = new Set<SceneState>([SceneState.Preparing, SceneState.Ready, SceneState.Suspended, SceneState.Destroying, SceneState.Destroyed]);
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `pnpm vitest run test/core/scene/scene-inputs.test.ts`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/core/scene/SceneInputs.ts test/core/scene/scene-inputs.test.ts
@@ -493,7 +493,7 @@ git commit -m "fix(core): gate SceneInputs dispatch during Ready"
 
 Per spec §4.2: `Preparing`/`Ready`/`Suspended` → `PendingVoice` (buffered); `Active` → real `Voice` immediately; `Destroying`/`Destroyed` → reject (dev-mode lifecycle error; production falls back to an inert, already-`ended` stand-in rather than crashing a teardown path).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Add to `test/core/scene/scene-audio.test.ts`, as a new `describe` block after the existing `describe('SceneAudio — Preparing gate', ...)`:
 
@@ -551,12 +551,12 @@ describe('SceneAudio — dormancy gate widens to Ready/Suspended, rejects Destro
 });
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `pnpm vitest run test/core/scene/scene-audio.test.ts`
 Expected: FAIL — `Suspended`/`Destroying`/`Destroyed` currently fall through to `this.add(this._app.audio.play(...))` (the "real voice immediately" branch), since today's check is only `=== SceneState.Preparing`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 In `src/core/scene/SceneAudio.ts`, replace the `play()` method:
 
@@ -634,17 +634,17 @@ with:
   }
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `pnpm vitest run test/core/scene/scene-audio.test.ts`
 Expected: PASS.
 
-- [ ] **Step 5: Typecheck**
+- [x] **Step 5: Typecheck**
 
 Run: `pnpm typecheck`
 Expected: clean.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/core/scene/SceneAudio.ts test/core/scene/scene-audio.test.ts
@@ -667,7 +667,7 @@ Today `TweenSequencer._manager` is `private readonly`, set once in the construct
 
 No dedicated test for this task alone — it has no independent observable behavior until Task 6 exercises it (constructing a manager-less sequencer, calling `.start()` on it, confirming nothing ticks, then calling `_attachManager()` and confirming it now does). Verified by `pnpm typecheck` only here.
 
-- [ ] **Step 1: Implement**
+- [x] **Step 1: Implement**
 
 In `src/animation/TweenSequencer.ts`, change:
 
@@ -696,12 +696,12 @@ Add, immediately after the constructor:
   }
 ```
 
-- [ ] **Step 2: Typecheck**
+- [x] **Step 2: Typecheck**
 
 Run: `pnpm typecheck`
 Expected: clean (no behavior change yet — nothing calls `_attachManager` until Task 6).
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/animation/TweenSequencer.ts
@@ -729,7 +729,7 @@ git commit -m "feat(animation): TweenSequencer._attachManager (mirrors Tween._at
 - `add()` while not `Active`: the tween may already be genuinely live (constructed via `app.tweens.create()` directly and handed here) — transferring ownership means pausing it immediately if it's currently `Active`-state (mirrors the existing `suspend()`/`restore()` pause idiom exactly), tracked in a new `_coldPaused` set, resumed at the next `Active` transition only if still in the exact state this left it in. The tween is still attached to the manager immediately (harmless once paused — `Tween.update()` no-ops for a non-`Active`-state tween regardless of whether it's present in the manager's array).
 - **Known, accepted, pre-existing-class limitation (not introduced by this change):** a caller who retains their own direct reference to a tween handed to `add()` can still call `.start()`/`.resume()` on it directly, bypassing the facade — exactly the same limitation the existing retention `suspend()`/`resume()` already has for any externally-held `Voice`/`Tween` reference. Not solvable without proxying every returned object; documented, not fixed, here.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 First, update every existing `new SceneTweens(app)` call site in `test/core/scene/scene-tweens.test.ts` to `new SceneTweens(app, () => SceneState.Active)` (the constructor is about to gain a required second parameter, and every existing test exercises the "live" facade — passing `Active` keeps their current behavior/assertions unchanged). Add the import:
 
@@ -853,12 +853,12 @@ import { Tween } from '#animation/Tween';
 import { TweenSequencer } from '#animation/TweenSequencer';
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `pnpm vitest run test/core/scene/scene-tweens.test.ts`
 Expected: FAIL — `SceneTweens` constructor doesn't accept a second argument yet (and even ignoring that, `create()`/`add()`/`createSequencer()` don't consult it).
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Replace the full contents of `src/core/scene/SceneTweens.ts`:
 
@@ -1216,17 +1216,17 @@ import { TweenSequencer } from '#animation/TweenSequencer';
 
 and use `TweenSequencer` directly as the type everywhere `TweenSequencerType` appears above (`Map<TweenSequencer, ...>`, `Set<TweenSequencer>`, return types). Re-read the class body above with that single substitution before saving the file — this plan wrote it with a placeholder alias only to keep the value/type distinction visible while explaining the diff; the real file must not import the same module twice.
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `pnpm vitest run test/core/scene/scene-tweens.test.ts`
 Expected: PASS.
 
-- [ ] **Step 5: Typecheck + lint**
+- [x] **Step 5: Typecheck + lint**
 
 Run: `pnpm typecheck && pnpm eslint src/core/scene/SceneTweens.ts test/core/scene/scene-tweens.test.ts`
 Expected: clean.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/core/scene/SceneTweens.ts test/core/scene/scene-tweens.test.ts
@@ -1250,7 +1250,7 @@ Verified (`SceneScope.ts:453-460` today): `_attachAutoRoots()` calls `this._app.
 
 **Design:** replace the single `_suspended` boolean with a per-entry `attached: boolean` flag. `observe()`/`capture()` consult `getState() === Active` at call time: if live, attach immediately (as today); if not, track without attaching. `suspend()` detaches every currently-attached entry (setting `attached = false`) without discarding tracking. `resume()` attaches every entry that isn't currently attached, in tracking order — this single operation correctly covers both a fresh activation flushing cold registrations and a retention restore reinstating what `suspend()` detached, since by the time either runs every entry is uniformly in the same attached/unattached state (entries only ever attach while truly `Active`, and `suspend()` uniformly clears them all together — see the inline comment in the implementation for why a mixed state can't arise in practice). Releasing a never-attached entry must not call the app-wide detach/pop functions at all.
 
-- [ ] **Step 1: Update every existing call site, then write the failing tests**
+- [x] **Step 1: Update every existing call site, then write the failing tests**
 
 In `test/core/scene/scene-interaction.test.ts`, replace every occurrence of:
 
@@ -1377,12 +1377,12 @@ describe('SceneInteraction — dormancy (registration while not Active)', () => 
 });
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `pnpm vitest run test/core/scene/scene-interaction.test.ts`
 Expected: FAIL — `SceneInteraction` doesn't accept a second constructor argument, and `observe()`/`capture()` attach unconditionally.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Replace the full contents of `src/core/scene/SceneInteraction.ts`:
 
@@ -1647,17 +1647,17 @@ export class SceneInteraction implements Destroyable {
 }
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `pnpm vitest run test/core/scene/scene-interaction.test.ts`
 Expected: PASS.
 
-- [ ] **Step 5: Typecheck + lint**
+- [x] **Step 5: Typecheck + lint**
 
 Run: `pnpm typecheck && pnpm eslint src/core/scene/SceneInteraction.ts test/core/scene/scene-interaction.test.ts`
 Expected: clean.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/core/scene/SceneInteraction.ts test/core/scene/scene-interaction.test.ts
@@ -1682,7 +1682,7 @@ No dedicated new test in this task — `Scene.onActivate`/`onSuspend` have no in
 
 **Note on Slice 1 overlap:** a parallel Slice 1 agent may be adding an `AppLike` second generic to this same file. This task's edits are confined to the signal-declaration region (lines ~62–69 today) and `_teardownInternals()` (lines ~415–424 today) — neither touches the class's generic parameter list (`export class Scene<Data = void> { ... }`) or the `app` getter. If a merge conflict does occur, it will be localized and mechanical (two independent hunks in the same file), not a semantic conflict.
 
-- [ ] **Step 1: Implement — remove `onLoad`/`onUnload`, add `onActivate`/`onSuspend`**
+- [x] **Step 1: Implement — remove `onLoad`/`onUnload`, add `onActivate`/`onSuspend`**
 
 In `src/core/Scene.ts`, change:
 
@@ -1751,12 +1751,12 @@ to:
   }
 ```
 
-- [ ] **Step 2: Typecheck**
+- [x] **Step 2: Typecheck**
 
 Run: `pnpm typecheck`
 Expected: FAIL — `examples/application-scenes/scene-lifecycle.ts` still references `this.onLoad`/`this.onUnload`.
 
-- [ ] **Step 3: Fix the example**
+- [x] **Step 3: Fix the example**
 
 In `examples/application-scenes/scene-lifecycle.ts`, change the comment block and the two signal registrations. Replace:
 
@@ -1806,17 +1806,17 @@ this.onSuspend.add(() => {
 
 Apply the identical change (same comment text, same two `add()` blocks, adjusted for the file's already-compiled JS syntax — no type annotations) to `examples/application-scenes/scene-lifecycle.js`.
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `pnpm typecheck && pnpm typecheck:examples`
 Expected: clean.
 
-- [ ] **Step 5: Lint**
+- [x] **Step 5: Lint**
 
 Run: `pnpm eslint src/core/Scene.ts examples/application-scenes/scene-lifecycle.js examples/application-scenes/scene-lifecycle.ts`
 Expected: clean.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/core/Scene.ts examples/application-scenes/scene-lifecycle.ts examples/application-scenes/scene-lifecycle.js
@@ -1864,7 +1864,7 @@ Suspend (Active → Suspended):
   (Director.onStateChange: dispatched by SceneDirector's _suspendAndRetain, Task 10 — unaffected call site, just converted to isolated dispatch)
 ```
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 In `test/core/scene-scope.test.ts`, first update the import line to include `Ready`, no change needed (imports `SceneState` as a whole already). Then apply the following rewrites.
 
@@ -2025,12 +2025,12 @@ test('restore() flushes pending audio and dispatches Scene.onActivate', async ()
 });
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `pnpm vitest run test/core/scene-scope.test.ts`
 Expected: FAIL — `prepare()` still ends in `Preparing`, `activate()` still transitions directly from `Preparing`, `scene.onActivate`/`onSuspend` don't exist yet on the `Scene` instances constructed by these tests (they do — Task 8 already added them — but `SceneScope` doesn't dispatch them yet).
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 In `src/core/SceneScope.ts`, replace `prepare()`:
 
@@ -2332,22 +2332,22 @@ to:
  */
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `pnpm vitest run test/core/scene-scope.test.ts`
 Expected: PASS.
 
-- [ ] **Step 5: Typecheck + lint**
+- [x] **Step 5: Typecheck + lint**
 
 Run: `pnpm typecheck && pnpm eslint src/core/SceneScope.ts test/core/scene-scope.test.ts`
 Expected: clean.
 
-- [ ] **Step 6: Run the full core suite to catch any other test relying on the old Preparing→Active edge**
+- [x] **Step 6: Run the full core suite to catch any other test relying on the old Preparing→Active edge**
 
 Run: `pnpm test:core`
 Expected: FAIL only in `test/core/scene-director.test.ts` (three tests assert the exact `(Preparing, Active, scene)` `onStateChange` tuple / call count that no longer occurs — fixed in Task 10). No other file should fail; if one does, stop and investigate before continuing (do not proceed to Task 10 with an unexplained failure elsewhere).
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/core/SceneScope.ts test/core/scene-scope.test.ts
@@ -2379,7 +2379,7 @@ Six call sites convert from `.dispatch(...)` to `.dispatchIsolated(error => this
 
 This is a **deliberate behavior change**, per spec §2.2.1: today, a throwing `onStopScene`/`onStateChange` listener genuinely propagates and triggers `_rollbackSwitch()` — exercised by the two existing tests in `describe('SceneDirector — switch-phase rollback', ...)`. After this change, those listeners' exceptions are isolated (reported via `Application.onError`, dispatch continues), so they can no longer trigger a rollback. Those two tests are rewritten below, per the spec's own explicit instruction, into tests of the new (correct) behavior.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 **1a.** Update the two `onStateChange`-count assertions affected by Task 9's `Preparing → Ready → Active` split. Replace (around line 258–270):
 
@@ -2594,12 +2594,12 @@ test('a throwing onChangeScene/onStartScene listener does not abort setScene() o
 });
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `pnpm vitest run test/core/scene-director.test.ts`
 Expected: FAIL — the rewritten tests expect isolation/completion; today's unguarded `.dispatch()` calls still propagate and roll back.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 In `src/core/SceneDirector.ts`, add the private helper, placed just above `_prepareScene`:
 
@@ -2749,17 +2749,17 @@ to:
   public readonly onStateChange = new Signal<[SceneState, SceneState, Scene]>();
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `pnpm vitest run test/core/scene-director.test.ts`
 Expected: PASS.
 
-- [ ] **Step 5: Typecheck + lint**
+- [x] **Step 5: Typecheck + lint**
 
 Run: `pnpm typecheck && pnpm eslint src/core/SceneDirector.ts test/core/scene-director.test.ts`
 Expected: clean.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/core/SceneDirector.ts test/core/scene-director.test.ts
@@ -2778,27 +2778,27 @@ the old (now removed) throw-triggers-rollback behavior."
 
 **Files:** none (verification only).
 
-- [ ] **Step 1: Full core test suite**
+- [x] **Step 1: Full core test suite**
 
 Run: `pnpm test:core`
 Expected: PASS, 0 failures. Compare the file/test counts against the baseline (318 files / 5083 tests before this slice) — expect the counts to have grown by the new tests added across Tasks 1–10, with no file count decrease.
 
-- [ ] **Step 2: Full typecheck (including examples)**
+- [x] **Step 2: Full typecheck (including examples)**
 
 Run: `pnpm typecheck && pnpm typecheck:examples && pnpm typecheck:type-tests`
 Expected: clean.
 
-- [ ] **Step 3: Full lint**
+- [x] **Step 3: Full lint**
 
 Run: `pnpm lint:all`
 Expected: clean.
 
-- [ ] **Step 4: Format check**
+- [x] **Step 4: Format check**
 
 Run: `pnpm format:check`
 Expected: clean. If it fails on files this slice touched, run `pnpm format` and re-stage.
 
-- [ ] **Step 5: Regenerate and check API docs**
+- [x] **Step 5: Regenerate and check API docs**
 
 `Scene.onActivate`/`Scene.onSuspend` are new public exports; `Scene.onLoad`/`Scene.onUnload` are removed ones. Run:
 
@@ -2814,12 +2814,12 @@ pnpm docs:api:check
 
 Expected: clean (no drift between the generator's output and what's committed).
 
-- [ ] **Step 6: Grep sweep for any remaining `onLoad`/`onUnload` reference**
+- [x] **Step 6: Grep sweep for any remaining `onLoad`/`onUnload` reference**
 
 Run: `grep -rn "\.onLoad\b\|\.onUnload\b" src/ test/ examples/ site/ docs/superpowers 2>/dev/null | grep -v "Loader\|resources/Loader"`
 Expected: no output referring to `Scene.onLoad`/`Scene.onUnload` (the `Loader.onLoad`-style hits from `src/resources/Loader.ts`, if any, are a distinct, unrelated signal and must remain — the grep's `-v` filter excludes that file already; double-check nothing else slipped through).
 
-- [ ] **Step 7: Commit any formatting fixups**
+- [x] **Step 7: Commit any formatting fixups**
 
 ```bash
 git add -A
@@ -2828,7 +2828,7 @@ git commit -m "chore: format + docs:api:generate for Slice 2 (Ready state & faci
 
 (Skip this commit if Steps 4–5 produced no changes.)
 
-- [ ] **Step 8: Update this plan's checkboxes**
+- [x] **Step 8: Update this plan's checkboxes**
 
 Mark every completed task's checkboxes `[x]` in this file and commit:
 
