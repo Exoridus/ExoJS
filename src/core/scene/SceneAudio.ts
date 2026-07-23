@@ -207,11 +207,30 @@ export class SceneAudio implements Destroyable {
   /**
    * Play `source` through the application audio manager and track the
    * resulting {@link Voice} for scene-lifetime cleanup. While the scope is
-   * `Preparing`, returns a {@link PendingVoice} stand-in immediately and
-   * defers the real `app.audio.play(...)` call until activation.
+   * `Preparing`, `Ready`, or `Suspended`, returns a {@link PendingVoice}
+   * stand-in immediately and defers the real `app.audio.play(...)` call
+   * until (re)activation — including a call made while already `Suspended`
+   * (definition §4.2: a new registration while dormant must buffer, not
+   * play for real, regardless of how the scope became dormant). While
+   * `Destroying`/`Destroyed`, rejects instead: a dev build throws a clear
+   * lifecycle error (playback requested during permanent teardown can
+   * never be scheduled); a production build returns an inert, already-
+   * `ended` stand-in rather than crashing a teardown path.
    */
   public play(source: Playable, options?: SceneAudioPlayOptions): Voice {
-    if (this._getState() === SceneState.Preparing) {
+    const state = this._getState();
+
+    if (state === SceneState.Destroying || state === SceneState.Destroyed) {
+      if (__DEV__) {
+        throw new Error(
+          'SceneAudio.play() was called while the owning scene is being destroyed (state is "destroying"/"destroyed") — playback requested during permanent teardown can never be scheduled.',
+        );
+      }
+
+      return this._createDeadVoice(options ?? {});
+    }
+
+    if (state !== SceneState.Active) {
       const pending = new PendingVoice(() => this._app.audio.play(source, options ?? {}), options ?? {});
 
       this._pending.add(pending);
@@ -221,6 +240,23 @@ export class SceneAudio implements Destroyable {
     }
 
     return this.add(this._app.audio.play(source, options), options);
+  }
+
+  /**
+   * Production-build fallback for {@link SceneAudio.play} called during
+   * `Destroying`/`Destroyed`: an already-cancelled {@link PendingVoice}
+   * whose `_createReal` callback is never invoked (a cancelled voice is
+   * never flushed) — inert, but Voice-shaped, so calling code that doesn't
+   * dev-guard its `play()` calls doesn't crash mid-teardown.
+   */
+  private _createDeadVoice(options: SceneAudioPlayOptions): Voice {
+    const dead = new PendingVoice(() => {
+      throw new Error('SceneAudio: a dead voice (created during Destroying/Destroyed) must never be flushed.');
+    }, options);
+
+    dead.stop();
+
+    return dead;
   }
 
   /** Track an already-created {@link Voice} (e.g. from `app.audio.play(...)`) for scene-lifetime cleanup. Returns it unchanged. */

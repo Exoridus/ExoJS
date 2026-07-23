@@ -305,3 +305,55 @@ describe('SceneAudio — Preparing gate', () => {
     expect(real.pause).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('SceneAudio — dormancy gate widens to Ready/Suspended, rejects Destroying/Destroyed', () => {
+  test('play() during Ready buffers a PendingVoice, same as Preparing', () => {
+    const voice = makeVoice();
+    const app = createAppStub(voice);
+    const audio = new SceneAudio(app, () => SceneState.Ready);
+
+    const pending = audio.play(fakePlayable);
+
+    expect(app.audio.play).not.toHaveBeenCalled();
+    expect(pending.ended).toBe(false);
+  });
+
+  test('play() during Suspended buffers a PendingVoice (a new registration while already dormant, not just Preparing/Ready)', () => {
+    const voice = makeVoice();
+    const app = createAppStub(voice);
+    const audio = new SceneAudio(app, () => SceneState.Suspended);
+
+    const pending = audio.play(fakePlayable);
+
+    expect(app.audio.play).not.toHaveBeenCalled();
+    expect(pending.ended).toBe(false);
+  });
+
+  test('_flushPending() started during Suspended starts for real once flushed', () => {
+    const voice = makeVoice();
+    const app = createAppStub(voice);
+    const audio = new SceneAudio(app, () => SceneState.Suspended);
+
+    audio.play(fakePlayable);
+    audio._flushPending();
+
+    expect(app.audio.play).toHaveBeenCalledTimes(1);
+  });
+
+  test('play() during Destroying, in dev builds, throws a lifecycle error and never buffers or plays', () => {
+    const voice = makeVoice();
+    const app = createAppStub(voice);
+    const audio = new SceneAudio(app, () => SceneState.Destroying);
+
+    expect(() => audio.play(fakePlayable)).toThrow(/destroy/i);
+    expect(app.audio.play).not.toHaveBeenCalled();
+  });
+
+  test('play() during Destroyed, in dev builds, throws a lifecycle error', () => {
+    const voice = makeVoice();
+    const app = createAppStub(voice);
+    const audio = new SceneAudio(app, () => SceneState.Destroyed);
+
+    expect(() => audio.play(fakePlayable)).toThrow(/destroy/i);
+  });
+});
