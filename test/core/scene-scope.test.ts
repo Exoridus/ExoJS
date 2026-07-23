@@ -340,7 +340,7 @@ describe('SceneScope', () => {
       expect(audioSuspendSpy).toHaveBeenCalledTimes(1);
     });
 
-    test('suspend() from Paused records Paused as the pre-suspend state', async () => {
+    test('suspend() while paused preserves the paused flag across suspend/restore', async () => {
       const app = createAppStub();
       const scene = new Scene();
       const scope = await activate(app, scene);
@@ -348,12 +348,14 @@ describe('SceneScope', () => {
       scope.pause();
       expect(scope.suspend()).toBe(true);
       expect(scope.state).toBe(SceneState.Suspended);
+      expect(scope.paused).toBe(true);
 
       expect(scope.restore()).toBe(true);
-      expect(scope.state).toBe(SceneState.Paused);
+      expect(scope.state).toBe(SceneState.Active);
+      expect(scope.paused).toBe(true);
     });
 
-    test('suspend() is a no-op outside Active/Paused', async () => {
+    test('suspend() is a no-op outside Active', async () => {
       const app = createAppStub();
       const scene = new Scene();
       const scope = new SceneScope(app, scene); // still Preparing
@@ -371,16 +373,16 @@ describe('SceneScope', () => {
 
       const inputsResumeSpy = vi.spyOn(scope.inputs, 'resume');
       const interactionResumeSpy = vi.spyOn(scope.interaction, 'resume');
-      const tweensResumeSpy = vi.spyOn(scope.tweens, 'resume');
-      const audioResumeSpy = vi.spyOn(scope.audio, 'resume');
+      const tweensRestoreSpy = vi.spyOn(scope.tweens, 'restore');
+      const audioRestoreSpy = vi.spyOn(scope.audio, 'restore');
 
       expect(scope.restore()).toBe(true);
 
       expect(scope.state).toBe(SceneState.Active);
       expect(inputsResumeSpy).toHaveBeenCalledTimes(1);
       expect(interactionResumeSpy).toHaveBeenCalledTimes(1);
-      expect(tweensResumeSpy).toHaveBeenCalledTimes(1);
-      expect(audioResumeSpy).toHaveBeenCalledTimes(1);
+      expect(tweensRestoreSpy).toHaveBeenCalledTimes(1);
+      expect(audioRestoreSpy).toHaveBeenCalledTimes(1);
     });
 
     test('restore() is a no-op outside Suspended', async () => {
@@ -452,6 +454,109 @@ describe('SceneScope', () => {
       (app.interaction.attachRoot as MockInstance).mockClear();
       scope.restore();
       expect(app.interaction.attachRoot).toHaveBeenCalledWith(scope.scene.root);
+    });
+  });
+
+  describe('pause()/resume()', () => {
+    const activate = async (app: Application, scene: Scene): Promise<SceneScope<void>> => {
+      const scope = new SceneScope(app, scene);
+
+      await scope.prepare(undefined);
+      scope.activate();
+
+      return scope;
+    };
+
+    test('pause() sets paused without changing state, and dispatches scene.onPause', async () => {
+      const app = createAppStub();
+      const scene = new Scene();
+      const scope = await activate(app, scene);
+      const onPause = vi.fn();
+
+      scene.onPause.add(onPause);
+
+      expect(scope.pause()).toBe(true);
+
+      expect(scope.state).toBe(SceneState.Active);
+      expect(scope.paused).toBe(true);
+      expect(onPause).toHaveBeenCalledTimes(1);
+    });
+
+    test('pause() calls tweens.pause() and audio.pause()', async () => {
+      const app = createAppStub();
+      const scene = new Scene();
+      const scope = await activate(app, scene);
+
+      const tweensPauseSpy = vi.spyOn(scope.tweens, 'pause');
+      const audioPauseSpy = vi.spyOn(scope.audio, 'pause');
+
+      scope.pause();
+
+      expect(tweensPauseSpy).toHaveBeenCalledTimes(1);
+      expect(audioPauseSpy).toHaveBeenCalledTimes(1);
+    });
+
+    test('resume() calls tweens.resume() and audio.resume()', async () => {
+      const app = createAppStub();
+      const scene = new Scene();
+      const scope = await activate(app, scene);
+
+      scope.pause();
+
+      const tweensResumeSpy = vi.spyOn(scope.tweens, 'resume');
+      const audioResumeSpy = vi.spyOn(scope.audio, 'resume');
+
+      scope.resume();
+
+      expect(tweensResumeSpy).toHaveBeenCalledTimes(1);
+      expect(audioResumeSpy).toHaveBeenCalledTimes(1);
+    });
+
+    test('pause() is a no-op outside Active, and a no-op when already paused', async () => {
+      const app = createAppStub();
+      const preparingScope = new SceneScope(app, new Scene()); // still Preparing
+
+      expect(preparingScope.pause()).toBe(false);
+
+      const scene = new Scene();
+      const scope = await activate(app, scene);
+
+      scope.pause();
+
+      const onPause = vi.fn();
+      scene.onPause.add(onPause);
+
+      expect(scope.pause()).toBe(false);
+      expect(onPause).not.toHaveBeenCalled();
+    });
+
+    test('resume() clears paused without changing state, and dispatches scene.onResume', async () => {
+      const app = createAppStub();
+      const scene = new Scene();
+      const scope = await activate(app, scene);
+
+      scope.pause();
+
+      const onResume = vi.fn();
+      scene.onResume.add(onResume);
+
+      expect(scope.resume()).toBe(true);
+
+      expect(scope.state).toBe(SceneState.Active);
+      expect(scope.paused).toBe(false);
+      expect(onResume).toHaveBeenCalledTimes(1);
+    });
+
+    test('resume() is a no-op when not currently paused', async () => {
+      const app = createAppStub();
+      const scene = new Scene();
+      const scope = await activate(app, scene);
+      const onResume = vi.fn();
+
+      scene.onResume.add(onResume);
+
+      expect(scope.resume()).toBe(false);
+      expect(onResume).not.toHaveBeenCalled();
     });
   });
 });
