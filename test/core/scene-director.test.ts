@@ -1,4 +1,6 @@
 import { TweenManager } from '#animation/TweenManager';
+import type { Tween } from '#animation/Tween';
+import { TweenState } from '#animation/types';
 import type { Application } from '#core/Application';
 import { logger } from '#core/logging';
 import { Scene } from '#core/Scene';
@@ -667,9 +669,10 @@ describe('SceneDirector — retention', () => {
 
   test('a when:"active" tween stays frozen across pause -> retain -> restore, and resumes when the scene resumes', async () => {
     const app = createApplicationStub();
+    let tween!: Tween;
     const FirstScene = makeSceneClass({
       init() {
-        this.tweens.create({}, { when: 'active' }).to({}, 1).start();
+        tween = this.tweens.create({}, { when: 'active' }).to({}, 1).start();
       },
     });
     const SecondScene = makeSceneClass();
@@ -678,15 +681,19 @@ describe('SceneDirector — retention', () => {
     await director.setScene(FirstScene);
     director.pause();
 
+    expect(tween.state).toBe(TweenState.Paused);
+
     await director.setScene(SecondScene, { retainCurrent: true });
     await director.restoreScene(FirstScene);
 
     expect(director.state).toBe(SceneState.Active);
     expect(director.paused).toBe(true);
+    expect(tween.state).toBe(TweenState.Paused);
 
     director.resume();
 
     expect(director.paused).toBe(false);
+    expect(tween.state).toBe(TweenState.Active);
   });
 
   test('releaseScene() permanently destroys the retained scene and returns true', async () => {
