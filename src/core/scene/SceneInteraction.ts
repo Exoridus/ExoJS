@@ -1,4 +1,5 @@
 import type { Application } from '#core/Application';
+import { SceneState } from '#core/SceneState';
 import type { Destroyable } from '#core/types';
 import type { RenderNode } from '#rendering/RenderNode';
 
@@ -31,11 +32,15 @@ export interface InteractionCapture extends Destroyable {
 
 interface TrackedObservation extends InteractionObservation {
   readonly root: RenderNode;
+  /** Whether this observation currently reached `app.interaction` — false while created/left dormant. */
+  attached: boolean;
   released: boolean;
 }
 
 interface TrackedCapture extends InteractionCapture {
   readonly root: RenderNode;
+  /** Whether this capture is currently pushed onto `app.interaction`'s stack — false while created/left dormant. */
+  attached: boolean;
   released: boolean;
 }
 
@@ -53,25 +58,45 @@ interface TrackedCapture extends InteractionCapture {
  * detach/release on teardown. Pause-aware dispatch gating (state
  * Active/Paused, transition gate) is enforced once, centrally, in
  * {@link InteractionManager.update} — not duplicated here.
+ *
+ * While the owning scope is not `Active` (`Preparing`, `Ready`, or
+ * `Suspended`), `observe()`/`capture()` track their registration locally but
+ * never reach `app.interaction` — including a call made while already
+ * `Suspended` (definition §4.2). {@link SceneInteraction.resume} attaches
+ * everything not yet attached, in tracking order, on the next transition
+ * into `Active` (fresh activation or retention restore alike).
  */
 export class SceneInteraction implements Destroyable {
   private readonly _observations = new Set<TrackedObservation>();
   private readonly _captures: TrackedCapture[] = [];
-  private _suspended = false;
 
-  public constructor(private readonly _app: Application) {}
+  public constructor(
+    private readonly _app: Application,
+    private readonly _getState: () => SceneState,
+  ) {}
+
+  private _isLive(): boolean {
+    return this._getState() === SceneState.Active;
+  }
 
   /**
    * Attach `root` to interaction dispatch (pointer/focus routing), so its
-   * interactive descendants start receiving events. Returns a handle to
-   * detach it early; otherwise it is detached automatically when the scene
-   * ends permanently.
+   * interactive descendants start receiving events — immediately if the
+   * owning scope is currently `Active`, otherwise buffered until it next
+   * becomes `Active` (see the class doc). Returns a handle to detach it
+   * early; otherwise it is detached automatically when the scene ends
+   * permanently.
    */
   public observe(root: RenderNode): InteractionObservation {
-    this._app.interaction.attachRoot(root);
+    const live = this._isLive();
+
+    if (live) {
+      this._app.interaction.attachRoot(root);
+    }
 
     const observation: TrackedObservation = {
       root,
+      attached: live,
       released: false,
       release: () => this._release(observation),
       destroy: () => this._release(observation),
@@ -88,13 +113,19 @@ export class SceneInteraction implements Destroyable {
    * that must swallow clicks outside itself. Nested captures use
    * last-created priority; releasing any capture (not only the most recent)
    * restores the stack to its state as if that capture had never been
-   * created, preserving the relative order of the rest.
+   * created, preserving the relative order of the rest. Buffered until the
+   * owning scope is `Active`, same as {@link SceneInteraction.observe}.
    */
   public capture(root: RenderNode): InteractionCapture {
-    this._app.interaction.pushInputCapture(root);
+    const live = this._isLive();
+
+    if (live) {
+      this._app.interaction.pushInputCapture(root);
+    }
 
     const capture: TrackedCapture = {
       root,
+      attached: live,
       released: false,
       release: () => this._releaseCapture(capture),
       destroy: () => this._releaseCapture(capture),
@@ -109,48 +140,54 @@ export class SceneInteraction implements Destroyable {
   }
 
   /**
-   * Detach every tracked observation and deactivate every capture (pop it
-   * from the manager's stack) without discarding local tracking, so
-   * {@link SceneInteraction.resume} can restore exactly the same set in the
-   * same order — a retained scene must not keep receiving pointer dispatch
-   * alongside whichever scope is now active (definition §8.2). Idempotent.
+   * Detach every currently-attached observation and pop every
+   * currently-attached capture off the manager's stack, without discarding
+   * local tracking — so {@link SceneInteraction.resume} can reattach exactly
+   * the same set in the same order. A retained scene must not keep
+   * receiving pointer dispatch alongside whichever scope is now active
+   * (definition §4.2). A no-op for anything created while already dormant
+   * (never reached `app.interaction` in the first place). Idempotent.
    * @internal
    */
   public suspend(): void {
-    if (this._suspended) {
-      return;
-    }
-
-    this._suspended = true;
-
     for (const observation of this._observations) {
-      this._app.interaction.detachRoot(observation.root);
+      if (observation.attached) {
+        this._app.interaction.detachRoot(observation.root);
+        observation.attached = false;
+      }
     }
 
     for (let i = this._captures.length - 1; i >= 0; i--) {
-      this._app.interaction.popInputCapture();
+      const capture = this._captures[i]!;
+
+      if (capture.attached) {
+        this._app.interaction.popInputCapture();
+        capture.attached = false;
+      }
     }
   }
 
   /**
-   * Reattach every tracked observation and re-push every tracked capture in
-   * its original order, undoing {@link SceneInteraction.suspend}. Idempotent
-   * — a no-op if not currently suspended.
+   * Attach every observation and push every capture not currently attached
+   * to `app.interaction`, in tracking order — covers both a fresh
+   * activation flushing whatever was registered while dormant, and a
+   * retention restore reinstating whatever {@link SceneInteraction.suspend}
+   * detached. Idempotent — already-attached entries are left alone.
    * @internal
    */
   public resume(): void {
-    if (!this._suspended) {
-      return;
-    }
-
-    this._suspended = false;
-
     for (const observation of this._observations) {
-      this._app.interaction.attachRoot(observation.root);
+      if (!observation.attached) {
+        this._app.interaction.attachRoot(observation.root);
+        observation.attached = true;
+      }
     }
 
     for (const capture of this._captures) {
-      this._app.interaction.pushInputCapture(capture.root);
+      if (!capture.attached) {
+        this._app.interaction.pushInputCapture(capture.root);
+        capture.attached = true;
+      }
     }
   }
 
@@ -173,7 +210,10 @@ export class SceneInteraction implements Destroyable {
 
     observation.released = true;
     this._observations.delete(observation);
-    this._app.interaction.detachRoot(observation.root);
+
+    if (observation.attached) {
+      this._app.interaction.detachRoot(observation.root);
+    }
   }
 
   private _releaseCapture(capture: TrackedCapture): void {
@@ -183,27 +223,28 @@ export class SceneInteraction implements Destroyable {
 
     const index = this._captures.indexOf(capture);
 
-    if (this._suspended) {
-      // suspend() already popped every capture off the live manager stack,
-      // and resume() will re-push the full, corrected `_captures` array
-      // from scratch. Touching the manager here (pop/push) would reinstate
-      // this capture's slot on the live stack while the scope is still
-      // dormant — exactly the state leak retention suspension exists to
-      // prevent. Local bookkeeping only; the manager catches up on resume().
+    if (!capture.attached) {
+      // Never reached app.interaction (created while dormant, or currently
+      // detached by suspend()) — local bookkeeping only; the manager's
+      // stack was never touched for this capture in the first place.
       capture.released = true;
       this._captures.splice(index, 1);
 
       return;
     }
 
-    // Pop every still-active capture from the top down through (and
-    // including) this one, then re-push everything that was above it, in
-    // original order — restores the manager's stack as if `capture` had
-    // never existed, without needing a manager-level "remove at index" API.
+    // Every capture from `index` onward is attached together in practice —
+    // captures only ever attach while genuinely Active, and suspend()
+    // detaches the entire array together, so a mix of attached/unattached
+    // entries above an attached one cannot arise. Pop every capture from
+    // the top down through (and including) this one, then re-push
+    // everything that was above it, in original order — restores the
+    // manager's stack as if `capture` had never existed.
     const above = this._captures.slice(index + 1);
 
     for (let i = this._captures.length - 1; i >= index; i--) {
       this._app.interaction.popInputCapture();
+      this._captures[i]!.attached = false;
     }
 
     capture.released = true;
@@ -211,6 +252,7 @@ export class SceneInteraction implements Destroyable {
 
     for (const entry of above) {
       this._app.interaction.pushInputCapture(entry.root);
+      entry.attached = true;
     }
   }
 }
