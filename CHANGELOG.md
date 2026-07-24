@@ -8,10 +8,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 The scene-model release. `Application`'s frame loop, scene lifecycle, and
 navigation are rebuilt around a normative multiphase `System` contract, a
-typed scene registry, pause with a per-binding availability policy, and
-retention (suspend a scene instead of destroying it, restore it later without
-re-running `load()`/`init()`). This is a pre-1.0 release and includes
-intentional breaking changes; see **Changed** and **Removed**.
+typed scene registry with scene-key navigation, pause with a per-binding
+availability policy, retention (suspend a scene instead of destroying it,
+restore it later without re-running `load()`/`init()`), transparent preload,
+and a class-based, composable `SceneTransition` system. This is a pre-1.0
+release and includes intentional breaking changes; see **Changed** and
+**Removed**.
 
 ### Added
 
@@ -19,18 +21,26 @@ intentional breaking changes; see **Changed** and **Removed**.
   `fixedUpdate`/`update`/`draw` (previously `update` + `destroy` were
   required); `app.systems`/`scene.systems` dispatch each phase in ascending
   `order`, ties broken by insertion order. Structural add/remove during a
-  frame is buffered to the next frame boundary (#390).
-- **Typed scene registry and navigation.** `new Application({ scenes: { game:
-GameScene } })` registers scene constructors; `app.start(GameScene, data?)`
-  and `app.scenes.setScene(GameScene, data?, options?)` take the constructor
-  directly — data and options are inferred from the scene's own generic,
-  rejecting a mismatched or missing payload at compile time. Unregistered or
-  duplicate registrations raise named errors (`UnregisteredSceneError`,
-  `DuplicateSceneRegistrationError`, `InvalidSceneRegistrationError`) (#392,
-  #396).
-- **`app.scenes.pause()`/`resume()`** freeze/unfreeze the active scene without
-  changing its `SceneState` (which stays `Active`) — instead they toggle an
-  orthogonal `paused` flag, read via `app.scenes.paused`/`scene.paused`.
+  frame is buffered to the next frame boundary.
+- **Typed, bidirectional scene registry and scene-key navigation.** `new
+Application({ scenes: { game: GameScene } })` registers scene constructors
+  under a string key; `app.start('game', data?)`/`app.scenes.change('game',
+{ data? })` navigate by key (autocomplete, no cross-scene runtime imports)
+  alongside constructor-based navigation, both first-class. A scene may
+  register a target-bound default `transition` (`{ scene: GameScene,
+transition: sharedFade }` or a per-phase `{ enter, exit }` pair). Data and
+  options are inferred from the scene's own generic, rejecting a mismatched
+  or missing payload at compile time. Unregistered or duplicate registrations
+  raise named errors (`UnregisteredSceneError`, `DuplicateSceneRegistrationError`,
+  `InvalidSceneRegistrationError`).
+- **`Scene<Data, AppLike>` and `ApplicationOf<T>`.** A project-local `Scene`
+  base class can expose a fully-typed `this.app` — including that
+  application's own scene registry, so `this.app.scenes.change('key', ...)`
+  is typed inside scene code — independent of the registry generic on
+  `Scene` itself.
+- **`app.scenes.pause()`/`resume()`** freeze/unfreeze the active scene
+  without changing its `SceneState` (which stays `Active`) — instead they
+  toggle an orthogonal `paused` flag, read via `app.scenes.paused`/`scene.paused`.
   `update()`/systems stop while paused; `draw()`, interaction, and scene input
   keep running. `onPause`/`onResume` fire on both `SceneDirector` and the
   `Scene` itself; `onStateChange` does not fire for pause/resume (the state
@@ -38,7 +48,7 @@ GameScene } })` registers scene constructors; `app.start(GameScene, data?)`
 'active'|'paused'|'always'` (default `'active'`), with edge rules so a
   press/release pair must both occur in an allowed state to trigger.
   `this.interaction.capture(root)` confines pointer hit-testing to a subtree
-  for modal UI (#392, #397).
+  for modal UI.
 - **`when: 'active' | 'paused' | 'always'` on `scene.tweens`/`scene.audio`.**
   `scene.tweens.create()`/`.add()`/`.createSequencer()` and `scene.audio.play()`/
   `.add()` accept a `when` option (default `'always'`, unchanged behavior)
@@ -48,22 +58,57 @@ GameScene } })` registers scene constructors; `app.start(GameScene, data?)`
   new — sequencers are now tracked for scene-lifetime teardown and retention
   suspend/restore, closing a previous gap where a sequencer obtained via
   `app.tweens.createSequencer()` was never tracked at all.
-- **Scene retention.** `setScene(X, { retainCurrent: true })` suspends the
-  outgoing scene instead of destroying it; `app.scenes.restoreScene(X)`
+- **Scene retention.** `change(X, { suspendCurrent: true })` suspends the
+  outgoing scene instead of destroying it; `app.scenes.restore(X)`
   reactivates the same instance without re-running `load()`/`init()`,
   returning to `Active` with whichever `paused` flag it had before
-  suspension; `releaseScene(X)` permanently ends a retained scene. Concurrent
-  navigation calls are now rejected with `ConcurrentSceneNavigationError`
-  instead of racing silently (#398).
+  suspension. Concurrent navigation calls are rejected with
+  `ConcurrentSceneNavigationError` instead of racing silently.
+- **Preload.** `app.scenes.preload(Target, data?)` prepares a scene ahead of
+  time — `load()`/`init()` run and the scope reaches a genuine, cold `Ready`
+  state (no update/draw/input dispatch, no application-wide side effects)
+  without ever becoming visible. A later `change(Target, { data })` with
+  matching data consumes the preload transparently, skipping the wait
+  entirely; mismatched or absent data falls back to a fresh `prepare()`.
+- **`unload(Target, { instance? })` — unified scene discard.** Replaces
+  `releaseScene()`. Checks every candidate (active, retained, preloaded) for
+  `Target`; resolves directly if exactly one exists, otherwise requires
+  `instance: 'active' | 'retained' | 'preloaded' | 'all'` to disambiguate —
+  rejecting with `AmbiguousSceneInstanceError` rather than silently picking
+  one via a fixed priority order.
+- **`SceneTransition` system.** A class-based, composable transition
+  contract replaces the old hardcoded fade-only machinery: an immutable
+  `SceneTransition` definition (reusable across navigations) produces a
+  fresh `SceneTransitionSession` per navigation; `getRequirements()`
+  declares the render resources a transition actually needs
+  (`outgoingFrame`/`currentFrame`); an exact commit/rollback boundary and
+  render-surface boundary make custom transitions safe to author. When no
+  transition is configured, navigation runs a direct fast path with none of
+  this machinery involved — there is no `InstantSceneTransition` type.
+- **`PhasedSceneTransition`.** A simplified single-class `enter()`/`exit()`
+  authoring layer over the full `SceneTransition` contract for the common
+  (non-crossfade) case — a concrete subclass declares `getPhaseRequirements()`
+  plus `enter()`/`exit()` render callbacks; session timing, easing, and
+  the commit handoff between phases are handled once, internally.
+- **Core built-in transitions.** `FadeSceneTransition`, `CrossFadeSceneTransition`,
+  and `SlideSceneTransition` — a class-based, autocomplete-discoverable
+  replacement for the old `{ type: 'fade' }` config-object shape (the only
+  accepted form for `transition` is now a `SceneTransition`/
+  `PhasedSceneTransition` instance).
+- **`Scene.onActivate`/`Scene.onSuspend`.** Fire on every transition into
+  `Active` (fresh activation, a consumed preload, or a restore) and on
+  `Active → Suspended` (retention) respectively — the Scene-level
+  counterparts `SceneScope.suspend()`/`.activate()` previously had no
+  signal for.
 - **Extension app-system bindings.** An `Extension.systems` binding
   (`ApplicationSystemBinding`) produces a `System` materialised once per
   `Application`, after every core manager exists, registered on
   `app.systems` — extensions can no longer only add renderers/assets/
-  serializers (#399).
+  serializers.
 - **`Scene.interaction`/`Scene.audio` facades** (`SceneInteraction`,
   `SceneAudio`) join the existing `Scene.inputs`/`Scene.tweens` — scene-scoped
   pointer capture/observation and scene-scoped playback, both auto-cleaned up
-  on scene teardown and suspended/resumed across retention (#391).
+  on scene teardown and suspended/resumed across retention.
 - **`PhysicsWorld.fixedUpdate()`** lets `@codexo/exojs-physics` register
   directly as a system (`app.systems.add(world, { order: SystemOrder.Physics
 })`) instead of being stepped manually from `Scene.update()`.
@@ -75,11 +120,28 @@ GameScene } })` registers scene constructors; `app.start(GameScene, data?)`
 
 - **BREAKING — `SceneManager` renamed `SceneDirector`, `app.scene` renamed
   `app.scenes`.**
-- **BREAKING — scene construction and navigation are constructor-based, not
-  instance-based.** `app.start(new GameScene())` → `new Application({ scenes:
-{ game: GameScene } })` + `app.start(GameScene, data?)`;
-  `app.scene.setScene(instance, opts)` → `app.scenes.setScene(Ctor, data?,
-opts?)`; `setScene(null)` is gone (start another scene, or `app.stop()`).
+- **BREAKING — scene construction and navigation are constructor- or
+  key-based, not instance-based.** `app.start(new GameScene())` → `new
+Application({ scenes: { game: GameScene } })` + `app.start(GameScene,
+data?)` or `app.start('game', data?)`; `app.scene.setScene(instance, opts)`
+  → `app.scenes.change(Ctor | 'key', { data?, transition?, suspendCurrent? })`;
+  `setScene(null)` is gone (start another scene, or `app.stop()`).
+- **BREAKING — `setScene()`/`restoreScene()` renamed `change()`/`restore()`,
+  and their `(data?, options?)` variadic argument pair collapses into one
+  options object.** `setScene(X, data, { transition })` →
+  `change(X, { data, transition })`. `retainCurrent` is renamed
+  `suspendCurrent` (matches the state it produces, `SceneState.Suspended`).
+- **BREAKING — `releaseScene()` renamed `unload()`, with explicit
+  disambiguation instead of a silent priority order.** `releaseScene(X)` →
+  `unload(X)`; a target with more than one coexisting activation (active +
+  retained + preloaded) now requires `{ instance: '...' }` rather than
+  resolving via an undocumented `retained → preloaded → active` priority.
+- **BREAKING — the `transition` option no longer accepts a config object.**
+  `{ transition: { type: 'fade', duration: 250 } }` →
+  `{ transition: new FadeSceneTransition({ duration: 250 }) }` — note
+  `duration` is now milliseconds, not seconds. `SceneTransition` is a class
+  (abstract base + `FadeSceneTransition`/`CrossFadeSceneTransition`/
+  `SlideSceneTransition`/`PhasedSceneTransition`), not a union type.
 - **BREAKING — `scene.paused` is no longer a writable field.** It is now a
   read-only getter (mirroring `SceneDirector.paused`) toggled only via
   `app.scenes.pause()`/`resume()`.
@@ -97,12 +159,21 @@ opts?)`; `setScene(null)` is gone (start another scene, or `app.stop()`).
   now safe for user systems.
 - **BREAKING — `scene.systems` is attach-gated.** Register scene systems from
   `init()` — using `scene.systems` before the scene is attached now throws.
+- **`Application.start()`'s startup sequencing** now starts the frame loop
+  before awaiting the initial navigation, rather than after — required so a
+  frame-driven `SceneTransitionSession` can progress on the very first
+  scene activation instead of deadlocking.
 - **`@codexo/exojs-physics`:** `PhysicsWorld` should be registered as a
   system rather than stepped manually; `step()` remains available for
   advanced manual driving.
 
 ### Removed
 
+- **BREAKING — `Scene.onLoad`/`Scene.onUnload` removed.** Redundant with
+  `SceneDirector.onStartScene`/`onStopScene` and the overridable
+  `load()`/`unload()` methods themselves; replaced in spirit by the new
+  `Scene.onActivate`/`onSuspend` for cross-cutting activation/retention
+  concerns.
 - **BREAKING — `super.destroy()` in a `Scene` subclass is no longer
   necessary.** The base `Scene.destroy()` is now empty — existing
   `super.destroy()` calls are harmless but can be deleted.
@@ -114,13 +185,20 @@ opts?)`; `setScene(null)` is gone (start another scene, or `app.stop()`).
   longer keeps receiving pointer dispatch alongside whichever scene is now
   active.
 - **`SceneAudio.play()`** now gates playback requested while the scope is
-  `Preparing`, queuing it until the scene activates, instead of starting
-  audio for a scene that might never finish activating.
+  `Preparing`/`Ready`/`Suspended`, queuing it until the scene next activates,
+  instead of starting audio for a scene that might never finish activating.
+- **A throwing lifecycle listener** (`Scene.onActivate`/`onSuspend`,
+  `Director.onStateChange`/`onChangeScene`/`onStartScene`/`onStopScene`) no
+  longer aborts the remaining listeners or corrupts the `Signal`'s internal
+  dispatch state — every listener runs, a throw is reported through
+  `Application.onError` per-listener instead of propagating.
 
 ### Docs
 
-- Migrated `examples/` and the `pause-menu`/`cinematics` recipe guides to the
-  v0.17 scene model; added a scene-less application example.
+- Migrated `examples/`, `@codexo/exojs-react`, the `create-exo-app`
+  game-starter template, and the `runtime`/`recipes`/`integrations` guides to
+  the `change()`/`restore()`/`unload()`/`preload()` navigation API and the
+  class-based `SceneTransition`/`PhasedSceneTransition` system.
 
 ## [0.15.2] - 2026-07-04
 
