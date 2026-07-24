@@ -79,7 +79,7 @@ describe('<Scenes> / <Scene> / useActiveScene', () => {
 
     // A real SceneTransition instance — the wrapper only forwards it to the
     // director's change(), so its concrete behavior is irrelevant here.
-    const transition = new FadeSceneTransition({ duration: 300 });
+    const transition = new FadeSceneTransition(undefined, { duration: 300 });
     view.rerender(<Tree app={app} active="game" transition={transition} />);
 
     await waitFor(() => expect(app.scenes.change).toHaveBeenCalled());
