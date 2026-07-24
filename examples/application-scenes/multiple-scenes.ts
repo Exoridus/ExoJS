@@ -14,11 +14,11 @@ class MenuScene extends Scene {
         this.label.setPosition(width / 2, height / 2);
 
         this.inputs.onTrigger(Keyboard.Space, () => {
-            void app.scenes.setScene(GameScene);
+            void app.scenes.change(GameScene);
         });
 
         this.onTap = () => {
-            void app.scenes.setScene(GameScene);
+            void app.scenes.change(GameScene);
         };
         app.input.onPointerTap.add(this.onTap);
     }
@@ -49,7 +49,7 @@ class GameScene extends Scene {
         this.label.setPosition(width / 2, height / 2);
 
         this.inputs.onTrigger(Keyboard.Escape, () => {
-            void app.scenes.setScene(MenuScene);
+            void app.scenes.change(MenuScene);
         });
     }
 

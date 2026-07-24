@@ -64,6 +64,9 @@ export type SceneRegistryShape<Registry> = {
   readonly [Key in keyof Registry]: SceneRegistration<AnySceneConstructor>;
 };
 
+/** Every string key registered in a `SceneRegistryShape` — the type of a valid `change()`/`restore()` key-based navigation target. */
+export type RegistryKeyOf<Registry> = Extract<keyof Registry, string>;
+
 /**
  * Extracts the {@link Scene} subclass constructor a {@link SceneRegistration}
  * resolves to — unwraps the descriptor form, passes a bare constructor
@@ -126,74 +129,63 @@ export interface FadeSceneTransition {
 /** Discriminated union of supported {@link SceneDirector} transitions. */
 export type SceneTransition = FadeSceneTransition;
 
-/** Options passed to {@link SceneDirector.setScene} / {@link Application.start}. */
-export interface SetSceneOptions {
-  transition?: SceneTransition;
+/**
+ * Options for {@link SceneDirector.change}. This is an intermediate shape —
+ * the spec's final shape (definition §6.3) also carries a `transition`
+ * field accepting a `SceneTransitionSelection` (a class-based
+ * `SceneTransition`/`PhasedSceneTransition`, or an `{ enter, exit }` pair).
+ * That lands in Slice 5, once the real transition-runtime types exist. A
+ * caller who still needs today's hardcoded fade machinery in the meantime
+ * uses the bridge documented on {@link SceneDirector.change} itself, not
+ * this type — `transition` is deliberately not part of this shape yet.
+ */
+export type ChangeSceneOptions<Data> = ([Data] extends [void] ? { data?: never } : { data: Readonly<Data> }) & {
   /**
    * Suspend the outgoing scene instead of ending it permanently, retaining
-   * it (keyed by its constructor) for a later {@link SceneDirector.restoreScene}
+   * it (keyed by its constructor) for a later {@link SceneDirector.restore}
    * call. The same scene instance and its state are preserved; `load()`/
-   * `init()` do not re-run on restore.
+   * `init()` do not re-run on restore. Replaces the old `retainCurrent`
+   * name — same meaning, renamed to match the public state it produces
+   * ({@link SceneState.Suspended}).
    */
-  retainCurrent?: boolean;
-}
+  suspendCurrent?: boolean;
+};
 
-/** Options passed to {@link SceneDirector.restoreScene}. */
+/**
+ * Tuple type for `change()`'s single options parameter: present-and-required
+ * whenever `ChangeSceneOptions<Data>` has a required `data` field (`Data`
+ * is not `void`), optional otherwise. There is no runtime data/options
+ * ambiguity to resolve anymore — `data` always lives inside this one
+ * object, never as a separate positional argument (spec §6.3; this
+ * supersedes the deleted two-argument `SetSceneArgs`).
+ */
+export type ChangeSceneArgs<Data> = [Data] extends [void] ? [options?: ChangeSceneOptions<Data>] : [options: ChangeSceneOptions<Data>];
+
+/**
+ * Options for {@link SceneDirector.restore}. No `data` field — a restored
+ * scope reuses whatever activation data it was originally prepared with;
+ * `load()`/`init()` never run again for it (definition §14.3).
+ */
 export interface RestoreSceneOptions {
-  transition?: SceneTransition;
-  /**
-   * Suspend the currently active scene (if any) instead of ending it
-   * permanently, retaining it for a later {@link SceneDirector.restoreScene}
-   * call — mirrors {@link SetSceneOptions.retainCurrent}.
-   */
-  retainCurrent?: boolean;
+  /** Suspend the currently active scene (if any) instead of ending it permanently — mirrors {@link ChangeSceneOptions.suspendCurrent}. */
+  suspendCurrent?: boolean;
 }
 
 /**
- * The reserved key set of {@link SetSceneOptions}. Used at runtime by
- * {@link resolveSetSceneArgs} to distinguish an options argument from a data
- * argument when only one tail argument is present (`Data` is erased at
- * runtime — see that function's doc for the full explanation).
+ * @internal Temporary bridge, removed by Slice 5 once `SceneTransition`
+ * becomes the real class-based union (spec §3.2) and a `transition` field
+ * is added to {@link ChangeSceneOptions} directly (spec §6.3). Until then,
+ * `SceneDirector.change()` still accepts today's hardcoded-fade-shaped
+ * `transition` option and routes it through the existing fade machinery
+ * unchanged — this type is that call boundary's actual (wider) parameter
+ * type. Deliberately not re-exported from the package root: a new caller
+ * should not discover `transition` as supported input via this slice's
+ * public types.
  */
-const setSceneOptionsKeys = new Set(['transition', 'retainCurrent']);
+export type ChangeSceneCallOptions<Data> = ChangeSceneOptions<Data> & { transition?: SceneTransition };
 
-/**
- * Tuple type for the variadic tail of `setScene`/`start` calls, after the
- * target constructor. When `Data` is `void` there is no data slot — only
- * `options`. Otherwise `data` is required and `options` is optional.
- *
- * **Runtime caveat:** `Data` has no runtime representation (erased). A
- * single tail argument is classified as *options* when it is a plain object
- * whose keys are a subset of `{ transition, retainCurrent }` (see
- * {@link resolveSetSceneArgs}) — otherwise it is classified as *data*. A
- * scene whose `Data` shape's only keys happen to be named `transition`
- * and/or `retainCurrent` would be misread as options; avoid that shape, or
- * nest such fields one level deeper.
- */
-export type SetSceneArgs<Data> = [Data] extends [void] ? [options?: SetSceneOptions] : [data: Readonly<Data>, options?: SetSceneOptions];
-
-const isPlainObject = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
-
-const looksLikeSetSceneOptions = (value: unknown): value is SetSceneOptions =>
-  isPlainObject(value) && Object.keys(value).every(key => setSceneOptionsKeys.has(key));
-
-/**
- * Resolve the erased-at-runtime `(data?, options?)` tail of a `setScene`/
- * `start` call into its two parts. See {@link SetSceneArgs} for the
- * disambiguation rule and its documented edge case.
- * @internal
- */
-export function resolveSetSceneArgs(args: readonly unknown[]): { data: unknown; options: SetSceneOptions } {
-  if (args.length >= 2) {
-    return { data: args[0], options: (args[1] as SetSceneOptions | undefined) ?? {} };
-  }
-
-  if (args.length === 1) {
-    return looksLikeSetSceneOptions(args[0]) ? { data: undefined, options: args[0] } : { data: args[0], options: {} };
-  }
-
-  return { data: undefined, options: {} };
-}
+/** @internal Bridge counterpart of {@link ChangeSceneCallOptions} for {@link SceneDirector.restore}. See its doc comment for the full rationale. */
+export type RestoreSceneCallOptions = RestoreSceneOptions & { transition?: SceneTransition };
 
 /**
  * Thrown (dev builds only) when `ApplicationOptions.scenes` registers the
@@ -247,7 +239,7 @@ export class UnregisteredSceneError extends Error {
 }
 
 /**
- * Thrown when `setScene`/`restoreScene` is called while another Scene
+ * Thrown when `change`/`restore` is called while another Scene
  * switch, restore, or fade transition is already in flight — navigation
  * never queues (definition §11.5).
  */
@@ -261,8 +253,8 @@ export class ConcurrentSceneNavigationError extends Error {
 }
 
 /**
- * Thrown when `setScene` targets a constructor that already has a retained
- * (suspended) Scene. Call {@link SceneDirector.restoreScene} or
+ * Thrown when `change` targets a constructor that already has a retained
+ * (suspended) Scene. Call {@link SceneDirector.restore} or
  * {@link SceneDirector.releaseScene} for it first.
  */
 export class RetainedSceneConflictError extends Error {
@@ -270,7 +262,7 @@ export class RetainedSceneConflictError extends Error {
 
   public constructor(constructorName: string) {
     super(
-      `Scene constructor "${constructorName}" already has a retained (suspended) instance. Call restoreScene(...) or releaseScene(...) for it before starting a fresh activation.`,
+      `Scene constructor "${constructorName}" already has a retained (suspended) instance. Call restore(...) or releaseScene(...) for it before starting a fresh activation.`,
     );
     this.name = 'RetainedSceneConflictError';
     this.constructorName = constructorName;
@@ -278,7 +270,7 @@ export class RetainedSceneConflictError extends Error {
 }
 
 /**
- * Thrown when `restoreScene` targets a constructor with no retained
+ * Thrown when `restore` targets a constructor with no retained
  * (suspended) Scene.
  */
 export class RetainedSceneNotFoundError extends Error {
@@ -293,10 +285,10 @@ export class RetainedSceneNotFoundError extends Error {
 
 /**
  * Bidirectional index built from `ApplicationOptions.scenes` by
- * {@link validateSceneRegistry}. `byConstructor` backs the existing
- * constructor-based navigation checks (`setScene`'s registration/diagnostics
- * lookups); `byKey` is reserved for key-based navigation — not consumed by
- * any navigation method yet.
+ * {@link validateSceneRegistry}. `byConstructor` backs the constructor-based
+ * navigation checks (`change`'s registration/diagnostics lookups); `byKey`
+ * backs key-based navigation (`change`/`restore` given a registered string
+ * key).
  * @internal
  */
 export interface SceneRegistryIndex {

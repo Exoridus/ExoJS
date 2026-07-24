@@ -470,7 +470,7 @@
         },
         {
           "name": "start",
-          "signature": "start(target: C, args: SetSceneArgs<InferSceneData<C>>): Promise<Application<Registry>>",
+          "signature": "start(target: C, args: ChangeSceneArgs<InferSceneData<C>>): Promise<Application<Registry>>",
           "signatureTokens": [
             {
               "text": "start",
@@ -505,7 +505,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "SetSceneArgs",
+              "text": "ChangeSceneArgs",
               "kind": "type"
             },
             {
@@ -577,7 +577,7 @@
             },
             {
               "name": "args",
-              "type": "SetSceneArgs<InferSceneData<C>>",
+              "type": "ChangeSceneArgs<InferSceneData<C>>",
               "optional": false
             }
           ],

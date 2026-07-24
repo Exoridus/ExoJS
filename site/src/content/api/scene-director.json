@@ -1,15 +1,15 @@
 {
   "title": "SceneDirector",
-  "description": "Single-active-scene controller owned by Application. Holds at most one active Scene (the current \"screen\"); SceneDirector.setScene switches to a new scene — ending the previous one permanently — with an optional fade transition. The `Registry` generic (inferred from `ApplicationOptions.scenes`, spec §6.1) types the scene registry passed at construction. This class stores it bidirectionally (`byConstructor`/`byKey`) for later use by key-based navigation — no method here consumes `byKey` yet. There is no scene stack: overlays, HUDs and pause menus belong on Scene.ui (the screen-fixed UI layer). Each activation is owned internally by a `SceneScope`, which attaches the scene's facilities, gates per-frame dispatch by SceneState, and runs teardown in the normative order; `SceneDirector` itself only tracks which scope is active and drives the transition machinery. Per-frame dispatch is split into four entry points, called by Application.update in normative order: SceneDirector.fixedUpdate (zero or more times), SceneDirector.update, SceneDirector.draw, then SceneDirector._drawTransition last, so the fade overlay always sits above both scene and app draw systems.",
+  "description": "Single-active-scene controller owned by Application. Holds at most one active Scene (the current \"screen\"); SceneDirector.change switches to a new scene — ending the previous one permanently — with an optional fade transition. The `Registry` generic (inferred from `ApplicationOptions.scenes`, spec §6.1) types the scene registry passed at construction. This class stores it bidirectionally (`byConstructor`/`byKey`) — `byConstructor` backs constructor-target registration/diagnostics checks, `byKey` backs key-based navigation (`change`/`restore` given a registered string key instead of a constructor). There is no scene stack: overlays, HUDs and pause menus belong on Scene.ui (the screen-fixed UI layer). Each activation is owned internally by a `SceneScope`, which attaches the scene's facilities, gates per-frame dispatch by SceneState, and runs teardown in the normative order; `SceneDirector` itself only tracks which scope is active and drives the transition machinery. Per-frame dispatch is split into four entry points, called by Application.update in normative order: SceneDirector.fixedUpdate (zero or more times), SceneDirector.update, SceneDirector.draw, then SceneDirector._drawTransition last, so the fade overlay always sits above both scene and app draw systems.",
   "symbol": "SceneDirector",
   "kind": "class",
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 20,
+  "memberCount": 22,
   "counts": {
     "constructors": 1,
-    "methods": 9,
+    "methods": 11,
     "properties": 3,
     "events": 7
   },
@@ -19,8 +19,8 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Single-active-scene controller owned by Application. Holds at most one active Scene (the current \"screen\"); SceneDirector.setScene switches to a new scene — ending the previous one permanently — with an optional fade transition.",
-        "The `Registry` generic (inferred from `ApplicationOptions.scenes`, spec §6.1) types the scene registry passed at construction. This class stores it bidirectionally (`byConstructor`/`byKey`) for later use by key-based navigation — no method here consumes `byKey` yet.",
+        "Single-active-scene controller owned by Application. Holds at most one active Scene (the current \"screen\"); SceneDirector.change switches to a new scene — ending the previous one permanently — with an optional fade transition.",
+        "The `Registry` generic (inferred from `ApplicationOptions.scenes`, spec §6.1) types the scene registry passed at construction. This class stores it bidirectionally (`byConstructor`/`byKey`) — `byConstructor` backs constructor-target registration/diagnostics checks, `byKey` backs key-based navigation (`change`/`restore` given a registered string key instead of a constructor).",
         "There is no scene stack: overlays, HUDs and pause menus belong on Scene.ui (the screen-fixed UI layer). Each activation is owned internally by a `SceneScope`, which attaches the scene's facilities, gates per-frame dispatch by SceneState, and runs teardown in the normative order; `SceneDirector` itself only tracks which scope is active and drives the transition machinery.",
         "Per-frame dispatch is split into four entry points, called by Application.update in normative order: SceneDirector.fixedUpdate (zero or more times), SceneDirector.update, SceneDirector.draw, then SceneDirector._drawTransition last, so the fade overlay always sits above both scene and app draw systems."
       ],
@@ -124,6 +124,250 @@
       "id": "methods",
       "title": "Methods",
       "members": [
+        {
+          "name": "change",
+          "signature": "change(target: K, args: ChangeSceneArgs<InferSceneData<Registry[K]>>): Promise<SceneDirector<Registry>>",
+          "signatureTokens": [
+            {
+              "text": "change",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "target",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "K",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "args",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ChangeSceneArgs",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "InferSceneData",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Registry",
+              "kind": "type"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "K",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneDirector",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Registry",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "target",
+              "type": "K",
+              "optional": false
+            },
+            {
+              "name": "args",
+              "type": "ChangeSceneArgs<InferSceneData<Registry[K]>>",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<SceneDirector<Registry>>",
+          "description": "Switch to a fresh instance of target (a registered key or a constructor), ending the previously active scene permanently — unless options.suspendCurrent is set, in which case the outgoing scene is suspended and retained (keyed by its constructor) for a later SceneDirector.restore call instead. Ordinary switching always creates a fresh instance (definition §11.4). The new scene completes load()+init() while the outgoing scene is still fully live and driving frames; the switch itself is then atomic (definition §3.5): once the incoming scope has been prepared, nothing past that point can fail or roll back — the outgoing scope is suspended or torn down and the incoming scope activated as one uninterruptible step, and the returned promise additionally waits for the outgoing scope's permanent teardown to fully settle (skipped when suspendCurrent is set, since there is nothing to tear down). A transition option shaped like today's hardcoded fade transition ({ type: 'fade', duration?, color? }) is still accepted and runs exactly as it does today — a temporary bridge to the pre-existing fade machinery, removed once a later slice lands the real transition runtime and adds a transition field to ChangeSceneOptions itself. It is intentionally not part of ChangeSceneOptions's documented public shape. Rejects with ConcurrentSceneNavigationError when another navigation is already in flight (dev and production builds — no queueing, definition §11.5); with UnregisteredSceneError (dev builds for a constructor target, every build for an unresolvable registry key) when target is not present in ApplicationOptions.scenes; with RetainedSceneConflictError when target already has a retained instance (restore or release it first)."
+        },
+        {
+          "name": "change",
+          "signature": "change(target: C, args: ChangeSceneArgs<InferSceneData<C>>): Promise<SceneDirector<Registry>>",
+          "signatureTokens": [
+            {
+              "text": "change",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "target",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "C",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "args",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ChangeSceneArgs",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "InferSceneData",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "C",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneDirector",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Registry",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "target",
+              "type": "C",
+              "optional": false
+            },
+            {
+              "name": "args",
+              "type": "ChangeSceneArgs<InferSceneData<C>>",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<SceneDirector<Registry>>",
+          "description": "Switch to a fresh instance of target (a registered key or a constructor), ending the previously active scene permanently — unless options.suspendCurrent is set, in which case the outgoing scene is suspended and retained (keyed by its constructor) for a later SceneDirector.restore call instead. Ordinary switching always creates a fresh instance (definition §11.4). The new scene completes load()+init() while the outgoing scene is still fully live and driving frames; the switch itself is then atomic (definition §3.5): once the incoming scope has been prepared, nothing past that point can fail or roll back — the outgoing scope is suspended or torn down and the incoming scope activated as one uninterruptible step, and the returned promise additionally waits for the outgoing scope's permanent teardown to fully settle (skipped when suspendCurrent is set, since there is nothing to tear down). A transition option shaped like today's hardcoded fade transition ({ type: 'fade', duration?, color? }) is still accepted and runs exactly as it does today — a temporary bridge to the pre-existing fade machinery, removed once a later slice lands the real transition runtime and adds a transition field to ChangeSceneOptions itself. It is intentionally not part of ChangeSceneOptions's documented public shape. Rejects with ConcurrentSceneNavigationError when another navigation is already in flight (dev and production builds — no queueing, definition §11.5); with UnregisteredSceneError (dev builds for a constructor target, every build for an unresolvable registry key) when target is not present in ApplicationOptions.scenes; with RetainedSceneConflictError when target already has a retained instance (restore or release it first)."
+        },
         {
           "name": "destroy",
           "signature": "destroy(): void",
@@ -336,11 +580,107 @@
           "description": "Permanently end a retained (suspended) scene without reactivating it. Returns true if a retained instance existed for target, false otherwise (no-op, not an error)."
         },
         {
-          "name": "restoreScene",
-          "signature": "restoreScene(target: C, options: RestoreSceneOptions): Promise<SceneDirector<Registry>>",
+          "name": "restore",
+          "signature": "restore(target: K, options?: RestoreSceneOptions): Promise<SceneDirector<Registry>>",
           "signatureTokens": [
             {
-              "text": "restoreScene",
+              "text": "restore",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "target",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "K",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RestoreSceneOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneDirector",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Registry",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "target",
+              "type": "K",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "RestoreSceneOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "Promise<SceneDirector<Registry>>",
+          "description": "Reactivate a scene previously retained via change(..., { suspendCurrent: true }) or restore(..., { suspendCurrent: true }) — the same instance, returned to whichever of Active/Paused it had before suspension. load()/ init() do not run again (definition §14.3). Shares the same atomic commit boundary as SceneDirector.change — see its doc comment for the exact guarantee and the temporary fade-transition bridge. Rejects with ConcurrentSceneNavigationError when another navigation is already in flight; with RetainedSceneNotFoundError when target has no retained instance."
+        },
+        {
+          "name": "restore",
+          "signature": "restore(target: C, options?: RestoreSceneOptions): Promise<SceneDirector<Registry>>",
+          "signatureTokens": [
+            {
+              "text": "restore",
               "kind": "name"
             },
             {
@@ -366,6 +706,10 @@
             {
               "text": "options",
               "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
             },
             {
               "text": ": ",
@@ -421,11 +765,11 @@
             {
               "name": "options",
               "type": "RestoreSceneOptions",
-              "optional": false
+              "optional": true
             }
           ],
           "returnType": "Promise<SceneDirector<Registry>>",
-          "description": "Reactivate a scene previously retained via setScene(..., { retainCurrent: true }) or restoreScene(..., { retainCurrent: true }) — the same instance, returned to Active with whichever paused flag it had before suspension. load()/init() do not run again (definition §14.3). Rejects with ConcurrentSceneNavigationError when another navigation is already in flight; with RetainedSceneNotFoundError when target has no retained instance."
+          "description": "Reactivate a scene previously retained via change(..., { suspendCurrent: true }) or restore(..., { suspendCurrent: true }) — the same instance, returned to whichever of Active/Paused it had before suspension. load()/ init() do not run again (definition §14.3). Shares the same atomic commit boundary as SceneDirector.change — see its doc comment for the exact guarantee and the temporary fade-transition bridge. Rejects with ConcurrentSceneNavigationError when another navigation is already in flight; with RetainedSceneNotFoundError when target has no retained instance."
         },
         {
           "name": "resume",
@@ -455,122 +799,6 @@
           "params": [],
           "returnType": "boolean",
           "description": "Resume a paused scene, undoing SceneDirector.pause. No-op (returns false) when no scene is active or it is not currently paused."
-        },
-        {
-          "name": "setScene",
-          "signature": "setScene(target: C, args: SetSceneArgs<InferSceneData<C>>): Promise<SceneDirector<Registry>>",
-          "signatureTokens": [
-            {
-              "text": "setScene",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "target",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "C",
-              "kind": "type"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "args",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "SetSceneArgs",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "InferSceneData",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "C",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Promise",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "SceneDirector",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Registry",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            }
-          ],
-          "params": [
-            {
-              "name": "target",
-              "type": "C",
-              "optional": false
-            },
-            {
-              "name": "args",
-              "type": "SetSceneArgs<InferSceneData<C>>",
-              "optional": false
-            }
-          ],
-          "returnType": "Promise<SceneDirector<Registry>>",
-          "description": "Switch to a fresh instance of target, ending the previously active scene permanently — unless options.retainCurrent is set, in which case the outgoing scene is suspended and retained (keyed by its constructor) for a later SceneDirector.restoreScene call instead. Ordinary switching always creates a fresh instance (definition §11.4) — this differs from the old instance-based API's same-instance no-op check, which no longer applies. An optional fade transition runs the swap at full opacity. The new scene completes load()+init() before the old one is torn down, so there is no blank frame between them, and the outgoing scene keeps running until the switch boundary is crossed. Rejects with ConcurrentSceneNavigationError when another navigation is already in flight (dev and production builds — no queueing, definition §11.5); with UnregisteredSceneError (dev builds) when target is not present in ApplicationOptions.scenes; with RetainedSceneConflictError when target already has a retained instance (restore or release it first)."
         },
         {
           "name": "update",
@@ -687,7 +915,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The active scene, or null when none is set. Read-only — see SceneDirector.setScene to change it."
+          "description": "The active scene, or null when none is set. Read-only — see SceneDirector.change to change it."
         },
         {
           "name": "paused",

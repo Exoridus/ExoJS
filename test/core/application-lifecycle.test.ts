@@ -14,7 +14,7 @@ import { Color } from '#core/Color';
 import { Scene } from '#core/Scene';
 
 // SceneDirector is fully mocked in this file's harness (see loadHarness) —
-// its setScene is a plain vi.fn() that never validates a registry, so any
+// its change() is a plain vi.fn() that never validates a registry, so any
 // Scene subclass constructor works as a start() target here.
 class DummyScene extends Scene {}
 
@@ -107,7 +107,7 @@ interface LifecycleHarness {
     onDeviceLost: { add: MockInstance };
     onDeviceRestored: { add: MockInstance };
   };
-  readonly sceneDirector: { update: MockInstance; setScene: MockInstance; _clearScene: MockInstance; destroy: MockInstance };
+  readonly sceneDirector: { update: MockInstance; change: MockInstance; _clearScene: MockInstance; destroy: MockInstance };
 }
 
 const loadHarness = async (options: LifecycleHarnessOptions = {}): Promise<LifecycleHarness> => {
@@ -152,7 +152,7 @@ const loadHarness = async (options: LifecycleHarnessOptions = {}): Promise<Lifec
   };
   const sceneDirector = {
     update: vi.fn(),
-    setScene: vi.fn().mockResolvedValue(undefined),
+    change: vi.fn().mockResolvedValue(undefined),
     _clearScene: vi.fn().mockResolvedValue(undefined),
     destroy: vi.fn(),
   };
@@ -1007,12 +1007,12 @@ describe('Application lifecycle / getters / sizing', () => {
       try {
         await app.start(DummyScene);
         expect(webglManager.initialize).toHaveBeenCalledTimes(1);
-        expect(sceneDirector.setScene).toHaveBeenCalledTimes(1);
+        expect(sceneDirector.change).toHaveBeenCalledTimes(1);
 
         await app.start(DummyScene);
 
         expect(webglManager.initialize).toHaveBeenCalledTimes(1);
-        expect(sceneDirector.setScene).toHaveBeenCalledTimes(1);
+        expect(sceneDirector.change).toHaveBeenCalledTimes(1);
       } finally {
         rafSpy.mockRestore();
       }

@@ -14,7 +14,7 @@ export function configureApplicationStatus(applicationStatus: { Stopped: number;
 
 interface MockSceneDirector {
   currentScene: unknown;
-  setScene: ReturnType<typeof vi.fn>;
+  change: ReturnType<typeof vi.fn>;
 }
 
 interface MockCanvasOptions {
@@ -104,12 +104,12 @@ export class MockApplication {
 
   public readonly scenes: MockSceneDirector = {
     currentScene: null,
-    // The real SceneDirector.setScene() takes a constructor and constructs a
+    // The real SceneDirector.change() takes a constructor and constructs a
     // fresh instance internally (definition §11.4) — mirror that here so
     // `scenes.currentScene` is an instance, matching what the real API
-    // exposes, while `setScene.mock.calls` still records the raw constructor
+    // exposes, while `change.mock.calls` still records the raw constructor
     // argument tests assert against.
-    setScene: vi.fn(async (SceneClass: new () => unknown): Promise<MockSceneDirector> => {
+    change: vi.fn(async (SceneClass: new () => unknown): Promise<MockSceneDirector> => {
       this.scenes.currentScene = new SceneClass();
       return this.scenes;
     }),

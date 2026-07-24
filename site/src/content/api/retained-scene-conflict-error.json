@@ -1,6 +1,6 @@
 {
   "title": "RetainedSceneConflictError",
-  "description": "Thrown when `setScene` targets a constructor that already has a retained (suspended) Scene. Call SceneDirector.restoreScene or SceneDirector.releaseScene for it first.",
+  "description": "Thrown when `change` targets a constructor that already has a retained (suspended) Scene. Call SceneDirector.restore or SceneDirector.releaseScene for it first.",
   "symbol": "RetainedSceneConflictError",
   "kind": "class",
   "subsystem": "core",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Thrown when `setScene` targets a constructor that already has a retained (suspended) Scene. Call SceneDirector.restoreScene or SceneDirector.releaseScene for it first."
+        "Thrown when `change` targets a constructor that already has a retained (suspended) Scene. Call SceneDirector.restore or SceneDirector.releaseScene for it first."
       ],
       "importLine": "import { RetainedSceneConflictError } from '@codexo/exojs'",
       "sourceLink": null

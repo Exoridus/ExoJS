@@ -57,7 +57,7 @@ describe('<Scenes> / <Scene> / useActiveScene', () => {
     // start() is invoked synchronously inside the activation effect.
     expect(app.start).toHaveBeenCalledTimes(1);
     expect(app.start.mock.calls[0]![0]).toBe(TitleScene);
-    expect(app.scenes.setScene).not.toHaveBeenCalled();
+    expect(app.scenes.change).not.toHaveBeenCalled();
 
     // The overlay + active-scene context appear once the start() promise resolves.
     const active = await findByTestId('active');
@@ -72,7 +72,7 @@ describe('<Scenes> / <Scene> / useActiveScene', () => {
     expect((await findByTestId('hud')).textContent).toBe('title-hud');
   });
 
-  it('switches scenes via app.scenes.setScene() (engine running) and forwards the transition', async () => {
+  it('switches scenes via app.scenes.change() (engine running) and forwards the transition', async () => {
     const app = makeApp();
     const view = render(<Tree app={app} active="title" />);
     await view.findByTestId('active');
@@ -80,8 +80,8 @@ describe('<Scenes> / <Scene> / useActiveScene', () => {
     const transition: SceneTransition = { type: 'fade', duration: 300 };
     view.rerender(<Tree app={app} active="game" transition={transition} />);
 
-    await waitFor(() => expect(app.scenes.setScene).toHaveBeenCalled());
-    const lastCall = app.scenes.setScene.mock.calls.at(-1)!;
+    await waitFor(() => expect(app.scenes.change).toHaveBeenCalled());
+    const lastCall = app.scenes.change.mock.calls.at(-1)!;
     expect(lastCall[0]).toBe(GameScene);
     expect(lastCall[1]).toEqual({ transition });
 
@@ -94,7 +94,7 @@ describe('<Scenes> / <Scene> / useActiveScene', () => {
     const view = render(<Tree app={app} active="title" />);
     await view.findByTestId('active');
 
-    const setSceneCallsBefore = app.scenes.setScene.mock.calls.length;
+    const changeCallsBefore = app.scenes.change.mock.calls.length;
 
     view.rerender(<Tree app={app} active="does-not-exist" />);
 
@@ -102,7 +102,7 @@ describe('<Scenes> / <Scene> / useActiveScene', () => {
     // last-active scene keeps running underneath; only the React-rendered
     // overlay is cleared.
     await waitFor(() => expect(view.queryByTestId('hud')).toBeNull());
-    expect(app.scenes.setScene.mock.calls.length).toBe(setSceneCallsBefore);
+    expect(app.scenes.change.mock.calls.length).toBe(changeCallsBefore);
   });
 
   it('routes a rejected app.start() to app.onError instead of an unhandled rejection', async () => {
@@ -119,7 +119,7 @@ describe('<Scenes> / <Scene> / useActiveScene', () => {
     expect(view.queryByTestId('hud')).toBeNull();
   });
 
-  it('routes a rejected app.scenes.setScene() (scene switch) to app.onError', async () => {
+  it('routes a rejected app.scenes.change() (scene switch) to app.onError', async () => {
     const app = makeApp();
     const view = render(<Tree app={app} active="title" />);
     await view.findByTestId('active');
@@ -127,21 +127,21 @@ describe('<Scenes> / <Scene> / useActiveScene', () => {
     const onError = vi.fn();
     app.onError.add(onError);
     const failure = new Error('switch failed');
-    app.scenes.setScene.mockRejectedValueOnce(failure);
+    app.scenes.change.mockRejectedValueOnce(failure);
 
     view.rerender(<Tree app={app} active="game" />);
 
     await waitFor(() => expect(onError).toHaveBeenCalledWith(failure));
   });
 
-  it('wraps a non-Error rejection from app.scenes.setScene() (scene switch) before dispatching it', async () => {
+  it('wraps a non-Error rejection from app.scenes.change() (scene switch) before dispatching it', async () => {
     const app = makeApp();
     const view = render(<Tree app={app} active="title" />);
     await view.findByTestId('active');
 
     const onError = vi.fn();
     app.onError.add(onError);
-    app.scenes.setScene.mockRejectedValueOnce('switch failed as a plain string');
+    app.scenes.change.mockRejectedValueOnce('switch failed as a plain string');
 
     view.rerender(<Tree app={app} active="game" />);
 

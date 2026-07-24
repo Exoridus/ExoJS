@@ -1,9 +1,9 @@
 import { Scene } from '#core/Scene';
 
 // SceneDirector is fully mocked in this file's harness (see
-// loadApplicationHarness) — its setScene is a plain vi.fn() that never
+// loadApplicationHarness) — its change() is a plain vi.fn() that never
 // validates a registry, so any Scene subclass constructor works as a
-// start()/setScene() target here.
+// start()/change() target here.
 class DummyScene extends Scene {}
 
 const setNavigatorGpu = (gpu: unknown): (() => void) => {
@@ -51,7 +51,7 @@ interface ApplicationTestHarness {
   readonly WebGpuBackendMock: MockInstance;
   readonly sceneDirector: {
     update: MockInstance;
-    setScene: MockInstance;
+    change: MockInstance;
     destroy: MockInstance;
   };
 }
@@ -101,7 +101,7 @@ const loadApplicationHarness = async (
   };
   const sceneDirector = {
     update: vi.fn(),
-    setScene: vi.fn().mockResolvedValue(undefined),
+    change: vi.fn().mockResolvedValue(undefined),
     destroy: vi.fn(),
   };
   const inputManager = {
@@ -338,7 +338,7 @@ describe('Application', () => {
       expect(webgpuManager.destroy).toHaveBeenCalledTimes(1);
       expect(BackendMock).toHaveBeenCalledTimes(1);
       expect(webglManager.initialize).toHaveBeenCalledTimes(1);
-      expect(sceneDirector.setScene).toHaveBeenCalledTimes(1);
+      expect(sceneDirector.change).toHaveBeenCalledTimes(1);
       expect(app.backend).toBe(webglManager);
     } finally {
       restoreGpu();

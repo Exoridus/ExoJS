@@ -18,6 +18,27 @@ const ActiveSceneContext = createContext<ExoScene | null>(null);
 ActiveSceneContext.displayName = 'ExoActiveScene';
 
 /**
+ * TODO(v0.17 Slice 5): remove once `transition` becomes part of `change()`'s
+ * public options with the real transition runtime. Until then, Core's
+ * `change()` deliberately keeps `transition` off its public overloads (it's
+ * routed through an `@internal`, non-re-exported bridge type) — so this
+ * package defines just the shape it needs locally and casts through it,
+ * rather than importing Core's private types (not published on any
+ * supported subpath; `@codexo/exojs-react` only depends on Core's root
+ * export surface).
+ */
+interface Slice5TransitionBridge {
+  change(target: new () => ExoScene, options: { readonly transition?: SceneTransition }): Promise<unknown>;
+}
+
+/** TODO(v0.17 Slice 5): remove alongside {@link Slice5TransitionBridge}. */
+async function changeWithTransitionBridge(scenes: unknown, target: new () => ExoScene, transition: SceneTransition | undefined): Promise<void> {
+  const bridge = scenes as Slice5TransitionBridge;
+
+  await bridge.change(target, transition !== undefined ? { transition } : {});
+}
+
+/**
  * Returns the currently-active scene instance from the nearest {@link Scenes},
  * or `null` while none is live. Useful for HUD/overlay components that need to
  * read scene state.
@@ -58,13 +79,13 @@ export interface ScenesProps {
 /**
  * Declarative scene switch over the one-active-scene model. Renders a set of
  * {@link Scene} declarations and activates the one whose `name` equals `active`
- * via `app.start()` (first activation) or `app.scenes.setScene()` (subsequent
+ * via `app.start()` (first activation) or `app.scenes.change()` (subsequent
  * switches, with the optional `transition`) — the declaration's `component`
  * constructor must be registered in `ApplicationOptions.scenes`. The active
  * scene's React children (HUD overlay) render alongside, and can read the
  * instance via {@link useActiveScene}.
  *
- * A failure in `app.start()`/`app.scenes.setScene()` (e.g. a scene's `onLoad`
+ * A failure in `app.start()`/`app.scenes.change()` (e.g. a scene's `onLoad`
  * rejects) is caught and routed to {@link Application.onError} rather than
  * left as an unhandled promise rejection — subscribe via `app.onError.add(...)`
  * or the {@link import('./ExoCanvas').ExoCanvas} `onError` prop to observe it.
@@ -121,14 +142,14 @@ export function Scenes({ active, transition, children }: ScenesProps): ReactElem
           // transitions only apply to subsequent switches.
           await app.start(SceneClass);
         } else {
-          await app.scenes.setScene(SceneClass, transition !== undefined ? { transition } : {});
+          await changeWithTransitionBridge(app.scenes, SceneClass, transition);
         }
         if (!cancelled) {
           setInstance(app.scenes.currentScene);
         }
       } catch (error) {
         // Route to Application.onError instead of leaving an unhandled
-        // rejection — app.start()/setScene() reject rather than dispatching
+        // rejection — app.start()/change() reject rather than dispatching
         // onError themselves.
         app.onError.dispatch(error instanceof Error ? error : new Error(String(error)));
       }

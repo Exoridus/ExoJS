@@ -100,7 +100,7 @@ describe('Application.start() — scene-less and constructor overloads', () => {
 
     const app = new Application({ backend: { type: 'webgl2' }, scenes: { test: DataStartScene } });
 
-    await app.start(DataStartScene, { level: 7 });
+    await app.start(DataStartScene, { data: { level: 7 } });
 
     expect(seenInLoad).toEqual({ level: 7 });
     expect(seenInInit).toEqual({ level: 7 });

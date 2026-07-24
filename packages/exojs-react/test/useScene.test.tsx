@@ -41,24 +41,24 @@ describe('useScene', () => {
 
     expect(app.start).toHaveBeenCalledTimes(1);
     expect(app.start.mock.calls[0]![0]).toBe(LevelScene);
-    expect(app.scenes.setScene).not.toHaveBeenCalled();
+    expect(app.scenes.change).not.toHaveBeenCalled();
 
     expect(await findByText('LevelScene')).toBeTruthy();
   });
 
-  it('switches scenes via setScene (not a restart) when deps change', async () => {
+  it('switches scenes via change() (not a restart) when deps change', async () => {
     const app = makeApp();
     const view = render(provide(app, <SceneProbe sceneClass={LevelScene} deps={[1]} />));
     await view.findByText('LevelScene');
 
     view.rerender(provide(app, <SceneProbe sceneClass={LevelScene} deps={[2]} />));
 
-    // The new scene is installed through setScene; the engine is NOT started again.
-    await waitFor(() => expect(app.scenes.setScene.mock.calls.some(call => call[0] === LevelScene)).toBe(true));
+    // The new scene is installed through change(); the engine is NOT started again.
+    await waitFor(() => expect(app.scenes.change.mock.calls.some(call => call[0] === LevelScene)).toBe(true));
     expect(app.start).toHaveBeenCalledTimes(1);
   });
 
-  it('does not call setScene when the component unmounts (no public API clears the director mid-lifetime)', async () => {
+  it('does not call change() when the component unmounts (no public API clears the director mid-lifetime)', async () => {
     const app = makeApp();
     const view = render(provide(app, <SceneProbe sceneClass={LevelScene} />));
     await view.findByText('LevelScene');
@@ -68,7 +68,7 @@ describe('useScene', () => {
     // definition §10.1: navigation always targets a registered constructor —
     // there is no public "clear to scene-less" call. Application.destroy()
     // (owned by ExoCanvas) is the actual teardown path for a still-active scene.
-    expect(app.scenes.setScene).not.toHaveBeenCalled();
+    expect(app.scenes.change).not.toHaveBeenCalled();
   });
 
   it('routes a rejected app.start() to app.onError instead of an unhandled rejection', async () => {
@@ -85,7 +85,7 @@ describe('useScene', () => {
     expect(await findByText('loading')).toBeTruthy();
   });
 
-  it('routes a rejected app.scenes.setScene() (dep-change switch) to app.onError', async () => {
+  it('routes a rejected app.scenes.change() (dep-change switch) to app.onError', async () => {
     const app = makeApp();
     const view = render(provide(app, <SceneProbe sceneClass={LevelScene} deps={[1]} />));
     await view.findByText('LevelScene');
@@ -93,7 +93,7 @@ describe('useScene', () => {
     const onError = vi.fn();
     app.onError.add(onError);
     const failure = new Error('switch failed');
-    app.scenes.setScene.mockRejectedValueOnce(failure);
+    app.scenes.change.mockRejectedValueOnce(failure);
 
     view.rerender(provide(app, <SceneProbe sceneClass={LevelScene} deps={[2]} />));
 
@@ -130,7 +130,7 @@ describe('useScene', () => {
     resolveStart(app);
 
     // Flush the microtask queue so the (now-late) `.then` in `apply()` runs;
-    // it must be a no-op rather than calling setScene on an unmounted tree.
+    // it must be a no-op rather than calling change() on an unmounted tree.
     await Promise.resolve().then(() => Promise.resolve());
     expect(view.queryByText('LevelScene')).toBeNull();
   });

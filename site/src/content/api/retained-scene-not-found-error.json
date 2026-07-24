@@ -1,6 +1,6 @@
 {
   "title": "RetainedSceneNotFoundError",
-  "description": "Thrown when `restoreScene` targets a constructor with no retained (suspended) Scene.",
+  "description": "Thrown when `restore` targets a constructor with no retained (suspended) Scene.",
   "symbol": "RetainedSceneNotFoundError",
   "kind": "class",
   "subsystem": "core",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Thrown when `restoreScene` targets a constructor with no retained (suspended) Scene."
+        "Thrown when `restore` targets a constructor with no retained (suspended) Scene."
       ],
       "importLine": "import { RetainedSceneNotFoundError } from '@codexo/exojs'",
       "sourceLink": null
