@@ -6,27 +6,29 @@ import type { Application } from './Application';
 import { Color } from './Color';
 import { logger } from './logging';
 import { Scene } from './Scene';
+import { SceneNavigationTransaction } from './scene/SceneNavigationTransaction';
 import { SceneScope } from './SceneScope';
 import type { SceneState } from './SceneState';
 import {
   type AnySceneConstructor,
+  type ChangeSceneArgs,
+  type ChangeSceneCallOptions,
   ConcurrentSceneNavigationError,
   type InferSceneData,
-  resolveSetSceneArgs,
-  type RestoreSceneOptions,
+  type RegistryKeyOf,
+  type RestoreSceneCallOptions,
   RetainedSceneConflictError,
   RetainedSceneNotFoundError,
   type SceneRegistryIndex,
   type SceneRegistryShape,
   type SceneTransition,
-  type SetSceneArgs,
   UnregisteredSceneError,
   validateSceneRegistry,
 } from './SceneTypes';
 import { Signal } from './Signal';
 import type { Time } from './Time';
 
-export type { FadeSceneTransition, RestoreSceneOptions, SceneTransition, SetSceneOptions } from './SceneTypes';
+export type { ChangeSceneOptions, FadeSceneTransition, RestoreSceneOptions, SceneTransition } from './SceneTypes';
 export { ConcurrentSceneNavigationError, RetainedSceneConflictError, RetainedSceneNotFoundError } from './SceneTypes';
 
 interface ActiveFadeTransition {
@@ -61,14 +63,16 @@ const defaultFadeTransitionDuration = 220;
 
 /**
  * Single-active-scene controller owned by {@link Application}. Holds at most one
- * active {@link Scene} (the current "screen"); {@link SceneDirector.setScene}
+ * active {@link Scene} (the current "screen"); {@link SceneDirector.change}
  * switches to a new scene — ending the previous one permanently — with an
  * optional fade transition.
  *
  * The `Registry` generic (inferred from `ApplicationOptions.scenes`, spec
  * §6.1) types the scene registry passed at construction. This class stores
- * it bidirectionally (`byConstructor`/`byKey`) for later use by key-based
- * navigation — no method here consumes `byKey` yet.
+ * it bidirectionally (`byConstructor`/`byKey`) — `byConstructor` backs
+ * constructor-target registration/diagnostics checks, `byKey` backs
+ * key-based navigation (`change`/`restore` given a registered string key
+ * instead of a constructor).
  *
  * There is no scene stack: overlays, HUDs and pause menus belong on
  * {@link Scene.ui} (the screen-fixed UI layer). Each activation is owned
@@ -118,12 +122,17 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    */
   public readonly onStateChange = new Signal<[SceneState, SceneState, Scene]>();
 
+  // Relies on class field initializers running top-to-bottom in declaration
+  // order — `_retained`/`onStopScene`/`onStateChange` above are already
+  // assigned by the time this initializer runs.
+  private readonly _navigation = new SceneNavigationTransaction(this._retained, this.onStopScene, this.onStateChange, error => this._reportLifecycleError(error));
+
   public constructor(app: Application, scenes?: Registry) {
     this._app = app;
     this._registry = validateSceneRegistry(scenes, Scene);
   }
 
-  /** The active scene, or `null` when none is set. Read-only — see {@link SceneDirector.setScene} to change it. */
+  /** The active scene, or `null` when none is set. Read-only — see {@link SceneDirector.change} to change it. */
   public get currentScene(): Scene | null {
     return (this._activeScope?.scene as Scene | undefined) ?? null;
   }
@@ -143,65 +152,85 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * by {@link SceneInputs} (`when` policy) and {@link InteractionManager}
    * to suppress scene input/interaction dispatch for the transition's
    * duration, regardless of `when: 'always'` (definition §13.6). A
-   * `setScene()` call with no `transition` option never opens this gate.
+   * `change()` call with no `transition` option never opens this gate.
    */
   public get _transitionGateOpen(): boolean {
     return this._inputGateDepth > 0;
   }
 
   /**
-   * Switch to a fresh instance of `target`, ending the previously active
-   * scene permanently — unless `options.retainCurrent` is set, in which
-   * case the outgoing scene is suspended and retained (keyed by its
-   * constructor) for a later {@link SceneDirector.restoreScene} call
-   * instead. Ordinary switching always creates a fresh instance (definition
-   * §11.4) — this differs from the old instance-based API's same-instance
-   * no-op check, which no longer applies. An optional fade transition runs
-   * the swap at full opacity. The new scene completes `load()`+`init()`
-   * before the old one is torn down, so there is no blank frame between
-   * them, and the outgoing scene keeps running until the switch boundary is
-   * crossed.
+   * Switch to a fresh instance of `target` (a registered key or a
+   * constructor), ending the previously active scene permanently — unless
+   * `options.suspendCurrent` is set, in which case the outgoing scene is
+   * suspended and retained (keyed by its constructor) for a later
+   * {@link SceneDirector.restore} call instead. Ordinary switching always
+   * creates a fresh instance (definition §11.4). The new scene completes
+   * `load()`+`init()` while the outgoing scene is still fully live and
+   * driving frames; the switch itself is then atomic (definition §3.5):
+   * once the incoming scope has been prepared, nothing past that point can
+   * fail or roll back — the outgoing scope is suspended or torn down and
+   * the incoming scope activated as one uninterruptible step, and the
+   * returned promise additionally waits for the outgoing scope's permanent
+   * teardown to fully settle (skipped when `suspendCurrent` is set, since
+   * there is nothing to tear down).
+   *
+   * A `transition` option shaped like today's hardcoded fade transition
+   * (`{ type: 'fade', duration?, color? }`) is still accepted and runs
+   * exactly as it does today — a temporary bridge to the pre-existing fade
+   * machinery, removed once a later slice lands the real transition
+   * runtime and adds a `transition` field to {@link ChangeSceneOptions}
+   * itself. It is intentionally not part of {@link ChangeSceneOptions}'s
+   * documented public shape.
    *
    * Rejects with {@link ConcurrentSceneNavigationError} when another
    * navigation is already in flight (dev and production builds — no
    * queueing, definition §11.5); with {@link UnregisteredSceneError} (dev
-   * builds) when `target` is not present in `ApplicationOptions.scenes`;
-   * with {@link RetainedSceneConflictError} when `target` already has a
-   * retained instance (restore or release it first).
+   * builds for a constructor target, every build for an unresolvable
+   * registry key) when `target` is not present in
+   * `ApplicationOptions.scenes`; with {@link RetainedSceneConflictError}
+   * when `target` already has a retained instance (restore or release it
+   * first).
    */
-  public async setScene<C extends AnySceneConstructor>(target: C, ...args: SetSceneArgs<InferSceneData<C>>): Promise<this> {
-    const { data, options } = resolveSetSceneArgs(args);
+  public async change<K extends RegistryKeyOf<Registry>>(target: K, ...args: ChangeSceneArgs<InferSceneData<Registry[K]>>): Promise<this>;
+  public async change<C extends AnySceneConstructor>(target: C, ...args: ChangeSceneArgs<InferSceneData<C>>): Promise<this>;
+  public async change(target: AnySceneConstructor | string, ...args: readonly unknown[]): Promise<this> {
+    const options = ((args[0] as ChangeSceneCallOptions<unknown> | undefined) ?? {}) as ChangeSceneCallOptions<unknown>;
 
     await this._runWithNavigation(async () => {
-      if (__DEV__ && !this._registry.byConstructor.has(target)) {
-        throw new UnregisteredSceneError(target.name, [...this._registry.byConstructor.values()]);
+      // Resolved inside the navigation lock, deliberately — this preserves
+      // the existing check order (concurrent-navigation guard first, then
+      // target validation) for both a bad key and an unregistered
+      // constructor alike, rather than only for the latter.
+      const resolvedTarget = this._resolveNavigationTarget(target);
+
+      if (__DEV__ && !this._registry.byConstructor.has(resolvedTarget)) {
+        throw new UnregisteredSceneError(resolvedTarget.name, [...this._registry.byConstructor.values()]);
       }
 
-      if (this._retained.has(target)) {
-        throw new RetainedSceneConflictError(target.name);
+      if (this._retained.has(resolvedTarget)) {
+        throw new RetainedSceneConflictError(resolvedTarget.name);
       }
 
-      const scene = new target();
-      const newScope = await this._prepareScene(scene, data);
+      const scene = new resolvedTarget();
+      const newScope = await this._prepareScene(scene, (options as { data?: unknown }).data);
+
+      // Atomic commit boundary (definition §3.5, steps 5-7) — nothing past
+      // this point can fail or roll back.
       const previousScope = this._activeScope;
       const previousTarget = this._activeScopeTarget;
+      const outgoing = previousScope === null ? null : { scope: previousScope, target: previousTarget! };
+      const { teardown, pendingStopScene } = this._navigation.beginOutgoingDisposition(outgoing, options.suspendCurrent ?? false);
 
       this._activeScope = newScope;
-      this._activeScopeTarget = target;
-
-      try {
-        await this._handleOutgoingScope(previousScope, previousTarget, options.retainCurrent ?? false);
-      } catch (error) {
-        this._rollbackSwitch(previousScope, previousTarget);
-        newScope.destroyFailedActivation();
-
-        throw error;
-      }
-
+      this._activeScopeTarget = resolvedTarget;
       newScope.activate();
 
       this.onChangeScene.dispatchIsolated(error => this._reportLifecycleError(error), scene as Scene);
       this.onStartScene.dispatchIsolated(error => this._reportLifecycleError(error), scene as Scene);
+
+      // Not rollback-able (definition §3.5, steps 8-9).
+      this._navigation.finishOutgoingDisposition(pendingStopScene);
+      await teardown;
     }, options.transition);
 
     return this;
@@ -232,57 +261,60 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
   }
 
   /**
-   * Reactivate a scene previously retained via `setScene(..., { retainCurrent: true })`
-   * or `restoreScene(..., { retainCurrent: true })` — the same instance,
-   * returned to `Active` with whichever `paused` flag it had before
-   * suspension. `load()`/`init()` do not run again (definition §14.3).
+   * Reactivate a scene previously retained via
+   * `change(..., { suspendCurrent: true })` or
+   * `restore(..., { suspendCurrent: true })` — the same instance, returned
+   * to whichever of `Active`/`Paused` it had before suspension. `load()`/
+   * `init()` do not run again (definition §14.3). Shares the same atomic
+   * commit boundary as {@link SceneDirector.change} — see its doc comment
+   * for the exact guarantee and the temporary fade-transition bridge.
    *
    * Rejects with {@link ConcurrentSceneNavigationError} when another
    * navigation is already in flight; with {@link RetainedSceneNotFoundError}
    * when `target` has no retained instance.
    */
-  public async restoreScene<C extends AnySceneConstructor>(target: C, options: RestoreSceneOptions = {}): Promise<this> {
-    const retainedScope = this._retained.get(target);
+  public async restore<K extends RegistryKeyOf<Registry>>(target: K, options?: RestoreSceneCallOptions): Promise<this>;
+  public async restore<C extends AnySceneConstructor>(target: C, options?: RestoreSceneCallOptions): Promise<this>;
+  public async restore(target: AnySceneConstructor | string, options: RestoreSceneCallOptions = {}): Promise<this> {
+    const resolvedTarget = this._resolveNavigationTarget(target);
+    const retainedScope = this._retained.get(resolvedTarget);
 
     if (retainedScope === undefined) {
-      throw new RetainedSceneNotFoundError(target.name);
+      throw new RetainedSceneNotFoundError(resolvedTarget.name);
     }
 
-    // Eager, synchronous claim: remove the scope from `_retained` before any
-    // `await` so a concurrent restoreScene(target)/releaseScene(target) call
-    // targeting the same constructor can never also see it — this closes
-    // the race without needing releaseScene() to share the navigation lock.
-    this._retained.delete(target);
+    // Eager, synchronous claim: removed from `_retained` before any `await`
+    // so a concurrent restore(target)/releaseScene(target) call targeting
+    // the same constructor can never also see it.
+    this._retained.delete(resolvedTarget);
 
     try {
       await this._runWithNavigation(async () => {
         const previousScope = this._activeScope;
         const previousTarget = this._activeScopeTarget;
+        const outgoing = previousScope === null ? null : { scope: previousScope, target: previousTarget! };
+        const { teardown, pendingStopScene } = this._navigation.beginOutgoingDisposition(outgoing, options.suspendCurrent ?? false);
 
-        this._activeScope = retainedScope;
-        this._activeScopeTarget = target;
-
-        try {
-          await this._handleOutgoingScope(previousScope, previousTarget, options.retainCurrent ?? false);
-        } catch (error) {
-          this._rollbackSwitch(previousScope, previousTarget);
-
-          throw error;
-        }
-
+        // Atomic commit boundary — restore() has no async prepare step, so
+        // this reaches the commit point immediately.
         const previousState = retainedScope.state;
 
+        this._activeScope = retainedScope;
+        this._activeScopeTarget = resolvedTarget;
         retainedScope.restore();
 
         this.onChangeScene.dispatchIsolated(error => this._reportLifecycleError(error), retainedScope.scene as Scene);
         this.onStateChange.dispatchIsolated(error => this._reportLifecycleError(error), previousState, retainedScope.state, retainedScope.scene as Scene);
+
+        this._navigation.finishOutgoingDisposition(pendingStopScene);
+        await teardown;
       }, options.transition);
     } catch (error) {
-      // Any failure (including a rejected concurrent-navigation guard, or
-      // the inner rollback above already having restored `_activeScope`)
-      // means the restore never committed — undo the eager claim so the
-      // scope remains available for a future restoreScene/releaseScene call.
-      this._retained.set(target, retainedScope);
+      // Only reachable here via a rejected concurrent-navigation guard —
+      // retainedScope.restore() itself never throws (SceneScope guards
+      // every facility call). Put the eager claim back so the scope
+      // remains available for a future restore()/releaseScene() call.
+      this._retained.set(resolvedTarget, retainedScope);
 
       throw error;
     }
@@ -521,6 +553,28 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
   }
 
   /**
+   * Resolve a `change()`/`restore()` navigation target: a constructor
+   * passes through unchanged; a registered key resolves to its constructor
+   * via the bidirectional registry. An unresolvable key is always an
+   * error, in every build — unlike an unregistered *constructor* (checked
+   * separately, dev-only), there is no constructor to fall back to for an
+   * unresolvable key.
+   */
+  private _resolveNavigationTarget(target: AnySceneConstructor | string): AnySceneConstructor {
+    if (typeof target !== 'string') {
+      return target;
+    }
+
+    const resolved = this._registry.byKey.get(target);
+
+    if (resolved === undefined) {
+      throw new UnregisteredSceneError(target, [...this._registry.byConstructor.values()]);
+    }
+
+    return resolved;
+  }
+
+  /**
    * Construct a `SceneScope` for `scene` and run its activation sequence
    * (attach → `Preparing` → `load()` → `init()`). On failure, runs the
    * definition §16 failed-activation cleanup — engine-managed registrations
@@ -557,67 +611,8 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
   }
 
   /**
-   * Handle the outgoing scope at a switch boundary: suspend+retain it when
-   * `retainCurrent` is set, otherwise permanently dispose it. No-op when
-   * there is no outgoing scope (scene-less start). The only realistic
-   * throw source here is a user `onStopScene` (dispose path) or
-   * `onStateChange` (retain path) listener — `SceneScope.suspend()` and
-   * `scope.destroy()` are both internally guarded and never throw
-   * themselves.
-   */
-  private async _handleOutgoingScope(previousScope: SceneScope | null, previousTarget: AnySceneConstructor | null, retainCurrent: boolean): Promise<void> {
-    if (previousScope === null) {
-      return;
-    }
-
-    if (retainCurrent && previousTarget !== null) {
-      this._suspendAndRetain(previousTarget, previousScope);
-
-      return;
-    }
-
-    await this._disposeScene(previousScope);
-  }
-
-  /**
-   * Suspend `scope` and store it in `_retained` under `target`. `scope` is
-   * always the outgoing active scope here, which is always `Active`
-   * (paused or not) — {@link SceneScope.suspend} is therefore guaranteed to
-   * succeed (never skipped by its own state guard).
-   */
-  private _suspendAndRetain(target: AnySceneConstructor, scope: SceneScope): void {
-    const previousState = scope.state;
-
-    scope.suspend();
-    this._retained.set(target, scope);
-
-    this.onStateChange.dispatchIsolated(error => this._reportLifecycleError(error), previousState, scope.state, scope.scene as Scene);
-  }
-
-  /**
-   * Undo a switch-boundary reassignment after `_handleOutgoingScope` threw:
-   * restore `_activeScope`/`_activeScopeTarget` to the previous scope, and —
-   * if that scope had already been suspended+retained as part of this same
-   * failed switch — remove it from `_retained` and un-suspend it. The
-   * incoming scope's own cleanup (`destroyFailedActivation()`) is the
-   * caller's responsibility (its exact call site differs between `setScene`,
-   * which always has an incoming scope, and `restoreScene`, whose "incoming"
-   * scope is the already-existing retained one and must not be destroyed on
-   * this path).
-   */
-  private _rollbackSwitch(previousScope: SceneScope | null, previousTarget: AnySceneConstructor | null): void {
-    this._activeScope = previousScope;
-    this._activeScopeTarget = previousTarget;
-
-    if (previousScope !== null && previousTarget !== null && this._retained.get(previousTarget) === previousScope) {
-      this._retained.delete(previousTarget);
-      previousScope.restore();
-    }
-  }
-
-  /**
    * Run `action` as one atomic navigation step, guarded so at most one
-   * navigation (`setScene`/`restoreScene`/`_clearScene`, transitioned or
+   * navigation (`change`/`restore`/`_clearScene`, transitioned or
    * not) is ever in flight at a time (definition §11.5 — a second request
    * rejects rather than queueing). Does not guard {@link SceneDirector._dispose},
    * which must always be able to proceed.

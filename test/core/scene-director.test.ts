@@ -146,7 +146,7 @@ describe('SceneDirector', () => {
 
     manager.onChangeScene.add(changeSpy);
 
-    await expect(manager.setScene(FailScene)).rejects.toThrow('load failed');
+    await expect(manager.change(FailScene)).rejects.toThrow('load failed');
     expect(manager.currentScene).toBeNull();
     // definition §16: unload() is never called for a scene that never completed activation.
     expect(unload).not.toHaveBeenCalled();
@@ -172,7 +172,7 @@ describe('SceneDirector', () => {
 
     manager.onChangeScene.add(changeSpy);
 
-    await expect(manager.setScene(FailScene)).rejects.toThrow('init failed');
+    await expect(manager.change(FailScene)).rejects.toThrow('init failed');
     expect(manager.currentScene).toBeNull();
     expect(load).toHaveBeenCalledTimes(1);
     expect(unload).not.toHaveBeenCalled();
@@ -198,7 +198,7 @@ describe('SceneDirector', () => {
 
     app.onError.add(errorSpy);
 
-    await expect(manager.setScene(FailScene)).rejects.toThrow('init failed');
+    await expect(manager.change(FailScene)).rejects.toThrow('init failed');
     expect(manager.currentScene).toBeNull();
     expect(errorSpy).toHaveBeenCalledWith(expect.objectContaining({ message: 'user destroy failed' }));
 
@@ -225,7 +225,7 @@ describe('SceneDirector', () => {
 
     app.onError.add(errorSpy);
 
-    await manager.setScene(OkScene);
+    await manager.change(OkScene);
     manager.destroy();
     await Promise.resolve();
     await Promise.resolve();
@@ -244,12 +244,12 @@ describe('SceneDirector', () => {
     const Second = makeSceneClass({ init: secondInit });
     const manager = new SceneDirector(createApplicationStub(), { first: First, second: Second });
 
-    await manager.setScene(First);
+    await manager.change(First);
     const first = manager.currentScene;
 
     expect(first).toBeInstanceOf(First);
 
-    await manager.setScene(Second);
+    await manager.change(Second);
     expect(manager.currentScene).toBeInstanceOf(Second);
     expect(firstUnload).toHaveBeenCalledTimes(1);
     expect(secondInit).toHaveBeenCalledTimes(1);
@@ -263,7 +263,7 @@ describe('SceneDirector', () => {
 
     manager.onStateChange.add(onStateChange);
 
-    await manager.setScene(TestScene);
+    await manager.change(TestScene);
     const scene = manager.currentScene;
 
     expect(onStateChange).toHaveBeenCalledTimes(2);
@@ -276,13 +276,13 @@ describe('SceneDirector', () => {
     const Second = makeSceneClass();
     const manager = new SceneDirector(createApplicationStub(), { first: First, second: Second });
 
-    await manager.setScene(First);
+    await manager.change(First);
     const first = manager.currentScene;
     const onStateChange = vi.fn();
 
     manager.onStateChange.add(onStateChange);
 
-    await manager.setScene(Second);
+    await manager.change(Second);
     const second = manager.currentScene;
 
     expect(onStateChange).toHaveBeenCalledTimes(4);
@@ -303,7 +303,7 @@ describe('SceneDirector', () => {
 
     manager.onStateChange.add(onStateChange);
 
-    await expect(manager.setScene(FailScene)).rejects.toThrow('init failed');
+    await expect(manager.change(FailScene)).rejects.toThrow('init failed');
 
     expect(onStateChange).toHaveBeenCalledTimes(2);
     expect(onStateChange).toHaveBeenCalledWith(SceneState.Preparing, SceneState.Destroying, expect.any(Object));
@@ -315,7 +315,7 @@ describe('SceneDirector', () => {
     const TestScene = makeSceneClass({ fixedUpdate });
     const manager = new SceneDirector(createApplicationStub(), { test: TestScene });
 
-    await manager.setScene(TestScene);
+    await manager.change(TestScene);
 
     manager.fixedUpdate(new Time(16));
     expect(fixedUpdate).toHaveBeenCalledTimes(1);
@@ -330,10 +330,10 @@ describe('SceneDirector', () => {
     const TestScene = makeSceneClass({ init, unload });
     const manager = new SceneDirector(createApplicationStub(), { test: TestScene });
 
-    await manager.setScene(TestScene);
+    await manager.change(TestScene);
     const firstInstance = manager.currentScene;
 
-    await manager.setScene(TestScene);
+    await manager.change(TestScene);
     const secondInstance = manager.currentScene;
 
     expect(init).toHaveBeenCalledTimes(2);
@@ -347,7 +347,7 @@ describe('SceneDirector', () => {
     const TestScene = makeSceneClass({ unload });
     const manager = new SceneDirector(createApplicationStub(), { test: TestScene });
 
-    await manager.setScene(TestScene);
+    await manager.change(TestScene);
     await manager._clearScene();
 
     expect(manager.currentScene).toBeNull();
@@ -358,7 +358,7 @@ describe('SceneDirector', () => {
     class UnregisteredScene extends Scene {}
     const manager = new SceneDirector(createApplicationStub(), {});
 
-    await expect(manager.setScene(UnregisteredScene)).rejects.toThrow(UnregisteredSceneError);
+    await expect(manager.change(UnregisteredScene)).rejects.toThrow(UnregisteredSceneError);
   });
 
   test('UnregisteredSceneError lists all registered scene names', async () => {
@@ -368,7 +368,7 @@ describe('SceneDirector', () => {
     const manager = new SceneDirector(createApplicationStub(), { a: RegisteredA, b: RegisteredB });
 
     try {
-      await manager.setScene(Unregistered);
+      await manager.change(Unregistered);
       expect.unreachable('setScene should have rejected');
     } catch (error) {
       expect(error).toBeInstanceOf(UnregisteredSceneError);
@@ -394,7 +394,7 @@ describe('SceneDirector', () => {
       const TestScene = makeSceneClass();
       const manager = new SceneDirector(createApplicationStub(), { test: { scene: TestScene, transition: 'placeholder' } });
 
-      await expect(manager.setScene(TestScene)).resolves.toBe(manager);
+      await expect(manager.change(TestScene)).resolves.toBe(manager);
     });
 
     test('rejects a duplicate constructor registered under two keys across mixed forms', () => {
@@ -418,7 +418,7 @@ describe('SceneDirector', () => {
     const TestScene = makeSceneClass({ update, draw });
     const manager = new SceneDirector(app, { test: TestScene });
 
-    await manager.setScene(TestScene);
+    await manager.change(TestScene);
     manager.currentScene?.systems.add({ update: systemUpdate });
 
     tick(manager, app);
@@ -438,9 +438,9 @@ describe('SceneDirector', () => {
     const Second = makeSceneClass();
     const manager = new SceneDirector(app, { first: First, second: Second });
 
-    await manager.setScene(First);
+    await manager.change(First);
 
-    const transitionPromise = manager.setScene(Second, {
+    const transitionPromise = manager.change(Second, {
       transition: {
         type: 'fade',
         duration: 100,
@@ -478,9 +478,9 @@ describe('SceneDirector', () => {
     const Fallback = makeSceneClass();
     const manager = new SceneDirector(app, { first: First, failing: Failing, fallback: Fallback });
 
-    await manager.setScene(First);
+    await manager.change(First);
 
-    const transitionPromise = manager.setScene(Failing, {
+    const transitionPromise = manager.change(Failing, {
       transition: {
         type: 'fade',
         duration: 60,
@@ -493,7 +493,7 @@ describe('SceneDirector', () => {
     await expect(transitionPromise).rejects.toThrow('transition target failed');
     expect(manager.currentScene).toBeInstanceOf(First);
 
-    await expect(manager.setScene(Fallback)).resolves.toBe(manager);
+    await expect(manager.change(Fallback)).resolves.toBe(manager);
     expect(manager.currentScene).toBeInstanceOf(Fallback);
   });
 
@@ -507,7 +507,7 @@ describe('SceneDirector', () => {
     });
     const manager = new SceneDirector(app, { test: TestScene });
 
-    await manager.setScene(TestScene);
+    await manager.change(TestScene);
     tick(manager, app);
 
     expect(drawArg).toBe(app.rendering);
@@ -518,7 +518,7 @@ describe('SceneDirector', () => {
     const TestScene = makeSceneClass();
     const manager = new SceneDirector(createApplicationStub(), { test: TestScene });
 
-    await manager.setScene(TestScene);
+    await manager.change(TestScene);
     manager.currentScene?.systems.add({ fixedUpdate: fixedSystemUpdate });
 
     manager.fixedUpdate(new Time(16));
@@ -537,7 +537,7 @@ describe('SceneDirector', () => {
     const onPause = vi.fn();
     const onStateChange = vi.fn();
 
-    await director.setScene(TestScene);
+    await director.change(TestScene);
     const scene = director.currentScene;
 
     director.onPause.add(onPause);
@@ -568,7 +568,7 @@ describe('SceneDirector', () => {
     const director = new SceneDirector(app, { test: TestScene });
     const onPause = vi.fn();
 
-    await director.setScene(TestScene);
+    await director.change(TestScene);
     director.pause();
     director.onPause.add(onPause);
 
@@ -584,7 +584,7 @@ describe('SceneDirector', () => {
     const onResume = vi.fn();
     const onStateChange = vi.fn();
 
-    await director.setScene(TestScene);
+    await director.change(TestScene);
     const scene = director.currentScene;
 
     director.pause();
@@ -609,7 +609,7 @@ describe('SceneDirector', () => {
     const director = new SceneDirector(app, { test: TestScene });
     const onResume = vi.fn();
 
-    await director.setScene(TestScene);
+    await director.change(TestScene);
     director.onResume.add(onResume);
 
     expect(director.resume()).toBe(false);
@@ -623,7 +623,7 @@ describe('SceneDirector', () => {
 
     expect(director.state).toBeNull();
 
-    await director.setScene(TestScene);
+    await director.change(TestScene);
     expect(director.state).toBe(SceneState.Active);
 
     await director._clearScene();
@@ -636,10 +636,10 @@ describe('SceneDirector', () => {
     const OtherScene = makeSceneClass();
     const manager = new SceneDirector(app, { test: TestScene, other: OtherScene });
 
-    await manager.setScene(TestScene);
+    await manager.change(TestScene);
     expect((manager as unknown as { _transitionGateOpen: boolean })._transitionGateOpen).toBe(false);
 
-    const transitionPromise = manager.setScene(OtherScene, {
+    const transitionPromise = manager.change(OtherScene, {
       transition: { type: 'fade', duration: 60 },
     });
 
@@ -671,9 +671,9 @@ describe('SceneDirector', () => {
     });
     const manager = new SceneDirector(app, { test: TestScene, fail: FailScene });
 
-    await manager.setScene(TestScene);
+    await manager.change(TestScene);
 
-    const transitionPromise = manager.setScene(FailScene, {
+    const transitionPromise = manager.change(FailScene, {
       transition: { type: 'fade', duration: 60 },
     });
 
@@ -686,17 +686,17 @@ describe('SceneDirector', () => {
 });
 
 describe('SceneDirector — retention', () => {
-  test('setScene(..., { retainCurrent: true }) suspends the outgoing scene instead of destroying it', async () => {
+  test('setScene(..., { suspendCurrent: true }) suspends the outgoing scene instead of destroying it', async () => {
     const app = createApplicationStub();
     const FirstScene = makeSceneClass();
     const SecondScene = makeSceneClass();
     const director = new SceneDirector(app, { first: FirstScene, second: SecondScene });
 
-    await director.setScene(FirstScene);
+    await director.change(FirstScene);
     const firstInstance = director.currentScene;
     const destroySpy = vi.spyOn(Scene.prototype, 'destroy');
 
-    await director.setScene(SecondScene, { retainCurrent: true });
+    await director.change(SecondScene, { suspendCurrent: true });
 
     expect(director.currentScene).toBeInstanceOf(SecondScene);
     expect(destroySpy).not.toHaveBeenCalled(); // FirstScene was suspended, not destroyed
@@ -713,14 +713,14 @@ describe('SceneDirector — retention', () => {
     const SecondScene = makeSceneClass();
     const director = new SceneDirector(app, { first: FirstScene, second: SecondScene });
 
-    await director.setScene(FirstScene);
+    await director.change(FirstScene);
     const firstInstance = director.currentScene;
 
     expect(load).toHaveBeenCalledTimes(1);
     expect(init).toHaveBeenCalledTimes(1);
 
-    await director.setScene(SecondScene, { retainCurrent: true });
-    await director.restoreScene(FirstScene);
+    await director.change(SecondScene, { suspendCurrent: true });
+    await director.restore(FirstScene);
 
     expect(director.currentScene).toBe(firstInstance); // same instance
     expect(load).toHaveBeenCalledTimes(1); // not re-run
@@ -734,10 +734,10 @@ describe('SceneDirector — retention', () => {
     const SecondScene = makeSceneClass();
     const director = new SceneDirector(app, { first: FirstScene, second: SecondScene });
 
-    await director.setScene(FirstScene);
+    await director.change(FirstScene);
     director.pause();
-    await director.setScene(SecondScene, { retainCurrent: true });
-    await director.restoreScene(FirstScene);
+    await director.change(SecondScene, { suspendCurrent: true });
+    await director.restore(FirstScene);
 
     expect(director.state).toBe(SceneState.Active);
     expect(director.paused).toBe(true);
@@ -754,13 +754,13 @@ describe('SceneDirector — retention', () => {
     const SecondScene = makeSceneClass();
     const director = new SceneDirector(app, { first: FirstScene, second: SecondScene });
 
-    await director.setScene(FirstScene);
+    await director.change(FirstScene);
     director.pause();
 
     expect(tween.state).toBe(TweenState.Paused);
 
-    await director.setScene(SecondScene, { retainCurrent: true });
-    await director.restoreScene(FirstScene);
+    await director.change(SecondScene, { suspendCurrent: true });
+    await director.restore(FirstScene);
 
     expect(director.state).toBe(SceneState.Active);
     expect(director.paused).toBe(true);
@@ -778,8 +778,8 @@ describe('SceneDirector — retention', () => {
     const SecondScene = makeSceneClass();
     const director = new SceneDirector(app, { first: FirstScene, second: SecondScene });
 
-    await director.setScene(FirstScene);
-    await director.setScene(SecondScene, { retainCurrent: true });
+    await director.change(FirstScene);
+    await director.change(SecondScene, { suspendCurrent: true });
 
     const destroySpy = vi.spyOn(Scene.prototype, 'destroy');
 
@@ -802,7 +802,7 @@ describe('SceneDirector — retention', () => {
     const FirstScene = makeSceneClass();
     const director = new SceneDirector(app, { first: FirstScene });
 
-    await expect(director.restoreScene(FirstScene)).rejects.toThrow(RetainedSceneNotFoundError);
+    await expect(director.restore(FirstScene)).rejects.toThrow(RetainedSceneNotFoundError);
   });
 
   test('setScene() rejects with RetainedSceneConflictError for a constructor with a retained instance', async () => {
@@ -811,26 +811,26 @@ describe('SceneDirector — retention', () => {
     const SecondScene = makeSceneClass();
     const director = new SceneDirector(app, { first: FirstScene, second: SecondScene });
 
-    await director.setScene(FirstScene);
-    await director.setScene(SecondScene, { retainCurrent: true });
+    await director.change(FirstScene);
+    await director.change(SecondScene, { suspendCurrent: true });
 
-    await expect(director.setScene(FirstScene)).rejects.toThrow(RetainedSceneConflictError);
+    await expect(director.change(FirstScene)).rejects.toThrow(RetainedSceneConflictError);
   });
 
-  test('restoreScene(..., { retainCurrent: true }) retains the scene it replaces', async () => {
+  test('restoreScene(..., { suspendCurrent: true }) retains the scene it replaces', async () => {
     const app = createApplicationStub();
     const FirstScene = makeSceneClass();
     const SecondScene = makeSceneClass();
     const ThirdScene = makeSceneClass();
     const director = new SceneDirector(app, { first: FirstScene, second: SecondScene, third: ThirdScene });
 
-    await director.setScene(FirstScene);
-    await director.setScene(SecondScene, { retainCurrent: true }); // retains First
-    await director.restoreScene(FirstScene, { retainCurrent: true }); // restores First, retains Second
+    await director.change(FirstScene);
+    await director.change(SecondScene, { suspendCurrent: true }); // retains First
+    await director.restore(FirstScene, { suspendCurrent: true }); // restores First, retains Second
 
     expect(director.currentScene).toBeInstanceOf(FirstScene);
 
-    await expect(director.restoreScene(SecondScene)).resolves.toBe(director);
+    await expect(director.restore(SecondScene)).resolves.toBe(director);
     expect(director.currentScene).toBeInstanceOf(SecondScene);
   });
 
@@ -840,8 +840,8 @@ describe('SceneDirector — retention', () => {
     const SecondScene = makeSceneClass();
     const director = new SceneDirector(app, { first: FirstScene, second: SecondScene });
 
-    await director.setScene(FirstScene);
-    await director.setScene(SecondScene, { retainCurrent: true });
+    await director.change(FirstScene);
+    await director.change(SecondScene, { suspendCurrent: true });
 
     expect(app.loader._releaseScope).not.toHaveBeenCalled(); // suspended, not released
 
@@ -858,8 +858,8 @@ describe('SceneDirector — concurrent navigation', () => {
     const OtherScene = makeSceneClass();
     const director = new SceneDirector(app, { slow: SlowScene, other: OtherScene });
 
-    const first = director.setScene(SlowScene);
-    const second = director.setScene(OtherScene);
+    const first = director.change(SlowScene);
+    const second = director.change(OtherScene);
 
     await expect(second).rejects.toThrow(ConcurrentSceneNavigationError);
 
@@ -873,12 +873,12 @@ describe('SceneDirector — concurrent navigation', () => {
     const OtherScene = makeSceneClass();
     const director = new SceneDirector(app, { slow: SlowScene, retained: RetainedScene, other: OtherScene });
 
-    await director.setScene(RetainedScene);
-    await director.setScene(OtherScene, { retainCurrent: true });
+    await director.change(RetainedScene);
+    await director.change(OtherScene, { suspendCurrent: true });
 
-    const first = director.setScene(SlowScene);
+    const first = director.change(SlowScene);
 
-    await expect(director.restoreScene(RetainedScene)).rejects.toThrow(ConcurrentSceneNavigationError);
+    await expect(director.restore(RetainedScene)).rejects.toThrow(ConcurrentSceneNavigationError);
 
     void first.catch(() => {});
   });
@@ -889,62 +889,65 @@ describe('SceneDirector — concurrent navigation', () => {
     const SecondScene = makeSceneClass();
     const director = new SceneDirector(app, { first: FirstScene, second: SecondScene });
 
-    await director.setScene(FirstScene);
-    await expect(director.setScene(SecondScene)).resolves.toBe(director); // no concurrent error — lock was released
+    await director.change(FirstScene);
+    await expect(director.change(SecondScene)).resolves.toBe(director); // no concurrent error — lock was released
   });
 });
 
-describe('SceneDirector — switch-phase rollback', () => {
-  test('a throwing onStopScene listener no longer aborts the switch — isolated, reported via onError, switch completes (definition §2.2.1)', async () => {
+describe('SceneDirector — post-commit signal isolation', () => {
+  test('a throwing onStopScene listener does not roll back — the switch stays committed and change() still resolves', async () => {
     const app = createApplicationStub();
     const FirstScene = makeSceneClass();
     const SecondScene = makeSceneClass();
     const director = new SceneDirector(app, { first: FirstScene, second: SecondScene });
+    const errorSpy = vi.fn();
+    const loggerErrorSpy = vi.spyOn(logger, 'error').mockImplementation(() => undefined);
 
-    await director.setScene(FirstScene);
+    app.onError.add(errorSpy);
+    await director.change(FirstScene);
 
     const failure = new Error('onStopScene listener failed');
-    const errorSpy = vi.fn();
 
     director.onStopScene.add(() => {
       throw failure;
     });
-    app.onError.add(errorSpy);
 
-    await expect(director.setScene(SecondScene)).resolves.toBe(director);
+    await expect(director.change(SecondScene)).resolves.toBe(director);
 
-    expect(director.currentScene).toBeInstanceOf(SecondScene);
-    expect(director.state).toBe(SceneState.Active);
+    expect(director.currentScene).toBeInstanceOf(SecondScene); // committed regardless of the throw
     expect(errorSpy).toHaveBeenCalledWith(failure);
+
+    loggerErrorSpy.mockRestore();
   });
 
-  test('a throwing onStateChange listener during a retainCurrent switch no longer un-suspends the previous scope — isolated, reported via onError, retention completes', async () => {
+  test('a throwing onStateChange listener during a suspendCurrent switch does not un-suspend the outgoing scope', async () => {
     const app = createApplicationStub();
     const FirstScene = makeSceneClass();
     const SecondScene = makeSceneClass();
     const director = new SceneDirector(app, { first: FirstScene, second: SecondScene });
+    const errorSpy = vi.fn();
+    const loggerErrorSpy = vi.spyOn(logger, 'error').mockImplementation(() => undefined);
 
-    await director.setScene(FirstScene);
+    app.onError.add(errorSpy);
+    await director.change(FirstScene);
     const firstInstance = director.currentScene;
 
     const failure = new Error('onStateChange listener failed');
-    const errorSpy = vi.fn();
 
     director.onStateChange.add(() => {
       throw failure;
     });
-    app.onError.add(errorSpy);
 
-    await expect(director.setScene(SecondScene, { retainCurrent: true })).resolves.toBe(director);
+    await expect(director.change(SecondScene, { suspendCurrent: true })).resolves.toBe(director);
 
     expect(director.currentScene).toBeInstanceOf(SecondScene);
-    expect(firstInstance?.state).toBe(SceneState.Suspended); // retained normally, not rolled back
-    expect(errorSpy).toHaveBeenCalledWith(failure);
+    expect(firstInstance?.state).toBe(SceneState.Suspended); // still suspended+retained despite the throw
+    await expect(director.restore(FirstScene)).resolves.toBe(director); // proves it IS in _retained
 
-    await expect(director.restoreScene(FirstScene)).resolves.toBe(director); // proves it IS in _retained
+    loggerErrorSpy.mockRestore();
   });
 
-  test('a throwing onChangeScene/onStartScene listener does not abort setScene() or block later listeners', async () => {
+  test('a throwing onChangeScene/onStartScene listener does not abort change() or block later listeners', async () => {
     const app = createApplicationStub();
     const TestScene = makeSceneClass();
     const director = new SceneDirector(app, { test: TestScene });
@@ -962,7 +965,7 @@ describe('SceneDirector — switch-phase rollback', () => {
     director.onStartScene.add(laterStartListener);
     app.onError.add(errorSpy);
 
-    await expect(director.setScene(TestScene)).resolves.toBe(director);
+    await expect(director.change(TestScene)).resolves.toBe(director);
 
     expect(laterChangeListener).toHaveBeenCalledTimes(1);
     expect(laterStartListener).toHaveBeenCalledTimes(1);
@@ -978,9 +981,9 @@ describe('SceneDirector — destroy() / _dispose()', () => {
     const ThirdScene = makeSceneClass();
     const director = new SceneDirector(app, { first: FirstScene, second: SecondScene, third: ThirdScene });
 
-    await director.setScene(FirstScene);
-    await director.setScene(SecondScene, { retainCurrent: true }); // retains First
-    await director.setScene(ThirdScene, { retainCurrent: true }); // retains Second, active = Third
+    await director.change(FirstScene);
+    await director.change(SecondScene, { suspendCurrent: true }); // retains First
+    await director.change(ThirdScene, { suspendCurrent: true }); // retains Second, active = Third
 
     const destroySpy = vi.spyOn(Scene.prototype, 'destroy');
 
@@ -1001,9 +1004,9 @@ describe('SceneDirector — destroy() / _dispose()', () => {
 
     director.onStopScene.add(scene => order.push(scene.constructor.name));
 
-    await director.setScene(FirstScene);
-    await director.setScene(SecondScene, { retainCurrent: true }); // retains First
-    await director.setScene(ThirdScene, { retainCurrent: true }); // retains Second
+    await director.change(FirstScene);
+    await director.change(SecondScene, { suspendCurrent: true }); // retains First
+    await director.change(ThirdScene, { suspendCurrent: true }); // retains Second
 
     order.length = 0; // clear the setScene-triggered dispatches above
 
@@ -1019,7 +1022,7 @@ describe('SceneDirector — destroy() / _dispose()', () => {
     const director = new SceneDirector(app, { first: FirstScene });
     const destroySpy = vi.spyOn(Scene.prototype, 'destroy');
 
-    await director.setScene(FirstScene);
+    await director.change(FirstScene);
 
     director.destroy(); // synchronous call, does not await
 
@@ -1039,10 +1042,54 @@ describe('SceneDirector — destroy() / _dispose()', () => {
     const SlowScene = makeSceneClass({ load: () => new Promise<void>(() => {}) });
     const director = new SceneDirector(app, { slow: SlowScene });
 
-    const pending = director.setScene(SlowScene); // never resolves — navigation lock stays held forever
+    const pending = director.change(SlowScene); // never resolves — navigation lock stays held forever
 
     await expect(director._dispose()).resolves.toBeUndefined();
 
     void pending.catch(() => {});
+  });
+});
+
+describe('SceneDirector — key-based navigation', () => {
+  test("change() accepts a registered string key and resolves to that key's constructor", async () => {
+    const app = createApplicationStub();
+    const FirstScene = makeSceneClass();
+    const director = new SceneDirector(app, { first: FirstScene });
+
+    await expect(director.change('first')).resolves.toBe(director);
+    expect(director.currentScene).toBeInstanceOf(FirstScene);
+  });
+
+  test('restore() accepts a registered string key for a retained scope', async () => {
+    const app = createApplicationStub();
+    const FirstScene = makeSceneClass();
+    const SecondScene = makeSceneClass();
+    const director = new SceneDirector(app, { first: FirstScene, second: SecondScene });
+
+    await director.change('first');
+    await director.change('second', { suspendCurrent: true });
+
+    await expect(director.restore('first')).resolves.toBe(director);
+    expect(director.currentScene).toBeInstanceOf(FirstScene);
+  });
+
+  test('change() still accepts a raw constructor directly, unchanged', async () => {
+    const app = createApplicationStub();
+    const FirstScene = makeSceneClass();
+    const director = new SceneDirector(app, { first: FirstScene });
+
+    await expect(director.change(FirstScene)).resolves.toBe(director);
+  });
+
+  test('change() rejects for an unregistered string key, in every build', async () => {
+    const app = createApplicationStub();
+    const RegisteredScene = makeSceneClass();
+    // Widened to the untyped registry shape for this one call — a string
+    // key not present in the registry is a compile-time error against the
+    // precisely-typed overload, which is exactly the point; this test
+    // exercises the runtime rejection path a production build still needs.
+    const director = new SceneDirector(app, { first: RegisteredScene }) as SceneDirector<Record<string, SceneConstructor<void>>>;
+
+    await expect(director.change('missing')).rejects.toThrow(UnregisteredSceneError);
   });
 });
