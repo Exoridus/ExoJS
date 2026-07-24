@@ -6,10 +6,10 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 13,
+  "memberCount": 14,
   "counts": {
     "constructors": 1,
-    "methods": 8,
+    "methods": 9,
     "properties": 4,
     "events": 0
   },
@@ -153,6 +153,35 @@
           "description": "Called by the Director — do not call directly. Dispatches to SceneTransition.createSession, which is protected so it does not clutter a beginner's view of a transition subclass while still being callable from Director code that does not share this class's hierarchy."
         },
         {
+          "name": "createPhaseState",
+          "signature": "createPhaseState(): FadePhaseState",
+          "signatureTokens": [
+            {
+              "text": "createPhaseState",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "FadePhaseState",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "FadePhaseState",
+          "description": "Allocate this navigation's session-scoped mutable scratch state (reused Sprite/Matrix/Color/etc — anything enter()/exit() mutates per draw). Called once per session, never shared across navigations or with the definition instance itself, which must stay fully immutable so it can be reused (even concurrently) across arbitrarily many navigations. Default: no scratch state needed (void)."
+        },
+        {
           "name": "createSession",
           "signature": "createSession(environment: SceneTransitionEnvironment): SceneTransitionSession",
           "signatureTokens": [
@@ -201,7 +230,7 @@
         },
         {
           "name": "enter",
-          "signature": "enter(context: SceneTransitionPhaseContext): void",
+          "signature": "enter(context: SceneTransitionPhaseContext, state: FadePhaseState): void",
           "signatureTokens": [
             {
               "text": "enter",
@@ -224,6 +253,22 @@
               "kind": "type"
             },
             {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "state",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "FadePhaseState",
+              "kind": "type"
+            },
+            {
               "text": ")",
               "kind": "punctuation"
             },
@@ -241,6 +286,11 @@
               "name": "context",
               "type": "SceneTransitionPhaseContext",
               "optional": false
+            },
+            {
+              "name": "state",
+              "type": "FadePhaseState",
+              "optional": false
             }
           ],
           "returnType": "void",
@@ -248,7 +298,7 @@
         },
         {
           "name": "exit",
-          "signature": "exit(context: SceneTransitionPhaseContext): void",
+          "signature": "exit(context: SceneTransitionPhaseContext, state: FadePhaseState): void",
           "signatureTokens": [
             {
               "text": "exit",
@@ -271,6 +321,22 @@
               "kind": "type"
             },
             {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "state",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "FadePhaseState",
+              "kind": "type"
+            },
+            {
               "text": ")",
               "kind": "punctuation"
             },
@@ -287,6 +353,11 @@
             {
               "name": "context",
               "type": "SceneTransitionPhaseContext",
+              "optional": false
+            },
+            {
+              "name": "state",
+              "type": "FadePhaseState",
               "optional": false
             }
           ],
@@ -447,7 +518,7 @@
         },
         {
           "name": "runPhase",
-          "signature": "runPhase(phase: \"enter\" | \"exit\", context: SceneTransitionPhaseContext): void",
+          "signature": "runPhase(phase: \"enter\" | \"exit\", context: SceneTransitionPhaseContext, state: FadePhaseState): void",
           "signatureTokens": [
             {
               "text": "runPhase",
@@ -494,6 +565,22 @@
               "kind": "type"
             },
             {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "state",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "FadePhaseState",
+              "kind": "type"
+            },
+            {
               "text": ")",
               "kind": "punctuation"
             },
@@ -515,6 +602,11 @@
             {
               "name": "context",
               "type": "SceneTransitionPhaseContext",
+              "optional": false
+            },
+            {
+              "name": "state",
+              "type": "FadePhaseState",
               "optional": false
             }
           ],

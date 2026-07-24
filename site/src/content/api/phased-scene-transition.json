@@ -6,10 +6,10 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 12,
+  "memberCount": 13,
   "counts": {
     "constructors": 1,
-    "methods": 8,
+    "methods": 9,
     "properties": 3,
     "events": 0
   },
@@ -30,7 +30,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(options: PhasedSceneTransitionOptions): PhasedSceneTransition",
+          "signature": "new(options: PhasedSceneTransitionOptions): PhasedSceneTransition<PhaseState>",
           "signatureTokens": [
             {
               "text": "new",
@@ -63,6 +63,18 @@
             {
               "text": "PhasedSceneTransition",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PhaseState",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             }
           ],
           "params": [
@@ -72,7 +84,7 @@
               "optional": false
             }
           ],
-          "returnType": "PhasedSceneTransition",
+          "returnType": "PhasedSceneTransition<PhaseState>",
           "description": "Public — an abstract class with a protected constructor is still not directly instantiable (that's what abstract already does), but a *protected* constructor is inherited: a concrete subclass that declares no constructor of its own (the common case — e.g. a FlashTransition with only enter()/exit()) would inherit it and become uninstantiable from outside the module. Public keeps every minimal subclass usable with zero boilerplate."
         }
       ],
@@ -132,6 +144,35 @@
           "description": "Called by the Director — do not call directly. Dispatches to SceneTransition.createSession, which is protected so it does not clutter a beginner's view of a transition subclass while still being callable from Director code that does not share this class's hierarchy."
         },
         {
+          "name": "createPhaseState",
+          "signature": "createPhaseState(): PhaseState",
+          "signatureTokens": [
+            {
+              "text": "createPhaseState",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PhaseState",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "PhaseState",
+          "description": "Allocate this navigation's session-scoped mutable scratch state (reused Sprite/Matrix/Color/etc — anything enter()/exit() mutates per draw). Called once per session, never shared across navigations or with the definition instance itself, which must stay fully immutable so it can be reused (even concurrently) across arbitrarily many navigations. Default: no scratch state needed (void)."
+        },
+        {
           "name": "createSession",
           "signature": "createSession(environment: SceneTransitionEnvironment): SceneTransitionSession",
           "signatureTokens": [
@@ -180,7 +221,7 @@
         },
         {
           "name": "enter",
-          "signature": "enter(_context: SceneTransitionPhaseContext): void",
+          "signature": "enter(_context: SceneTransitionPhaseContext, _state: PhaseState): void",
           "signatureTokens": [
             {
               "text": "enter",
@@ -203,6 +244,22 @@
               "kind": "type"
             },
             {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "_state",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PhaseState",
+              "kind": "type"
+            },
+            {
               "text": ")",
               "kind": "punctuation"
             },
@@ -220,6 +277,11 @@
               "name": "_context",
               "type": "SceneTransitionPhaseContext",
               "optional": false
+            },
+            {
+              "name": "_state",
+              "type": "PhaseState",
+              "optional": false
             }
           ],
           "returnType": "void",
@@ -227,7 +289,7 @@
         },
         {
           "name": "exit",
-          "signature": "exit(_context: SceneTransitionPhaseContext): void",
+          "signature": "exit(_context: SceneTransitionPhaseContext, _state: PhaseState): void",
           "signatureTokens": [
             {
               "text": "exit",
@@ -250,6 +312,22 @@
               "kind": "type"
             },
             {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "_state",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PhaseState",
+              "kind": "type"
+            },
+            {
               "text": ")",
               "kind": "punctuation"
             },
@@ -266,6 +344,11 @@
             {
               "name": "_context",
               "type": "SceneTransitionPhaseContext",
+              "optional": false
+            },
+            {
+              "name": "_state",
+              "type": "PhaseState",
               "optional": false
             }
           ],
@@ -473,7 +556,7 @@
         },
         {
           "name": "runPhase",
-          "signature": "runPhase(phase: \"enter\" | \"exit\", context: SceneTransitionPhaseContext): void",
+          "signature": "runPhase(phase: \"enter\" | \"exit\", context: SceneTransitionPhaseContext, state: PhaseState): void",
           "signatureTokens": [
             {
               "text": "runPhase",
@@ -520,6 +603,22 @@
               "kind": "type"
             },
             {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "state",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PhaseState",
+              "kind": "type"
+            },
+            {
               "text": ")",
               "kind": "punctuation"
             },
@@ -541,6 +640,11 @@
             {
               "name": "context",
               "type": "SceneTransitionPhaseContext",
+              "optional": false
+            },
+            {
+              "name": "state",
+              "type": "PhaseState",
               "optional": false
             }
           ],
