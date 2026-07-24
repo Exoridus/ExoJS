@@ -740,6 +740,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
         this._status = ApplicationStatus.Running;
       } catch (error) {
+        this._stopFrameLoop();
         this._status = ApplicationStatus.Stopped;
         throw error;
       }
@@ -1221,6 +1222,18 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * interaction, audio, tweens, rendering — the app system registry, backend,
    * scene director, all clocks, all signals) and release event listeners. The
    * application instance is unusable after this call.
+   *
+   * Fires the RAF halt synchronously (so no further frame runs after this
+   * call returns) but the rest of teardown runs as a background async chain,
+   * awaited internally: `scenes` — including every retained and preloaded
+   * scope, and any scene's own async `unload()` — is fully disposed FIRST,
+   * before the Loader, rendering context, audio manager, or backend are
+   * destroyed, so a scene's teardown code never touches an already-destroyed
+   * dependency. This intentionally does not route through the public
+   * {@link Application.stop}, which fire-and-forgets its own scene-clear —
+   * that would race against `scenes._dispose()`'s own active-scope teardown
+   * for ownership of the same scope. `destroy()` instead halts the frame
+   * loop directly and lets `scenes._dispose()` own scene teardown entirely.
    */
   public destroy(): void {
     this._destroyed = true;
@@ -1232,7 +1245,33 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     this._resizeObserver?.disconnect();
     this._resizeObserver = null;
 
-    this.stop();
+    if (this._frameLoopActive) {
+      if (this._status === ApplicationStatus.Running) {
+        this._status = ApplicationStatus.Halting;
+      }
+
+      this._stopFrameLoop();
+    }
+
+    this._status = ApplicationStatus.Stopped;
+
+    void this._disposeManagedResources();
+  }
+
+  /**
+   * @internal Awaited teardown, in order: `scenes` fully disposed first
+   * (active + every retained + every preloaded scope, including each one's
+   * own async `unload()`) — then every other owned subsystem, then clocks,
+   * then Signals. See {@link Application.destroy}'s doc comment for why
+   * scenes go first.
+   */
+  private async _disposeManagedResources(): Promise<void> {
+    try {
+      await this.scenes._dispose();
+    } catch (error) {
+      logger.error('Application.destroy() failed to fully dispose SceneDirector.', { source: 'Application', ...(error instanceof Error && { error }) });
+    }
+
     this.loader.destroy();
     this.focus.destroy();
     this.systems.destroy();
@@ -1245,7 +1284,6 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     this.interaction.destroy();
     this.input.destroy();
     this._backend.destroy();
-    this.scenes.destroy();
     this._startupClock.destroy();
     this._activeClock.destroy();
     this._frameClock.destroy();

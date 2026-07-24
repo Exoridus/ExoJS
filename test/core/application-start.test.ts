@@ -114,4 +114,46 @@ describe('Application.start() — scene-less and constructor overloads', () => {
     await expect(app.start(UnregisteredScene)).rejects.toThrow(/is not registered in ApplicationOptions\.scenes/);
     app.destroy();
   });
+
+  test('start() failure stops the frame loop instead of leaving it running forever', async () => {
+    class FailingLoadScene extends Scene {
+      public override load(): void {
+        throw new Error('load failed');
+      }
+    }
+    const app = new Application({ backend: { type: 'webgl2' }, scenes: { fail: FailingLoadScene } });
+
+    await expect(app.start(FailingLoadScene)).rejects.toThrow('load failed');
+
+    expect((app as unknown as { _frameLoopActive: boolean })._frameLoopActive).toBe(false);
+
+    app.destroy();
+  });
+
+  test('destroy() fully disposes the active scene before destroying the loader/rendering/audio/backend', async () => {
+    const order: string[] = [];
+
+    class OrderCheckScene extends Scene {
+      public override async unload(): Promise<void> {
+        order.push('scene.unload:start');
+        await Promise.resolve();
+        order.push('scene.unload:end');
+      }
+    }
+
+    const app = new Application({ backend: { type: 'webgl2' }, scenes: { check: OrderCheckScene } });
+
+    vi.spyOn(app.loader, 'destroy').mockImplementation(() => order.push('loader.destroy'));
+    vi.spyOn(app.tweens, 'destroy').mockImplementation(() => order.push('tweens.destroy'));
+
+    await app.start(OrderCheckScene);
+
+    app.destroy();
+
+    for (let i = 0; i < 32 && order.length < 4; i++) {
+      await Promise.resolve();
+    }
+
+    expect(order).toEqual(['scene.unload:start', 'scene.unload:end', 'loader.destroy', 'tweens.destroy']);
+  });
 });
