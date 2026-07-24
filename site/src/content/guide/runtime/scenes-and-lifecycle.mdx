@@ -138,8 +138,8 @@ A scene has a small set of hooks the engine calls in a defined order. Knowing wh
 
 The first time a scene starts:
 
-1. `async load(loader)` — declare assets you need. Resolves before `init`.
-2. `init(loader)` — build state. Loaded assets are available via `loader.get(...)`.
+1. `async load()` — declare assets you need via `this.loader`. Resolves before `init`.
+2. `init(data)` — build state. Must be synchronous. Loaded assets are available via `this.loader.get(...)`; activation data (if the scene declares a data type) arrives here.
 
 Then, every frame while the scene is active:
 
@@ -147,9 +147,11 @@ Then, every frame while the scene is active:
 4. `update(delta)` — advance state. `delta.seconds` is the elapsed time since the last frame.
 5. `draw(context)` — render the current state.
 
+Two signals bracket activation from the outside rather than being hooks you override: `Scene.onActivate` fires every time the scene becomes `Active` (fresh start, a consumed preload, or a restore from retention); `Scene.onSuspend` fires when the scene is suspended for retention instead of ended permanently.
+
 When the scene is replaced or the application shuts down:
 
-6. `async unload(loader)` — release scene-private assets that aren't needed by the next scene.
+6. `async unload()` — release scene-private assets that aren't needed by the next scene.
 7. `destroy()` — drop scene-graph references and cancel input bindings.
 
 You override the hooks you need. Empty hooks like `update` and `draw` do nothing by default, so there is no setup ceremony for scenes that only need one or two phases. Cleanup hooks are different: if you override `destroy`, keep the built-in cleanup path intact unless the API reference for your version says otherwise.
