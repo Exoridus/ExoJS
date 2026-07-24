@@ -32,6 +32,7 @@ import {
   RetainedSceneNotFoundError,
   type SceneInstanceKind,
   SceneInstanceNotFoundError,
+  SceneNavigationAbortedError,
   type SceneRegistryIndex,
   type SceneRegistryShape,
   type UnloadOptions,
@@ -160,6 +161,8 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
   private _sessionResources: TransitionResources | null = null;
   private _inputGateDepth = 0;
   private _navigationInFlight = false;
+  private _navigationGeneration = 0;
+  private _destroyed = false;
 
   /** Fires whenever the active scene changes (set or clear). Payload is the new scene, or `null` when cleared. */
   public readonly onChangeScene = new Signal<[Scene | null]>();
@@ -317,26 +320,22 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
         // Captured before the prepare `await`: the session driving this
         // commit, or `null` on the direct fast path (no session at all).
         const sessionAtStart = this._activeSession;
+        const generationAtStart = this._navigationGeneration;
         const scene = claimedEntry !== null ? (claimedEntry.scope.scene as Scene) : new resolvedTarget();
         const newScope = claimedEntry !== null ? await this._awaitClaimedPreload(claimedEntry) : await this._prepareScene(scene, data);
 
-        // §3.7 concurrency guard. `_prepareScene`/`_awaitClaimedPreload` above
-        // can await the incoming scene's `load()`/`init()` across several
-        // frames (or a slow preload); a frame-loop stop
-        // (`_abortInFlightNavigation`) can fire during that window — a scene's
-        // own `load()` hook calling `app.stop()`, or a fatal frame error —
-        // settling and rejecting this navigation while this continuation is
-        // still suspended. Committing the switch now would activate the
-        // incoming scene and tear the outgoing one down for a navigation the
-        // app already reported aborted. Detect it (the session that drove
-        // this commit is gone) and bail, tearing the freshly-prepared,
-        // never-activated Ready scope down (Ready-scope cleanup, §3.5.1 —
-        // `unload()` runs, `onStopScene` does not).
-        if (sessionAtStart !== null && this._activeSession !== sessionAtStart) {
+        // Generalized §3.7 concurrency guard, covering BOTH a session-driven
+        // commit (the old `sessionAtStart !== null && this._activeSession !==
+        // sessionAtStart` check) and a direct (non-transitioned) commit, which
+        // previously had no abort checkpoint at all: `_navigationGeneration`
+        // is bumped by every real `_abortInFlightNavigation` call regardless
+        // of whether a session existed, so comparing it alone subsumes the
+        // old session-identity check.
+        if (this._navigationGeneration !== generationAtStart) {
           // Guarded (unlike the commit path below, which lets a genuine
           // failure propagate to _performSessionCommit's catch): this
           // disposal runs for a navigation that has already settled — its
-          // session was aborted moments ago, so _finishActiveSession's
+          // session (if any) was aborted moments ago, so _finishActiveSession's
           // `session === null` guard makes any catch further up a no-op,
           // silently dropping the error instead of surfacing it. Report it
           // through the same error pipeline every other guarded disposal in
@@ -353,13 +352,22 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
             this._app.onError.dispatch(normalized);
           }
 
+          if (sessionAtStart === null) {
+            // Direct (non-transitioned) navigation — nothing else will
+            // reject change()'s own promise on abort (a session-driven
+            // commit's rejection instead comes from the session's own
+            // outer promise via `_finishActiveSession`), so this bail must
+            // throw itself.
+            throw new SceneNavigationAbortedError();
+          }
+
           return;
         }
 
         const previousScope = this._activeScope;
         const previousTarget = this._activeScopeTarget;
         const outgoing = previousScope === null ? null : { scope: previousScope, target: previousTarget! };
-        const { teardown, pendingStopScene } = this._navigation.beginOutgoingDisposition(outgoing, options.suspendCurrent ?? false);
+        const { pendingStopScene } = this._navigation.prepareOutgoingDisposition(outgoing, options.suspendCurrent ?? false);
 
         this._activeScope = newScope;
         this._activeScopeTarget = resolvedTarget;
@@ -368,11 +376,13 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
         this.onChangeScene.dispatchIsolated(error => this._reportLifecycleError(error), scene as Scene);
         this.onStartScene.dispatchIsolated(error => this._reportLifecycleError(error), scene as Scene);
 
-        // Not rollback-able (definition §3.5, steps 8-9). Outgoing teardown
-        // settles in the background while the session keeps playing; the
-        // navigation awaits it last via `_awaitPendingOutgoingTeardown`.
-        this._navigation.finishOutgoingDisposition(pendingStopScene);
-        this._pendingOutgoingTeardown = teardown;
+        // Not rollback-able (definition §3.5, steps 8-9). `onStopScene` fires
+        // here — after the incoming scope is fully live — and ONLY THEN does
+        // outgoing teardown actually start; it settles in the background
+        // while the session keeps playing, and the navigation awaits it last
+        // via `_awaitPendingOutgoingTeardown`.
+        this._navigation.dispatchStopScene(pendingStopScene);
+        this._pendingOutgoingTeardown = this._navigation.beginOutgoingTeardown(pendingStopScene);
       };
 
       const resolvedTransition = resolveSceneTransitionSelection('change', options.transition, this._registry.defaultTransitions.get(resolvedTarget));
@@ -384,11 +394,30 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
         // Pre-commit abort restoration (spec §3.5.1), mirroring restore()'s
         // `_retained` restoration. Only when `commitSwitch` never started:
         // once it has, it owns the claimed scope (commit, prepare-failure
-        // cleanup, or the §3.7 race-guard teardown above all handle it), and
+        // cleanup, or the generation-mismatch bail above all handle it), and
         // re-adding a consumed/destroyed scope here would corrupt `_preloaded`.
+        //
+        // Even when `commitSwitch` never started, only restore the claim if
+        // nothing newer has since claimed this slot (a fresh `preload()` call
+        // for the same target, registered while this one was in flight) and
+        // the Director itself is not mid-`_dispose()` (which will tear
+        // `_preloaded` down itself — resurrecting a claim here would leak it
+        // past that teardown).
         if (!commitStarted && claimedEntry !== null) {
-          claimedEntry.status = 'ready';
-          this._preloaded.set(resolvedTarget, claimedEntry);
+          if (!this._destroyed && !this._preloaded.has(resolvedTarget)) {
+            claimedEntry.status = 'ready';
+            this._preloaded.set(resolvedTarget, claimedEntry);
+          } else {
+            void this._disposeScene(claimedEntry.scope, { dispatchStopScene: false }).catch(disposeError => {
+              const normalized = disposeError instanceof Error ? disposeError : new Error(String(disposeError));
+
+              logger.error('SceneDirector.change() failed to dispose an aborted claimed preload that could not be restored.', {
+                source: 'SceneDirector',
+                error: normalized,
+              });
+              this._app.onError.dispatch(normalized);
+            });
+          }
         }
 
         throw error;
@@ -532,7 +561,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
           const previousScope = this._activeScope;
           const previousTarget = this._activeScopeTarget;
           const outgoing = previousScope === null ? null : { scope: previousScope, target: previousTarget! };
-          const { teardown, pendingStopScene } = this._navigation.beginOutgoingDisposition(outgoing, options.suspendCurrent ?? false);
+          const { pendingStopScene } = this._navigation.prepareOutgoingDisposition(outgoing, options.suspendCurrent ?? false);
           const previousState = retainedScope.state;
 
           committed = true;
@@ -540,11 +569,14 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
           this._activeScopeTarget = resolvedTarget;
           retainedScope.restore();
 
-          this.onChangeScene.dispatchIsolated(error => this._reportLifecycleError(error), retainedScope.scene as Scene);
+          // Order per spec: Scene.onActivate (fired synchronously inside
+          // retainedScope.restore() above) -> Director.onStateChange ->
+          // Director.onChangeScene.
           this.onStateChange.dispatchIsolated(error => this._reportLifecycleError(error), previousState, retainedScope.state, retainedScope.scene as Scene);
+          this.onChangeScene.dispatchIsolated(error => this._reportLifecycleError(error), retainedScope.scene as Scene);
 
-          this._navigation.finishOutgoingDisposition(pendingStopScene);
-          this._pendingOutgoingTeardown = teardown;
+          this._navigation.dispatchStopScene(pendingStopScene);
+          this._pendingOutgoingTeardown = this._navigation.beginOutgoingTeardown(pendingStopScene);
 
           return Promise.resolve();
         };
@@ -977,6 +1009,8 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * regardless of any in-flight navigation (definition §10.6).
    */
   public async _dispose(): Promise<void> {
+    this._destroyed = true;
+
     // Abort any in-flight transition session first, through the same public
     // entry point every frame-loop stop uses (§3.7). A no-op when nothing is
     // in flight; otherwise `_finishActiveSession` owns the full synchronous
@@ -1052,6 +1086,8 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * closure (the only navigation whose commit has an async prepare step).
    */
   public _abortInFlightNavigation(reason: Error): boolean {
+    this._navigationGeneration++;
+
     if (this._activeSession === null) {
       return false;
     }

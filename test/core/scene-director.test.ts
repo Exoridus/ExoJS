@@ -2327,6 +2327,41 @@ describe('SceneDirector._abortInFlightNavigation() (Slice 7 Group B, §3.7)', ()
     expect(director._abortInFlightNavigation(new SceneNavigationAbortedError())).toBe(false);
   });
 
+  test('rejects a direct (non-transitioned) change() when the frame loop stops mid-prepare', async () => {
+    const app = createApplicationStub();
+    const First = makeSceneClass();
+    let resolveLoad!: () => void;
+    const SlowLoad = makeSceneClass({
+      load: () =>
+        new Promise<void>(resolve => {
+          resolveLoad = resolve;
+        }),
+    });
+    const director = new SceneDirector(app, { first: First, slow: SlowLoad });
+
+    await director.change(First);
+    const firstInstance = director.currentScene;
+
+    // Direct fast path: commitSwitch runs immediately and is now suspended
+    // awaiting SlowLoad.load(). No transition session is involved.
+    const navigation = director.change(SlowLoad);
+
+    void navigation.catch(() => undefined);
+    await Promise.resolve(); // let commitSwitch reach its prepare await
+
+    // SlowLoad's load()/init() is still pending — abort now, exactly what
+    // Application._stopFrameLoop() does on stop()/a fatal frame error. There
+    // is no session, so this returns false but still bumps the generation.
+    expect(director._abortInFlightNavigation(new SceneNavigationAbortedError())).toBe(false);
+
+    // Unblock load() so commitSwitch's continuation resumes: it must observe
+    // the generation bump and reject rather than commit the switch.
+    resolveLoad();
+
+    await expect(navigation).rejects.toThrow(SceneNavigationAbortedError);
+    expect(director.currentScene).toBe(firstInstance); // outgoing scene untouched
+  });
+
   test('a claimed _preloaded entry is restored (status "ready", back in _preloaded) when the change() consuming it is aborted pre-commit', async () => {
     const app = createApplicationStub();
     const GameScene = makeSceneClass();
