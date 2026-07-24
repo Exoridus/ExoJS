@@ -1,7 +1,7 @@
 {
-  "title": "SetSceneArgs",
-  "description": "Tuple type for the variadic tail of `setScene`/`start` calls, after the target constructor. When `Data` is `void` there is no data slot — only `options`. Otherwise `data` is required and `options` is optional. **Runtime caveat:** `Data` has no runtime representation (erased). A single tail argument is classified as *options* when it is a plain object whose keys are a subset of `{ transition, retainCurrent }` (see resolveSetSceneArgs) — otherwise it is classified as *data*. A scene whose `Data` shape's only keys happen to be named `transition` and/or `retainCurrent` would be misread as options; avoid that shape, or nest such fields one level deeper.",
-  "symbol": "SetSceneArgs",
+  "title": "ChangeSceneArgs",
+  "description": "Tuple type for `change()`'s single options parameter: present-and-required whenever `ChangeSceneOptions<Data>` has a required `data` field (`Data` is not `void`), optional otherwise. There is no runtime data/options ambiguity to resolve anymore — `data` always lives inside this one object, never as a separate positional argument (spec §6.3; this supersedes the deleted two-argument `SetSceneArgs`).",
+  "symbol": "ChangeSceneArgs",
   "kind": "type",
   "subsystem": "core",
   "importPath": "@codexo/exojs",
@@ -19,10 +19,9 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Tuple type for the variadic tail of `setScene`/`start` calls, after the target constructor. When `Data` is `void` there is no data slot — only `options`. Otherwise `data` is required and `options` is optional.",
-        "**Runtime caveat:** `Data` has no runtime representation (erased). A single tail argument is classified as *options* when it is a plain object whose keys are a subset of `{ transition, retainCurrent }` (see resolveSetSceneArgs) — otherwise it is classified as *data*. A scene whose `Data` shape's only keys happen to be named `transition` and/or `retainCurrent` would be misread as options; avoid that shape, or nest such fields one level deeper."
+        "Tuple type for `change()`'s single options parameter: present-and-required whenever `ChangeSceneOptions<Data>` has a required `data` field (`Data` is not `void`), optional otherwise. There is no runtime data/options ambiguity to resolve anymore — `data` always lives inside this one object, never as a separate positional argument (spec §6.3; this supersedes the deleted two-argument `SetSceneArgs`)."
       ],
-      "importLine": "import { SetSceneArgs } from '@codexo/exojs'",
+      "importLine": "import { ChangeSceneArgs } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
@@ -30,8 +29,8 @@
       "title": "Definition",
       "members": [
         {
-          "name": "SetSceneArgs",
-          "signature": "[Data] extends [void] ? [options] : [data, options]",
+          "name": "ChangeSceneArgs",
+          "signature": "[Data] extends [void] ? [options] : [options]",
           "signatureTokens": [
             {
               "text": "[",
@@ -91,14 +90,6 @@
             },
             {
               "text": "[",
-              "kind": "punctuation"
-            },
-            {
-              "text": "data",
-              "kind": "type"
-            },
-            {
-              "text": ", ",
               "kind": "punctuation"
             },
             {

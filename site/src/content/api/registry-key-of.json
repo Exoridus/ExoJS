@@ -1,16 +1,16 @@
 {
-  "title": "RestoreSceneOptions",
-  "description": "Options for SceneDirector.restore. No `data` field — a restored scope reuses whatever activation data it was originally prepared with; `load()`/`init()` never run again for it (definition §14.3).",
-  "symbol": "RestoreSceneOptions",
-  "kind": "interface",
+  "title": "RegistryKeyOf",
+  "description": "Every string key registered in a `SceneRegistryShape` — the type of a valid `change()`/`restore()` key-based navigation target.",
+  "symbol": "RegistryKeyOf",
+  "kind": "type",
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 1,
+  "memberCount": 0,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 1,
+    "properties": 0,
     "events": 0
   },
   "sections": [
@@ -19,39 +19,55 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Options for SceneDirector.restore. No `data` field — a restored scope reuses whatever activation data it was originally prepared with; `load()`/`init()` never run again for it (definition §14.3)."
+        "Every string key registered in a `SceneRegistryShape` — the type of a valid `change()`/`restore()` key-based navigation target."
       ],
-      "importLine": "import { RestoreSceneOptions } from '@codexo/exojs'",
+      "importLine": "import { RegistryKeyOf } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
-      "id": "properties",
-      "title": "Properties",
+      "id": "definition",
+      "title": "Definition",
       "members": [
         {
-          "name": "suspendCurrent",
-          "signature": "suspendCurrent?: boolean",
+          "name": "RegistryKeyOf",
+          "signature": "Extract<keyof Registry, string>",
           "signatureTokens": [
             {
-              "text": "suspendCurrent",
-              "kind": "name"
+              "text": "Extract",
+              "kind": "type"
             },
             {
-              "text": "?",
+              "text": "<",
               "kind": "punctuation"
             },
             {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "boolean",
+              "text": "keyof",
               "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Registry",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Suspend the currently active scene (if any) instead of ending it permanently — mirrors ChangeSceneOptions.suspendCurrent."
+          "description": ""
         }
       ],
       "paragraphs": [],
