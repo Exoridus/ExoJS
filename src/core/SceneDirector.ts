@@ -1561,7 +1561,17 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
     const outgoingSnapshot =
       requirements.outgoingFrame === 'snapshot' && this._activeScope !== null ? this._captureOutgoingSnapshot(this._activeScope, width, height) : null;
 
-    const currentTexture = requirements.currentFrame === 'texture' ? this._app.backend.acquireRenderTexture(width, height) : null;
+    let currentTexture: RenderTexture | null = null;
+
+    try {
+      currentTexture = requirements.currentFrame === 'texture' ? this._app.backend.acquireRenderTexture(width, height) : null;
+    } catch (error) {
+      if (outgoingSnapshot !== null) {
+        this._app.backend.releaseRenderTexture(outgoingSnapshot);
+      }
+
+      throw error;
+    }
 
     const onResize = (): void => {
       currentTexture?.setSize(this._app.canvas.width, this._app.canvas.height);
@@ -1592,7 +1602,13 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
   private _captureOutgoingSnapshot(scope: SceneScope, width: number, height: number): RenderTexture {
     const snapshot = this._app.backend.acquireRenderTexture(width, height);
 
-    this._app.rendering._renderSurfaceInto(snapshot, this._app.clearColor, () => scope.draw(this._app.rendering));
+    try {
+      this._app.rendering._renderSurfaceInto(snapshot, this._app.clearColor, () => scope.draw(this._app.rendering));
+    } catch (error) {
+      this._app.backend.releaseRenderTexture(snapshot);
+
+      throw error;
+    }
 
     return snapshot;
   }

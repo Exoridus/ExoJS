@@ -1740,6 +1740,66 @@ describe('SceneDirector — transition resource provisioning (§3.4, §3.7a)', (
     await navigation;
   });
 
+  test('releases the acquired snapshot texture if capturing it throws', async () => {
+    const app = createApplicationStub();
+    const First = makeSceneClass({
+      draw: () => {
+        throw new Error('draw exploded');
+      },
+    });
+    const Second = makeSceneClass();
+    const manager = new SceneDirector(app, { first: First, second: Second });
+
+    await manager.change(First);
+
+    const session = new FakeSession();
+    const transition = new (class extends SceneTransition {
+      public getRequirements(): SceneTransitionRequirements {
+        return { outgoingFrame: 'snapshot', currentFrame: 'none' };
+      }
+      protected override createSession(): SceneTransitionSession {
+        return session;
+      }
+    })();
+
+    await expect(manager.change(Second, { transition })).rejects.toThrow('draw exploded');
+    expect(app.backend.releaseRenderTexture).toHaveBeenCalled();
+  });
+
+  test('releases an already-acquired snapshot texture if acquiring the current texture then fails', async () => {
+    const app = createApplicationStub();
+    const First = makeSceneClass();
+    const Second = makeSceneClass();
+    const manager = new SceneDirector(app, { first: First, second: Second });
+
+    await manager.change(First);
+
+    let acquireCalls = 0;
+
+    (app.backend.acquireRenderTexture as MockInstance).mockImplementation((width: number, height: number) => {
+      acquireCalls++;
+
+      if (acquireCalls === 2) {
+        throw new Error('second acquire exploded');
+      }
+
+      return new RenderTexture(width, height);
+    });
+
+    const session = new FakeSession();
+    const transition = new (class extends SceneTransition {
+      public getRequirements(): SceneTransitionRequirements {
+        return { outgoingFrame: 'snapshot', currentFrame: 'texture' };
+      }
+      protected override createSession(): SceneTransitionSession {
+        return session;
+      }
+    })();
+
+    await expect(manager.change(Second, { transition })).rejects.toThrow('second acquire exploded');
+    expect(app.backend.releaseRenderTexture).toHaveBeenCalledTimes(1); // the snapshot, released after the second acquire failed
+  });
+
   test('outgoingFrame: "snapshot" is skipped (frame.outgoing stays null) when there is no outgoing scene', async () => {
     const app = createApplicationStub();
     const First = makeSceneClass();
