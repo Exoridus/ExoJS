@@ -25,9 +25,7 @@ const navContext: SceneTransitionContext = { operation: 'change', hasOutgoingSce
 // stub needs both. Assertions inspect the captured Sprite node's own
 // properties (x/y/texture/tint.a), not a plain call-argument object, since
 // `render()` takes a RenderNode rather than a `{x, y, alpha}` bag.
-const stubRendering = (
-  render = vi.fn(),
-): SceneTransitionPhaseContext['rendering'] =>
+const stubRendering = (render = vi.fn()): SceneTransitionPhaseContext['rendering'] =>
   ({
     render,
     screenView: { getBounds: () => ({ left: 0, top: 0, right: 800, bottom: 600 }) },

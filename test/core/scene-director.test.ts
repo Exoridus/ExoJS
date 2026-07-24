@@ -2361,7 +2361,7 @@ describe('SceneDirector._abortInFlightNavigation() (Slice 7 Group B, §3.7)', ()
     expect(director.currentScene).toBeInstanceOf(GameScene);
   });
 
-  test('a claimed _retained entry is restored to _retained when the restore() consuming it is aborted pre-commit (restore()\'s existing catch, no code change)', async () => {
+  test("a claimed _retained entry is restored to _retained when the restore() consuming it is aborted pre-commit (restore()'s existing catch, no code change)", async () => {
     const app = createApplicationStub();
     const First = makeSceneClass();
     const Second = makeSceneClass();
@@ -2521,7 +2521,7 @@ describe('SceneDirector._abortInFlightNavigation() (Slice 7 Group B, §3.7)', ()
     }
   });
 
-  test('restore()\'s claim restoration does not resurrect a scope that Application.stop() already force-cleared and disposed post-commit', async () => {
+  test("restore()'s claim restoration does not resurrect a scope that Application.stop() already force-cleared and disposed post-commit", async () => {
     // Reproduces the exact sequence Application.stop() drives: it aborts the
     // in-flight session (rejecting restore()'s promise) AND separately calls
     // _forceClearActiveSceneAfterAbort(), which nulls _activeScope and

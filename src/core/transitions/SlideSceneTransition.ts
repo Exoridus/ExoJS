@@ -132,7 +132,12 @@ export class SlideSceneTransition extends PhasedSceneTransition {
   }
 
   /** Draw `texture` via `sprite`, offset along `direction`'s axis by `distance * (1 - presence) * sign`. */
-  private _drawSliding(context: SceneTransitionPhaseContext, sprite: Sprite, texture: NonNullable<SceneTransitionPhaseContext['frame']['current']>, direction: SlideDirection): void {
+  private _drawSliding(
+    context: SceneTransitionPhaseContext,
+    sprite: Sprite,
+    texture: NonNullable<SceneTransitionPhaseContext['frame']['current']>,
+    direction: SlideDirection,
+  ): void {
     const { width, height } = this._screenSize(context);
     const distance = directionAxis[direction] === 'x' ? width : height;
     const offset = distance * (1 - context.presence) * directionSign[direction];

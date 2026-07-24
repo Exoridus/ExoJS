@@ -349,7 +349,10 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
           } catch (error) {
             const normalized = error instanceof Error ? error : new Error(String(error));
 
-            logger.error('SceneDirector.change() failed to dispose a Ready scope discarded by the §3.7 race guard.', { source: 'SceneDirector', error: normalized });
+            logger.error('SceneDirector.change() failed to dispose a Ready scope discarded by the §3.7 race guard.', {
+              source: 'SceneDirector',
+              error: normalized,
+            });
             this._app.onError.dispatch(normalized);
           }
 
