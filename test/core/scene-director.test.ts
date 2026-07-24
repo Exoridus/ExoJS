@@ -1092,4 +1092,16 @@ describe('SceneDirector — key-based navigation', () => {
 
     await expect(director.change('missing')).rejects.toThrow(UnregisteredSceneError);
   });
+
+  test('restore() rejects for an unregistered string key, in every build', async () => {
+    const app = createApplicationStub();
+    const RegisteredScene = makeSceneClass();
+    // Widened to the untyped registry shape for this one call — a string
+    // key not present in the registry is a compile-time error against the
+    // precisely-typed overload, which is exactly the point; this test
+    // exercises the runtime rejection path a production build still needs.
+    const director = new SceneDirector(app, { first: RegisteredScene }) as SceneDirector<Record<string, SceneConstructor<void>>>;
+
+    await expect(director.restore('missing')).rejects.toThrow(UnregisteredSceneError);
+  });
 });

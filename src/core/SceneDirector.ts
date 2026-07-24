@@ -125,7 +125,9 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
   // Relies on class field initializers running top-to-bottom in declaration
   // order — `_retained`/`onStopScene`/`onStateChange` above are already
   // assigned by the time this initializer runs.
-  private readonly _navigation = new SceneNavigationTransaction(this._retained, this.onStopScene, this.onStateChange, error => this._reportLifecycleError(error));
+  private readonly _navigation = new SceneNavigationTransaction(this._retained, this.onStopScene, this.onStateChange, error =>
+    this._reportLifecycleError(error),
+  );
 
   public constructor(app: Application, scenes?: Registry) {
     this._app = app;
@@ -559,6 +561,14 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * error, in every build — unlike an unregistered *constructor* (checked
    * separately, dev-only), there is no constructor to fall back to for an
    * unresolvable key.
+   *
+   * Callers resolve at different points relative to the navigation lock:
+   * `change()` resolves inside `_runWithNavigation`, deliberately, to
+   * preserve its existing check order (concurrent-navigation guard first,
+   * then target validation); `restore()` resolves eagerly, before the lock,
+   * so a `restore('missing-key')` call rejects with
+   * {@link UnregisteredSceneError} even while another navigation is already
+   * in flight, rather than {@link ConcurrentSceneNavigationError}.
    */
   private _resolveNavigationTarget(target: AnySceneConstructor | string): AnySceneConstructor {
     if (typeof target !== 'string') {
