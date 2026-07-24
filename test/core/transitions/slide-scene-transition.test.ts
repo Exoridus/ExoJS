@@ -5,13 +5,18 @@ import { SlideSceneTransition } from '#core/transitions/SlideSceneTransition';
 import type { Sprite } from '#rendering/sprite/Sprite';
 
 // Exposes the protected authoring hooks through public wrappers — same
-// pattern as FadeSceneTransition's test suite (Task 1).
+// pattern as FadeSceneTransition's test suite (Task 1). Scratch state is
+// created once per instance and reused across callEnter()/callExit() calls
+// on that same instance — matching how a real session drives one phase's
+// state across its own frames.
 class TestableSlideSceneTransition extends SlideSceneTransition {
+  private readonly _testState = this._createPhaseStateForSession();
+
   public callEnter(context: SceneTransitionPhaseContext): void {
-    this.enter(context);
+    this.enter(context, this._testState);
   }
   public callExit(context: SceneTransitionPhaseContext): void {
-    this.exit(context);
+    this.exit(context, this._testState);
   }
   public callGetPhaseRequirements(phase: 'enter' | 'exit', context: SceneTransitionContext): SceneTransitionPhaseRequirements {
     return this.getPhaseRequirements(phase, context);

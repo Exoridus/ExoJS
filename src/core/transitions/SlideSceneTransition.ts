@@ -41,6 +41,12 @@ const oppositeDirection: Record<SlideDirection, SlideDirection> = {
   down: 'up',
 };
 
+/** Per-session scratch state for {@link SlideSceneTransition} — never shared with the (immutable, reusable-across-navigations) definition instance, and never retains a texture past the session that assigned it. */
+interface SlidePhaseState {
+  readonly currentSprite: Sprite;
+  readonly snapshotSprite: Sprite;
+}
+
 /**
  * Directional slide transition — covers menu/inventory/page-style navigation
  * (definition spec §8). Three modes:
@@ -54,23 +60,9 @@ const oppositeDirection: Record<SlideDirection, SlideDirection> = {
  *   edge over a frozen snapshot of the (already-gone) outgoing scene.
  * @stable
  */
-export class SlideSceneTransition extends PhasedSceneTransition {
+export class SlideSceneTransition extends PhasedSceneTransition<SlidePhaseState> {
   public readonly direction: SlideDirection;
   public readonly mode: SlideMode;
-
-  /**
-   * Reusable sprite for the animated "current" surface (the live outgoing
-   * texture during `exit()`, the live incoming texture during `enter()`) —
-   * mutated per draw, never reallocated.
-   */
-  private readonly _currentSprite = new Sprite(null);
-  /**
-   * Reusable sprite for `mode: 'cover'`'s frozen outgoing snapshot, held
-   * separately from {@link _currentSprite} because `cover`'s `enter()` draws
-   * both in the same frame — reusing one instance for both would have the
-   * second draw overwrite the first before it renders.
-   */
-  private readonly _snapshotSprite = new Sprite(null);
 
   public constructor(options: SlideSceneTransitionOptions = {}) {
     super(options);
@@ -91,7 +83,11 @@ export class SlideSceneTransition extends PhasedSceneTransition {
     return phase === 'exit' ? { outgoingFrame: 'none', currentFrame: 'direct' } : { outgoingFrame: 'snapshot', currentFrame: 'texture' };
   }
 
-  protected override exit(context: SceneTransitionPhaseContext): void {
+  protected override createPhaseState(): SlidePhaseState {
+    return { currentSprite: new Sprite(null), snapshotSprite: new Sprite(null) };
+  }
+
+  protected override exit(context: SceneTransitionPhaseContext, state: SlidePhaseState): void {
     if (this.mode === 'cover') {
       return; // static — the outgoing scene stays put, untouched, until commit
     }
@@ -102,20 +98,20 @@ export class SlideSceneTransition extends PhasedSceneTransition {
       return;
     }
 
-    this._drawSliding(context, this._currentSprite, context.frame.current, this.direction);
+    this._drawSliding(context, state.currentSprite, context.frame.current, this.direction);
   }
 
-  protected override enter(context: SceneTransitionPhaseContext): void {
+  protected override enter(context: SceneTransitionPhaseContext, state: SlidePhaseState): void {
     if (this.mode === 'reveal') {
       return; // nothing left to animate — the reveal already happened during exit
     }
 
     if (this.mode === 'cover' && context.frame.outgoing !== null) {
-      this._snapshotSprite.texture = context.frame.outgoing;
-      this._snapshotSprite.x = 0;
-      this._snapshotSprite.y = 0;
-      this._snapshotSprite.tint.a = 1;
-      context.rendering.render(this._snapshotSprite, { view: context.rendering.screenView });
+      state.snapshotSprite.texture = context.frame.outgoing;
+      state.snapshotSprite.x = 0;
+      state.snapshotSprite.y = 0;
+      state.snapshotSprite.tint.a = 1;
+      context.rendering.render(state.snapshotSprite, { view: context.rendering.screenView });
     }
 
     if (context.frame.current === null) {
@@ -128,7 +124,7 @@ export class SlideSceneTransition extends PhasedSceneTransition {
     // incoming content comes from the other side in every animated mode.
     const entryDirection = oppositeDirection[this.direction];
 
-    this._drawSliding(context, this._currentSprite, context.frame.current, entryDirection);
+    this._drawSliding(context, state.currentSprite, context.frame.current, entryDirection);
   }
 
   /** Draw `texture` via `sprite`, offset along `direction`'s axis by `distance * (1 - presence) * sign`. */
