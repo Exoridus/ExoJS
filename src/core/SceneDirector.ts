@@ -1,14 +1,21 @@
-import { Mesh } from '#rendering/mesh/Mesh';
-import type { RenderBackend } from '#rendering/RenderBackend';
 import type { RenderingContext } from '#rendering/RenderingContext';
+import type { RenderTexture } from '#rendering/texture/RenderTexture';
 
 import type { Application } from './Application';
-import { Color } from './Color';
 import { logger } from './logging';
 import { Scene } from './Scene';
 import { SceneNavigationTransaction } from './scene/SceneNavigationTransaction';
 import { SceneScope } from './SceneScope';
 import type { SceneState } from './SceneState';
+import type {
+  SceneTransition,
+  SceneTransitionContext,
+  SceneTransitionEnvironment,
+  SceneTransitionFrame,
+  SceneTransitionRequirements,
+  SceneTransitionSession,
+} from './SceneTransition';
+import { SceneTransitionLifecycleError } from './SceneTransition';
 import {
   AmbiguousSceneInstanceError,
   type AnySceneConstructor,
@@ -27,7 +34,6 @@ import {
   SceneInstanceNotFoundError,
   type SceneRegistryIndex,
   type SceneRegistryShape,
-  type SceneTransition,
   type UnloadOptions,
   UnregisteredSceneError,
   validateSceneRegistry,
@@ -35,7 +41,16 @@ import {
 import { Signal } from './Signal';
 import type { Time } from './Time';
 
-export type { ChangeSceneOptions, FadeSceneTransition, RestoreSceneOptions, SceneInstanceKind, SceneTransition, UnloadOptions } from './SceneTypes';
+export type {
+  SceneTransitionContext,
+  SceneTransitionEnvironment,
+  SceneTransitionFrame,
+  SceneTransitionOperation,
+  SceneTransitionRequirements,
+  SceneTransitionSession,
+} from './SceneTransition';
+export { SceneTransition, SceneTransitionLifecycleError } from './SceneTransition';
+export type { ChangeSceneOptions, RestoreSceneOptions, SceneInstanceKind, UnloadOptions } from './SceneTypes';
 export {
   AmbiguousSceneInstanceError,
   ConcurrentSceneNavigationError,
@@ -46,7 +61,7 @@ export {
 
 type PreloadStatus = 'loading' | 'ready' | 'claimed' | 'cancelling';
 
-/** Internal `_preloaded` entry — same "small internal-only interface colocated with the class that uses it" convention as {@link ActiveFadeTransition}. */
+/** Internal `_preloaded` entry — a small internal-only interface colocated with the class that uses it. */
 interface PreloadEntry {
   readonly scope: SceneScope;
   readonly data: unknown;
@@ -54,41 +69,57 @@ interface PreloadEntry {
   status: PreloadStatus;
 }
 
-interface ActiveFadeTransition {
-  readonly type: 'fade';
-  readonly durationMs: number;
-  readonly action: () => Promise<void>;
-  readonly resolve: () => void;
-  readonly reject: (error: unknown) => void;
-  readonly color: Color;
-  elapsedMs: number;
-  phase: 'out' | 'switching' | 'in';
+/** @internal Result of driving one transition session to its exit point. */
+type SceneTransitionOutcome = { readonly ok: true; readonly error?: undefined } | { readonly ok: false; readonly error: unknown };
+
+/** @internal Render resources provisioned for one transition session, released on every exit path. */
+interface TransitionResources {
+  readonly outgoingSnapshot: RenderTexture | null;
+  readonly currentTexture: RenderTexture | null;
+  readonly release: () => void;
 }
 
-class TransitionOverlayMesh extends Mesh {
-  public override render(backend: RenderBackend): this {
-    if (this.visible) {
-      backend.draw(this);
+/** @internal Director-owned implementation of {@link SceneTransitionEnvironment}. Not exported. */
+class DirectorTransitionEnvironment implements SceneTransitionEnvironment {
+  public readonly context: SceneTransitionContext;
+  private _commitRequested = false;
+  private _committed = false;
+
+  public constructor(context: SceneTransitionContext) {
+    this.context = context;
+  }
+
+  public get commitRequested(): boolean {
+    return this._commitRequested;
+  }
+
+  public get committed(): boolean {
+    return this._committed;
+  }
+
+  public commit(): void {
+    if (this._commitRequested) {
+      if (__DEV__) {
+        throw new SceneTransitionLifecycleError('commit-reentrant');
+      }
+
+      return;
     }
 
-    return this;
+    this._commitRequested = true;
+  }
+
+  /** @internal Called by the Director once the atomic commit boundary is actually crossed. */
+  public _markCommitted(): void {
+    this._committed = true;
   }
 }
-
-const createOverlayMesh = (): TransitionOverlayMesh =>
-  new TransitionOverlayMesh({
-    // 4 vertices (TL, TR, BL, BR) with 2 indexed triangles forming a screen quad.
-    vertices: new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]),
-    indices: new Uint16Array([0, 1, 2, 1, 3, 2]),
-  });
-
-const defaultFadeTransitionDuration = 220;
 
 /**
  * Single-active-scene controller owned by {@link Application}. Holds at most one
  * active {@link Scene} (the current "screen"); {@link SceneDirector.change}
  * switches to a new scene — ending the previous one permanently — with an
- * optional fade transition.
+ * optional {@link SceneTransition}.
  *
  * The `Registry` generic (inferred from `ApplicationOptions.scenes`, spec
  * §6.1) types the scene registry passed at construction. This class stores
@@ -104,11 +135,13 @@ const defaultFadeTransitionDuration = 220;
  * normative order; `SceneDirector` itself only tracks which scope is active
  * and drives the transition machinery.
  *
- * Per-frame dispatch is split into four entry points, called by
+ * Per-frame dispatch is split into entry points called by
  * {@link Application.update} in normative order: {@link SceneDirector.fixedUpdate}
- * (zero or more times), {@link SceneDirector.update}, {@link SceneDirector.draw},
- * then {@link SceneDirector._drawTransition} last, so the fade overlay always
- * sits above both scene and app draw systems.
+ * (zero or more times), {@link SceneDirector.update}, then
+ * {@link SceneDirector.draw}. An active {@link SceneTransitionSession} is
+ * driven separately each frame via {@link SceneDirector._updateTransition}
+ * and {@link SceneDirector._renderTransition}, composited above or below the
+ * app draw systems depending on the session's `placement` (§3.6).
  */
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- empty registry is a valid default
 export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
@@ -118,8 +151,13 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
   private _activeScopeTarget: AnySceneConstructor | null = null;
   private readonly _retained = new Map<AnySceneConstructor, SceneScope>();
   private readonly _preloaded = new Map<AnySceneConstructor, PreloadEntry>();
-  private readonly _transitionOverlay: TransitionOverlayMesh = createOverlayMesh();
-  private _transition: ActiveFadeTransition | null = null;
+  private _activeSession: SceneTransitionSession | null = null;
+  private _activeEnvironment: DirectorTransitionEnvironment | null = null;
+  private _sessionAction: (() => Promise<void>) | null = null;
+  private _sessionSettle: ((outcome: SceneTransitionOutcome) => void) | null = null;
+  private _sessionCommitStarted = false;
+  private _pendingOutgoingTeardown: Promise<void> | null = null;
+  private _sessionResources: TransitionResources | null = null;
   private _inputGateDepth = 0;
   private _navigationInFlight = false;
 
@@ -174,8 +212,8 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
   }
 
   /**
-   * @internal `true` while an explicit fade transition is in flight — used
-   * by {@link SceneInputs} (`when` policy) and {@link InteractionManager}
+   * @internal `true` while a {@link SceneTransitionSession} is in flight —
+   * used by {@link SceneInputs} (`when` policy) and {@link InteractionManager}
    * to suppress scene input/interaction dispatch for the transition's
    * duration, regardless of `when: 'always'` (definition §13.6). A
    * `change()` call with no `transition` option never opens this gate.
@@ -200,13 +238,14 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * teardown to fully settle (skipped when `suspendCurrent` is set, since
    * there is nothing to tear down).
    *
-   * A `transition` option shaped like today's hardcoded fade transition
-   * (`{ type: 'fade', duration?, color? }`) is still accepted and runs
-   * exactly as it does today — a temporary bridge to the pre-existing fade
-   * machinery, removed once a later slice lands the real transition
-   * runtime and adds a `transition` field to {@link ChangeSceneOptions}
-   * itself. It is intentionally not part of {@link ChangeSceneOptions}'s
-   * documented public shape.
+   * An optional `transition` (a {@link SceneTransition} instance) drives the
+   * switch through a {@link SceneTransitionSession}: the atomic commit
+   * boundary is deferred until the session requests it via
+   * `environment.commit()`, and the returned promise resolves only once the
+   * session finishes. With no `transition`, the switch runs the direct fast
+   * path. `transition` is intentionally not yet part of
+   * {@link ChangeSceneOptions}'s documented public shape (a registry-default
+   * `SceneTransitionSelection` follows in a later slice).
    *
    * Rejects with {@link ConcurrentSceneNavigationError} when another
    * navigation is already in flight (dev and production builds — no
@@ -245,9 +284,9 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
       // would, per spec §3.5.1, go back into `_preloaded` as `ready` rather
       // than being destroyed — but the only way to reach that case is
       // §3.7's frame-loop abort scenario, which does not exist yet (Slice
-      // 7, built on Slice 5's transition sessions); change()'s current body
-      // has no pre-commit failure point past this claim for that
-      // restoration to guard, so there is nothing to wire up here yet.
+      // 7, built on Slice 5's transition sessions); change()'s body has no
+      // pre-commit failure point past this claim for that restoration to
+      // guard, so there is nothing to wire up here yet.
       const preloadEntry = this._preloaded.get(resolvedTarget);
       const claimedEntry = preloadEntry !== undefined && preloadEntry.status !== 'cancelling' && Object.is(preloadEntry.data, data) ? preloadEntry : null;
 
@@ -256,27 +295,42 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
         claimedEntry.status = 'claimed';
       }
 
-      const scene = claimedEntry !== null ? (claimedEntry.scope.scene as Scene) : new resolvedTarget();
-      const newScope = claimedEntry !== null ? await this._awaitClaimedPreload(claimedEntry) : await this._prepareScene(scene, data);
+      const context: SceneTransitionContext = {
+        operation: 'change',
+        hasOutgoingScene: this._activeScope !== null,
+        hasIncomingScene: true,
+      };
 
-      // Atomic commit boundary (definition §3.5, steps 5-7) — nothing past
-      // this point can fail or roll back.
-      const previousScope = this._activeScope;
-      const previousTarget = this._activeScopeTarget;
-      const outgoing = previousScope === null ? null : { scope: previousScope, target: previousTarget! };
-      const { teardown, pendingStopScene } = this._navigation.beginOutgoingDisposition(outgoing, options.suspendCurrent ?? false);
+      // The atomic switch (definition §3.5, steps 5-9). Invoked directly on
+      // the direct fast path, or by the transition session once it calls
+      // `environment.commit()`. `_prepareScene`/`_awaitClaimedPreload` runs
+      // inside here, so a transitioned navigation only prepares the incoming
+      // scope at commit time; nothing past prepare can fail or roll back.
+      const commitSwitch = async (): Promise<void> => {
+        const scene = claimedEntry !== null ? (claimedEntry.scope.scene as Scene) : new resolvedTarget();
+        const newScope = claimedEntry !== null ? await this._awaitClaimedPreload(claimedEntry) : await this._prepareScene(scene, data);
+        const previousScope = this._activeScope;
+        const previousTarget = this._activeScopeTarget;
+        const outgoing = previousScope === null ? null : { scope: previousScope, target: previousTarget! };
+        const { teardown, pendingStopScene } = this._navigation.beginOutgoingDisposition(outgoing, options.suspendCurrent ?? false);
 
-      this._activeScope = newScope;
-      this._activeScopeTarget = resolvedTarget;
-      newScope.activate();
+        this._activeScope = newScope;
+        this._activeScopeTarget = resolvedTarget;
+        newScope.activate();
 
-      this.onChangeScene.dispatchIsolated(error => this._reportLifecycleError(error), scene as Scene);
-      this.onStartScene.dispatchIsolated(error => this._reportLifecycleError(error), scene as Scene);
+        this.onChangeScene.dispatchIsolated(error => this._reportLifecycleError(error), scene as Scene);
+        this.onStartScene.dispatchIsolated(error => this._reportLifecycleError(error), scene as Scene);
 
-      // Not rollback-able (definition §3.5, steps 8-9).
-      this._navigation.finishOutgoingDisposition(pendingStopScene);
-      await teardown;
-    }, options.transition);
+        // Not rollback-able (definition §3.5, steps 8-9). Outgoing teardown
+        // settles in the background while the session keeps playing; the
+        // navigation awaits it last via `_awaitPendingOutgoingTeardown`.
+        this._navigation.finishOutgoingDisposition(pendingStopScene);
+        this._pendingOutgoingTeardown = teardown;
+      };
+
+      await (options.transition === undefined ? commitSwitch() : this._runTransitionedAction(commitSwitch, context, options.transition));
+      await this._awaitPendingOutgoingTeardown();
+    });
 
     return this;
   }
@@ -284,24 +338,38 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
   /**
    * @internal Clear the active scene (if any) without activating a new one.
    * Used by {@link Application.stop}/{@link Application.destroy} (no
-   * transition, the default), and by {@link SceneDirector.unload}'s
-   * active-scope match (an explicit `transition` may apply there — spec §5).
-   * Never part of the public navigation surface itself (navigation always
-   * targets a registered constructor).
+   * transition, the default — runs the direct fast path), and by
+   * {@link SceneDirector.unload}'s active-scope match, where an explicit
+   * `transition` drives a full {@link SceneTransitionSession} (operation
+   * `'unload'`, `hasIncomingScene: false` — the discard has no scene to
+   * enter). Never part of the public navigation surface itself (navigation
+   * always targets a registered constructor).
    */
   public async _clearScene(transition?: SceneTransition): Promise<this> {
     await this._runWithNavigation(async () => {
-      const previousScope = this._activeScope;
+      const context: SceneTransitionContext = {
+        operation: 'unload',
+        hasOutgoingScene: this._activeScope !== null,
+        hasIncomingScene: false,
+      };
 
-      this._activeScope = null;
-      this._activeScopeTarget = null;
+      const commitDiscard = (): Promise<void> => {
+        const previousScope = this._activeScope;
 
-      if (previousScope !== null) {
-        await this._disposeScene(previousScope);
-      }
+        this._activeScope = null;
+        this._activeScopeTarget = null;
+        // Outgoing teardown backgrounds (same contract as change()/restore());
+        // awaited last via `_awaitPendingOutgoingTeardown`.
+        this._pendingOutgoingTeardown = previousScope !== null ? this._disposeScene(previousScope) : null;
 
-      this.onChangeScene.dispatchIsolated(error => this._reportLifecycleError(error), null);
-    }, transition);
+        this.onChangeScene.dispatchIsolated(error => this._reportLifecycleError(error), null);
+
+        return Promise.resolve();
+      };
+
+      await (transition === undefined ? commitDiscard() : this._runTransitionedAction(commitDiscard, context, transition));
+      await this._awaitPendingOutgoingTeardown();
+    });
 
     return this;
   }
@@ -312,8 +380,9 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * `restore(..., { suspendCurrent: true })` — the same instance, returned
    * to whichever of `Active`/`Paused` it had before suspension. `load()`/
    * `init()` do not run again (definition §14.3). Shares the same atomic
-   * commit boundary as {@link SceneDirector.change} — see its doc comment
-   * for the exact guarantee and the temporary fade-transition bridge.
+   * commit boundary and optional {@link SceneTransition} behavior as
+   * {@link SceneDirector.change} — see its doc comment for the exact
+   * guarantee.
    *
    * Rejects with {@link ConcurrentSceneNavigationError} when another
    * navigation is already in flight; with {@link RetainedSceneNotFoundError}
@@ -336,31 +405,49 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
 
     try {
       await this._runWithNavigation(async () => {
-        const previousScope = this._activeScope;
-        const previousTarget = this._activeScopeTarget;
-        const outgoing = previousScope === null ? null : { scope: previousScope, target: previousTarget! };
-        const { teardown, pendingStopScene } = this._navigation.beginOutgoingDisposition(outgoing, options.suspendCurrent ?? false);
+        const context: SceneTransitionContext = {
+          operation: 'restore',
+          hasOutgoingScene: this._activeScope !== null,
+          hasIncomingScene: true,
+        };
 
         // Atomic commit boundary — restore() has no async prepare step, so
-        // this reaches the commit point immediately.
-        const previousState = retainedScope.state;
+        // this reaches the commit point immediately (or as soon as a
+        // transition session requests commit).
+        const commitSwitch = (): Promise<void> => {
+          const previousScope = this._activeScope;
+          const previousTarget = this._activeScopeTarget;
+          const outgoing = previousScope === null ? null : { scope: previousScope, target: previousTarget! };
+          const { teardown, pendingStopScene } = this._navigation.beginOutgoingDisposition(outgoing, options.suspendCurrent ?? false);
+          const previousState = retainedScope.state;
 
-        this._activeScope = retainedScope;
-        this._activeScopeTarget = resolvedTarget;
-        retainedScope.restore();
+          this._activeScope = retainedScope;
+          this._activeScopeTarget = resolvedTarget;
+          retainedScope.restore();
 
-        this.onChangeScene.dispatchIsolated(error => this._reportLifecycleError(error), retainedScope.scene as Scene);
-        this.onStateChange.dispatchIsolated(error => this._reportLifecycleError(error), previousState, retainedScope.state, retainedScope.scene as Scene);
+          this.onChangeScene.dispatchIsolated(error => this._reportLifecycleError(error), retainedScope.scene as Scene);
+          this.onStateChange.dispatchIsolated(error => this._reportLifecycleError(error), previousState, retainedScope.state, retainedScope.scene as Scene);
 
-        this._navigation.finishOutgoingDisposition(pendingStopScene);
-        await teardown;
-      }, options.transition);
+          this._navigation.finishOutgoingDisposition(pendingStopScene);
+          this._pendingOutgoingTeardown = teardown;
+
+          return Promise.resolve();
+        };
+
+        await (options.transition === undefined ? commitSwitch() : this._runTransitionedAction(commitSwitch, context, options.transition));
+        await this._awaitPendingOutgoingTeardown();
+      });
     } catch (error) {
-      // Only reachable here via a rejected concurrent-navigation guard —
-      // retainedScope.restore() itself never throws (SceneScope guards
-      // every facility call). Put the eager claim back so the scope
-      // remains available for a future restore()/unload() call.
-      this._retained.set(resolvedTarget, retainedScope);
+      // Put the eager claim back into `_retained` — but only if the switch
+      // never actually committed. A post-commit session failure (§3.5: the
+      // new scene stays live) means `retainedScope` is now legitimately
+      // `_activeScope`; re-adding it here would make the same scope both
+      // live and "retained". The common pre-commit path (a rejected
+      // concurrent-navigation guard, or a pre-commit session abort) restores
+      // it so a future restore()/unload() can still reach it.
+      if (this._activeScope !== retainedScope) {
+        this._retained.set(resolvedTarget, retainedScope);
+      }
 
       throw error;
     }
@@ -627,32 +714,98 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * frame's {@link SceneDirector.update}: draws the active scene — gated by
    * its `SceneScope` state — then its systems' draw phase, then its
    * screen-fixed UI layer on top. No-op when no scene is active or the
-   * active scope's state does not permit drawing. The transition overlay is
-   * drawn separately, last — see {@link SceneDirector._drawTransition}.
+   * active scope's state does not permit drawing. An active transition
+   * session's own visual output is drawn separately — see
+   * {@link SceneDirector._renderTransition}.
+   *
+   * When a session requested `currentFrame: 'texture'` (§3.4), the active
+   * scope's full render surface is redirected into the pooled offscreen
+   * texture instead of straight to the canvas, so the session can composite
+   * it itself.
    */
   public draw(context: RenderingContext): this {
+    const currentTexture = this._sessionResources?.currentTexture ?? null;
+
+    if (currentTexture !== null) {
+      if (this._activeScope !== null) {
+        context._renderSurfaceInto(currentTexture, this._app.clearColor, () => this._activeScope?.draw(context));
+      }
+
+      return this;
+    }
+
     this._activeScope?.draw(context);
 
     return this;
   }
 
   /**
-   * @internal Advances the active fade transition by `delta` and, once it
-   * has any visible opacity, draws the fullscreen overlay into `context`'s
-   * backend. Called once per frame by the {@link Application} loop, after
-   * Scene draw and app draw systems have rendered — the overlay is always
-   * topmost (definition §10.5).
+   * @internal Advance the active {@link SceneTransitionSession}'s `update()`
+   * by `delta`, then check whether it just requested commit or reported
+   * `done`. Called once per frame by {@link Application.update}. No-op when
+   * no session is active.
    */
-  public _drawTransition(context: RenderingContext, delta: Time): this {
-    this._advanceTransition(delta.milliseconds);
+  public _updateTransition(delta: Time): void {
+    const session = this._activeSession;
 
-    const transitionAlpha = this._getTransitionAlpha();
-
-    if (transitionAlpha > 0) {
-      this._renderTransitionOverlay(transitionAlpha, context.backend);
+    if (session === null) {
+      return;
     }
 
-    return this;
+    try {
+      session.update(delta);
+    } catch (error) {
+      this._finishActiveSession({ ok: false, error });
+
+      return;
+    }
+
+    this._checkCommitRequested();
+    this._checkSessionDone();
+  }
+
+  /**
+   * @internal Which render layer the active session's output composites
+   * against (§3.6), or `null` when no session is active. Read live every
+   * frame by {@link Application.update} to decide draw order.
+   */
+  public _transitionPlacement(): 'scene' | 'screen' | null {
+    return this._activeSession?.placement ?? null;
+  }
+
+  /**
+   * @internal Render the active {@link SceneTransitionSession}'s own visual
+   * output (not the scene itself — see the render-surface boundary, §3.6),
+   * then check whether it just requested commit or reported `done`. No-op
+   * when no session is active. The {@link SceneTransitionFrame} carries the
+   * provisioned resources (§3.4/§3.7a): the one-time outgoing snapshot, and
+   * the pooled "current" texture (only while there is a live scope to show).
+   */
+  public _renderTransition(context: RenderingContext): void {
+    const session = this._activeSession;
+    const environment = this._activeEnvironment;
+
+    if (session === null || environment === null) {
+      return;
+    }
+
+    const resources = this._sessionResources;
+    const frame: SceneTransitionFrame = {
+      outgoing: resources?.outgoingSnapshot ?? null,
+      current: this._activeScope !== null ? (resources?.currentTexture ?? null) : null,
+      committed: environment.committed,
+    };
+
+    try {
+      session.render(context, frame);
+    } catch (error) {
+      this._finishActiveSession({ ok: false, error });
+
+      return;
+    }
+
+    this._checkCommitRequested();
+    this._checkSessionDone();
   }
 
   /**
@@ -674,37 +827,43 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
   }
 
   /**
-   * Tear down every owned resource: reject an in-flight fade transition,
+   * Tear down every owned resource: abort an in-flight transition session,
    * destroy the active scene, destroy every retained scene, then destroy
-   * the overlay and all Signals. Fires `_dispose()` (async teardown) and
-   * returns immediately — errors are reported through the app error
-   * pipeline rather than propagated, matching every other synchronous
-   * `destroy()` in the engine. An async shutdown path that needs to know
-   * teardown has fully finished may `await` {@link SceneDirector._dispose}
-   * directly instead of calling this method.
+   * all Signals. Fires `_dispose()` (async teardown) and returns immediately
+   * — errors are reported through the app error pipeline rather than
+   * propagated, matching every other synchronous `destroy()` in the engine.
+   * An async shutdown path that needs to know teardown has fully finished
+   * may `await` {@link SceneDirector._dispose} directly instead of calling
+   * this method.
    */
   public destroy(): void {
     void this._dispose();
   }
 
   /**
-   * @internal Awaited teardown, in order: reject any in-flight fade
-   * transition → destroy the active scope (guarded, errors reported) →
-   * destroy every retained scope in reverse insertion order (guarded,
-   * errors reported) → destroy the transition overlay and every Signal.
+   * @internal Awaited teardown, in order: abort any in-flight transition
+   * session (destroy it, reject its navigation) → destroy the active scope
+   * (guarded, errors reported) → destroy every retained scope in reverse
+   * insertion order (guarded, errors reported) → destroy every Signal.
    * Signals are destroyed last so scene teardown (`unload()`, `onStopScene`
    * listeners) can still use them while it runs. Does not participate in
    * the `_navigationInFlight` guard — teardown must always proceed
    * regardless of any in-flight navigation (definition §10.6).
    */
   public async _dispose(): Promise<void> {
-    if (this._transition) {
-      const transition = this._transition;
-
-      this._transition = null;
+    if (this._activeSession !== null) {
+      // KNOWN LIMITATION (full generalization is Slice 7's job): this does
+      // not distinguish "a commitSwitch() prepare() is still asynchronously
+      // in flight" from "the session is merely between frames" — it always
+      // destroys the session and rejects immediately. If a commitSwitch() is
+      // genuinely still awaiting prepare() when this runs, that promise chain
+      // continues independently in the background and may still mutate
+      // `_activeScope`/`_retained` after this method returns. Slice 7's
+      // abort-flag machinery closes this gap.
+      this._finishActiveSession({ ok: false, error: new SceneTransitionLifecycleError('aborted') });
+      this._releaseTransitionResources(this._sessionResources);
+      this._sessionResources = null;
       this._inputGateDepth--;
-      transition.color.destroy();
-      transition.reject(new Error('SceneDirector was destroyed while a transition was active.'));
     }
 
     const activeScope = this._activeScope;
@@ -732,7 +891,6 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
       }
     }
 
-    this._transitionOverlay.destroy();
     this.onChangeScene.destroy();
     this.onStartScene.destroy();
     this.onUpdateScene.destroy();
@@ -900,12 +1058,13 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
 
   /**
    * Run `action` as one atomic navigation step, guarded so at most one
-   * navigation (`change`/`restore`/`_clearScene`, transitioned or
-   * not) is ever in flight at a time (definition §11.5 — a second request
-   * rejects rather than queueing). Does not guard {@link SceneDirector._dispose},
-   * which must always be able to proceed.
+   * navigation (`change`/`restore`/`_clearScene`, transitioned or not) is
+   * ever in flight at a time (definition §11.5 — a second request rejects
+   * rather than queueing). Transition handling lives in each navigation
+   * method's own body, not here. Does not guard
+   * {@link SceneDirector._dispose}, which must always be able to proceed.
    */
-  private async _runWithNavigation(action: () => Promise<void>, transition?: SceneTransition): Promise<void> {
+  private async _runWithNavigation(action: () => Promise<void>): Promise<void> {
     if (this._navigationInFlight) {
       throw new ConcurrentSceneNavigationError();
     }
@@ -913,139 +1072,231 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
     this._navigationInFlight = true;
 
     try {
-      await this._runTransitionedAction(action, transition);
+      await action();
     } finally {
       this._navigationInFlight = false;
     }
   }
 
-  private async _runTransitionedAction(action: () => Promise<void>, transition?: SceneTransition): Promise<void> {
-    if (transition?.type !== 'fade') {
-      await action();
+  /** Await and clear `_pendingOutgoingTeardown`, if a commitSwitch/commitDiscard set it this navigation. */
+  private async _awaitPendingOutgoingTeardown(): Promise<void> {
+    const pending = this._pendingOutgoingTeardown;
 
-      return;
+    this._pendingOutgoingTeardown = null;
+
+    if (pending !== null) {
+      await pending;
+    }
+  }
+
+  /**
+   * Run `commit` (the atomic switch/discard closure) through a full
+   * transitioned navigation: provision the session's declared render
+   * resources (§3.4), start `transition`'s session, then drive it once per
+   * frame via {@link SceneDirector._updateTransition}/
+   * {@link SceneDirector._renderTransition} until it calls
+   * `environment.commit()` (which runs `commit`) and reports `done`. This
+   * method only sets up the session and awaits its outer promise; the actual
+   * per-frame ticking is done by `Application.update()` (or manually in
+   * tests). The input gate is held open for the session's whole lifetime.
+   *
+   * KNOWN LIMITATION (removed by a later slice's `Application.start()` fix):
+   * a transitioned navigation run as part of the very first navigation inside
+   * `Application.start()` deadlocks — nothing drives the per-frame methods
+   * yet (the frame loop has not started). Do not exercise a transitioned
+   * navigation through `Application.start()`; drive `SceneDirector` directly.
+   */
+  private async _runTransitionedAction(commit: () => Promise<void>, context: SceneTransitionContext, transition: SceneTransition): Promise<void> {
+    const requirements = transition.getRequirements(context);
+    const resources = this._provisionTransitionResources(context, requirements);
+    const environment = new DirectorTransitionEnvironment(context);
+
+    let session: SceneTransitionSession;
+
+    try {
+      session = transition.beginSession(environment);
+    } catch (error) {
+      this._releaseTransitionResources(resources);
+
+      throw error;
     }
 
-    const durationMs = Math.max(0, transition.duration ?? defaultFadeTransitionDuration);
+    this._inputGateDepth++;
 
-    if (durationMs === 0) {
-      await action();
+    const outcome = await new Promise<SceneTransitionOutcome>(resolve => {
+      this._activeSession = session;
+      this._activeEnvironment = environment;
+      this._sessionAction = commit;
+      this._sessionSettle = resolve;
+      this._sessionCommitStarted = false;
+      this._sessionResources = resources;
 
-      return;
-    }
-
-    await new Promise<void>((resolve, reject) => {
-      this._inputGateDepth++;
-      this._transition = {
-        type: 'fade',
-        durationMs,
-        action,
-        resolve,
-        reject,
-        color: (transition.color ?? Color.black).clone(),
-        elapsedMs: 0,
-        phase: 'out',
-      };
+      // A session may call environment.commit() and/or report done()
+      // synchronously from inside its own createSession() — check right away
+      // rather than waiting for the first per-frame tick.
+      this._checkCommitRequested();
+      this._checkSessionDone();
     });
-  }
 
-  private _advanceTransition(deltaMs: number): void {
-    if (!this._transition) {
-      return;
-    }
+    this._inputGateDepth--;
+    this._activeSession = null;
+    this._activeEnvironment = null;
+    this._sessionAction = null;
+    this._sessionSettle = null;
+    this._releaseTransitionResources(this._sessionResources);
+    this._sessionResources = null;
 
-    if (this._transition.phase === 'out') {
-      this._transition.elapsedMs = Math.min(this._transition.durationMs, this._transition.elapsedMs + Math.max(0, deltaMs));
-
-      if (this._transition.elapsedMs >= this._transition.durationMs) {
-        this._transition.phase = 'switching';
-        void this._executeTransitionAction();
-      }
-
-      return;
-    }
-
-    if (this._transition.phase === 'in') {
-      this._transition.elapsedMs = Math.min(this._transition.durationMs, this._transition.elapsedMs + Math.max(0, deltaMs));
-
-      if (this._transition.elapsedMs >= this._transition.durationMs) {
-        this._finishTransition();
-      }
+    if (!outcome.ok) {
+      throw outcome.error;
     }
   }
 
-  private async _executeTransitionAction(): Promise<void> {
-    const transition = this._transition;
+  /**
+   * If the active session has requested commit and it has not started yet,
+   * kick off the atomic switch. The switch itself runs asynchronously (its
+   * `_prepareScene` may await) — never reentrantly from inside the session
+   * callback that requested it (§3.5.2).
+   */
+  private _checkCommitRequested(): void {
+    const environment = this._activeEnvironment;
 
-    if (transition?.phase !== 'switching') {
+    if (environment === null || this._sessionCommitStarted || !environment.commitRequested) {
+      return;
+    }
+
+    this._sessionCommitStarted = true;
+    void this._performSessionCommit();
+  }
+
+  private async _performSessionCommit(): Promise<void> {
+    const environment = this._activeEnvironment;
+    const commit = this._sessionAction;
+
+    if (environment === null || commit === null) {
       return;
     }
 
     try {
-      await transition.action();
+      await commit();
     } catch (error) {
-      if (this._transition === transition) {
-        this._transition = null;
-        this._inputGateDepth--;
-        transition.color.destroy();
-        transition.reject(error);
-      }
+      this._finishActiveSession({ ok: false, error });
 
       return;
     }
 
-    if (this._transition !== transition) {
+    environment._markCommitted();
+    this._checkSessionDone();
+  }
+
+  /**
+   * Finish the active session if it has reported `done`: a session done
+   * before commit is a `'done-before-commit'` lifecycle error (the switch
+   * never happened — the old scene stays live), otherwise a clean success.
+   * No-op while the session is not yet done.
+   */
+  private _checkSessionDone(): void {
+    const session = this._activeSession;
+    const environment = this._activeEnvironment;
+
+    if (session === null || environment === null || !session.done) {
       return;
     }
 
-    transition.phase = 'in';
-    transition.elapsedMs = 0;
-  }
+    if (!environment.committed) {
+      this._finishActiveSession({ ok: false, error: new SceneTransitionLifecycleError('done-before-commit') });
 
-  private _finishTransition(): void {
-    if (!this._transition) {
       return;
     }
 
-    const transition = this._transition;
-
-    this._transition = null;
-    this._inputGateDepth--;
-    transition.color.destroy();
-    transition.resolve();
+    this._finishActiveSession({ ok: true });
   }
 
-  private _getTransitionAlpha(): number {
-    if (!this._transition) {
-      return 0;
+  /**
+   * Finish the active session: destroy it exactly once (§3.7b), report any
+   * failure (both the session's own error, and any error `session.destroy()`
+   * itself throws) through the app error pipeline, then settle the outer
+   * navigation promise. Idempotent — a second call once the session has
+   * already settled is a no-op, which matters because `_updateTransition`
+   * and `_renderTransition` can each independently decide the session is
+   * done on the same frame.
+   */
+  private _finishActiveSession(outcome: SceneTransitionOutcome): void {
+    const session = this._activeSession;
+    const settle = this._sessionSettle;
+
+    if (session === null || settle === null) {
+      return;
     }
 
-    if (this._transition.phase === 'switching') {
-      return 1;
+    this._sessionSettle = null;
+
+    try {
+      session.destroy();
+    } catch (error) {
+      this._app.onError.dispatch(error instanceof Error ? error : new Error(String(error)));
     }
 
-    const progress = this._transition.durationMs > 0 ? this._transition.elapsedMs / this._transition.durationMs : 1;
+    if (!outcome.ok) {
+      this._app.onError.dispatch(outcome.error instanceof Error ? outcome.error : new Error(String(outcome.error)));
+    }
 
-    return this._transition.phase === 'out' ? progress : 1 - progress;
+    settle(outcome);
   }
 
-  private _renderTransitionOverlay(alpha: number, backend: RenderBackend): void {
-    const transition = this._transition;
-    const overlayColor = transition ? transition.color : Color.black;
-    const bounds = backend.view.getBounds();
-    const overlay = this._transitionOverlay;
-    const vertices = overlay.vertices;
+  /**
+   * Provision render resources for a session about to start, per its
+   * declared {@link SceneTransitionRequirements} (§3.4). Textures are sized
+   * to the current canvas backing-store dimensions (device-pixel-ratio
+   * aware, since `Application` already bakes `pixelRatio` into
+   * `canvas.width`/`canvas.height`) and, for the pooled "current" texture
+   * only, resized live if the canvas resizes mid-session — a frozen
+   * `outgoingFrame: 'snapshot'` is deliberately never resized (§3.7a: "the
+   * same snapshot texture for the entire session — never reallocated").
+   */
+  private _provisionTransitionResources(context: SceneTransitionContext, requirements: SceneTransitionRequirements): TransitionResources {
+    const width = this._app.canvas.width;
+    const height = this._app.canvas.height;
 
-    vertices[0] = bounds.left;
-    vertices[1] = bounds.top;
-    vertices[2] = bounds.right;
-    vertices[3] = bounds.top;
-    vertices[4] = bounds.left;
-    vertices[5] = bounds.bottom;
-    vertices[6] = bounds.right;
-    vertices[7] = bounds.bottom;
+    const outgoingSnapshot =
+      requirements.outgoingFrame === 'snapshot' && this._activeScope !== null ? this._captureOutgoingSnapshot(this._activeScope, width, height) : null;
 
-    overlay.tint.set(overlayColor.r, overlayColor.g, overlayColor.b, Math.max(0, Math.min(1, alpha)));
-    overlay.render(backend);
+    const currentTexture = requirements.currentFrame === 'texture' ? this._app.backend.acquireRenderTexture(width, height) : null;
+
+    const onResize = (): void => {
+      currentTexture?.setSize(this._app.canvas.width, this._app.canvas.height);
+    };
+
+    this._app.onResize.add(onResize);
+
+    void context; // reserved for future requirement-dependent provisioning (none needed yet)
+
+    return {
+      outgoingSnapshot,
+      currentTexture,
+      release: () => {
+        this._app.onResize.remove(onResize);
+
+        if (outgoingSnapshot !== null) {
+          this._app.backend.releaseRenderTexture(outgoingSnapshot);
+        }
+
+        if (currentTexture !== null) {
+          this._app.backend.releaseRenderTexture(currentTexture);
+        }
+      },
+    };
+  }
+
+  /** One-time capture of `scope`'s full render surface (`Scene.draw()` + its systems + `Scene.ui`) into a fresh pooled texture, while it is still the live scope. */
+  private _captureOutgoingSnapshot(scope: SceneScope, width: number, height: number): RenderTexture {
+    const snapshot = this._app.backend.acquireRenderTexture(width, height);
+
+    this._app.rendering._renderSurfaceInto(snapshot, this._app.clearColor, () => scope.draw(this._app.rendering));
+
+    return snapshot;
+  }
+
+  private _releaseTransitionResources(resources: TransitionResources | null): void {
+    resources?.release();
   }
 }

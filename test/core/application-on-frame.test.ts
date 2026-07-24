@@ -156,7 +156,9 @@ describe('Application.onFrame', () => {
         callOrder.push('sceneDirector.update');
       }),
       draw: vi.fn(),
-      _drawTransition: vi.fn(),
+      _updateTransition: vi.fn(),
+      _transitionPlacement: vi.fn(() => null),
+      _renderTransition: vi.fn(),
     };
 
     // Get the Signal class from the same module registry that Application uses.

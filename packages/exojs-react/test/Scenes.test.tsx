@@ -77,7 +77,9 @@ describe('<Scenes> / <Scene> / useActiveScene', () => {
     const view = render(<Tree app={app} active="title" />);
     await view.findByTestId('active');
 
-    const transition: SceneTransition = { type: 'fade', duration: 300 };
+    // An opaque SceneTransition instance — the wrapper only forwards it to the
+    // director's change(), so its concrete behavior is irrelevant here.
+    const transition = {} as unknown as SceneTransition;
     view.rerender(<Tree app={app} active="game" transition={transition} />);
 
     await waitFor(() => expect(app.scenes.change).toHaveBeenCalled());

@@ -743,9 +743,12 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    *    {@link Application.onFixedFrame}.
    * 3. **Update** — `app.systems` update phase, then `scenes.update()` + the
    *    scene's systems update phase.
-   * 4. **Draw** — the scene draws (plus its systems and UI layer), then
-   *    `app.systems` draw phase (app draw systems render *above* scene
-   *    output), then the transition overlay (always topmost).
+   * 4. **Draw** — the scene draws (plus its systems and UI layer); an active
+   *    transition session's own visual output composites either below or
+   *    above the `app.systems` draw phase depending on the session's
+   *    `placement` (`'scene'`: below app overlays; `'screen'`: above them,
+   *    matching the pre-transition-runtime default) — see §3.6 of the
+   *    scene-transition design spec.
    * 5. **Frame dispatch / flush** — {@link Application.onFrame}, backend GPU
    *    flush, frame-time stat write, RAF reschedule.
    *
@@ -807,10 +810,17 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
         if (__DEV__) Perf.measure(systemsMeasure, systemsStartMark);
 
         this.scenes.update(frameDelta);
+        this.scenes._updateTransition(frameDelta);
 
-        this.scenes.draw(this._rendering);
-        this.systems._draw(this._rendering);
-        this.scenes._drawTransition(this._rendering, frameDelta);
+        if (this.scenes._transitionPlacement() === 'scene') {
+          this.scenes.draw(this._rendering);
+          this.scenes._renderTransition(this._rendering);
+          this.systems._draw(this._rendering);
+        } else {
+          this.scenes.draw(this._rendering);
+          this.systems._draw(this._rendering);
+          this.scenes._renderTransition(this._rendering);
+        }
 
         this.onFrame.dispatch(frameDelta);
         this.backend.flush();

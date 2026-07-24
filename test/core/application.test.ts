@@ -220,7 +220,9 @@ describe('Application', () => {
       fixedUpdate: vi.fn(),
       update: vi.fn(),
       draw: vi.fn(),
-      _drawTransition: vi.fn(),
+      _updateTransition: vi.fn(),
+      _transitionPlacement: vi.fn(() => null),
+      _renderTransition: vi.fn(),
     };
     const backend = {
       flush: vi.fn(),

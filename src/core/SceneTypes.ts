@@ -1,6 +1,6 @@
 import type { Application } from './Application';
-import type { Color } from './Color';
 import type { Scene } from './Scene';
+import type { SceneTransition } from './SceneTransition';
 
 /**
  * Zero-argument constructor for a {@link Scene} subclass. `Data` is the
@@ -114,20 +114,6 @@ export type ApplicationOf<T extends ApplicationLike> = T extends abstract new (.
     ? T
     : never;
 /* eslint-enable @typescript-eslint/no-explicit-any */
-
-/**
- * Fade-to-color scene transition. The screen fades to `color` (default black)
- * over `duration` ms (default 220), the scene change happens at full
- * opacity, then the screen fades back in.
- */
-export interface FadeSceneTransition {
-  type: 'fade';
-  duration?: number;
-  color?: Color;
-}
-
-/** Discriminated union of supported {@link SceneDirector} transitions. */
-export type SceneTransition = FadeSceneTransition;
 
 /**
  * Options for {@link SceneDirector.change}. This is an intermediate shape —

@@ -31,13 +31,21 @@ export { SceneDirector } from './SceneDirector';
 export { SceneNode } from './SceneNode';
 export { SceneState } from './SceneState';
 export type {
+  SceneTransitionContext,
+  SceneTransitionEnvironment,
+  SceneTransitionFrame,
+  SceneTransitionOperation,
+  SceneTransitionRequirements,
+  SceneTransitionSession,
+} from './SceneTransition';
+export { SceneTransition, SceneTransitionLifecycleError } from './SceneTransition';
+export type {
   AnySceneConstructor,
   ApplicationLike,
   ApplicationOf,
   ChangeSceneArgs,
   ChangeSceneOptions,
   ConstructorOf,
-  FadeSceneTransition,
   InferSceneData,
   PreloadArgs,
   PreloadOptions,
@@ -47,7 +55,6 @@ export type {
   SceneInstanceKind,
   SceneRegistration,
   SceneRegistryShape,
-  SceneTransition,
   UnloadOptions,
 } from './SceneTypes';
 export {
