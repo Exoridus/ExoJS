@@ -4,6 +4,7 @@ exports[`root index export surface snapshot > sorted runtime export names match 
 [
   "AbstractAssetFactory",
   "AbstractText",
+  "AmbiguousSceneInstanceError",
   "AnimatedSprite",
   "Application",
   "ApplicationStatus",
@@ -148,6 +149,7 @@ exports[`root index export surface snapshot > sorted runtime export names match 
   "ScaleModes",
   "Scene",
   "SceneDirector",
+  "SceneInstanceNotFoundError",
   "SceneNode",
   "SceneState",
   "ScrollContainer",

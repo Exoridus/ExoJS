@@ -39,19 +39,25 @@ export type {
   ConstructorOf,
   FadeSceneTransition,
   InferSceneData,
+  PreloadArgs,
+  PreloadOptions,
   RegistryKeyOf,
   RestoreSceneOptions,
   SceneConstructor,
+  SceneInstanceKind,
   SceneRegistration,
   SceneRegistryShape,
   SceneTransition,
+  UnloadOptions,
 } from './SceneTypes';
 export {
+  AmbiguousSceneInstanceError,
   ConcurrentSceneNavigationError,
   DuplicateSceneRegistrationError,
   InvalidSceneRegistrationError,
   RetainedSceneConflictError,
   RetainedSceneNotFoundError,
+  SceneInstanceNotFoundError,
   UnregisteredSceneError,
 } from './SceneTypes';
 export type { DeserializeContext, NodeSerializer, SerializeContext } from './serialization/NodeSerializer';

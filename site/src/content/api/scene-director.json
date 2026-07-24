@@ -6,10 +6,10 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 22,
+  "memberCount": 23,
   "counts": {
     "constructors": 1,
-    "methods": 11,
+    "methods": 12,
     "properties": 3,
     "events": 7
   },
@@ -250,7 +250,7 @@
             }
           ],
           "returnType": "Promise<SceneDirector<Registry>>",
-          "description": "Switch to a fresh instance of target (a registered key or a constructor), ending the previously active scene permanently — unless options.suspendCurrent is set, in which case the outgoing scene is suspended and retained (keyed by its constructor) for a later SceneDirector.restore call instead. Ordinary switching always creates a fresh instance (definition §11.4). The new scene completes load()+init() while the outgoing scene is still fully live and driving frames; the switch itself is then atomic (definition §3.5): once the incoming scope has been prepared, nothing past that point can fail or roll back — the outgoing scope is suspended or torn down and the incoming scope activated as one uninterruptible step, and the returned promise additionally waits for the outgoing scope's permanent teardown to fully settle (skipped when suspendCurrent is set, since there is nothing to tear down). A transition option shaped like today's hardcoded fade transition ({ type: 'fade', duration?, color? }) is still accepted and runs exactly as it does today — a temporary bridge to the pre-existing fade machinery, removed once a later slice lands the real transition runtime and adds a transition field to ChangeSceneOptions itself. It is intentionally not part of ChangeSceneOptions's documented public shape. Rejects with ConcurrentSceneNavigationError when another navigation is already in flight (dev and production builds — no queueing, definition §11.5); with UnregisteredSceneError (dev builds for a constructor target, every build for an unresolvable registry key) when target is not present in ApplicationOptions.scenes; with RetainedSceneConflictError when target already has a retained instance (restore or release it first)."
+          "description": "Switch to a fresh instance of target (a registered key or a constructor), ending the previously active scene permanently — unless options.suspendCurrent is set, in which case the outgoing scene is suspended and retained (keyed by its constructor) for a later SceneDirector.restore call instead. Ordinary switching always creates a fresh instance (definition §11.4). The new scene completes load()+init() while the outgoing scene is still fully live and driving frames; the switch itself is then atomic (definition §3.5): once the incoming scope has been prepared, nothing past that point can fail or roll back — the outgoing scope is suspended or torn down and the incoming scope activated as one uninterruptible step, and the returned promise additionally waits for the outgoing scope's permanent teardown to fully settle (skipped when suspendCurrent is set, since there is nothing to tear down). A transition option shaped like today's hardcoded fade transition ({ type: 'fade', duration?, color? }) is still accepted and runs exactly as it does today — a temporary bridge to the pre-existing fade machinery, removed once a later slice lands the real transition runtime and adds a transition field to ChangeSceneOptions itself. It is intentionally not part of ChangeSceneOptions's documented public shape. Rejects with ConcurrentSceneNavigationError when another navigation is already in flight (dev and production builds — no queueing, definition §11.5); with UnregisteredSceneError (dev builds for a constructor target, every build for an unresolvable registry key) when target is not present in ApplicationOptions.scenes; with RetainedSceneConflictError when target already has a retained instance (restore or unload it first)."
         },
         {
           "name": "change",
@@ -366,7 +366,7 @@
             }
           ],
           "returnType": "Promise<SceneDirector<Registry>>",
-          "description": "Switch to a fresh instance of target (a registered key or a constructor), ending the previously active scene permanently — unless options.suspendCurrent is set, in which case the outgoing scene is suspended and retained (keyed by its constructor) for a later SceneDirector.restore call instead. Ordinary switching always creates a fresh instance (definition §11.4). The new scene completes load()+init() while the outgoing scene is still fully live and driving frames; the switch itself is then atomic (definition §3.5): once the incoming scope has been prepared, nothing past that point can fail or roll back — the outgoing scope is suspended or torn down and the incoming scope activated as one uninterruptible step, and the returned promise additionally waits for the outgoing scope's permanent teardown to fully settle (skipped when suspendCurrent is set, since there is nothing to tear down). A transition option shaped like today's hardcoded fade transition ({ type: 'fade', duration?, color? }) is still accepted and runs exactly as it does today — a temporary bridge to the pre-existing fade machinery, removed once a later slice lands the real transition runtime and adds a transition field to ChangeSceneOptions itself. It is intentionally not part of ChangeSceneOptions's documented public shape. Rejects with ConcurrentSceneNavigationError when another navigation is already in flight (dev and production builds — no queueing, definition §11.5); with UnregisteredSceneError (dev builds for a constructor target, every build for an unresolvable registry key) when target is not present in ApplicationOptions.scenes; with RetainedSceneConflictError when target already has a retained instance (restore or release it first)."
+          "description": "Switch to a fresh instance of target (a registered key or a constructor), ending the previously active scene permanently — unless options.suspendCurrent is set, in which case the outgoing scene is suspended and retained (keyed by its constructor) for a later SceneDirector.restore call instead. Ordinary switching always creates a fresh instance (definition §11.4). The new scene completes load()+init() while the outgoing scene is still fully live and driving frames; the switch itself is then atomic (definition §3.5): once the incoming scope has been prepared, nothing past that point can fail or roll back — the outgoing scope is suspended or torn down and the incoming scope activated as one uninterruptible step, and the returned promise additionally waits for the outgoing scope's permanent teardown to fully settle (skipped when suspendCurrent is set, since there is nothing to tear down). A transition option shaped like today's hardcoded fade transition ({ type: 'fade', duration?, color? }) is still accepted and runs exactly as it does today — a temporary bridge to the pre-existing fade machinery, removed once a later slice lands the real transition runtime and adds a transition field to ChangeSceneOptions itself. It is intentionally not part of ChangeSceneOptions's documented public shape. Rejects with ConcurrentSceneNavigationError when another navigation is already in flight (dev and production builds — no queueing, definition §11.5); with UnregisteredSceneError (dev builds for a constructor target, every build for an unresolvable registry key) when target is not present in ApplicationOptions.scenes; with RetainedSceneConflictError when target already has a retained instance (restore or unload it first)."
         },
         {
           "name": "destroy",
@@ -521,11 +521,11 @@
           "description": "Pause the active scene. Its fixedUpdate/update stop running, but draw keeps rendering and input/interaction stay live — the canonical \"pause menu drawn over a frozen world\" shape. This does not change SceneDirector.state — see SceneDirector.paused instead. No-op (returns false) when no scene is active, it is not currently Active, or it is already paused."
         },
         {
-          "name": "releaseScene",
-          "signature": "releaseScene(target: C): Promise<boolean>",
+          "name": "preload",
+          "signature": "preload(target: C, args: PreloadArgs<InferSceneData<C>>): Promise<void>",
           "signatureTokens": [
             {
-              "text": "releaseScene",
+              "text": "preload",
               "kind": "name"
             },
             {
@@ -545,6 +545,46 @@
               "kind": "type"
             },
             {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "args",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PreloadArgs",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "InferSceneData",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "C",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
               "text": ")",
               "kind": "punctuation"
             },
@@ -561,7 +601,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "boolean",
+              "text": "void",
               "kind": "keyword"
             },
             {
@@ -574,10 +614,15 @@
               "name": "target",
               "type": "C",
               "optional": false
+            },
+            {
+              "name": "args",
+              "type": "PreloadArgs<InferSceneData<C>>",
+              "optional": false
             }
           ],
-          "returnType": "Promise<boolean>",
-          "description": "Permanently end a retained (suspended) scene without reactivating it. Returns true if a retained instance existed for target, false otherwise (no-op, not an error)."
+          "returnType": "Promise<void>",
+          "description": "Transparently pre-warm a fresh instance of target into SceneState.Ready — fully prepared (load() + init() complete), but never activated. A later SceneDirector.change call for the same constructor with Object.is()-matching data consumes it automatically, skipping load()/ init() entirely. Not exclusive of an active or retained instance of the same constructor — preloading \"the next GameScene\" while a different GameScene instance is currently playing, or already retained, is fully supported. A racing second preload() call for the same constructor shares this same in-flight preparation when its data matches (Object.is()); a call with different data discards the stale entry (once its own preparation settles) and starts a fresh one with the new data — the newest call's data always wins, never silently ignored. Rejects with UnregisteredSceneError (dev builds) when target is not present in ApplicationOptions.scenes."
         },
         {
           "name": "restore",
@@ -799,6 +844,86 @@
           "params": [],
           "returnType": "boolean",
           "description": "Resume a paused scene, undoing SceneDirector.pause. No-op (returns false) when no scene is active or it is not currently paused."
+        },
+        {
+          "name": "unload",
+          "signature": "unload(target: C, options: UnloadOptions): Promise<boolean>",
+          "signatureTokens": [
+            {
+              "text": "unload",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "target",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "C",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UnloadOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "target",
+              "type": "C",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "UnloadOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<boolean>",
+          "description": "Discard whatever is parked or active for target's constructor — the single, unified replacement for the removed releaseScene(). Checks every candidate (active, retained, preloaded); when more than one exists, options.instance must disambiguate which one — there is no priority order. options.transition only materializes for an active-scope match (a retained or preloaded match has nothing visible on screen to transition, and always runs the direct, non-transitioned teardown path). Returns false if nothing matched target at all. Rejects with AmbiguousSceneInstanceError when options.instance is omitted and more than one candidate exists; with SceneInstanceNotFoundError when options.instance names a specific kind that doesn't exist for target."
         },
         {
           "name": "update",

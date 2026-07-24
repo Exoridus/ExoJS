@@ -1,0 +1,108 @@
+{
+  "title": "UnloadOptions",
+  "description": "Options passed to SceneDirector.unload.",
+  "symbol": "UnloadOptions",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Options passed to SceneDirector.unload."
+      ],
+      "importLine": "import { UnloadOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "instance",
+          "signature": "instance?: SceneInstanceKind | \"all\"",
+          "signatureTokens": [
+            {
+              "text": "instance",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneInstanceKind",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"all\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Disambiguates which candidate to discard when more than one exists for the same constructor (active, retained, and/or preloaded can all coexist). Omit only when exactly one candidate exists — 'all' discards every one that does."
+        },
+        {
+          "name": "transition",
+          "signature": "transition?: FadeSceneTransition",
+          "signatureTokens": [
+            {
+              "text": "transition",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "FadeSceneTransition",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Only materializes for an active-scope match — a retained or preloaded match has nothing visible on screen to transition, and always runs the direct (non-transitioned) teardown path regardless of this option."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/SceneTypes.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneTypes.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/SceneTypes.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneTypes.ts"
+}
