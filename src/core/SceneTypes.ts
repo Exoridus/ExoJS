@@ -1,6 +1,6 @@
 import type { Application } from './Application';
-import type { Color } from './Color';
 import type { Scene } from './Scene';
+import type { SceneTransition } from './SceneTransition';
 
 /**
  * Zero-argument constructor for a {@link Scene} subclass. `Data` is the
@@ -116,28 +116,17 @@ export type ApplicationOf<T extends ApplicationLike> = T extends abstract new (.
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
 /**
- * Fade-to-color scene transition. The screen fades to `color` (default black)
- * over `duration` ms (default 220), the scene change happens at full
- * opacity, then the screen fades back in.
- */
-export interface FadeSceneTransition {
-  type: 'fade';
-  duration?: number;
-  color?: Color;
-}
-
-/** Discriminated union of supported {@link SceneDirector} transitions. */
-export type SceneTransition = FadeSceneTransition;
-
-/**
  * Options for {@link SceneDirector.change}. This is an intermediate shape —
  * the spec's final shape (definition §6.3) also carries a `transition`
  * field accepting a `SceneTransitionSelection` (a class-based
  * `SceneTransition`/`PhasedSceneTransition`, or an `{ enter, exit }` pair).
- * That lands in Slice 5, once the real transition-runtime types exist. A
- * caller who still needs today's hardcoded fade machinery in the meantime
- * uses the bridge documented on {@link SceneDirector.change} itself, not
- * this type — `transition` is deliberately not part of this shape yet.
+ * That field is not part of this public shape yet — a later slice folds it
+ * in directly, once the registry-default `SceneTransitionSelection` exists.
+ * A caller passing a `transition` today does so through the wider internal
+ * {@link ChangeSceneCallOptions} that {@link SceneDirector.change} accepts,
+ * which drives a real {@link SceneTransition} session — see that method's
+ * doc comment, not this type; `transition` is deliberately not part of this
+ * shape yet.
  */
 export type ChangeSceneOptions<Data> = ([Data] extends [void] ? { data?: never } : { data: Readonly<Data> }) & {
   /**
@@ -221,15 +210,15 @@ export function resolvePreloadArgs(args: readonly unknown[]): { data: unknown } 
 }
 
 /**
- * @internal Temporary bridge, removed by Slice 5 once `SceneTransition`
- * becomes the real class-based union (spec §3.2) and a `transition` field
- * is added to {@link ChangeSceneOptions} directly (spec §6.3). Until then,
- * `SceneDirector.change()` still accepts today's hardcoded-fade-shaped
- * `transition` option and routes it through the existing fade machinery
- * unchanged — this type is that call boundary's actual (wider) parameter
- * type. Deliberately not re-exported from the package root: a new caller
- * should not discover `transition` as supported input via this slice's
- * public types.
+ * @internal The actual (wider) parameter type {@link SceneDirector.change}
+ * accepts: {@link ChangeSceneOptions} plus a `transition` field carrying a
+ * real class-based {@link SceneTransition} (spec §3.2), which drives the
+ * switch through a {@link SceneTransitionSession}. `transition` is not yet
+ * part of {@link ChangeSceneOptions}'s public documented shape — a later
+ * slice folds it in directly, once the registry-default
+ * `SceneTransitionSelection` exists (spec §6.3). Deliberately not re-exported
+ * from the package root: a new caller should not discover `transition` as
+ * supported input via this slice's public types.
  */
 export type ChangeSceneCallOptions<Data> = ChangeSceneOptions<Data> & { transition?: SceneTransition };
 
@@ -289,7 +278,7 @@ export class UnregisteredSceneError extends Error {
 
 /**
  * Thrown when `change`/`restore` is called while another Scene
- * switch, restore, or fade transition is already in flight — navigation
+ * switch, restore, or transition session is already in flight — navigation
  * never queues (definition §11.5).
  */
 export class ConcurrentSceneNavigationError extends Error {

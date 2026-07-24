@@ -18,8 +18,8 @@ const ActiveSceneContext = createContext<ExoScene | null>(null);
 ActiveSceneContext.displayName = 'ExoActiveScene';
 
 /**
- * TODO(v0.17 Slice 5): remove once `transition` becomes part of `change()`'s
- * public options with the real transition runtime. Until then, Core's
+ * TODO(v0.17 Slice 6): remove once `transition` becomes part of `change()`'s
+ * public options (the `SceneTransitionSelection` option). Until then, Core's
  * `change()` deliberately keeps `transition` off its public overloads (it's
  * routed through an `@internal`, non-re-exported bridge type) — so this
  * package defines just the shape it needs locally and casts through it,
@@ -31,7 +31,7 @@ interface Slice5TransitionBridge {
   change(target: new () => ExoScene, options: { readonly transition?: SceneTransition }): Promise<unknown>;
 }
 
-/** TODO(v0.17 Slice 5): remove alongside {@link Slice5TransitionBridge}. */
+/** TODO(v0.17 Slice 6): remove alongside {@link Slice5TransitionBridge}. */
 async function changeWithTransitionBridge(scenes: unknown, target: new () => ExoScene, transition: SceneTransition | undefined): Promise<void> {
   const bridge = scenes as Slice5TransitionBridge;
 
@@ -93,7 +93,7 @@ export interface ScenesProps {
  * @example
  * ```tsx
  * <ExoCanvas>
- *   <Scenes active={screen} transition={{ type: 'fade', duration: 0.3 }}>
+ *   <Scenes active={screen} transition={myFadeTransition}>
  *     <Scene name="title" component={TitleScene} />
  *     <Scene name="game" component={GameScene}>
  *       <Hud />

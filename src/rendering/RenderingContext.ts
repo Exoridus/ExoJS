@@ -368,6 +368,55 @@ export class RenderingContext implements DrawContext {
   }
 
   /**
+   * @internal Render arbitrary content — not limited to a single
+   * {@link RenderNode} — into a caller-owned {@link RenderTexture}, using the
+   * pass-coordinator's target/view save-restore semantics (the same
+   * mechanism {@link RenderingContext.renderTo} uses internally, generalized
+   * to an arbitrary draw callback). Used by `SceneDirector` to capture a
+   * scene's full render surface (`Scene.draw()` + its systems + `Scene.ui`)
+   * for `SceneTransition` resource provisioning (§3.4/§3.6) — that sequence
+   * of calls cannot be expressed as a single `RenderNode`.
+   */
+  public _renderSurfaceInto(target: RenderTexture, clear: Color | undefined, draw: () => void): void {
+    const view = target.view;
+
+    this._renderedViews.add(view);
+    const coordinator = (this._backend as RenderBackend & Partial<RenderPassCoordinatorHost>)._passCoordinator;
+
+    if (coordinator) {
+      coordinator.withChildPass(
+        {
+          target,
+          view,
+          load: clear !== undefined ? 'clear' : 'load',
+          clearColor: clear ?? null,
+          stencil: StencilAttachmentMode.None,
+        },
+        draw,
+      );
+
+      return;
+    }
+
+    const previousTarget = this._backend.renderTarget;
+    const previousView = this._backend.view;
+
+    this._backend.setRenderTarget(target);
+    this._backend.setView(view);
+
+    if (clear !== undefined) {
+      this._backend.clear(clear);
+    }
+
+    try {
+      draw();
+    } finally {
+      this._backend.setRenderTarget(previousTarget);
+      this._backend.setView(previousView);
+    }
+  }
+
+  /**
    * Immediately draw a single {@link Geometry} with `transform` as its world
    * matrix — no retained {@link RenderNode} required. Useful for procedural or
    * data-driven shapes that would be wasteful to wrap in a node.

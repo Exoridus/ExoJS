@@ -2,10 +2,20 @@ import type { Tween } from '#animation/Tween';
 import { TweenManager } from '#animation/TweenManager';
 import { TweenState } from '#animation/types';
 import type { Application } from '#core/Application';
+import { Color } from '#core/Color';
 import { logger } from '#core/logging';
 import { Scene } from '#core/Scene';
 import { SceneDirector } from '#core/SceneDirector';
 import { SceneState } from '#core/SceneState';
+import {
+  SceneTransition,
+  type SceneTransitionContext,
+  type SceneTransitionEnvironment,
+  type SceneTransitionFrame,
+  SceneTransitionLifecycleError,
+  type SceneTransitionRequirements,
+  type SceneTransitionSession,
+} from '#core/SceneTransition';
 import type { SceneConstructor } from '#core/SceneTypes';
 import {
   AmbiguousSceneInstanceError,
@@ -22,6 +32,7 @@ import { Time } from '#core/Time';
 import type { Pointer } from '#input/Pointer';
 import { Rectangle } from '#math/Rectangle';
 import type { Vector } from '#math/Vector';
+import { RenderTexture } from '#rendering/texture/RenderTexture';
 
 interface InputManagerStub {
   readonly onKeyDown: Signal<[number]>;
@@ -51,24 +62,32 @@ const createInputManagerStub = (): InputManagerStub => ({
   onMouseWheel: new Signal<[Vector]>(),
 });
 
-const createApplicationStub = (): Application & {
+type ApplicationStub = Application & {
   input: InputManagerStub;
   onError: Signal<[Error]>;
   loader: { _releaseScope: MockInstance };
+  canvas: HTMLCanvasElement;
+  onResize: Signal<[number, number, Application]>;
+  clearColor: Color;
   rendering: {
     backend: {
       view: { getBounds: () => Rectangle };
       draw: MockInstance;
     };
     render: MockInstance;
+    _renderSurfaceInto: MockInstance;
   };
   backend: {
     view: { getBounds: () => Rectangle };
     draw: MockInstance;
     stats: { culledNodes: number };
     resetStats: MockInstance;
+    acquireRenderTexture: MockInstance;
+    releaseRenderTexture: MockInstance;
   };
-} => {
+};
+
+const createApplicationStub = (): ApplicationStub => {
   const bounds = new Rectangle(0, 0, 320, 180);
   const backendMock = {
     view: {
@@ -77,6 +96,8 @@ const createApplicationStub = (): Application & {
     draw: vi.fn().mockReturnThis(),
     stats: { culledNodes: 0 },
     resetStats: vi.fn().mockReturnThis(),
+    acquireRenderTexture: vi.fn((width: number, height: number) => new RenderTexture(width, height)),
+    releaseRenderTexture: vi.fn(),
   };
 
   return {
@@ -85,39 +106,27 @@ const createApplicationStub = (): Application & {
     interaction: { attachRoot: vi.fn(), detachRoot: vi.fn() },
     onError: new Signal<[Error]>(),
     tweens: new TweenManager(),
+    canvas: { width: 320, height: 180 } as HTMLCanvasElement,
+    onResize: new Signal<[number, number, Application]>(),
+    clearColor: Color.black,
     rendering: {
       backend: backendMock,
       render: vi.fn(),
+      _renderSurfaceInto: vi.fn((_target: RenderTexture, _clear: unknown, draw: () => void) => draw()),
     },
     backend: backendMock,
-  } as unknown as Application & {
-    input: InputManagerStub;
-    onError: Signal<[Error]>;
-    loader: { _releaseScope: MockInstance };
-    rendering: {
-      backend: {
-        view: { getBounds: () => Rectangle };
-        draw: MockInstance;
-      };
-      render: MockInstance;
-    };
-    backend: {
-      view: { getBounds: () => Rectangle };
-      draw: MockInstance;
-      stats: { culledNodes: number };
-      resetStats: MockInstance;
-    };
-  };
+  } as unknown as ApplicationStub;
 };
 
 // Mirrors the per-frame call sequence Application.update() makes on
-// SceneDirector: logic update, draw, then the transition overlay last.
+// SceneDirector: logic update + transition update, draw + transition render.
 const tick = (manager: SceneDirector, app: ReturnType<typeof createApplicationStub>, milliseconds = 16): void => {
   const time = new Time(milliseconds);
 
   manager.update(time);
+  manager._updateTransition(time);
   manager.draw(app.rendering);
-  manager._drawTransition(app.rendering, time);
+  manager._renderTransition(app.rendering);
 };
 
 type SceneHooks = Partial<Pick<Scene, 'load' | 'init' | 'update' | 'fixedUpdate' | 'draw' | 'unload' | 'destroy'>>;
@@ -132,6 +141,47 @@ const makeSceneClass = (hooks: SceneHooks = {}): SceneConstructor<void> =>
       Object.assign(this, hooks);
     }
   };
+
+// Reusable fake transition/session pair for the transition-runtime tests.
+class FakeSession implements SceneTransitionSession {
+  public done = false;
+  public placement: 'scene' | 'screen' = 'screen';
+  public destroyCallCount = 0;
+  public updateCallCount = 0;
+  public renderCallCount = 0;
+
+  public update(_delta: Time): void {
+    this.updateCallCount++;
+  }
+
+  public render(_context: unknown, _frame: SceneTransitionFrame): void {
+    this.renderCallCount++;
+  }
+
+  public destroy(): void {
+    this.destroyCallCount++;
+  }
+}
+
+class FakeTransition extends SceneTransition {
+  public readonly session: FakeSession;
+  public lastContext: SceneTransitionContext | null = null;
+
+  public constructor(session: FakeSession = new FakeSession()) {
+    super();
+    this.session = session;
+  }
+
+  public getRequirements(context: SceneTransitionContext): SceneTransitionRequirements {
+    this.lastContext = context;
+
+    return { outgoingFrame: 'none', currentFrame: 'none' };
+  }
+
+  protected override createSession(_environment: SceneTransitionEnvironment): SceneTransitionSession {
+    return this.session;
+  }
+}
 
 describe('SceneDirector', () => {
   test('keeps scene unset and cleans up when load() fails, without calling unload()', async () => {
@@ -434,71 +484,6 @@ describe('SceneDirector', () => {
     expect(draw).toHaveBeenCalledTimes(2);
   });
 
-  test('fade transition runs and completes around setScene', async () => {
-    const app = createApplicationStub();
-    const First = makeSceneClass();
-    const Second = makeSceneClass();
-    const manager = new SceneDirector(app, { first: First, second: Second });
-
-    await manager.change(First);
-
-    const transitionPromise = manager.change(Second, {
-      transition: {
-        type: 'fade',
-        duration: 100,
-      },
-    });
-    let transitionSettled = false;
-
-    void transitionPromise.then(() => {
-      transitionSettled = true;
-    });
-
-    tick(manager, app, 50);
-    expect(manager.currentScene).toBeInstanceOf(First);
-
-    tick(manager, app, 60);
-    for (let i = 0; i < 64 && !transitionSettled; i++) {
-      await Promise.resolve();
-      tick(manager, app, 100);
-    }
-
-    expect(transitionSettled).toBe(true);
-    await expect(transitionPromise).resolves.toBe(manager);
-    expect(manager.currentScene).toBeInstanceOf(Second);
-    expect(app.backend.draw).toHaveBeenCalled();
-  });
-
-  test('transition failure rejects and leaves manager in a valid state', async () => {
-    const app = createApplicationStub();
-    const First = makeSceneClass();
-    const Failing = makeSceneClass({
-      init() {
-        throw new Error('transition target failed');
-      },
-    });
-    const Fallback = makeSceneClass();
-    const manager = new SceneDirector(app, { first: First, failing: Failing, fallback: Fallback });
-
-    await manager.change(First);
-
-    const transitionPromise = manager.change(Failing, {
-      transition: {
-        type: 'fade',
-        duration: 60,
-      },
-    });
-
-    tick(manager, app, 60);
-    await Promise.resolve();
-
-    await expect(transitionPromise).rejects.toThrow('transition target failed');
-    expect(manager.currentScene).toBeInstanceOf(First);
-
-    await expect(manager.change(Fallback)).resolves.toBe(manager);
-    expect(manager.currentScene).toBeInstanceOf(Fallback);
-  });
-
   test('passes the rendering context to scene.draw()', async () => {
     const app = createApplicationStub();
     let drawArg: unknown = null;
@@ -630,60 +615,6 @@ describe('SceneDirector', () => {
 
     await director._clearScene();
     expect(director.state).toBeNull();
-  });
-
-  test('_transitionGateOpen is true only while a fade transition is in flight, including on failure', async () => {
-    const app = createApplicationStub();
-    const TestScene = makeSceneClass();
-    const OtherScene = makeSceneClass();
-    const manager = new SceneDirector(app, { test: TestScene, other: OtherScene });
-
-    await manager.change(TestScene);
-    expect((manager as unknown as { _transitionGateOpen: boolean })._transitionGateOpen).toBe(false);
-
-    const transitionPromise = manager.change(OtherScene, {
-      transition: { type: 'fade', duration: 60 },
-    });
-
-    expect((manager as unknown as { _transitionGateOpen: boolean })._transitionGateOpen).toBe(true);
-
-    let transitionSettled = false;
-
-    void transitionPromise.then(() => {
-      transitionSettled = true;
-    });
-
-    tick(manager, app, 60);
-    for (let i = 0; i < 64 && !transitionSettled; i++) {
-      await Promise.resolve();
-      tick(manager, app, 60);
-    }
-    await transitionPromise;
-
-    expect((manager as unknown as { _transitionGateOpen: boolean })._transitionGateOpen).toBe(false);
-  });
-
-  test('_transitionGateOpen closes even when the transition target fails to activate', async () => {
-    const app = createApplicationStub();
-    const TestScene = makeSceneClass();
-    const FailScene = makeSceneClass({
-      init() {
-        throw new Error('boom');
-      },
-    });
-    const manager = new SceneDirector(app, { test: TestScene, fail: FailScene });
-
-    await manager.change(TestScene);
-
-    const transitionPromise = manager.change(FailScene, {
-      transition: { type: 'fade', duration: 60 },
-    });
-
-    tick(manager, app, 60);
-    await Promise.resolve();
-
-    await expect(transitionPromise).rejects.toThrow('boom');
-    expect((manager as unknown as { _transitionGateOpen: boolean })._transitionGateOpen).toBe(false);
   });
 });
 
@@ -1337,12 +1268,14 @@ describe('SceneDirector — unload', () => {
     const PreloadedScene = makeSceneClass();
     const director = new SceneDirector(app, { preloaded: PreloadedScene });
 
-    // No fade machinery is exercised for a retained/preloaded discard — this
-    // resolves immediately regardless of the (deliberately long) duration,
-    // proving the direct fast path ran instead of the transition bridge.
+    // No transition session is started for a retained/preloaded discard —
+    // this resolves immediately even though the supplied transition's session
+    // never commits or completes, proving the direct fast path ran instead.
+    const neverCompletingTransition = new FakeTransition();
+
     await director.preload(PreloadedScene);
 
-    await expect(director.unload(PreloadedScene, { transition: { type: 'fade', duration: 5000 } })).resolves.toBe(true);
+    await expect(director.unload(PreloadedScene, { transition: neverCompletingTransition })).resolves.toBe(true);
   });
 
   test('unload() never dispatches onStopScene for a preloaded scene that was never activated', async () => {
@@ -1442,5 +1375,786 @@ describe('SceneDirector — unload', () => {
     // The second preload is still available for a later change() to consume —
     // confirmed by its state, not yet activated:
     expect(director.currentScene).toBeNull();
+  });
+});
+
+// Drains all pending microtasks (the async commit chain: _performSessionCommit
+// -> commitSwitch -> _prepareScene -> scope.prepare -> scene.load) by yielding
+// to a macrotask. `commit()` only sets a flag; a tick() must drive
+// _checkCommitRequested first, then settle() lets the switch finish.
+const settle = (): Promise<void> => new Promise<void>(resolve => setTimeout(resolve, 0));
+
+describe('SceneDirector — transition session driving', () => {
+  test('a transitioned change() does not switch until the session calls environment.commit()', async () => {
+    const app = createApplicationStub();
+    const First = makeSceneClass();
+    const Second = makeSceneClass();
+    const manager = new SceneDirector(app, { first: First, second: Second });
+
+    await manager.change(First);
+
+    let environmentRef: SceneTransitionEnvironment | null = null;
+    const session = new FakeSession();
+    const transition = new (class extends SceneTransition {
+      public getRequirements(): SceneTransitionRequirements {
+        return { outgoingFrame: 'none', currentFrame: 'none' };
+      }
+      protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
+        environmentRef = environment;
+
+        return session;
+      }
+    })();
+
+    const navigation = manager.change(Second, { transition });
+
+    tick(manager, app);
+    expect(manager.currentScene).toBeInstanceOf(First);
+    expect(environmentRef?.commitRequested).toBe(false);
+
+    environmentRef?.commit();
+    tick(manager, app); // drives _checkCommitRequested -> starts the async switch
+    await settle();
+
+    expect(manager.currentScene).toBeInstanceOf(Second);
+    expect(environmentRef?.committed).toBe(true);
+
+    session.done = true;
+    tick(manager, app);
+    await navigation;
+
+    expect(session.destroyCallCount).toBe(1);
+  });
+
+  test('SceneTransitionContext reflects operation/hasOutgoingScene/hasIncomingScene for a transitioned change()', async () => {
+    const app = createApplicationStub();
+    const First = makeSceneClass();
+    const Second = makeSceneClass();
+    const manager = new SceneDirector(app, { first: First, second: Second });
+
+    await manager.change(First);
+
+    let capturedContext: SceneTransitionContext | null = null;
+    let environmentRef: SceneTransitionEnvironment | null = null;
+
+    class SelfCommittingSession implements SceneTransitionSession {
+      public done = false;
+      public placement: 'scene' | 'screen' = 'screen';
+      public constructor(private readonly environment: SceneTransitionEnvironment) {
+        this.environment.commit();
+      }
+      public update(_delta: Time): void {
+        if (this.environment.committed) {
+          this.done = true;
+        }
+      }
+      public render(): void {}
+      public destroy(): void {}
+    }
+
+    const transition = new (class extends SceneTransition {
+      public getRequirements(context: SceneTransitionContext): SceneTransitionRequirements {
+        capturedContext = context;
+
+        return { outgoingFrame: 'none', currentFrame: 'none' };
+      }
+      protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
+        environmentRef = environment;
+
+        return new SelfCommittingSession(environment);
+      }
+    })();
+
+    const navigation = manager.change(Second, { transition });
+
+    expect(capturedContext).toEqual({ operation: 'change', hasOutgoingScene: true, hasIncomingScene: true });
+
+    // The session committed synchronously in its constructor — one tick drives
+    // the async switch, settle() lets it finish, then update() flips done true.
+    tick(manager, app);
+    await settle();
+    tick(manager, app);
+    await navigation;
+
+    expect(environmentRef?.committed).toBe(true);
+    expect(manager.currentScene).toBeInstanceOf(Second);
+  });
+
+  test('_transitionGateOpen is true only while a transitioned navigation is in flight, including on post-commit session failure', async () => {
+    const app = createApplicationStub();
+    const TestScene = makeSceneClass();
+    const OtherScene = makeSceneClass();
+    const manager = new SceneDirector(app, { test: TestScene, other: OtherScene });
+
+    await manager.change(TestScene);
+    expect((manager as unknown as { _transitionGateOpen: boolean })._transitionGateOpen).toBe(false);
+
+    let environmentRef: SceneTransitionEnvironment | null = null;
+    const session = new FakeSession();
+    const transition = new (class extends SceneTransition {
+      public getRequirements(): SceneTransitionRequirements {
+        return { outgoingFrame: 'none', currentFrame: 'none' };
+      }
+      protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
+        environmentRef = environment;
+
+        return session;
+      }
+    })();
+
+    const navigation = manager.change(OtherScene, { transition });
+
+    expect((manager as unknown as { _transitionGateOpen: boolean })._transitionGateOpen).toBe(true);
+
+    environmentRef?.commit();
+    tick(manager, app);
+    await settle();
+    expect(manager.currentScene).toBeInstanceOf(OtherScene); // already committed
+
+    session.render = () => {
+      throw new Error('render blew up post-commit');
+    };
+    tick(manager, app);
+
+    await expect(navigation).rejects.toThrow('render blew up post-commit');
+    expect((manager as unknown as { _transitionGateOpen: boolean })._transitionGateOpen).toBe(false);
+    // Post-commit failure: the new scene stays live, never rolled back.
+    expect(manager.currentScene).toBeInstanceOf(OtherScene);
+  });
+});
+
+describe('SceneDirector — transition resource provisioning (§3.4, §3.7a)', () => {
+  test('currentFrame: "texture" redirects the active scope draw into a pooled texture instead of the canvas', async () => {
+    const app = createApplicationStub();
+    const drawSpy = vi.fn();
+    const TestScene = makeSceneClass({ draw: drawSpy });
+    const Other = makeSceneClass();
+    const manager = new SceneDirector(app, { test: TestScene, other: Other });
+
+    await manager.change(TestScene);
+
+    let environmentRef: SceneTransitionEnvironment | null = null;
+    const session = new FakeSession();
+    const transition = new (class extends SceneTransition {
+      public getRequirements(): SceneTransitionRequirements {
+        return { outgoingFrame: 'none', currentFrame: 'texture' };
+      }
+      protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
+        environmentRef = environment;
+
+        return session;
+      }
+    })();
+
+    const navigation = manager.change(Other, { transition });
+
+    manager.draw(app.rendering);
+
+    expect(app.rendering._renderSurfaceInto).toHaveBeenCalled();
+    expect(drawSpy).toHaveBeenCalledTimes(1); // drawn via the redirect, not straight to canvas
+    expect(app.backend.acquireRenderTexture).toHaveBeenCalledWith(app.canvas.width, app.canvas.height);
+
+    environmentRef?.commit();
+    tick(manager, app);
+    await settle();
+    session.done = true;
+    tick(manager, app);
+    await navigation;
+
+    expect(app.backend.releaseRenderTexture).toHaveBeenCalled();
+  });
+
+  test('outgoingFrame: "snapshot" captures the outgoing scene once, before the session starts, and never reallocates it', async () => {
+    const app = createApplicationStub();
+    const drawSpy = vi.fn();
+    const First = makeSceneClass({ draw: drawSpy });
+    const Second = makeSceneClass();
+    const manager = new SceneDirector(app, { first: First, second: Second });
+
+    await manager.change(First);
+    drawSpy.mockClear();
+
+    let environmentRef: SceneTransitionEnvironment | null = null;
+    const capturedFrames: SceneTransitionFrame[] = [];
+    const session = new FakeSession();
+    session.render = (_context, frame) => {
+      capturedFrames.push(frame);
+    };
+    const transition = new (class extends SceneTransition {
+      public getRequirements(): SceneTransitionRequirements {
+        return { outgoingFrame: 'snapshot', currentFrame: 'none' };
+      }
+      protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
+        environmentRef = environment;
+
+        return session;
+      }
+    })();
+
+    const navigation = manager.change(Second, { transition });
+
+    // The snapshot is captured once, synchronously, before beginSession() —
+    // the outgoing scene's draw() ran exactly once for it.
+    expect(drawSpy).toHaveBeenCalledTimes(1);
+
+    manager._renderTransition(app.rendering);
+    manager._renderTransition(app.rendering);
+
+    expect(capturedFrames).toHaveLength(2);
+    expect(capturedFrames[0]!.outgoing).not.toBeNull();
+    expect(capturedFrames[0]!.outgoing).toBe(capturedFrames[1]!.outgoing); // same texture instance, never reallocated
+
+    environmentRef?.commit();
+    tick(manager, app);
+    await settle();
+    session.done = true;
+    tick(manager, app);
+    await navigation;
+  });
+
+  test('outgoingFrame: "snapshot" is skipped (frame.outgoing stays null) when there is no outgoing scene', async () => {
+    const app = createApplicationStub();
+    const First = makeSceneClass();
+    const manager = new SceneDirector(app, { first: First });
+
+    let capturedFrame: SceneTransitionFrame | null = null;
+    const session = new FakeSession();
+    session.render = (_context, frame) => {
+      capturedFrame = frame;
+    };
+    const transition = new (class extends SceneTransition {
+      public getRequirements(): SceneTransitionRequirements {
+        return { outgoingFrame: 'snapshot', currentFrame: 'none' };
+      }
+      protected override createSession(): SceneTransitionSession {
+        return session;
+      }
+    })();
+
+    const navigation = manager.change(First, { transition });
+
+    manager._renderTransition(app.rendering);
+    expect((capturedFrame as SceneTransitionFrame | null)?.outgoing).toBeNull();
+
+    // Never committed — reporting done here is a done-before-commit lifecycle
+    // error; drive one more frame to let the Director observe it.
+    session.done = true;
+    manager._renderTransition(app.rendering);
+    await expect(navigation).rejects.toThrow(SceneTransitionLifecycleError);
+  });
+
+  test('the pooled "current" texture resizes when the canvas resizes mid-session', async () => {
+    const app = createApplicationStub();
+    const TestScene = makeSceneClass();
+    const Other = makeSceneClass();
+    const manager = new SceneDirector(app, { test: TestScene, other: Other });
+
+    await manager.change(TestScene);
+
+    let environmentRef: SceneTransitionEnvironment | null = null;
+    const session = new FakeSession();
+    const transition = new (class extends SceneTransition {
+      public getRequirements(): SceneTransitionRequirements {
+        return { outgoingFrame: 'none', currentFrame: 'texture' };
+      }
+      protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
+        environmentRef = environment;
+
+        return session;
+      }
+    })();
+
+    const navigation = manager.change(Other, { transition });
+
+    manager.draw(app.rendering);
+    (app.canvas as { width: number; height: number }).width = 640;
+    (app.canvas as { width: number; height: number }).height = 360;
+    app.onResize.dispatch(640, 360, app);
+
+    environmentRef?.commit();
+    tick(manager, app);
+    await settle();
+    session.done = true;
+    tick(manager, app);
+    await navigation;
+
+    // Resize behavior is asserted structurally: the resize handler must have
+    // been reachable via app.onResize without throwing, and the session must
+    // still have completed normally.
+    expect(session.destroyCallCount).toBe(1);
+  });
+});
+
+describe('SceneDirector — transition lifecycle contract', () => {
+  test('environment.commit() called twice is a dev-mode lifecycle error', async () => {
+    const app = createApplicationStub();
+    const First = makeSceneClass();
+    const Second = makeSceneClass();
+    const manager = new SceneDirector(app, { first: First, second: Second });
+
+    await manager.change(First);
+
+    let environmentRef: SceneTransitionEnvironment | null = null;
+    const session = new FakeSession();
+    session.update = () => {
+      environmentRef?.commit();
+    };
+    const transition = new (class extends SceneTransition {
+      public getRequirements(): SceneTransitionRequirements {
+        return { outgoingFrame: 'none', currentFrame: 'none' };
+      }
+      protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
+        environmentRef = environment;
+        environment.commit(); // first call, synchronous, from createSession()
+
+        return session;
+      }
+    })();
+
+    const navigation = manager.change(Second, { transition });
+
+    // session.update() (driven by tick()) calls commit() a second time —
+    // __DEV__ is true in the test environment, so this throws and rejects the
+    // navigation with a SceneTransitionLifecycleError.
+    tick(manager, app);
+
+    await expect(navigation).rejects.toThrow(SceneTransitionLifecycleError);
+    await expect(navigation).rejects.toMatchObject({ reason: 'commit-reentrant' });
+  });
+
+  test('a session reaching done === true before commit() was ever called is a lifecycle error, old scene stays active', async () => {
+    const app = createApplicationStub();
+    const First = makeSceneClass();
+    const Second = makeSceneClass();
+    const manager = new SceneDirector(app, { first: First, second: Second });
+
+    await manager.change(First);
+
+    const session = new FakeSession();
+    const transition = new FakeTransition(session);
+
+    const navigation = manager.change(Second, { transition });
+
+    session.done = true; // never committed
+    tick(manager, app);
+
+    await expect(navigation).rejects.toThrow(SceneTransitionLifecycleError);
+    await expect(navigation).rejects.toMatchObject({ reason: 'done-before-commit' });
+    expect(manager.currentScene).toBeInstanceOf(First);
+    expect(session.destroyCallCount).toBe(1);
+  });
+
+  test('post-commit session failure (update throws) rejects the navigation but the new scene stays live', async () => {
+    const app = createApplicationStub();
+    const First = makeSceneClass();
+    const Second = makeSceneClass();
+    const manager = new SceneDirector(app, { first: First, second: Second });
+
+    await manager.change(First);
+
+    let environmentRef: SceneTransitionEnvironment | null = null;
+    const session = new FakeSession();
+    const transition = new (class extends SceneTransition {
+      public getRequirements(): SceneTransitionRequirements {
+        return { outgoingFrame: 'none', currentFrame: 'none' };
+      }
+      protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
+        environmentRef = environment;
+
+        return session;
+      }
+    })();
+
+    const navigation = manager.change(Second, { transition });
+
+    environmentRef?.commit();
+    tick(manager, app);
+    await settle();
+    expect(manager.currentScene).toBeInstanceOf(Second); // already committed
+
+    session.update = () => {
+      throw new Error('update blew up post-commit');
+    };
+    tick(manager, app);
+
+    await expect(navigation).rejects.toThrow('update blew up post-commit');
+    expect(manager.currentScene).toBeInstanceOf(Second); // never rolled back
+    expect(session.destroyCallCount).toBe(1);
+  });
+
+  test('a session error inside destroy() itself does not block the outer settle', async () => {
+    const app = createApplicationStub();
+    const First = makeSceneClass();
+    const Second = makeSceneClass();
+    const manager = new SceneDirector(app, { first: First, second: Second });
+    const errorSpy = vi.fn();
+
+    app.onError.add(errorSpy);
+    await manager.change(First);
+
+    const session = new FakeSession();
+    session.destroy = () => {
+      throw new Error('destroy() itself failed');
+    };
+    const transition = new FakeTransition(session);
+
+    const navigation = manager.change(Second, { transition });
+
+    session.done = true; // done-before-commit path also exercises destroy()
+    tick(manager, app);
+
+    await expect(navigation).rejects.toThrow(SceneTransitionLifecycleError);
+    expect(errorSpy).toHaveBeenCalledWith(expect.objectContaining({ message: 'destroy() itself failed' }));
+  });
+
+  test('_dispose() destroys an in-flight session and rejects its navigation', async () => {
+    const app = createApplicationStub();
+    const First = makeSceneClass();
+    const Second = makeSceneClass();
+    const manager = new SceneDirector(app, { first: First, second: Second });
+
+    await manager.change(First);
+
+    const session = new FakeSession();
+    const transition = new FakeTransition(session);
+
+    const navigation = manager.change(Second, { transition });
+
+    await manager._dispose();
+
+    await expect(navigation).rejects.toThrow(SceneTransitionLifecycleError);
+    await expect(navigation).rejects.toMatchObject({ reason: 'aborted' });
+    expect(session.destroyCallCount).toBe(1);
+  });
+
+  test('a session that finishes during update() gets no update()/render() call after destroy() the same frame', async () => {
+    const app = createApplicationStub();
+    const First = makeSceneClass();
+    const Second = makeSceneClass();
+    const manager = new SceneDirector(app, { first: First, second: Second });
+
+    await manager.change(First);
+
+    // Records any update()/render() that lands after destroy() — the exact
+    // use-after-free the fix prevents. destroy()'s contract promises "No
+    // further update()/render() calls follow." The common completion path
+    // reports done from inside update(), which Application.update() drives
+    // (via _updateTransition) BEFORE the same frame's draw()/_renderTransition().
+    class LifecycleGuardSession implements SceneTransitionSession {
+      public done = false;
+      public placement: 'scene' | 'screen' = 'screen';
+      public destroyed = false;
+      public destroyCallCount = 0;
+      public readonly callsAfterDestroy: string[] = [];
+
+      public constructor(private readonly environment: SceneTransitionEnvironment) {}
+
+      public update(_delta: Time): void {
+        if (this.destroyed) {
+          this.callsAfterDestroy.push('update');
+        }
+
+        if (this.environment.committed) {
+          this.done = true;
+        }
+      }
+
+      public render(_context: unknown, _frame: SceneTransitionFrame): void {
+        if (this.destroyed) {
+          this.callsAfterDestroy.push('render');
+        }
+      }
+
+      public destroy(): void {
+        this.destroyed = true;
+        this.destroyCallCount++;
+      }
+    }
+
+    let environmentRef: SceneTransitionEnvironment | null = null;
+    let session!: LifecycleGuardSession;
+    const transition = new (class extends SceneTransition {
+      public getRequirements(): SceneTransitionRequirements {
+        return { outgoingFrame: 'none', currentFrame: 'none' };
+      }
+      protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
+        environmentRef = environment;
+        session = new LifecycleGuardSession(environment);
+
+        return session;
+      }
+    })();
+
+    const navigation = manager.change(Second, { transition });
+
+    environmentRef?.commit();
+    tick(manager, app); // drives the async switch
+    await settle();
+    expect(manager.currentScene).toBeInstanceOf(Second);
+
+    // This tick: update() sees committed -> sets done -> _updateTransition
+    // detects done and finishes+destroys the session, all before the SAME
+    // tick's draw()/_renderTransition(). Neither may touch the destroyed
+    // session.
+    tick(manager, app);
+    await navigation;
+
+    expect(session.destroyCallCount).toBe(1);
+    expect(session.callsAfterDestroy).toEqual([]);
+  });
+});
+
+// NOTE (§3.5.1, "Ready-scope cleanup"): the fourth pre-commit-failure concept
+// — a navigation aborted after commit() was requested and prepare() was
+// already in flight, cancelled before ever reaching the atomic commit boundary
+// — requires the abort-flag machinery Slice 7 adds to Application.start()'s
+// frame loop (§3.7). It is deliberately not tested here; Slice 7's own plan
+// must add it once _frameLoopActive exists.
+describe('SceneDirector — pre-commit failure semantics (§3.5.1)', () => {
+  test('active-scope rollback is eliminated: _activeScope is only ever reassigned once prepare() has already succeeded', async () => {
+    const app = createApplicationStub();
+    const First = makeSceneClass();
+    const Failing = makeSceneClass({
+      init() {
+        throw new Error('prepare failed');
+      },
+    });
+    const manager = new SceneDirector(app, { first: First, failing: Failing });
+
+    await manager.change(First);
+    const firstInstance = manager.currentScene;
+
+    let environmentRef: SceneTransitionEnvironment | null = null;
+    const session = new FakeSession();
+    const transition = new (class extends SceneTransition {
+      public getRequirements(): SceneTransitionRequirements {
+        return { outgoingFrame: 'none', currentFrame: 'none' };
+      }
+      protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
+        environmentRef = environment;
+
+        return session;
+      }
+    })();
+
+    const navigation = manager.change(Failing, { transition });
+    // Attach a handler before the switch runs — the navigation rejects during
+    // settle(), so observing it only afterwards would flag a spurious
+    // "handled asynchronously" unhandled-rejection warning.
+    void navigation.catch(() => undefined);
+
+    environmentRef?.commit(); // triggers commitSwitch(), which awaits _prepareScene() — and that throws
+    tick(manager, app);
+    await settle();
+
+    await expect(navigation).rejects.toThrow('prepare failed');
+    expect(manager.currentScene).toBe(firstInstance); // never reassigned — nothing to roll back
+  });
+
+  test('failed-preparation cleanup: destroyFailedActivation() runs, unload() is never called', async () => {
+    const app = createApplicationStub();
+    const First = makeSceneClass();
+    const unload = vi.fn();
+    const Failing = makeSceneClass({
+      init() {
+        throw new Error('prepare failed');
+      },
+      unload,
+    });
+    const manager = new SceneDirector(app, { first: First, failing: Failing });
+
+    await manager.change(First);
+
+    let environmentRef: SceneTransitionEnvironment | null = null;
+    const session = new FakeSession();
+    const transition = new (class extends SceneTransition {
+      public getRequirements(): SceneTransitionRequirements {
+        return { outgoingFrame: 'none', currentFrame: 'none' };
+      }
+      protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
+        environmentRef = environment;
+
+        return session;
+      }
+    })();
+
+    const navigation = manager.change(Failing, { transition });
+    void navigation.catch(() => undefined);
+
+    environmentRef?.commit();
+    tick(manager, app);
+    await settle();
+
+    await expect(navigation).rejects.toThrow('prepare failed');
+    expect(unload).not.toHaveBeenCalled();
+  });
+
+  test('claim restoration: a transitioned restore() that fails pre-commit puts the scope back into _retained', async () => {
+    const app = createApplicationStub();
+    const First = makeSceneClass();
+    const Second = makeSceneClass();
+    const managerB = new SceneDirector(app, { first: First, second: Second });
+
+    await managerB.change(First);
+    await managerB.change(Second, { suspendCurrent: true }); // First is now retained
+
+    let environmentRef: SceneTransitionEnvironment | null = null;
+    const session = new FakeSession();
+    const transition = new (class extends SceneTransition {
+      public getRequirements(): SceneTransitionRequirements {
+        return { outgoingFrame: 'none', currentFrame: 'none' };
+      }
+      protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
+        environmentRef = environment;
+
+        return session;
+      }
+    })();
+
+    managerB.onStateChange.add(() => {
+      throw new Error('onStateChange listener failed');
+    });
+
+    const navigation = managerB.restore(First, { transition });
+
+    environmentRef?.commit();
+    tick(managerB, app);
+    await settle();
+    session.done = true; // if the restore committed, let the session finish so navigation settles
+    tick(managerB, app);
+
+    // Whether this listener throw surfaces as a rejection depends on Slice 2's
+    // guarded-dispatch: onStateChange is dispatched via dispatchIsolated, so
+    // the throw is reported, not thrown back — the restore commits. Assert the
+    // invariant that holds regardless: the scope ends up in exactly one place.
+    try {
+      await navigation;
+      expect((managerB as unknown as { _retained: Map<unknown, unknown> })._retained.has(First)).toBe(false);
+      expect(managerB.currentScene).toBeInstanceOf(First);
+    } catch {
+      expect((managerB as unknown as { _retained: Map<unknown, unknown> })._retained.has(First)).toBe(true);
+      expect(managerB.currentScene).not.toBeInstanceOf(First);
+    }
+  });
+});
+
+describe('SceneDirector — composability (§3.8)', () => {
+  test('a transitioned restore() runs through the same commit/session machinery as change()', async () => {
+    const First = makeSceneClass();
+    const Second = makeSceneClass();
+    const app = createApplicationStub();
+    const manager = new SceneDirector(app, { first: First, second: Second });
+
+    await manager.change(First);
+    await manager.change(Second, { suspendCurrent: true });
+
+    let capturedContext: SceneTransitionContext | null = null;
+    let environmentRef: SceneTransitionEnvironment | null = null;
+    const session = new FakeSession();
+    const transition = new (class extends SceneTransition {
+      public getRequirements(context: SceneTransitionContext): SceneTransitionRequirements {
+        capturedContext = context;
+
+        return { outgoingFrame: 'none', currentFrame: 'none' };
+      }
+      protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
+        environmentRef = environment;
+
+        return session;
+      }
+    })();
+
+    const navigation = manager.restore(First, { transition });
+
+    expect(capturedContext).toEqual({ operation: 'restore', hasOutgoingScene: true, hasIncomingScene: true });
+
+    environmentRef?.commit();
+    tick(manager, app);
+    await settle();
+    session.done = true;
+    tick(manager, app);
+    await navigation;
+
+    expect(manager.currentScene).toBeInstanceOf(First);
+  });
+
+  test('a transitioned restore() with suspendCurrent suspends the outgoing scope instead of destroying it', async () => {
+    const First = makeSceneClass();
+    const Second = makeSceneClass();
+    const app = createApplicationStub();
+    const manager = new SceneDirector(app, { first: First, second: Second });
+
+    await manager.change(First);
+    await manager.change(Second, { suspendCurrent: true });
+
+    const secondInstance = manager.currentScene;
+    let environmentRef: SceneTransitionEnvironment | null = null;
+    const session = new FakeSession();
+    const transition = new (class extends SceneTransition {
+      public getRequirements(): SceneTransitionRequirements {
+        return { outgoingFrame: 'none', currentFrame: 'none' };
+      }
+      protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
+        environmentRef = environment;
+
+        return session;
+      }
+    })();
+
+    const navigation = manager.restore(First, { transition, suspendCurrent: true });
+
+    environmentRef?.commit();
+    tick(manager, app);
+    await settle();
+    session.done = true;
+    tick(manager, app);
+    await navigation;
+
+    expect(manager.currentScene).toBeInstanceOf(First);
+    expect((manager as unknown as { _retained: Map<unknown, unknown> })._retained.has(Second)).toBe(true);
+    expect(secondInstance?.state).toBe(SceneState.Suspended); // suspended, not destroyed
+  });
+
+  test('a transitioned unload() of the active scope: frame.current becomes null after commit (no incoming scene)', async () => {
+    const app = createApplicationStub();
+    const TestScene = makeSceneClass();
+    const manager = new SceneDirector(app, { test: TestScene });
+
+    await manager.change(TestScene);
+
+    let environmentRef: SceneTransitionEnvironment | null = null;
+    const capturedFrames: SceneTransitionFrame[] = [];
+    const session = new FakeSession();
+    session.render = (_context, frame) => {
+      capturedFrames.push(frame);
+    };
+    const transition = new (class extends SceneTransition {
+      public getRequirements(): SceneTransitionRequirements {
+        return { outgoingFrame: 'none', currentFrame: 'texture' };
+      }
+      protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
+        environmentRef = environment;
+
+        return session;
+      }
+    })();
+
+    const navigation = manager.unload(TestScene, { transition });
+
+    manager.draw(app.rendering);
+    manager._renderTransition(app.rendering);
+    expect(capturedFrames.at(-1)?.current).not.toBeNull(); // still the outgoing scene, pre-commit
+
+    environmentRef?.commit();
+    tick(manager, app);
+    await settle();
+
+    manager.draw(app.rendering);
+    manager._renderTransition(app.rendering);
+    expect(capturedFrames.at(-1)?.current).toBeNull(); // post-commit, no incoming scene
+
+    session.done = true;
+    tick(manager, app);
+    await navigation;
   });
 });

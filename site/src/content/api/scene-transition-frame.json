@@ -1,0 +1,129 @@
+{
+  "title": "SceneTransitionFrame",
+  "description": "Per-frame render inputs handed to SceneTransitionSession.render. See `SceneTransitionFrame field semantics` in the design spec (§3.7a) for the exact non-null conditions of each field.",
+  "symbol": "SceneTransitionFrame",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Per-frame render inputs handed to SceneTransitionSession.render. See `SceneTransitionFrame field semantics` in the design spec (§3.7a) for the exact non-null conditions of each field."
+      ],
+      "importLine": "import { SceneTransitionFrame } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "committed",
+          "signature": "committed: boolean",
+          "signatureTokens": [
+            {
+              "text": "committed",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Mirrors SceneTransitionEnvironment.committed at render time."
+        },
+        {
+          "name": "current",
+          "signature": "current: RenderTexture | null",
+          "signatureTokens": [
+            {
+              "text": "current",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderTexture",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Non-null only when currentFrame: 'texture' was requested and there is a live surface to show. Before commit: the outgoing scene. After commit: the incoming scene, or null for an unload with no incoming scene."
+        },
+        {
+          "name": "outgoing",
+          "signature": "outgoing: RenderTexture | null",
+          "signatureTokens": [
+            {
+              "text": "outgoing",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderTexture",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Non-null only when outgoingFrame: 'snapshot' was requested and an outgoing scene existed. The same texture for the entire session — never reallocated mid-session. Borrowed — do not retain or destroy it."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/SceneTransition.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneTransition.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/SceneTransition.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneTransition.ts"
+}

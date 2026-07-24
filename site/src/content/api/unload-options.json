@@ -63,7 +63,7 @@
         },
         {
           "name": "transition",
-          "signature": "transition?: FadeSceneTransition",
+          "signature": "transition?: SceneTransition",
           "signatureTokens": [
             {
               "text": "transition",
@@ -78,7 +78,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "FadeSceneTransition",
+              "text": "SceneTransition",
               "kind": "type"
             }
           ],

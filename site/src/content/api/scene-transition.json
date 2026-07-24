@@ -1,15 +1,15 @@
 {
   "title": "SceneTransition",
-  "description": "Discriminated union of supported SceneDirector transitions.",
+  "description": "Reusable, immutable transition definition — construct once, use across arbitrarily many navigations (even concurrently, across multiple `Application`s). All per-navigation mutable state lives on the SceneTransitionSession a call to SceneTransition.beginSession produces, never on the definition itself.",
   "symbol": "SceneTransition",
-  "kind": "type",
+  "kind": "class",
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 0,
+  "memberCount": 4,
   "counts": {
-    "constructors": 0,
-    "methods": 0,
+    "constructors": 1,
+    "methods": 3,
     "properties": 0,
     "events": 0
   },
@@ -19,27 +19,193 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Discriminated union of supported SceneDirector transitions."
+        "Reusable, immutable transition definition — construct once, use across arbitrarily many navigations (even concurrently, across multiple `Application`s). All per-navigation mutable state lives on the SceneTransitionSession a call to SceneTransition.beginSession produces, never on the definition itself."
       ],
       "importLine": "import { SceneTransition } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
-      "id": "definition",
-      "title": "Definition",
+      "id": "constructors",
+      "title": "Constructors",
       "members": [
         {
-          "name": "SceneTransition",
-          "signature": "FadeSceneTransition",
+          "name": "new",
+          "signature": "new(): SceneTransition",
           "signatureTokens": [
             {
-              "text": "FadeSceneTransition",
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneTransition",
               "kind": "type"
             }
           ],
           "params": [],
-          "returnType": null,
+          "returnType": "SceneTransition",
           "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "beginSession",
+          "signature": "beginSession(environment: SceneTransitionEnvironment): SceneTransitionSession",
+          "signatureTokens": [
+            {
+              "text": "beginSession",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "environment",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneTransitionEnvironment",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneTransitionSession",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "environment",
+              "type": "SceneTransitionEnvironment",
+              "optional": false
+            }
+          ],
+          "returnType": "SceneTransitionSession",
+          "description": "Called by the Director — do not call directly. Dispatches to SceneTransition.createSession, which is protected so it does not clutter a beginner's view of a transition subclass while still being callable from Director code that does not share this class's hierarchy."
+        },
+        {
+          "name": "createSession",
+          "signature": "createSession(environment: SceneTransitionEnvironment): SceneTransitionSession",
+          "signatureTokens": [
+            {
+              "text": "createSession",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "environment",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneTransitionEnvironment",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneTransitionSession",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "environment",
+              "type": "SceneTransitionEnvironment",
+              "optional": false
+            }
+          ],
+          "returnType": "SceneTransitionSession",
+          "description": "Construct this navigation's session. Override in a subclass."
+        },
+        {
+          "name": "getRequirements",
+          "signature": "getRequirements(context: SceneTransitionContext): SceneTransitionRequirements",
+          "signatureTokens": [
+            {
+              "text": "getRequirements",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "context",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneTransitionContext",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneTransitionRequirements",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "context",
+              "type": "SceneTransitionContext",
+              "optional": false
+            }
+          ],
+          "returnType": "SceneTransitionRequirements",
+          "description": "Pure, synchronous. Called once, before a session starts, so the Director can provision render resources up front."
         }
       ],
       "paragraphs": [],
@@ -53,11 +219,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/core/SceneTypes.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneTypes.ts"
+        "label": "src/core/SceneTransition.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneTransition.ts"
       }
     }
   ],
-  "sourcePath": "src/core/SceneTypes.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneTypes.ts"
+  "sourcePath": "src/core/SceneTransition.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneTransition.ts"
 }

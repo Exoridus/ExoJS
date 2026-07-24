@@ -20,7 +20,9 @@ interface FocusVisibilityHarness {
     fixedUpdate: MockInstance;
     update: MockInstance;
     draw: MockInstance;
-    _drawTransition: MockInstance;
+    _updateTransition: MockInstance;
+    _transitionPlacement: MockInstance;
+    _renderTransition: MockInstance;
     setScene: MockInstance;
     destroy: MockInstance;
   };
@@ -48,7 +50,9 @@ const loadHarness = async (): Promise<FocusVisibilityHarness> => {
     fixedUpdate: vi.fn(),
     update: vi.fn(),
     draw: vi.fn(),
-    _drawTransition: vi.fn(),
+    _updateTransition: vi.fn(),
+    _transitionPlacement: vi.fn(() => null),
+    _renderTransition: vi.fn(),
     setScene: vi.fn().mockResolvedValue(undefined),
     destroy: vi.fn(),
   };

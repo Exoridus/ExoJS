@@ -1,0 +1,113 @@
+{
+  "title": "SceneTransitionContext",
+  "description": "Immutable, read-only description of the navigation a SceneTransition is being asked to run for — passed to SceneTransition.getRequirements and into the SceneTransitionEnvironment handed to SceneTransition.beginSession. Never mutates over a session's lifetime; construct a fresh one per navigation.",
+  "symbol": "SceneTransitionContext",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Immutable, read-only description of the navigation a SceneTransition is being asked to run for — passed to SceneTransition.getRequirements and into the SceneTransitionEnvironment handed to SceneTransition.beginSession. Never mutates over a session's lifetime; construct a fresh one per navigation."
+      ],
+      "importLine": "import { SceneTransitionContext } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "hasIncomingScene",
+          "signature": "hasIncomingScene: boolean",
+          "signatureTokens": [
+            {
+              "text": "hasIncomingScene",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "true when this navigation activates a scene (false only for unload()'s active-scope discard, which has no incoming scene)."
+        },
+        {
+          "name": "hasOutgoingScene",
+          "signature": "hasOutgoingScene: boolean",
+          "signatureTokens": [
+            {
+              "text": "hasOutgoingScene",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "true when a scene was active before this navigation began."
+        },
+        {
+          "name": "operation",
+          "signature": "operation: SceneTransitionOperation",
+          "signatureTokens": [
+            {
+              "text": "operation",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneTransitionOperation",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/SceneTransition.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneTransition.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/SceneTransition.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneTransition.ts"
+}

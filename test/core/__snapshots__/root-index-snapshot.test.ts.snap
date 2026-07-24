@@ -152,6 +152,8 @@ exports[`root index export surface snapshot > sorted runtime export names match 
   "SceneInstanceNotFoundError",
   "SceneNode",
   "SceneState",
+  "SceneTransition",
+  "SceneTransitionLifecycleError",
   "ScrollContainer",
   "Segment",
   "SerializationRegistry",

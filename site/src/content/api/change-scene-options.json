@@ -1,6 +1,6 @@
 {
   "title": "ChangeSceneOptions",
-  "description": "Options for SceneDirector.change. This is an intermediate shape — the spec's final shape (definition §6.3) also carries a `transition` field accepting a `SceneTransitionSelection` (a class-based `SceneTransition`/`PhasedSceneTransition`, or an `{ enter, exit }` pair). That lands in Slice 5, once the real transition-runtime types exist. A caller who still needs today's hardcoded fade machinery in the meantime uses the bridge documented on SceneDirector.change itself, not this type — `transition` is deliberately not part of this shape yet.",
+  "description": "Options for SceneDirector.change. This is an intermediate shape — the spec's final shape (definition §6.3) also carries a `transition` field accepting a `SceneTransitionSelection` (a class-based `SceneTransition`/`PhasedSceneTransition`, or an `{ enter, exit }` pair). That field is not part of this public shape yet — a later slice folds it in directly, once the registry-default `SceneTransitionSelection` exists. A caller passing a `transition` today does so through the wider internal ChangeSceneCallOptions that SceneDirector.change accepts, which drives a real SceneTransition session — see that method's doc comment, not this type; `transition` is deliberately not part of this shape yet.",
   "symbol": "ChangeSceneOptions",
   "kind": "type",
   "subsystem": "core",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Options for SceneDirector.change. This is an intermediate shape — the spec's final shape (definition §6.3) also carries a `transition` field accepting a `SceneTransitionSelection` (a class-based `SceneTransition`/`PhasedSceneTransition`, or an `{ enter, exit }` pair). That lands in Slice 5, once the real transition-runtime types exist. A caller who still needs today's hardcoded fade machinery in the meantime uses the bridge documented on SceneDirector.change itself, not this type — `transition` is deliberately not part of this shape yet."
+        "Options for SceneDirector.change. This is an intermediate shape — the spec's final shape (definition §6.3) also carries a `transition` field accepting a `SceneTransitionSelection` (a class-based `SceneTransition`/`PhasedSceneTransition`, or an `{ enter, exit }` pair). That field is not part of this public shape yet — a later slice folds it in directly, once the registry-default `SceneTransitionSelection` exists. A caller passing a `transition` today does so through the wider internal ChangeSceneCallOptions that SceneDirector.change accepts, which drives a real SceneTransition session — see that method's doc comment, not this type; `transition` is deliberately not part of this shape yet."
       ],
       "importLine": "import { ChangeSceneOptions } from '@codexo/exojs'",
       "sourceLink": null
