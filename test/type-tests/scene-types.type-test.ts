@@ -4,11 +4,11 @@ import type {
   AnySceneConstructor,
   ApplicationLike,
   ApplicationOf,
+  ChangeSceneArgs,
   ConstructorOf,
   InferSceneData,
   SceneRegistration,
   SceneRegistryShape,
-  SetSceneArgs,
 } from '#core/SceneTypes';
 
 interface GameData {
@@ -24,19 +24,21 @@ type DataInferred = InferSceneData<typeof DataScene>; // expect: GameData
 const _voidCheck: VoidInferred = undefined as void;
 const _dataCheck: DataInferred = { level: 1 };
 
-// SetSceneArgs — void target: options-only tuple, data forbidden
-const _voidArgsEmpty: SetSceneArgs<void> = [];
-const _voidArgsOptions: SetSceneArgs<void> = [{ transition: { type: 'fade' } }];
-// @ts-expect-error — void target must not accept a data argument
-const _voidArgsRejectsData: SetSceneArgs<void> = [{ level: 1 }];
+// ChangeSceneArgs — void target: the single options tuple slot is itself optional, and its `data` key is forbidden
+const _voidArgsEmpty: ChangeSceneArgs<void> = [];
+const _voidArgsOptions: ChangeSceneArgs<void> = [{ suspendCurrent: true }];
+// @ts-expect-error — void target must not accept a data field
+const _voidArgsRejectsData: ChangeSceneArgs<void> = [{ data: { level: 1 } }];
 
-// SetSceneArgs — data target: data required, options optional
-const _dataArgsRequired: SetSceneArgs<GameData> = [{ level: 1 }];
-const _dataArgsWithOptions: SetSceneArgs<GameData> = [{ level: 1 }, { transition: { type: 'fade' } }];
-// @ts-expect-error — required data cannot be omitted
-const _dataArgsRejectsEmpty: SetSceneArgs<GameData> = [];
+// ChangeSceneArgs — data target: the options object is required, and its `data` key is required
+const _dataArgsRequired: ChangeSceneArgs<GameData> = [{ data: { level: 1 } }];
+const _dataArgsWithSuspend: ChangeSceneArgs<GameData> = [{ data: { level: 1 }, suspendCurrent: true }];
+// @ts-expect-error — the options tuple slot cannot be omitted when data is required
+const _dataArgsRejectsEmpty: ChangeSceneArgs<GameData> = [];
+// @ts-expect-error — required data cannot be omitted from the options object
+const _dataArgsRejectsMissingData: ChangeSceneArgs<GameData> = [{}];
 // @ts-expect-error — structurally incompatible data is rejected
-const _dataArgsRejectsMismatch: SetSceneArgs<GameData> = [{ wrongField: true }];
+const _dataArgsRejectsMismatch: ChangeSceneArgs<GameData> = [{ data: { wrongField: true } }];
 
 // AnySceneConstructor accepts a heterogeneous constructor map
 const _registry: Record<string, AnySceneConstructor> = { voidScene: VoidScene, dataScene: DataScene };
