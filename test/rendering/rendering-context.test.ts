@@ -728,3 +728,77 @@ describe('RenderingContext.drawBatch', () => {
     geometry.destroy();
   });
 });
+
+describe('_renderSurfaceInto', () => {
+  test('redirects an arbitrary draw callback into the target and restores the previous target/view (legacy fallback branch — no _passCoordinator on the stub)', () => {
+    const { backend, drawEvents, setRenderTargetSpy, setViewSpy, root } = createMockBackend();
+    const context = new RenderingContext(backend);
+    const target = new RenderTexture(64, 64);
+    const sprite = new Sprite(createTexture());
+    let sawTargetDuringDraw: RenderTarget | null = null;
+
+    context._renderSurfaceInto(target, undefined, () => {
+      sawTargetDuringDraw = backend.renderTarget;
+      context.render(sprite);
+    });
+
+    expect(sawTargetDuringDraw).toBe(target);
+    expect(drawEvents).toHaveLength(1);
+    expect(drawEvents[0]).toBe(sprite);
+    // Restored afterwards.
+    expect(backend.renderTarget).toBe(root);
+    expect(setRenderTargetSpy).toHaveBeenCalledWith(target);
+    expect(setRenderTargetSpy).toHaveBeenLastCalledWith(root);
+    expect(setViewSpy).toHaveBeenCalled();
+  });
+
+  test('clears the target when a clear color is supplied', () => {
+    const { backend, clear, clearCalls } = createMockBackend();
+    const context = new RenderingContext(backend);
+    const target = new RenderTexture(32, 32);
+
+    context._renderSurfaceInto(target, Color.red, () => {});
+
+    expect(clear).toHaveBeenCalled();
+    expect(clearCalls).toContainEqual(Color.red);
+  });
+
+  test('does not clear the target when no clear color is supplied (content preserved across calls)', () => {
+    const { backend, clear } = createMockBackend();
+    const context = new RenderingContext(backend);
+    const target = new RenderTexture(32, 32);
+
+    context._renderSurfaceInto(target, undefined, () => {});
+
+    expect(clear).not.toHaveBeenCalled();
+  });
+
+  test('restores the previous target/view even when the draw callback throws', () => {
+    const { backend, root } = createMockBackend();
+    const context = new RenderingContext(backend);
+    const target = new RenderTexture(32, 32);
+
+    expect(() =>
+      context._renderSurfaceInto(target, undefined, () => {
+        throw new Error('boom');
+      }),
+    ).toThrow('boom');
+
+    expect(backend.renderTarget).toBe(root);
+  });
+
+  test('renders multiple calls back into RenderingContext (not limited to a single RenderNode)', () => {
+    const { backend, drawEvents } = createMockBackend();
+    const context = new RenderingContext(backend);
+    const target = new RenderTexture(48, 48);
+    const first = new Sprite(createTexture());
+    const second = new Sprite(createTexture());
+
+    context._renderSurfaceInto(target, undefined, () => {
+      context.render(first);
+      context.render(second);
+    });
+
+    expect(drawEvents).toEqual([first, second]);
+  });
+});
