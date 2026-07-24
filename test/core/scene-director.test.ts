@@ -1826,6 +1826,82 @@ describe('SceneDirector — transition lifecycle contract', () => {
     await expect(navigation).rejects.toMatchObject({ reason: 'aborted' });
     expect(session.destroyCallCount).toBe(1);
   });
+
+  test('a session that finishes during update() gets no update()/render() call after destroy() the same frame', async () => {
+    const app = createApplicationStub();
+    const First = makeSceneClass();
+    const Second = makeSceneClass();
+    const manager = new SceneDirector(app, { first: First, second: Second });
+
+    await manager.change(First);
+
+    // Records any update()/render() that lands after destroy() — the exact
+    // use-after-free the fix prevents. destroy()'s contract promises "No
+    // further update()/render() calls follow." The common completion path
+    // reports done from inside update(), which Application.update() drives
+    // (via _updateTransition) BEFORE the same frame's draw()/_renderTransition().
+    class LifecycleGuardSession implements SceneTransitionSession {
+      public done = false;
+      public placement: 'scene' | 'screen' = 'screen';
+      public destroyed = false;
+      public destroyCallCount = 0;
+      public readonly callsAfterDestroy: string[] = [];
+
+      public constructor(private readonly environment: SceneTransitionEnvironment) {}
+
+      public update(_delta: Time): void {
+        if (this.destroyed) {
+          this.callsAfterDestroy.push('update');
+        }
+
+        if (this.environment.committed) {
+          this.done = true;
+        }
+      }
+
+      public render(_context: unknown, _frame: SceneTransitionFrame): void {
+        if (this.destroyed) {
+          this.callsAfterDestroy.push('render');
+        }
+      }
+
+      public destroy(): void {
+        this.destroyed = true;
+        this.destroyCallCount++;
+      }
+    }
+
+    let environmentRef: SceneTransitionEnvironment | null = null;
+    let session!: LifecycleGuardSession;
+    const transition = new (class extends SceneTransition {
+      public getRequirements(): SceneTransitionRequirements {
+        return { outgoingFrame: 'none', currentFrame: 'none' };
+      }
+      protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
+        environmentRef = environment;
+        session = new LifecycleGuardSession(environment);
+
+        return session;
+      }
+    })();
+
+    const navigation = manager.change(Second, { transition });
+
+    environmentRef?.commit();
+    tick(manager, app); // drives the async switch
+    await settle();
+    expect(manager.currentScene).toBeInstanceOf(Second);
+
+    // This tick: update() sees committed -> sets done -> _updateTransition
+    // detects done and finishes+destroys the session, all before the SAME
+    // tick's draw()/_renderTransition(). Neither may touch the destroyed
+    // session.
+    tick(manager, app);
+    await navigation;
+
+    expect(session.destroyCallCount).toBe(1);
+    expect(session.callsAfterDestroy).toEqual([]);
+  });
 });
 
 // NOTE (§3.5.1, "Ready-scope cleanup"): the fourth pre-commit-failure concept

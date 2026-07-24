@@ -860,10 +860,11 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
       // continues independently in the background and may still mutate
       // `_activeScope`/`_retained` after this method returns. Slice 7's
       // abort-flag machinery closes this gap.
+      // _finishActiveSession owns the full synchronous teardown — it destroys
+      // the session, releases `_sessionResources`, and decrements the input
+      // gate itself (exactly once). Duplicating any of that here would
+      // double-release the render textures and drive `_inputGateDepth` to -1.
       this._finishActiveSession({ ok: false, error: new SceneTransitionLifecycleError('aborted') });
-      this._releaseTransitionResources(this._sessionResources);
-      this._sessionResources = null;
-      this._inputGateDepth--;
     }
 
     const activeScope = this._activeScope;
@@ -1138,14 +1139,10 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
       this._checkSessionDone();
     });
 
-    this._inputGateDepth--;
-    this._activeSession = null;
-    this._activeEnvironment = null;
-    this._sessionAction = null;
-    this._sessionSettle = null;
-    this._releaseTransitionResources(this._sessionResources);
-    this._sessionResources = null;
-
+    // No cleanup here: the promise only ever settles via _finishActiveSession
+    // (the sole caller of `settle`), which already cleared `_activeSession`/
+    // `_activeEnvironment`/`_sessionAction`/`_sessionResources` and decremented
+    // the input gate synchronously, before this continuation's microtask ran.
     if (!outcome.ok) {
       throw outcome.error;
     }
@@ -1212,13 +1209,37 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
   }
 
   /**
-   * Finish the active session: destroy it exactly once (§3.7b), report any
-   * failure (both the session's own error, and any error `session.destroy()`
-   * itself throws) through the app error pipeline, then settle the outer
-   * navigation promise. Idempotent — a second call once the session has
-   * already settled is a no-op, which matters because `_updateTransition`
-   * and `_renderTransition` can each independently decide the session is
-   * done on the same frame.
+   * Finish the active session, performing ALL session-completion cleanup
+   * synchronously and exactly once at the moment completion is detected —
+   * before settling the outer navigation promise (whose `await` continuation
+   * in {@link SceneDirector._runTransitionedAction} only resumes on a later
+   * microtask). Clearing `_activeSession`/`_activeEnvironment` and releasing
+   * `_sessionResources` here (rather than in that continuation) is what makes
+   * the rest of the SAME frame safe: once this returns, any later per-frame
+   * call this tick — {@link SceneDirector.draw},
+   * {@link SceneDirector._updateTransition},
+   * {@link SceneDirector._transitionPlacement},
+   * {@link SceneDirector._renderTransition} — sees a cleared session and
+   * no-ops, so `session.update()`/`session.render()` are never called on, and
+   * `draw()` never redirects into a texture owned by, the session this method
+   * just destroyed (§3.7b; {@link SceneTransitionSession.destroy}'s "no
+   * further update()/render() calls follow" contract). This matters because
+   * a session commonly reports `done` from inside `_updateTransition()`,
+   * which runs BEFORE this frame's `draw()`/`_renderTransition()`.
+   *
+   * Steps, in order: null the session/environment/action/settle handles and
+   * release the render resources, decrement the input gate (exactly once per
+   * session lifecycle — the increment lives in `_runTransitionedAction`),
+   * destroy the session exactly once (§3.7b), report any failure (both the
+   * session's own error and any error `session.destroy()` itself throws)
+   * through the app error pipeline, then settle the outer navigation promise
+   * last.
+   *
+   * Idempotent — a second call once the session has already settled is a
+   * no-op, which matters because `_updateTransition` and `_renderTransition`
+   * can each independently decide the session is done on the same frame, and
+   * because `_dispose()` may abort a session that a per-frame method is
+   * mid-completing.
    */
   private _finishActiveSession(outcome: SceneTransitionOutcome): void {
     const session = this._activeSession;
@@ -1228,7 +1249,17 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
       return;
     }
 
+    // Clear all session state synchronously, up front — before destroy() and
+    // before settle(). The guard above (captured into `session`/`settle`)
+    // makes this the single, atomic ownership handoff: any re-entrant or
+    // later same-tick call now short-circuits.
+    this._activeSession = null;
+    this._activeEnvironment = null;
+    this._sessionAction = null;
     this._sessionSettle = null;
+    this._releaseTransitionResources(this._sessionResources);
+    this._sessionResources = null;
+    this._inputGateDepth--;
 
     try {
       session.destroy();
