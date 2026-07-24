@@ -1,50 +1,12 @@
 import { Scene } from '#core/Scene';
-import { DuplicateSceneRegistrationError, InvalidSceneRegistrationError, resolveSetSceneArgs, validateSceneRegistry } from '#core/SceneTypes';
+import { DuplicateSceneRegistrationError, InvalidSceneRegistrationError, validateSceneRegistry } from '#core/SceneTypes';
 
-describe('resolveSetSceneArgs', () => {
-  test('no arguments: no data, no options', () => {
-    expect(resolveSetSceneArgs([])).toEqual({ data: undefined, options: {} });
-  });
-
-  test('single plain-data argument is treated as data', () => {
-    const data = { level: 3 };
-    expect(resolveSetSceneArgs([data])).toEqual({ data, options: {} });
-  });
-
-  test('single options-shaped argument (transition only) is treated as options', () => {
-    const options = { transition: { type: 'fade' as const } };
-    expect(resolveSetSceneArgs([options])).toEqual({ data: undefined, options });
-  });
-
-  test('single options-shaped argument (retainCurrent only) is treated as options', () => {
-    const options = { retainCurrent: true };
-    expect(resolveSetSceneArgs([options])).toEqual({ data: undefined, options });
-  });
-
-  test('single options-shaped argument (both keys) is treated as options', () => {
-    const options = { transition: { type: 'fade' as const }, retainCurrent: true };
-    expect(resolveSetSceneArgs([options])).toEqual({ data: undefined, options });
-  });
-
-  test('empty object argument is treated as options (no data keys to preserve)', () => {
-    expect(resolveSetSceneArgs([{}])).toEqual({ data: undefined, options: {} });
-  });
-
-  test('two arguments: data then options, unconditionally', () => {
-    const data = { level: 3 };
-    const options = { retainCurrent: true };
-    expect(resolveSetSceneArgs([data, options])).toEqual({ data, options });
-  });
-
-  test('data containing an extra key alongside transition is treated as data (not options-shaped)', () => {
-    const data = { transition: 'fade-in-game-state', level: 3 };
-    expect(resolveSetSceneArgs([data])).toEqual({ data, options: {} });
-  });
-
-  test('non-object single argument (e.g. a primitive data payload) is treated as data', () => {
-    expect(resolveSetSceneArgs([42])).toEqual({ data: 42, options: {} });
-  });
-});
+// The erased-at-runtime (data?, options?) variadic heuristic
+// (resolveSetSceneArgs/SetSceneArgs) was deleted in Slice 3 — change()/
+// restore() now take a single options object, so there is nothing left to
+// disambiguate at runtime. This file's dedicated resolveSetSceneArgs
+// coverage was deleted along with it (not renamed — there is no successor
+// function).
 
 describe('validateSceneRegistry', () => {
   class VoidScene extends Scene {}

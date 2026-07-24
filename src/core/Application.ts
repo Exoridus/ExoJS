@@ -33,7 +33,7 @@ import { computeLetterboxLayout } from './letterbox';
 import { hello, logger } from './logging';
 import { Perf } from './Perf';
 import { SceneDirector } from './SceneDirector';
-import type { AnySceneConstructor, InferSceneData, SceneRegistryShape, SetSceneArgs } from './SceneTypes';
+import type { AnySceneConstructor, ChangeSceneArgs, InferSceneData, SceneRegistryShape } from './SceneTypes';
 import { defaultSerializationRegistry, SerializationRegistry } from './serialization/SerializationRegistry';
 import { Signal } from './Signal';
 import { SystemRegistry } from './SystemRegistry';
@@ -142,13 +142,13 @@ export interface ApplicationOptions<Registry extends SceneRegistryShape<Registry
   /**
    * Registry of navigable {@link Scene} constructors, keyed by a name used
    * for diagnostics (shown in {@link UnregisteredSceneError} messages and
-   * duplicate-registration errors) and, in a later slice, key-based
-   * navigation. Each value is either a bare {@link Scene} subclass
-   * constructor, or a `{ scene, transition? }` descriptor pairing one with a
-   * target-bound default transition — see {@link SceneRegistration}
-   * (`transition`'s real type ships with the transition runtime; it is an
-   * inert placeholder until then). Required for any {@link Application.start}
-   * / {@link SceneDirector.setScene} call that targets a constructor —
+   * duplicate-registration errors) and for key-based navigation. Each value
+   * is either a bare {@link Scene} subclass constructor, or a
+   * `{ scene, transition? }` descriptor pairing one with a target-bound
+   * default transition — see {@link SceneRegistration} (`transition`'s real
+   * type ships with the transition runtime; it is an inert placeholder
+   * until then). Required for any {@link Application.start} /
+   * {@link SceneDirector.change} call that targets a constructor —
    * unregistered targets reject in development builds. Validated once at
    * construction: every value must resolve to a {@link Scene} subclass
    * constructor (checked without instantiating it), and no constructor may
@@ -690,7 +690,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * running the call is a no-op. On error the status returns to `Stopped`
    * and the error propagates.
    */
-  public async start<C extends AnySceneConstructor>(target: C, ...args: SetSceneArgs<InferSceneData<C>>): Promise<this>;
+  public async start<C extends AnySceneConstructor>(target: C, ...args: ChangeSceneArgs<InferSceneData<C>>): Promise<this>;
   public async start(target?: AnySceneConstructor, ...args: readonly unknown[]): Promise<this> {
     invariant(!this._destroyed, 'Application.start() was called after destroy(). Construct a new Application instead of reusing a destroyed one.');
 
@@ -711,7 +711,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
         this._capabilities = await capabilitiesPromise;
 
         if (target !== undefined) {
-          await this.scenes.setScene(target, ...(args as SetSceneArgs<InferSceneData<typeof target>>));
+          await this.scenes.change(target, ...(args as ChangeSceneArgs<InferSceneData<typeof target>>));
         }
 
         this._frameRequest = requestAnimationFrame(this._updateHandler);
