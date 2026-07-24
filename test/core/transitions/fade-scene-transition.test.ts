@@ -1,6 +1,7 @@
 import { Ease } from '#animation/Easing';
 import { Color } from '#core/Color';
-import type { SceneTransitionContext, SceneTransitionPhaseContext, SceneTransitionPhaseRequirements } from '#core/SceneTransition';
+import type { SceneTransitionPhaseContext, SceneTransitionPhaseRequirements } from '#core/PhasedSceneTransition';
+import type { SceneTransitionContext } from '#core/SceneTransition';
 import { FadeSceneTransition } from '#core/transitions/FadeSceneTransition';
 import type { Matrix } from '#math/Matrix';
 import { QuadGeometry } from '#rendering/geometry/QuadGeometry';
