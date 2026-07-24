@@ -97,6 +97,23 @@ export type RegistryKeyOf<Registry> = Extract<keyof Registry, string>;
  */
 export type ConstructorOf<R extends SceneRegistration<AnySceneConstructor>> = R extends { scene: infer C } ? C : R;
 
+/**
+ * The constructor union `Application.start()`/`SceneDirector.change()`/
+ * `SceneDirector.restore()` accept as a *constructor* target (as opposed to
+ * a registered string key): every registered constructor, unwrapping the
+ * `{ scene, transition? }` descriptor form via {@link ConstructorOf}, when
+ * `Registry` has at least one key — or any {@link AnySceneConstructor} when
+ * `Registry` is the empty default (`{}`, scene-less / registry-less use, the
+ * default generic on `Application`/`SceneDirector`). Without this
+ * conditional, an unconstrained `C extends AnySceneConstructor` accepted any
+ * constructor even with a populated registry present, giving no
+ * compile-time rejection of an unregistered scene (the dev-only
+ * {@link UnregisteredSceneError} runtime check was the only guard).
+ */
+export type NavigableSceneConstructor<Registry> = keyof Registry extends never
+  ? AnySceneConstructor
+  : { [K in keyof Registry]: Registry[K] extends { scene: infer C } ? C : Registry[K] }[keyof Registry];
+
 /* eslint-disable @typescript-eslint/no-explicit-any -- ApplicationLike/ApplicationOf must accept `Application<any>` and an abstract constructor's erased argument list; see spec §6.2. */
 /**
  * Anything that resolves to a concrete {@link Application} instance type: the

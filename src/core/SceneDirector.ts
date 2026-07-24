@@ -24,6 +24,7 @@ import {
   type ChangeSceneOptions,
   ConcurrentSceneNavigationError,
   type InferSceneData,
+  type NavigableSceneConstructor,
   type PreloadArgs,
   type RegistryKeyOf,
   resolvePreloadArgs,
@@ -258,7 +259,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * first).
    */
   public async change<K extends RegistryKeyOf<Registry>>(target: K, ...args: ChangeSceneArgs<InferSceneData<Registry[K]>>): Promise<this>;
-  public async change<C extends AnySceneConstructor>(target: C, ...args: ChangeSceneArgs<InferSceneData<C>>): Promise<this>;
+  public async change<C extends NavigableSceneConstructor<Registry>>(target: C, ...args: ChangeSceneArgs<InferSceneData<C>>): Promise<this>;
   public async change(target: AnySceneConstructor | string, ...args: readonly unknown[]): Promise<this> {
     const options = ((args[0] as ChangeSceneOptions<unknown> | undefined) ?? {}) as ChangeSceneOptions<unknown>;
     const data = (options as { data?: unknown }).data;
@@ -529,7 +530,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * when `target` has no retained instance.
    */
   public async restore<K extends RegistryKeyOf<Registry>>(target: K, options?: RestoreSceneOptions): Promise<this>;
-  public async restore<C extends AnySceneConstructor>(target: C, options?: RestoreSceneOptions): Promise<this>;
+  public async restore<C extends NavigableSceneConstructor<Registry>>(target: C, options?: RestoreSceneOptions): Promise<this>;
   public async restore(target: AnySceneConstructor | string, options: RestoreSceneOptions = {}): Promise<this> {
     const resolvedTarget = this._resolveNavigationTarget(target);
     const retainedScope = this._retained.get(resolvedTarget);

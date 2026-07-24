@@ -33,7 +33,15 @@ import { computeLetterboxLayout } from './letterbox';
 import { hello, logger } from './logging';
 import { Perf } from './Perf';
 import { SceneDirector } from './SceneDirector';
-import { type AnySceneConstructor, type ChangeSceneArgs, type InferSceneData, SceneNavigationAbortedError, type SceneRegistryShape } from './SceneTypes';
+import {
+  type AnySceneConstructor,
+  type ChangeSceneArgs,
+  type InferSceneData,
+  type NavigableSceneConstructor,
+  type RegistryKeyOf,
+  SceneNavigationAbortedError,
+  type SceneRegistryShape,
+} from './SceneTypes';
 import { defaultSerializationRegistry, SerializationRegistry } from './serialization/SerializationRegistry';
 import { Signal } from './Signal';
 import { SystemRegistry } from './SystemRegistry';
@@ -687,13 +695,14 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   public async start(): Promise<this>;
   /**
    * Initialize the render backend, await capability detection, activate
-   * `target` (a constructor registered in `ApplicationOptions.scenes`), and
-   * start the per-frame loop. Idempotent — if the application is already
-   * running the call is a no-op. On error the status returns to `Stopped`
-   * and the error propagates.
+   * `target` — a registered string key, or a constructor registered in
+   * `ApplicationOptions.scenes` — and start the per-frame loop. Idempotent —
+   * if the application is already running the call is a no-op. On error the
+   * status returns to `Stopped` and the error propagates.
    */
-  public async start<C extends AnySceneConstructor>(target: C, ...args: ChangeSceneArgs<InferSceneData<C>>): Promise<this>;
-  public async start(target?: AnySceneConstructor, ...args: readonly unknown[]): Promise<this> {
+  public async start<K extends RegistryKeyOf<Registry>>(target: K, ...args: ChangeSceneArgs<InferSceneData<Registry[K]>>): Promise<this>;
+  public async start<C extends NavigableSceneConstructor<Registry>>(target: C, ...args: ChangeSceneArgs<InferSceneData<C>>): Promise<this>;
+  public async start(target?: AnySceneConstructor | string, ...args: readonly unknown[]): Promise<this> {
     invariant(!this._destroyed, 'Application.start() was called after destroy(). Construct a new Application instead of reusing a destroyed one.');
 
     if (this._status === ApplicationStatus.Stopped) {
@@ -735,7 +744,16 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
         this._capabilities = await capabilitiesPromise;
 
         if (target !== undefined) {
-          await this.scenes.change(target, ...(args as ChangeSceneArgs<InferSceneData<typeof target>>));
+          // `target`'s implementation-level type is a union (registered key
+          // OR constructor) — TS overload resolution does not distribute
+          // over a union-typed argument, so the cast picks the constructor
+          // overload purely for compile-time dispatch; SceneDirector.change()'s
+          // own single implementation signature already accepts both shapes
+          // and forwards whichever one was actually passed at runtime.
+          await this.scenes.change(
+            target as NavigableSceneConstructor<Registry>,
+            ...(args as ChangeSceneArgs<InferSceneData<NavigableSceneConstructor<Registry>>>),
+          );
         }
 
         this._status = ApplicationStatus.Running;

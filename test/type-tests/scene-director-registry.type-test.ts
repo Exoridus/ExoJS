@@ -48,4 +48,22 @@ void registryDirector.change('title', { transition: {} });
 // @ts-expect-error — {} is not a valid SceneTransitionSelection
 void registryDirector.restore('title', { transition: {} });
 
+// change()/restore()'s constructor overload is constrained to the registry
+// (NavigableSceneConstructor<Registry>) — an unregistered constructor is
+// rejected at compile time, not just by the dev-only UnregisteredSceneError
+// runtime check. A data-bearing registry entry is needed to observe this: a
+// registry containing only structurally-empty scenes (like VoidScene above)
+// can never meaningfully reject anything, because structural typing can't
+// tell two empty classes apart — any Scene subclass satisfies "no members
+// required." GameScene's Data shape gives a genuine structural difference
+// to check against.
+declare const gameOnlyDirector: SceneDirector<{ game: typeof GameScene }>;
+
+class UnregisteredScene extends Scene<{ readonly totallyDifferent: string }> {}
+
+// @ts-expect-error — UnregisteredScene is not in gameOnlyDirector's registry; change() must reject it at compile time.
+void gameOnlyDirector.change(UnregisteredScene);
+// @ts-expect-error — UnregisteredScene is not in gameOnlyDirector's registry; restore() must reject it at compile time.
+void gameOnlyDirector.restore(UnregisteredScene);
+
 export {};
