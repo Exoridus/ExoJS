@@ -97,6 +97,33 @@ export type RegistryKeyOf<Registry> = Extract<keyof Registry, string>;
  */
 export type ConstructorOf<R extends SceneRegistration<AnySceneConstructor>> = R extends { scene: infer C } ? C : R;
 
+/**
+ * The constructor union `Application.start()`/`SceneDirector.change()`/
+ * `SceneDirector.restore()` accept as a *constructor* target (as opposed to
+ * a registered string key): every registered constructor, unwrapping the
+ * `{ scene, transition? }` descriptor form via {@link ConstructorOf}, when
+ * `Registry` has at least one key — or any {@link AnySceneConstructor} when
+ * `Registry` is the empty default (`{}`, scene-less / registry-less use, the
+ * default generic on `Application`/`SceneDirector`). Without this
+ * conditional, an unconstrained `C extends AnySceneConstructor` accepted any
+ * constructor even with a populated registry present, giving no
+ * compile-time signal for an unregistered scene at all (the dev-only
+ * {@link UnregisteredSceneError} runtime check was the only guard).
+ *
+ * **Structural-typing caveat:** this rejects an unregistered constructor
+ * only when it is structurally distinguishable from every registered one —
+ * concretely, when it has a `Data` type (or other members) the registered
+ * constructors lack. Two `Scene` subclasses that declare no members of
+ * their own (the same shape as bare `Scene`) are structurally identical, so
+ * an unregistered empty scene passed where a registered empty scene is
+ * expected still compiles; TypeScript's structural type system cannot tell
+ * them apart. The dev-only {@link UnregisteredSceneError} runtime check
+ * remains the only guard that is complete in every case.
+ */
+export type NavigableSceneConstructor<Registry> = keyof Registry extends never
+  ? AnySceneConstructor
+  : { [K in keyof Registry]: Registry[K] extends { scene: infer C } ? C : Registry[K] }[keyof Registry];
+
 /* eslint-disable @typescript-eslint/no-explicit-any -- ApplicationLike/ApplicationOf must accept `Application<any>` and an abstract constructor's erased argument list; see spec §6.2. */
 /**
  * Anything that resolves to a concrete {@link Application} instance type: the

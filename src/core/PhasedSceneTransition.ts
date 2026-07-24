@@ -1,6 +1,7 @@
 import { Ease } from '#animation/Easing';
 import type { EasingFunction } from '#animation/types';
 import type { RenderingContext } from '#rendering/RenderingContext';
+import { Sprite } from '#rendering/sprite/Sprite';
 
 import {
   SceneTransition,
@@ -87,7 +88,7 @@ export interface SceneTransitionPhaseContext {
  * for this common case.
  * @stable
  */
-export abstract class PhasedSceneTransition extends SceneTransition {
+export abstract class PhasedSceneTransition<PhaseState = void> extends SceneTransition {
   public readonly duration: number;
   public readonly easing: EasingFunction;
   public readonly placement: 'scene' | 'screen';
@@ -124,11 +125,34 @@ export abstract class PhasedSceneTransition extends SceneTransition {
   /** Declare this phase's render-resource requirements. See {@link SceneTransitionPhaseRequirements}. */
   protected abstract getPhaseRequirements(phase: 'enter' | 'exit', context: SceneTransitionContext): SceneTransitionPhaseRequirements;
 
+  /**
+   * Allocate this navigation's session-scoped mutable scratch state (reused
+   * `Sprite`/`Matrix`/`Color`/etc — anything `enter()`/`exit()` mutates per
+   * draw). Called once per session, never shared across navigations or with
+   * the definition instance itself, which must stay fully immutable so it
+   * can be reused (even concurrently) across arbitrarily many navigations.
+   * Default: no scratch state needed (`void`).
+   */
+  protected createPhaseState(): PhaseState {
+    return undefined as PhaseState;
+  }
+
+  /**
+   * @internal Public forwarder for {@link PhasedSceneTransition.createPhaseState} —
+   * mirrors {@link PhasedSceneTransition.getRequirementsForPhase}'s existing
+   * pattern: `PhasedSceneTransitionSession` (and a composed sibling
+   * instance) is not a subclass of this class and cannot call the
+   * `protected` hook directly.
+   */
+  public _createPhaseStateForSession(): PhaseState {
+    return this.createPhaseState();
+  }
+
   /** Draw one frame of the `enter` phase. No-op by default — override for a visible enter effect. */
-  protected enter(_context: SceneTransitionPhaseContext): void {}
+  protected enter(_context: SceneTransitionPhaseContext, _state: PhaseState): void {}
 
   /** Draw one frame of the `exit` phase. No-op by default — override for a visible exit effect. */
-  protected exit(_context: SceneTransitionPhaseContext): void {}
+  protected exit(_context: SceneTransitionPhaseContext, _state: PhaseState): void {}
 
   public override getRequirements(context: SceneTransitionContext): SceneTransitionRequirements {
     return mergeSceneTransitionRequirements(this.getRequirementsForPhase('exit', context), this.getRequirementsForPhase('enter', context));
@@ -144,11 +168,11 @@ export abstract class PhasedSceneTransition extends SceneTransition {
    * hooks directly. Authors override `enter()`/`exit()`; nothing else calls
    * them directly.
    */
-  public runPhase(phase: 'enter' | 'exit', context: SceneTransitionPhaseContext): void {
+  public runPhase(phase: 'enter' | 'exit', context: SceneTransitionPhaseContext, state: PhaseState): void {
     if (phase === 'enter') {
-      this.enter(context);
+      this.enter(context, state);
     } else {
-      this.exit(context);
+      this.exit(context, state);
     }
   }
 
@@ -174,12 +198,21 @@ type PhasedTransitionPhaseState = 'exit' | 'holding' | 'enter' | 'done';
 export class PhasedSceneTransitionSession implements SceneTransitionSession {
   private _phaseState: PhasedTransitionPhaseState = 'exit';
   private _elapsedMs = 0;
+  /** Reusable sprite for the direct→texture identity-composite fallback — session-owned, never shared with the phase definitions. */
+  private readonly _identitySprite = new Sprite(null);
+  private readonly _exitPhaseState: unknown;
+  private readonly _enterPhaseState: unknown;
 
   public constructor(
-    private readonly _exitPhase: PhasedSceneTransition,
-    private readonly _enterPhase: PhasedSceneTransition,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- exit and enter may be different PhasedSceneTransition<PhaseState> instantiations (composition); the session itself is untyped over PhaseState, matching its @internal status.
+    private readonly _exitPhase: PhasedSceneTransition<any>,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    private readonly _enterPhase: PhasedSceneTransition<any>,
     private readonly _environment: SceneTransitionEnvironment,
-  ) {}
+  ) {
+    this._exitPhaseState = this._exitPhase._createPhaseStateForSession();
+    this._enterPhaseState = this._enterPhase._createPhaseStateForSession();
+  }
 
   public get done(): boolean {
     return this._phaseState === 'done';
@@ -236,11 +269,34 @@ export class PhasedSceneTransitionSession implements SceneTransitionSession {
     // timing ever changes.
     const phase: 'enter' | 'exit' = this._phaseState === 'enter' || this._phaseState === 'done' ? 'enter' : 'exit';
     const activePhase = phase === 'enter' ? this._enterPhase : this._exitPhase;
+    const activePhaseState = phase === 'enter' ? this._enterPhaseState : this._exitPhaseState;
+
+    // Direct -> texture identity-composite promotion (spec §3.9.1): when the
+    // SESSION-WIDE requirements were promoted to `currentFrame: 'texture'` by
+    // the OTHER phase, but this phase itself only declared `direct` (or
+    // `none`), the live surface was redirected into `frame.current` for the
+    // whole session — never drawn straight to the screen at any point — so
+    // this phase must draw an unmodified 1:1 copy of it before its own
+    // effect runs, or the screen shows nothing for this phase's entire
+    // duration. Detected by comparing THIS phase's own declared requirement
+    // (not the merged session-wide one) against whether `frame.current` is
+    // actually populated: if this phase didn't ask for `texture` but a
+    // texture showed up anyway, it was promoted by its sibling.
+    const ownRequirements = activePhase.getRequirementsForPhase(phase, this._environment.context);
+
+    if (frame.current !== null && ownRequirements.currentFrame !== 'texture') {
+      this._identitySprite.texture = frame.current;
+      this._identitySprite.x = 0;
+      this._identitySprite.y = 0;
+      this._identitySprite.tint.a = 1;
+      context.render(this._identitySprite, { view: context.screenView });
+    }
+
     const progress = activePhase.duration === 0 ? 1 : Math.min(1, this._elapsedMs / activePhase.duration);
     const easedProgress = activePhase.easing(progress);
     const presence = phase === 'enter' ? easedProgress : 1 - easedProgress;
 
-    activePhase.runPhase(phase, { phase, progress, easedProgress, presence, frame, rendering: context });
+    activePhase.runPhase(phase, { phase, progress, easedProgress, presence, frame, rendering: context }, activePhaseState);
   }
 
   public destroy(): void {

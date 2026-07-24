@@ -29,21 +29,20 @@ const makeFakeScope = (state: SceneState = SceneState.Active): SceneScope & { st
 };
 
 describe('SceneNavigationTransaction', () => {
-  describe('beginOutgoingDisposition()', () => {
-    test('with no outgoing scope, resolves immediately with a null pendingStopScene', () => {
+  describe('prepareOutgoingDisposition()', () => {
+    test('with no outgoing scope, returns a null pendingStopScene', () => {
       const retained = new Map<AnySceneConstructor, SceneScope>();
       const onStopScene = new Signal<[Scene]>();
       const onStateChange = new Signal<[SceneState, SceneState, Scene]>();
       const reportError = vi.fn();
       const transaction = new SceneNavigationTransaction(retained, onStopScene, onStateChange, reportError);
 
-      const result = transaction.beginOutgoingDisposition(null, false);
+      const result = transaction.prepareOutgoingDisposition(null, false);
 
       expect(result.pendingStopScene).toBeNull();
-      return expect(result.teardown).resolves.toBeUndefined();
     });
 
-    test('suspendCurrent: true suspends the outgoing scope, retains it, and dispatches onStateChange — no pending onStopScene', async () => {
+    test('suspendCurrent: true suspends the outgoing scope, retains it, and dispatches onStateChange — no pending onStopScene', () => {
       const retained = new Map<AnySceneConstructor, SceneScope>();
       const onStopScene = new Signal<[Scene]>();
       const onStateChange = new Signal<[SceneState, SceneState, Scene]>();
@@ -54,16 +53,15 @@ describe('SceneNavigationTransaction', () => {
 
       onStateChange.add(onStateChangeSpy);
 
-      const result = transaction.beginOutgoingDisposition({ scope, target: FakeTarget }, true);
+      const result = transaction.prepareOutgoingDisposition({ scope, target: FakeTarget }, true);
 
       expect(scope.suspend).toHaveBeenCalledTimes(1);
       expect(retained.get(FakeTarget)).toBe(scope);
       expect(onStateChangeSpy).toHaveBeenCalledWith(SceneState.Active, SceneState.Suspended, scope.scene);
       expect(result.pendingStopScene).toBeNull();
-      await expect(result.teardown).resolves.toBeUndefined();
     });
 
-    test('suspendCurrent: false begins permanent teardown and returns the scope as pendingStopScene', () => {
+    test('suspendCurrent: false returns the scope as pendingStopScene WITHOUT starting its teardown', () => {
       const retained = new Map<AnySceneConstructor, SceneScope>();
       const onStopScene = new Signal<[Scene]>();
       const onStateChange = new Signal<[SceneState, SceneState, Scene]>();
@@ -71,9 +69,9 @@ describe('SceneNavigationTransaction', () => {
       const transaction = new SceneNavigationTransaction(retained, onStopScene, onStateChange, reportError);
       const scope = makeFakeScope(SceneState.Active);
 
-      const result = transaction.beginOutgoingDisposition({ scope, target: FakeTarget }, false);
+      const result = transaction.prepareOutgoingDisposition({ scope, target: FakeTarget }, false);
 
-      expect(scope.destroy).toHaveBeenCalledTimes(1);
+      expect(scope.destroy).not.toHaveBeenCalled();
       expect(result.pendingStopScene).toBe(scope);
       expect(retained.has(FakeTarget)).toBe(false);
     });
@@ -91,19 +89,36 @@ describe('SceneNavigationTransaction', () => {
         throw failure;
       });
 
-      expect(() => transaction.beginOutgoingDisposition({ scope, target: FakeTarget }, true)).not.toThrow();
+      expect(() => transaction.prepareOutgoingDisposition({ scope, target: FakeTarget }, true)).not.toThrow();
       expect(retained.get(FakeTarget)).toBe(scope);
       expect(reportError).toHaveBeenCalledWith(failure);
     });
+
+    test('does not start teardown until beginOutgoingTeardown is called', () => {
+      const onStopScene = new Signal<[Scene]>();
+      const onStateChange = new Signal<[SceneState, SceneState, Scene]>();
+      const reportError = vi.fn();
+      const transaction = new SceneNavigationTransaction(new Map(), onStopScene, onStateChange, reportError);
+      const scope = makeFakeScope(SceneState.Active);
+
+      const { pendingStopScene } = transaction.prepareOutgoingDisposition({ scope, target: FakeTarget }, false);
+
+      expect(scope.destroy).not.toHaveBeenCalled();
+
+      transaction.dispatchStopScene(pendingStopScene);
+      transaction.beginOutgoingTeardown(pendingStopScene);
+
+      expect(scope.destroy).toHaveBeenCalledTimes(1);
+    });
   });
 
-  describe('finishOutgoingDisposition()', () => {
+  describe('dispatchStopScene()', () => {
     test('with null, is a no-op', () => {
       const onStopScene = new Signal<[Scene]>();
       const dispatchSpy = vi.spyOn(onStopScene, 'dispatch');
       const transaction = new SceneNavigationTransaction(new Map(), onStopScene, new Signal<[SceneState, SceneState, Scene]>(), vi.fn());
 
-      expect(() => transaction.finishOutgoingDisposition(null)).not.toThrow();
+      expect(() => transaction.dispatchStopScene(null)).not.toThrow();
       expect(dispatchSpy).not.toHaveBeenCalled();
     });
 
@@ -114,7 +129,7 @@ describe('SceneNavigationTransaction', () => {
       const scope = makeFakeScope(SceneState.Destroying);
 
       onStopScene.add(onStopSceneSpy);
-      transaction.finishOutgoingDisposition(scope);
+      transaction.dispatchStopScene(scope);
 
       expect(onStopSceneSpy).toHaveBeenCalledWith(scope.scene);
     });
@@ -130,8 +145,26 @@ describe('SceneNavigationTransaction', () => {
         throw failure;
       });
 
-      expect(() => transaction.finishOutgoingDisposition(scope)).not.toThrow();
+      expect(() => transaction.dispatchStopScene(scope)).not.toThrow();
       expect(reportError).toHaveBeenCalledWith(failure);
+    });
+  });
+
+  describe('beginOutgoingTeardown()', () => {
+    test('with null, resolves immediately without tearing anything down', () => {
+      const transaction = new SceneNavigationTransaction(new Map(), new Signal<[Scene]>(), new Signal<[SceneState, SceneState, Scene]>(), vi.fn());
+
+      return expect(transaction.beginOutgoingTeardown(null)).resolves.toBeUndefined();
+    });
+
+    test('with a scope, starts its permanent teardown and returns the settling promise', async () => {
+      const transaction = new SceneNavigationTransaction(new Map(), new Signal<[Scene]>(), new Signal<[SceneState, SceneState, Scene]>(), vi.fn());
+      const scope = makeFakeScope(SceneState.Destroying);
+
+      const teardown = transaction.beginOutgoingTeardown(scope);
+
+      expect(scope.destroy).toHaveBeenCalledTimes(1);
+      await expect(teardown).resolves.toBeUndefined();
     });
   });
 });

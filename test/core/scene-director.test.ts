@@ -409,6 +409,23 @@ describe('SceneDirector', () => {
     expect(unload).toHaveBeenCalledTimes(1);
   });
 
+  test("_clearScene() dispatches onChangeScene(null) before onStopScene — matches change()/restore()'s new-scene-signals-before-outgoing-teardown order", async () => {
+    const app = createApplicationStub();
+    const TestScene = makeSceneClass();
+    const manager = new SceneDirector(app, { test: TestScene });
+    const order: string[] = [];
+
+    manager.onChangeScene.add(() => order.push('onChangeScene'));
+    manager.onStopScene.add(() => order.push('onStopScene'));
+
+    await manager.change(TestScene);
+    order.length = 0; // clear the change()-triggered dispatches above
+
+    await manager._clearScene();
+
+    expect(order).toEqual(['onChangeScene', 'onStopScene']);
+  });
+
   test('rejects setScene() targeting an unregistered constructor', async () => {
     class UnregisteredScene extends Scene {}
     const manager = new SceneDirector(createApplicationStub(), {});
@@ -806,6 +823,64 @@ describe('SceneDirector — concurrent navigation', () => {
 });
 
 describe('SceneDirector — post-commit signal isolation', () => {
+  test('change(): outgoing unload() starts only after the incoming scope activates and onChangeScene/onStartScene/onStopScene fire, in that order', async () => {
+    const app = createApplicationStub();
+    const order: string[] = [];
+    const FirstScene = makeSceneClass({
+      unload: async () => {
+        order.push('outgoing.unload:start');
+        await Promise.resolve();
+        order.push('outgoing.unload:end');
+      },
+    });
+    const SecondScene = makeSceneClass();
+    const director = new SceneDirector(app, { first: FirstScene, second: SecondScene });
+
+    director.onChangeScene.add(scene => {
+      if (scene instanceof SecondScene) order.push('onChangeScene');
+    });
+    director.onStartScene.add(scene => {
+      if (scene instanceof SecondScene) order.push('onStartScene');
+    });
+    director.onStopScene.add(scene => {
+      if (scene instanceof FirstScene) order.push('onStopScene');
+    });
+
+    await director.change(FirstScene);
+    order.length = 0; // clear the first change()'s own dispatches
+
+    await director.change(SecondScene);
+
+    // The incoming scope's own signals fire, fully, before the outgoing
+    // scope's unload() is even started — not just before it settles.
+    expect(order).toEqual(['onChangeScene', 'onStartScene', 'onStopScene', 'outgoing.unload:start', 'outgoing.unload:end']);
+  });
+
+  test('restore(): signal order is onStateChange before onChangeScene for the restored scene (Scene.onActivate -> Director.onStateChange -> Director.onChangeScene)', async () => {
+    const app = createApplicationStub();
+    const FirstScene = makeSceneClass();
+    const SecondScene = makeSceneClass();
+    const director = new SceneDirector(app, { first: FirstScene, second: SecondScene });
+    const order: string[] = [];
+
+    await director.change(FirstScene);
+    await director.change(SecondScene, { suspendCurrent: true }); // retains First
+
+    // Every SceneScope dispatches onStateChange for its own lifecycle
+    // transitions (Preparing->Active, ->Destroying, etc.) — restore() here
+    // also permanently ends the outgoing SecondScene, which fires several
+    // onStateChange events of its own. Only the restored FirstScene's own
+    // Suspended->Active edge is the one this test's ordering claim is about.
+    director.onStateChange.add((_previous, _next, scene) => {
+      if (scene instanceof FirstScene) order.push('onStateChange');
+    });
+    director.onChangeScene.add(() => order.push('onChangeScene'));
+
+    await director.restore(FirstScene);
+
+    expect(order).toEqual(['onStateChange', 'onChangeScene']);
+  });
+
   test('a throwing onStopScene listener does not roll back — the switch stays committed and change() still resolves', async () => {
     const app = createApplicationStub();
     const FirstScene = makeSceneClass();
@@ -927,6 +1002,41 @@ describe('SceneDirector — destroy() / _dispose()', () => {
     expect(order).toEqual(['ThirdScene', 'SecondScene', 'FirstScene']);
   });
 
+  test('_dispose() awaits a pending outgoing teardown left in flight by a fire-and-forget _clearScene() (Application.stop() then destroy())', async () => {
+    const app = createApplicationStub();
+    let resolveUnload!: () => void;
+    const FirstScene = makeSceneClass({
+      unload: () =>
+        new Promise<void>(resolve => {
+          resolveUnload = resolve;
+        }),
+    });
+    const director = new SceneDirector(app, { first: FirstScene });
+
+    await director.change(FirstScene);
+
+    // Fire-and-forget, matching Application.stop()'s real usage — the
+    // caller does not await _clearScene() before calling destroy()/_dispose().
+    void director._clearScene();
+
+    const disposePromise = director._dispose();
+    let disposeSettled = false;
+
+    void disposePromise.then(() => {
+      disposeSettled = true;
+    });
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(disposeSettled).toBe(false); // _dispose() must not resolve while unload() is still pending
+
+    resolveUnload();
+    await disposePromise;
+
+    expect(disposeSettled).toBe(true);
+  });
+
   test('destroy() (sync façade) fires _dispose() without the caller awaiting it', async () => {
     const app = createApplicationStub();
     const FirstScene = makeSceneClass();
@@ -958,6 +1068,60 @@ describe('SceneDirector — destroy() / _dispose()', () => {
     await expect(director._dispose()).resolves.toBeUndefined();
 
     void pending.catch(() => {});
+  });
+
+  test('_dispose() destroys a Ready (never-consumed) preloaded scope', async () => {
+    const app = createApplicationStub();
+    const PreloadedScene = makeSceneClass();
+    const director = new SceneDirector(app, { preloaded: PreloadedScene });
+    const destroySpy = vi.spyOn(Scene.prototype, 'destroy');
+    const stopSceneSpy = vi.fn();
+
+    director.onStopScene.add(stopSceneSpy);
+
+    await director.preload(PreloadedScene); // reaches Ready but is never consumed by change()
+
+    await director._dispose();
+
+    expect(destroySpy).toHaveBeenCalledTimes(1);
+    expect(stopSceneSpy).not.toHaveBeenCalled(); // never activated — onStopScene must not fire for it
+
+    destroySpy.mockRestore();
+  });
+
+  test('_dispose() waits for an in-flight preload to settle, then destroys it without concurrent teardown', async () => {
+    const app = createApplicationStub();
+    let resolveLoad!: () => void;
+    const initSpy = vi.fn();
+    const destroySpy = vi.spyOn(Scene.prototype, 'destroy');
+    const SlowScene = makeSceneClass({
+      load: () =>
+        new Promise<void>(resolve => {
+          resolveLoad = resolve;
+        }),
+      init: initSpy,
+    });
+    const director = new SceneDirector(app, { slow: SlowScene });
+
+    const preloadPromise = director.preload(SlowScene);
+    const disposePromise = director._dispose();
+
+    // Still mid-load() — _dispose() must be waiting on prepare() to settle,
+    // not tearing anything down concurrently.
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(destroySpy).not.toHaveBeenCalled();
+    expect(initSpy).not.toHaveBeenCalled(); // load() hasn't even resolved yet
+
+    resolveLoad();
+
+    await expect(preloadPromise).resolves.toBeUndefined(); // prepare() itself still succeeds
+    await disposePromise;
+
+    expect(initSpy).toHaveBeenCalledTimes(1); // prepare() ran to completion (reached Ready), not aborted mid-way
+    expect(destroySpy).toHaveBeenCalledTimes(1);
+
+    destroySpy.mockRestore();
   });
 });
 
@@ -1524,6 +1688,77 @@ describe('SceneDirector — transition session driving', () => {
     // Post-commit failure: the new scene stays live, never rolled back.
     expect(manager.currentScene).toBeInstanceOf(OtherScene);
   });
+
+  test('a session that self-terminates (update() throws) mid-commit — after commitSwitch began its async prepare but before it resolved — does NOT activate the incoming scene once prepare later resolves (§3.7 session-identity guard)', async () => {
+    const app = createApplicationStub();
+    const First = makeSceneClass();
+
+    // Incoming scene whose load() we hold open, keeping commitSwitch suspended
+    // inside its prepare() window while the session keeps being driven.
+    let resolveLoad!: () => void;
+    const incomingInit = vi.fn();
+    const Second = makeSceneClass({
+      load: () =>
+        new Promise<void>(resolve => {
+          resolveLoad = resolve;
+        }),
+      init: incomingInit,
+    });
+    const manager = new SceneDirector(app, { first: First, second: Second });
+
+    await manager.change(First);
+    const firstInstance = manager.currentScene;
+
+    let environmentRef: SceneTransitionEnvironment | null = null;
+    const session = new FakeSession();
+    const transition = new (class extends SceneTransition {
+      public getRequirements(): SceneTransitionRequirements {
+        return { outgoingFrame: 'none', currentFrame: 'none' };
+      }
+      protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
+        environmentRef = environment;
+
+        return session;
+      }
+    })();
+
+    const navigation = manager.change(Second, { transition });
+
+    // The session requests commit; this tick kicks off commitSwitch, which then
+    // suspends on the incoming scene's still-pending load() — the async prepare
+    // window this bug lives in.
+    environmentRef?.commit();
+    tick(manager, app);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(incomingInit).not.toHaveBeenCalled(); // still mid-load(): prepare hasn't resolved
+    expect(manager.currentScene).toBe(firstInstance); // not switched yet
+
+    // The session self-terminates DURING that window WITHOUT going through
+    // `_abortInFlightNavigation`: `session.update()` throws, so
+    // `_updateTransition` calls `_finishActiveSession` directly — rejecting the
+    // navigation and clearing `_activeSession`, but NOT bumping
+    // `_navigationGeneration`. The generation term of the §3.7 guard therefore
+    // cannot detect this; only the session-identity term can.
+    session.update = () => {
+      throw new Error('session update blew up mid-prepare');
+    };
+    tick(manager, app);
+
+    // The navigation rejects from the session's own thrown error (settled by
+    // `_finishActiveSession`), not from a second error thrown by commitSwitch.
+    await expect(navigation).rejects.toThrow('session update blew up mid-prepare');
+
+    // Now prepare finally resolves and commitSwitch's continuation resumes. Its
+    // §3.7 guard must hit the session-identity bail (generation is unchanged, so
+    // the generation term alone would MISS this) and dispose the freshly-prepared
+    // scope instead of activating it.
+    resolveLoad();
+    await settle();
+
+    expect(incomingInit).toHaveBeenCalledTimes(1); // prepare did run to completion (reached Ready) ...
+    expect(manager.currentScene).toBe(firstInstance); // ... but the incoming scene was NEVER activated
+  });
 });
 
 describe('SceneDirector — transition resource provisioning (§3.4, §3.7a)', () => {
@@ -1615,6 +1850,66 @@ describe('SceneDirector — transition resource provisioning (§3.4, §3.7a)', (
     await navigation;
   });
 
+  test('releases the acquired snapshot texture if capturing it throws', async () => {
+    const app = createApplicationStub();
+    const First = makeSceneClass({
+      draw: () => {
+        throw new Error('draw exploded');
+      },
+    });
+    const Second = makeSceneClass();
+    const manager = new SceneDirector(app, { first: First, second: Second });
+
+    await manager.change(First);
+
+    const session = new FakeSession();
+    const transition = new (class extends SceneTransition {
+      public getRequirements(): SceneTransitionRequirements {
+        return { outgoingFrame: 'snapshot', currentFrame: 'none' };
+      }
+      protected override createSession(): SceneTransitionSession {
+        return session;
+      }
+    })();
+
+    await expect(manager.change(Second, { transition })).rejects.toThrow('draw exploded');
+    expect(app.backend.releaseRenderTexture).toHaveBeenCalled();
+  });
+
+  test('releases an already-acquired snapshot texture if acquiring the current texture then fails', async () => {
+    const app = createApplicationStub();
+    const First = makeSceneClass();
+    const Second = makeSceneClass();
+    const manager = new SceneDirector(app, { first: First, second: Second });
+
+    await manager.change(First);
+
+    let acquireCalls = 0;
+
+    (app.backend.acquireRenderTexture as MockInstance).mockImplementation((width: number, height: number) => {
+      acquireCalls++;
+
+      if (acquireCalls === 2) {
+        throw new Error('second acquire exploded');
+      }
+
+      return new RenderTexture(width, height);
+    });
+
+    const session = new FakeSession();
+    const transition = new (class extends SceneTransition {
+      public getRequirements(): SceneTransitionRequirements {
+        return { outgoingFrame: 'snapshot', currentFrame: 'texture' };
+      }
+      protected override createSession(): SceneTransitionSession {
+        return session;
+      }
+    })();
+
+    await expect(manager.change(Second, { transition })).rejects.toThrow('second acquire exploded');
+    expect(app.backend.releaseRenderTexture).toHaveBeenCalledTimes(1); // the snapshot, released after the second acquire failed
+  });
+
   test('outgoingFrame: "snapshot" is skipped (frame.outgoing stays null) when there is no outgoing scene', async () => {
     const app = createApplicationStub();
     const First = makeSceneClass();
@@ -1644,6 +1939,79 @@ describe('SceneDirector — transition resource provisioning (§3.4, §3.7a)', (
     session.done = true;
     manager._renderTransition(app.rendering);
     await expect(navigation).rejects.toThrow(SceneTransitionLifecycleError);
+  });
+
+  test('finishes the active session (not hangs) when session.done throws', async () => {
+    const app = createApplicationStub();
+    const First = makeSceneClass();
+    const Second = makeSceneClass();
+    const manager = new SceneDirector(app, { first: First, second: Second });
+
+    await manager.change(First);
+
+    class ThrowingDoneSession implements SceneTransitionSession {
+      public placement: 'scene' | 'screen' = 'screen';
+
+      public get done(): boolean {
+        throw new Error('done getter exploded');
+      }
+
+      public update(): void {}
+      public render(): void {}
+      public destroy(): void {}
+    }
+
+    const transition = new (class extends SceneTransition {
+      public getRequirements(): SceneTransitionRequirements {
+        return { outgoingFrame: 'none', currentFrame: 'none' };
+      }
+      protected override createSession(): SceneTransitionSession {
+        return new ThrowingDoneSession();
+      }
+    })();
+
+    const navigation = manager.change(Second, { transition });
+
+    manager._renderTransition(app.rendering);
+
+    await expect(navigation).rejects.toThrow('done getter exploded');
+    expect(manager._transitionPlacement()).toBeNull(); // session was torn down, not left dangling
+  });
+
+  test('finishes the active session (not hangs) when session.placement throws', async () => {
+    const app = createApplicationStub();
+    const First = makeSceneClass();
+    const Second = makeSceneClass();
+    const manager = new SceneDirector(app, { first: First, second: Second });
+
+    await manager.change(First);
+
+    class ThrowingPlacementSession implements SceneTransitionSession {
+      public done = false;
+
+      public get placement(): 'scene' | 'screen' {
+        throw new Error('placement getter exploded');
+      }
+
+      public update(): void {}
+      public render(): void {}
+      public destroy(): void {}
+    }
+
+    const transition = new (class extends SceneTransition {
+      public getRequirements(): SceneTransitionRequirements {
+        return { outgoingFrame: 'none', currentFrame: 'none' };
+      }
+      protected override createSession(): SceneTransitionSession {
+        return new ThrowingPlacementSession();
+      }
+    })();
+
+    const navigation = manager.change(Second, { transition });
+
+    expect(manager._transitionPlacement()).toBeNull();
+
+    await expect(navigation).rejects.toThrow('placement getter exploded');
   });
 
   test('the pooled "current" texture resizes when the canvas resizes mid-session', async () => {
@@ -1745,6 +2113,72 @@ describe('SceneDirector — transition lifecycle contract', () => {
     await expect(navigation).rejects.toMatchObject({ reason: 'done-before-commit' });
     expect(manager.currentScene).toBeInstanceOf(First);
     expect(session.destroyCallCount).toBe(1);
+  });
+
+  test('settles the navigation promise even when an onError listener throws', async () => {
+    const app = createApplicationStub();
+    const First = makeSceneClass();
+    const Second = makeSceneClass();
+    const manager = new SceneDirector(app, { first: First, second: Second });
+
+    await manager.change(First);
+
+    app.onError.add(() => {
+      throw new Error('listener exploded');
+    });
+
+    const session = new FakeSession();
+    const transition = new FakeTransition(session);
+
+    const navigation = manager.change(Second, { transition });
+
+    // done === true before commit() was ever called -> a 'done-before-commit'
+    // lifecycle error, which is exactly what previously hit the unguarded
+    // onError.dispatch() and, with a throwing listener, would have skipped
+    // settle() and left `navigation` hanging forever.
+    session.done = true;
+    tick(manager, app);
+
+    await expect(navigation).rejects.toThrow(SceneTransitionLifecycleError);
+  });
+
+  test('settles the navigation promise even when releasing transition resources throws', async () => {
+    const app = createApplicationStub();
+    const First = makeSceneClass();
+    const Second = makeSceneClass();
+    const manager = new SceneDirector(app, { first: First, second: Second });
+
+    await manager.change(First);
+
+    (app.backend.releaseRenderTexture as MockInstance).mockImplementation(() => {
+      throw new Error('releaseRenderTexture exploded');
+    });
+
+    let environmentRef: SceneTransitionEnvironment | null = null;
+    const session = new FakeSession();
+    const transition = new (class extends SceneTransition {
+      public getRequirements(): SceneTransitionRequirements {
+        return { outgoingFrame: 'none', currentFrame: 'texture' };
+      }
+      protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
+        environmentRef = environment;
+
+        return session;
+      }
+    })();
+
+    const navigation = manager.change(Second, { transition });
+
+    environmentRef?.commit();
+    tick(manager, app);
+    await settle();
+    session.done = true;
+    tick(manager, app);
+
+    // Without the fix, release() throwing inside _finishActiveSession (which
+    // ran outside its try/finally) would skip settle() and this would hang
+    // until the test's timeout instead of resolving.
+    await expect(navigation).resolves.toBe(manager);
   });
 
   test('post-commit session failure (update throws) rejects the navigation but the new scene stays live', async () => {
@@ -2325,6 +2759,41 @@ describe('SceneDirector._abortInFlightNavigation() (Slice 7 Group B, §3.7)', ()
     await director.change(TestScene); // no transition — commits synchronously via the direct fast path
 
     expect(director._abortInFlightNavigation(new SceneNavigationAbortedError())).toBe(false);
+  });
+
+  test('rejects a direct (non-transitioned) change() when the frame loop stops mid-prepare', async () => {
+    const app = createApplicationStub();
+    const First = makeSceneClass();
+    let resolveLoad!: () => void;
+    const SlowLoad = makeSceneClass({
+      load: () =>
+        new Promise<void>(resolve => {
+          resolveLoad = resolve;
+        }),
+    });
+    const director = new SceneDirector(app, { first: First, slow: SlowLoad });
+
+    await director.change(First);
+    const firstInstance = director.currentScene;
+
+    // Direct fast path: commitSwitch runs immediately and is now suspended
+    // awaiting SlowLoad.load(). No transition session is involved.
+    const navigation = director.change(SlowLoad);
+
+    void navigation.catch(() => undefined);
+    await Promise.resolve(); // let commitSwitch reach its prepare await
+
+    // SlowLoad's load()/init() is still pending — abort now, exactly what
+    // Application._stopFrameLoop() does on stop()/a fatal frame error. There
+    // is no session, so this returns false but still bumps the generation.
+    expect(director._abortInFlightNavigation(new SceneNavigationAbortedError())).toBe(false);
+
+    // Unblock load() so commitSwitch's continuation resumes: it must observe
+    // the generation bump and reject rather than commit the switch.
+    resolveLoad();
+
+    await expect(navigation).rejects.toThrow(SceneNavigationAbortedError);
+    expect(director.currentScene).toBe(firstInstance); // outgoing scene untouched
   });
 
   test('a claimed _preloaded entry is restored (status "ready", back in _preloaded) when the change() consuming it is aborted pre-commit', async () => {

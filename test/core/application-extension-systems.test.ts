@@ -120,7 +120,7 @@ describe('Application app-system extension bindings (Slice F)', () => {
     appB.destroy();
   });
 
-  test('app.destroy() destroys the extension system, in reverse registration order with a later user system', () => {
+  test('app.destroy() destroys the extension system, in reverse registration order with a later user system', async () => {
     const order: string[] = [];
     const extSystem: System = { update: vi.fn(), destroy: () => order.push('extension') };
     const binding: ApplicationSystemBinding = { create: () => extSystem };
@@ -131,6 +131,13 @@ describe('Application app-system extension bindings (Slice F)', () => {
     app.systems.add(userSystem);
 
     app.destroy();
+
+    // destroy() now disposes `scenes` first, awaited internally, before the
+    // rest of teardown (including `systems.destroy()`) runs — give that
+    // background chain a few microtask turns to settle.
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
 
     expect(order).toEqual(['user', 'extension']);
   });

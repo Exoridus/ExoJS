@@ -10,11 +10,9 @@ export interface OutgoingScope {
   readonly target: AnySceneConstructor;
 }
 
-/** Result of {@link SceneNavigationTransaction.beginOutgoingDisposition}. */
+/** Result of {@link SceneNavigationTransaction.prepareOutgoingDisposition}. */
 export interface OutgoingDisposition {
-  /** Resolves once the outgoing scope's permanent teardown has fully settled. Already resolved when there was no outgoing scope, or it was suspended instead of torn down. */
-  readonly teardown: Promise<void>;
-  /** The scope `finishOutgoingDisposition` must still dispatch `onStopScene` for, or `null` when there is nothing to dispatch (no outgoing scope, or it was suspended instead). */
+  /** The scope about to be permanently torn down, or `null` when there is nothing to tear down (no outgoing scope, or it was suspended instead). Pass to {@link SceneNavigationTransaction.dispatchStopScene} then {@link SceneNavigationTransaction.beginOutgoingTeardown}, in that order. */
   readonly pendingStopScene: SceneScope | null;
 }
 
@@ -28,6 +26,15 @@ export interface OutgoingDisposition {
  * signals it dispatches through, both handed in at construction —
  * `SceneDirector` remains the sole owner of `_activeScope`/
  * `_activeScopeTarget`/`_retained` itself.
+ *
+ * Split into three steps — `prepareOutgoingDisposition` →
+ * `dispatchStopScene` → `beginOutgoingTeardown` — rather than one call,
+ * so the caller can interleave incoming-scope activation and
+ * `onChangeScene`/`onStartScene` dispatch BETWEEN deciding the outgoing
+ * scope's fate and actually starting its teardown (spec: the outgoing
+ * scope must be marked/suspended before the incoming scope activates, but
+ * `Scene.unload()` must not start running until after `onStopScene` has
+ * fired for it, which itself must fire after the incoming scope is live).
  */
 export class SceneNavigationTransaction {
   public constructor(
@@ -38,20 +45,19 @@ export class SceneNavigationTransaction {
   ) {}
 
   /**
-   * Commit the outgoing scope's fate as part of an atomic switch (§3.5 step
-   * 5): suspend and retain it under `outgoing.target` when `suspendCurrent`
-   * is set (dispatching `onStateChange` for the edge, guarded via
-   * `Signal.dispatchIsolated` — a throwing listener is reported, never
-   * thrown back), otherwise begin its permanent teardown (`scope.destroy()`,
-   * which synchronously flips it to `Destroying` before this method
-   * returns) and hand back the still-settling teardown promise plus the
-   * scope `finishOutgoingDisposition` must still dispatch `onStopScene` for.
-   * No-op (an already-resolved teardown, `null` pending-stop-scene) when
-   * `outgoing` is `null`. Never throws.
+   * Decide the outgoing scope's fate (§3.5 step 5) WITHOUT starting its
+   * teardown: suspend and retain it under `outgoing.target` when
+   * `suspendCurrent` is set (dispatching `onStateChange` for the edge
+   * immediately — suspension has no `unload()`/`onStopScene` to sequence
+   * against), otherwise return it as `pendingStopScene` for the caller to
+   * pass to {@link SceneNavigationTransaction.dispatchStopScene} and
+   * {@link SceneNavigationTransaction.beginOutgoingTeardown} once it has
+   * finished activating the incoming scope. No-op (`pendingStopScene: null`)
+   * when `outgoing` is `null`. Never throws.
    */
-  public beginOutgoingDisposition(outgoing: OutgoingScope | null, suspendCurrent: boolean): OutgoingDisposition {
+  public prepareOutgoingDisposition(outgoing: OutgoingScope | null, suspendCurrent: boolean): OutgoingDisposition {
     if (outgoing === null) {
-      return { teardown: Promise.resolve(), pendingStopScene: null };
+      return { pendingStopScene: null };
     }
 
     if (suspendCurrent) {
@@ -61,24 +67,38 @@ export class SceneNavigationTransaction {
       this._retained.set(outgoing.target, outgoing.scope);
       this._onStateChange.dispatchIsolated(this._reportError, previousState, outgoing.scope.state, outgoing.scope.scene as Scene);
 
-      return { teardown: Promise.resolve(), pendingStopScene: null };
+      return { pendingStopScene: null };
     }
 
-    return { teardown: outgoing.scope.destroy(), pendingStopScene: outgoing.scope };
+    return { pendingStopScene: outgoing.scope };
   }
 
   /**
-   * Not-rollback-able step 8: dispatch `onStopScene` for a just-committed
-   * permanent switch's outgoing scope — guarded via
-   * `Signal.dispatchIsolated`, never throws back to the caller (the switch
-   * already committed; a throwing listener here cannot un-commit it). No-op
-   * when `pendingStopScene` is `null`.
+   * Dispatch `onStopScene` for a scope about to be permanently torn down —
+   * guarded via `Signal.dispatchIsolated`, never throws back to the caller.
+   * Call AFTER the incoming scope has activated and its own
+   * `onChangeScene`/`onStartScene` have fired, and BEFORE
+   * {@link SceneNavigationTransaction.beginOutgoingTeardown} (`onStopScene`'s
+   * own contract: "fires just before a scene is unloaded"). No-op when
+   * `pendingStopScene` is `null`.
    */
-  public finishOutgoingDisposition(pendingStopScene: SceneScope | null): void {
+  public dispatchStopScene(pendingStopScene: SceneScope | null): void {
     if (pendingStopScene === null) {
       return;
     }
 
     this._onStopScene.dispatchIsolated(this._reportError, pendingStopScene.scene as Scene);
+  }
+
+  /**
+   * Not-rollback-able step 8: actually start `pendingStopScene`'s permanent
+   * teardown (`scope.destroy()`, which synchronously flips it to
+   * `Destroying` and begins running `Scene.unload()` before this method
+   * returns). Call AFTER {@link SceneNavigationTransaction.dispatchStopScene}.
+   * Returns the still-settling teardown promise — already resolved when
+   * `pendingStopScene` is `null`.
+   */
+  public beginOutgoingTeardown(pendingStopScene: SceneScope | null): Promise<void> {
+    return pendingStopScene === null ? Promise.resolve() : pendingStopScene.destroy();
   }
 }

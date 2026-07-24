@@ -283,6 +283,58 @@ class BootScene extends Scene {
 
 Unlike `LoadingQueue.onProgress`, which you attach to the return value of one `loader.load(...)` call, these four are properties on the `Loader` itself — subscribe once (for example in your boot scene's `init`) and they report every foreground load for the lifetime of that loader.
 
+### Guard the final navigation
+
+`onLoadComplete` can fire after this scene is no longer the active one — a
+scene switch away from `BootScene` while a load is still in flight, or an
+app-level `stop()`/`destroy()` mid-load, are both real cases. Check
+`this.state` before navigating away, and unsubscribe from the loader
+signals in `unload()` so a listener from a torn-down scene never fires
+`change()` against a Director that has since moved on:
+
+```js
+class BootScene extends Scene {
+    init(loader) {
+        this._onLoadComplete = () => {
+            this.progressBar.visible = false;
+            this._enterGame();
+        };
+
+        loader.onLoadStart.add((key, url) => {
+            this.progressBar.visible = true;
+        });
+        loader.onLoadProgress.add((loaded, total, key) => {
+            this.progressBar.value = loaded / total;
+        });
+        loader.onLoadError.add((key, error) => {
+            console.warn(`Failed to load "${key}":`, error);
+        });
+        loader.onLoadComplete.add(this._onLoadComplete);
+
+        loader.load(TitleAssets);
+    }
+
+    unload() {
+        // this.app is still valid here — unload() runs before the scene is
+        // detached (see Scene.attached below).
+        this.app.loader.onLoadComplete.remove(this._onLoadComplete);
+    }
+
+    _enterGame() {
+        // Check this.attached first — it never throws, unlike this.state,
+        // which throws once the scene has been fully detached (destroyed).
+        // this.state is 'active' only while this scene is still the one
+        // driving the screen — suspended, unloading, or detached must not
+        // navigate.
+        if (!this.attached || this.state !== 'active') {
+            return;
+        }
+
+        this.app.scenes.change(GameScene);
+    }
+}
+```
+
 ## Status channel instead of throwing
 
 For `Texture`, `Sound`, and the data tokens, the path (or `X.of(...)` reference) *is* the identity — there's no separate alias to register or forget. Every handle and `AssetRef` exposes the same small status contract:

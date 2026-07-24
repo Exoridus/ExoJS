@@ -6,10 +6,10 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 50,
+  "memberCount": 51,
   "counts": {
     "constructors": 1,
-    "methods": 9,
+    "methods": 10,
     "properties": 32,
     "events": 8
   },
@@ -206,7 +206,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Tear down every owned subsystem (loader, the core managers — input, interaction, audio, tweens, rendering — the app system registry, backend, scene director, all clocks, all signals) and release event listeners. The application instance is unusable after this call."
+          "description": "Tear down every owned subsystem (loader, the core managers — input, interaction, audio, tweens, rendering — the app system registry, backend, scene director, all clocks, all signals) and release event listeners. The application instance is unusable after this call. Fires the RAF halt synchronously (so no further frame runs after this call returns) but the rest of teardown runs as a background async chain, awaited internally: scenes — including every retained and preloaded scope, and any scene's own async unload() — is fully disposed FIRST, before the Loader, rendering context, audio manager, or backend are destroyed, so a scene's teardown code never touches an already-destroyed dependency. This intentionally does not route through the public Application.stop, which fire-and-forgets its own scene-clear — that would race against scenes._dispose()'s own active-scope teardown for ownership of the same scope. destroy() instead halts the frame loop directly and lets scenes._dispose() own scene teardown entirely."
         },
         {
           "name": "resize",
@@ -470,6 +470,134 @@
         },
         {
           "name": "start",
+          "signature": "start(target: K, args: ChangeSceneArgs<InferSceneData<Registry[K]>>): Promise<Application<Registry>>",
+          "signatureTokens": [
+            {
+              "text": "start",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "target",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "K",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "args",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ChangeSceneArgs",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "InferSceneData",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Registry",
+              "kind": "type"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "K",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Application",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Registry",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "target",
+              "type": "K",
+              "optional": false
+            },
+            {
+              "name": "args",
+              "type": "ChangeSceneArgs<InferSceneData<Registry[K]>>",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<Application<Registry>>",
+          "description": "Initialize the render backend, await capability detection, activate target — a registered string key, or a constructor registered in ApplicationOptions.scenes — and start the per-frame loop. Idempotent — if the application is already running the call is a no-op. On error the status returns to Stopped and the error propagates."
+        },
+        {
+          "name": "start",
           "signature": "start(target: C, args: ChangeSceneArgs<InferSceneData<C>>): Promise<Application<Registry>>",
           "signatureTokens": [
             {
@@ -582,7 +710,7 @@
             }
           ],
           "returnType": "Promise<Application<Registry>>",
-          "description": "Initialize the render backend, await capability detection, activate target (a constructor registered in ApplicationOptions.scenes), and start the per-frame loop. Idempotent — if the application is already running the call is a no-op. On error the status returns to Stopped and the error propagates."
+          "description": "Initialize the render backend, await capability detection, and start the per-frame loop without activating a scene. Use start(target, data?) to start directly into a registered scene. Idempotent — if the application is already running the call is a no-op. On error the status returns to Stopped and the error propagates."
         },
         {
           "name": "stop",

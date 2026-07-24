@@ -33,7 +33,15 @@ import { computeLetterboxLayout } from './letterbox';
 import { hello, logger } from './logging';
 import { Perf } from './Perf';
 import { SceneDirector } from './SceneDirector';
-import { type AnySceneConstructor, type ChangeSceneArgs, type InferSceneData, SceneNavigationAbortedError, type SceneRegistryShape } from './SceneTypes';
+import {
+  type AnySceneConstructor,
+  type ChangeSceneArgs,
+  type InferSceneData,
+  type NavigableSceneConstructor,
+  type RegistryKeyOf,
+  SceneNavigationAbortedError,
+  type SceneRegistryShape,
+} from './SceneTypes';
 import { defaultSerializationRegistry, SerializationRegistry } from './serialization/SerializationRegistry';
 import { Signal } from './Signal';
 import { SystemRegistry } from './SystemRegistry';
@@ -687,13 +695,14 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   public async start(): Promise<this>;
   /**
    * Initialize the render backend, await capability detection, activate
-   * `target` (a constructor registered in `ApplicationOptions.scenes`), and
-   * start the per-frame loop. Idempotent — if the application is already
-   * running the call is a no-op. On error the status returns to `Stopped`
-   * and the error propagates.
+   * `target` — a registered string key, or a constructor registered in
+   * `ApplicationOptions.scenes` — and start the per-frame loop. Idempotent —
+   * if the application is already running the call is a no-op. On error the
+   * status returns to `Stopped` and the error propagates.
    */
-  public async start<C extends AnySceneConstructor>(target: C, ...args: ChangeSceneArgs<InferSceneData<C>>): Promise<this>;
-  public async start(target?: AnySceneConstructor, ...args: readonly unknown[]): Promise<this> {
+  public async start<K extends RegistryKeyOf<Registry>>(target: K, ...args: ChangeSceneArgs<InferSceneData<Registry[K]>>): Promise<this>;
+  public async start<C extends NavigableSceneConstructor<Registry>>(target: C, ...args: ChangeSceneArgs<InferSceneData<C>>): Promise<this>;
+  public async start(target?: AnySceneConstructor | string, ...args: readonly unknown[]): Promise<this> {
     invariant(!this._destroyed, 'Application.start() was called after destroy(). Construct a new Application instead of reusing a destroyed one.');
 
     if (this._status === ApplicationStatus.Stopped) {
@@ -735,11 +744,21 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
         this._capabilities = await capabilitiesPromise;
 
         if (target !== undefined) {
-          await this.scenes.change(target, ...(args as ChangeSceneArgs<InferSceneData<typeof target>>));
+          // `target`'s implementation-level type is a union (registered key
+          // OR constructor) — TS overload resolution does not distribute
+          // over a union-typed argument, so the cast picks the constructor
+          // overload purely for compile-time dispatch; SceneDirector.change()'s
+          // own single implementation signature already accepts both shapes
+          // and forwards whichever one was actually passed at runtime.
+          await this.scenes.change(
+            target as NavigableSceneConstructor<Registry>,
+            ...(args as ChangeSceneArgs<InferSceneData<NavigableSceneConstructor<Registry>>>),
+          );
         }
 
         this._status = ApplicationStatus.Running;
       } catch (error) {
+        this._stopFrameLoop();
         this._status = ApplicationStatus.Stopped;
         throw error;
       }
@@ -1221,6 +1240,18 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * interaction, audio, tweens, rendering — the app system registry, backend,
    * scene director, all clocks, all signals) and release event listeners. The
    * application instance is unusable after this call.
+   *
+   * Fires the RAF halt synchronously (so no further frame runs after this
+   * call returns) but the rest of teardown runs as a background async chain,
+   * awaited internally: `scenes` — including every retained and preloaded
+   * scope, and any scene's own async `unload()` — is fully disposed FIRST,
+   * before the Loader, rendering context, audio manager, or backend are
+   * destroyed, so a scene's teardown code never touches an already-destroyed
+   * dependency. This intentionally does not route through the public
+   * {@link Application.stop}, which fire-and-forgets its own scene-clear —
+   * that would race against `scenes._dispose()`'s own active-scope teardown
+   * for ownership of the same scope. `destroy()` instead halts the frame
+   * loop directly and lets `scenes._dispose()` own scene teardown entirely.
    */
   public destroy(): void {
     this._destroyed = true;
@@ -1232,7 +1263,36 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     this._resizeObserver?.disconnect();
     this._resizeObserver = null;
 
-    this.stop();
+    if (this._frameLoopActive) {
+      if (this._status === ApplicationStatus.Running) {
+        this._status = ApplicationStatus.Halting;
+      }
+
+      this._stopFrameLoop();
+    }
+
+    this._status = ApplicationStatus.Stopped;
+
+    void this._disposeManagedResources().catch((error: unknown) => {
+      logger.error('Application.destroy() failed during teardown.', { source: 'Application', ...(error instanceof Error && { error }) });
+      this.onError?.dispatch(error instanceof Error ? error : new Error(String(error)));
+    });
+  }
+
+  /**
+   * @internal Awaited teardown, in order: `scenes` fully disposed first
+   * (active + every retained + every preloaded scope, including each one's
+   * own async `unload()`) — then every other owned subsystem, then clocks,
+   * then Signals. See {@link Application.destroy}'s doc comment for why
+   * scenes go first.
+   */
+  private async _disposeManagedResources(): Promise<void> {
+    try {
+      await this.scenes._dispose();
+    } catch (error) {
+      logger.error('Application.destroy() failed to fully dispose SceneDirector.', { source: 'Application', ...(error instanceof Error && { error }) });
+    }
+
     this.loader.destroy();
     this.focus.destroy();
     this.systems.destroy();
@@ -1245,7 +1305,6 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     this.interaction.destroy();
     this.input.destroy();
     this._backend.destroy();
-    this.scenes.destroy();
     this._startupClock.destroy();
     this._activeClock.destroy();
     this._frameClock.destroy();

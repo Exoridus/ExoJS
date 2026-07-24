@@ -1,7 +1,8 @@
 import { Ease } from '#animation/Easing';
 import { Color } from '#core/Color';
 import type { SceneTransitionPhaseContext, SceneTransitionPhaseRequirements } from '#core/PhasedSceneTransition';
-import type { SceneTransitionContext } from '#core/SceneTransition';
+import type { SceneTransitionContext, SceneTransitionEnvironment } from '#core/SceneTransition';
+import { Time } from '#core/Time';
 import { FadeSceneTransition } from '#core/transitions/FadeSceneTransition';
 import type { Matrix } from '#math/Matrix';
 import { QuadGeometry } from '#rendering/geometry/QuadGeometry';
@@ -12,11 +13,13 @@ import { QuadGeometry } from '#rendering/geometry/QuadGeometry';
 // PhasedSceneTransition's own session machinery (already covered by Slice 6's
 // test suite).
 class TestableFadeSceneTransition extends FadeSceneTransition {
+  private readonly _testState = this._createPhaseStateForSession();
+
   public callEnter(context: SceneTransitionPhaseContext): void {
-    this.enter(context);
+    this.enter(context, this._testState);
   }
   public callExit(context: SceneTransitionPhaseContext): void {
-    this.exit(context);
+    this.exit(context, this._testState);
   }
   public callGetPhaseRequirements(phase: 'enter' | 'exit', context: SceneTransitionContext): SceneTransitionPhaseRequirements {
     return this.getPhaseRequirements(phase, context);
@@ -44,6 +47,27 @@ const stubContext = (overrides: Partial<SceneTransitionPhaseContext> = {}): Scen
 });
 
 const navContext: SceneTransitionContext = { operation: 'change', hasOutgoingScene: true, hasIncomingScene: true };
+
+// Minimal SceneTransitionEnvironment for driving a real session through
+// FadeSceneTransition.beginSession().
+class TestEnvironment implements SceneTransitionEnvironment {
+  public readonly context = navContext;
+  private _committed = false;
+  private _commitRequested = false;
+
+  public get commitRequested(): boolean {
+    return this._commitRequested;
+  }
+
+  public get committed(): boolean {
+    return this._committed;
+  }
+
+  public commit(): void {
+    this._commitRequested = true;
+    this._committed = true;
+  }
+}
 
 describe('FadeSceneTransition', () => {
   test('defaults: color black, duration 220, linear easing, placement screen', () => {
@@ -123,5 +147,31 @@ describe('FadeSceneTransition', () => {
 
     const [, , options] = drawGeometry.mock.calls[0] as [QuadGeometry, Matrix, { tint: Color }];
     expect(options.tint.a).toBe(1);
+  });
+
+  test('does not share mutable scratch state between two sessions of the same reused definition', () => {
+    const shared = new FadeSceneTransition();
+    const sessionA = shared.beginSession(new TestEnvironment());
+    const sessionB = shared.beginSession(new TestEnvironment());
+
+    // Drive A to a different presence than B, then render both — if they
+    // shared one Color/Matrix/QuadGeometry on the definition, the second
+    // render() call would clobber the first's tint alpha before A's draw
+    // call actually reads it back.
+    sessionA.update(new Time(50));
+    sessionB.update(new Time(10));
+
+    const drawGeometryA = vi.fn();
+    const drawGeometryB = vi.fn();
+
+    sessionA.render(stubRendering(drawGeometryA), { outgoing: null, current: null, committed: false });
+    sessionB.render(stubRendering(drawGeometryB), { outgoing: null, current: null, committed: false });
+
+    const [quadA, , optionsA] = drawGeometryA.mock.calls[0] as [QuadGeometry, Matrix, { tint: Color }];
+    const [quadB, , optionsB] = drawGeometryB.mock.calls[0] as [QuadGeometry, Matrix, { tint: Color }];
+
+    expect(quadA).not.toBe(quadB); // different object identity — proves no shared scratch QuadGeometry
+    expect(optionsA.tint).not.toBe(optionsB.tint); // different object identity — proves no shared scratch Color
+    expect(optionsA.tint.a).not.toBeCloseTo(optionsB.tint.a); // different progress -> different alpha, would have been clobbered if shared
   });
 });

@@ -146,7 +146,7 @@ import { TitleScene, GameScene } from './scenes';
 function Game({ screen }: { screen: 'title' | 'game' }) {
   return (
     <ExoCanvas options={{ canvas: { width: 1280, height: 720 } }} style={{ width: 1280, height: 720 }}>
-      <Scenes active={screen} transition={new FadeSceneTransition({ duration: 300 })}>
+      <Scenes active={screen} transition={new FadeSceneTransition(undefined, { duration: 300 })}>
         <Scene name="title" component={TitleScene} />
         <Scene name="game" component={GameScene}>
           <Hud />
@@ -159,9 +159,14 @@ function Game({ screen }: { screen: 'title' | 'game' }) {
 
 Each `<Scene>` takes a unique `name`, the scene `component` class to instantiate, and optional
 `children` that render as the active scene's overlay. The `transition` (a `SceneTransition`
-instance — e.g. `new FadeSceneTransition({ duration: 300 })`, `duration` in milliseconds) only
+instance — e.g. `new FadeSceneTransition(undefined, { duration: 300 })`, `duration` in milliseconds) only
 applies to switches, not the first start.
-If `active` matches no `<Scene>`, the active scene is cleared.
+If `active` matches no `<Scene>`, the underlying engine scene is left running
+untouched (there is no public API to clear it mid-lifetime) — only the
+React-rendered HUD overlay is cleared, and a console warning is logged. This
+is a caller mismatch (an `active` name with no matching `<Scene>`), not a
+supported "show nothing" path — check `active` against your actual `<Scene
+name="...">` declarations if you see the warning.
 
 `useActiveScene()` reads the live scene instance from the nearest `<Scenes>`, so an overlay can
 react to scene state:
@@ -233,7 +238,7 @@ export function App() {
       options={{ canvas: { width: 1280, height: 720 } }}
       style={{ width: 1280, height: 720 }}
     >
-      <Scenes active={screen} transition={new FadeSceneTransition({ duration: 300 })}>
+      <Scenes active={screen} transition={new FadeSceneTransition(undefined, { duration: 300 })}>
         <Scene name="title" component={TitleScene}>
           <button style={{ position: 'absolute', inset: 0 }} onClick={() => setScreen('game')}>
             Start
