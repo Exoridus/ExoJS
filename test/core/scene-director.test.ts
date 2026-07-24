@@ -1358,4 +1358,89 @@ describe('SceneDirector — unload', () => {
 
     expect(stopSceneSpy).not.toHaveBeenCalled();
   });
+
+  test('unload() racing an in-flight preload() cancels it: waits for prepare() to settle, never destroys concurrently with prepare(), then still runs unload() (Ready-scope cleanup)', async () => {
+    const app = createApplicationStub();
+    let resolveLoad!: () => void;
+    const initSpy = vi.fn();
+    const unloadHook = vi.fn(async () => undefined);
+    const destroySpy = vi.spyOn(Scene.prototype, 'destroy');
+    const SlowScene = makeSceneClass({
+      load: () =>
+        new Promise<void>(resolve => {
+          resolveLoad = resolve;
+        }),
+      init: initSpy,
+      unload: unloadHook,
+    });
+    const director = new SceneDirector(app, { slow: SlowScene });
+
+    const preloadPromise = director.preload(SlowScene);
+    const unloadPromise = director.unload(SlowScene);
+
+    // Still mid-load() — unload() must be waiting on prepare() to settle,
+    // not tearing anything down yet.
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(destroySpy).not.toHaveBeenCalled();
+    expect(unloadHook).not.toHaveBeenCalled();
+    expect(initSpy).not.toHaveBeenCalled(); // load() hasn't even resolved yet
+
+    resolveLoad();
+
+    await expect(preloadPromise).resolves.toBeUndefined(); // prepare() itself still succeeds
+    await expect(unloadPromise).resolves.toBe(true);
+
+    expect(initSpy).toHaveBeenCalledTimes(1); // prepare() ran to completion (reached Ready), not aborted mid-way
+    expect(unloadHook).toHaveBeenCalledTimes(1); // Ready-scope cleanup: unload() DOES run (spec §2.1/§3.5.1)
+    expect(destroySpy).toHaveBeenCalledTimes(1);
+
+    destroySpy.mockRestore();
+  });
+
+  test('a fresh preload() call racing an in-flight unload()-cancellation of the same target does not interfere with it', async () => {
+    const app = createApplicationStub();
+    let resolveFirstLoad!: () => void;
+    const firstUnloadHook = vi.fn(async () => undefined);
+    const secondInit = vi.fn();
+    let loadCallCount = 0;
+    const RacyScene = makeSceneClass({
+      load: () => {
+        loadCallCount += 1;
+
+        if (loadCallCount === 1) {
+          return new Promise<void>(resolve => {
+            resolveFirstLoad = resolve;
+          });
+        }
+
+        return undefined;
+      },
+      init: secondInit,
+      unload: firstUnloadHook,
+    });
+    const director = new SceneDirector(app, { racy: RacyScene });
+
+    const firstPreload = director.preload(RacyScene);
+    const cancellingUnload = director.unload(RacyScene); // marks the first entry 'cancelling'
+
+    const secondPreload = director.preload(RacyScene); // starts an independent, fresh preload for the same constructor
+
+    resolveFirstLoad();
+
+    await Promise.all([firstPreload, cancellingUnload, secondPreload]);
+
+    expect(firstUnloadHook).toHaveBeenCalledTimes(1); // the cancelled entry's own scene was torn down
+    // `init` is one shared hook function reused across every RacyScene
+    // instance (makeSceneClass assigns the same hooks object to each new
+    // instance) — it fires once per scene's own prepare() call, and both
+    // the cancelled first preload and the fresh second one run their own
+    // prepare() to completion independently (cancelling only gates what
+    // happens *after* prepare() settles, not during it), hence 2 calls.
+    expect(secondInit).toHaveBeenCalledTimes(2); // both the cancelled and the fresh preload reached Ready independently
+
+    // The second preload is still available for a later change() to consume —
+    // confirmed by its state, not yet activated:
+    expect(director.currentScene).toBeNull();
+  });
 });
