@@ -15,7 +15,9 @@ import {
   type ChangeSceneCallOptions,
   ConcurrentSceneNavigationError,
   type InferSceneData,
+  type PreloadArgs,
   type RegistryKeyOf,
+  resolvePreloadArgs,
   type RestoreSceneCallOptions,
   type RestoreSceneOptions,
   RetainedSceneConflictError,
@@ -31,6 +33,16 @@ import type { Time } from './Time';
 
 export type { ChangeSceneOptions, FadeSceneTransition, RestoreSceneOptions, SceneTransition } from './SceneTypes';
 export { ConcurrentSceneNavigationError, RetainedSceneConflictError, RetainedSceneNotFoundError } from './SceneTypes';
+
+type PreloadStatus = 'loading' | 'ready' | 'claimed' | 'cancelling' | 'failed';
+
+/** Internal `_preloaded` entry — same "small internal-only interface colocated with the class that uses it" convention as {@link ActiveFadeTransition}. */
+interface PreloadEntry {
+  readonly scope: SceneScope;
+  readonly data: unknown;
+  readonly ready: Promise<void>;
+  status: PreloadStatus;
+}
 
 interface ActiveFadeTransition {
   readonly type: 'fade';
@@ -95,6 +107,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
   private _activeScope: SceneScope | null = null;
   private _activeScopeTarget: AnySceneConstructor | null = null;
   private readonly _retained = new Map<AnySceneConstructor, SceneScope>();
+  private readonly _preloaded = new Map<AnySceneConstructor, PreloadEntry>();
   private readonly _transitionOverlay: TransitionOverlayMesh = createOverlayMesh();
   private _transition: ActiveFadeTransition | null = null;
   private _inputGateDepth = 0;
@@ -324,6 +337,60 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
     }
 
     return this;
+  }
+
+  /**
+   * Transparently pre-warm a fresh instance of `target` into {@link SceneState.Ready}
+   * — fully prepared (`load()` + `init()` complete), but never activated. A
+   * later {@link SceneDirector.change} call for the same constructor with
+   * `Object.is()`-matching data consumes it automatically, skipping `load()`/
+   * `init()` entirely. Not exclusive of an active or retained instance of the
+   * same constructor — preloading "the next `GameScene`" while a different
+   * `GameScene` instance is currently playing, or already retained, is fully
+   * supported.
+   *
+   * A racing second `preload()` call for the same constructor shares this
+   * same in-flight preparation when its data matches (`Object.is()`); a call
+   * with different data discards the stale entry (once its own preparation
+   * settles) and starts a fresh one with the new data — the newest call's
+   * data always wins, never silently ignored.
+   *
+   * Rejects with {@link UnregisteredSceneError} (dev builds) when `target` is
+   * not present in `ApplicationOptions.scenes`.
+   */
+  public async preload<C extends AnySceneConstructor>(target: C, ...args: PreloadArgs<InferSceneData<C>>): Promise<void> {
+    const { data } = resolvePreloadArgs(args);
+    const existing = this._preloaded.get(target);
+
+    if (existing !== undefined && existing.status !== 'cancelling') {
+      if (Object.is(existing.data, data)) {
+        return existing.ready;
+      }
+
+      this._preloaded.delete(target);
+      this._discardStalePreload(existing);
+    }
+
+    if (__DEV__ && !this._registry.byConstructor.has(target)) {
+      throw new UnregisteredSceneError(target.name, [...this._registry.byConstructor.values()]);
+    }
+
+    const scene = new target();
+    const scope = new SceneScope(this._app, scene, (previous, next) =>
+      this.onStateChange.dispatchIsolated(error => this._reportLifecycleError(error), previous, next, scene as Scene),
+    );
+    const entry = {
+      scope,
+      data,
+      status: 'loading',
+      ready: undefined,
+    } as unknown as { scope: SceneScope; data: unknown; ready: Promise<void>; status: PreloadStatus };
+
+    entry.ready = this._runPreloadPrepare(target, entry, scene as Scene, data);
+
+    this._preloaded.set(target, entry);
+
+    return entry.ready;
   }
 
   /**
@@ -618,6 +685,51 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
 
       throw error;
     }
+  }
+
+  /**
+   * Runs the actual `prepare()` for a `preload()` entry. Marks the entry
+   * `ready` on success (unless a racing `unload()` already marked it
+   * `cancelling` — in that case `unload()` itself owns the final teardown;
+   * this method leaves it alone), or removes it from `_preloaded` and
+   * rethrows on failure (ordinary failed-preparation cleanup — no `unload()`,
+   * spec §3.5.1).
+   */
+  private async _runPreloadPrepare(target: AnySceneConstructor, entry: PreloadEntry, scene: Scene, data: unknown): Promise<void> {
+    try {
+      await this._prepareScene(scene, data, entry.scope);
+    } catch (error) {
+      if (this._preloaded.get(target) === entry) {
+        this._preloaded.delete(target);
+      }
+
+      throw error;
+    }
+
+    if (entry.status === 'cancelling') {
+      return;
+    }
+
+    entry.status = 'ready';
+  }
+
+  /**
+   * Discard a `_preloaded` entry that a newer `preload()`/`change()` call
+   * superseded (mismatched data). Never destroys the scope while its own
+   * `prepare()` is still in flight — waits for `ready` to settle first, then
+   * tears it down through the normal "Ready-scope cleanup" path (`unload()`
+   * runs, `onStopScene` does not — spec §2.1/§3.5.1). A failed `prepare()`
+   * already cleaned itself up via `_runPreloadPrepare`'s own catch above —
+   * nothing further to do in that case.
+   */
+  private _discardStalePreload(entry: PreloadEntry): void {
+    entry.status = 'cancelling';
+
+    void entry.ready
+      .then(() => this._disposeScene(entry.scope, { dispatchStopScene: false }))
+      .catch(() => {
+        /* prepare() itself failed — already cleaned up */
+      });
   }
 
   /**

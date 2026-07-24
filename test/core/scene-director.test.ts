@@ -1105,3 +1105,71 @@ describe('SceneDirector — key-based navigation', () => {
     await expect(director.restore('missing')).rejects.toThrow(UnregisteredSceneError);
   });
 });
+
+describe('SceneDirector — preload', () => {
+  test('preload() prepares a scene into Ready without activating it', async () => {
+    const app = createApplicationStub();
+    const init = vi.fn();
+    const PreloadedScene = makeSceneClass({ init });
+    const director = new SceneDirector(app, { preloaded: PreloadedScene });
+
+    await director.preload(PreloadedScene);
+
+    expect(init).toHaveBeenCalledTimes(1);
+    expect(director.currentScene).toBeNull(); // never activated
+    expect(director.state).toBeNull(); // no active scope at all
+  });
+
+  test('a racing second preload() call for the same target and data shares the same in-flight preparation', async () => {
+    const app = createApplicationStub();
+    const load = vi.fn(async () => undefined);
+    const PreloadedScene = makeSceneClass({ load });
+    const director = new SceneDirector(app, { preloaded: PreloadedScene });
+
+    const first = director.preload(PreloadedScene);
+    const second = director.preload(PreloadedScene);
+
+    await Promise.all([first, second]);
+
+    expect(load).toHaveBeenCalledTimes(1); // one shared preparation, not two
+  });
+
+  test('preload() with mismatched data discards the stale entry and starts a fresh preparation with the new data', async () => {
+    const app = createApplicationStub();
+    const seenData: unknown[] = [];
+    const destroySpy = vi.spyOn(Scene.prototype, 'destroy');
+    class DataScene extends Scene<{ level: number }> {
+      public override init(data: Readonly<{ level: number }>): void {
+        seenData.push(data);
+      }
+    }
+    const director = new SceneDirector(app, { preloaded: DataScene as unknown as SceneConstructor<void> });
+
+    await director.preload(DataScene, { data: { level: 1 } });
+    await director.preload(DataScene, { data: { level: 2 } }); // different object literal — Object.is() mismatch
+
+    expect(seenData).toEqual([{ level: 1 }, { level: 2 }]);
+    expect(destroySpy).toHaveBeenCalledTimes(1); // the stale level-1 preload was torn down
+
+    destroySpy.mockRestore();
+  });
+
+  test('preload() rejects (dev builds) when the target is not registered', async () => {
+    const app = createApplicationStub();
+    const UnregisteredScene = makeSceneClass();
+    const director = new SceneDirector(app, {});
+
+    await expect(director.preload(UnregisteredScene)).rejects.toThrow(UnregisteredSceneError);
+  });
+
+  test('preload() coexists with a different active instance of the same constructor', async () => {
+    const app = createApplicationStub();
+    const GameScene = makeSceneClass();
+    const director = new SceneDirector(app, { game: GameScene });
+
+    await director.change(GameScene); // one live instance active
+    await expect(director.preload(GameScene)).resolves.toBeUndefined(); // a second, preloaded instance — allowed
+
+    expect(director.currentScene).toBeInstanceOf(GameScene);
+  });
+});
