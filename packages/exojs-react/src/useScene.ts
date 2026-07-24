@@ -16,7 +16,7 @@ import { useExoApp } from './useExoApp';
  * switch scenes without restarting the engine. Each activation constructs a
  * fresh instance (definition §11.4) — this hook never reuses one across calls.
  *
- * A failure in `app.start()`/`app.scenes.change()` (e.g. a scene's `onLoad`
+ * A failure in `app.start()`/`app.scenes.change()` (e.g. a scene's `load()`
  * rejects) is caught and routed to {@link Application.onError} rather than
  * left as an unhandled promise rejection — subscribe via
  * `app.onError.add(...)` or the {@link import('./ExoCanvas').ExoCanvas}

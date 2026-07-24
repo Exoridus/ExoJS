@@ -1,4 +1,4 @@
-import { ApplicationStatus, type Scene as ExoScene, type SceneTransition } from '@codexo/exojs';
+import { ApplicationStatus, type Scene as ExoScene, type SceneTransitionSelection } from '@codexo/exojs';
 import {
   Children,
   createContext,
@@ -18,22 +18,22 @@ const ActiveSceneContext = createContext<ExoScene | null>(null);
 ActiveSceneContext.displayName = 'ExoActiveScene';
 
 /**
- * TODO(v0.17 Slice 6): remove once `transition` becomes part of `change()`'s
- * public options (the `SceneTransitionSelection` option). Until then, Core's
- * `change()` deliberately keeps `transition` off its public overloads (it's
- * routed through an `@internal`, non-re-exported bridge type) — so this
- * package defines just the shape it needs locally and casts through it,
- * rather than importing Core's private types (not published on any
- * supported subpath; `@codexo/exojs-react` only depends on Core's root
- * export surface).
+ * TODO: remove once `transition` becomes part of `change()`'s public options
+ * ({@link SceneTransitionSelection}). As of the end of the scene-transition
+ * redesign, Core's `change()` still deliberately keeps `transition` off its
+ * public overloads (it's routed through an `@internal`, non-re-exported
+ * bridge type) — so this package defines just the shape it needs locally and
+ * casts through it, rather than importing Core's private types (not
+ * published on any supported subpath; `@codexo/exojs-react` only depends on
+ * Core's root export surface).
  */
-interface Slice5TransitionBridge {
-  change(target: new () => ExoScene, options: { readonly transition?: SceneTransition }): Promise<unknown>;
+interface TransitionBridge {
+  change(target: new () => ExoScene, options: { readonly transition?: SceneTransitionSelection }): Promise<unknown>;
 }
 
-/** TODO(v0.17 Slice 6): remove alongside {@link Slice5TransitionBridge}. */
-async function changeWithTransitionBridge(scenes: unknown, target: new () => ExoScene, transition: SceneTransition | undefined): Promise<void> {
-  const bridge = scenes as Slice5TransitionBridge;
+/** TODO: remove alongside {@link TransitionBridge}. */
+async function changeWithTransitionBridge(scenes: unknown, target: new () => ExoScene, transition: SceneTransitionSelection | undefined): Promise<void> {
+  const bridge = scenes as TransitionBridge;
 
   await bridge.change(target, transition !== undefined ? { transition } : {});
 }
@@ -70,8 +70,8 @@ export function Scene(_props: SceneProps): ReactElement | null {
 export interface ScenesProps {
   /** Name of the active {@link Scene}. Changing it switches scenes. */
   readonly active: string;
-  /** Optional transition (e.g. a fade) applied when switching scenes. */
-  readonly transition?: SceneTransition;
+  /** Optional transition (e.g. a `FadeSceneTransition`) applied when switching scenes. */
+  readonly transition?: SceneTransitionSelection;
   /** {@link Scene} declarations. */
   readonly children?: ReactNode;
 }
@@ -85,15 +85,17 @@ export interface ScenesProps {
  * scene's React children (HUD overlay) render alongside, and can read the
  * instance via {@link useActiveScene}.
  *
- * A failure in `app.start()`/`app.scenes.change()` (e.g. a scene's `onLoad`
+ * A failure in `app.start()`/`app.scenes.change()` (e.g. a scene's `load()`
  * rejects) is caught and routed to {@link Application.onError} rather than
  * left as an unhandled promise rejection — subscribe via `app.onError.add(...)`
  * or the {@link import('./ExoCanvas').ExoCanvas} `onError` prop to observe it.
  *
  * @example
  * ```tsx
+ * import { FadeSceneTransition } from '@codexo/exojs';
+ *
  * <ExoCanvas>
- *   <Scenes active={screen} transition={myFadeTransition}>
+ *   <Scenes active={screen} transition={new FadeSceneTransition({ duration: 300 })}>
  *     <Scene name="title" component={TitleScene} />
  *     <Scene name="game" component={GameScene}>
  *       <Hud />

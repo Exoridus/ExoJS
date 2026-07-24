@@ -67,7 +67,7 @@ class MockSignal<Args extends unknown[]> {
 /**
  * Minimal stand-in for the engine {@link Application}. It owns no GPU backend;
  * it only records the calls the React glue makes (construction, resize,
- * sizingMode / clearColor assignment, start / setScene, destroy) so the tests
+ * sizingMode / clearColor assignment, start / change, destroy) so the tests
  * can assert the bridge behaviour without a real renderer.
  */
 export class MockApplication {

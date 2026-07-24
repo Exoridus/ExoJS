@@ -1,4 +1,4 @@
-import { Application, Scene as ExoScene, type SceneTransition } from '@codexo/exojs';
+import { Application, FadeSceneTransition, Scene as ExoScene, type SceneTransitionSelection } from '@codexo/exojs';
 import { render, waitFor } from '@testing-library/react';
 import { type ReactElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -26,7 +26,7 @@ function ActiveProbe(): ReactElement {
   return <span data-testid="active">{scene?.constructor.name ?? 'none'}</span>;
 }
 
-function Tree({ app, active, transition }: { app: Application; active: string; transition?: SceneTransition }): ReactElement {
+function Tree({ app, active, transition }: { app: Application; active: string; transition?: SceneTransitionSelection }): ReactElement {
   return (
     <ExoContext.Provider value={app}>
       <Scenes active={active} transition={transition}>
@@ -77,9 +77,9 @@ describe('<Scenes> / <Scene> / useActiveScene', () => {
     const view = render(<Tree app={app} active="title" />);
     await view.findByTestId('active');
 
-    // An opaque SceneTransition instance — the wrapper only forwards it to the
+    // A real SceneTransition instance — the wrapper only forwards it to the
     // director's change(), so its concrete behavior is irrelevant here.
-    const transition = {} as unknown as SceneTransition;
+    const transition = new FadeSceneTransition({ duration: 300 });
     view.rerender(<Tree app={app} active="game" transition={transition} />);
 
     await waitFor(() => expect(app.scenes.change).toHaveBeenCalled());
