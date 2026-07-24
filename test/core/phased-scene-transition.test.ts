@@ -1,4 +1,62 @@
-import { mergeSceneTransitionRequirements, type SceneTransitionPhaseRequirements } from '#core/PhasedSceneTransition';
+import { Ease } from '#animation/Easing';
+import { mergeSceneTransitionRequirements, PhasedSceneTransition, type PhasedSceneTransitionOptions, type SceneTransitionPhaseRequirements } from '#core/PhasedSceneTransition';
+import type { SceneTransitionContext } from '#core/SceneTransition';
+
+const fakeContext: SceneTransitionContext = { operation: 'change', hasOutgoingScene: true, hasIncomingScene: true };
+
+// A minimal concrete subclass declaring NO constructor of its own — the
+// exact shape a real FlashTransition-style author would write. If
+// PhasedSceneTransition's constructor were `protected`, this class would
+// inherit that modifier and `new MinimalPhase()` below would fail to
+// compile (verified separately in Task 2's typecheck step; the point of
+// this test is that it runs and passes at all, proving construction
+// succeeded from outside the module).
+class MinimalPhase extends PhasedSceneTransition {
+  protected getPhaseRequirements(): SceneTransitionPhaseRequirements {
+    return { outgoingFrame: 'none', currentFrame: 'direct' };
+  }
+}
+
+describe('PhasedSceneTransition', () => {
+  test('a concrete subclass with no constructor of its own is directly instantiable (public constructor)', () => {
+    const instance = new MinimalPhase();
+
+    expect(instance).toBeInstanceOf(PhasedSceneTransition);
+  });
+
+  test('constructor options default duration=220, easing=Ease.linear, placement="screen"', () => {
+    const instance = new MinimalPhase();
+
+    expect(instance.duration).toBe(220);
+    expect(instance.easing).toBe(Ease.linear);
+    expect(instance.placement).toBe('screen');
+  });
+
+  test('constructor options override the defaults', () => {
+    const options: PhasedSceneTransitionOptions = { duration: 500, easing: Ease.quadIn, placement: 'scene' };
+    const instance = new MinimalPhase(options);
+
+    expect(instance.duration).toBe(500);
+    expect(instance.easing).toBe(Ease.quadIn);
+    expect(instance.placement).toBe('scene');
+  });
+
+  test('getRequirementsForPhase() is callable from outside the class hierarchy and forwards to the phase hook', () => {
+    const instance = new MinimalPhase();
+
+    // directorLikeCaller does not extend PhasedSceneTransition — this call
+    // only compiles/works because getRequirementsForPhase() is public.
+    const directorLikeCaller = (phase: PhasedSceneTransition): unknown => phase.getRequirementsForPhase('exit', fakeContext);
+
+    expect(directorLikeCaller(instance)).toEqual({ outgoingFrame: 'none', currentFrame: 'direct' });
+  });
+
+  test("getRequirements() merges the instance's own exit/enter requirements (no promotion when they match)", () => {
+    const instance = new MinimalPhase();
+
+    expect(instance.getRequirements(fakeContext)).toEqual({ outgoingFrame: 'none', currentFrame: 'direct' });
+  });
+});
 
 describe('mergeSceneTransitionRequirements', () => {
   test('identical requirements pass through unchanged', () => {
