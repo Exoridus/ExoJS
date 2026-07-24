@@ -386,15 +386,23 @@ export class SceneInstanceNotFoundError extends Error {
  * {@link validateSceneRegistry}. `byConstructor` backs the constructor-based
  * navigation checks (`change`'s registration/diagnostics lookups); `byKey`
  * backs key-based navigation (`change`/`restore` given a registered string
- * key).
+ * key); `defaultTransitions` backs registry-default transition resolution
+ * (spec §3.10, {@link resolveSceneTransitionSelection}) — only constructors
+ * registered via the `{ scene, transition }` descriptor form with a
+ * `transition` value have an entry; a bare-constructor registration, or a
+ * descriptor with no `transition` field, has none. `Map.get()` returning
+ * `undefined` for "not registered" is indistinguishable from, and equally
+ * correct as, "no default" — {@link SceneTransitionSelection} never
+ * legitimately includes `undefined` itself.
  * @internal
  */
 export interface SceneRegistryIndex {
   readonly byConstructor: ReadonlyMap<AnySceneConstructor, string>;
   readonly byKey: ReadonlyMap<string, AnySceneConstructor>;
+  readonly defaultTransitions: ReadonlyMap<AnySceneConstructor, SceneTransitionSelection>;
 }
 
-const isSceneRegistrationDescriptor = (value: unknown): value is { scene: AnySceneConstructor; transition?: unknown } =>
+const isSceneRegistrationDescriptor = (value: unknown): value is { scene: AnySceneConstructor; transition?: SceneTransitionSelection } =>
   typeof value === 'object' && value !== null && 'scene' in value;
 
 /**
@@ -410,9 +418,10 @@ const isSceneRegistrationDescriptor = (value: unknown): value is { scene: AnySce
 export function validateSceneRegistry(scenes: Record<string, SceneRegistration<AnySceneConstructor>> | undefined, sceneBase: typeof Scene): SceneRegistryIndex {
   const byConstructor = new Map<AnySceneConstructor, string>();
   const byKey = new Map<string, AnySceneConstructor>();
+  const defaultTransitions = new Map<AnySceneConstructor, SceneTransitionSelection>();
 
   if (scenes === undefined) {
-    return { byConstructor, byKey };
+    return { byConstructor, byKey, defaultTransitions };
   }
 
   for (const [key, registration] of Object.entries(scenes)) {
@@ -436,7 +445,11 @@ export function validateSceneRegistry(scenes: Record<string, SceneRegistration<A
 
     byConstructor.set(resolvedCtor, key);
     byKey.set(key, resolvedCtor);
+
+    if (isSceneRegistrationDescriptor(registration) && registration.transition !== undefined) {
+      defaultTransitions.set(resolvedCtor, registration.transition);
+    }
   }
 
-  return { byConstructor, byKey };
+  return { byConstructor, byKey, defaultTransitions };
 }

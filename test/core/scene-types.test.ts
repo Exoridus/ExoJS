@@ -53,4 +53,31 @@ describe('validateSceneRegistry', () => {
   test('rejects a value that is neither a constructor nor a { scene } descriptor', () => {
     expect(() => validateSceneRegistry({ bad: {} as never }, Scene)).toThrow(InvalidSceneRegistrationError);
   });
+
+  describe('defaultTransitions (spec §3.10)', () => {
+    test('a descriptor with a transition populates defaultTransitions for its resolved constructor', () => {
+      const registeredTransition = false as const;
+      const registry = validateSceneRegistry({ game: { scene: OtherScene, transition: registeredTransition } }, Scene);
+
+      expect(registry.defaultTransitions.get(OtherScene)).toBe(registeredTransition);
+    });
+
+    test('a bare-constructor entry has no defaultTransitions entry', () => {
+      const registry = validateSceneRegistry({ title: VoidScene }, Scene);
+
+      expect(registry.defaultTransitions.has(VoidScene)).toBe(false);
+    });
+
+    test('a descriptor with no transition field has no defaultTransitions entry', () => {
+      const registry = validateSceneRegistry({ game: { scene: OtherScene } }, Scene);
+
+      expect(registry.defaultTransitions.has(OtherScene)).toBe(false);
+    });
+
+    test('undefined input returns an empty defaultTransitions map', () => {
+      const registry = validateSceneRegistry(undefined, Scene);
+
+      expect(registry.defaultTransitions.size).toBe(0);
+    });
+  });
 });
