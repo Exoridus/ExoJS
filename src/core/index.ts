@@ -24,6 +24,8 @@ export type { LoadStateValue } from './LoadState';
 export type { LogEntry, LogOptions, LogSink } from './logging';
 export { Logger, logger, LogSeverity } from './logging';
 export { Perf } from './Perf';
+export type { PhasedSceneTransitionOptions, SceneTransitionPhaseContext, SceneTransitionPhaseRequirements } from './PhasedSceneTransition';
+export { PhasedSceneTransition } from './PhasedSceneTransition';
 export { Scene } from './Scene';
 export type { SceneInputAvailability, SceneInputBindingOptions } from './scene/SceneInputs';
 export type { InteractionCapture, InteractionObservation } from './scene/SceneInteraction';
@@ -55,6 +57,8 @@ export type {
   SceneInstanceKind,
   SceneRegistration,
   SceneRegistryShape,
+  SceneTransitionPhases,
+  SceneTransitionSelection,
   UnloadOptions,
 } from './SceneTypes';
 export {

@@ -1,0 +1,133 @@
+{
+  "title": "PhasedSceneTransitionOptions",
+  "description": "Construction options for PhasedSceneTransition and its subclasses.",
+  "symbol": "PhasedSceneTransitionOptions",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Construction options for PhasedSceneTransition and its subclasses."
+      ],
+      "importLine": "import { PhasedSceneTransitionOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "duration",
+          "signature": "duration?: number",
+          "signatureTokens": [
+            {
+              "text": "duration",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Duration of *each* phase (enter and exit run this long independently), in milliseconds. Default 220."
+        },
+        {
+          "name": "easing",
+          "signature": "easing?: EasingFunction",
+          "signatureTokens": [
+            {
+              "text": "easing",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "EasingFunction",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Applied to both phases' progress to produce easedProgress. Default Ease.linear."
+        },
+        {
+          "name": "placement",
+          "signature": "placement?: \"screen\" | \"scene\"",
+          "signatureTokens": [
+            {
+              "text": "placement",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"screen\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"scene\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Which render layer this transition's output composites against (spec §3.6). Default 'screen'."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/PhasedSceneTransition.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/PhasedSceneTransition.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/PhasedSceneTransition.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/PhasedSceneTransition.ts"
+}

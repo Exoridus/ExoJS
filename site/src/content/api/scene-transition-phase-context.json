@@ -1,0 +1,184 @@
+{
+  "title": "SceneTransitionPhaseContext",
+  "description": "Per-frame context handed to PhasedSceneTransition.enter/ PhasedSceneTransition.exit. Spec §3.9.",
+  "symbol": "SceneTransitionPhaseContext",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 6,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 6,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Per-frame context handed to PhasedSceneTransition.enter/ PhasedSceneTransition.exit. Spec §3.9."
+      ],
+      "importLine": "import { SceneTransitionPhaseContext } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "easedProgress",
+          "signature": "easedProgress: number",
+          "signatureTokens": [
+            {
+              "text": "easedProgress",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "progress after this transition's easing function. Always 0 → 1."
+        },
+        {
+          "name": "frame",
+          "signature": "frame: SceneTransitionFrame",
+          "signatureTokens": [
+            {
+              "text": "frame",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneTransitionFrame",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "phase",
+          "signature": "phase: \"enter\" | \"exit\"",
+          "signatureTokens": [
+            {
+              "text": "phase",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"enter\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"exit\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "presence",
+          "signature": "presence: number",
+          "signatureTokens": [
+            {
+              "text": "presence",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Visual presence of the affected scene — enter: 0 → 1 (offscreen → onscreen); exit: 1 → 0 (onscreen → offscreen). Lets both phases share one formula (e.g. lerp(offscreenX, 0, presence)) without either inverting anything itself."
+        },
+        {
+          "name": "progress",
+          "signature": "progress: number",
+          "signatureTokens": [
+            {
+              "text": "progress",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Chronological progress of this phase. Always 0 → 1, regardless of phase."
+        },
+        {
+          "name": "rendering",
+          "signature": "rendering: RenderingContext",
+          "signatureTokens": [
+            {
+              "text": "rendering",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderingContext",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/PhasedSceneTransition.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/PhasedSceneTransition.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/PhasedSceneTransition.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/PhasedSceneTransition.ts"
+}

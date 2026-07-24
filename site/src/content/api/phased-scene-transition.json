@@ -1,0 +1,649 @@
+{
+  "title": "PhasedSceneTransition",
+  "description": "Single-class `enter()`/`exit()` authoring layer over the full SceneTransition contract (spec §3.9) — covers the common case (fade, slide, wipe, a custom flash) with no need to hand-manage timing, easing, or session lifecycle. Subclasses implement PhasedSceneTransition.getPhaseRequirements and override PhasedSceneTransition.enter/PhasedSceneTransition.exit — `createSession()` is implemented once, here, and never needs overriding for this common case.",
+  "symbol": "PhasedSceneTransition",
+  "kind": "class",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 12,
+  "counts": {
+    "constructors": 1,
+    "methods": 8,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Single-class `enter()`/`exit()` authoring layer over the full SceneTransition contract (spec §3.9) — covers the common case (fade, slide, wipe, a custom flash) with no need to hand-manage timing, easing, or session lifecycle. Subclasses implement PhasedSceneTransition.getPhaseRequirements and override PhasedSceneTransition.enter/PhasedSceneTransition.exit — `createSession()` is implemented once, here, and never needs overriding for this common case."
+      ],
+      "importLine": "import { PhasedSceneTransition } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(options: PhasedSceneTransitionOptions): PhasedSceneTransition",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PhasedSceneTransitionOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PhasedSceneTransition",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "options",
+              "type": "PhasedSceneTransitionOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "PhasedSceneTransition",
+          "description": "Public — an abstract class with a protected constructor is still not directly instantiable (that's what abstract already does), but a *protected* constructor is inherited: a concrete subclass that declares no constructor of its own (the common case — e.g. a FlashTransition with only enter()/exit()) would inherit it and become uninstantiable from outside the module. Public keeps every minimal subclass usable with zero boilerplate."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "beginSession",
+          "signature": "beginSession(environment: SceneTransitionEnvironment): SceneTransitionSession",
+          "signatureTokens": [
+            {
+              "text": "beginSession",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "environment",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneTransitionEnvironment",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneTransitionSession",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "environment",
+              "type": "SceneTransitionEnvironment",
+              "optional": false
+            }
+          ],
+          "returnType": "SceneTransitionSession",
+          "description": "Called by the Director — do not call directly. Dispatches to SceneTransition.createSession, which is protected so it does not clutter a beginner's view of a transition subclass while still being callable from Director code that does not share this class's hierarchy."
+        },
+        {
+          "name": "createSession",
+          "signature": "createSession(environment: SceneTransitionEnvironment): SceneTransitionSession",
+          "signatureTokens": [
+            {
+              "text": "createSession",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "environment",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneTransitionEnvironment",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneTransitionSession",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "environment",
+              "type": "SceneTransitionEnvironment",
+              "optional": false
+            }
+          ],
+          "returnType": "SceneTransitionSession",
+          "description": "Construct this navigation's session. Override in a subclass."
+        },
+        {
+          "name": "enter",
+          "signature": "enter(_context: SceneTransitionPhaseContext): void",
+          "signatureTokens": [
+            {
+              "text": "enter",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "_context",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneTransitionPhaseContext",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "_context",
+              "type": "SceneTransitionPhaseContext",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Draw one frame of the enter phase. No-op by default — override for a visible enter effect."
+        },
+        {
+          "name": "exit",
+          "signature": "exit(_context: SceneTransitionPhaseContext): void",
+          "signatureTokens": [
+            {
+              "text": "exit",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "_context",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneTransitionPhaseContext",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "_context",
+              "type": "SceneTransitionPhaseContext",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Draw one frame of the exit phase. No-op by default — override for a visible exit effect."
+        },
+        {
+          "name": "getPhaseRequirements",
+          "signature": "getPhaseRequirements(phase: \"enter\" | \"exit\", context: SceneTransitionContext): SceneTransitionPhaseRequirements",
+          "signatureTokens": [
+            {
+              "text": "getPhaseRequirements",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "phase",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"enter\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"exit\"",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "context",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneTransitionContext",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneTransitionPhaseRequirements",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "phase",
+              "type": "\"enter\" | \"exit\"",
+              "optional": false
+            },
+            {
+              "name": "context",
+              "type": "SceneTransitionContext",
+              "optional": false
+            }
+          ],
+          "returnType": "SceneTransitionPhaseRequirements",
+          "description": "Declare this phase's render-resource requirements. See SceneTransitionPhaseRequirements."
+        },
+        {
+          "name": "getRequirements",
+          "signature": "getRequirements(context: SceneTransitionContext): SceneTransitionRequirements",
+          "signatureTokens": [
+            {
+              "text": "getRequirements",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "context",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneTransitionContext",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneTransitionRequirements",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "context",
+              "type": "SceneTransitionContext",
+              "optional": false
+            }
+          ],
+          "returnType": "SceneTransitionRequirements",
+          "description": "Pure, synchronous. Called once, before a session starts, so the Director can provision render resources up front."
+        },
+        {
+          "name": "getRequirementsForPhase",
+          "signature": "getRequirementsForPhase(phase: \"enter\" | \"exit\", context: SceneTransitionContext): SceneTransitionPhaseRequirements",
+          "signatureTokens": [
+            {
+              "text": "getRequirementsForPhase",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "phase",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"enter\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"exit\"",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "context",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneTransitionContext",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneTransitionPhaseRequirements",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "phase",
+              "type": "\"enter\" | \"exit\"",
+              "optional": false
+            },
+            {
+              "name": "context",
+              "type": "SceneTransitionContext",
+              "optional": false
+            }
+          ],
+          "returnType": "SceneTransitionPhaseRequirements",
+          "description": "Director entry point — mirrors SceneTransition.beginSession/ createSession() (spec §3.1a): the Director (and, for { enter, exit } composition, a sibling PhasedSceneTransition instance's own session driver) calls this directly on a phase instance it doesn't own the hierarchy of, which the protected PhasedSceneTransition.getPhaseRequirements authoring hook cannot support on its own. Authors implement getPhaseRequirements(); nothing else calls it directly."
+        },
+        {
+          "name": "runPhase",
+          "signature": "runPhase(phase: \"enter\" | \"exit\", context: SceneTransitionPhaseContext): void",
+          "signatureTokens": [
+            {
+              "text": "runPhase",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "phase",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"enter\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"exit\"",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "context",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneTransitionPhaseContext",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "phase",
+              "type": "\"enter\" | \"exit\"",
+              "optional": false
+            },
+            {
+              "name": "context",
+              "type": "SceneTransitionPhaseContext",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Session-driver entry point for rendering one frame of phase — mirrors PhasedSceneTransition.getRequirementsForPhase exactly: PhasedSceneTransitionSession (and, for { enter, exit } composition, a *different* PhasedSceneTransition instance's session) is not a subclass of this class and cannot call the protected PhasedSceneTransition.enter/PhasedSceneTransition.exit hooks directly. Authors override enter()/exit(); nothing else calls them directly."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "duration",
+          "signature": "duration: number",
+          "signatureTokens": [
+            {
+              "text": "duration",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "easing",
+          "signature": "easing: EasingFunction",
+          "signatureTokens": [
+            {
+              "text": "easing",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "EasingFunction",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "placement",
+          "signature": "placement: \"screen\" | \"scene\"",
+          "signatureTokens": [
+            {
+              "text": "placement",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"screen\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"scene\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/PhasedSceneTransition.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/PhasedSceneTransition.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/PhasedSceneTransition.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/PhasedSceneTransition.ts"
+}

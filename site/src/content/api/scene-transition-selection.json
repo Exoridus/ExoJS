@@ -1,0 +1,79 @@
+{
+  "title": "SceneTransitionSelection",
+  "description": "The full set of values accepted for a `transition` option — call-site (`change()`/`restore()`/`unload()`) or registry-level default (§3.10): a single SceneTransition (or PhasedSceneTransition, which is one), a `{ enter, exit }` pair to compose, or `false` (the explicit \"no transition, even if a registry default exists\" escape hatch).",
+  "symbol": "SceneTransitionSelection",
+  "kind": "type",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "The full set of values accepted for a `transition` option — call-site (`change()`/`restore()`/`unload()`) or registry-level default (§3.10): a single SceneTransition (or PhasedSceneTransition, which is one), a `{ enter, exit }` pair to compose, or `false` (the explicit \"no transition, even if a registry default exists\" escape hatch)."
+      ],
+      "importLine": "import { SceneTransitionSelection } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "SceneTransitionSelection",
+          "signature": "SceneTransition | SceneTransitionPhases | false",
+          "signatureTokens": [
+            {
+              "text": "SceneTransition",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneTransitionPhases",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "false",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/SceneTypes.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneTypes.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/SceneTypes.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneTypes.ts"
+}

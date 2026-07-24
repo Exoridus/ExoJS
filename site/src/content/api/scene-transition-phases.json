@@ -1,0 +1,143 @@
+{
+  "title": "SceneTransitionPhases",
+  "description": "A `{ enter, exit }` pair of independently-authored PhasedSceneTransition instances (spec §3.9.1/§3.10) — a union of two variants requiring at least one of `{ enter, exit }`, never an interface with both fields optional. An interface form would type-check `transition: {}` as valid, which — since a call-site value fully replaces the registry default (§3.10 rule 1) — would silently suppress a scene's configured default while looking like a no-op. Confirmed, TypeScript `--strict`: the union form correctly rejects `{}` (see `test/type-tests/scene-transition-phases.type-test.ts`).",
+  "symbol": "SceneTransitionPhases",
+  "kind": "type",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A `{ enter, exit }` pair of independently-authored PhasedSceneTransition instances (spec §3.9.1/§3.10) — a union of two variants requiring at least one of `{ enter, exit }`, never an interface with both fields optional. An interface form would type-check `transition: {}` as valid, which — since a call-site value fully replaces the registry default (§3.10 rule 1) — would silently suppress a scene's configured default while looking like a no-op. Confirmed, TypeScript `--strict`: the union form correctly rejects `{}` (see `test/type-tests/scene-transition-phases.type-test.ts`)."
+      ],
+      "importLine": "import { SceneTransitionPhases } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "SceneTransitionPhases",
+          "signature": "{ enter: PhasedSceneTransition; exit?: PhasedSceneTransition } | { enter?: PhasedSceneTransition; exit: PhasedSceneTransition }",
+          "signatureTokens": [
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "enter",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PhasedSceneTransition",
+              "kind": "type"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "exit",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PhasedSceneTransition",
+              "kind": "type"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "enter",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PhasedSceneTransition",
+              "kind": "type"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "exit",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PhasedSceneTransition",
+              "kind": "type"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/SceneTypes.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneTypes.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/SceneTypes.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneTypes.ts"
+}

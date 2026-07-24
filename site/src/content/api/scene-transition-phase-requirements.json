@@ -1,0 +1,116 @@
+{
+  "title": "SceneTransitionPhaseRequirements",
+  "description": "Per-phase render-resource requirements for one phase (`enter` or `exit`) of a PhasedSceneTransition. Same shape as SceneTransitionRequirements — kept as a distinct type because a phase declares its *own* requirements, which the Director then merges with the other phase's via mergeSceneTransitionRequirements to produce the session-wide SceneTransitionRequirements (spec §3.9.1).",
+  "symbol": "SceneTransitionPhaseRequirements",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Per-phase render-resource requirements for one phase (`enter` or `exit`) of a PhasedSceneTransition. Same shape as SceneTransitionRequirements — kept as a distinct type because a phase declares its *own* requirements, which the Director then merges with the other phase's via mergeSceneTransitionRequirements to produce the session-wide SceneTransitionRequirements (spec §3.9.1)."
+      ],
+      "importLine": "import { SceneTransitionPhaseRequirements } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "currentFrame",
+          "signature": "currentFrame: \"none\" | \"texture\" | \"direct\"",
+          "signatureTokens": [
+            {
+              "text": "currentFrame",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"none\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"texture\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"direct\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "outgoingFrame",
+          "signature": "outgoingFrame: \"none\" | \"snapshot\"",
+          "signatureTokens": [
+            {
+              "text": "outgoingFrame",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"none\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"snapshot\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/PhasedSceneTransition.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/PhasedSceneTransition.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/PhasedSceneTransition.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/PhasedSceneTransition.ts"
+}
