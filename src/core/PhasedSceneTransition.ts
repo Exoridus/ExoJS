@@ -186,7 +186,7 @@ export class PhasedSceneTransitionSession implements SceneTransitionSession {
   }
 
   public get placement(): 'scene' | 'screen' {
-    return this._phaseState === 'enter' ? this._enterPhase.placement : this._exitPhase.placement;
+    return this._phaseState === 'enter' || this._phaseState === 'done' ? this._enterPhase.placement : this._exitPhase.placement;
   }
 
   public update(delta: Time): void {
@@ -228,9 +228,12 @@ export class PhasedSceneTransitionSession implements SceneTransitionSession {
   public render(context: RenderingContext, frame: SceneTransitionFrame): void {
     // `'done'` still renders — it maps to `enter`'s own resting frame
     // (progress 1 / presence 1), same as `'holding'` maps to `exit`'s
-    // resting frame: the terminal frame must be renderable at least once
-    // before the Director tears the session down (mirrors 'holding' below,
-    // which also renders the *previous* phase's end-state, not a live one).
+    // resting frame. Defensive: the current Director tears the session down
+    // synchronously inside `_updateTransition()`, before `_renderTransition()`
+    // runs later in the same frame, so a real `'done'`-state render never
+    // actually happens — this branch exists so the session stays internally
+    // consistent (matching the `placement` getter below) if that teardown
+    // timing ever changes.
     const phase: 'enter' | 'exit' = this._phaseState === 'enter' || this._phaseState === 'done' ? 'enter' : 'exit';
     const activePhase = phase === 'enter' ? this._enterPhase : this._exitPhase;
     const progress = activePhase.duration === 0 ? 1 : Math.min(1, this._elapsedMs / activePhase.duration);
