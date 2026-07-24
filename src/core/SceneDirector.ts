@@ -241,12 +241,13 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
 
   /**
    * @internal Clear the active scene (if any) without activating a new one.
-   * Replaces the old `setScene(null)` path — used only by
-   * {@link Application.stop} / {@link Application.destroy}, never part of
-   * the public navigation surface (navigation always targets a registered
-   * constructor).
+   * Used by {@link Application.stop}/{@link Application.destroy} (no
+   * transition, the default), and by {@link SceneDirector.unload}'s
+   * active-scope match (an explicit `transition` may apply there — spec §5).
+   * Never part of the public navigation surface itself (navigation always
+   * targets a registered constructor).
    */
-  public async _clearScene(): Promise<this> {
+  public async _clearScene(transition?: SceneTransition): Promise<this> {
     await this._runWithNavigation(async () => {
       const previousScope = this._activeScope;
 
@@ -258,7 +259,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
       }
 
       this.onChangeScene.dispatchIsolated(error => this._reportLifecycleError(error), null);
-    });
+    }, transition);
 
     return this;
   }
@@ -586,17 +587,21 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
   }
 
   /**
-   * Construct a `SceneScope` for `scene` and run its activation sequence
+   * Construct (unless `scope` is already supplied — used by
+   * {@link SceneDirector.preload}, which needs the `SceneScope` reference to
+   * exist before `prepare()` resolves) and run its activation sequence
    * (attach → `Preparing` → `load()` → `init()`). On failure, runs the
    * definition §16 failed-activation cleanup — engine-managed registrations
    * destroyed, loader claims released, `scene.destroy()` invoked, but
    * `unload()` is never called — and rethrows the original error unchanged.
    */
-  private async _prepareScene<Data>(scene: Scene<Data>, data: Data): Promise<SceneScope<Data>> {
-    const scope = new SceneScope(this._app, scene, (previous, next) =>
+  private async _prepareScene<Data>(
+    scene: Scene<Data>,
+    data: Data,
+    scope = new SceneScope<Data>(this._app, scene, (previous, next) =>
       this.onStateChange.dispatchIsolated(error => this._reportLifecycleError(error), previous, next, scene as Scene),
-    );
-
+    ),
+  ): Promise<SceneScope<Data>> {
     try {
       await scope.prepare(data);
 
@@ -615,9 +620,18 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
     }
   }
 
-  /** Permanently end `scope`'s scene: dispatch {@link SceneDirector.onStopScene}, then run the scope's teardown sequence (definition §17). */
-  private async _disposeScene(scope: SceneScope): Promise<void> {
-    this.onStopScene.dispatchIsolated(error => this._reportLifecycleError(error), scope.scene as Scene);
+  /**
+   * Permanently end `scope`'s scene: dispatch {@link SceneDirector.onStopScene}
+   * (unless `dispatchStopScene: false` — used by {@link SceneDirector.unload}
+   * for a preloaded scope that never reached `Active`; spec §2.1:
+   * "`onStopScene` fires only for a scope activated at least once"), then run
+   * the scope's teardown sequence (definition §17).
+   */
+  private async _disposeScene(scope: SceneScope, options: { dispatchStopScene?: boolean } = {}): Promise<void> {
+    if (options.dispatchStopScene ?? true) {
+      this.onStopScene.dispatchIsolated(error => this._reportLifecycleError(error), scope.scene as Scene);
+    }
+
     await scope.destroy();
   }
 
