@@ -1,5 +1,6 @@
 import type { SceneTransitionPhaseContext, SceneTransitionPhaseRequirements } from '#core/PhasedSceneTransition';
-import type { SceneTransitionContext } from '#core/SceneTransition';
+import type { SceneTransitionContext, SceneTransitionEnvironment } from '#core/SceneTransition';
+import { Time } from '#core/Time';
 import { SlideSceneTransition } from '#core/transitions/SlideSceneTransition';
 import type { Sprite } from '#rendering/sprite/Sprite';
 
@@ -18,6 +19,28 @@ class TestableSlideSceneTransition extends SlideSceneTransition {
 }
 
 const navContext: SceneTransitionContext = { operation: 'change', hasOutgoingScene: true, hasIncomingScene: true };
+
+// Minimal SceneTransitionEnvironment for driving a real session through
+// SlideSceneTransition.beginSession() — mirrors phased-scene-transition.test.ts's
+// own TestEnvironment fixture (a fake that settles commit() synchronously).
+class TestEnvironment implements SceneTransitionEnvironment {
+  public readonly context = navContext;
+  private _committed = false;
+  private _commitRequested = false;
+
+  public get commitRequested(): boolean {
+    return this._commitRequested;
+  }
+
+  public get committed(): boolean {
+    return this._committed;
+  }
+
+  public commit(): void {
+    this._commitRequested = true;
+    this._committed = true;
+  }
+}
 
 // The real SceneTransitionPhaseContext['rendering'] is a RenderingContext.
 // SlideSceneTransition draws a Sprite via rendering.render(sprite, { view }),
@@ -113,6 +136,23 @@ describe('SlideSceneTransition', () => {
       expect(node.x).toBe(0);
       expect(node.y).toBe(-600);
     });
+
+    test('no identity-composite draw through a real session — both phases already declare currentFrame texture themselves, so the promotion branch never fires', () => {
+      const slide = new SlideSceneTransition({ mode: 'push', duration: 100 });
+      const environment = new TestEnvironment();
+      const session = slide.beginSession(environment);
+      const render = vi.fn();
+      const rendering = stubRendering(render);
+      const currentTexture = { current: true } as never;
+
+      session.update(new Time(1));
+      session.render(rendering, { outgoing: null, current: currentTexture, committed: false });
+
+      // Exactly the phase's own slide draw — no extra identity-composite
+      // call ahead of it, since push's exit already declares `texture`
+      // itself (ownRequirements.currentFrame === 'texture').
+      expect(render).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('mode: reveal', () => {
@@ -132,6 +172,32 @@ describe('SlideSceneTransition', () => {
 
       expect(render).not.toHaveBeenCalled();
     });
+
+    test('composites frame.current unchanged during the enter phase — the session-wide requirement was promoted to texture by the exit phase, but enter itself only declared direct', () => {
+      const slide = new SlideSceneTransition({ mode: 'reveal', duration: 100 });
+      const environment = new TestEnvironment();
+      const session = slide.beginSession(environment);
+      const render = vi.fn();
+      const rendering = stubRendering(render);
+      const currentTexture = { current: true } as never;
+
+      // Drive past exit (100ms) — requests commit — then one more update()
+      // to observe `committed` and switch into the enter phase.
+      session.update(new Time(100));
+      session.update(new Time(1));
+
+      session.render(rendering, { outgoing: null, current: currentTexture, committed: true });
+
+      // reveal mode's enter() is an intentional no-op — without the
+      // identity-composite fix, render() was never called here and the
+      // screen showed only clear color for the whole enter phase.
+      expect(render).toHaveBeenCalledTimes(1);
+      const [drawnSprite] = render.mock.calls[0] as [Sprite];
+      expect(drawnSprite.texture).toBe(currentTexture);
+      expect(drawnSprite.x).toBe(0);
+      expect(drawnSprite.y).toBe(0);
+      expect(drawnSprite.tint.a).toBe(1);
+    });
   });
 
   describe('mode: cover', () => {
@@ -150,6 +216,29 @@ describe('SlideSceneTransition', () => {
       slide.callExit(stubContext({ phase: 'exit', presence: 1, rendering }));
 
       expect(render).not.toHaveBeenCalled();
+    });
+
+    test('composites frame.current unchanged during the exit phase — the session-wide requirement was promoted to texture by the enter phase, but exit itself only declared direct', () => {
+      const slide = new SlideSceneTransition({ mode: 'cover', duration: 100 });
+      const environment = new TestEnvironment();
+      const session = slide.beginSession(environment);
+      const render = vi.fn();
+      const rendering = stubRendering(render);
+      const currentTexture = { current: true } as never;
+
+      session.update(new Time(1));
+      session.render(rendering, { outgoing: null, current: currentTexture, committed: false });
+
+      // cover mode's exit() is an intentional no-op (the outgoing scene
+      // stays static) — without the identity-composite fix, render() was
+      // never called here and the screen showed only clear color for the
+      // whole exit phase.
+      expect(render).toHaveBeenCalledTimes(1);
+      const [drawnSprite] = render.mock.calls[0] as [Sprite];
+      expect(drawnSprite.texture).toBe(currentTexture);
+      expect(drawnSprite.x).toBe(0);
+      expect(drawnSprite.y).toBe(0);
+      expect(drawnSprite.tint.a).toBe(1);
     });
 
     test('enter() draws the frozen outgoing snapshot at full opacity behind the sliding incoming texture', () => {

@@ -1,6 +1,7 @@
 import { Ease } from '#animation/Easing';
 import type { EasingFunction } from '#animation/types';
 import type { RenderingContext } from '#rendering/RenderingContext';
+import { Sprite } from '#rendering/sprite/Sprite';
 
 import {
   SceneTransition,
@@ -174,6 +175,8 @@ type PhasedTransitionPhaseState = 'exit' | 'holding' | 'enter' | 'done';
 export class PhasedSceneTransitionSession implements SceneTransitionSession {
   private _phaseState: PhasedTransitionPhaseState = 'exit';
   private _elapsedMs = 0;
+  /** Reusable sprite for the direct→texture identity-composite fallback — session-owned, never shared with the phase definitions. */
+  private readonly _identitySprite = new Sprite(null);
 
   public constructor(
     private readonly _exitPhase: PhasedSceneTransition,
@@ -236,6 +239,28 @@ export class PhasedSceneTransitionSession implements SceneTransitionSession {
     // timing ever changes.
     const phase: 'enter' | 'exit' = this._phaseState === 'enter' || this._phaseState === 'done' ? 'enter' : 'exit';
     const activePhase = phase === 'enter' ? this._enterPhase : this._exitPhase;
+
+    // Direct -> texture identity-composite promotion (spec §3.9.1): when the
+    // SESSION-WIDE requirements were promoted to `currentFrame: 'texture'` by
+    // the OTHER phase, but this phase itself only declared `direct` (or
+    // `none`), the live surface was redirected into `frame.current` for the
+    // whole session — never drawn straight to the screen at any point — so
+    // this phase must draw an unmodified 1:1 copy of it before its own
+    // effect runs, or the screen shows nothing for this phase's entire
+    // duration. Detected by comparing THIS phase's own declared requirement
+    // (not the merged session-wide one) against whether `frame.current` is
+    // actually populated: if this phase didn't ask for `texture` but a
+    // texture showed up anyway, it was promoted by its sibling.
+    const ownRequirements = activePhase.getRequirementsForPhase(phase, this._environment.context);
+
+    if (frame.current !== null && ownRequirements.currentFrame !== 'texture') {
+      this._identitySprite.texture = frame.current;
+      this._identitySprite.x = 0;
+      this._identitySprite.y = 0;
+      this._identitySprite.tint.a = 1;
+      context.render(this._identitySprite, { view: context.screenView });
+    }
+
     const progress = activePhase.duration === 0 ? 1 : Math.min(1, this._elapsedMs / activePhase.duration);
     const easedProgress = activePhase.easing(progress);
     const presence = phase === 'enter' ? easedProgress : 1 - easedProgress;
