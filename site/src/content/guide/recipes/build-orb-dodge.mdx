@@ -160,7 +160,7 @@ if (dist < PLAYER_RADIUS + ORB_RADIUS) {
 }
 ```
 
-Orbs that leave the canvas are also removed. After the loop, if `gameEnded` is true, call `setScene` to switch to the game-over screen. Use a flag instead of breaking early so all remaining orbs are cleaned up in the same loop pass.
+Orbs that leave the canvas are also removed. After the loop, if `gameEnded` is true, call `change` to switch to the game-over screen. Use a flag instead of breaking early so all remaining orbs are cleaned up in the same loop pass.
 
 ## HUD text
 
@@ -184,7 +184,7 @@ this.timeText.text  = `${this.elapsed.toFixed(1)} s`;
 
 ## Game-over scene and restart
 
-`GameOverScene` declares its activation-data shape (`GameOverData`) and receives the final score and time as the second argument to `setScene` — `init(data)` reads `data.score` / `data.time` directly, so there's no separate mutator method or intermediate state to keep in sync:
+`GameOverScene` declares its activation-data shape (`GameOverData`) and receives the final score and time via `change`'s `data` option — `init(data)` reads `data.score` / `data.time` directly, so there's no separate mutator method or intermediate state to keep in sync:
 
 <SourceSnippet
   source="examples/showcase/orb-dodge.ts"
@@ -193,7 +193,7 @@ this.timeText.text  = `${this.elapsed.toFixed(1)} s`;
   title="examples/showcase/orb-dodge.ts — GameOverScene"
 />
 
-When the player restarts, `setScene(PlayScene)` switches back. `SceneDirector` always constructs a fresh `PlayScene` instance and calls its `init()` — the scene starts from scratch, so no manual reset is needed. Input bindings registered in `init` via `this.inputs` are disposed and recreated automatically with each scene activation.
+When the player restarts, `change(PlayScene)` switches back. `SceneDirector` always constructs a fresh `PlayScene` instance and calls its `init()` — the scene starts from scratch, so no manual reset is needed. Input bindings registered in `init` via `this.inputs` are disposed and recreated automatically with each scene activation.
 
 ## How scenes reference each other
 
@@ -208,7 +208,7 @@ const app = new Application({
 app.start(PlayScene);
 ```
 
-`PlayScene` calls `void this.app.scenes.setScene(GameOverScene, { score: this.score, time: this.elapsed })`. `GameOverScene` calls `void this.app.scenes.setScene(PlayScene)`. Each call constructs a brand-new instance of the target scene — there's no shared mutable state between activations, and no forward-reference ordering to worry about, since both classes are declared once and referenced by name.
+`PlayScene` calls `void this.app.scenes.change(GameOverScene, { data: { score: this.score, time: this.elapsed } })`. `GameOverScene` calls `void this.app.scenes.change(PlayScene)`. Each call constructs a brand-new instance of the target scene — there's no shared mutable state between activations, and no forward-reference ordering to worry about, since both classes are declared once and referenced by name.
 
 ## Cleanup in destroy
 
