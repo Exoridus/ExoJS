@@ -1172,4 +1172,69 @@ describe('SceneDirector — preload', () => {
 
     expect(director.currentScene).toBeInstanceOf(GameScene);
   });
+
+  test('change() consumes a matching preload without re-running load()/init()', async () => {
+    const app = createApplicationStub();
+    const load = vi.fn(async () => undefined);
+    const init = vi.fn();
+    const GameScene = makeSceneClass({ load, init });
+    const director = new SceneDirector(app, { game: GameScene });
+
+    await director.preload(GameScene);
+    expect(load).toHaveBeenCalledTimes(1);
+    expect(init).toHaveBeenCalledTimes(1);
+
+    await director.change(GameScene);
+
+    expect(load).toHaveBeenCalledTimes(1); // not re-run
+    expect(init).toHaveBeenCalledTimes(1); // not re-run
+    expect(director.state).toBe(SceneState.Active);
+  });
+
+  test('change() with data matching (Object.is) a preload consumes it; mismatched data ignores it and prepares fresh', async () => {
+    const app = createApplicationStub();
+    const seenData: unknown[] = [];
+    class DataScene extends Scene<{ level: number }> {
+      public override init(data: Readonly<{ level: number }>): void {
+        seenData.push(data);
+      }
+    }
+    const director = new SceneDirector(app, { game: DataScene as unknown as SceneConstructor<void> });
+    const sharedData = { level: 3 };
+
+    await director.preload(DataScene, { data: sharedData });
+    await director.change(DataScene, { data: sharedData }); // same reference — Object.is() match
+
+    expect(seenData).toEqual([{ level: 3 }]); // init() ran exactly once — from the preload, not re-run by change()
+    expect(director.currentScene).toBeInstanceOf(DataScene);
+  });
+
+  test('change() ignores a preload with different (non-Object.is-matching) data and prepares fresh instead', async () => {
+    const app = createApplicationStub();
+    const seenData: unknown[] = [];
+    class DataScene extends Scene<{ level: number }> {
+      public override init(data: Readonly<{ level: number }>): void {
+        seenData.push(data);
+      }
+    }
+    const director = new SceneDirector(app, { game: DataScene as unknown as SceneConstructor<void> });
+
+    await director.preload(DataScene, { data: { level: 1 } });
+    await director.change(DataScene, { data: { level: 2 } }); // different object literal
+
+    expect(seenData).toEqual([{ level: 1 }, { level: 2 }]); // preload's init() AND change()'s own fresh init() both ran
+    expect(director.currentScene).toBeInstanceOf(DataScene);
+  });
+
+  test('change() with no matching preload behaves exactly as before (fresh prepare)', async () => {
+    const app = createApplicationStub();
+    const init = vi.fn();
+    const GameScene = makeSceneClass({ init });
+    const director = new SceneDirector(app, { game: GameScene });
+
+    await director.change(GameScene);
+
+    expect(init).toHaveBeenCalledTimes(1);
+    expect(director.state).toBe(SceneState.Active);
+  });
 });

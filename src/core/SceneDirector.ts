@@ -211,6 +211,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
   public async change<C extends AnySceneConstructor>(target: C, ...args: ChangeSceneArgs<InferSceneData<C>>): Promise<this>;
   public async change(target: AnySceneConstructor | string, ...args: readonly unknown[]): Promise<this> {
     const options = ((args[0] as ChangeSceneCallOptions<unknown> | undefined) ?? {}) as ChangeSceneCallOptions<unknown>;
+    const data = (options as { data?: unknown }).data;
 
     await this._runWithNavigation(async () => {
       // Resolved inside the navigation lock, deliberately — this preserves
@@ -227,8 +228,26 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
         throw new RetainedSceneConflictError(resolvedTarget.name);
       }
 
-      const scene = new resolvedTarget();
-      const newScope = await this._prepareScene(scene, (options as { data?: unknown }).data);
+      // Synchronous, before-first-await claim of a matching `_preloaded`
+      // entry (Object.is() on the activation data) — mirrors restore()'s
+      // eager claim-before-await pattern for `_retained`. A claimed-but-
+      // uncommitted entry that fails to reach the commit boundary below
+      // would, per spec §3.5.1, go back into `_preloaded` as `ready` rather
+      // than being destroyed — but the only way to reach that case is
+      // §3.7's frame-loop abort scenario, which does not exist yet (Slice
+      // 7, built on Slice 5's transition sessions); change()'s current body
+      // has no pre-commit failure point past this claim for that
+      // restoration to guard, so there is nothing to wire up here yet.
+      const preloadEntry = this._preloaded.get(resolvedTarget);
+      const claimedEntry = preloadEntry !== undefined && preloadEntry.status !== 'cancelling' && Object.is(preloadEntry.data, data) ? preloadEntry : null;
+
+      if (claimedEntry !== null) {
+        this._preloaded.delete(resolvedTarget);
+        claimedEntry.status = 'claimed';
+      }
+
+      const scene = claimedEntry !== null ? (claimedEntry.scope.scene as Scene) : new resolvedTarget();
+      const newScope = claimedEntry !== null ? await this._awaitClaimedPreload(claimedEntry) : await this._prepareScene(scene, data);
 
       // Atomic commit boundary (definition §3.5, steps 5-7) — nothing past
       // this point can fail or roll back.
@@ -685,6 +704,23 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
 
       throw error;
     }
+  }
+
+  /**
+   * Await a claimed `_preloaded` entry's own `ready` — already resolved if
+   * the preload had reached `Ready`, still pending if it was mid-`load()`/
+   * `init()` when claimed (spec §3.5 step 4: "an already-preloaded target
+   * reaches the commit boundary almost immediately since there's nothing
+   * left to await"). If `ready` rejects, the preload's own preparation
+   * failure already ran the ordinary failed-preparation cleanup
+   * (`_runPreloadPrepare`'s catch, see above) — nothing further to restore
+   * here, this call simply propagates the same rejection `change()` would
+   * have produced for a fresh `prepare()` failure.
+   */
+  private async _awaitClaimedPreload(entry: PreloadEntry): Promise<SceneScope> {
+    await entry.ready;
+
+    return entry.scope;
   }
 
   /**
