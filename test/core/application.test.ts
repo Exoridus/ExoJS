@@ -235,6 +235,7 @@ describe('Application', () => {
     };
 
     rawApp['_status'] = ApplicationStatus.Running;
+    rawApp['_frameLoopActive'] = true;
     rawApp['pauseOnHidden'] = false;
     rawApp['_documentVisible'] = true;
     rawApp['systems'] = systems;
@@ -530,6 +531,11 @@ describe('Application', () => {
     const sceneTeardownError = new Error('scene teardown failed');
     const sceneDirector = {
       _clearScene: vi.fn().mockRejectedValue(sceneTeardownError),
+      // _stopFrameLoop() (Slice 7 Group B, spec §3.7) always aborts any
+      // in-flight navigation before scene teardown runs — false here means
+      // "nothing was in flight," matching this test's own setup, so stop()
+      // falls through to the _clearScene() path under test.
+      _abortInFlightNavigation: vi.fn().mockReturnValue(false),
     };
     const activeClock = { stop: vi.fn() };
     const frameClock = { stop: vi.fn() };
@@ -537,6 +543,7 @@ describe('Application', () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
     rawApp['_status'] = ApplicationStatus.Running;
+    rawApp['_frameLoopActive'] = true;
     rawApp['_frameRequest'] = 99;
     rawApp['scenes'] = sceneDirector;
     rawApp['_activeClock'] = activeClock;

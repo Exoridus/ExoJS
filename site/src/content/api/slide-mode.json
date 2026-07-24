@@ -1,0 +1,79 @@
+{
+  "title": "SlideMode",
+  "description": "The three visual shapes a slide can take — see SlideSceneTransition for details.",
+  "symbol": "SlideMode",
+  "kind": "type",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "The three visual shapes a slide can take — see SlideSceneTransition for details."
+      ],
+      "importLine": "import { SlideMode } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "SlideMode",
+          "signature": "\"push\" | \"cover\" | \"reveal\"",
+          "signatureTokens": [
+            {
+              "text": "\"push\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"cover\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"reveal\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/transitions/SlideSceneTransition.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/transitions/SlideSceneTransition.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/transitions/SlideSceneTransition.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/transitions/SlideSceneTransition.ts"
+}

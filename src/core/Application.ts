@@ -33,7 +33,7 @@ import { computeLetterboxLayout } from './letterbox';
 import { hello, logger } from './logging';
 import { Perf } from './Perf';
 import { SceneDirector } from './SceneDirector';
-import type { AnySceneConstructor, ChangeSceneArgs, InferSceneData, SceneRegistryShape } from './SceneTypes';
+import { type AnySceneConstructor, type ChangeSceneArgs, type InferSceneData, SceneNavigationAbortedError, type SceneRegistryShape } from './SceneTypes';
 import { defaultSerializationRegistry, SerializationRegistry } from './serialization/SerializationRegistry';
 import { Signal } from './Signal';
 import { SystemRegistry } from './SystemRegistry';
@@ -344,6 +344,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   private _frameAlpha = 0;
 
   private _status: ApplicationStatus = ApplicationStatus.Stopped;
+  private _frameLoopActive = false;
   private _destroyed = false;
   private _pixelRatio: number = defaultCanvasSettings.pixelRatio;
   private _designWidth: number = defaultCanvasSettings.width;
@@ -698,8 +699,8 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     if (this._status === ApplicationStatus.Stopped) {
       this._status = ApplicationStatus.Loading;
 
-      // Kick off capability detection in parallel with renderer init —
-      // both are mostly-async startup work, no point serializing them.
+      // Kick off capability detection in parallel with renderer init — both
+      // are mostly-async startup work, no point serializing them.
       const capabilitiesPromise = Capabilities.ready;
 
       try {
@@ -709,16 +710,34 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
           hello({ backend: this._backendType });
         }
 
+        // The frame loop must be live BEFORE the initial navigation runs —
+        // a frame-driven SceneTransitionSession needs update()/render()
+        // calls to progress, and update()'s gate no longer waits for
+        // `_status === Running` (definition spec §3.7). Started as early as
+        // possible (ahead of the capabilities await, not just the scene
+        // nav) so nothing downstream can observe the loop live and
+        // `_status` already `Running` in the same synchronous tick — a real
+        // RAF callback never fires synchronously anyway, so capabilities
+        // (documented as available only once `start()` resolves) is always
+        // settled well before any frame body actually runs.
+        this._startFrameLoop();
+
+        // Guarantee at least one full microtask turn between the loop going
+        // live and `_status` flipping to `Running` — otherwise, when
+        // `capabilitiesPromise` is already settled (e.g. a later `start()`
+        // call on a second Application reusing the memoized
+        // `Capabilities.ready`), the two awaits below could resolve in the
+        // same synchronous continuation as `_startFrameLoop()`, collapsing
+        // the "loop active, not yet Running" window race-callers (a
+        // frame-driven transition, tests) rely on being able to observe.
+        await Promise.resolve();
+
         this._capabilities = await capabilitiesPromise;
 
         if (target !== undefined) {
           await this.scenes.change(target, ...(args as ChangeSceneArgs<InferSceneData<typeof target>>));
         }
 
-        this._frameRequest = requestAnimationFrame(this._updateHandler);
-        this._frameClock.restart();
-        this._fixed.reset();
-        this._activeClock.start();
         this._status = ApplicationStatus.Running;
       } catch (error) {
         this._status = ApplicationStatus.Stopped;
@@ -727,6 +746,56 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     }
 
     return this;
+  }
+
+  /**
+   * Flip the internal "loop is live" flag, schedule the first frame, and
+   * reset every clock the frame body depends on — all in one place so every
+   * call site that can start the loop does so identically. `_status` is left
+   * untouched (still `Loading` at the point {@link Application.start} calls
+   * this) — {@link Application.update}'s gate reads `_frameLoopActive`, a
+   * strict superset of `_status === Running` (definition spec §3.7).
+   */
+  private _startFrameLoop(): void {
+    this._frameLoopActive = true;
+    this._frameRequest = requestAnimationFrame(this._updateHandler);
+    this._frameClock.restart();
+    this._fixed.reset();
+    this._activeClock.start();
+  }
+
+  /**
+   * Halt the per-frame loop: clear {@link Application._frameLoopActive},
+   * cancel the pending RAF request, and stop the active/frame clocks. Called
+   * from every place the loop can stop (fatal frame error, {@link
+   * Application.stop}, {@link Application.destroy} during the `Loading`
+   * window) so `_frameLoopActive` is the single source of truth everywhere,
+   * not only where the loop starts (definition spec §3.7). Idempotent — a
+   * second call while the loop is already stopped is a no-op (returns
+   * `false`). Always aborts whatever scene navigation is in flight via
+   * {@link SceneDirector._abortInFlightNavigation} — a transition session
+   * cannot progress without frame callbacks, so it must be settled here
+   * rather than left to hang, regardless of caller. Deliberately does NOT
+   * call `scenes._clearScene()` itself — a fatal frame error must NOT unload
+   * the active scene (see {@link Application._handleFrameError}'s doc
+   * comment) — that decision, and this method's return value, are the
+   * caller's responsibility.
+   *
+   * @returns `true` if an in-flight navigation was aborted (nothing else
+   *   needs to unload the scene), `false` otherwise (including when the loop
+   *   was already stopped).
+   */
+  private _stopFrameLoop(): boolean {
+    if (!this._frameLoopActive) {
+      return false;
+    }
+
+    this._frameLoopActive = false;
+    cancelAnimationFrame(this._frameRequest);
+    this._activeClock.stop();
+    this._frameClock.stop();
+
+    return this.scenes._abortInFlightNavigation(new SceneNavigationAbortedError());
   }
 
   /**
@@ -760,7 +829,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * elapsed delta is recorded separately in `backend.stats.rawFrameDeltaMs`.
    */
   public update(): this {
-    if (this._status === ApplicationStatus.Running) {
+    if (this._frameLoopActive) {
       if (this.pauseOnHidden && !this._documentVisible) {
         this._frameClock.restart();
         this._fixed.reset();
@@ -844,7 +913,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
         // RAF rescheduling always happens unless the guard halted the loop —
         // this is what keeps the canvas alive through a throwing frame.
-        if (this._status === ApplicationStatus.Running) {
+        if (this._frameLoopActive) {
           this._frameRequest = requestAnimationFrame(this._updateHandler);
           this._frameClock.restart();
           this._frameCount++;
@@ -871,7 +940,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     this._reportError(normalized, fatal);
 
     if (fatal) {
-      cancelAnimationFrame(this._frameRequest);
+      this._stopFrameLoop();
       this._status = ApplicationStatus.Stopped;
       logger.error(`Frame loop halted after ${maxConsecutiveFrameErrors} consecutive frame errors.`, { source: 'core', error: normalized });
     }
@@ -924,20 +993,55 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   /**
    * Halt the per-frame loop, unload the active scene, and stop the active
    * + frame clocks. Leaves backend, input, audio, etc. intact — call
-   * {@link Application.destroy} to release everything.
+   * {@link Application.destroy} to release everything. Acts whenever the
+   * frame loop is actually live (`_frameLoopActive`), including mid-`start()`
+   * — not only while `_status` is `Running` (definition spec §3.7): a
+   * transition-driven navigation (the initial one, or any later `change()`)
+   * may still be in flight, in which case {@link SceneDirector._abortInFlightNavigation}
+   * (invoked by {@link Application._stopFrameLoop} itself) rejects it with a
+   * dedicated error rather than leaving it to hang.
+   *
+   * Whether the active scene actually gets unloaded is decided by
+   * `scenes.currentScene` AFTER the abort above, not by whether an abort
+   * happened: a mid-transition abort on the very first navigation leaves
+   * `currentScene` `null` (nothing ever committed — correctly skipped), but
+   * a mid-transition abort on a LATER `change()` call still finds whatever
+   * scene was active before that navigation started (it never committed
+   * away either) — that scene must still be unloaded, matching this
+   * method's "unload the active scene" contract regardless of why the loop
+   * stopped. When an abort actually happened, the unload goes through
+   * {@link SceneDirector._forceClearActiveSceneAfterAbort} rather than the
+   * ordinary {@link SceneDirector._clearScene} — the aborted navigation's own
+   * lock (`_navigationInFlight`) does not clear until its rejection finishes
+   * propagating a few microtask turns later, and `_clearScene()` would
+   * spuriously reject against that still-stale lock (see the dedicated
+   * method's own doc comment).
    */
   public stop(): this {
+    if (!this._frameLoopActive) {
+      return this;
+    }
+
     if (this._status === ApplicationStatus.Running) {
       this._status = ApplicationStatus.Halting;
-      cancelAnimationFrame(this._frameRequest);
-      void this.scenes._clearScene().catch((error: unknown) => {
+    }
+
+    const navigationAborted = this._stopFrameLoop();
+
+    if (this.scenes.currentScene !== null) {
+      const onClearSceneFailure = (error: unknown): void => {
         logger.error('Application.stop() failed to unload the active scene.', { source: 'Application', ...(error instanceof Error && { error }) });
         this.onError?.dispatch(error instanceof Error ? error : new Error(String(error)));
-      });
-      this._activeClock.stop();
-      this._frameClock.stop();
-      this._status = ApplicationStatus.Stopped;
+      };
+
+      if (navigationAborted) {
+        void this.scenes._forceClearActiveSceneAfterAbort().catch(onClearSceneFailure);
+      } else {
+        void this.scenes._clearScene().catch(onClearSceneFailure);
+      }
     }
+
+    this._status = ApplicationStatus.Stopped;
 
     return this;
   }

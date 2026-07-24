@@ -69,6 +69,7 @@ export {
   RetainedSceneConflictError,
   RetainedSceneNotFoundError,
   SceneInstanceNotFoundError,
+  SceneNavigationAbortedError,
   UnregisteredSceneError,
 } from './SceneTypes';
 export type { DeserializeContext, NodeSerializer, SerializeContext } from './serialization/NodeSerializer';
@@ -84,6 +85,9 @@ export type { SystemRegistrationOptions } from './SystemRegistry';
 export { SystemRegistry } from './SystemRegistry';
 export { Time } from './Time';
 export { Timer } from './Timer';
+export { CrossFadeSceneTransition, type CrossFadeSceneTransitionOptions } from './transitions/CrossFadeSceneTransition';
+export { FadeSceneTransition } from './transitions/FadeSceneTransition';
+export { type SlideDirection, type SlideMode, SlideSceneTransition, type SlideSceneTransitionOptions } from './transitions/SlideSceneTransition';
 export type {
   Cloneable,
   Destroyable,

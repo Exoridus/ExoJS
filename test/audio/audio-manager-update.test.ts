@@ -112,6 +112,7 @@ describe('AudioManager.update()', () => {
     const prepareStub = (name: string): { _prepareFrame: () => void } => ({ _prepareFrame: () => callOrder.push(name) });
 
     rawApp['_status'] = ApplicationStatus.Running;
+    rawApp['_frameLoopActive'] = true;
     rawApp['pauseOnHidden'] = false;
     rawApp['_documentVisible'] = true;
     rawApp['systems'] = new SystemRegistry();

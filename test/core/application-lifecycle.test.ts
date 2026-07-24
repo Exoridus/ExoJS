@@ -107,7 +107,15 @@ interface LifecycleHarness {
     onDeviceLost: { add: MockInstance };
     onDeviceRestored: { add: MockInstance };
   };
-  readonly sceneDirector: { update: MockInstance; change: MockInstance; _clearScene: MockInstance; destroy: MockInstance };
+  readonly sceneDirector: {
+    update: MockInstance;
+    change: MockInstance;
+    currentScene: unknown;
+    _clearScene: MockInstance;
+    _forceClearActiveSceneAfterAbort: MockInstance;
+    _abortInFlightNavigation: MockInstance;
+    destroy: MockInstance;
+  };
 }
 
 const loadHarness = async (options: LifecycleHarnessOptions = {}): Promise<LifecycleHarness> => {
@@ -153,7 +161,15 @@ const loadHarness = async (options: LifecycleHarnessOptions = {}): Promise<Lifec
   const sceneDirector = {
     update: vi.fn(),
     change: vi.fn().mockResolvedValue(undefined),
+    // Non-null stand-in — a real SceneDirector's currentScene is whatever
+    // scene is active; most of this harness's tests don't drive an actual
+    // scene through `change()`, so a truthy sentinel keeps stop()'s
+    // "unload whatever is active" branch exercised by default, matching
+    // this suite's pre-existing expectations (see the wiring tests below).
+    currentScene: {} as unknown,
     _clearScene: vi.fn().mockResolvedValue(undefined),
+    _forceClearActiveSceneAfterAbort: vi.fn().mockResolvedValue(undefined),
+    _abortInFlightNavigation: vi.fn().mockReturnValue(false),
     destroy: vi.fn(),
   };
   const inputManager = {
@@ -1063,7 +1079,9 @@ describe('Application lifecycle / getters / sizing', () => {
       const teardownError = new Error('scene teardown failed');
       sceneDirector._clearScene.mockRejectedValueOnce(teardownError);
 
-      (app as unknown as Record<string, unknown>)['_status'] = ApplicationStatus.Running;
+      const rawApp = app as unknown as Record<string, unknown>;
+      rawApp['_status'] = ApplicationStatus.Running;
+      rawApp['_frameLoopActive'] = true;
       const errorHandler = vi.fn();
       app.onError.add(errorHandler);
 
@@ -1081,7 +1099,9 @@ describe('Application lifecycle / getters / sizing', () => {
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
       sceneDirector._clearScene.mockRejectedValueOnce('a plain string rejection');
 
-      (app as unknown as Record<string, unknown>)['_status'] = ApplicationStatus.Running;
+      const rawApp = app as unknown as Record<string, unknown>;
+      rawApp['_status'] = ApplicationStatus.Running;
+      rawApp['_frameLoopActive'] = true;
       const errorHandler = vi.fn();
       app.onError.add(errorHandler);
 
@@ -1094,6 +1114,98 @@ describe('Application lifecycle / getters / sizing', () => {
       expect(receivedError).toBeInstanceOf(Error);
       expect(receivedError.message).toBe('a plain string rejection');
       consoleErrorSpy.mockRestore();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // _stopFrameLoop() -> scenes._abortInFlightNavigation() wiring (Slice 7 Group B)
+  // -------------------------------------------------------------------------
+
+  describe('_stopFrameLoop() -> scenes._abortInFlightNavigation() wiring (Slice 7 Group B)', () => {
+    test('stop() calls scenes._abortInFlightNavigation() before its own _clearScene() call', async () => {
+      const { Application, ApplicationStatus, sceneDirector } = await loadHarness();
+      const app = new Application({ backend: { type: 'webgl2' } });
+      const rafSpy = vi.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 1);
+
+      try {
+        await app.start();
+        (app as unknown as Record<string, unknown>)['_status'] = ApplicationStatus.Running;
+
+        app.stop();
+
+        expect(sceneDirector._abortInFlightNavigation).toHaveBeenCalledTimes(1);
+        expect(sceneDirector._clearScene).toHaveBeenCalledTimes(1);
+      } finally {
+        rafSpy.mockRestore();
+      }
+    });
+
+    test('stop() routes through _forceClearActiveSceneAfterAbort() instead of _clearScene() when abort handled an in-flight navigation', async () => {
+      // Finding 1 regression (final-review fix): _clearScene() would spuriously
+      // reject with ConcurrentSceneNavigationError here — the aborted
+      // navigation's own _navigationInFlight lock does not clear until its
+      // rejection finishes propagating a few microtask turns later. stop()
+      // must still unload whatever scene is active (`currentScene !== null`
+      // decides that, not whether an abort happened), just through the
+      // lock-bypassing method instead.
+      const { Application, ApplicationStatus, sceneDirector } = await loadHarness();
+      sceneDirector._abortInFlightNavigation.mockReturnValue(true);
+
+      const app = new Application({ backend: { type: 'webgl2' } });
+      const rafSpy = vi.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 1);
+
+      try {
+        await app.start();
+        (app as unknown as Record<string, unknown>)['_status'] = ApplicationStatus.Running;
+
+        app.stop();
+
+        expect(sceneDirector._abortInFlightNavigation).toHaveBeenCalledTimes(1);
+        expect(sceneDirector._forceClearActiveSceneAfterAbort).toHaveBeenCalledTimes(1);
+        expect(sceneDirector._clearScene).not.toHaveBeenCalled();
+      } finally {
+        rafSpy.mockRestore();
+      }
+    });
+
+    test('stop() skips unloading entirely when abort left no active scene (the startup-navigation case)', async () => {
+      const { Application, ApplicationStatus, sceneDirector } = await loadHarness();
+      sceneDirector._abortInFlightNavigation.mockReturnValue(true);
+      sceneDirector.currentScene = null;
+
+      const app = new Application({ backend: { type: 'webgl2' } });
+      const rafSpy = vi.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 1);
+
+      try {
+        await app.start();
+        (app as unknown as Record<string, unknown>)['_status'] = ApplicationStatus.Running;
+
+        app.stop();
+
+        expect(sceneDirector._abortInFlightNavigation).toHaveBeenCalledTimes(1);
+        expect(sceneDirector._forceClearActiveSceneAfterAbort).not.toHaveBeenCalled();
+        expect(sceneDirector._clearScene).not.toHaveBeenCalled();
+      } finally {
+        rafSpy.mockRestore();
+      }
+    });
+
+    test('_abortInFlightNavigation() is called with a SceneNavigationAbortedError', async () => {
+      const { Application, ApplicationStatus, sceneDirector } = await loadHarness();
+      const app = new Application({ backend: { type: 'webgl2' } });
+      const rafSpy = vi.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 1);
+
+      try {
+        await app.start();
+        (app as unknown as Record<string, unknown>)['_status'] = ApplicationStatus.Running;
+
+        app.stop();
+
+        const [reason] = sceneDirector._abortInFlightNavigation.mock.calls[0] as [Error];
+        expect(reason.name).toBe('SceneNavigationAbortedError');
+      } finally {
+        rafSpy.mockRestore();
+      }
     });
   });
 
