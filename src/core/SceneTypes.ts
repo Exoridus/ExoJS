@@ -1,4 +1,5 @@
 import type { Application } from './Application';
+import type { PhasedSceneTransition } from './PhasedSceneTransition';
 import type { Scene } from './Scene';
 import type { SceneTransition } from './SceneTransition';
 
@@ -30,6 +31,29 @@ export type AnySceneConstructor = SceneConstructor | SceneConstructor<any>;
 export type InferSceneData<C> = C extends SceneConstructor<infer Data> ? Data : never;
 
 /**
+ * A `{ enter, exit }` pair of independently-authored {@link PhasedSceneTransition}
+ * instances (spec §3.9.1/§3.10) — a union of two variants requiring at
+ * least one of `{ enter, exit }`, never an interface with both fields
+ * optional. An interface form would type-check `transition: {}` as valid,
+ * which — since a call-site value fully replaces the registry default
+ * (§3.10 rule 1) — would silently suppress a scene's configured default
+ * while looking like a no-op. Confirmed, TypeScript `--strict`: the union
+ * form correctly rejects `{}` (see `test/type-tests/scene-transition-phases.type-test.ts`).
+ */
+export type SceneTransitionPhases =
+  | { readonly enter: PhasedSceneTransition; readonly exit?: PhasedSceneTransition }
+  | { readonly enter?: PhasedSceneTransition; readonly exit: PhasedSceneTransition };
+
+/**
+ * The full set of values accepted for a `transition` option — call-site
+ * (`change()`/`restore()`/`unload()`) or registry-level default (§3.10):
+ * a single {@link SceneTransition} (or {@link PhasedSceneTransition}, which
+ * is one), a `{ enter, exit }` pair to compose, or `false` (the explicit
+ * "no transition, even if a registry default exists" escape hatch).
+ */
+export type SceneTransitionSelection = SceneTransition | SceneTransitionPhases | false;
+
+/**
  * A single `ApplicationOptions.scenes` registry entry: either a bare
  * {@link Scene} subclass constructor, or a descriptor pairing one with a
  * target-bound default transition. Both forms register identically —
@@ -44,8 +68,7 @@ export type SceneRegistration<C extends AnySceneConstructor> =
        * constructor without its own call-site `transition` option (spec
        * §3.10).
        */
-      // TODO(slice 6): SceneTransitionSelection
-      readonly transition?: unknown;
+      readonly transition?: SceneTransitionSelection;
     };
 
 /**
@@ -168,9 +191,12 @@ export interface UnloadOptions {
   /**
    * Only materializes for an active-scope match — a retained or preloaded
    * match has nothing visible on screen to transition, and always runs the
-   * direct (non-transitioned) teardown path regardless of this option.
+   * direct (non-transitioned) teardown path regardless of this option. A
+   * {@link SceneTransitionSelection} — unlike `change()`/`restore()`,
+   * `unload()` never consults a target's registry-level default transition
+   * (spec §3.10); this option is the only source of a transition here.
    */
-  transition?: SceneTransition;
+  transition?: SceneTransitionSelection;
   /**
    * Disambiguates which candidate to discard when more than one exists for
    * the same constructor (active, retained, and/or preloaded can all
@@ -212,18 +238,20 @@ export function resolvePreloadArgs(args: readonly unknown[]): { data: unknown } 
 /**
  * @internal The actual (wider) parameter type {@link SceneDirector.change}
  * accepts: {@link ChangeSceneOptions} plus a `transition` field carrying a
- * real class-based {@link SceneTransition} (spec §3.2), which drives the
- * switch through a {@link SceneTransitionSession}. `transition` is not yet
- * part of {@link ChangeSceneOptions}'s public documented shape — a later
- * slice folds it in directly, once the registry-default
- * `SceneTransitionSelection` exists (spec §6.3). Deliberately not re-exported
- * from the package root: a new caller should not discover `transition` as
- * supported input via this slice's public types.
+ * {@link SceneTransitionSelection} (spec §3.2/§3.10) — a real class-based
+ * {@link SceneTransition} (or {@link PhasedSceneTransition}), a
+ * `{ enter, exit }` pair, or `false` — resolved against the target's
+ * registry-level default via {@link resolveSceneTransitionSelection} and
+ * used to drive the switch through a {@link SceneTransitionSession}.
+ * `transition` is not yet part of {@link ChangeSceneOptions}'s public
+ * documented shape — a later slice folds it in directly. Deliberately not
+ * re-exported from the package root: a new caller should not discover
+ * `transition` as supported input via this slice's public types.
  */
-export type ChangeSceneCallOptions<Data> = ChangeSceneOptions<Data> & { transition?: SceneTransition };
+export type ChangeSceneCallOptions<Data> = ChangeSceneOptions<Data> & { transition?: SceneTransitionSelection };
 
 /** @internal Bridge counterpart of {@link ChangeSceneCallOptions} for {@link SceneDirector.restore}. See its doc comment for the full rationale. */
-export type RestoreSceneCallOptions = RestoreSceneOptions & { transition?: SceneTransition };
+export type RestoreSceneCallOptions = RestoreSceneOptions & { transition?: SceneTransitionSelection };
 
 /**
  * Thrown (dev builds only) when `ApplicationOptions.scenes` registers the
@@ -363,15 +391,23 @@ export class SceneInstanceNotFoundError extends Error {
  * {@link validateSceneRegistry}. `byConstructor` backs the constructor-based
  * navigation checks (`change`'s registration/diagnostics lookups); `byKey`
  * backs key-based navigation (`change`/`restore` given a registered string
- * key).
+ * key); `defaultTransitions` backs registry-default transition resolution
+ * (spec §3.10, {@link resolveSceneTransitionSelection}) — only constructors
+ * registered via the `{ scene, transition }` descriptor form with a
+ * `transition` value have an entry; a bare-constructor registration, or a
+ * descriptor with no `transition` field, has none. `Map.get()` returning
+ * `undefined` for "not registered" is indistinguishable from, and equally
+ * correct as, "no default" — {@link SceneTransitionSelection} never
+ * legitimately includes `undefined` itself.
  * @internal
  */
 export interface SceneRegistryIndex {
   readonly byConstructor: ReadonlyMap<AnySceneConstructor, string>;
   readonly byKey: ReadonlyMap<string, AnySceneConstructor>;
+  readonly defaultTransitions: ReadonlyMap<AnySceneConstructor, SceneTransitionSelection>;
 }
 
-const isSceneRegistrationDescriptor = (value: unknown): value is { scene: AnySceneConstructor; transition?: unknown } =>
+const isSceneRegistrationDescriptor = (value: unknown): value is { scene: AnySceneConstructor; transition?: SceneTransitionSelection } =>
   typeof value === 'object' && value !== null && 'scene' in value;
 
 /**
@@ -387,9 +423,10 @@ const isSceneRegistrationDescriptor = (value: unknown): value is { scene: AnySce
 export function validateSceneRegistry(scenes: Record<string, SceneRegistration<AnySceneConstructor>> | undefined, sceneBase: typeof Scene): SceneRegistryIndex {
   const byConstructor = new Map<AnySceneConstructor, string>();
   const byKey = new Map<string, AnySceneConstructor>();
+  const defaultTransitions = new Map<AnySceneConstructor, SceneTransitionSelection>();
 
   if (scenes === undefined) {
-    return { byConstructor, byKey };
+    return { byConstructor, byKey, defaultTransitions };
   }
 
   for (const [key, registration] of Object.entries(scenes)) {
@@ -413,7 +450,11 @@ export function validateSceneRegistry(scenes: Record<string, SceneRegistration<A
 
     byConstructor.set(resolvedCtor, key);
     byKey.set(key, resolvedCtor);
+
+    if (isSceneRegistrationDescriptor(registration) && registration.transition !== undefined) {
+      defaultTransitions.set(resolvedCtor, registration.transition);
+    }
   }
 
-  return { byConstructor, byKey };
+  return { byConstructor, byKey, defaultTransitions };
 }

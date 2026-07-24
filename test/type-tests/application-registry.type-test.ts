@@ -11,11 +11,11 @@ class NotAScene {}
 // Bare-constructor registry, inferred.
 new Application({ scenes: { title: TitleScene } });
 
-// Descriptor form, including the still-untyped `transition` placeholder.
+// Descriptor form, including a registered default `transition` (spec §3.10).
 new Application({
   scenes: {
     title: TitleScene,
-    game: { scene: GameScene, transition: 'placeholder-until-slice-6' },
+    game: { scene: GameScene, transition: false },
   },
 });
 

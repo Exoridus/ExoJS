@@ -145,9 +145,10 @@ export interface ApplicationOptions<Registry extends SceneRegistryShape<Registry
    * duplicate-registration errors) and for key-based navigation. Each value
    * is either a bare {@link Scene} subclass constructor, or a
    * `{ scene, transition? }` descriptor pairing one with a target-bound
-   * default transition — see {@link SceneRegistration} (`transition`'s real
-   * type ships with the transition runtime; it is an inert placeholder
-   * until then). Required for any {@link Application.start} /
+   * default transition, consulted by {@link SceneDirector.change}/
+   * {@link SceneDirector.restore} whenever navigation targets this
+   * constructor without its own call-site `transition` option (spec §3.10)
+   * — see {@link SceneRegistration}. Required for any {@link Application.start} /
    * {@link SceneDirector.change} call that targets a constructor —
    * unregistered targets reject in development builds. Validated once at
    * construction: every value must resolve to a {@link Scene} subclass

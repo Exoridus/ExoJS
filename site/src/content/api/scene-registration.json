@@ -30,7 +30,7 @@
       "members": [
         {
           "name": "SceneRegistration",
-          "signature": "C | { scene: C; transition?: unknown }",
+          "signature": "C | { scene: C; transition?: SceneTransitionSelection }",
           "signatureTokens": [
             {
               "text": "C",
@@ -73,8 +73,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "unknown",
-              "kind": "keyword"
+              "text": "SceneTransitionSelection",
+              "kind": "type"
             },
             {
               "text": " }",

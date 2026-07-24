@@ -15,7 +15,7 @@ declare const app: Application;
 // Bare-constructor and descriptor-form registrations both type-check, alone and mixed.
 new SceneDirector(app, { title: VoidScene });
 new SceneDirector(app, { title: VoidScene, game: { scene: GameScene } });
-new SceneDirector(app, { title: VoidScene, game: { scene: GameScene, transition: 'placeholder' } });
+new SceneDirector(app, { title: VoidScene, game: { scene: GameScene, transition: false } });
 
 // No registry at all — Registry defaults to {}.
 new SceneDirector(app);

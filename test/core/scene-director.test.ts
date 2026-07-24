@@ -4,6 +4,7 @@ import { TweenState } from '#animation/types';
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { logger } from '#core/logging';
+import { PhasedSceneTransition } from '#core/PhasedSceneTransition';
 import { Scene } from '#core/Scene';
 import { SceneDirector } from '#core/SceneDirector';
 import { SceneState } from '#core/SceneState';
@@ -444,7 +445,7 @@ describe('SceneDirector', () => {
   describe('registry — descriptor form (spec §6.1)', () => {
     test('accepts a descriptor-form registration ({ scene, transition }) exactly like a bare constructor', async () => {
       const TestScene = makeSceneClass();
-      const manager = new SceneDirector(createApplicationStub(), { test: { scene: TestScene, transition: 'placeholder' } });
+      const manager = new SceneDirector(createApplicationStub(), { test: { scene: TestScene, transition: false } });
 
       await expect(manager.change(TestScene)).resolves.toBe(manager);
     });
@@ -2155,6 +2156,107 @@ describe('SceneDirector — composability (§3.8)', () => {
 
     session.done = true;
     tick(manager, app);
+    await navigation;
+  });
+});
+
+class RecordingPhaseForDirectorTest extends PhasedSceneTransition {
+  public static beginSessionCalls = 0;
+
+  protected getPhaseRequirements(): { outgoingFrame: 'none' | 'snapshot'; currentFrame: 'none' | 'direct' | 'texture' } {
+    return { outgoingFrame: 'none', currentFrame: 'direct' };
+  }
+
+  public override beginSession(...args: Parameters<PhasedSceneTransition['beginSession']>): ReturnType<PhasedSceneTransition['beginSession']> {
+    RecordingPhaseForDirectorTest.beginSessionCalls++;
+
+    return super.beginSession(...args);
+  }
+}
+
+// A zero-duration RecordingPhaseForDirectorTest session completes over
+// exactly this tick() -> settle() -> tick() sequence: the first tick's
+// session.update() finishes the (duration 0) exit phase and requests
+// commit, kicking off the async commitSwitch; settle() lets that
+// microtask-driven commit resolve and environment._markCommitted() run;
+// the second tick's session.update() then observes `committed`, falls
+// through into the (also duration 0) enter phase, and reaches `done` in
+// that same call.
+const driveZeroDurationTransition = async (manager: SceneDirector, app: ReturnType<typeof createApplicationStub>): Promise<void> => {
+  tick(manager, app);
+  await settle();
+  tick(manager, app);
+};
+
+describe('SceneDirector — registry-default transition resolution (spec §3.10)', () => {
+  test("change() uses the target's registered default transition when no call-site transition is given", async () => {
+    const registeredDefault = new RecordingPhaseForDirectorTest({ duration: 0 });
+    const app = createApplicationStub();
+    const GameScene = makeSceneClass();
+    const manager = new SceneDirector(app, { game: { scene: GameScene, transition: registeredDefault } });
+
+    RecordingPhaseForDirectorTest.beginSessionCalls = 0;
+    const navigation = manager.change(GameScene);
+
+    // beginSession() runs synchronously inside _runTransitionedAction, before
+    // change()'s own first await suspends — observable immediately.
+    expect(RecordingPhaseForDirectorTest.beginSessionCalls).toBeGreaterThan(0);
+
+    await driveZeroDurationTransition(manager, app);
+    await navigation;
+  });
+
+  test('an explicit call-site transition: false suppresses the registered default entirely', async () => {
+    const registeredDefault = new RecordingPhaseForDirectorTest({ duration: 0 });
+    const app = createApplicationStub();
+    const GameScene = makeSceneClass();
+    const manager = new SceneDirector(app, { game: { scene: GameScene, transition: registeredDefault } });
+
+    RecordingPhaseForDirectorTest.beginSessionCalls = 0;
+    await manager.change(GameScene, { transition: false });
+
+    expect(RecordingPhaseForDirectorTest.beginSessionCalls).toBe(0);
+  });
+
+  test('unload() never consults the registered default transition', async () => {
+    const registeredDefault = new RecordingPhaseForDirectorTest({ duration: 0 });
+    const app = createApplicationStub();
+    const GameScene = makeSceneClass();
+    const manager = new SceneDirector(app, { game: { scene: GameScene, transition: registeredDefault } });
+
+    const navigation = manager.change(GameScene);
+
+    await driveZeroDurationTransition(manager, app);
+    await navigation;
+
+    RecordingPhaseForDirectorTest.beginSessionCalls = 0;
+
+    await manager.unload(GameScene);
+
+    expect(RecordingPhaseForDirectorTest.beginSessionCalls).toBe(0);
+  });
+
+  test("restore() uses the target's registered default transition when no call-site transition is given", async () => {
+    const registeredDefault = new RecordingPhaseForDirectorTest({ duration: 0 });
+    const app = createApplicationStub();
+    const GameScene = makeSceneClass();
+    const OtherScene = makeSceneClass();
+    const manager = new SceneDirector(app, { game: { scene: GameScene, transition: registeredDefault }, other: OtherScene });
+
+    const firstChange = manager.change(GameScene);
+
+    await driveZeroDurationTransition(manager, app);
+    await firstChange;
+
+    // Suspend GameScene (retained) by switching to OtherScene — restore() below reactivates it.
+    await manager.change(OtherScene, { transition: false, suspendCurrent: true });
+
+    RecordingPhaseForDirectorTest.beginSessionCalls = 0;
+    const navigation = manager.restore(GameScene);
+
+    expect(RecordingPhaseForDirectorTest.beginSessionCalls).toBeGreaterThan(0);
+
+    await driveZeroDurationTransition(manager, app);
     await navigation;
   });
 });

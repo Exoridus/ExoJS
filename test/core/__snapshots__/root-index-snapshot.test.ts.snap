@@ -116,6 +116,7 @@ exports[`root index export surface snapshot > sorted runtime export names match 
   "Panel",
   "PassContext",
   "Perf",
+  "PhasedSceneTransition",
   "PixelSnapMode",
   "PlayStationGamepadMapping",
   "Pointer",
