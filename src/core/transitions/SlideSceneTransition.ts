@@ -7,9 +7,12 @@ import {
 import type { SceneTransitionContext } from '#core/SceneTransition';
 import { Sprite } from '#rendering/sprite/Sprite';
 
+/** The edge the outgoing content exits toward — see {@link SlideSceneTransitionOptions.direction}. */
 export type SlideDirection = 'left' | 'right' | 'up' | 'down';
+/** The three visual shapes a slide can take — see {@link SlideSceneTransition} for details. */
 export type SlideMode = 'push' | 'cover' | 'reveal';
 
+/** Options for {@link SlideSceneTransition}. */
 export interface SlideSceneTransitionOptions extends PhasedSceneTransitionOptions {
   /** The edge the outgoing content exits toward. Default `'right'`. */
   readonly direction?: SlideDirection;
