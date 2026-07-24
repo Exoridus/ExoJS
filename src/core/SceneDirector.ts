@@ -44,7 +44,7 @@ export {
   SceneInstanceNotFoundError,
 } from './SceneTypes';
 
-type PreloadStatus = 'loading' | 'ready' | 'claimed' | 'cancelling' | 'failed';
+type PreloadStatus = 'loading' | 'ready' | 'claimed' | 'cancelling';
 
 /** Internal `_preloaded` entry — same "small internal-only interface colocated with the class that uses it" convention as {@link ActiveFadeTransition}. */
 interface PreloadEntry {
