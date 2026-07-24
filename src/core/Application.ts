@@ -344,6 +344,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   private _frameAlpha = 0;
 
   private _status: ApplicationStatus = ApplicationStatus.Stopped;
+  private _frameLoopActive = false;
   private _destroyed = false;
   private _pixelRatio: number = defaultCanvasSettings.pixelRatio;
   private _designWidth: number = defaultCanvasSettings.width;
@@ -698,8 +699,8 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     if (this._status === ApplicationStatus.Stopped) {
       this._status = ApplicationStatus.Loading;
 
-      // Kick off capability detection in parallel with renderer init —
-      // both are mostly-async startup work, no point serializing them.
+      // Kick off capability detection in parallel with renderer init — both
+      // are mostly-async startup work, no point serializing them.
       const capabilitiesPromise = Capabilities.ready;
 
       try {
@@ -709,16 +710,34 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
           hello({ backend: this._backendType });
         }
 
+        // The frame loop must be live BEFORE the initial navigation runs —
+        // a frame-driven SceneTransitionSession needs update()/render()
+        // calls to progress, and update()'s gate no longer waits for
+        // `_status === Running` (definition spec §3.7). Started as early as
+        // possible (ahead of the capabilities await, not just the scene
+        // nav) so nothing downstream can observe the loop live and
+        // `_status` already `Running` in the same synchronous tick — a real
+        // RAF callback never fires synchronously anyway, so capabilities
+        // (documented as available only once `start()` resolves) is always
+        // settled well before any frame body actually runs.
+        this._startFrameLoop();
+
+        // Guarantee at least one full microtask turn between the loop going
+        // live and `_status` flipping to `Running` — otherwise, when
+        // `capabilitiesPromise` is already settled (e.g. a later `start()`
+        // call on a second Application reusing the memoized
+        // `Capabilities.ready`), the two awaits below could resolve in the
+        // same synchronous continuation as `_startFrameLoop()`, collapsing
+        // the "loop active, not yet Running" window race-callers (a
+        // frame-driven transition, tests) rely on being able to observe.
+        await Promise.resolve();
+
         this._capabilities = await capabilitiesPromise;
 
         if (target !== undefined) {
           await this.scenes.change(target, ...(args as ChangeSceneArgs<InferSceneData<typeof target>>));
         }
 
-        this._frameRequest = requestAnimationFrame(this._updateHandler);
-        this._frameClock.restart();
-        this._fixed.reset();
-        this._activeClock.start();
         this._status = ApplicationStatus.Running;
       } catch (error) {
         this._status = ApplicationStatus.Stopped;
@@ -727,6 +746,22 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     }
 
     return this;
+  }
+
+  /**
+   * Flip the internal "loop is live" flag, schedule the first frame, and
+   * reset every clock the frame body depends on — all in one place so every
+   * call site that can start the loop does so identically. `_status` is left
+   * untouched (still `Loading` at the point {@link Application.start} calls
+   * this) — {@link Application.update}'s gate reads `_frameLoopActive`, a
+   * strict superset of `_status === Running` (definition spec §3.7).
+   */
+  private _startFrameLoop(): void {
+    this._frameLoopActive = true;
+    this._frameRequest = requestAnimationFrame(this._updateHandler);
+    this._frameClock.restart();
+    this._fixed.reset();
+    this._activeClock.start();
   }
 
   /**
@@ -760,7 +795,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * elapsed delta is recorded separately in `backend.stats.rawFrameDeltaMs`.
    */
   public update(): this {
-    if (this._status === ApplicationStatus.Running) {
+    if (this._frameLoopActive) {
       if (this.pauseOnHidden && !this._documentVisible) {
         this._frameClock.restart();
         this._fixed.reset();
@@ -844,7 +879,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
         // RAF rescheduling always happens unless the guard halted the loop —
         // this is what keeps the canvas alive through a throwing frame.
-        if (this._status === ApplicationStatus.Running) {
+        if (this._frameLoopActive) {
           this._frameRequest = requestAnimationFrame(this._updateHandler);
           this._frameClock.restart();
           this._frameCount++;
