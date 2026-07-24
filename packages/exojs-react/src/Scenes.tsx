@@ -58,13 +58,13 @@ export interface ScenesProps {
 /**
  * Declarative scene switch over the one-active-scene model. Renders a set of
  * {@link Scene} declarations and activates the one whose `name` equals `active`
- * via `app.start()` (first activation) or `app.scenes.setScene()` (subsequent
+ * via `app.start()` (first activation) or `app.scenes.change()` (subsequent
  * switches, with the optional `transition`) — the declaration's `component`
  * constructor must be registered in `ApplicationOptions.scenes`. The active
  * scene's React children (HUD overlay) render alongside, and can read the
  * instance via {@link useActiveScene}.
  *
- * A failure in `app.start()`/`app.scenes.setScene()` (e.g. a scene's `onLoad`
+ * A failure in `app.start()`/`app.scenes.change()` (e.g. a scene's `onLoad`
  * rejects) is caught and routed to {@link Application.onError} rather than
  * left as an unhandled promise rejection — subscribe via `app.onError.add(...)`
  * or the {@link import('./ExoCanvas').ExoCanvas} `onError` prop to observe it.
@@ -121,14 +121,14 @@ export function Scenes({ active, transition, children }: ScenesProps): ReactElem
           // transitions only apply to subsequent switches.
           await app.start(SceneClass);
         } else {
-          await app.scenes.setScene(SceneClass, transition !== undefined ? { transition } : {});
+          await app.scenes.change(SceneClass, transition !== undefined ? { transition } : {});
         }
         if (!cancelled) {
           setInstance(app.scenes.currentScene);
         }
       } catch (error) {
         // Route to Application.onError instead of leaving an unhandled
-        // rejection — app.start()/setScene() reject rather than dispatching
+        // rejection — app.start()/change() reject rather than dispatching
         // onError themselves.
         app.onError.dispatch(error instanceof Error ? error : new Error(String(error)));
       }

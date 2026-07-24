@@ -12,11 +12,11 @@ import { useExoApp } from './useExoApp';
  *
  * On first call (engine not yet started) this hook calls `app.start(SceneClass)`,
  * which initializes the render backend and begins the per-frame loop. On
- * subsequent dep-change remounts it calls `app.scenes.setScene(SceneClass)` to
+ * subsequent dep-change remounts it calls `app.scenes.change(SceneClass)` to
  * switch scenes without restarting the engine. Each activation constructs a
  * fresh instance (definition §11.4) — this hook never reuses one across calls.
  *
- * A failure in `app.start()`/`app.scenes.setScene()` (e.g. a scene's `onLoad`
+ * A failure in `app.start()`/`app.scenes.change()` (e.g. a scene's `onLoad`
  * rejects) is caught and routed to {@link Application.onError} rather than
  * left as an unhandled promise rejection — subscribe via
  * `app.onError.add(...)` or the {@link import('./ExoCanvas').ExoCanvas}
@@ -46,7 +46,7 @@ export function useScene<T extends Scene>(SceneClass: new () => T, deps: Depende
     // This hook's contract has always been zero-arg activation only (no data
     // parameter) — `T extends Scene` (Data defaults to void), but that generic
     // `T` can't be distributed through the navigation call's conditional types
-    // (InferSceneData/SetSceneArgs) inside this function body, so it's pinned
+    // (InferSceneData/ChangeSceneArgs) inside this function body, so it's pinned
     // to its concrete void-data instantiation here.
     const target = SceneClass as SceneConstructor;
 
@@ -57,7 +57,7 @@ export function useScene<T extends Scene>(SceneClass: new () => T, deps: Depende
           await app.start(target);
         } else {
           // Engine already running — switch scenes without restarting.
-          await app.scenes.setScene(target);
+          await app.scenes.change(target);
         }
 
         if (!cancelled) {
@@ -65,7 +65,7 @@ export function useScene<T extends Scene>(SceneClass: new () => T, deps: Depende
         }
       } catch (error) {
         // Route to Application.onError instead of leaving an unhandled
-        // rejection — app.start()/setScene() reject rather than dispatching
+        // rejection — app.start()/change() reject rather than dispatching
         // onError themselves.
         app.onError.dispatch(error instanceof Error ? error : new Error(String(error)));
       }
