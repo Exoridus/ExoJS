@@ -195,12 +195,17 @@ export class PhasedSceneTransitionSession implements SceneTransitionSession {
     }
 
     if (this._phaseState === 'holding') {
-      if (this._environment.committed) {
-        this._phaseState = 'enter';
-        this._elapsedMs = 0;
+      if (!this._environment.committed) {
+        return;
       }
 
-      return;
+      // Falls through to process the freshly-entered `enter` phase's advance
+      // with this same delta, rather than returning and wasting an entire
+      // extra frame at 0 progress — the "holding" wait consumes zero of the
+      // enter phase's own duration, but the frame that finally observes
+      // `committed` should not be a second no-op frame on top of that.
+      this._phaseState = 'enter';
+      this._elapsedMs = 0;
     }
 
     const activePhase = this._phaseState === 'exit' ? this._exitPhase : this._enterPhase;
@@ -221,11 +226,12 @@ export class PhasedSceneTransitionSession implements SceneTransitionSession {
   }
 
   public render(context: RenderingContext, frame: SceneTransitionFrame): void {
-    if (this._phaseState === 'done') {
-      return;
-    }
-
-    const phase: 'enter' | 'exit' = this._phaseState === 'enter' ? 'enter' : 'exit';
+    // `'done'` still renders — it maps to `enter`'s own resting frame
+    // (progress 1 / presence 1), same as `'holding'` maps to `exit`'s
+    // resting frame: the terminal frame must be renderable at least once
+    // before the Director tears the session down (mirrors 'holding' below,
+    // which also renders the *previous* phase's end-state, not a live one).
+    const phase: 'enter' | 'exit' = this._phaseState === 'enter' || this._phaseState === 'done' ? 'enter' : 'exit';
     const activePhase = phase === 'enter' ? this._enterPhase : this._exitPhase;
     const progress = activePhase.duration === 0 ? 1 : Math.min(1, this._elapsedMs / activePhase.duration);
     const easedProgress = activePhase.easing(progress);

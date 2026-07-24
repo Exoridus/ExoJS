@@ -1,6 +1,13 @@
 import { Ease } from '#animation/Easing';
-import { mergeSceneTransitionRequirements, PhasedSceneTransition, type PhasedSceneTransitionOptions, type SceneTransitionPhaseRequirements } from '#core/PhasedSceneTransition';
-import type { SceneTransitionContext } from '#core/SceneTransition';
+import {
+  mergeSceneTransitionRequirements,
+  PhasedSceneTransition,
+  type PhasedSceneTransitionOptions,
+  type SceneTransitionPhaseContext,
+  type SceneTransitionPhaseRequirements,
+} from '#core/PhasedSceneTransition';
+import type { SceneTransitionContext, SceneTransitionEnvironment, SceneTransitionFrame } from '#core/SceneTransition';
+import { Time } from '#core/Time';
 
 const fakeContext: SceneTransitionContext = { operation: 'change', hasOutgoingScene: true, hasIncomingScene: true };
 
@@ -55,6 +62,127 @@ describe('PhasedSceneTransition', () => {
     const instance = new MinimalPhase();
 
     expect(instance.getRequirements(fakeContext)).toEqual({ outgoingFrame: 'none', currentFrame: 'direct' });
+  });
+});
+
+class TestEnvironment implements SceneTransitionEnvironment {
+  public readonly context = fakeContext;
+  public commitCalls = 0;
+  private _committed = false;
+  private _commitRequested = false;
+
+  public get commitRequested(): boolean {
+    return this._commitRequested;
+  }
+
+  public get committed(): boolean {
+    return this._committed;
+  }
+
+  public commit(): void {
+    this._commitRequested = true;
+    this.commitCalls++;
+    this._committed = true; // this fake settles synchronously; the session must still wait one extra update() tick — see below
+  }
+}
+
+const fakeFrame: SceneTransitionFrame = { outgoing: null, current: null, committed: false };
+const fakeRenderingContext = {} as never; // opaque to PhasedSceneTransitionSession/RecordingPhase — never dereferenced in these tests
+
+interface RecordedCall {
+  readonly phase: 'enter' | 'exit';
+  readonly progress: number;
+  readonly easedProgress: number;
+  readonly presence: number;
+}
+
+class RecordingPhase extends PhasedSceneTransition {
+  public readonly calls: RecordedCall[] = [];
+
+  protected getPhaseRequirements(): SceneTransitionPhaseRequirements {
+    return { outgoingFrame: 'none', currentFrame: 'direct' };
+  }
+
+  protected override enter(context: SceneTransitionPhaseContext): void {
+    this.calls.push({ phase: 'enter', progress: context.progress, easedProgress: context.easedProgress, presence: context.presence });
+  }
+
+  protected override exit(context: SceneTransitionPhaseContext): void {
+    this.calls.push({ phase: 'exit', progress: context.progress, easedProgress: context.easedProgress, presence: context.presence });
+  }
+}
+
+describe('PhasedSceneTransition — single-instance session driving', () => {
+  test('runPhase() is callable from outside the class hierarchy and forwards to enter()/exit()', () => {
+    const instance = new RecordingPhase({ duration: 10 });
+    const context: SceneTransitionPhaseContext = {
+      phase: 'exit',
+      progress: 1,
+      easedProgress: 1,
+      presence: 0,
+      frame: fakeFrame,
+      rendering: fakeRenderingContext,
+    };
+
+    // sessionLikeCaller does not extend PhasedSceneTransition.
+    const sessionLikeCaller = (phase: PhasedSceneTransition): void => phase.runPhase('exit', context);
+    sessionLikeCaller(instance);
+
+    expect(instance.calls).toEqual([{ phase: 'exit', progress: 1, easedProgress: 1, presence: 0 }]);
+  });
+
+  test('drives exit (0→1) → requests commit() exactly once → holds → drives enter (0→1) → done, with correct presence', () => {
+    const phase = new RecordingPhase({ duration: 100 });
+    const environment = new TestEnvironment();
+    const session = phase.beginSession(environment);
+
+    expect(session.done).toBe(false);
+
+    session.update(new Time(50));
+    session.render(fakeRenderingContext, fakeFrame);
+    expect(environment.commitCalls).toBe(0);
+    expect(phase.calls.at(-1)).toMatchObject({ phase: 'exit', progress: 0.5, presence: 0.5 });
+
+    session.update(new Time(60)); // elapsed clamps to 100 — exit phase finishes, commit() requested
+    expect(environment.commitCalls).toBe(1);
+    session.render(fakeRenderingContext, fakeFrame); // still holding at the exit end-state
+    expect(phase.calls.at(-1)).toMatchObject({ phase: 'exit', progress: 1, presence: 0 });
+    expect(session.done).toBe(false);
+
+    // environment.committed flipped true synchronously inside this fake's commit() call, but the
+    // session only observes it on the *next* update() — matching spec §3.5.2 (the switch is never
+    // processed reentrantly from inside the callback that requested it).
+    session.update(new Time(0));
+    session.render(fakeRenderingContext, fakeFrame);
+    expect(phase.calls.at(-1)).toMatchObject({ phase: 'enter', progress: 0, presence: 0 });
+
+    session.update(new Time(100));
+    expect(session.done).toBe(true);
+    session.render(fakeRenderingContext, fakeFrame);
+    expect(phase.calls.at(-1)).toMatchObject({ phase: 'enter', progress: 1, presence: 1 });
+
+    expect(environment.commitCalls).toBe(1); // never called a second time
+  });
+
+  test("session.placement reflects the instance's own placement throughout (single-instance case)", () => {
+    const phase = new RecordingPhase({ duration: 10, placement: 'scene' });
+    const session = phase.beginSession(new TestEnvironment());
+
+    expect(session.placement).toBe('scene');
+    session.update(new Time(10));
+    expect(session.placement).toBe('scene');
+  });
+
+  test('a zero-duration phase completes its half immediately on the first update() past commit', () => {
+    const phase = new RecordingPhase({ duration: 0 });
+    const environment = new TestEnvironment();
+    const session = phase.beginSession(environment);
+
+    session.update(new Time(0)); // exit duration 0 — finishes immediately, requests commit
+    expect(environment.commitCalls).toBe(1);
+
+    session.update(new Time(0)); // observes committed, switches to enter, which also finishes immediately
+    expect(session.done).toBe(true);
   });
 });
 
