@@ -1,8 +1,10 @@
 import { Ease } from '#animation/Easing';
 import {
+  composePhasedSceneTransition,
   mergeSceneTransitionRequirements,
   PhasedSceneTransition,
   type PhasedSceneTransitionOptions,
+  resolvePhasedSelection,
   type SceneTransitionPhaseContext,
   type SceneTransitionPhaseRequirements,
 } from '#core/PhasedSceneTransition';
@@ -183,6 +185,80 @@ describe('PhasedSceneTransition — single-instance session driving', () => {
 
     session.update(new Time(0)); // observes committed, switches to enter, which also finishes immediately
     expect(session.done).toBe(true);
+  });
+});
+
+class DirectPhase extends RecordingPhase {
+  protected override getPhaseRequirements(): SceneTransitionPhaseRequirements {
+    return { outgoingFrame: 'none', currentFrame: 'direct' };
+  }
+}
+
+class TexturePhase extends RecordingPhase {
+  protected override getPhaseRequirements(): SceneTransitionPhaseRequirements {
+    return { outgoingFrame: 'snapshot', currentFrame: 'texture' };
+  }
+}
+
+describe('composePhasedSceneTransition', () => {
+  test("merges the two instances' own requirements via getRequirementsForPhase (§3.9.1)", () => {
+    const exitPhase = new DirectPhase({ duration: 10 });
+    const enterPhase = new TexturePhase({ duration: 10 });
+    const composed = composePhasedSceneTransition(exitPhase, enterPhase);
+
+    expect(composed.getRequirements(fakeContext)).toEqual({ outgoingFrame: 'snapshot', currentFrame: 'texture' });
+  });
+
+  test('drives exit from the exit instance and enter from the enter instance — never crossed', () => {
+    const exitPhase = new RecordingPhase({ duration: 10 });
+    const enterPhase = new RecordingPhase({ duration: 10 });
+    const environment = new TestEnvironment();
+    const composed = composePhasedSceneTransition(exitPhase, enterPhase);
+    const session = composed.beginSession(environment);
+
+    session.update(new Time(10));
+    session.render(fakeRenderingContext, fakeFrame);
+    session.update(new Time(0)); // observes committed
+    session.render(fakeRenderingContext, fakeFrame);
+    session.update(new Time(10));
+    session.render(fakeRenderingContext, fakeFrame);
+
+    expect(session.done).toBe(true);
+    expect(exitPhase.calls.every(call => call.phase === 'exit')).toBe(true);
+    expect(exitPhase.calls.length).toBeGreaterThan(0);
+    expect(enterPhase.calls.every(call => call.phase === 'enter')).toBe(true);
+    expect(enterPhase.calls.length).toBeGreaterThan(0);
+  });
+
+  test("session.placement switches from the exit instance's to the enter instance's at the commit boundary", () => {
+    const exitPhase = new RecordingPhase({ duration: 10, placement: 'screen' });
+    const enterPhase = new RecordingPhase({ duration: 10, placement: 'scene' });
+    const composed = composePhasedSceneTransition(exitPhase, enterPhase);
+    const session = composed.beginSession(new TestEnvironment());
+
+    expect(session.placement).toBe('screen');
+    session.update(new Time(10)); // exit finishes, commit requested — still holding, still exit's placement
+    expect(session.placement).toBe('screen');
+    session.update(new Time(0)); // switches to enter
+    expect(session.placement).toBe('scene');
+  });
+});
+
+describe('resolvePhasedSelection', () => {
+  test('falls back to a no-op phase for whichever side is omitted, without forcing texture/snapshot', () => {
+    const exitPhase = new TexturePhase({ duration: 10 });
+    const resolved = resolvePhasedSelection(exitPhase, undefined);
+
+    // TexturePhase alone requests snapshot/texture; the no-op fallback requests
+    // none/none on both axes, so it never wins the merge — the composed result
+    // is exactly TexturePhase's own requirements.
+    expect(resolved.getRequirements(fakeContext)).toEqual({ outgoingFrame: 'snapshot', currentFrame: 'texture' });
+  });
+
+  test('a fully-omitted pair resolves to a fully no-op transition', () => {
+    const resolved = resolvePhasedSelection(undefined, undefined);
+
+    expect(resolved.getRequirements(fakeContext)).toEqual({ outgoingFrame: 'none', currentFrame: 'none' });
   });
 });
 

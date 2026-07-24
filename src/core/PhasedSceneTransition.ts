@@ -244,3 +244,63 @@ export class PhasedSceneTransitionSession implements SceneTransitionSession {
     // No resources of its own — pooled textures/input gate are Director-owned (spec §3.4/§3.7b).
   }
 }
+
+/**
+ * Compose two independently-authored {@link PhasedSceneTransition}
+ * instances into one {@link SceneTransition}: `exit`'s `exit()` phase runs
+ * first, then `enter`'s `enter()` phase, sharing one session and one
+ * atomic commit (spec §3.9.2 contrasts this with Excalibur's independently-
+ * animated `in`/`out` entities — this is *not* that). Session-wide
+ * requirements are resolved by the Director-facing `getRequirementsForPhase()`
+ * wrapper on each instance, then merged (spec §3.9.1) — never via the
+ * `protected` `getPhaseRequirements()` hook directly.
+ */
+export function composePhasedSceneTransition(exit: PhasedSceneTransition, enter: PhasedSceneTransition): SceneTransition {
+  return new ComposedPhasedSceneTransition(exit, enter);
+}
+
+class ComposedPhasedSceneTransition extends SceneTransition {
+  public constructor(
+    private readonly _exitPhase: PhasedSceneTransition,
+    private readonly _enterPhase: PhasedSceneTransition,
+  ) {
+    super();
+  }
+
+  public getRequirements(context: SceneTransitionContext): SceneTransitionRequirements {
+    return mergeSceneTransitionRequirements(
+      this._exitPhase.getRequirementsForPhase('exit', context),
+      this._enterPhase.getRequirementsForPhase('enter', context),
+    );
+  }
+
+  protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
+    return new PhasedSceneTransitionSession(this._exitPhase, this._enterPhase, environment);
+  }
+}
+
+/**
+ * Concrete, fully-inert {@link PhasedSceneTransition} — requirements
+ * `{ outgoingFrame: 'none', currentFrame: 'none' }` (the weakest possible
+ * on both axes, so it never wins {@link mergeSceneTransitionRequirements}),
+ * `enter()`/`exit()` left as the inherited no-ops. Fills whichever side of
+ * a `{ enter, exit }` selection (spec §3.10) is omitted — the union type
+ * requires at least one of `{ enter, exit }`, never both, so the other
+ * side needs a real (if inert) instance to compose against.
+ */
+class NoOpPhasedSceneTransition extends PhasedSceneTransition {
+  protected getPhaseRequirements(): SceneTransitionPhaseRequirements {
+    return { outgoingFrame: 'none', currentFrame: 'none' };
+  }
+}
+
+const noOpPhasedSceneTransition = new NoOpPhasedSceneTransition({ duration: 0 });
+
+/**
+ * Resolve an optional `{ enter, exit }` pair (either side may be omitted —
+ * see {@link NoOpPhasedSceneTransition}) into one composed
+ * {@link SceneTransition}, ready to hand to {@link SceneTransition.beginSession}.
+ */
+export function resolvePhasedSelection(exit: PhasedSceneTransition | undefined, enter: PhasedSceneTransition | undefined): SceneTransition {
+  return composePhasedSceneTransition(exit ?? noOpPhasedSceneTransition, enter ?? noOpPhasedSceneTransition);
+}
