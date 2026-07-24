@@ -21,13 +21,12 @@ import {
   AmbiguousSceneInstanceError,
   type AnySceneConstructor,
   type ChangeSceneArgs,
-  type ChangeSceneCallOptions,
+  type ChangeSceneOptions,
   ConcurrentSceneNavigationError,
   type InferSceneData,
   type PreloadArgs,
   type RegistryKeyOf,
   resolvePreloadArgs,
-  type RestoreSceneCallOptions,
   type RestoreSceneOptions,
   RetainedSceneConflictError,
   RetainedSceneNotFoundError,
@@ -239,14 +238,12 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * teardown to fully settle (skipped when `suspendCurrent` is set, since
    * there is nothing to tear down).
    *
-   * An optional `transition` (a {@link SceneTransition} instance) drives the
-   * switch through a {@link SceneTransitionSession}: the atomic commit
+   * An optional `transition` (see {@link ChangeSceneOptions.transition}) drives
+   * the switch through a {@link SceneTransitionSession}: the atomic commit
    * boundary is deferred until the session requests it via
    * `environment.commit()`, and the returned promise resolves only once the
-   * session finishes. With no `transition`, the switch runs the direct fast
-   * path. `transition` is intentionally not yet part of
-   * {@link ChangeSceneOptions}'s documented public shape (a registry-default
-   * `SceneTransitionSelection` follows in a later slice).
+   * session finishes. With no `transition` — and no registry-level default
+   * for the target (spec §3.10) — the switch runs the direct fast path.
    *
    * Rejects with {@link ConcurrentSceneNavigationError} when another
    * navigation is already in flight (dev and production builds — no
@@ -260,7 +257,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
   public async change<K extends RegistryKeyOf<Registry>>(target: K, ...args: ChangeSceneArgs<InferSceneData<Registry[K]>>): Promise<this>;
   public async change<C extends AnySceneConstructor>(target: C, ...args: ChangeSceneArgs<InferSceneData<C>>): Promise<this>;
   public async change(target: AnySceneConstructor | string, ...args: readonly unknown[]): Promise<this> {
-    const options = ((args[0] as ChangeSceneCallOptions<unknown> | undefined) ?? {}) as ChangeSceneCallOptions<unknown>;
+    const options = ((args[0] as ChangeSceneOptions<unknown> | undefined) ?? {}) as ChangeSceneOptions<unknown>;
     const data = (options as { data?: unknown }).data;
 
     await this._runWithNavigation(async () => {
@@ -496,7 +493,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    */
   public async restore<K extends RegistryKeyOf<Registry>>(target: K, options?: RestoreSceneOptions): Promise<this>;
   public async restore<C extends AnySceneConstructor>(target: C, options?: RestoreSceneOptions): Promise<this>;
-  public async restore(target: AnySceneConstructor | string, options: RestoreSceneCallOptions = {}): Promise<this> {
+  public async restore(target: AnySceneConstructor | string, options: RestoreSceneOptions = {}): Promise<this> {
     const resolvedTarget = this._resolveNavigationTarget(target);
     const retainedScope = this._retained.get(resolvedTarget);
 

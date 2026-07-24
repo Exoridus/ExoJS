@@ -139,17 +139,13 @@ export type ApplicationOf<T extends ApplicationLike> = T extends abstract new (.
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
 /**
- * Options for {@link SceneDirector.change}. This is an intermediate shape —
- * the spec's final shape (definition §6.3) also carries a `transition`
- * field accepting a `SceneTransitionSelection` (a class-based
- * `SceneTransition`/`PhasedSceneTransition`, or an `{ enter, exit }` pair).
- * That field is not part of this public shape yet — a later slice folds it
- * in directly, once the registry-default `SceneTransitionSelection` exists.
- * A caller passing a `transition` today does so through the wider internal
- * {@link ChangeSceneCallOptions} that {@link SceneDirector.change} accepts,
- * which drives a real {@link SceneTransition} session — see that method's
- * doc comment, not this type; `transition` is deliberately not part of this
- * shape yet.
+ * Options for {@link SceneDirector.change} (definition §6.3). Carries the
+ * activation `data` (when `Data` is not `void`), `suspendCurrent`, and an
+ * optional `transition` — a class-based `SceneTransition`/
+ * `PhasedSceneTransition`, or an `{ enter, exit }` pair — resolved against
+ * the target's registry-level default (spec §3.10) to drive the switch
+ * through a {@link SceneTransitionSession}; see {@link SceneDirector.change}'s
+ * doc comment for the full guarantee.
  */
 export type ChangeSceneOptions<Data> = ([Data] extends [void] ? { data?: never } : { data: Readonly<Data> }) & {
   /**
@@ -161,6 +157,14 @@ export type ChangeSceneOptions<Data> = ([Data] extends [void] ? { data?: never }
    * ({@link SceneState.Suspended}).
    */
   suspendCurrent?: boolean;
+  /**
+   * Transition to drive this switch through, overriding the target's
+   * registry-level default (spec §3.10) if any. `false` explicitly opts out
+   * of a registry default with no transition at all. Omitted (`undefined`)
+   * defers to that default, or the direct (non-transitioned) fast path if
+   * none is registered.
+   */
+  transition?: SceneTransitionSelection;
 };
 
 /**
@@ -181,6 +185,8 @@ export type ChangeSceneArgs<Data> = [Data] extends [void] ? [options?: ChangeSce
 export interface RestoreSceneOptions {
   /** Suspend the currently active scene (if any) instead of ending it permanently — mirrors {@link ChangeSceneOptions.suspendCurrent}. */
   suspendCurrent?: boolean;
+  /** Transition to drive this restore through — mirrors {@link ChangeSceneOptions.transition}; see its doc comment for the full guarantee. */
+  transition?: SceneTransitionSelection;
 }
 
 /** Which kind of scene activation a disambiguating {@link SceneDirector.unload} call targets. */
@@ -234,24 +240,6 @@ export function resolvePreloadArgs(args: readonly unknown[]): { data: unknown } 
 
   return { data: options?.data };
 }
-
-/**
- * @internal The actual (wider) parameter type {@link SceneDirector.change}
- * accepts: {@link ChangeSceneOptions} plus a `transition` field carrying a
- * {@link SceneTransitionSelection} (spec §3.2/§3.10) — a real class-based
- * {@link SceneTransition} (or {@link PhasedSceneTransition}), a
- * `{ enter, exit }` pair, or `false` — resolved against the target's
- * registry-level default via {@link resolveSceneTransitionSelection} and
- * used to drive the switch through a {@link SceneTransitionSession}.
- * `transition` is not yet part of {@link ChangeSceneOptions}'s public
- * documented shape — a later slice folds it in directly. Deliberately not
- * re-exported from the package root: a new caller should not discover
- * `transition` as supported input via this slice's public types.
- */
-export type ChangeSceneCallOptions<Data> = ChangeSceneOptions<Data> & { transition?: SceneTransitionSelection };
-
-/** @internal Bridge counterpart of {@link ChangeSceneCallOptions} for {@link SceneDirector.restore}. See its doc comment for the full rationale. */
-export type RestoreSceneCallOptions = RestoreSceneOptions & { transition?: SceneTransitionSelection };
 
 /**
  * Thrown (dev builds only) when `ApplicationOptions.scenes` registers the

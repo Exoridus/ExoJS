@@ -18,27 +18,6 @@ const ActiveSceneContext = createContext<ExoScene | null>(null);
 ActiveSceneContext.displayName = 'ExoActiveScene';
 
 /**
- * TODO: remove once `transition` becomes part of `change()`'s public options
- * ({@link SceneTransitionSelection}). As of the end of the scene-transition
- * redesign, Core's `change()` still deliberately keeps `transition` off its
- * public overloads (it's routed through an `@internal`, non-re-exported
- * bridge type) — so this package defines just the shape it needs locally and
- * casts through it, rather than importing Core's private types (not
- * published on any supported subpath; `@codexo/exojs-react` only depends on
- * Core's root export surface).
- */
-interface TransitionBridge {
-  change(target: new () => ExoScene, options: { readonly transition?: SceneTransitionSelection }): Promise<unknown>;
-}
-
-/** TODO: remove alongside {@link TransitionBridge}. */
-async function changeWithTransitionBridge(scenes: unknown, target: new () => ExoScene, transition: SceneTransitionSelection | undefined): Promise<void> {
-  const bridge = scenes as TransitionBridge;
-
-  await bridge.change(target, transition !== undefined ? { transition } : {});
-}
-
-/**
  * Returns the currently-active scene instance from the nearest {@link Scenes},
  * or `null` while none is live. Useful for HUD/overlay components that need to
  * read scene state.
@@ -144,7 +123,7 @@ export function Scenes({ active, transition, children }: ScenesProps): ReactElem
           // transitions only apply to subsequent switches.
           await app.start(SceneClass);
         } else {
-          await changeWithTransitionBridge(app.scenes, SceneClass, transition);
+          await app.scenes.change(SceneClass, transition !== undefined ? { transition } : {});
         }
         if (!cancelled) {
           setInstance(app.scenes.currentScene);
