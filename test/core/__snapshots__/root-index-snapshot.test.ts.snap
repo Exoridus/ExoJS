@@ -153,6 +153,7 @@ exports[`root index export surface snapshot > sorted runtime export names match 
   "Scene",
   "SceneDirector",
   "SceneInstanceNotFoundError",
+  "SceneNavigationAbortedError",
   "SceneNode",
   "SceneState",
   "SceneTransition",
