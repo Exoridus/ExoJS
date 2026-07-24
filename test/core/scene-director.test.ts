@@ -2520,4 +2520,69 @@ describe('SceneDirector._abortInFlightNavigation() (Slice 7 Group B, §3.7)', ()
       destroySpy.mockRestore();
     }
   });
+
+  test('restore()\'s claim restoration does not resurrect a scope that Application.stop() already force-cleared and disposed post-commit', async () => {
+    // Reproduces the exact sequence Application.stop() drives: it aborts the
+    // in-flight session (rejecting restore()'s promise) AND separately calls
+    // _forceClearActiveSceneAfterAbort(), which nulls _activeScope and
+    // disposes it OUTSIDE restore()'s own control flow. If restore()'s catch
+    // still infers "never committed" from `_activeScope !== retainedScope`,
+    // it wrongly re-adds the now-disposed scope back into _retained.
+    const app = createApplicationStub();
+    const First = makeSceneClass();
+    const Second = makeSceneClass();
+    const director = new SceneDirector(app, { first: First, second: Second });
+
+    await director.change(First);
+    await director.change(Second, { suspendCurrent: true }); // First is now retained
+
+    const retained = (director as unknown as { _retained: Map<unknown, unknown> })._retained;
+
+    expect(retained.has(First)).toBe(true);
+
+    let environmentRef: SceneTransitionEnvironment | null = null;
+    const session = new FakeSession(); // never reports done — stays "playing" after commit
+    const transition = new (class extends SceneTransition {
+      public getRequirements(): SceneTransitionRequirements {
+        return { outgoingFrame: 'none', currentFrame: 'none' };
+      }
+      protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
+        environmentRef = environment;
+
+        return session;
+      }
+    })();
+
+    const navigation = director.restore(First, { transition });
+
+    // restore() claims eagerly and synchronously, before any await.
+    expect(retained.has(First)).toBe(false);
+
+    environmentRef?.commit();
+    tick(director, app); // commitSwitch runs synchronously -> _activeScope becomes First's retained scope
+
+    // The switch has genuinely committed — First is live — but the session
+    // is still playing (session.done was never set).
+    expect(director.currentScene).toBeInstanceOf(First);
+
+    const reason = new SceneNavigationAbortedError();
+
+    // Mirrors Application.stop(): abort the session, then force-clear the
+    // (now-committed) active scope, exactly as stop() does immediately after
+    // aborting — before restore()'s own catch has had a chance to run.
+    director._abortInFlightNavigation(reason);
+
+    const forceClear = director._forceClearActiveSceneAfterAbort();
+
+    await expect(navigation).rejects.toBe(reason);
+    await forceClear;
+
+    // The committed-but-aborted scope must NOT be put back into _retained —
+    // it was already disposed by _forceClearActiveSceneAfterAbort().
+    expect(retained.has(First)).toBe(false);
+
+    // The most direct proof: a subsequent restore() must fail cleanly with
+    // RetainedSceneNotFoundError rather than reactivate the disposed scope.
+    await expect(director.restore(First)).rejects.toBeInstanceOf(RetainedSceneNotFoundError);
+  });
 });

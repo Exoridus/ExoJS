@@ -506,6 +506,17 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
     // the same constructor can never also see it.
     this._retained.delete(resolvedTarget);
 
+    // Flipped `true` at the exact point `commitSwitch` mutates `_activeScope`
+    // to `retainedScope` — mirrors `change()`'s local `commitStarted` flag
+    // (see its doc comment). `_activeScope` identity alone can no longer
+    // answer "did the switch commit?": `_forceClearActiveSceneAfterAbort()`
+    // (called by `Application.stop()` after aborting an in-flight session)
+    // nulls `_activeScope` — and disposes the scope it held — from OUTSIDE
+    // this method's own control flow, on a navigation that had already
+    // committed. A local flag set only by this method's own commit path is
+    // immune to that external mutation.
+    let committed = false;
+
     try {
       await this._runWithNavigation(async () => {
         const context: SceneTransitionContext = {
@@ -524,6 +535,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
           const { teardown, pendingStopScene } = this._navigation.beginOutgoingDisposition(outgoing, options.suspendCurrent ?? false);
           const previousState = retainedScope.state;
 
+          committed = true;
           this._activeScope = retainedScope;
           this._activeScopeTarget = resolvedTarget;
           retainedScope.restore();
@@ -549,8 +561,13 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
       // `_activeScope`; re-adding it here would make the same scope both
       // live and "retained". The common pre-commit path (a rejected
       // concurrent-navigation guard, or a pre-commit session abort) restores
-      // it so a future restore()/unload() can still reach it.
-      if (this._activeScope !== retainedScope) {
+      // it so a future restore()/unload() can still reach it. Checked via the
+      // local `committed` flag, not `_activeScope` identity: an already-
+      // committed switch can have its `_activeScope` externally nulled (and
+      // the scope disposed) by `_forceClearActiveSceneAfterAbort()` before
+      // this catch runs — re-adding it here would put a disposed scope back
+      // into `_retained` as if it were still reactivatable.
+      if (!committed) {
         this._retained.set(resolvedTarget, retainedScope);
       }
 
