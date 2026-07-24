@@ -1,6 +1,6 @@
 {
   "title": "ChangeSceneOptions",
-  "description": "Options for SceneDirector.change. This is an intermediate shape — the spec's final shape (definition §6.3) also carries a `transition` field accepting a `SceneTransitionSelection` (a class-based `SceneTransition`/`PhasedSceneTransition`, or an `{ enter, exit }` pair). That field is not part of this public shape yet — a later slice folds it in directly, once the registry-default `SceneTransitionSelection` exists. A caller passing a `transition` today does so through the wider internal ChangeSceneCallOptions that SceneDirector.change accepts, which drives a real SceneTransition session — see that method's doc comment, not this type; `transition` is deliberately not part of this shape yet.",
+  "description": "Options for SceneDirector.change (definition §6.3). Carries the activation `data` (when `Data` is not `void`), `suspendCurrent`, and an optional `transition` — a class-based `SceneTransition`/ `PhasedSceneTransition`, or an `{ enter, exit }` pair — resolved against the target's registry-level default (spec §3.10) to drive the switch through a SceneTransitionSession; see SceneDirector.change's doc comment for the full guarantee.",
   "symbol": "ChangeSceneOptions",
   "kind": "type",
   "subsystem": "core",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Options for SceneDirector.change. This is an intermediate shape — the spec's final shape (definition §6.3) also carries a `transition` field accepting a `SceneTransitionSelection` (a class-based `SceneTransition`/`PhasedSceneTransition`, or an `{ enter, exit }` pair). That field is not part of this public shape yet — a later slice folds it in directly, once the registry-default `SceneTransitionSelection` exists. A caller passing a `transition` today does so through the wider internal ChangeSceneCallOptions that SceneDirector.change accepts, which drives a real SceneTransition session — see that method's doc comment, not this type; `transition` is deliberately not part of this shape yet."
+        "Options for SceneDirector.change (definition §6.3). Carries the activation `data` (when `Data` is not `void`), `suspendCurrent`, and an optional `transition` — a class-based `SceneTransition`/ `PhasedSceneTransition`, or an `{ enter, exit }` pair — resolved against the target's registry-level default (spec §3.10) to drive the switch through a SceneTransitionSession; see SceneDirector.change's doc comment for the full guarantee."
       ],
       "importLine": "import { ChangeSceneOptions } from '@codexo/exojs'",
       "sourceLink": null
@@ -30,7 +30,7 @@
       "members": [
         {
           "name": "ChangeSceneOptions",
-          "signature": "[Data] extends [void] ? { data?: never } : { data: Readonly<Data> } & { suspendCurrent?: boolean }",
+          "signature": "[Data] extends [void] ? { data?: never } : { data: Readonly<Data> } & { suspendCurrent?: boolean; transition?: SceneTransitionSelection }",
           "signatureTokens": [
             {
               "text": "[",
@@ -155,6 +155,26 @@
             {
               "text": "boolean",
               "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "transition",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneTransitionSelection",
+              "kind": "type"
             },
             {
               "text": " }",

@@ -6,11 +6,11 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 1,
+  "memberCount": 2,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 1,
+    "properties": 2,
     "events": 0
   },
   "sections": [
@@ -52,6 +52,31 @@
           "params": [],
           "returnType": null,
           "description": "Suspend the currently active scene (if any) instead of ending it permanently — mirrors ChangeSceneOptions.suspendCurrent."
+        },
+        {
+          "name": "transition",
+          "signature": "transition?: SceneTransitionSelection",
+          "signatureTokens": [
+            {
+              "text": "transition",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneTransitionSelection",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Transition to drive this restore through — mirrors ChangeSceneOptions.transition; see its doc comment for the full guarantee."
         }
       ],
       "paragraphs": [],

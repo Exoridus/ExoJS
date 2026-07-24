@@ -42,30 +42,32 @@ Scene structure stays in your code. State lives on `this`, organized however you
 
 ## Running a scene
 
-Hand a scene instance to `app.start` and the application takes over:
+Register the scene's constructor and hand it to `app.start`; the application takes over:
 
 ```js
-const app = new Application();
-app.start(new TitleScene());
+const app = new Application({ scenes: { TitleScene } });
+app.start(TitleScene);
 ```
 
 From this point on, the application runs the scene's `update` and `draw` once per frame.
 
 ## Switching scenes
 
-Most non-trivial projects have more than one scene. The application owns a scene manager (`app.scenes`) that drives the active scene. Use `setScene` to swap in a new scene:
+Most non-trivial projects have more than one scene. The application owns a scene director (`app.scenes`) that drives the active scene. Use `change` to swap in a new scene, and register scene constructors up front so `change` knows which classes are valid targets:
 
 ```js
-// Replace the active scene with a new one
-await app.scenes.setScene(new GameScene());
+const app = new Application({ scenes: { GameScene } });
+
+// Replace the active scene with a fresh instance
+await app.scenes.change(GameScene);
 
 // Replace with a fade transition
-await app.scenes.setScene(new GameScene(), { transition: { type: 'fade' } });
+await app.scenes.change(GameScene, { transition: new FadeSceneTransition() });
 ```
 
-`setScene` ends the current scene — running `unload` and `destroy` — and starts the new one. The optional `transition` argument adds a brief cross-fade so the cut is not jarring.
+`change` ends the current scene — running `unload` and `destroy` — and starts a fresh instance of the target. The optional `transition` option (a `SceneTransition` instance, e.g. `FadeSceneTransition`) adds a brief cross-fade so the cut is not jarring.
 
-For a typical app: a `MenuScene` calls `setScene(new GameScene())` when the player clicks Start. `app.scenes.currentScene` always reflects the currently active scene.
+For a typical app: a `MenuScene` calls `this.app.scenes.change(GameScene)` when the player clicks Start. `app.scenes.currentScene` always reflects the currently active scene.
 
 ## Scene UI layer
 
@@ -138,8 +140,8 @@ A scene has a small set of hooks the engine calls in a defined order. Knowing wh
 
 The first time a scene starts:
 
-1. `async load(loader)` — declare assets you need. Resolves before `init`.
-2. `init(loader)` — build state. Loaded assets are available via `loader.get(...)`.
+1. `async load()` — declare assets you need via `this.loader`. Resolves before `init`.
+2. `init(data)` — build state. Must be synchronous. Loaded assets are available via `this.loader.get(...)`; activation data (if the scene declares a data type) arrives here.
 
 Then, every frame while the scene is active:
 
@@ -147,9 +149,11 @@ Then, every frame while the scene is active:
 4. `update(delta)` — advance state. `delta.seconds` is the elapsed time since the last frame.
 5. `draw(context)` — render the current state.
 
+Two signals bracket activation from the outside rather than being hooks you override: `Scene.onActivate` fires every time the scene becomes `Active` (fresh start, a consumed preload, or a restore from retention); `Scene.onSuspend` fires when the scene is suspended for retention instead of ended permanently.
+
 When the scene is replaced or the application shuts down:
 
-6. `async unload(loader)` — release scene-private assets that aren't needed by the next scene.
+6. `async unload()` — release scene-private assets that aren't needed by the next scene.
 7. `destroy()` — drop scene-graph references and cancel input bindings.
 
 You override the hooks you need. Empty hooks like `update` and `draw` do nothing by default, so there is no setup ceremony for scenes that only need one or two phases. Cleanup hooks are different: if you override `destroy`, keep the built-in cleanup path intact unless the API reference for your version says otherwise.
@@ -162,10 +166,10 @@ The `load` hook is the async setup hook. Use it to register everything the scene
 import { Scene } from '@codexo/exojs';
 
 class GameScene extends Scene {
-    async load(loader) {
+    async load() {
         await Promise.all([
-            loader.load('image/hero.png'),
-            loader.load('image/ground.png'),
+            this.loader.load('image/hero.png'),
+            this.loader.load('image/ground.png'),
         ]);
     }
 }
@@ -175,11 +179,11 @@ The application doesn't call `init` until this promise resolves, so by the time 
 
 ## init: build state
 
-The `init` hook is where you create the scene's actual objects. The same `loader` instance is passed in; calling `loader.get(...)` returns the already-loaded asset:
+The `init` hook is where you create the scene's actual objects. Read a previously-loaded asset via `this.loader`:
 
 ```js
-init(loader) {
-    this.hero = new Sprite(loader.get('image/hero.png'));
+init() {
+    this.hero = new Sprite(this.loader.get('image/hero.png'));
     this.hero.setAnchor(0.5);
     this.hero.setPosition(400, 300);
     this.addChild(this.hero);
@@ -301,7 +305,7 @@ Bindings created on `this.inputs` are automatically disposed when the scene is d
 
 ## unload and destroy
 
-The `unload` hook runs when the scene is replaced by `setScene` or when the application shuts down. Use it to release assets the scene was holding that no other scene needs.
+The `unload` hook runs when the scene ends permanently — replaced by `change`/`restore`, discarded via `unload(Target)`, or the application shuts down (not when the scene is only suspended for retention). Use it to release assets the scene was holding that no other scene needs.
 
 The `destroy` hook is the synchronous final step after `unload`. The default cleanup path disposes scene-owned bindings and graph references. Override only when you have additional cleanup, and keep the built-in cleanup behavior intact.
 
@@ -313,7 +317,7 @@ The default `destroy` disposes scene-owned input bindings and graph references. 
 
 <ExamplePreview chapter="application-scenes" slug="multiple-scenes" />
 
-Switching between two scenes — a menu and a game — using `app.scenes.setScene`.
+Switching between two scenes — a menu and a game — using `app.scenes.change`.
 
 <ExamplePreview chapter="application-scenes" slug="scene-lifecycle" />
 

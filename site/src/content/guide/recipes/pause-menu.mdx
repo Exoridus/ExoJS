@@ -86,7 +86,7 @@ await app.start(GameScene);
 ```
 
 <Callout type="warning" title="Clear filters in destroy">
-Any filter you set in `init` or `togglePause` — the `BlurFilter` here — must be cleared in `destroy`. Otherwise it stays attached to `scene.root` and bleeds into the next scene after `app.scenes.setScene(...)`.
+Any filter you set in `init` or `togglePause` — the `BlurFilter` here — must be cleared in `destroy`. Otherwise it stays attached to `scene.root` and bleeds into the next scene after `app.scenes.change(...)`.
 </Callout>
 
 <Callout type="hint" title="Modal menus that must block clicks">
@@ -106,11 +106,11 @@ This recipe's overlay is informational only — `scene.ui` widgets stay clickabl
 
 ## Cleanup
 
-The `destroy` hook clears the blur filter from `scene.root`. Without this, the filter array would linger if the scene is ever replaced via `app.scenes.setScene(...)`. As a rule, any filter applied in `init` or `togglePause` should be cleaned up in `destroy`.
+The `destroy` hook clears the blur filter from `scene.root`. Without this, the filter array would linger if the scene is ever replaced via `app.scenes.change(...)`. As a rule, any filter applied in `init` or `togglePause` should be cleaned up in `destroy`.
 
 ## Switching scenes from the pause menu
 
-If the pause menu offers options like "Return to main menu" or "Quit", use `app.scenes.setScene(...)` to navigate away — it unloads the current scene and loads the next one, optionally with a fade transition:
+If the pause menu offers options like "Return to main menu" or "Quit", use `app.scenes.change(...)` to navigate away — it unloads the current scene and loads the next one, optionally with a fade transition:
 
 ```js
 // Inside a resume button's onClick handler:
@@ -120,7 +120,7 @@ resumeButton.onClick.add(() => {
 
 // Inside a "main menu" button's onClick handler:
 mainMenuButton.onClick.add(() => {
-    this.app.scenes.setScene(MainMenuScene, { transition: { type: 'fade' } });
+    this.app.scenes.change(MainMenuScene, { transition: new FadeSceneTransition() });
 });
 ```
 

@@ -33,14 +33,19 @@ new SceneDirector(app, { bad: NotAScene });
 // @ts-expect-error — NotAScene is not a Scene subclass constructor
 new SceneDirector(app, { bad: { scene: NotAScene } });
 
-// `transition` is deliberately not part of change()'s/restore()'s public options
-// shape (routed through an @internal, non-re-exported bridge type; the public
-// SceneTransitionSelection option lands in a later slice) — both must reject it
-// at the type level.
+// `transition` is part of change()'s/restore()'s public options shape
+// (SceneTransitionSelection) — a valid value type-checks directly, no cast
+// or bridge type needed.
 declare const registryDirector: SceneDirector<{ title: typeof VoidScene }>;
-// @ts-expect-error — transition is not part of the public options shape
+void registryDirector.change('title', { transition: false });
+void registryDirector.restore('title', { transition: false });
+
+// An invalid `transition` value — neither a SceneTransition/PhasedSceneTransition
+// pair nor `false` — is still rejected at the type level (same empty-phases
+// rejection as SceneTransitionSelection itself; see scene-transition-phases.type-test.ts).
+// @ts-expect-error — {} is not a valid SceneTransitionSelection
 void registryDirector.change('title', { transition: {} });
-// @ts-expect-error — transition is not part of the public options shape
+// @ts-expect-error — {} is not a valid SceneTransitionSelection
 void registryDirector.restore('title', { transition: {} });
 
 export {};
