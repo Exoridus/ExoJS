@@ -69,6 +69,7 @@ export {
   RetainedSceneConflictError,
   RetainedSceneNotFoundError,
   SceneInstanceNotFoundError,
+  SceneNavigationAbortedError,
   UnregisteredSceneError,
 } from './SceneTypes';
 export type { DeserializeContext, NodeSerializer, SerializeContext } from './serialization/NodeSerializer';

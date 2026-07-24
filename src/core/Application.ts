@@ -33,7 +33,7 @@ import { computeLetterboxLayout } from './letterbox';
 import { hello, logger } from './logging';
 import { Perf } from './Perf';
 import { SceneDirector } from './SceneDirector';
-import type { AnySceneConstructor, ChangeSceneArgs, InferSceneData, SceneRegistryShape } from './SceneTypes';
+import { type AnySceneConstructor, type ChangeSceneArgs, type InferSceneData, SceneNavigationAbortedError, type SceneRegistryShape } from './SceneTypes';
 import { defaultSerializationRegistry, SerializationRegistry } from './serialization/SerializationRegistry';
 import { Signal } from './Signal';
 import { SystemRegistry } from './SystemRegistry';
@@ -771,21 +771,31 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * Application.stop}, {@link Application.destroy} during the `Loading`
    * window) so `_frameLoopActive` is the single source of truth everywhere,
    * not only where the loop starts (definition spec §3.7). Idempotent — a
-   * second call while the loop is already stopped is a no-op. Deliberately
-   * does NOT touch scene teardown (`scenes._clearScene()`/navigation abort)
-   * — those are the caller's responsibility, since a fatal frame error must
-   * NOT unload the active scene (see {@link Application._handleFrameError}'s
-   * doc comment), while {@link Application.stop} explicitly does.
+   * second call while the loop is already stopped is a no-op (returns
+   * `false`). Always aborts whatever scene navigation is in flight via
+   * {@link SceneDirector._abortInFlightNavigation} — a transition session
+   * cannot progress without frame callbacks, so it must be settled here
+   * rather than left to hang, regardless of caller. Deliberately does NOT
+   * call `scenes._clearScene()` itself — a fatal frame error must NOT unload
+   * the active scene (see {@link Application._handleFrameError}'s doc
+   * comment) — that decision, and this method's return value, are the
+   * caller's responsibility.
+   *
+   * @returns `true` if an in-flight navigation was aborted (nothing else
+   *   needs to unload the scene), `false` otherwise (including when the loop
+   *   was already stopped).
    */
-  private _stopFrameLoop(): void {
+  private _stopFrameLoop(): boolean {
     if (!this._frameLoopActive) {
-      return;
+      return false;
     }
 
     this._frameLoopActive = false;
     cancelAnimationFrame(this._frameRequest);
     this._activeClock.stop();
     this._frameClock.stop();
+
+    return this.scenes._abortInFlightNavigation(new SceneNavigationAbortedError());
   }
 
   /**
@@ -1000,12 +1010,14 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       this._status = ApplicationStatus.Halting;
     }
 
-    this._stopFrameLoop();
+    const navigationAborted = this._stopFrameLoop();
 
-    void this.scenes._clearScene().catch((error: unknown) => {
-      logger.error('Application.stop() failed to unload the active scene.', { source: 'Application', ...(error instanceof Error && { error }) });
-      this.onError?.dispatch(error instanceof Error ? error : new Error(String(error)));
-    });
+    if (!navigationAborted) {
+      void this.scenes._clearScene().catch((error: unknown) => {
+        logger.error('Application.stop() failed to unload the active scene.', { source: 'Application', ...(error instanceof Error && { error }) });
+        this.onError?.dispatch(error instanceof Error ? error : new Error(String(error)));
+      });
+    }
 
     this._status = ApplicationStatus.Stopped;
 
