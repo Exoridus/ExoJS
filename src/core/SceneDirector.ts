@@ -281,13 +281,10 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
       // Synchronous, before-first-await claim of a matching `_preloaded`
       // entry (Object.is() on the activation data) — mirrors restore()'s
       // eager claim-before-await pattern for `_retained`. A claimed-but-
-      // uncommitted entry that fails to reach the commit boundary below
-      // would, per spec §3.5.1, go back into `_preloaded` as `ready` rather
-      // than being destroyed — but the only way to reach that case is
-      // §3.7's frame-loop abort scenario, which does not exist yet (Slice
-      // 7, built on Slice 5's transition sessions); change()'s body has no
-      // pre-commit failure point past this claim for that restoration to
-      // guard, so there is nothing to wire up here yet.
+      // uncommitted entry that never reaches the commit boundary below goes
+      // back into `_preloaded` as `ready` rather than being destroyed (spec
+      // §3.5.1) — see the `catch` on the transitioned action below, which is
+      // reachable via §3.7's frame-loop abort (`_abortInFlightNavigation`).
       const preloadEntry = this._preloaded.get(resolvedTarget);
       const claimedEntry = preloadEntry !== undefined && preloadEntry.status !== 'cancelling' && Object.is(preloadEntry.data, data) ? preloadEntry : null;
 
@@ -302,14 +299,48 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
         hasIncomingScene: true,
       };
 
+      // Flipped `true` the instant the atomic switch begins consuming the
+      // claim (before its `await`). Distinguishes "the claim was never
+      // reached — a pre-commit session abort settled the navigation before
+      // `commitSwitch` ran" (restore the claim, §3.5.1) from "`commitSwitch`
+      // already started — it now owns the claimed scope's fate itself,
+      // whether it goes on to commit, fail preparation, or bail on the §3.7
+      // race guard below". The catch must never touch a claim `commitSwitch`
+      // has taken over.
+      let commitStarted = false;
+
       // The atomic switch (definition §3.5, steps 5-9). Invoked directly on
       // the direct fast path, or by the transition session once it calls
       // `environment.commit()`. `_prepareScene`/`_awaitClaimedPreload` runs
       // inside here, so a transitioned navigation only prepares the incoming
       // scope at commit time; nothing past prepare can fail or roll back.
       const commitSwitch = async (): Promise<void> => {
+        commitStarted = true;
+
+        // Captured before the prepare `await`: the session driving this
+        // commit, or `null` on the direct fast path (no session at all).
+        const sessionAtStart = this._activeSession;
         const scene = claimedEntry !== null ? (claimedEntry.scope.scene as Scene) : new resolvedTarget();
         const newScope = claimedEntry !== null ? await this._awaitClaimedPreload(claimedEntry) : await this._prepareScene(scene, data);
+
+        // §3.7 concurrency guard. `_prepareScene`/`_awaitClaimedPreload` above
+        // can await the incoming scene's `load()`/`init()` across several
+        // frames (or a slow preload); a frame-loop stop
+        // (`_abortInFlightNavigation`) can fire during that window — a scene's
+        // own `load()` hook calling `app.stop()`, or a fatal frame error —
+        // settling and rejecting this navigation while this continuation is
+        // still suspended. Committing the switch now would activate the
+        // incoming scene and tear the outgoing one down for a navigation the
+        // app already reported aborted. Detect it (the session that drove
+        // this commit is gone) and bail, tearing the freshly-prepared,
+        // never-activated Ready scope down (Ready-scope cleanup, §3.5.1 —
+        // `unload()` runs, `onStopScene` does not).
+        if (sessionAtStart !== null && this._activeSession !== sessionAtStart) {
+          await this._disposeScene(newScope, { dispatchStopScene: false });
+
+          return;
+        }
+
         const previousScope = this._activeScope;
         const previousTarget = this._activeScopeTarget;
         const outgoing = previousScope === null ? null : { scope: previousScope, target: previousTarget! };
@@ -331,8 +362,22 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
 
       const resolvedTransition = resolveSceneTransitionSelection('change', options.transition, this._registry.defaultTransitions.get(resolvedTarget));
 
-      await (resolvedTransition === null ? commitSwitch() : this._runTransitionedAction(commitSwitch, context, resolvedTransition));
-      await this._awaitPendingOutgoingTeardown();
+      try {
+        await (resolvedTransition === null ? commitSwitch() : this._runTransitionedAction(commitSwitch, context, resolvedTransition));
+        await this._awaitPendingOutgoingTeardown();
+      } catch (error) {
+        // Pre-commit abort restoration (spec §3.5.1), mirroring restore()'s
+        // `_retained` restoration. Only when `commitSwitch` never started:
+        // once it has, it owns the claimed scope (commit, prepare-failure
+        // cleanup, or the §3.7 race-guard teardown above all handle it), and
+        // re-adding a consumed/destroyed scope here would corrupt `_preloaded`.
+        if (!commitStarted && claimedEntry !== null) {
+          claimedEntry.status = 'ready';
+          this._preloaded.set(resolvedTarget, claimedEntry);
+        }
+
+        throw error;
+      }
     });
 
     return this;
@@ -860,21 +905,15 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * regardless of any in-flight navigation (definition §10.6).
    */
   public async _dispose(): Promise<void> {
-    if (this._activeSession !== null) {
-      // KNOWN LIMITATION (full generalization is Slice 7's job): this does
-      // not distinguish "a commitSwitch() prepare() is still asynchronously
-      // in flight" from "the session is merely between frames" — it always
-      // destroys the session and rejects immediately. If a commitSwitch() is
-      // genuinely still awaiting prepare() when this runs, that promise chain
-      // continues independently in the background and may still mutate
-      // `_activeScope`/`_retained` after this method returns. Slice 7's
-      // abort-flag machinery closes this gap.
-      // _finishActiveSession owns the full synchronous teardown — it destroys
-      // the session, releases `_sessionResources`, and decrements the input
-      // gate itself (exactly once). Duplicating any of that here would
-      // double-release the render textures and drive `_inputGateDepth` to -1.
-      this._finishActiveSession({ ok: false, error: new SceneTransitionLifecycleError('aborted') });
-    }
+    // Abort any in-flight transition session first, through the same public
+    // entry point every frame-loop stop uses (§3.7). A no-op when nothing is
+    // in flight; otherwise `_finishActiveSession` owns the full synchronous
+    // teardown (destroy the session, release `_sessionResources`, decrement
+    // the input gate — each exactly once) and rejects the pending navigation.
+    // A `commitSwitch()` still awaiting its incoming scene's prepare() when
+    // this fires is now caught by that method's own §3.7 race guard: it sees
+    // the session gone and bails instead of mutating `_activeScope` behind us.
+    this._abortInFlightNavigation(new SceneTransitionLifecycleError('aborted'));
 
     const activeScope = this._activeScope;
 
@@ -908,6 +947,46 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
     this.onPause.destroy();
     this.onResume.destroy();
     this.onStateChange.destroy();
+  }
+
+  /**
+   * @internal Abort whatever transition session is currently in flight, if
+   * any, rejecting its pending navigation promise with `reason`. This
+   * generalizes the single hard-coded abort {@link SceneDirector._dispose}
+   * already performs (its `'aborted'` lifecycle-error case) to any point the
+   * {@link Application} frame loop stops while a frame-driven session is
+   * mid-flight (definition §3.7): a session cannot progress without per-frame
+   * `update()`/`render()` callbacks, so rather than hang forever the
+   * navigation is aborted. {@link SceneDirector._finishActiveSession} runs the
+   * full generalized teardown (destroy the session exactly once, release its
+   * render resources, close the input gate, settle the outer promise), and
+   * the resulting rejection propagates up through each navigation method's own
+   * pre-commit `catch`, restoring any claimed preload/retained entry per spec
+   * §3.5.1.
+   *
+   * Returns `true` when a session was actually in flight and got aborted;
+   * `false` when there was nothing to interrupt — no session at all, or a
+   * navigation already past its atomic commit boundary (a committed switch is
+   * never undone, §3.5). Idempotent: a second call once the session has
+   * settled is a no-op `false`, since `_finishActiveSession` already cleared
+   * `_activeSession`. Called by {@link Application} whenever it stops the
+   * frame loop.
+   *
+   * NOTE: a `commitSwitch()` whose `_prepareScene()`/`_awaitClaimedPreload()`
+   * is still asynchronously awaiting when this fires is handled by that
+   * closure's own §3.7 race guard — it re-checks liveness after the `await`
+   * and bails instead of mutating `_activeScope` for an already-rejected
+   * navigation. That guard lives in {@link SceneDirector.change}'s commit
+   * closure (the only navigation whose commit has an async prepare step).
+   */
+  public _abortInFlightNavigation(reason: Error): boolean {
+    if (this._activeSession === null) {
+      return false;
+    }
+
+    this._finishActiveSession({ ok: false, error: reason });
+
+    return true;
   }
 
   /**
