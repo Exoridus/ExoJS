@@ -17,6 +17,7 @@ import {
   type InferSceneData,
   type RegistryKeyOf,
   type RestoreSceneCallOptions,
+  type RestoreSceneOptions,
   RetainedSceneConflictError,
   RetainedSceneNotFoundError,
   type SceneRegistryIndex,
@@ -275,8 +276,8 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * navigation is already in flight; with {@link RetainedSceneNotFoundError}
    * when `target` has no retained instance.
    */
-  public async restore<K extends RegistryKeyOf<Registry>>(target: K, options?: RestoreSceneCallOptions): Promise<this>;
-  public async restore<C extends AnySceneConstructor>(target: C, options?: RestoreSceneCallOptions): Promise<this>;
+  public async restore<K extends RegistryKeyOf<Registry>>(target: K, options?: RestoreSceneOptions): Promise<this>;
+  public async restore<C extends AnySceneConstructor>(target: C, options?: RestoreSceneOptions): Promise<this>;
   public async restore(target: AnySceneConstructor | string, options: RestoreSceneCallOptions = {}): Promise<this> {
     const resolvedTarget = this._resolveNavigationTarget(target);
     const retainedScope = this._retained.get(resolvedTarget);

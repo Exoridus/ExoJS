@@ -33,4 +33,13 @@ new SceneDirector(app, { bad: NotAScene });
 // @ts-expect-error — NotAScene is not a Scene subclass constructor
 new SceneDirector(app, { bad: { scene: NotAScene } });
 
+// `transition` is deliberately not part of change()'s/restore()'s public options
+// shape yet (routed through an @internal, non-re-exported bridge type until the
+// real transition runtime lands in Slice 5) — both must reject it at the type level.
+declare const registryDirector: SceneDirector<{ title: typeof VoidScene }>;
+// @ts-expect-error — transition is not public until Slice 5
+void registryDirector.change('title', { transition: { type: 'fade' } });
+// @ts-expect-error — transition is not public until Slice 5
+void registryDirector.restore('title', { transition: { type: 'fade' } });
+
 export {};

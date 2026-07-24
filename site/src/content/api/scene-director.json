@@ -581,7 +581,7 @@
         },
         {
           "name": "restore",
-          "signature": "restore(target: K, options?: RestoreSceneCallOptions): Promise<SceneDirector<Registry>>",
+          "signature": "restore(target: K, options?: RestoreSceneOptions): Promise<SceneDirector<Registry>>",
           "signatureTokens": [
             {
               "text": "restore",
@@ -620,7 +620,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "RestoreSceneCallOptions",
+              "text": "RestoreSceneOptions",
               "kind": "type"
             },
             {
@@ -668,7 +668,7 @@
             },
             {
               "name": "options",
-              "type": "RestoreSceneCallOptions",
+              "type": "RestoreSceneOptions",
               "optional": true
             }
           ],
@@ -677,7 +677,7 @@
         },
         {
           "name": "restore",
-          "signature": "restore(target: C, options?: RestoreSceneCallOptions): Promise<SceneDirector<Registry>>",
+          "signature": "restore(target: C, options?: RestoreSceneOptions): Promise<SceneDirector<Registry>>",
           "signatureTokens": [
             {
               "text": "restore",
@@ -716,7 +716,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "RestoreSceneCallOptions",
+              "text": "RestoreSceneOptions",
               "kind": "type"
             },
             {
@@ -764,7 +764,7 @@
             },
             {
               "name": "options",
-              "type": "RestoreSceneCallOptions",
+              "type": "RestoreSceneOptions",
               "optional": true
             }
           ],
