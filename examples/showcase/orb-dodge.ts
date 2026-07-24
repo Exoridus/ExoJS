@@ -163,7 +163,7 @@ class PlayScene extends Scene {
         this.orbs = gameEnded ? [] : survived;
 
         if (gameEnded) {
-            void app.scenes.setScene(GameOverScene, { score: this.score, time: this.elapsed });
+            void app.scenes.change(GameOverScene, { data: { score: this.score, time: this.elapsed } });
             return;
         }
 
@@ -226,7 +226,7 @@ class GameOverScene extends Scene<GameOverData> {
         this.hint.setPosition(CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2 + 70);
 
         const restart = (): void => {
-            void app.scenes.setScene(PlayScene);
+            void app.scenes.change(PlayScene);
         };
         this.inputs.onTrigger(Keyboard.Space, restart);
         this.inputs.onTrigger(Keyboard.R, restart);
