@@ -171,6 +171,55 @@ export interface RestoreSceneOptions {
   suspendCurrent?: boolean;
 }
 
+/** Which kind of scene activation a disambiguating {@link SceneDirector.unload} call targets. */
+export type SceneInstanceKind = 'active' | 'retained' | 'preloaded';
+
+/** Options passed to {@link SceneDirector.unload}. */
+export interface UnloadOptions {
+  /**
+   * Only materializes for an active-scope match — a retained or preloaded
+   * match has nothing visible on screen to transition, and always runs the
+   * direct (non-transitioned) teardown path regardless of this option.
+   */
+  transition?: SceneTransition;
+  /**
+   * Disambiguates which candidate to discard when more than one exists for
+   * the same constructor (active, retained, and/or preloaded can all
+   * coexist). Omit only when exactly one candidate exists — `'all'` discards
+   * every one that does.
+   */
+  instance?: SceneInstanceKind | 'all';
+}
+
+/**
+ * Options passed to {@link SceneDirector.preload}. Unlike
+ * {@link ChangeSceneOptions}, there is no `transition`/`suspendCurrent` —
+ * preloading never touches the active scope or visibly transitions anything.
+ */
+export type PreloadOptions<Data> = [Data] extends [void] ? { data?: never } : { data: Readonly<Data> };
+
+/**
+ * Tuple type for the variadic tail of `preload()` calls, after the target
+ * constructor — mirrors {@link ChangeSceneArgs}'s conditional-arity trick:
+ * when `Data` is `void` the options argument itself is optional (nothing to
+ * supply), otherwise it's required so a data-carrying scene can't be
+ * preloaded without its data.
+ */
+export type PreloadArgs<Data> = [Data] extends [void] ? [options?: PreloadOptions<Data>] : [options: PreloadOptions<Data>];
+
+/**
+ * Resolve the erased-at-runtime options tail of a `preload()` call. Simpler
+ * than `change()`'s data-vs-options disambiguation — `preload()` only ever
+ * takes zero or one argument, always an options object, never a bare data
+ * value.
+ * @internal
+ */
+export function resolvePreloadArgs(args: readonly unknown[]): { data: unknown } {
+  const options = args[0] as { data?: unknown } | undefined;
+
+  return { data: options?.data };
+}
+
 /**
  * @internal Temporary bridge, removed by Slice 5 once `SceneTransition`
  * becomes the real class-based union (spec §3.2) and a `transition` field
@@ -255,14 +304,14 @@ export class ConcurrentSceneNavigationError extends Error {
 /**
  * Thrown when `change` targets a constructor that already has a retained
  * (suspended) Scene. Call {@link SceneDirector.restore} or
- * {@link SceneDirector.releaseScene} for it first.
+ * {@link SceneDirector.unload} for it first.
  */
 export class RetainedSceneConflictError extends Error {
   public readonly constructorName: string;
 
   public constructor(constructorName: string) {
     super(
-      `Scene constructor "${constructorName}" already has a retained (suspended) instance. Call restore(...) or releaseScene(...) for it before starting a fresh activation.`,
+      `Scene constructor "${constructorName}" already has a retained (suspended) instance. Call restore(...) or unload(...) for it before starting a fresh activation.`,
     );
     this.name = 'RetainedSceneConflictError';
     this.constructorName = constructorName;
@@ -280,6 +329,43 @@ export class RetainedSceneNotFoundError extends Error {
     super(`Scene constructor "${constructorName}" has no retained (suspended) instance to restore.`);
     this.name = 'RetainedSceneNotFoundError';
     this.constructorName = constructorName;
+  }
+}
+
+/**
+ * Thrown when `unload(Target)` is called with `options.instance` omitted
+ * while more than one activation (active, retained, and/or preloaded)
+ * exists for `Target` — there is no priority order; the caller must specify
+ * which one via `{ instance: 'active' | 'retained' | 'preloaded' }`, or
+ * `{ instance: 'all' }` to discard every one.
+ */
+export class AmbiguousSceneInstanceError extends Error {
+  public readonly constructorName: string;
+  public readonly candidates: readonly SceneInstanceKind[];
+
+  public constructor(constructorName: string, candidates: readonly SceneInstanceKind[]) {
+    super(
+      `Scene constructor "${constructorName}" has more than one matching instance (${candidates.join(', ')}). Call unload(${constructorName}, { instance: '...' }) to specify which one, or { instance: 'all' } to discard every one.`,
+    );
+    this.name = 'AmbiguousSceneInstanceError';
+    this.constructorName = constructorName;
+    this.candidates = candidates;
+  }
+}
+
+/**
+ * Thrown when `unload(Target, { instance: kind })` targets a specific kind
+ * of activation that does not exist for `Target`.
+ */
+export class SceneInstanceNotFoundError extends Error {
+  public readonly constructorName: string;
+  public readonly instance: SceneInstanceKind;
+
+  public constructor(constructorName: string, instance: SceneInstanceKind) {
+    super(`Scene constructor "${constructorName}" has no ${instance} instance to unload.`);
+    this.name = 'SceneInstanceNotFoundError';
+    this.constructorName = constructorName;
+    this.instance = instance;
   }
 }
 
