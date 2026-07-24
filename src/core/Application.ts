@@ -996,10 +996,26 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * {@link Application.destroy} to release everything. Acts whenever the
    * frame loop is actually live (`_frameLoopActive`), including mid-`start()`
    * — not only while `_status` is `Running` (definition spec §3.7): a
-   * transition-driven initial navigation may still be in flight, in which
-   * case {@link SceneDirector._abortInFlightNavigation} (invoked internally
-   * by scene teardown below) rejects it with a dedicated error rather than
-   * leaving it to hang.
+   * transition-driven navigation (the initial one, or any later `change()`)
+   * may still be in flight, in which case {@link SceneDirector._abortInFlightNavigation}
+   * (invoked by {@link Application._stopFrameLoop} itself) rejects it with a
+   * dedicated error rather than leaving it to hang.
+   *
+   * Whether the active scene actually gets unloaded is decided by
+   * `scenes.currentScene` AFTER the abort above, not by whether an abort
+   * happened: a mid-transition abort on the very first navigation leaves
+   * `currentScene` `null` (nothing ever committed — correctly skipped), but
+   * a mid-transition abort on a LATER `change()` call still finds whatever
+   * scene was active before that navigation started (it never committed
+   * away either) — that scene must still be unloaded, matching this
+   * method's "unload the active scene" contract regardless of why the loop
+   * stopped. When an abort actually happened, the unload goes through
+   * {@link SceneDirector._forceClearActiveSceneAfterAbort} rather than the
+   * ordinary {@link SceneDirector._clearScene} — the aborted navigation's own
+   * lock (`_navigationInFlight`) does not clear until its rejection finishes
+   * propagating a few microtask turns later, and `_clearScene()` would
+   * spuriously reject against that still-stale lock (see the dedicated
+   * method's own doc comment).
    */
   public stop(): this {
     if (!this._frameLoopActive) {
@@ -1012,11 +1028,17 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
     const navigationAborted = this._stopFrameLoop();
 
-    if (!navigationAborted) {
-      void this.scenes._clearScene().catch((error: unknown) => {
+    if (this.scenes.currentScene !== null) {
+      const onClearSceneFailure = (error: unknown): void => {
         logger.error('Application.stop() failed to unload the active scene.', { source: 'Application', ...(error instanceof Error && { error }) });
         this.onError?.dispatch(error instanceof Error ? error : new Error(String(error)));
-      });
+      };
+
+      if (navigationAborted) {
+        void this.scenes._forceClearActiveSceneAfterAbort().catch(onClearSceneFailure);
+      } else {
+        void this.scenes._clearScene().catch(onClearSceneFailure);
+      }
     }
 
     this._status = ApplicationStatus.Stopped;

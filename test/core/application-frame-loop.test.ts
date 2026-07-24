@@ -257,5 +257,68 @@ describe('Application — _frameLoopActive (Slice 7 Group B)', () => {
 
       app.destroy();
     });
+
+    test('app.stop() called mid-transition while a scene is ALREADY active unloads that scene, not just skips it', async () => {
+      class HangingSceneTransition extends SceneTransition {
+        public sessionDestroyed = false;
+
+        public override getRequirements(): SceneTransitionRequirements {
+          return { outgoingFrame: 'none', currentFrame: 'direct' };
+        }
+
+        protected override createSession(_environment: SceneTransitionEnvironment): SceneTransitionSession {
+          // Same hanging stand-in as the startup-navigation test above, but
+          // exercised against a navigation that switches AWAY FROM an already
+          // -active scene, not the very first navigation into an empty app.
+          return {
+            placement: 'screen',
+            done: false,
+            update(): void {},
+            render(): void {},
+            destroy: (): void => {
+              this.sessionDestroyed = true;
+            },
+          };
+        }
+      }
+
+      class SceneA extends Scene {}
+      class SceneB extends Scene {}
+
+      const app = new Application({ backend: { type: 'webgl2' }, scenes: { a: SceneA, b: SceneB } });
+
+      // Get the app fully running with SceneA active first (no transition —
+      // resolves once the direct fast path completes), matching the
+      // "already-running app" precondition the mid-transition abort gap
+      // requires (unlike the startup test above, which never activates a
+      // scene before stop()).
+      await app.start(SceneA);
+
+      expect(app.scenes.currentScene).toBeInstanceOf(SceneA);
+      expect(app.status).toBe(ApplicationStatus.Running);
+
+      const transition = new HangingSceneTransition();
+      const changePromise = app.scenes.change(SceneB, { transition });
+
+      for (let i = 0; i < 50 && !sessionActive(app); i++) {
+        await Promise.resolve();
+      }
+
+      expect(sessionActive(app)).toBe(true);
+
+      app.stop();
+
+      await expect(changePromise).rejects.toThrow(/navigation aborted/i);
+      expect(transition.sessionDestroyed).toBe(true);
+      expect(app.status).toBe(ApplicationStatus.Stopped);
+      // The bug this test guards: stop() must not leave SceneA loaded just
+      // because a navigation abort (rather than a clean stop) is what
+      // triggered the unload — SceneA never committed away, so it is still
+      // the active scene at the moment stop() is called, and stop()'s own
+      // contract is to unload whatever is active.
+      expect(app.scenes.currentScene).toBeNull();
+
+      app.destroy();
+    });
   });
 });

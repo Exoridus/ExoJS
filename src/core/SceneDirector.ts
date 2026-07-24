@@ -336,7 +336,22 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
         // never-activated Ready scope down (Ready-scope cleanup, §3.5.1 —
         // `unload()` runs, `onStopScene` does not).
         if (sessionAtStart !== null && this._activeSession !== sessionAtStart) {
-          await this._disposeScene(newScope, { dispatchStopScene: false });
+          // Guarded (unlike the commit path below, which lets a genuine
+          // failure propagate to _performSessionCommit's catch): this
+          // disposal runs for a navigation that has already settled — its
+          // session was aborted moments ago, so _finishActiveSession's
+          // `session === null` guard makes any catch further up a no-op,
+          // silently dropping the error instead of surfacing it. Report it
+          // through the same error pipeline every other guarded disposal in
+          // this file uses instead.
+          try {
+            await this._disposeScene(newScope, { dispatchStopScene: false });
+          } catch (error) {
+            const normalized = error instanceof Error ? error : new Error(String(error));
+
+            logger.error('SceneDirector.change() failed to dispose a Ready scope discarded by the §3.7 race guard.', { source: 'SceneDirector', error: normalized });
+            this._app.onError.dispatch(normalized);
+          }
 
           return;
         }
@@ -420,6 +435,46 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
     });
 
     return this;
+  }
+
+  /**
+   * @internal Force-unload the active scene without going through the
+   * navigation lock ({@link SceneDirector._runWithNavigation}) — used
+   * exclusively by {@link Application.stop} for the one case where routing
+   * through {@link SceneDirector._clearScene} would spuriously throw
+   * {@link ConcurrentSceneNavigationError}: `stop()` just aborted a
+   * transitioned navigation's in-flight session via
+   * {@link SceneDirector._abortInFlightNavigation}, which settles that
+   * navigation's outer promise synchronously — but the aborted navigation's
+   * OWN `_runWithNavigation` wrapper (around the whole `change()`/`restore()`
+   * body) only clears `_navigationInFlight` several microtask turns later,
+   * once the rejection has actually propagated back up through its `await`/
+   * `catch`. Calling `_clearScene()` synchronously inside that window (as
+   * `Application.stop()` does, immediately after aborting) would see a stale
+   * `_navigationInFlight === true` and reject with
+   * {@link ConcurrentSceneNavigationError} instead of unloading anything.
+   *
+   * Safe to bypass the lock here regardless of that staleness: the aborted
+   * navigation can no longer mutate `_activeScope` unnoticed once its
+   * session is gone — either its `commitSwitch` never started (nothing left
+   * to run for it), or it already had and is still asynchronously preparing,
+   * in which case its own §3.7 race guard detects the now-cleared session
+   * when it resumes and bails without touching `_activeScope` (see
+   * `change()`'s `commitSwitch`). No-op when no scene is active.
+   */
+  public async _forceClearActiveSceneAfterAbort(): Promise<void> {
+    const previousScope = this._activeScope;
+
+    if (previousScope === null) {
+      return;
+    }
+
+    this._activeScope = null;
+    this._activeScopeTarget = null;
+
+    this.onChangeScene.dispatchIsolated(error => this._reportLifecycleError(error), null);
+
+    await this._disposeScene(previousScope);
   }
 
   /**

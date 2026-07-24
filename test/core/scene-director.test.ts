@@ -7,6 +7,7 @@ import { logger } from '#core/logging';
 import { PhasedSceneTransition } from '#core/PhasedSceneTransition';
 import { Scene } from '#core/Scene';
 import { SceneDirector } from '#core/SceneDirector';
+import { SceneScope } from '#core/SceneScope';
 import { SceneState } from '#core/SceneState';
 import {
   SceneTransition,
@@ -2441,5 +2442,82 @@ describe('SceneDirector._abortInFlightNavigation() (Slice 7 Group B, §3.7)', ()
     await settle();
 
     expect(director.currentScene).toBe(firstInstance);
+  });
+
+  test('a throwing disposal of the race-guard-discarded scope is reported through app.onError, not silently dropped', async () => {
+    // NOTE: SceneScope.destroy() already guards scene.unload()/scene.destroy()
+    // internally (see SceneScope's own `_guard`/`_guardAsync` + `_reportErrors`)
+    // and reports failures through app.onError itself, so a plain throwing
+    // `unload()` never actually reaches this code path — SceneScope's own
+    // safety net already covers it. To exercise the specific gap this test
+    // guards (SceneDirector's OWN handling of a rejected `_disposeScene()`
+    // call in the §3.7 race guard, independent of SceneScope's guarantee),
+    // `scope.destroy()` itself is mocked to reject directly.
+    const app = createApplicationStub();
+    const First = makeSceneClass();
+    let resolveLoad!: () => void;
+    const disposalError = new Error('scope.destroy() blew up');
+    const Second = makeSceneClass({
+      load: () =>
+        new Promise<void>(resolve => {
+          resolveLoad = resolve;
+        }),
+    });
+    const director = new SceneDirector(app, { first: First, second: Second });
+
+    await director.change(First);
+    const firstInstance = director.currentScene;
+
+    let environmentRef: SceneTransitionEnvironment | null = null;
+    const session = new FakeSession();
+    const transition = new (class extends SceneTransition {
+      public getRequirements(): SceneTransitionRequirements {
+        return { outgoingFrame: 'none', currentFrame: 'none' };
+      }
+      protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
+        environmentRef = environment;
+
+        return session;
+      }
+    })();
+
+    const navigation = director.change(Second, { transition });
+
+    void navigation.catch(() => undefined);
+
+    environmentRef?.commit();
+    tick(director, app); // starts _performSessionCommit -> commitSwitch, now awaiting Second.load()
+    await Promise.resolve();
+
+    // Aborted mid-prepare, exactly as the previous test.
+    const reason = new SceneNavigationAbortedError();
+
+    expect(director._abortInFlightNavigation(reason)).toBe(true);
+    await expect(navigation).rejects.toBe(reason);
+    expect(director.currentScene).toBe(firstInstance);
+
+    const reportedErrors: Error[] = [];
+
+    app.onError.add(error => reportedErrors.push(error));
+
+    const destroySpy = vi.spyOn(SceneScope.prototype, 'destroy').mockRejectedValueOnce(disposalError);
+
+    try {
+      // Let the suspended load() resolve — commitSwitch's continuation
+      // resumes in the background, observes the abort, and discards the
+      // freshly prepared Second scope via the race guard
+      // (`_disposeScene(newScope, { dispatchStopScene: false })`). That
+      // disposal rejects — this must surface through app.onError, not vanish
+      // silently (`_performSessionCommit`'s own catch calling
+      // `_finishActiveSession` again is a no-op — the session already
+      // settled via the abort above).
+      resolveLoad();
+      await settle();
+
+      expect(reportedErrors).toContain(disposalError);
+      expect(director.currentScene).toBe(firstInstance);
+    } finally {
+      destroySpy.mockRestore();
+    }
   });
 });
