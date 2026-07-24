@@ -936,7 +936,19 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * frame by {@link Application.update} to decide draw order.
    */
   public _transitionPlacement(): 'scene' | 'screen' | null {
-    return this._activeSession?.placement ?? null;
+    const session = this._activeSession;
+
+    if (session === null) {
+      return null;
+    }
+
+    try {
+      return session.placement;
+    } catch (error) {
+      this._finishActiveSession({ ok: false, error });
+
+      return null;
+    }
   }
 
   /**
@@ -1431,7 +1443,21 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
     const session = this._activeSession;
     const environment = this._activeEnvironment;
 
-    if (session === null || environment === null || !session.done) {
+    if (session === null || environment === null) {
+      return;
+    }
+
+    let done: boolean;
+
+    try {
+      done = session.done;
+    } catch (error) {
+      this._finishActiveSession({ ok: false, error });
+
+      return;
+    }
+
+    if (!done) {
       return;
     }
 

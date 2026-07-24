@@ -1771,6 +1771,79 @@ describe('SceneDirector — transition resource provisioning (§3.4, §3.7a)', (
     await expect(navigation).rejects.toThrow(SceneTransitionLifecycleError);
   });
 
+  test('finishes the active session (not hangs) when session.done throws', async () => {
+    const app = createApplicationStub();
+    const First = makeSceneClass();
+    const Second = makeSceneClass();
+    const manager = new SceneDirector(app, { first: First, second: Second });
+
+    await manager.change(First);
+
+    class ThrowingDoneSession implements SceneTransitionSession {
+      public placement: 'scene' | 'screen' = 'screen';
+
+      public get done(): boolean {
+        throw new Error('done getter exploded');
+      }
+
+      public update(): void {}
+      public render(): void {}
+      public destroy(): void {}
+    }
+
+    const transition = new (class extends SceneTransition {
+      public getRequirements(): SceneTransitionRequirements {
+        return { outgoingFrame: 'none', currentFrame: 'none' };
+      }
+      protected override createSession(): SceneTransitionSession {
+        return new ThrowingDoneSession();
+      }
+    })();
+
+    const navigation = manager.change(Second, { transition });
+
+    manager._renderTransition(app.rendering);
+
+    await expect(navigation).rejects.toThrow('done getter exploded');
+    expect(manager._transitionPlacement()).toBeNull(); // session was torn down, not left dangling
+  });
+
+  test('finishes the active session (not hangs) when session.placement throws', async () => {
+    const app = createApplicationStub();
+    const First = makeSceneClass();
+    const Second = makeSceneClass();
+    const manager = new SceneDirector(app, { first: First, second: Second });
+
+    await manager.change(First);
+
+    class ThrowingPlacementSession implements SceneTransitionSession {
+      public done = false;
+
+      public get placement(): 'scene' | 'screen' {
+        throw new Error('placement getter exploded');
+      }
+
+      public update(): void {}
+      public render(): void {}
+      public destroy(): void {}
+    }
+
+    const transition = new (class extends SceneTransition {
+      public getRequirements(): SceneTransitionRequirements {
+        return { outgoingFrame: 'none', currentFrame: 'none' };
+      }
+      protected override createSession(): SceneTransitionSession {
+        return new ThrowingPlacementSession();
+      }
+    })();
+
+    const navigation = manager.change(Second, { transition });
+
+    expect(manager._transitionPlacement()).toBeNull();
+
+    await expect(navigation).rejects.toThrow('placement getter exploded');
+  });
+
   test('the pooled "current" texture resizes when the canvas resizes mid-session', async () => {
     const app = createApplicationStub();
     const TestScene = makeSceneClass();
