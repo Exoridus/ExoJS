@@ -1,0 +1,180 @@
+{
+  "title": "SceneNavigationAbortedError",
+  "description": "Thrown to reject a `change()`/`restore()`/`unload()` call whose transition session was still in flight when the Application frame loop stopped (a fatal frame error, or `stop()`/`destroy()` called mid-transition) — the session cannot progress without frame callbacks, so the navigation is aborted rather than left to hang forever (definition spec §3.7). Any claimed preload/retained entry is restored, not discarded — see spec §3.5.1's claim-restoration rules.",
+  "symbol": "SceneNavigationAbortedError",
+  "kind": "class",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 5,
+  "counts": {
+    "constructors": 1,
+    "methods": 0,
+    "properties": 4,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Thrown to reject a `change()`/`restore()`/`unload()` call whose transition session was still in flight when the Application frame loop stopped (a fatal frame error, or `stop()`/`destroy()` called mid-transition) — the session cannot progress without frame callbacks, so the navigation is aborted rather than left to hang forever (definition spec §3.7). Any claimed preload/retained entry is restored, not discarded — see spec §3.5.1's claim-restoration rules."
+      ],
+      "importLine": "import { SceneNavigationAbortedError } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(): SceneNavigationAbortedError",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneNavigationAbortedError",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "SceneNavigationAbortedError",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "cause",
+          "signature": "cause?: unknown",
+          "signatureTokens": [
+            {
+              "text": "cause",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "message",
+          "signature": "message: string",
+          "signatureTokens": [
+            {
+              "text": "message",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "name",
+          "signature": "name: string",
+          "signatureTokens": [
+            {
+              "text": "name",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "stack",
+          "signature": "stack?: string",
+          "signatureTokens": [
+            {
+              "text": "stack",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/SceneTypes.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneTypes.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/SceneTypes.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneTypes.ts"
+}
