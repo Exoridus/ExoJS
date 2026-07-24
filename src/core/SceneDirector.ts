@@ -16,6 +16,7 @@ import type {
   SceneTransitionSession,
 } from './SceneTransition';
 import { SceneTransitionLifecycleError } from './SceneTransition';
+import { resolveSceneTransitionSelection } from './SceneTransitionResolution';
 import {
   AmbiguousSceneInstanceError,
   type AnySceneConstructor,
@@ -328,7 +329,9 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
         this._pendingOutgoingTeardown = teardown;
       };
 
-      await (options.transition === undefined ? commitSwitch() : this._runTransitionedAction(commitSwitch, context, options.transition));
+      const resolvedTransition = resolveSceneTransitionSelection('change', options.transition, this._registry.defaultTransitions.get(resolvedTarget));
+
+      await (resolvedTransition === null ? commitSwitch() : this._runTransitionedAction(commitSwitch, context, resolvedTransition));
       await this._awaitPendingOutgoingTeardown();
     });
 
@@ -345,7 +348,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * enter). Never part of the public navigation surface itself (navigation
    * always targets a registered constructor).
    */
-  public async _clearScene(transition?: SceneTransition): Promise<this> {
+  public async _clearScene(transition?: SceneTransition | null): Promise<this> {
     await this._runWithNavigation(async () => {
       const context: SceneTransitionContext = {
         operation: 'unload',
@@ -367,7 +370,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
         return Promise.resolve();
       };
 
-      await (transition === undefined ? commitDiscard() : this._runTransitionedAction(commitDiscard, context, transition));
+      await (transition === undefined || transition === null ? commitDiscard() : this._runTransitionedAction(commitDiscard, context, transition));
       await this._awaitPendingOutgoingTeardown();
     });
 
@@ -434,7 +437,9 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
           return Promise.resolve();
         };
 
-        await (options.transition === undefined ? commitSwitch() : this._runTransitionedAction(commitSwitch, context, options.transition));
+        const resolvedTransition = resolveSceneTransitionSelection('restore', options.transition, this._registry.defaultTransitions.get(resolvedTarget));
+
+        await (resolvedTransition === null ? commitSwitch() : this._runTransitionedAction(commitSwitch, context, resolvedTransition));
         await this._awaitPendingOutgoingTeardown();
       });
     } catch (error) {
@@ -590,7 +595,11 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
       return false;
     }
 
-    await this._clearScene(options.transition);
+    // 'unload' never consults the registry default — resolveSceneTransitionSelection
+    // enforces that internally regardless of what defaultTransitions holds for `target`.
+    const resolvedTransition = resolveSceneTransitionSelection('unload', options.transition, this._registry.defaultTransitions.get(target));
+
+    await this._clearScene(resolvedTransition);
 
     return true;
   }

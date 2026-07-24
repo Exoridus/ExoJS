@@ -191,9 +191,12 @@ export interface UnloadOptions {
   /**
    * Only materializes for an active-scope match — a retained or preloaded
    * match has nothing visible on screen to transition, and always runs the
-   * direct (non-transitioned) teardown path regardless of this option.
+   * direct (non-transitioned) teardown path regardless of this option. A
+   * {@link SceneTransitionSelection} — unlike `change()`/`restore()`,
+   * `unload()` never consults a target's registry-level default transition
+   * (spec §3.10); this option is the only source of a transition here.
    */
-  transition?: SceneTransition;
+  transition?: SceneTransitionSelection;
   /**
    * Disambiguates which candidate to discard when more than one exists for
    * the same constructor (active, retained, and/or preloaded can all
@@ -235,18 +238,20 @@ export function resolvePreloadArgs(args: readonly unknown[]): { data: unknown } 
 /**
  * @internal The actual (wider) parameter type {@link SceneDirector.change}
  * accepts: {@link ChangeSceneOptions} plus a `transition` field carrying a
- * real class-based {@link SceneTransition} (spec §3.2), which drives the
- * switch through a {@link SceneTransitionSession}. `transition` is not yet
- * part of {@link ChangeSceneOptions}'s public documented shape — a later
- * slice folds it in directly, once the registry-default
- * `SceneTransitionSelection` exists (spec §6.3). Deliberately not re-exported
- * from the package root: a new caller should not discover `transition` as
- * supported input via this slice's public types.
+ * {@link SceneTransitionSelection} (spec §3.2/§3.10) — a real class-based
+ * {@link SceneTransition} (or {@link PhasedSceneTransition}), a
+ * `{ enter, exit }` pair, or `false` — resolved against the target's
+ * registry-level default via {@link resolveSceneTransitionSelection} and
+ * used to drive the switch through a {@link SceneTransitionSession}.
+ * `transition` is not yet part of {@link ChangeSceneOptions}'s public
+ * documented shape — a later slice folds it in directly. Deliberately not
+ * re-exported from the package root: a new caller should not discover
+ * `transition` as supported input via this slice's public types.
  */
-export type ChangeSceneCallOptions<Data> = ChangeSceneOptions<Data> & { transition?: SceneTransition };
+export type ChangeSceneCallOptions<Data> = ChangeSceneOptions<Data> & { transition?: SceneTransitionSelection };
 
 /** @internal Bridge counterpart of {@link ChangeSceneCallOptions} for {@link SceneDirector.restore}. See its doc comment for the full rationale. */
-export type RestoreSceneCallOptions = RestoreSceneOptions & { transition?: SceneTransition };
+export type RestoreSceneCallOptions = RestoreSceneOptions & { transition?: SceneTransitionSelection };
 
 /**
  * Thrown (dev builds only) when `ApplicationOptions.scenes` registers the
