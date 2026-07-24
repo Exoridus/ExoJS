@@ -1524,6 +1524,77 @@ describe('SceneDirector — transition session driving', () => {
     // Post-commit failure: the new scene stays live, never rolled back.
     expect(manager.currentScene).toBeInstanceOf(OtherScene);
   });
+
+  test('a session that self-terminates (update() throws) mid-commit — after commitSwitch began its async prepare but before it resolved — does NOT activate the incoming scene once prepare later resolves (§3.7 session-identity guard)', async () => {
+    const app = createApplicationStub();
+    const First = makeSceneClass();
+
+    // Incoming scene whose load() we hold open, keeping commitSwitch suspended
+    // inside its prepare() window while the session keeps being driven.
+    let resolveLoad!: () => void;
+    const incomingInit = vi.fn();
+    const Second = makeSceneClass({
+      load: () =>
+        new Promise<void>(resolve => {
+          resolveLoad = resolve;
+        }),
+      init: incomingInit,
+    });
+    const manager = new SceneDirector(app, { first: First, second: Second });
+
+    await manager.change(First);
+    const firstInstance = manager.currentScene;
+
+    let environmentRef: SceneTransitionEnvironment | null = null;
+    const session = new FakeSession();
+    const transition = new (class extends SceneTransition {
+      public getRequirements(): SceneTransitionRequirements {
+        return { outgoingFrame: 'none', currentFrame: 'none' };
+      }
+      protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
+        environmentRef = environment;
+
+        return session;
+      }
+    })();
+
+    const navigation = manager.change(Second, { transition });
+
+    // The session requests commit; this tick kicks off commitSwitch, which then
+    // suspends on the incoming scene's still-pending load() — the async prepare
+    // window this bug lives in.
+    environmentRef?.commit();
+    tick(manager, app);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(incomingInit).not.toHaveBeenCalled(); // still mid-load(): prepare hasn't resolved
+    expect(manager.currentScene).toBe(firstInstance); // not switched yet
+
+    // The session self-terminates DURING that window WITHOUT going through
+    // `_abortInFlightNavigation`: `session.update()` throws, so
+    // `_updateTransition` calls `_finishActiveSession` directly — rejecting the
+    // navigation and clearing `_activeSession`, but NOT bumping
+    // `_navigationGeneration`. The generation term of the §3.7 guard therefore
+    // cannot detect this; only the session-identity term can.
+    session.update = () => {
+      throw new Error('session update blew up mid-prepare');
+    };
+    tick(manager, app);
+
+    // The navigation rejects from the session's own thrown error (settled by
+    // `_finishActiveSession`), not from a second error thrown by commitSwitch.
+    await expect(navigation).rejects.toThrow('session update blew up mid-prepare');
+
+    // Now prepare finally resolves and commitSwitch's continuation resumes. Its
+    // §3.7 guard must hit the session-identity bail (generation is unchanged, so
+    // the generation term alone would MISS this) and dispose the freshly-prepared
+    // scope instead of activating it.
+    resolveLoad();
+    await settle();
+
+    expect(incomingInit).toHaveBeenCalledTimes(1); // prepare did run to completion (reached Ready) ...
+    expect(manager.currentScene).toBe(firstInstance); // ... but the incoming scene was NEVER activated
+  });
 });
 
 describe('SceneDirector — transition resource provisioning (§3.4, §3.7a)', () => {

@@ -324,14 +324,22 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
         const scene = claimedEntry !== null ? (claimedEntry.scope.scene as Scene) : new resolvedTarget();
         const newScope = claimedEntry !== null ? await this._awaitClaimedPreload(claimedEntry) : await this._prepareScene(scene, data);
 
-        // Generalized §3.7 concurrency guard, covering BOTH a session-driven
-        // commit (the old `sessionAtStart !== null && this._activeSession !==
-        // sessionAtStart` check) and a direct (non-transitioned) commit, which
-        // previously had no abort checkpoint at all: `_navigationGeneration`
-        // is bumped by every real `_abortInFlightNavigation` call regardless
-        // of whether a session existed, so comparing it alone subsumes the
-        // old session-identity check.
-        if (this._navigationGeneration !== generationAtStart) {
+        // §3.7 concurrency guard, combining TWO checks — neither subsumes the
+        // other:
+        //   • The generation term catches an abort routed through
+        //     `_abortInFlightNavigation` (the only caller that bumps
+        //     `_navigationGeneration`), including a direct (non-transitioned)
+        //     commit that previously had no abort checkpoint at all.
+        //   • The session-identity term catches a session that self-terminated
+        //     DURING this async prepare window WITHOUT going through
+        //     `_abortInFlightNavigation` — i.e. `session.update()`/`render()`
+        //     threw, or the session reported `done` before commit. Those paths
+        //     call `_finishActiveSession` directly (clearing `_activeSession`
+        //     and rejecting the navigation) but do NOT bump the generation, so
+        //     the generation term alone would miss them and let this closure
+        //     mutate `_activeScope`/dispatch signals for an already-rejected
+        //     navigation.
+        if (this._navigationGeneration !== generationAtStart || (sessionAtStart !== null && this._activeSession !== sessionAtStart)) {
           // Guarded (unlike the commit path below, which lets a genuine
           // failure propagate to _performSessionCommit's catch): this
           // disposal runs for a navigation that has already settled — its
