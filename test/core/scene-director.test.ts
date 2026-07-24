@@ -409,6 +409,23 @@ describe('SceneDirector', () => {
     expect(unload).toHaveBeenCalledTimes(1);
   });
 
+  test("_clearScene() dispatches onChangeScene(null) before onStopScene — matches change()/restore()'s new-scene-signals-before-outgoing-teardown order", async () => {
+    const app = createApplicationStub();
+    const TestScene = makeSceneClass();
+    const manager = new SceneDirector(app, { test: TestScene });
+    const order: string[] = [];
+
+    manager.onChangeScene.add(() => order.push('onChangeScene'));
+    manager.onStopScene.add(() => order.push('onStopScene'));
+
+    await manager.change(TestScene);
+    order.length = 0; // clear the change()-triggered dispatches above
+
+    await manager._clearScene();
+
+    expect(order).toEqual(['onChangeScene', 'onStopScene']);
+  });
+
   test('rejects setScene() targeting an unregistered constructor', async () => {
     class UnregisteredScene extends Scene {}
     const manager = new SceneDirector(createApplicationStub(), {});
@@ -806,6 +823,64 @@ describe('SceneDirector — concurrent navigation', () => {
 });
 
 describe('SceneDirector — post-commit signal isolation', () => {
+  test('change(): outgoing unload() starts only after the incoming scope activates and onChangeScene/onStartScene/onStopScene fire, in that order', async () => {
+    const app = createApplicationStub();
+    const order: string[] = [];
+    const FirstScene = makeSceneClass({
+      unload: async () => {
+        order.push('outgoing.unload:start');
+        await Promise.resolve();
+        order.push('outgoing.unload:end');
+      },
+    });
+    const SecondScene = makeSceneClass();
+    const director = new SceneDirector(app, { first: FirstScene, second: SecondScene });
+
+    director.onChangeScene.add(scene => {
+      if (scene instanceof SecondScene) order.push('onChangeScene');
+    });
+    director.onStartScene.add(scene => {
+      if (scene instanceof SecondScene) order.push('onStartScene');
+    });
+    director.onStopScene.add(scene => {
+      if (scene instanceof FirstScene) order.push('onStopScene');
+    });
+
+    await director.change(FirstScene);
+    order.length = 0; // clear the first change()'s own dispatches
+
+    await director.change(SecondScene);
+
+    // The incoming scope's own signals fire, fully, before the outgoing
+    // scope's unload() is even started — not just before it settles.
+    expect(order).toEqual(['onChangeScene', 'onStartScene', 'onStopScene', 'outgoing.unload:start', 'outgoing.unload:end']);
+  });
+
+  test('restore(): signal order is onStateChange before onChangeScene for the restored scene (Scene.onActivate -> Director.onStateChange -> Director.onChangeScene)', async () => {
+    const app = createApplicationStub();
+    const FirstScene = makeSceneClass();
+    const SecondScene = makeSceneClass();
+    const director = new SceneDirector(app, { first: FirstScene, second: SecondScene });
+    const order: string[] = [];
+
+    await director.change(FirstScene);
+    await director.change(SecondScene, { suspendCurrent: true }); // retains First
+
+    // Every SceneScope dispatches onStateChange for its own lifecycle
+    // transitions (Preparing->Active, ->Destroying, etc.) — restore() here
+    // also permanently ends the outgoing SecondScene, which fires several
+    // onStateChange events of its own. Only the restored FirstScene's own
+    // Suspended->Active edge is the one this test's ordering claim is about.
+    director.onStateChange.add((_previous, _next, scene) => {
+      if (scene instanceof FirstScene) order.push('onStateChange');
+    });
+    director.onChangeScene.add(() => order.push('onChangeScene'));
+
+    await director.restore(FirstScene);
+
+    expect(order).toEqual(['onStateChange', 'onChangeScene']);
+  });
+
   test('a throwing onStopScene listener does not roll back — the switch stays committed and change() still resolves', async () => {
     const app = createApplicationStub();
     const FirstScene = makeSceneClass();
@@ -925,6 +1000,41 @@ describe('SceneDirector — destroy() / _dispose()', () => {
 
     // Active (Third) first, then retained in reverse insertion order: Second before First.
     expect(order).toEqual(['ThirdScene', 'SecondScene', 'FirstScene']);
+  });
+
+  test('_dispose() awaits a pending outgoing teardown left in flight by a fire-and-forget _clearScene() (Application.stop() then destroy())', async () => {
+    const app = createApplicationStub();
+    let resolveUnload!: () => void;
+    const FirstScene = makeSceneClass({
+      unload: () =>
+        new Promise<void>(resolve => {
+          resolveUnload = resolve;
+        }),
+    });
+    const director = new SceneDirector(app, { first: FirstScene });
+
+    await director.change(FirstScene);
+
+    // Fire-and-forget, matching Application.stop()'s real usage — the
+    // caller does not await _clearScene() before calling destroy()/_dispose().
+    void director._clearScene();
+
+    const disposePromise = director._dispose();
+    let disposeSettled = false;
+
+    void disposePromise.then(() => {
+      disposeSettled = true;
+    });
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(disposeSettled).toBe(false); // _dispose() must not resolve while unload() is still pending
+
+    resolveUnload();
+    await disposePromise;
+
+    expect(disposeSettled).toBe(true);
   });
 
   test('destroy() (sync façade) fires _dispose() without the caller awaiting it', async () => {
@@ -2030,6 +2140,45 @@ describe('SceneDirector — transition lifecycle contract', () => {
     tick(manager, app);
 
     await expect(navigation).rejects.toThrow(SceneTransitionLifecycleError);
+  });
+
+  test('settles the navigation promise even when releasing transition resources throws', async () => {
+    const app = createApplicationStub();
+    const First = makeSceneClass();
+    const Second = makeSceneClass();
+    const manager = new SceneDirector(app, { first: First, second: Second });
+
+    await manager.change(First);
+
+    (app.backend.releaseRenderTexture as MockInstance).mockImplementation(() => {
+      throw new Error('releaseRenderTexture exploded');
+    });
+
+    let environmentRef: SceneTransitionEnvironment | null = null;
+    const session = new FakeSession();
+    const transition = new (class extends SceneTransition {
+      public getRequirements(): SceneTransitionRequirements {
+        return { outgoingFrame: 'none', currentFrame: 'texture' };
+      }
+      protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
+        environmentRef = environment;
+
+        return session;
+      }
+    })();
+
+    const navigation = manager.change(Second, { transition });
+
+    environmentRef?.commit();
+    tick(manager, app);
+    await settle();
+    session.done = true;
+    tick(manager, app);
+
+    // Without the fix, release() throwing inside _finishActiveSession (which
+    // ran outside its try/finally) would skip settle() and this would hang
+    // until the test's timeout instead of resolving.
+    await expect(navigation).resolves.toBe(manager);
   });
 
   test('post-commit session failure (update throws) rejects the navigation but the new scene stays live', async () => {

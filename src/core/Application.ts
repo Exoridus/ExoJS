@@ -1273,7 +1273,10 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
     this._status = ApplicationStatus.Stopped;
 
-    void this._disposeManagedResources();
+    void this._disposeManagedResources().catch((error: unknown) => {
+      logger.error('Application.destroy() failed during teardown.', { source: 'Application', ...(error instanceof Error && { error }) });
+      this.onError?.dispatch(error instanceof Error ? error : new Error(String(error)));
+    });
   }
 
   /**

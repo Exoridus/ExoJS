@@ -9,7 +9,7 @@
 interface OnFrameTestHarness {
   readonly Application: typeof import('#core/Application').Application;
   readonly ApplicationStatus: typeof import('#core/Application').ApplicationStatus;
-  readonly sceneDirector: { update: MockInstance; setScene: MockInstance; destroy: MockInstance };
+  readonly sceneDirector: { update: MockInstance; setScene: MockInstance; destroy: MockInstance; _dispose: MockInstance };
   readonly backend: {
     flush: MockInstance;
     resetStats: MockInstance;
@@ -41,6 +41,7 @@ const loadOnFrameHarness = async (): Promise<OnFrameTestHarness> => {
     update: vi.fn(),
     setScene: vi.fn().mockResolvedValue(undefined),
     destroy: vi.fn(),
+    _dispose: vi.fn().mockResolvedValue(undefined),
   };
   // Plain object that satisfies the onKeyDown Signal shape needed by DebugOverlay
   // (Application itself doesn't use onKeyDown in its constructor, so a minimal stub suffices).
@@ -215,6 +216,13 @@ describe('Application.onFrame', () => {
     expect(app.onFrame.count).toBeGreaterThan(0);
 
     app.destroy();
+
+    // destroy() disposes scenes first, awaited internally in a background
+    // async chain, before the rest of teardown (including onFrame.destroy())
+    // runs — give it a few microtask turns to settle.
+    for (let i = 0; i < 16 && app.onFrame.count > 0; i++) {
+      await Promise.resolve();
+    }
 
     expect(app.onFrame.count).toBe(0);
   });

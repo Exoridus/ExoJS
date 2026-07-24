@@ -459,11 +459,16 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
 
         this._activeScope = null;
         this._activeScopeTarget = null;
+
+        // onChangeScene fires before outgoing teardown starts (and therefore
+        // before onStopScene, dispatched inside _disposeScene) — matches
+        // change()/restore()'s order (new-scene signals before the outgoing
+        // scope's), and _forceClearActiveSceneAfterAbort()'s equivalent.
+        this.onChangeScene.dispatchIsolated(error => this._reportLifecycleError(error), null);
+
         // Outgoing teardown backgrounds (same contract as change()/restore());
         // awaited last via `_awaitPendingOutgoingTeardown`.
         this._pendingOutgoingTeardown = previousScope !== null ? this._disposeScene(previousScope) : null;
-
-        this.onChangeScene.dispatchIsolated(error => this._reportLifecycleError(error), null);
 
         return Promise.resolve();
       };
@@ -1045,6 +1050,22 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
     // the session gone and bails instead of mutating `_activeScope` behind us.
     this._abortInFlightNavigation(new SceneTransitionLifecycleError('aborted'));
 
+    // A prior committed switch's outgoing scope may still be tearing down in
+    // the background (`change()`/`restore()`/`_clearScene()` await this same
+    // promise last, via `_awaitPendingOutgoingTeardown`) — wait for it before
+    // touching any other manager, or `destroy()`'s documented guarantee
+    // ("scenes fully disposed first, including any scene's own async
+    // unload()") is false whenever destroy() follows close behind a switch
+    // or a fire-and-forget `stop()`.
+    try {
+      await this._awaitPendingOutgoingTeardown();
+    } catch (error) {
+      logger.error('SceneDirector.destroy() failed to await a pending outgoing scene teardown.', {
+        source: 'SceneDirector',
+        ...(error instanceof Error && { error }),
+      });
+    }
+
     const activeScope = this._activeScope;
 
     this._activeScope = null;
@@ -1520,11 +1541,23 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
     this._activeEnvironment = null;
     this._sessionAction = null;
     this._sessionSettle = null;
-    this._releaseTransitionResources(this._sessionResources);
+
+    const resources = this._sessionResources;
+
     this._sessionResources = null;
     this._inputGateDepth--;
 
     try {
+      // Guarded like session.destroy() below — release() can throw (a
+      // backend releaseRenderTexture call against a lost/destroyed backend)
+      // and must never skip settle() any more than a throwing session or a
+      // throwing onError listener may.
+      try {
+        this._releaseTransitionResources(resources);
+      } catch (error) {
+        this._app.onError.dispatchIsolated(() => {}, error instanceof Error ? error : new Error(String(error)));
+      }
+
       try {
         session.destroy();
       } catch (error) {
@@ -1588,12 +1621,32 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
       release: () => {
         this._app.onResize.remove(onResize);
 
+        // Each release is independently guarded — one texture's release
+        // throwing (e.g. against a lost/destroyed backend) must not skip
+        // the other's, or the un-released texture leaks. The caller
+        // (_finishActiveSession) already isolates a throw from this whole
+        // method; re-thrown here so that isolation still observes a failure
+        // happened, after both releases were attempted.
+        let firstError: unknown;
+
         if (outgoingSnapshot !== null) {
-          this._app.backend.releaseRenderTexture(outgoingSnapshot);
+          try {
+            this._app.backend.releaseRenderTexture(outgoingSnapshot);
+          } catch (error) {
+            firstError = error;
+          }
         }
 
         if (currentTexture !== null) {
-          this._app.backend.releaseRenderTexture(currentTexture);
+          try {
+            this._app.backend.releaseRenderTexture(currentTexture);
+          } catch (error) {
+            firstError ??= error;
+          }
+        }
+
+        if (firstError !== undefined) {
+          throw firstError instanceof Error ? firstError : new Error('SceneDirector: releasing transition resources failed', { cause: firstError });
         }
       },
     };

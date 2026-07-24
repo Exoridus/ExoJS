@@ -315,14 +315,18 @@ class BootScene extends Scene {
     }
 
     unload() {
-        this.loader.onLoadComplete.remove(this._onLoadComplete);
+        // this.app is still valid here — unload() runs before the scene is
+        // detached (see Scene.attached below).
+        this.app.loader.onLoadComplete.remove(this._onLoadComplete);
     }
 
     _enterGame() {
+        // Check this.attached first — it never throws, unlike this.state,
+        // which throws once the scene has been fully detached (destroyed).
         // this.state is 'active' only while this scene is still the one
-        // driving the screen — a suspended, unloading, or already-destroyed
-        // BootScene must not navigate.
-        if (this.state !== 'active') {
+        // driving the screen — suspended, unloading, or detached must not
+        // navigate.
+        if (!this.attached || this.state !== 'active') {
             return;
         }
 

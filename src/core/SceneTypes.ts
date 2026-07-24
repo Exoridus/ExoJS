@@ -107,8 +107,18 @@ export type ConstructorOf<R extends SceneRegistration<AnySceneConstructor>> = R 
  * default generic on `Application`/`SceneDirector`). Without this
  * conditional, an unconstrained `C extends AnySceneConstructor` accepted any
  * constructor even with a populated registry present, giving no
- * compile-time rejection of an unregistered scene (the dev-only
+ * compile-time signal for an unregistered scene at all (the dev-only
  * {@link UnregisteredSceneError} runtime check was the only guard).
+ *
+ * **Structural-typing caveat:** this rejects an unregistered constructor
+ * only when it is structurally distinguishable from every registered one —
+ * concretely, when it has a `Data` type (or other members) the registered
+ * constructors lack. Two `Scene` subclasses that declare no members of
+ * their own (the same shape as bare `Scene`) are structurally identical, so
+ * an unregistered empty scene passed where a registered empty scene is
+ * expected still compiles; TypeScript's structural type system cannot tell
+ * them apart. The dev-only {@link UnregisteredSceneError} runtime check
+ * remains the only guard that is complete in every case.
  */
 export type NavigableSceneConstructor<Registry> = keyof Registry extends never
   ? AnySceneConstructor
