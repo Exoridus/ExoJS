@@ -1,16 +1,16 @@
 {
-  "title": "RetainedSceneConflictError",
-  "description": "Thrown when `change` targets a constructor that already has a retained (suspended) Scene. Call SceneDirector.restore or SceneDirector.unload for it first.",
-  "symbol": "RetainedSceneConflictError",
+  "title": "AmbiguousSceneInstanceError",
+  "description": "Thrown when `unload(Target)` is called with `options.instance` omitted while more than one activation (active, retained, and/or preloaded) exists for `Target` — there is no priority order; the caller must specify which one via `{ instance: 'active' | 'retained' | 'preloaded' }`, or `{ instance: 'all' }` to discard every one.",
+  "symbol": "AmbiguousSceneInstanceError",
   "kind": "class",
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 6,
+  "memberCount": 7,
   "counts": {
     "constructors": 1,
     "methods": 0,
-    "properties": 5,
+    "properties": 6,
     "events": 0
   },
   "sections": [
@@ -19,9 +19,9 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Thrown when `change` targets a constructor that already has a retained (suspended) Scene. Call SceneDirector.restore or SceneDirector.unload for it first."
+        "Thrown when `unload(Target)` is called with `options.instance` omitted while more than one activation (active, retained, and/or preloaded) exists for `Target` — there is no priority order; the caller must specify which one via `{ instance: 'active' | 'retained' | 'preloaded' }`, or `{ instance: 'all' }` to discard every one."
       ],
-      "importLine": "import { RetainedSceneConflictError } from '@codexo/exojs'",
+      "importLine": "import { AmbiguousSceneInstanceError } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
@@ -30,7 +30,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(constructorName: string): RetainedSceneConflictError",
+          "signature": "new(constructorName: string, candidates: readonly SceneInstanceKind[]): AmbiguousSceneInstanceError",
           "signatureTokens": [
             {
               "text": "new",
@@ -53,6 +53,34 @@
               "kind": "keyword"
             },
             {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "candidates",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneInstanceKind",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            },
+            {
               "text": ")",
               "kind": "punctuation"
             },
@@ -61,7 +89,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "RetainedSceneConflictError",
+              "text": "AmbiguousSceneInstanceError",
               "kind": "type"
             }
           ],
@@ -70,9 +98,14 @@
               "name": "constructorName",
               "type": "string",
               "optional": false
+            },
+            {
+              "name": "candidates",
+              "type": "readonly SceneInstanceKind[]",
+              "optional": false
             }
           ],
-          "returnType": "RetainedSceneConflictError",
+          "returnType": "AmbiguousSceneInstanceError",
           "description": ""
         }
       ],
@@ -84,6 +117,39 @@
       "id": "properties",
       "title": "Properties",
       "members": [
+        {
+          "name": "candidates",
+          "signature": "candidates: readonly SceneInstanceKind[]",
+          "signatureTokens": [
+            {
+              "text": "candidates",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneInstanceKind",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
         {
           "name": "cause",
           "signature": "cause?: unknown",
