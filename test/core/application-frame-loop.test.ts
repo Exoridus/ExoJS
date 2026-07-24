@@ -5,6 +5,8 @@
  * `start()` call (before `_status` flips to Running).
  */
 import { Application, ApplicationStatus } from '#core/Application';
+import { Scene } from '#core/Scene';
+import { SceneTransition, type SceneTransitionEnvironment, type SceneTransitionRequirements, type SceneTransitionSession } from '#core/SceneTransition';
 
 vi.mock('#rendering/webgl2/WebGl2Backend', () => ({
   WebGl2Backend: vi.fn().mockImplementation(function () {
@@ -46,6 +48,12 @@ vi.mock('#rendering/webgl2/WebGl2Backend', () => ({
 
 function frameLoopActive(app: Application): boolean {
   return (app as unknown as Record<string, unknown>)['_frameLoopActive'] as boolean;
+}
+
+function sessionActive(app: Application): boolean {
+  const scenes = app.scenes as unknown as Record<string, unknown>;
+
+  return scenes['_activeSession'] !== null && scenes['_activeSession'] !== undefined;
 }
 
 describe('Application — _frameLoopActive (Slice 7 Group B)', () => {
@@ -192,6 +200,62 @@ describe('Application — _frameLoopActive (Slice 7 Group B)', () => {
       expect(frameLoopActive(app)).toBe(false);
 
       await startPromise;
+    });
+  });
+
+  describe('End-to-end: stopping the app mid-transition aborts the in-flight navigation (real SceneDirector)', () => {
+    test('app.stop() called while the initial start() navigation is mid-transition rejects start() with SceneNavigationAbortedError', async () => {
+      class HangingSceneTransition extends SceneTransition {
+        public sessionDestroyed = false;
+
+        public override getRequirements(): SceneTransitionRequirements {
+          return { outgoingFrame: 'none', currentFrame: 'direct' };
+        }
+
+        protected override createSession(_environment: SceneTransitionEnvironment): SceneTransitionSession {
+          // Never calls environment.commit() and never reaches `done` on its
+          // own — a stand-in for "a transition whose session is still
+          // mid-flight when something stops the app," driven only by the test.
+          return {
+            placement: 'screen',
+            done: false,
+            update(): void {},
+            render(): void {},
+            destroy: (): void => {
+              this.sessionDestroyed = true;
+            },
+          };
+        }
+      }
+
+      class TargetScene extends Scene {}
+
+      const app = new Application({ backend: { type: 'webgl2' }, scenes: { target: TargetScene } });
+      const transition = new HangingSceneTransition();
+
+      const startPromise = app.start(TargetScene, { transition });
+
+      // Let the loop start and the transition's session begin — but never
+      // drive it to commit/done (that's the whole point of this test). The
+      // exact number of microtask turns start() needs before the session
+      // actually begins (backend init, capability detection, then the
+      // Director's own pre-session synchronous setup) isn't a stable
+      // constant to hardcode — poll instead of guessing a tick count.
+      for (let i = 0; i < 50 && !sessionActive(app); i++) {
+        await Promise.resolve();
+      }
+
+      expect(sessionActive(app)).toBe(true);
+      expect(app.status).toBe(ApplicationStatus.Loading);
+
+      app.stop();
+
+      await expect(startPromise).rejects.toThrow(/navigation aborted/i);
+      expect(transition.sessionDestroyed).toBe(true);
+      expect(app.status).toBe(ApplicationStatus.Stopped);
+      expect(app.scenes.currentScene).toBeNull();
+
+      app.destroy();
     });
   });
 });
