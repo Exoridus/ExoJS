@@ -1945,6 +1945,33 @@ describe('SceneDirector — transition lifecycle contract', () => {
     expect(session.destroyCallCount).toBe(1);
   });
 
+  test('settles the navigation promise even when an onError listener throws', async () => {
+    const app = createApplicationStub();
+    const First = makeSceneClass();
+    const Second = makeSceneClass();
+    const manager = new SceneDirector(app, { first: First, second: Second });
+
+    await manager.change(First);
+
+    app.onError.add(() => {
+      throw new Error('listener exploded');
+    });
+
+    const session = new FakeSession();
+    const transition = new FakeTransition(session);
+
+    const navigation = manager.change(Second, { transition });
+
+    // done === true before commit() was ever called -> a 'done-before-commit'
+    // lifecycle error, which is exactly what previously hit the unguarded
+    // onError.dispatch() and, with a throwing listener, would have skipped
+    // settle() and left `navigation` hanging forever.
+    session.done = true;
+    tick(manager, app);
+
+    await expect(navigation).rejects.toThrow(SceneTransitionLifecycleError);
+  });
+
   test('post-commit session failure (update throws) rejects the navigation but the new scene stays live', async () => {
     const app = createApplicationStub();
     const First = makeSceneClass();

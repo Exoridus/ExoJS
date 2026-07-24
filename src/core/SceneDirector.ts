@@ -1524,16 +1524,24 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
     this._inputGateDepth--;
 
     try {
-      session.destroy();
-    } catch (error) {
-      this._app.onError.dispatch(error instanceof Error ? error : new Error(String(error)));
-    }
+      try {
+        session.destroy();
+      } catch (error) {
+        // dispatchIsolated with a no-op onError callback: an onError
+        // listener itself throwing must never propagate out of this method
+        // and skip `settle()` below — Signal.dispatchIsolated already
+        // isolates a throwing LISTENER; the no-op callback here additionally
+        // isolates a throwing onError CALLBACK, which a plain `.dispatch()`
+        // would not.
+        this._app.onError.dispatchIsolated(() => {}, error instanceof Error ? error : new Error(String(error)));
+      }
 
-    if (!outcome.ok) {
-      this._app.onError.dispatch(outcome.error instanceof Error ? outcome.error : new Error(String(outcome.error)));
+      if (!outcome.ok) {
+        this._app.onError.dispatchIsolated(() => {}, outcome.error instanceof Error ? outcome.error : new Error(String(outcome.error)));
+      }
+    } finally {
+      settle(outcome);
     }
-
-    settle(outcome);
   }
 
   /**
