@@ -126,7 +126,7 @@ For full control with no wrapper element, drop down to `useExoApplication`.
 `<Scenes>` switches the one active scene by name. Declare each scene with `<Scene>` and select
 the active one through the `active` prop. The first activation calls `app.start(scene)` (which
 initializes the backend and starts the frame loop); later switches call
-`app.scenes.setScene(scene, …)` with the optional `transition`.
+`app.scenes.change(scene, …)` with the optional `transition`.
 
 The scene classes you reference are ordinary ExoJS scenes — the React layer only decides which
 one is active:
@@ -139,13 +139,14 @@ export class GameScene extends Scene {}
 ```
 
 ```tsx no-check
+import { FadeSceneTransition } from '@codexo/exojs';
 import { ExoCanvas, Scenes, Scene } from '@codexo/exojs-react';
 import { TitleScene, GameScene } from './scenes';
 
 function Game({ screen }: { screen: 'title' | 'game' }) {
   return (
     <ExoCanvas options={{ canvas: { width: 1280, height: 720 } }} style={{ width: 1280, height: 720 }}>
-      <Scenes active={screen} transition={{ type: 'fade', duration: 300 }}>
+      <Scenes active={screen} transition={new FadeSceneTransition({ duration: 300 })}>
         <Scene name="title" component={TitleScene} />
         <Scene name="game" component={GameScene}>
           <Hud />
@@ -157,8 +158,9 @@ function Game({ screen }: { screen: 'title' | 'game' }) {
 ```
 
 Each `<Scene>` takes a unique `name`, the scene `component` class to instantiate, and optional
-`children` that render as the active scene's overlay. The `transition` (a core `SceneTransition`,
-e.g. a fade whose `duration` is in milliseconds) only applies to switches, not the first start.
+`children` that render as the active scene's overlay. The `transition` (a `SceneTransition`
+instance — e.g. `new FadeSceneTransition({ duration: 300 })`, `duration` in milliseconds) only
+applies to switches, not the first start.
 If `active` matches no `<Scene>`, the active scene is cleared.
 
 `useActiveScene()` reads the live scene instance from the nearest `<Scenes>`, so an overlay can
@@ -210,6 +212,7 @@ HUD on the active scene:
 
 ```tsx no-check
 import { useState } from 'react';
+import { FadeSceneTransition } from '@codexo/exojs';
 import { ExoCanvas, Scenes, Scene, useActiveScene } from '@codexo/exojs-react';
 import { TitleScene, GameScene } from './scenes';
 
@@ -230,7 +233,7 @@ export function App() {
       options={{ canvas: { width: 1280, height: 720 } }}
       style={{ width: 1280, height: 720 }}
     >
-      <Scenes active={screen} transition={{ type: 'fade', duration: 300 }}>
+      <Scenes active={screen} transition={new FadeSceneTransition({ duration: 300 })}>
         <Scene name="title" component={TitleScene}>
           <button style={{ position: 'absolute', inset: 0 }} onClick={() => setScreen('game')}>
             Start
@@ -253,7 +256,7 @@ loop. The two stay cleanly separated.
 - **Package README:** [`@codexo/exojs-react`](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-react/README.md)
   — install, the export table, and the reactivity model.
 - **Scenes & lifecycle:** the [Scenes & lifecycle](/ExoJS/en/guide/runtime/scenes-and-lifecycle/)
-  chapter explains `app.start`, `app.scenes.setScene`, transitions, and the hooks the React layer
+  chapter explains `app.start`, `app.scenes.change`, transitions, and the hooks the React layer
   drives for you.
 - **API reference:** the [`Application`](/ExoJS/en/api/application/) and
   [`Scene`](/ExoJS/en/api/scene/) pages document the underlying engine surface the bindings wrap.
