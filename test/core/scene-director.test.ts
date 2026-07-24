@@ -959,6 +959,60 @@ describe('SceneDirector — destroy() / _dispose()', () => {
 
     void pending.catch(() => {});
   });
+
+  test('_dispose() destroys a Ready (never-consumed) preloaded scope', async () => {
+    const app = createApplicationStub();
+    const PreloadedScene = makeSceneClass();
+    const director = new SceneDirector(app, { preloaded: PreloadedScene });
+    const destroySpy = vi.spyOn(Scene.prototype, 'destroy');
+    const stopSceneSpy = vi.fn();
+
+    director.onStopScene.add(stopSceneSpy);
+
+    await director.preload(PreloadedScene); // reaches Ready but is never consumed by change()
+
+    await director._dispose();
+
+    expect(destroySpy).toHaveBeenCalledTimes(1);
+    expect(stopSceneSpy).not.toHaveBeenCalled(); // never activated — onStopScene must not fire for it
+
+    destroySpy.mockRestore();
+  });
+
+  test('_dispose() waits for an in-flight preload to settle, then destroys it without concurrent teardown', async () => {
+    const app = createApplicationStub();
+    let resolveLoad!: () => void;
+    const initSpy = vi.fn();
+    const destroySpy = vi.spyOn(Scene.prototype, 'destroy');
+    const SlowScene = makeSceneClass({
+      load: () =>
+        new Promise<void>(resolve => {
+          resolveLoad = resolve;
+        }),
+      init: initSpy,
+    });
+    const director = new SceneDirector(app, { slow: SlowScene });
+
+    const preloadPromise = director.preload(SlowScene);
+    const disposePromise = director._dispose();
+
+    // Still mid-load() — _dispose() must be waiting on prepare() to settle,
+    // not tearing anything down concurrently.
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(destroySpy).not.toHaveBeenCalled();
+    expect(initSpy).not.toHaveBeenCalled(); // load() hasn't even resolved yet
+
+    resolveLoad();
+
+    await expect(preloadPromise).resolves.toBeUndefined(); // prepare() itself still succeeds
+    await disposePromise;
+
+    expect(initSpy).toHaveBeenCalledTimes(1); // prepare() ran to completion (reached Ready), not aborted mid-way
+    expect(destroySpy).toHaveBeenCalledTimes(1);
+
+    destroySpy.mockRestore();
+  });
 });
 
 describe('SceneDirector — key-based navigation', () => {

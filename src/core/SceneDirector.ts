@@ -1010,11 +1010,14 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * @internal Awaited teardown, in order: abort any in-flight transition
    * session (destroy it, reject its navigation) → destroy the active scope
    * (guarded, errors reported) → destroy every retained scope in reverse
-   * insertion order (guarded, errors reported) → destroy every Signal.
-   * Signals are destroyed last so scene teardown (`unload()`, `onStopScene`
-   * listeners) can still use them while it runs. Does not participate in
-   * the `_navigationInFlight` guard — teardown must always proceed
-   * regardless of any in-flight navigation (definition §10.6).
+   * insertion order (guarded, errors reported) → destroy every preloaded-
+   * but-never-consumed scope in reverse insertion order (each entry marked
+   * `cancelling` and awaited before disposal, guarded, errors reported,
+   * `onStopScene` never dispatched since it was never activated) → destroy
+   * every Signal. Signals are destroyed last so scene teardown (`unload()`,
+   * `onStopScene` listeners) can still use them while it runs. Does not
+   * participate in the `_navigationInFlight` guard — teardown must always
+   * proceed regardless of any in-flight navigation (definition §10.6).
    */
   public async _dispose(): Promise<void> {
     this._destroyed = true;
@@ -1051,6 +1054,35 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
         await this._disposeScene(scope);
       } catch (error) {
         logger.error('SceneDirector.destroy() failed to destroy a retained scene.', { source: 'SceneDirector', ...(error instanceof Error && { error }) });
+      }
+    }
+
+    // Preloaded-but-never-consumed scopes are Director-owned activations
+    // (spec: preloaded scopes are Director-owned, must not be restored or
+    // left behind at Director teardown) — never touched by the loops above.
+    // In reverse insertion order for symmetry with `_retained`. Marked
+    // `cancelling` first, mirroring `_discardStalePreload`/`_unloadPreloaded`,
+    // so a `preload()`/`change()` claim racing this teardown sees it and
+    // skips the entry instead of claiming a scope mid-destroy.
+    const preloadedInReverseInsertionOrder = [...this._preloaded.entries()].reverse();
+
+    this._preloaded.clear();
+
+    for (const [, entry] of preloadedInReverseInsertionOrder) {
+      entry.status = 'cancelling';
+
+      try {
+        await entry.ready;
+      } catch {
+        // prepare() failed — _runPreloadPrepare()'s own catch already ran
+        // the failed-preparation cleanup. Nothing further to do.
+        continue;
+      }
+
+      try {
+        await this._disposeScene(entry.scope, { dispatchStopScene: false });
+      } catch (error) {
+        logger.error('SceneDirector.destroy() failed to destroy a preloaded scene.', { source: 'SceneDirector', ...(error instanceof Error && { error }) });
       }
     }
 
