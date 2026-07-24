@@ -444,7 +444,7 @@ describe('SceneDirector', () => {
   describe('registry — descriptor form (spec §6.1)', () => {
     test('accepts a descriptor-form registration ({ scene, transition }) exactly like a bare constructor', async () => {
       const TestScene = makeSceneClass();
-      const manager = new SceneDirector(createApplicationStub(), { test: { scene: TestScene, transition: 'placeholder' } });
+      const manager = new SceneDirector(createApplicationStub(), { test: { scene: TestScene, transition: false } });
 
       await expect(manager.change(TestScene)).resolves.toBe(manager);
     });

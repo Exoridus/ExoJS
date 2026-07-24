@@ -27,7 +27,7 @@ describe('validateSceneRegistry', () => {
   });
 
   test('a descriptor-form entry resolves to its scene constructor in both directions', () => {
-    const registry = validateSceneRegistry({ game: { scene: OtherScene, transition: 'placeholder' } }, Scene);
+    const registry = validateSceneRegistry({ game: { scene: OtherScene, transition: false } }, Scene);
 
     expect(registry.byConstructor.get(OtherScene)).toBe('game');
     expect(registry.byKey.get('game')).toBe(OtherScene);

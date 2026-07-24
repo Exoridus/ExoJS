@@ -53,7 +53,7 @@ class RegGameScene extends Scene<GameData> {}
 
 const _bareRegistration: SceneRegistration<typeof VoidScene> = VoidScene;
 const _descriptorRegistration: SceneRegistration<typeof RegGameScene> = { scene: RegGameScene };
-const _descriptorWithTransition: SceneRegistration<typeof RegGameScene> = { scene: RegGameScene, transition: 'placeholder' };
+const _descriptorWithTransition: SceneRegistration<typeof RegGameScene> = { scene: RegGameScene, transition: false };
 
 // A plain interface (no index signature) satisfies the mapped-type constraint.
 interface GameScenesRegistry {

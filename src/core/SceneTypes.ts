@@ -1,4 +1,5 @@
 import type { Application } from './Application';
+import type { PhasedSceneTransition } from './PhasedSceneTransition';
 import type { Scene } from './Scene';
 import type { SceneTransition } from './SceneTransition';
 
@@ -30,6 +31,29 @@ export type AnySceneConstructor = SceneConstructor | SceneConstructor<any>;
 export type InferSceneData<C> = C extends SceneConstructor<infer Data> ? Data : never;
 
 /**
+ * A `{ enter, exit }` pair of independently-authored {@link PhasedSceneTransition}
+ * instances (spec §3.9.1/§3.10) — a union of two variants requiring at
+ * least one of `{ enter, exit }`, never an interface with both fields
+ * optional. An interface form would type-check `transition: {}` as valid,
+ * which — since a call-site value fully replaces the registry default
+ * (§3.10 rule 1) — would silently suppress a scene's configured default
+ * while looking like a no-op. Confirmed, TypeScript `--strict`: the union
+ * form correctly rejects `{}` (see `test/type-tests/scene-transition-phases.type-test.ts`).
+ */
+export type SceneTransitionPhases =
+  | { readonly enter: PhasedSceneTransition; readonly exit?: PhasedSceneTransition }
+  | { readonly enter?: PhasedSceneTransition; readonly exit: PhasedSceneTransition };
+
+/**
+ * The full set of values accepted for a `transition` option — call-site
+ * (`change()`/`restore()`/`unload()`) or registry-level default (§3.10):
+ * a single {@link SceneTransition} (or {@link PhasedSceneTransition}, which
+ * is one), a `{ enter, exit }` pair to compose, or `false` (the explicit
+ * "no transition, even if a registry default exists" escape hatch).
+ */
+export type SceneTransitionSelection = SceneTransition | SceneTransitionPhases | false;
+
+/**
  * A single `ApplicationOptions.scenes` registry entry: either a bare
  * {@link Scene} subclass constructor, or a descriptor pairing one with a
  * target-bound default transition. Both forms register identically —
@@ -44,8 +68,7 @@ export type SceneRegistration<C extends AnySceneConstructor> =
        * constructor without its own call-site `transition` option (spec
        * §3.10).
        */
-      // TODO(slice 6): SceneTransitionSelection
-      readonly transition?: unknown;
+      readonly transition?: SceneTransitionSelection;
     };
 
 /**
