@@ -10,6 +10,7 @@ import { SceneNavigationTransaction } from './scene/SceneNavigationTransaction';
 import { SceneScope } from './SceneScope';
 import type { SceneState } from './SceneState';
 import {
+  AmbiguousSceneInstanceError,
   type AnySceneConstructor,
   type ChangeSceneArgs,
   type ChangeSceneCallOptions,
@@ -22,17 +23,26 @@ import {
   type RestoreSceneOptions,
   RetainedSceneConflictError,
   RetainedSceneNotFoundError,
+  type SceneInstanceKind,
+  SceneInstanceNotFoundError,
   type SceneRegistryIndex,
   type SceneRegistryShape,
   type SceneTransition,
+  type UnloadOptions,
   UnregisteredSceneError,
   validateSceneRegistry,
 } from './SceneTypes';
 import { Signal } from './Signal';
 import type { Time } from './Time';
 
-export type { ChangeSceneOptions, FadeSceneTransition, RestoreSceneOptions, SceneTransition } from './SceneTypes';
-export { ConcurrentSceneNavigationError, RetainedSceneConflictError, RetainedSceneNotFoundError } from './SceneTypes';
+export type { ChangeSceneOptions, FadeSceneTransition, RestoreSceneOptions, SceneInstanceKind, SceneTransition, UnloadOptions } from './SceneTypes';
+export {
+  AmbiguousSceneInstanceError,
+  ConcurrentSceneNavigationError,
+  RetainedSceneConflictError,
+  RetainedSceneNotFoundError,
+  SceneInstanceNotFoundError,
+} from './SceneTypes';
 
 type PreloadStatus = 'loading' | 'ready' | 'claimed' | 'cancelling' | 'failed';
 
@@ -204,7 +214,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * builds for a constructor target, every build for an unresolvable
    * registry key) when `target` is not present in
    * `ApplicationOptions.scenes`; with {@link RetainedSceneConflictError}
-   * when `target` already has a retained instance (restore or release it
+   * when `target` already has a retained instance (restore or unload it
    * first).
    */
   public async change<K extends RegistryKeyOf<Registry>>(target: K, ...args: ChangeSceneArgs<InferSceneData<Registry[K]>>): Promise<this>;
@@ -320,7 +330,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
     }
 
     // Eager, synchronous claim: removed from `_retained` before any `await`
-    // so a concurrent restore(target)/releaseScene(target) call targeting
+    // so a concurrent restore(target)/unload(target) call targeting
     // the same constructor can never also see it.
     this._retained.delete(resolvedTarget);
 
@@ -349,7 +359,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
       // Only reachable here via a rejected concurrent-navigation guard —
       // retainedScope.restore() itself never throws (SceneScope guards
       // every facility call). Put the eager claim back so the scope
-      // remains available for a future restore()/releaseScene() call.
+      // remains available for a future restore()/unload() call.
       this._retained.set(resolvedTarget, retainedScope);
 
       throw error;
@@ -413,19 +423,124 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
   }
 
   /**
-   * Permanently end a retained (suspended) scene without reactivating it.
-   * Returns `true` if a retained instance existed for `target`, `false`
-   * otherwise (no-op, not an error).
+   * Discard whatever is parked or active for `target`'s constructor — the
+   * single, unified replacement for the removed `releaseScene()`. Checks
+   * every candidate (active, retained, preloaded); when more than one
+   * exists, `options.instance` must disambiguate which one — there is no
+   * priority order. `options.transition` only materializes for an
+   * active-scope match (a retained or preloaded match has nothing visible on
+   * screen to transition, and always runs the direct, non-transitioned
+   * teardown path).
+   *
+   * Returns `false` if nothing matched `target` at all. Rejects with
+   * {@link AmbiguousSceneInstanceError} when `options.instance` is omitted
+   * and more than one candidate exists; with {@link SceneInstanceNotFoundError}
+   * when `options.instance` names a specific kind that doesn't exist for
+   * `target`.
    */
-  public async releaseScene<C extends AnySceneConstructor>(target: C): Promise<boolean> {
-    const scope = this._retained.get(target);
+  public async unload<C extends AnySceneConstructor>(target: C, options: UnloadOptions = {}): Promise<boolean> {
+    const preloadEntry = this._preloaded.get(target);
+    const candidates: SceneInstanceKind[] = [
+      ...(this._activeScopeTarget === target ? (['active'] as const) : []),
+      ...(this._retained.has(target) ? (['retained'] as const) : []),
+      ...(preloadEntry !== undefined && preloadEntry.status !== 'cancelling' ? (['preloaded'] as const) : []),
+    ];
 
-    if (scope === undefined) {
+    if (candidates.length === 0) {
       return false;
     }
 
-    this._retained.delete(target);
-    await this._disposeScene(scope);
+    if (options.instance === undefined) {
+      if (candidates.length > 1) {
+        throw new AmbiguousSceneInstanceError(target.name, candidates);
+      }
+
+      return this._unloadInstance(target, candidates[0]!, options);
+    }
+
+    if (options.instance === 'all') {
+      let unloadedAny = false;
+
+      for (const kind of ['retained', 'preloaded', 'active'] as const) {
+        if (!candidates.includes(kind)) {
+          continue;
+        }
+
+        const unloaded = await this._unloadInstance(target, kind, options);
+
+        unloadedAny = unloaded || unloadedAny;
+      }
+
+      return unloadedAny;
+    }
+
+    if (!candidates.includes(options.instance)) {
+      throw new SceneInstanceNotFoundError(target.name, options.instance);
+    }
+
+    return this._unloadInstance(target, options.instance, options);
+  }
+
+  private async _unloadInstance(target: AnySceneConstructor, kind: SceneInstanceKind, options: UnloadOptions): Promise<boolean> {
+    if (kind === 'retained') {
+      const scope = this._retained.get(target);
+
+      if (scope === undefined) {
+        return false;
+      }
+
+      this._retained.delete(target);
+      await this._disposeScene(scope);
+
+      return true;
+    }
+
+    if (kind === 'preloaded') {
+      return this._unloadPreloaded(target);
+    }
+
+    if (this._activeScopeTarget !== target) {
+      return false;
+    }
+
+    await this._clearScene(options.transition);
+
+    return true;
+  }
+
+  /**
+   * Discard a `_preloaded` entry, racing an in-flight `preload()` safely:
+   * marks the entry `cancelling` synchronously (so `preload()`'s own claim
+   * check and `change()`'s claim check both skip it — see `preload()` and
+   * `change()`'s claim step above), then waits for its `ready` to settle
+   * before tearing anything down — `scope.destroy()` never runs
+   * concurrently with an in-progress `prepare()`.
+   */
+  private async _unloadPreloaded(target: AnySceneConstructor): Promise<boolean> {
+    const entry = this._preloaded.get(target);
+
+    if (entry === undefined || entry.status === 'cancelling') {
+      return false;
+    }
+
+    entry.status = 'cancelling';
+
+    try {
+      await entry.ready;
+    } catch {
+      // prepare() failed — _runPreloadPrepare() already ran the
+      // failed-preparation cleanup and removed the entry. Nothing further to do.
+      return true;
+    }
+
+    // prepare() succeeded — the scope genuinely reached Ready. Normal
+    // permanent teardown, WITH unload() (spec §2.1/§3.5.1's "Ready-scope
+    // cleanup"), but WITHOUT dispatching onStopScene (§2.1: never activated).
+    if (this._preloaded.get(target) === entry) {
+      this._preloaded.delete(target);
+    }
+
+    await this._disposeScene(entry.scope, { dispatchStopScene: false });
 
     return true;
   }

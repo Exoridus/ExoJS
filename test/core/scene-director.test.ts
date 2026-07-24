@@ -8,11 +8,13 @@ import { SceneDirector } from '#core/SceneDirector';
 import { SceneState } from '#core/SceneState';
 import type { SceneConstructor } from '#core/SceneTypes';
 import {
+  AmbiguousSceneInstanceError,
   ConcurrentSceneNavigationError,
   DuplicateSceneRegistrationError,
   InvalidSceneRegistrationError,
   RetainedSceneConflictError,
   RetainedSceneNotFoundError,
+  SceneInstanceNotFoundError,
   UnregisteredSceneError,
 } from '#core/SceneTypes';
 import { Signal } from '#core/Signal';
@@ -772,31 +774,6 @@ describe('SceneDirector — retention', () => {
     expect(tween.state).toBe(TweenState.Active);
   });
 
-  test('releaseScene() permanently destroys the retained scene and returns true', async () => {
-    const app = createApplicationStub();
-    const FirstScene = makeSceneClass();
-    const SecondScene = makeSceneClass();
-    const director = new SceneDirector(app, { first: FirstScene, second: SecondScene });
-
-    await director.change(FirstScene);
-    await director.change(SecondScene, { suspendCurrent: true });
-
-    const destroySpy = vi.spyOn(Scene.prototype, 'destroy');
-
-    await expect(director.releaseScene(FirstScene)).resolves.toBe(true);
-    expect(destroySpy).toHaveBeenCalledTimes(1);
-
-    destroySpy.mockRestore();
-  });
-
-  test('releaseScene() returns false for a constructor with nothing retained', async () => {
-    const app = createApplicationStub();
-    const FirstScene = makeSceneClass();
-    const director = new SceneDirector(app, { first: FirstScene });
-
-    await expect(director.releaseScene(FirstScene)).resolves.toBe(false);
-  });
-
   test('restoreScene() rejects with RetainedSceneNotFoundError when nothing is retained for the target', async () => {
     const app = createApplicationStub();
     const FirstScene = makeSceneClass();
@@ -845,7 +822,7 @@ describe('SceneDirector — retention', () => {
 
     expect(app.loader._releaseScope).not.toHaveBeenCalled(); // suspended, not released
 
-    await director.releaseScene(FirstScene);
+    await director.unload(FirstScene);
 
     expect(app.loader._releaseScope).toHaveBeenCalledTimes(1); // released now
   });
@@ -1236,5 +1213,149 @@ describe('SceneDirector — preload', () => {
 
     expect(init).toHaveBeenCalledTimes(1);
     expect(director.state).toBe(SceneState.Active);
+  });
+});
+
+describe('SceneDirector — unload', () => {
+  test('unload() with exactly one candidate (retained) resolves it directly, no instance needed', async () => {
+    const app = createApplicationStub();
+    const FirstScene = makeSceneClass();
+    const SecondScene = makeSceneClass();
+    const director = new SceneDirector(app, { first: FirstScene, second: SecondScene });
+    const destroySpy = vi.spyOn(Scene.prototype, 'destroy');
+
+    await director.change(FirstScene);
+    await director.change(SecondScene, { suspendCurrent: true }); // retains First
+
+    await expect(director.unload(FirstScene)).resolves.toBe(true);
+    expect(destroySpy).toHaveBeenCalledTimes(1);
+
+    destroySpy.mockRestore();
+  });
+
+  test('unload() with exactly one candidate (preloaded) resolves it directly', async () => {
+    const app = createApplicationStub();
+    const PreloadedScene = makeSceneClass();
+    const director = new SceneDirector(app, { preloaded: PreloadedScene });
+    const destroySpy = vi.spyOn(Scene.prototype, 'destroy');
+
+    await director.preload(PreloadedScene);
+
+    await expect(director.unload(PreloadedScene)).resolves.toBe(true);
+    expect(destroySpy).toHaveBeenCalledTimes(1);
+
+    destroySpy.mockRestore();
+  });
+
+  test('unload() with exactly one candidate (active) resolves it directly and clears the active scope', async () => {
+    const app = createApplicationStub();
+    const GameScene = makeSceneClass();
+    const director = new SceneDirector(app, { game: GameScene });
+
+    await director.change(GameScene);
+
+    await expect(director.unload(GameScene)).resolves.toBe(true);
+    expect(director.currentScene).toBeNull();
+  });
+
+  test('unload() returns false when nothing matches at all', async () => {
+    const app = createApplicationStub();
+    const UnusedScene = makeSceneClass();
+    const director = new SceneDirector(app, { unused: UnusedScene });
+
+    await expect(director.unload(UnusedScene)).resolves.toBe(false);
+  });
+
+  test('unload() with omitted instance rejects with AmbiguousSceneInstanceError when retained+preloaded both exist', async () => {
+    const app = createApplicationStub();
+    const GameScene = makeSceneClass();
+    const OtherScene = makeSceneClass();
+    const director = new SceneDirector(app, { game: GameScene, other: OtherScene });
+
+    await director.change(GameScene);
+    await director.change(OtherScene, { suspendCurrent: true }); // retains GameScene
+    await director.preload(GameScene); // also preload a fresh GameScene — allowed alongside the retained one
+
+    await expect(director.unload(GameScene)).rejects.toThrow(AmbiguousSceneInstanceError);
+  });
+
+  test('unload() with omitted instance rejects with AmbiguousSceneInstanceError when active+preloaded both exist', async () => {
+    const app = createApplicationStub();
+    const GameScene = makeSceneClass();
+    const director = new SceneDirector(app, { game: GameScene });
+
+    await director.change(GameScene);
+    await director.preload(GameScene);
+
+    await expect(director.unload(GameScene)).rejects.toThrow(AmbiguousSceneInstanceError);
+  });
+
+  test('unload(..., { instance }) targets exactly the requested candidate', async () => {
+    const app = createApplicationStub();
+    const GameScene = makeSceneClass();
+    const OtherScene = makeSceneClass();
+    const director = new SceneDirector(app, { game: GameScene, other: OtherScene });
+
+    await director.change(GameScene);
+    await director.change(OtherScene, { suspendCurrent: true }); // retains GameScene
+    await director.preload(GameScene); // + a fresh preloaded GameScene
+
+    await expect(director.unload(GameScene, { instance: 'preloaded' })).resolves.toBe(true);
+    // The retained GameScene is untouched — still resolvable and unambiguous now:
+    await expect(director.unload(GameScene, { instance: 'retained' })).resolves.toBe(true);
+  });
+
+  test('unload(..., { instance }) rejects with SceneInstanceNotFoundError when that specific kind does not exist', async () => {
+    const app = createApplicationStub();
+    const GameScene = makeSceneClass();
+    const director = new SceneDirector(app, { game: GameScene });
+
+    await director.preload(GameScene);
+
+    await expect(director.unload(GameScene, { instance: 'retained' })).rejects.toThrow(SceneInstanceNotFoundError);
+  });
+
+  test('unload(..., { instance: "all" }) discards every existing candidate', async () => {
+    const app = createApplicationStub();
+    const GameScene = makeSceneClass();
+    const director = new SceneDirector(app, { game: GameScene });
+    const destroySpy = vi.spyOn(Scene.prototype, 'destroy');
+
+    await director.change(GameScene);
+    await director.preload(GameScene);
+
+    await expect(director.unload(GameScene, { instance: 'all' })).resolves.toBe(true);
+
+    expect(director.currentScene).toBeNull();
+    expect(destroySpy).toHaveBeenCalledTimes(2); // the active instance and the preloaded one
+
+    destroySpy.mockRestore();
+  });
+
+  test('a retained or preloaded match ignores options.transition — only an active match can visibly transition', async () => {
+    const app = createApplicationStub();
+    const PreloadedScene = makeSceneClass();
+    const director = new SceneDirector(app, { preloaded: PreloadedScene });
+
+    // No fade machinery is exercised for a retained/preloaded discard — this
+    // resolves immediately regardless of the (deliberately long) duration,
+    // proving the direct fast path ran instead of the transition bridge.
+    await director.preload(PreloadedScene);
+
+    await expect(director.unload(PreloadedScene, { transition: { type: 'fade', duration: 5000 } })).resolves.toBe(true);
+  });
+
+  test('unload() never dispatches onStopScene for a preloaded scene that was never activated', async () => {
+    const app = createApplicationStub();
+    const PreloadedScene = makeSceneClass();
+    const director = new SceneDirector(app, { preloaded: PreloadedScene });
+    const stopSceneSpy = vi.fn();
+
+    director.onStopScene.add(stopSceneSpy);
+
+    await director.preload(PreloadedScene);
+    await director.unload(PreloadedScene);
+
+    expect(stopSceneSpy).not.toHaveBeenCalled();
   });
 });
