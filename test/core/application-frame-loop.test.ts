@@ -127,4 +127,71 @@ describe('Application — _frameLoopActive (Slice 7 Group B)', () => {
     await startPromise;
     app.destroy();
   });
+
+  describe('_stopFrameLoop() — fatal frame error, stop(), destroy() during Loading', () => {
+    test('a fatal frame error clears _frameLoopActive and cancels the pending RAF request before setting status Stopped', async () => {
+      const app = new Application({ backend: { type: 'webgl2' } });
+
+      await app.start();
+      (app.backend.flush as unknown as MockInstance).mockImplementation(() => {
+        throw new Error('persistent failure');
+      });
+
+      app.update();
+      app.update();
+      app.update();
+
+      expect(frameLoopActive(app)).toBe(false);
+      expect(app.status).toBe(ApplicationStatus.Stopped);
+      expect(cafSpy).toHaveBeenCalled();
+
+      app.destroy();
+    });
+
+    test('stop() halts the loop even while _status is still Loading (mid-startup)', async () => {
+      const app = new Application({ backend: { type: 'webgl2' } });
+      const startPromise = app.start().catch(() => undefined); // will reject — see next test
+
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(app.status).toBe(ApplicationStatus.Loading);
+      expect(frameLoopActive(app)).toBe(true);
+
+      app.stop();
+
+      expect(frameLoopActive(app)).toBe(false);
+      expect(app.status).toBe(ApplicationStatus.Stopped);
+
+      await startPromise;
+      app.destroy();
+    });
+
+    test('stop() is a no-op when the loop was never started (still Stopped)', () => {
+      const app = new Application({ backend: { type: 'webgl2' } });
+
+      expect(() => app.stop()).not.toThrow();
+      expect(app.status).toBe(ApplicationStatus.Stopped);
+
+      app.destroy();
+    });
+
+    test('destroy() during Loading also halts the loop (delegates to stop())', async () => {
+      const app = new Application({ backend: { type: 'webgl2' } });
+      const startPromise = app.start().catch(() => undefined);
+
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(frameLoopActive(app)).toBe(true);
+
+      app.destroy();
+
+      expect(frameLoopActive(app)).toBe(false);
+
+      await startPromise;
+    });
+  });
 });

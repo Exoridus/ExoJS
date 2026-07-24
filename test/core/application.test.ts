@@ -235,6 +235,7 @@ describe('Application', () => {
     };
 
     rawApp['_status'] = ApplicationStatus.Running;
+    rawApp['_frameLoopActive'] = true;
     rawApp['pauseOnHidden'] = false;
     rawApp['_documentVisible'] = true;
     rawApp['systems'] = systems;
@@ -537,6 +538,7 @@ describe('Application', () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
     rawApp['_status'] = ApplicationStatus.Running;
+    rawApp['_frameLoopActive'] = true;
     rawApp['_frameRequest'] = 99;
     rawApp['scenes'] = sceneDirector;
     rawApp['_activeClock'] = activeClock;

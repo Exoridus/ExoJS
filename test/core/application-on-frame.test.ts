@@ -180,6 +180,7 @@ describe('Application.onFrame', () => {
     };
 
     rawApp['_status'] = ApplicationStatus.Running;
+    rawApp['_frameLoopActive'] = true;
     rawApp['pauseOnHidden'] = false;
     rawApp['_documentVisible'] = true;
     rawApp['systems'] = { _beginFrame: vi.fn(), _endFrame: vi.fn(), _fixedUpdate: vi.fn(), _update: vi.fn(), _draw: vi.fn() };

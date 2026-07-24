@@ -255,6 +255,7 @@ describe('Application focus / visibility', () => {
 
     // Set up raw state for update()
     rawApp['_status'] = ApplicationStatus.Running;
+    rawApp['_frameLoopActive'] = true;
     rawApp['_updateHandler'] = vi.fn();
     rawApp['_frameClock'] = {
       elapsedTime: { milliseconds: 16, seconds: 0.016 },
@@ -286,8 +287,9 @@ describe('Application focus / visibility', () => {
       get: () => 'visible',
     });
 
-    // Set status to Stopped so destroy() doesn't try to stop real clocks
+    // Set status/loop-flag to Stopped/false so destroy() doesn't try to stop real clocks
     rawApp['_status'] = ApplicationStatus.Stopped;
+    rawApp['_frameLoopActive'] = false;
     app.destroy();
   });
 
@@ -304,6 +306,7 @@ describe('Application focus / visibility', () => {
     document.dispatchEvent(new Event('visibilitychange'));
 
     rawApp['_status'] = ApplicationStatus.Running;
+    rawApp['_frameLoopActive'] = true;
     rawApp['_updateHandler'] = vi.fn();
     rawApp['_frameClock'] = {
       elapsedTime: { milliseconds: 16, seconds: 0.016 },
@@ -341,8 +344,9 @@ describe('Application focus / visibility', () => {
       get: () => 'visible',
     });
 
-    // Set status to Stopped so destroy() doesn't try to stop real clocks
+    // Set status/loop-flag to Stopped/false so destroy() doesn't try to stop real clocks
     rawApp['_status'] = ApplicationStatus.Stopped;
+    rawApp['_frameLoopActive'] = false;
     app.destroy();
   });
 

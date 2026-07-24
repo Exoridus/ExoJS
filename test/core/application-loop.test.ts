@@ -95,7 +95,10 @@ vi.mock('#rendering/webgpu/WebGpuBackend', () => ({
 
 /** Force the Application into Running state without calling start(). */
 function forceRunning(app: Application): void {
-  (app as unknown as Record<string, unknown>)['_status'] = ApplicationStatus.Running;
+  const record = app as unknown as Record<string, unknown>;
+
+  record['_status'] = ApplicationStatus.Running;
+  record['_frameLoopActive'] = true;
 }
 
 /** Access the private _frameClock. */
@@ -358,7 +361,10 @@ describe('Application.update() — loop timing', () => {
     });
 
     test('update() is a no-op when status is not Running', () => {
-      (app as unknown as Record<string, unknown>)['_status'] = ApplicationStatus.Stopped;
+      const record = app as unknown as Record<string, unknown>;
+
+      record['_status'] = ApplicationStatus.Stopped;
+      record['_frameLoopActive'] = false;
       mockFrameElapsed(app, 16);
 
       app.update();

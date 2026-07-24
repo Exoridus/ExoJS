@@ -91,7 +91,10 @@ vi.mock('#rendering/webgpu/WebGpuBackend', () => ({
 // ---------------------------------------------------------------------------
 
 function forceRunning(app: Application): void {
-  (app as unknown as Record<string, unknown>)['_status'] = ApplicationStatus.Running;
+  const record = app as unknown as Record<string, unknown>;
+
+  record['_status'] = ApplicationStatus.Running;
+  record['_frameLoopActive'] = true;
 }
 
 function frameClock(app: Application): import('#core/Clock').Clock {

@@ -765,6 +765,30 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   }
 
   /**
+   * Halt the per-frame loop: clear {@link Application._frameLoopActive},
+   * cancel the pending RAF request, and stop the active/frame clocks. Called
+   * from every place the loop can stop (fatal frame error, {@link
+   * Application.stop}, {@link Application.destroy} during the `Loading`
+   * window) so `_frameLoopActive` is the single source of truth everywhere,
+   * not only where the loop starts (definition spec §3.7). Idempotent — a
+   * second call while the loop is already stopped is a no-op. Deliberately
+   * does NOT touch scene teardown (`scenes._clearScene()`/navigation abort)
+   * — those are the caller's responsibility, since a fatal frame error must
+   * NOT unload the active scene (see {@link Application._handleFrameError}'s
+   * doc comment), while {@link Application.stop} explicitly does.
+   */
+  private _stopFrameLoop(): void {
+    if (!this._frameLoopActive) {
+      return;
+    }
+
+    this._frameLoopActive = false;
+    cancelAnimationFrame(this._frameRequest);
+    this._activeClock.stop();
+    this._frameClock.stop();
+  }
+
+  /**
    * One iteration of the per-frame loop. Invoked by `requestAnimationFrame`.
    * When the document is hidden and `pauseOnHidden` is `true`, the frame
    * clock is reset and the body is skipped — preventing a large delta spike
@@ -906,7 +930,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     this._reportError(normalized, fatal);
 
     if (fatal) {
-      cancelAnimationFrame(this._frameRequest);
+      this._stopFrameLoop();
       this._status = ApplicationStatus.Stopped;
       logger.error(`Frame loop halted after ${maxConsecutiveFrameErrors} consecutive frame errors.`, { source: 'core', error: normalized });
     }
@@ -959,20 +983,31 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   /**
    * Halt the per-frame loop, unload the active scene, and stop the active
    * + frame clocks. Leaves backend, input, audio, etc. intact — call
-   * {@link Application.destroy} to release everything.
+   * {@link Application.destroy} to release everything. Acts whenever the
+   * frame loop is actually live (`_frameLoopActive`), including mid-`start()`
+   * — not only while `_status` is `Running` (definition spec §3.7): a
+   * transition-driven initial navigation may still be in flight, in which
+   * case {@link SceneDirector._abortInFlightNavigation} (invoked internally
+   * by scene teardown below) rejects it with a dedicated error rather than
+   * leaving it to hang.
    */
   public stop(): this {
+    if (!this._frameLoopActive) {
+      return this;
+    }
+
     if (this._status === ApplicationStatus.Running) {
       this._status = ApplicationStatus.Halting;
-      cancelAnimationFrame(this._frameRequest);
-      void this.scenes._clearScene().catch((error: unknown) => {
-        logger.error('Application.stop() failed to unload the active scene.', { source: 'Application', ...(error instanceof Error && { error }) });
-        this.onError?.dispatch(error instanceof Error ? error : new Error(String(error)));
-      });
-      this._activeClock.stop();
-      this._frameClock.stop();
-      this._status = ApplicationStatus.Stopped;
     }
+
+    this._stopFrameLoop();
+
+    void this.scenes._clearScene().catch((error: unknown) => {
+      logger.error('Application.stop() failed to unload the active scene.', { source: 'Application', ...(error instanceof Error && { error }) });
+      this.onError?.dispatch(error instanceof Error ? error : new Error(String(error)));
+    });
+
+    this._status = ApplicationStatus.Stopped;
 
     return this;
   }

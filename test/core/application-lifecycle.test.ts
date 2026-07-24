@@ -1063,7 +1063,9 @@ describe('Application lifecycle / getters / sizing', () => {
       const teardownError = new Error('scene teardown failed');
       sceneDirector._clearScene.mockRejectedValueOnce(teardownError);
 
-      (app as unknown as Record<string, unknown>)['_status'] = ApplicationStatus.Running;
+      const rawApp = app as unknown as Record<string, unknown>;
+      rawApp['_status'] = ApplicationStatus.Running;
+      rawApp['_frameLoopActive'] = true;
       const errorHandler = vi.fn();
       app.onError.add(errorHandler);
 
@@ -1081,7 +1083,9 @@ describe('Application lifecycle / getters / sizing', () => {
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
       sceneDirector._clearScene.mockRejectedValueOnce('a plain string rejection');
 
-      (app as unknown as Record<string, unknown>)['_status'] = ApplicationStatus.Running;
+      const rawApp = app as unknown as Record<string, unknown>;
+      rawApp['_status'] = ApplicationStatus.Running;
+      rawApp['_frameLoopActive'] = true;
       const errorHandler = vi.fn();
       app.onError.add(errorHandler);
 
