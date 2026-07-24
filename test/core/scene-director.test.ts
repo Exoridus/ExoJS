@@ -616,7 +616,6 @@ describe('SceneDirector', () => {
     await director._clearScene();
     expect(director.state).toBeNull();
   });
-
 });
 
 describe('SceneDirector — retention', () => {

@@ -1,0 +1,151 @@
+{
+  "title": "SceneTransitionEnvironment",
+  "description": "Handed to SceneTransition.beginSession. `commitRequested`/`committed` are live views — they reflect state at read time, not a snapshot taken when this object was constructed.",
+  "symbol": "SceneTransitionEnvironment",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 0,
+    "methods": 1,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Handed to SceneTransition.beginSession. `commitRequested`/`committed` are live views — they reflect state at read time, not a snapshot taken when this object was constructed."
+      ],
+      "importLine": "import { SceneTransitionEnvironment } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "commit",
+          "signature": "commit(): void",
+          "signatureTokens": [
+            {
+              "text": "commit",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Request the scene switch. May be called synchronously from createSession(), update(), or render(). Exactly once per session — a second call is a dev-mode lifecycle error (SceneTransitionLifecycleError, reason 'commit-reentrant') and a production no-op. Never swaps the active scene reentrantly from inside the caller's own callback — the Director processes the actual switch only after the current callback has fully returned control (§3.5.2)."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "commitRequested",
+          "signature": "commitRequested: boolean",
+          "signatureTokens": [
+            {
+              "text": "commitRequested",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "true once SceneTransitionEnvironment.commit has been called. Live view."
+        },
+        {
+          "name": "committed",
+          "signature": "committed: boolean",
+          "signatureTokens": [
+            {
+              "text": "committed",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "true once the atomic commit boundary has actually been crossed. Live view."
+        },
+        {
+          "name": "context",
+          "signature": "context: SceneTransitionContext",
+          "signatureTokens": [
+            {
+              "text": "context",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SceneTransitionContext",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/SceneTransition.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneTransition.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/SceneTransition.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/SceneTransition.ts"
+}
