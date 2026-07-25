@@ -1,5 +1,5 @@
-import { Container } from '#rendering/Container';
-import { RenderNode } from '#rendering/RenderNode';
+import type { Container } from '#rendering/Container';
+import type { RenderNode } from '#rendering/RenderNode';
 
 declare const container: Container;
 declare const node: RenderNode;
