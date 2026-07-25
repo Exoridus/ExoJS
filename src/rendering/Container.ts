@@ -29,9 +29,19 @@ import { RenderNode } from './RenderNode';
 export class Container extends RenderNode {
   protected readonly _children: RenderNode[] = [];
   private _retainedPlan: RetainedPlanCache | null = null;
+  private _childrenView: readonly RenderNode[] | null = null;
 
-  public get children(): RenderNode[] {
-    return this._children;
+  /**
+   * Snapshot of the current children in document order. Frozen and cached —
+   * repeated reads return the same array reference until the next
+   * structural change (`addChild`/`removeChild`/`setChildIndex`/
+   * `swapChildren`/etc.), which invalidates it. The returned array cannot
+   * be mutated (`push`, index assignment, ... throw); go through
+   * `addChild`/`removeChild` instead so parent linkage, stage propagation,
+   * and bounds invalidation stay consistent.
+   */
+  public get children(): readonly RenderNode[] {
+    return (this._childrenView ??= Object.freeze(this._children.slice()));
   }
 
   public get width(): number {
@@ -119,6 +129,7 @@ export class Container extends RenderNode {
 
     child.parent = this;
     this._children.splice(index, 0, child);
+    this._childrenView = null;
     this.invalidateCache();
     this._markStructureDirty();
 
@@ -138,6 +149,7 @@ export class Container extends RenderNode {
 
       this._children[firstIndex] = secondChild;
       this._children[secondIndex] = firstChild;
+      this._childrenView = null;
       this.invalidateCache();
       this._markStructureDirty();
     }
@@ -163,6 +175,7 @@ export class Container extends RenderNode {
     removeArrayItems(this._children, this.getChildIndex(child), 1);
 
     this._children.splice(index, 0, child);
+    this._childrenView = null;
     this.invalidateCache();
     this._markStructureDirty();
 
@@ -204,6 +217,7 @@ export class Container extends RenderNode {
       child._setStage(null);
     }
 
+    this._childrenView = null;
     this.invalidateCache();
     this._markStructureDirty();
 
@@ -239,6 +253,7 @@ export class Container extends RenderNode {
     }
 
     removeArrayItems(this._children, begin, range);
+    this._childrenView = null;
     this.invalidateCache();
     this._markStructureDirty();
 

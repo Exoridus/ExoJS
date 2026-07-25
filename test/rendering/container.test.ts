@@ -119,3 +119,48 @@ describe('Container', () => {
     });
   });
 });
+
+describe('Container children view', () => {
+  test('returns the same array reference across repeated reads with no structural change', () => {
+    const container = new Container();
+    container.addChild(new DummyDrawable());
+
+    expect(container.children).toBe(container.children);
+  });
+
+  test.each([
+    { name: 'addChild', mutate: (c: Container) => c.addChild(new DummyDrawable()) },
+    { name: 'removeChildAt', mutate: (c: Container) => c.removeChildAt(0) },
+    { name: 'removeChildren', mutate: (c: Container) => c.removeChildren() },
+    { name: 'setChildIndex', mutate: (c: Container) => c.setChildIndex(c.getChildAt(1), 0) },
+    { name: 'swapChildren', mutate: (c: Container) => c.swapChildren(c.getChildAt(0), c.getChildAt(1)) },
+  ])('invalidates the cached view on $name', ({ mutate }) => {
+    const container = new Container();
+    container.addChild(new DummyDrawable());
+    container.addChild(new DummyDrawable());
+    const before = container.children;
+
+    mutate(container);
+
+    expect(container.children).not.toBe(before);
+  });
+
+  test('is a real Array — Array.isArray, length, and indexed access all work like before', () => {
+    const container = new Container();
+    const first = new DummyDrawable();
+    container.addChild(first);
+
+    expect(Array.isArray(container.children)).toBe(true);
+    expect(container.children.length).toBe(1);
+    expect(container.children[0]).toBe(first);
+  });
+
+  test('mutating children directly is rejected at both the type level and at runtime', () => {
+    const container = new Container();
+
+    expect(() => {
+      // @ts-expect-error — `children` is `readonly RenderNode[]`; mutate via addChild/removeChild instead.
+      container.children.push(new DummyDrawable());
+    }).toThrow(TypeError);
+  });
+});
