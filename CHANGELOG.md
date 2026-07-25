@@ -166,6 +166,16 @@ data?)` or `app.start('game', data?)`; `app.scene.setScene(instance, opts)`
 - **`@codexo/exojs-physics`:** `PhysicsWorld` should be registered as a
   system rather than stepped manually; `step()` remains available for
   advanced manual driving.
+- **BREAKING — `Container.children` returns a frozen snapshot, not the
+  live array.** `container.children.push(x)` (or any other direct
+  mutation) now throws — mutate the scene graph only through `addChild`/
+  `addChildAt`/`removeChild`/`removeChildAt`/`removeChildren`. The
+  returned `readonly RenderNode[]` is cached and reuses the same
+  reference across reads until the next structural change.
+- **BREAKING — `SceneNode.parent` is no longer directly writable.** The
+  public setter is removed; reparenting happens exclusively through the
+  same `Container` mutation methods, which now use an internal
+  `_setParent()` path.
 
 ### Removed
 
