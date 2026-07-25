@@ -236,10 +236,13 @@ export class AssetTypeRegistry {
     return type.name.length > 0 ? type.name : '(anonymous type)';
   }
 
-  /** Destroys the factory registry, destroys every bound `bindAsset` handler (deduplicated by identity), and clears handler/adapter maps. */
-  public destroy(): void {
+  /** Destroys the `register()`-based factory registry. */
+  public destroyFactories(): void {
     this._factories.destroy();
+  }
 
+  /** Destroys every bound `bindAsset` handler (deduplicated by identity) and clears handler/adapter maps. */
+  public destroyHandlers(): void {
     const destroyedHandlers = new Set<AssetHandler>();
 
     for (const handler of this._boundHandlers) {
@@ -252,5 +255,11 @@ export class AssetTypeRegistry {
     this._boundHandlers.length = 0;
     this._handlerFunctions.clear();
     this._seamlessAdapters.clear();
+  }
+
+  /** Destroys the factory registry and every bound handler — see {@link destroyFactories}/{@link destroyHandlers}. */
+  public destroy(): void {
+    this.destroyFactories();
+    this.destroyHandlers();
   }
 }

@@ -1224,11 +1224,13 @@ export class Loader {
    * registered via `bindAsset`.
    */
   public destroy(): void {
-    this._typeRegistry.destroy();
+    this._typeRegistry.destroyFactories();
 
     for (const store of this._stores) {
       store.destroy();
     }
+
+    this._typeRegistry.destroyHandlers();
 
     this._resources.clear();
     this._inFlight.clear();
