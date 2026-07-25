@@ -1496,6 +1496,20 @@ describe('destroy()', () => {
 
     expect(() => loader.destroy()).not.toThrow();
   });
+
+  test('destroys CacheStores before bound bindAsset handlers', () => {
+    class OrderAsset {}
+    const order: string[] = [];
+    const store = createCacheStoreMock({ destroy: vi.fn(() => order.push('store')) });
+    const handlerDestroy = vi.fn(() => order.push('handler'));
+    const loader = new Loader({ basePath: '/', cache: store });
+
+    loader.bindAsset({ type: OrderAsset }, { load: async () => 'x', destroy: handlerDestroy });
+
+    loader.destroy();
+
+    expect(order).toEqual(['store', 'handler']);
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

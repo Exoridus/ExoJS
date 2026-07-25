@@ -1,7 +1,7 @@
 import { describe, expect, test, vi } from 'vitest';
 
-import { AssetTypeRegistry } from '#resources/AssetTypeRegistry';
 import type { AssetFactory } from '#resources/AssetFactory';
+import { AssetTypeRegistry } from '#resources/AssetTypeRegistry';
 
 class TypeA {}
 class TypeB {}

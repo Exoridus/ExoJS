@@ -93,6 +93,12 @@ export class AssetTypeRegistry {
     }
 
     // All validation passed — install atomically.
+    // Localized type-erasure boundary: the internal registry uses a flat config
+    // `{ source, ...fields }`. The public AssetHandler<Result, Options> interface
+    // uses `AssetLoadRequest<Options> = { source, options? }`. This single `toRequest`
+    // helper is the only place where the erased flat config is cast to the typed
+    // request — justified by the `AssetBinding<Result, Options>` contract that
+    // associates this handler's Options with the registered constructor.
     const toRequest = (config: unknown): AssetLoadRequest<Options> => {
       const { source, ...rest } = config as { source: string } & Record<string, unknown>;
 
@@ -120,7 +126,8 @@ export class AssetTypeRegistry {
       this._extensionMap.set(ext, keys.type);
     }
 
-    // Own this handler for lifecycle management.
+    // Own this handler for lifecycle management. Cast to the erased AssetHandler
+    // for storage; destroy() is the only method called on entries in this array.
     this._boundHandlers.push(handler as AssetHandler);
 
     if (keys.seamless !== undefined) {

@@ -1224,6 +1224,8 @@ export class Loader {
    * registered via `bindAsset`.
    */
   public destroy(): void {
+    // Order matters: bound-handler destroy must run after store destroy (mirrors
+    // the original inline teardown order) — see the regression test in loader.test.ts.
     this._typeRegistry.destroyFactories();
 
     for (const store of this._stores) {
@@ -1784,8 +1786,7 @@ export class Loader {
     // Identity key: use handler's getIdentityKey if provided (config-sensitive dedup),
     // otherwise fall back to source-based identity (correct for URL-only assets).
     const handlerEntry = this._typeRegistry.getHandler(type);
-    const discriminator = handlerEntry?.getIdentityKey?.(rawConfig) ?? source;
-    const identityKey = `id:${this._typeRegistry._getTypeId(type)}:${discriminator}`;
+    const identityKey = this._typeRegistry._resolveAssetIdentityKey(type, asset);
     const aliasKey = this._typeRegistry._key(type, alias);
 
     // Register alias → identity mapping for unload() semantics
@@ -2462,5 +2463,4 @@ export class Loader {
 
     return `${this._basePath}${path}`;
   }
-
 }
