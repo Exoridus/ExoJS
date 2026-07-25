@@ -174,7 +174,7 @@ data?)` or `app.start('game', data?)`; `app.scene.setScene(instance, opts)`
   is cached and reuses the same reference across reads until the next
   structural change; a reference held before that change keeps
   reflecting the old membership (`const kids = c.children;
-  c.removeChild(x); kids` still contains `x`) — it does not update
+c.removeChild(x); kids` still contains `x`) — it does not update
   in place.
 - **BREAKING — `SceneNode.parent` is no longer directly writable.** The
   public setter is removed; reparenting happens exclusively through the
