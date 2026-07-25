@@ -2345,7 +2345,7 @@
         },
         {
           "name": "children",
-          "signature": "children: RenderNode[]",
+          "signature": "children: readonly RenderNode[]",
           "signatureTokens": [
             {
               "text": "children",
@@ -2353,6 +2353,14 @@
             },
             {
               "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
               "kind": "punctuation"
             },
             {
@@ -2366,7 +2374,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Snapshot of the current children in document order. Frozen and cached — repeated reads return the same array reference until the next structural change (addChild/removeChild/setChildIndex/ swapChildren/etc.), which invalidates it. A reference to a previous snapshot is unaffected by later changes — it keeps reflecting the child list as it was at the time of the read. Mutating methods (push, splice, ...) throw in normal (strict-mode) usage; go through addChild/removeChild instead so parent linkage, stage propagation, and bounds invalidation stay consistent."
         },
         {
           "name": "clip",

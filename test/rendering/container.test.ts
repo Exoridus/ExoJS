@@ -1,9 +1,13 @@
-﻿import { logger } from '#core/logging';
+﻿import type { Application } from '#core/Application';
+import { logger } from '#core/logging';
 import { SceneNode } from '#core/SceneNode';
+import type { InteractionHooks, Stage } from '#core/Stage';
+import { FocusManager } from '#input/FocusManager';
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
 import { Graphics } from '#rendering/primitives/Graphics';
 import type { RenderBackend } from '#rendering/RenderBackend';
+import type { RenderNode } from '#rendering/RenderNode';
 
 class DummyDrawable extends Drawable {
   public override render(_backend: RenderBackend): this {
@@ -224,5 +228,59 @@ describe('Container children view', () => {
       // @ts-expect-error — `children` is `readonly RenderNode[]`; mutate via addChild/removeChild instead.
       container.children.push(new DummyDrawable());
     }).toThrow(TypeError);
+  });
+
+  // Regression for the whole-branch review finding: removeChildAt used to
+  // splice `_children` and run every removal side effect (bounds cascade,
+  // _setParent(null), interaction notify, focus notify) BEFORE invalidating
+  // `_childrenView` — invalidation was the very last statement in the
+  // method. The stage's focus manager's `_notifyNodeRemoved` synchronously
+  // dispatches the public `onBlur` signal, i.e. arbitrary user code, from
+  // inside that window. A handler reading `container.children` from onBlur
+  // would therefore see the STALE cached snapshot (still containing the
+  // node being removed). This test focuses the child being removed so
+  // `onBlur` fires synchronously from inside `removeChildAt`, and asserts
+  // the handler already observes the post-removal list — which only holds
+  // if the cache was invalidated before the focus notify runs, not merely
+  // by the time `removeChildAt` returns.
+  test('the children-view cache is already invalidated when a synchronous onBlur handler runs during removeChildAt', () => {
+    const noopInteraction: InteractionHooks = {
+      _notifyNodeAdded() {},
+      _notifyNodeRemoved() {},
+      _notifyInteractiveChanged() {},
+      _notifyBoundsInvalidated() {},
+      _notifyTransformGroupMoved() {},
+    };
+    const stubInput = { onKeyDown: { add() {}, remove() {} }, onKeyUp: { add() {}, remove() {} } };
+    const focusApp = { input: stubInput } as unknown as Application;
+    const focus = new FocusManager(focusApp);
+    const stage: Stage = { interaction: noopInteraction, focus };
+
+    const container = new Container();
+    container._setStage(stage);
+
+    const child = new DummyDrawable();
+    child.focusable = true;
+    container.addChild(child);
+    focus.focus(child);
+
+    // Populate the cache BEFORE removal — without this, `_childrenView` is
+    // still null going into removeChildAt and the getter would compute a
+    // fresh (already-correct) array on first read regardless of where the
+    // invalidation line sits, silently defeating the regression check.
+    const before = container.children;
+    expect(before).toContain(child);
+
+    let seenDuringBlur: readonly RenderNode[] | undefined;
+    child.onBlur.add(() => {
+      seenDuringBlur = container.children;
+    });
+
+    container.removeChildAt(0);
+
+    expect(seenDuringBlur).toBeDefined();
+    expect(seenDuringBlur).not.toBe(before);
+    expect(seenDuringBlur).not.toContain(child);
+    expect(seenDuringBlur!.length).toBe(0);
   });
 });

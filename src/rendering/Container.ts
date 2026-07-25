@@ -27,6 +27,8 @@ import { RenderNode } from './RenderNode';
  * @stable
  */
 export class Container extends RenderNode {
+  // Subclasses mutating this directly must also set `_childrenView = null`,
+  // or the public `children` snapshot silently desyncs from the true list.
   protected readonly _children: RenderNode[] = [];
   private _retainedPlan: RetainedPlanCache | null = null;
   private _childrenView: readonly RenderNode[] | null = null;
@@ -35,8 +37,10 @@ export class Container extends RenderNode {
    * Snapshot of the current children in document order. Frozen and cached —
    * repeated reads return the same array reference until the next
    * structural change (`addChild`/`removeChild`/`setChildIndex`/
-   * `swapChildren`/etc.), which invalidates it. The returned array cannot
-   * be mutated (`push`, index assignment, ... throw); go through
+   * `swapChildren`/etc.), which invalidates it. A reference to a previous
+   * snapshot is unaffected by later changes — it keeps reflecting the child
+   * list as it was at the time of the read. Mutating methods (`push`,
+   * `splice`, ...) throw in normal (strict-mode) usage; go through
    * `addChild`/`removeChild` instead so parent linkage, stage propagation,
    * and bounds invalidation stay consistent.
    */
@@ -206,6 +210,11 @@ export class Container extends RenderNode {
     const child = this._children[index];
 
     removeArrayItems(this._children, index, 1);
+    // Invalidate the children-view cache immediately after the array write,
+    // before any of the notify calls below can run user code (e.g. an
+    // onBlur handler) that reads `container.children` — otherwise that read
+    // would observe a stale snapshot still containing `child`.
+    this._childrenView = null;
 
     if (child?.parent === this) {
       // Cascade bounds up BEFORE clearing parent so the walk reaches this node.
@@ -217,7 +226,6 @@ export class Container extends RenderNode {
       child._setStage(null);
     }
 
-    this._childrenView = null;
     this.invalidateCache();
     this._markStructureDirty();
 
