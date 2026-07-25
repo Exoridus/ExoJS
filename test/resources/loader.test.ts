@@ -948,7 +948,7 @@ describe('unload(asset) + getIdentityKey — identity discrimination (Fix 2 regr
 
     await loader.load({ tmxA: tmxMap, tmxB: tmxMap, rpgA: rpgMap });
 
-    const ctor = loader['_assetTypeMap'].get('richAsset')!;
+    const ctor = loader['_typeRegistry']['resolveTypeName']('richAsset')!;
 
     expect(loader._peekResource(ctor, 'tmxA')).not.toBeNull();
     expect(loader._peekResource(ctor, 'tmxB')).not.toBeNull();
@@ -970,7 +970,7 @@ describe('unload(asset) + getIdentityKey — identity discrimination (Fix 2 regr
 
     await loader.load({ a: asset, b: asset });
 
-    const ctor = loader['_assetTypeMap'].get('richAsset')!;
+    const ctor = loader['_typeRegistry']['resolveTypeName']('richAsset')!;
 
     expect(loader._peekResource(ctor, 'a')).not.toBeNull();
     expect(loader._peekResource(ctor, 'b')).not.toBeNull();
@@ -997,7 +997,7 @@ describe('unload(asset) + getIdentityKey — identity discrimination (Fix 2 regr
 
     await loader.load({ tmxA: tmxMap, rpgA: rpgMap });
 
-    const ctor = loader['_assetTypeMap'].get('richAsset')!;
+    const ctor = loader['_typeRegistry']['resolveTypeName']('richAsset')!;
 
     loader.unload(rpgMap);
 
@@ -1206,7 +1206,7 @@ describe('hasLoadable() / hasAssetType() / hasExtension()', () => {
 
     expect(loader.hasLoadable(HandlerAsset)).toBe(false);
     loader.bindAsset<string>({ type: HandlerAsset, typeNames: ['handlerType'] }, { load: async () => 'ok' });
-    const ctor = loader['_assetTypeMap'].get('handlerType')!;
+    const ctor = loader['_typeRegistry']['resolveTypeName']('handlerType')!;
 
     expect(loader.hasLoadable(ctor)).toBe(true);
   });

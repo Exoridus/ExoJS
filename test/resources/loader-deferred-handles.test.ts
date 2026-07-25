@@ -37,7 +37,7 @@ function evictedHas(loader: Loader, key: string): boolean {
   return (loader as unknown as { _evicted: Set<string> })._evicted.has(key);
 }
 function keyOf(loader: Loader, source: string): string {
-  return (loader as unknown as { _key(t: unknown, s: string): string })._key(Texture, source);
+  return (loader as unknown as { _typeRegistry: { _key(t: unknown, s: string): string } })._typeRegistry._key(Texture, source);
 }
 
 /** Real major GC + macrotask hops so reclaimed WeakRefs settle. Needs `--expose-gc`. */

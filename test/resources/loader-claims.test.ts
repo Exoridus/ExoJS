@@ -136,16 +136,16 @@ describe('refcount / claims', () => {
     loader._getClaimed(scopeB, Asset.kind('sound', 'boom.ogg'));
     await handle.loaded;
 
-    loader._release(loader['_key'](Sound, 'boom.ogg'), scopeA);
+    loader._release(loader['_typeRegistry']['_key'](Sound, 'boom.ogg'), scopeA);
     expect(handle.audioBuffer).not.toBeNull(); // B still holds it
-    loader._release(loader['_key'](Sound, 'boom.ogg'), scopeB);
+    loader._release(loader['_typeRegistry']['_key'](Sound, 'boom.ogg'), scopeB);
     expect(handle.audioBuffer).toBeNull(); // both gone → evicted
   });
 
   test('release while the fetch is still in flight frees the handle on arrival (§4.7)', async () => {
     mockFetchAudio();
     const loader = createCoreLoader();
-    const key = loader['_key'](Sound, 'boom.ogg');
+    const key = loader['_typeRegistry']['_key'](Sound, 'boom.ogg');
 
     const handle = loader.get('boom.ogg');
     // Fetch is in flight: the handle is still deferred, not yet in _resources.
@@ -174,7 +174,7 @@ describe('refcount / claims', () => {
   test('a concurrent load in the reclaim window does not overwrite the healed handle (identity race)', async () => {
     mockFetchAudio();
     const loader = createCoreLoader();
-    const key = loader['_key'](Sound, 'boom.ogg');
+    const key = loader['_typeRegistry']['_key'](Sound, 'boom.ogg');
 
     const handle = loader.get('boom.ogg');
     await handle.loaded;
