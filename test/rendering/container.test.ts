@@ -50,6 +50,68 @@ describe('Container', () => {
     expect(container.children.length).toBe(0);
   });
 
+  test('addChild sets the child parent via the internal _setParent path', () => {
+    const container = new Container();
+    const child = new DummyDrawable();
+
+    container.addChild(child);
+
+    expect(child.parent).toBe(container);
+  });
+
+  test('parent has no public setter — assigning it throws, not just a type error', () => {
+    const container = new Container();
+    const child = new DummyDrawable();
+
+    expect(() => {
+      // @ts-expect-error — `parent` has no public setter; use addChild/removeChild.
+      child.parent = container;
+    }).toThrow(TypeError);
+
+    expect(child.parent).toBeNull();
+  });
+
+  test('random add/remove/setChildIndex sequences keep parent and children-view invariants consistent', () => {
+    // Spec-mandated property test (deterministic seeded PRNG, no flakiness):
+    // after every mutation in a long random sequence, every node in
+    // container.children must have .parent === container, and every node
+    // NOT in container.children must not. This exercises exactly the code
+    // paths this task touches (_setParent calls in addChildAt/removeChildAt,
+    // _childrenView invalidation in setChildIndex) under adversarial ordering.
+    const container = new Container();
+    const pool = Array.from({ length: 8 }, () => new DummyDrawable());
+    let seed = 42;
+    const random = (): number => {
+      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+      return seed / 0x7fffffff;
+    };
+
+    for (let step = 0; step < 200; step++) {
+      const action = Math.floor(random() * 3);
+
+      if (action === 0 || container.children.length === 0) {
+        const child = pool[Math.floor(random() * pool.length)]!;
+        if (child.parent !== container) {
+          container.addChild(child);
+        }
+      } else if (action === 1) {
+        container.removeChildAt(Math.floor(random() * container.children.length));
+      } else if (container.children.length > 1) {
+        container.setChildIndex(container.getChildAt(0), Math.floor(random() * container.children.length));
+      }
+
+      for (const child of container.children) {
+        expect(child.parent).toBe(container);
+      }
+
+      for (const candidate of pool) {
+        if (!container.children.includes(candidate)) {
+          expect(candidate.parent).not.toBe(container);
+        }
+      }
+    }
+  });
+
   test('removeChildren clears parent references in range', () => {
     const container = new Container();
     const first = new DummyDrawable();

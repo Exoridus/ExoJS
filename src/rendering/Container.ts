@@ -127,7 +127,7 @@ export class Container extends RenderNode {
       child.parent.removeChild(child);
     }
 
-    child.parent = this;
+    child._setParent(this);
     this._children.splice(index, 0, child);
     this._childrenView = null;
     this.invalidateCache();
@@ -210,7 +210,7 @@ export class Container extends RenderNode {
     if (child?.parent === this) {
       // Cascade bounds up BEFORE clearing parent so the walk reaches this node.
       this._invalidateBoundsCascade();
-      child.parent = null;
+      child._setParent(null);
       child._invalidateSubtreeTransform();
       this._stage?.interaction._notifyNodeRemoved(child);
       this._stage?.focus._notifyNodeRemoved(child);
@@ -244,7 +244,7 @@ export class Container extends RenderNode {
       const child = this._children[i];
 
       if (child?.parent === this) {
-        child.parent = null;
+        child._setParent(null);
         child._invalidateSubtreeTransform();
         this._stage?.interaction._notifyNodeRemoved(child);
         this._stage?.focus._notifyNodeRemoved(child);
