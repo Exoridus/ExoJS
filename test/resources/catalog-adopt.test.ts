@@ -235,7 +235,7 @@ describe('Loader._adopt', () => {
     // silently couldn't resolve the key and the claim leaked. release(handle)
     // always targets the app-lifetime root claimer (same scope loader.get()
     // claimed under above), so it must now actually drop that scope.
-    const key = loader['_key'](Texture, 'x.png');
+    const key = loader['_typeRegistry']['_key'](Texture, 'x.png');
     expect(loader['_claims'].get(key)?.scopes.has(loader['_rootClaimer'])).toBe(true);
 
     loader.release(leaf);
@@ -290,7 +290,7 @@ describe('Loader._adopt', () => {
     expect(leaf.value).toEqual({ hp: 3 });
 
     // Bug: release(handle) couldn't resolve the key for this branch either.
-    const key = loader['_key'](Json, 'cfg.json');
+    const key = loader['_typeRegistry']['_key'](Json, 'cfg.json');
     expect(loader['_claims'].get(key)?.scopes.has(loader['_rootClaimer'])).toBe(true);
 
     loader.release(leaf);

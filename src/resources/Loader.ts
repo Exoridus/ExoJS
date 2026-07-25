@@ -1,7 +1,7 @@
 import type { Sound } from '#audio/Sound';
 import { logger } from '#core/logging';
 import { Signal } from '#core/Signal';
-import type { AssetHandler, AssetLoadRequest } from '#extensions/Extension';
+import type { AssetHandler } from '#extensions/Extension';
 import { type BmFont } from '#rendering/text/BmFont';
 import type { Texture } from '#rendering/texture/Texture';
 
@@ -22,12 +22,12 @@ import { createLeaf } from './assetKindRegistry';
 import { _readMeta } from './assetMeta';
 import { AssetRef } from './AssetRef';
 import { _normalizeEntry, type Assets, AssetsImpl, type InferAssetsProperties } from './Assets';
+import { AssetTypeRegistry, type HandlerEntry } from './AssetTypeRegistry';
 import { CacheFirstStrategy } from './CacheFirstStrategy';
 import type { CacheStore } from './CacheStore';
 import type { CacheStrategy } from './CacheStrategy';
 import { resolveKindByPath } from './extensionKindRegistry';
 import type { AssetConstructor } from './FactoryRegistry';
-import { FactoryRegistry } from './FactoryRegistry';
 import { LoadingQueue } from './LoadingQueue';
 import type { SeamlessAdapter } from './seamless';
 import { BinaryAsset, CsvAsset, FontAsset, type ImageAsset, Json, SubtitleAsset, type SvgAsset, TextAsset, WasmAsset, XmlAsset } from './tokens';
@@ -220,15 +220,6 @@ interface QueueEntry {
   readonly options?: unknown;
 }
 
-/** Stored entry for handler-based asset bindings (via `bindAsset`). */
-interface HandlerEntry {
-  load: (config: unknown, ctx: AssetLoaderContext) => Promise<unknown>;
-  /** Optional discriminator for in-flight identity keying; overrides source-only default. */
-  getIdentityKey?: (config: unknown) => string;
-  /** Optional byte-source constructor used by container loading (bypasses fetch). */
-  createFromBytes?: (bytes: ArrayBuffer, options?: unknown) => Promise<unknown>;
-}
-
 // ---------------------------------------------------------------------------
 // Loader
 // ---------------------------------------------------------------------------
@@ -258,8 +249,7 @@ interface HandlerEntry {
  * ```
  */
 export class Loader {
-  private readonly _registry = new FactoryRegistry();
-  private readonly _assetTypeMap = new Map<string, AssetConstructor>();
+  private readonly _typeRegistry = new AssetTypeRegistry();
   private readonly _resources = new Map<AssetConstructor, Map<string, unknown>>();
   // Reverse lookup: loaded resource object → the (type, source) it was first
   // stored under. Backs {@link Loader.keyFor} for scene serialization. A
@@ -267,7 +257,6 @@ export class Loader {
   // (primitive results like parsed JSON/text are not keyable → null).
   private readonly _resourceKeys = new WeakMap<object, { type: AssetConstructor; source: string }>();
   private readonly _inFlight = new Map<string, Promise<unknown>>();
-  private readonly _typeIds = new WeakMap<AssetConstructor, number>();
   private readonly _preventStoreKeys = new Set<string>();
   private readonly _stores: readonly CacheStore[];
   private readonly _cacheStrategy: CacheStrategy;
@@ -279,13 +268,6 @@ export class Loader {
   private readonly _identityKeyToAliases = new Map<string, Set<string>>();
   // In-flight promises keyed by identity (source-based) for cross-alias dedup
   private readonly _inFlightByIdentity = new Map<string, Promise<unknown>>();
-  // Handler entries bound via bindAsset (the AssetBinding handler form)
-  private readonly _handlerFunctions = new Map<AssetConstructor, HandlerEntry>();
-  // Maps lower-case file extensions (without dot) to the constructor to use
-  private readonly _extensionMap = new Map<string, AssetConstructor>();
-
-  // Handlers registered via bindAsset — owned for their full lifecycle
-  private readonly _boundHandlers: AssetHandler[] = [];
 
   // ── Seamless deferred handles (asset-system v2) ───────────────────────────
   // Adapter per seamless type; handles pending or failed, keyed by _key(type, source).
@@ -303,7 +285,6 @@ export class Loader {
   // fully-released source does not pin its evicted 0×0 `Texture`/`Sound` for the
   // loader's lifetime (audit A4); `_deferredFinalization` prunes the emptied
   // entry once the GC reclaims the last handle.
-  private readonly _seamlessAdapters = new Map<AssetConstructor, SeamlessAdapter<unknown>>();
   private readonly _deferred = new Map<string, { readonly handles: WeakHandleSet; readonly options: unknown }>();
 
   // Prunes a deferred entry once the GC reclaims a handle registered under its
@@ -360,7 +341,6 @@ export class Loader {
   private _basePath: string;
   private _fetchOptions: RequestInit;
   private _concurrency: number;
-  private _nextTypeId = 1;
 
   private _fgBatchActive = 0;
   private _fgBatchLoaded = 0;
@@ -409,7 +389,7 @@ export class Loader {
    * for the same constructor.
    */
   public register<T>(type: AssetConstructor<T>, factory: AssetFactory<T>): this {
-    this._registry.register(type, factory);
+    this._typeRegistry.register(type, factory);
 
     return this;
   }
@@ -420,11 +400,7 @@ export class Loader {
    * @advanced
    */
   public registerSeamlessAdapter<T>(type: AssetConstructor<T>, adapter: SeamlessAdapter<T>): this {
-    if (this._seamlessAdapters.has(type)) {
-      throw new Error(`A seamless adapter is already registered for ${this._describeType(type)}.`);
-    }
-
-    this._seamlessAdapters.set(type, adapter);
+    this._typeRegistry.registerSeamlessAdapter(type, adapter);
 
     return this;
   }
@@ -450,7 +426,7 @@ export class Loader {
 
     // Resolve every type up front so an unknown type fails before any asset is stored.
     const resolved = entries.map(entry => {
-      const type = this._assetTypeMap.get(entry.type);
+      const type = this._typeRegistry.resolveTypeName(entry.type);
 
       if (!type) {
         throw new Error(`Container "${url}" references unknown asset type "${entry.type}".`);
@@ -598,7 +574,7 @@ export class Loader {
     // 2b. Extension-based: single path string with no type token
     if (typeof arg0 === 'string' && arg1 === undefined) {
       const path = arg0;
-      let ctor = this._resolveExtensionType(path);
+      let ctor = this._typeRegistry._resolveExtensionType(path);
 
       // Value-kind fallback: a bare path whose suffix maps to a value kind
       // resolves the raw value via the value token (asset-system v2 §4.4).
@@ -616,7 +592,7 @@ export class Loader {
       // FontAsset requires a family option — infer it from the filename when not provided
       const options: unknown = ctor === FontAsset ? { family: (path.split('/').pop()?.split(/[?#]/)[0] ?? '').replace(/\.[^.]+$/, '') } : undefined;
 
-      this._claim(this._key(ctor, path), ctor, path, claimer);
+      this._claim(this._typeRegistry._key(ctor, path), ctor, path, claimer);
       this._onFgBatchStart(path, path);
       let notifyFn: ((success: boolean) => void) | null = null;
       const promise = this._loadSingle(ctor, path, options).then(
@@ -844,14 +820,14 @@ export class Loader {
 
     if (typeof typeOrPath === 'string') {
       const path = typeOrPath;
-      const ctor = this._resolveExtensionType(path);
+      const ctor = this._typeRegistry._resolveExtensionType(path);
 
       if (ctor !== undefined) {
-        const pathAdapter = this._seamlessAdapters.get(ctor);
+        const pathAdapter = this._typeRegistry.getSeamlessAdapter(ctor);
 
         if (pathAdapter !== undefined) {
           const handle = this._getSeamless(ctor, pathAdapter, path, source);
-          this._claim(this._key(ctor, path), ctor, path, claimer);
+          this._claim(this._typeRegistry._key(ctor, path), ctor, path, claimer);
 
           return handle;
         }
@@ -865,7 +841,7 @@ export class Loader {
 
       if (valueToken !== undefined) {
         const ref = this._getRef(valueToken, path, source);
-        this._claim(this._key(valueToken, path), valueToken, path, claimer);
+        this._claim(this._typeRegistry._key(valueToken, path), valueToken, path, claimer);
 
         return ref;
       }
@@ -875,7 +851,7 @@ export class Loader {
         throw new Error(`Loader: no type registered for any extension of "${path}". Register one via defineAsset() (its extensions).`);
       }
 
-      throw new Error(`Loader: type ${this._describeType(ctor)} inferred from "${path}" has no seamless adapter — use load() instead.`);
+      throw new Error(`Loader: type ${this._typeRegistry._describeType(ctor)} inferred from "${path}" has no seamless adapter — use load() instead.`);
     }
 
     // Not a container, meta-leaf, or path string: a Loadable type token.
@@ -891,7 +867,7 @@ export class Loader {
       throw new Error(`Missing resource "${src}" for type ${ctor.name}.`);
     }
 
-    this._claim(this._key(ctor, src), ctor, src, claimer);
+    this._claim(this._typeRegistry._key(ctor, src), ctor, src, claimer);
 
     return typeMap.get(src);
   }
@@ -916,7 +892,7 @@ export class Loader {
   public release(handle: object): void;
   public release(type: AssetConstructor, source: string): void;
   public release(handleOrType: object | AssetConstructor, source?: string): void {
-    const key = typeof source === 'string' ? this._key(handleOrType as AssetConstructor, source) : this._handleKeys.get(handleOrType);
+    const key = typeof source === 'string' ? this._typeRegistry._key(handleOrType as AssetConstructor, source) : this._handleKeys.get(handleOrType);
 
     if (key !== undefined) {
       this._release(key, this._rootClaimer);
@@ -968,11 +944,11 @@ export class Loader {
   public unload(arg0: unknown, arg1?: unknown): this {
     if (arg0 instanceof AssetImpl) {
       const asset = arg0 as Asset<unknown>;
-      const ctor = this._assetTypeMap.get(asset.kind);
+      const ctor = this._typeRegistry.resolveTypeName(asset.kind);
 
       if (!ctor) return this;
 
-      const identityKey = this._resolveAssetIdentityKey(ctor, asset);
+      const identityKey = this._typeRegistry._resolveAssetIdentityKey(ctor, asset);
       const aliasSet = this._identityKeyToAliases.get(identityKey);
 
       if (aliasSet && aliasSet.size > 0) {
@@ -1010,7 +986,7 @@ export class Loader {
 
   private _unloadOne(type: Loadable, alias: string): this {
     const ctor = type;
-    const aliasKey = this._key(ctor, alias);
+    const aliasKey = this._typeRegistry._key(ctor, alias);
 
     // Snapshot BEFORE the delete: a key whose resource is already stored has a
     // SETTLED fetch — any lingering `_inFlight` entry for it is stale (its
@@ -1080,7 +1056,7 @@ export class Loader {
     // honoring "does not cancel in-flight fetches".
     const settledKeys = new Set<string>();
     for (const [ctor, typeMap] of this._resources) {
-      for (const alias of typeMap.keys()) settledKeys.add(this._key(ctor, alias));
+      for (const alias of typeMap.keys()) settledKeys.add(this._typeRegistry._key(ctor, alias));
     }
 
     for (const typeMap of this._resources.values()) {
@@ -1207,89 +1183,7 @@ export class Loader {
     keys: { type: AssetConstructor<Result>; typeNames?: readonly string[]; extensions?: readonly string[]; seamless?: SeamlessAdapter<Result> },
     handler: AssetHandler<Result, Options>,
   ): void {
-    const normalizedExts: string[] = [];
-    const resolvedNames: string[] = keys.typeNames !== undefined ? [...keys.typeNames] : [];
-
-    // Normalise extension keys
-    for (const ext of keys.extensions ?? []) {
-      normalizedExts.push(ext.replace(/^\./, '').toLowerCase());
-    }
-
-    // Validate: detect duplicates within this binding
-    const seenExts = new Set<string>();
-
-    for (const ext of normalizedExts) {
-      if (seenExts.has(ext)) {
-        throw new Error(`Duplicate extension key ".${ext}" within a single asset binding.`);
-      }
-
-      seenExts.add(ext);
-    }
-
-    // Validate: detect conflicts with already-registered keys — throw before any mutation
-    if (this._handlerFunctions.has(keys.type)) {
-      throw new Error(`An asset handler is already registered for ${keys.type.name}.`);
-    }
-
-    for (const name of resolvedNames) {
-      if (this._assetTypeMap.has(name)) {
-        throw new Error(`Asset type name "${name}" is already registered.`);
-      }
-    }
-
-    for (const ext of normalizedExts) {
-      if (this._extensionMap.has(ext)) {
-        throw new Error(`File extension ".${ext}" is already mapped to an asset type.`);
-      }
-    }
-
-    // All validation passed — install atomically.
-    //
-    // Localized type-erasure boundary: the internal Loader uses a flat config
-    // `{ source, ...fields }`. The public AssetHandler<Result, Options> interface
-    // uses `AssetLoadRequest<Options> = { source, options? }`. This single `toRequest`
-    // helper is the only place where the erased flat config is cast to the typed
-    // request — justified by the `AssetBinding<Result, Options>` contract that
-    // associates this handler's Options with the registered constructor.
-    //
-    // `options` is intentionally omitted (not set to `undefined`) when the flat
-    // config carries no extra fields, keeping the object compatible with a future
-    // `exactOptionalPropertyTypes` migration.
-    const toRequest = (config: unknown): AssetLoadRequest<Options> => {
-      const { source, ...rest } = config as { source: string } & Record<string, unknown>;
-
-      if (Object.keys(rest).length === 0) {
-        return { source };
-      }
-
-      return { source, options: rest as Options };
-    };
-
-    const boundIdentityKey = handler.getIdentityKey?.bind(handler);
-    const boundCreateFromBytes = handler.createFromBytes?.bind(handler);
-
-    this._handlerFunctions.set(keys.type, {
-      load: (config, ctx) => handler.load(toRequest(config), ctx),
-      ...(boundIdentityKey && { getIdentityKey: (config: unknown) => boundIdentityKey(toRequest(config)) }),
-      ...(boundCreateFromBytes && { createFromBytes: (bytes: ArrayBuffer, options?: unknown) => boundCreateFromBytes(bytes, options as Options) }),
-    });
-
-    for (const name of resolvedNames) {
-      this._assetTypeMap.set(name, keys.type);
-    }
-
-    for (const ext of normalizedExts) {
-      this._extensionMap.set(ext, keys.type);
-    }
-
-    // Own this handler for lifecycle management.
-    // Cast to the erased AssetHandler for storage; destroy() is the only method
-    // called on entries in this array.
-    this._boundHandlers.push(handler as AssetHandler);
-
-    if (keys.seamless !== undefined) {
-      this.registerSeamlessAdapter(keys.type, keys.seamless);
-    }
+    this._typeRegistry.bindAsset(keys, handler);
   }
 
   /**
@@ -1297,7 +1191,7 @@ export class Loader {
    * @advanced
    */
   public hasLoadable(type: AssetConstructor): boolean {
-    return this._handlerFunctions.has(type) || this._registry.has(type);
+    return this._typeRegistry.hasLoadable(type);
   }
 
   /**
@@ -1305,7 +1199,7 @@ export class Loader {
    * @advanced
    */
   public hasAssetType(typeName: string): boolean {
-    return this._assetTypeMap.has(typeName);
+    return this._typeRegistry.hasAssetType(typeName);
   }
 
   /**
@@ -1314,7 +1208,7 @@ export class Loader {
    * @advanced
    */
   public hasExtension(ext: string): boolean {
-    return this._extensionMap.has(ext.replace(/^\./, '').toLowerCase());
+    return this._typeRegistry.hasExtension(ext);
   }
 
   // -----------------------------------------------------------------------
@@ -1330,33 +1224,24 @@ export class Loader {
    * registered via `bindAsset`.
    */
   public destroy(): void {
-    this._registry.destroy();
+    // Order matters: bound-handler destroy must run after store destroy (mirrors
+    // the original inline teardown order) — see the regression test in loader.test.ts.
+    this._typeRegistry.destroyFactories();
 
     for (const store of this._stores) {
       store.destroy();
     }
 
-    // Call destroy on all bound handlers (deduplicated by identity)
-    const destroyedHandlers = new Set<AssetHandler>();
+    this._typeRegistry.destroyHandlers();
 
-    for (const handler of this._boundHandlers) {
-      if (!destroyedHandlers.has(handler)) {
-        destroyedHandlers.add(handler);
-        handler.destroy?.();
-      }
-    }
-
-    this._boundHandlers.length = 0;
     this._resources.clear();
     this._inFlight.clear();
     this._preventStoreKeys.clear();
     this._inFlightByIdentity.clear();
     this._aliasKeyToIdentityKey.clear();
     this._identityKeyToAliases.clear();
-    this._handlerFunctions.clear();
     this._deferred.clear();
     this._refs.clear();
-    this._seamlessAdapters.clear();
     this._backgroundQueue.length = 0;
     this.onProgress.destroy();
     this.onLoaded.destroy();
@@ -1392,7 +1277,7 @@ export class Loader {
       throw new Error('Loader._adopt: value is not an Assets.from() leaf (no assetMeta).');
     }
 
-    const ctor = this._assetTypeMap.get(meta.kind);
+    const ctor = this._typeRegistry.resolveTypeName(meta.kind);
 
     if (ctor === undefined) {
       throw new Error(`Loader._adopt: no constructor registered for kind "${meta.kind}".`);
@@ -1404,7 +1289,7 @@ export class Loader {
     const leafState = (handle as { _loadState?: { value: string; begin(): void } })._loadState;
     if (leafState?.value === 'idle') leafState.begin();
 
-    const key = this._key(ctor, meta.src);
+    const key = this._typeRegistry._key(ctor, meta.src);
 
     if (handle instanceof AssetRef) {
       const existingRef = this._refs.get(key);
@@ -1474,7 +1359,7 @@ export class Loader {
       // donor was itself registered here at store time, so the entry already
       // exists (its representative stays canonical); the co-handle only ever
       // joins, never displaces it.
-      const adapter = this._seamlessAdapters.get(ctor);
+      const adapter = this._typeRegistry.getSeamlessAdapter(ctor);
 
       adapter?.fill(handle, stored);
 
@@ -1507,7 +1392,7 @@ export class Loader {
       return stored;
     }
 
-    const key = this._key(type, source);
+    const key = this._typeRegistry._key(type, source);
     const entry = this._deferred.get(key);
 
     if (entry !== undefined) {
@@ -1557,7 +1442,7 @@ export class Loader {
 
   /** Value-asset twin of {@link _getSeamless}: stable ref, options first-wins, retry-on-failed. */
   private _getRef(type: AssetConstructor, source: string, options?: unknown): AssetRef<unknown> {
-    const key = this._key(type, source);
+    const key = this._typeRegistry._key(type, source);
     const entry = this._refs.get(key);
 
     if (entry !== undefined) {
@@ -1617,7 +1502,7 @@ export class Loader {
    */
   private _enqueueBackgroundFetch(type: AssetConstructor, source: string, options: unknown): void {
     if (this._hasResource(type, source)) return;
-    if (this._inFlight.has(this._key(type, source))) return;
+    if (this._inFlight.has(this._typeRegistry._key(type, source))) return;
     if (this._isQueuedInBackground(type, source)) return;
 
     if (this._backgroundQueue.length === 0 && this._backgroundActive === 0) {
@@ -1650,7 +1535,7 @@ export class Loader {
       this._evicted.delete(key);
 
       // The handle was re-armed to 'loading' during eviction; just re-drive the fetch.
-      if (this._seamlessAdapters.has(type)) {
+      if (this._typeRegistry.hasSeamlessAdapter(type)) {
         this._startSeamlessFetch(type, source, this._deferred.get(key)?.options);
       }
     }
@@ -1710,7 +1595,7 @@ export class Loader {
    * @internal
    */
   private _evictKey(key: string, type: AssetConstructor, source: string): void {
-    const adapter = this._seamlessAdapters.get(type);
+    const adapter = this._typeRegistry.getSeamlessAdapter(type);
     const stored = this._resources.get(type)?.get(source);
 
     if (adapter !== undefined && stored !== undefined) {
@@ -1756,7 +1641,7 @@ export class Loader {
 
     // Drop a not-yet-started background entry (only possible while still queued;
     // once _startBackgroundEntry ran it is in _inFlight and cannot be cancelled).
-    const queued = this._backgroundQueue.findIndex(entry => this._key(entry.type, entry.alias) === key);
+    const queued = this._backgroundQueue.findIndex(entry => this._typeRegistry._key(entry.type, entry.alias) === key);
 
     if (queued !== -1) {
       this._backgroundQueue.splice(queued, 1);
@@ -1771,7 +1656,7 @@ export class Loader {
       }
     }
 
-    const key = this._key(type, alias);
+    const key = this._typeRegistry._key(type, alias);
 
     if (this._inFlight.has(key)) {
       return this._inFlight.get(key);
@@ -1798,7 +1683,7 @@ export class Loader {
 
     const itemPromises = items.map(({ alias, asset }) => {
       this._onFgBatchStart(alias, asset.source);
-      const ctor = this._assetTypeMap.get(asset.kind);
+      const ctor = this._typeRegistry.resolveTypeName(asset.kind);
 
       if (!ctor) {
         // Must call _notifyItem(false) so LoadingProgress doesn't remain stuck.
@@ -1816,7 +1701,7 @@ export class Loader {
         );
       }
 
-      this._claim(this._key(ctor, alias), ctor, alias, claimer);
+      this._claim(this._typeRegistry._key(ctor, alias), ctor, alias, claimer);
 
       return this._loadSingleAsset(ctor, alias, asset).then(
         resource => {
@@ -1900,10 +1785,9 @@ export class Loader {
 
     // Identity key: use handler's getIdentityKey if provided (config-sensitive dedup),
     // otherwise fall back to source-based identity (correct for URL-only assets).
-    const handlerEntry = this._handlerFunctions.get(type);
-    const discriminator = handlerEntry?.getIdentityKey?.(rawConfig) ?? source;
-    const identityKey = `id:${this._getTypeId(type)}:${discriminator}`;
-    const aliasKey = this._key(type, alias);
+    const handlerEntry = this._typeRegistry.getHandler(type);
+    const identityKey = this._typeRegistry._resolveAssetIdentityKey(type, asset);
+    const aliasKey = this._typeRegistry._key(type, alias);
 
     // Register alias → identity mapping for unload() semantics
     this._aliasKeyToIdentityKey.set(aliasKey, identityKey);
@@ -1943,7 +1827,7 @@ export class Loader {
           const failedAliases = this._identityKeyToAliases.get(identityKey);
           if (failedAliases) {
             for (const fa of failedAliases) {
-              const faKey = this._key(type, fa);
+              const faKey = this._typeRegistry._key(type, fa);
               this._aliasKeyToIdentityKey.delete(faKey);
               this._preventStoreKeys.delete(faKey);
             }
@@ -2031,13 +1915,13 @@ export class Loader {
    * bytes. The backing path for {@link loadContainer}.
    */
   private async _injectSource(type: AssetConstructor, alias: string, bytes: ArrayBuffer, options?: unknown): Promise<void> {
-    const handlerEntry = this._handlerFunctions.get(type);
+    const handlerEntry = this._typeRegistry.getHandler(type);
     let resource: unknown;
 
     if (handlerEntry?.createFromBytes) {
       resource = await handlerEntry.createFromBytes(bytes, options);
-    } else if (this._registry.has(type)) {
-      resource = await this._registry.resolve(type).create(bytes, options);
+    } else if (this._typeRegistry.hasFactory(type)) {
+      resource = await this._typeRegistry.resolveFactory(type).create(bytes, options);
     } else {
       throw new Error(`Asset type "${type.name}" cannot be built from container bytes (no createFromBytes handler).`);
     }
@@ -2053,13 +1937,13 @@ export class Loader {
    * honor `bindAsset` handlers identically.
    */
   private _dispatchFetch(type: AssetConstructor, alias: string, path: string, options?: unknown): Promise<unknown> {
-    const handlerEntry = this._handlerFunctions.get(type);
+    const handlerEntry = this._typeRegistry.getHandler(type);
 
     if (!handlerEntry) {
       return this._fetch(type, alias, path, options);
     }
 
-    const identityKey = this._identityKey(type, path);
+    const identityKey = this._typeRegistry._identityKey(type, path);
     const config: Record<string, unknown> = { source: path };
 
     if (options !== null && options !== undefined && typeof options === 'object') {
@@ -2072,7 +1956,7 @@ export class Loader {
   }
 
   private async _fetch(type: AssetConstructor, alias: string, path: string, options?: unknown): Promise<unknown> {
-    const factory = this._registry.resolve(type);
+    const factory = this._typeRegistry.resolveFactory(type);
     const url = this._resolveUrl(path);
 
     try {
@@ -2141,7 +2025,7 @@ export class Loader {
       if (!entry) {
         continue;
       }
-      const key = this._key(entry.type, entry.alias);
+      const key = this._typeRegistry._key(entry.type, entry.alias);
 
       if (this._hasResource(entry.type, entry.alias) || this._inFlight.has(key)) {
         this._backgroundLoaded++;
@@ -2185,7 +2069,7 @@ export class Loader {
     this._trackInFlight(entry.type, entry.alias, this._dispatchFetch(entry.type, entry.alias, entry.path, entry.options))
       .catch(error => {
         const err = this._normalizeError(error);
-        const key2 = this._key(entry.type, entry.alias);
+        const key2 = this._typeRegistry._key(entry.type, entry.alias);
 
         if (!this._deferred.has(key2) && !this._refs.has(key2)) {
           this.onError.dispatch(entry.type, entry.alias, err);
@@ -2200,7 +2084,7 @@ export class Loader {
   }
 
   private _trackInFlight(type: AssetConstructor, alias: string, promise: Promise<unknown>): Promise<unknown> {
-    const key = this._key(type, alias);
+    const key = this._typeRegistry._key(type, alias);
     const trackedPromise = promise.finally(() => {
       // Clear only our OWN entry: a superseding load (e.g. a reclaim re-fetch
       // after an eviction dropped and re-added this key) may already own the
@@ -2227,7 +2111,7 @@ export class Loader {
     const deferredEntry = this._deferred.get(key);
 
     if (deferredEntry !== undefined) {
-      const adapter = this._seamlessAdapters.get(type);
+      const adapter = this._typeRegistry.getSeamlessAdapter(type);
 
       // Fail EVERY in-flight handle for the key so all co-adopters settle.
       for (const handle of deferredEntry.handles) {
@@ -2326,7 +2210,7 @@ export class Loader {
       return;
     }
 
-    logger.warn(`get(${this._describeType(type)}, "${source}"): conflicting options ignored — the first call's options win.`, {
+    logger.warn(`get(${this._typeRegistry._describeType(type)}, "${source}"): conflicting options ignored — the first call's options win.`, {
       source: 'Loader',
       once: `loader:seamless-options:${key}`,
     });
@@ -2434,16 +2318,12 @@ export class Loader {
     return error instanceof Error ? error : new Error(String(error));
   }
 
-  private _describeType(type: AssetConstructor): string {
-    return type.name.length > 0 ? type.name : '(anonymous type)';
-  }
-
   private _hasResource(type: AssetConstructor, alias: string): boolean {
     return this._resources.get(type)?.has(alias) ?? false;
   }
 
   private _storeResource(type: AssetConstructor, alias: string, resource: unknown): unknown {
-    const key = this._key(type, alias);
+    const key = this._typeRegistry._key(type, alias);
 
     if (this._preventStoreKeys.delete(key)) {
       // The asset was unloaded while its fetch was in flight. A deferred handle
@@ -2453,7 +2333,7 @@ export class Loader {
       const preventedEntry = this._deferred.get(key);
 
       if (preventedEntry !== undefined) {
-        const adapter = this._seamlessAdapters.get(type);
+        const adapter = this._typeRegistry.getSeamlessAdapter(type);
         const unloadError = new Error(`Asset "${alias}" was unloaded while its fetch was in flight.`);
 
         for (const handle of preventedEntry.handles) {
@@ -2482,7 +2362,7 @@ export class Loader {
     let filledDeferredHandle = false;
 
     if (deferredEntry !== undefined) {
-      const adapter = this._seamlessAdapters.get(type);
+      const adapter = this._typeRegistry.getSeamlessAdapter(type);
       let representative: object | undefined;
 
       // Fill EVERY in-flight handle for the key from the single decoded donor
@@ -2555,7 +2435,7 @@ export class Loader {
     // set. A resource that already came from a deferred handle is a member
     // already; a plain `load()` donor (no prior get()) is added here. Held
     // weakly, so a fully-released source does not pin its evicted payload (A4).
-    if (typeof resource === 'object' && resource !== null && this._seamlessAdapters.has(type) && this._deferred.get(key) === undefined) {
+    if (typeof resource === 'object' && resource !== null && this._typeRegistry.hasSeamlessAdapter(type) && this._deferred.get(key) === undefined) {
       this._createDeferredEntry(key, resource);
     }
 
@@ -2576,65 +2456,11 @@ export class Loader {
     return resource;
   }
 
-  private _getTypeId(type: AssetConstructor): number {
-    let typeId = this._typeIds.get(type);
-
-    if (typeId === undefined) {
-      typeId = this._nextTypeId++;
-      this._typeIds.set(type, typeId);
-    }
-
-    return typeId;
-  }
-
-  private _key(type: AssetConstructor, alias: string): string {
-    return `${this._getTypeId(type)}:${alias}`;
-  }
-
-  private _identityKey(type: AssetConstructor, source: string): string {
-    return `id:${this._getTypeId(type)}:${source}`;
-  }
-
-  /**
-   * Resolves the effective identity key for an `Asset<T>` reference, mirroring
-   * the logic used in `_loadSingleAsset`.
-   *
-   * For handler types with `getIdentityKey`, the config-sensitive discriminator
-   * is used; otherwise source is the discriminator (same as `_identityKey`).
-   */
-  private _resolveAssetIdentityKey(type: AssetConstructor, asset: Asset<unknown>): string {
-    const rawConfig = asset._config as Record<string, unknown>;
-    const handlerEntry = this._handlerFunctions.get(type);
-    const discriminator = handlerEntry?.getIdentityKey?.(rawConfig) ?? asset.source;
-    return `id:${this._getTypeId(type)}:${discriminator}`;
-  }
-
   private _resolveUrl(path: string): string {
     if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('//') || path.startsWith('/')) {
       return path;
     }
 
     return `${this._basePath}${path}`;
-  }
-
-  /**
-   * Resolve the registered asset type for a path by matching the basename's
-   * dot-suffixes longest-first (Entscheidung #14): `hero.aseprite.json` tries
-   * `aseprite.json` before `json`. Query/hash suffixes are ignored.
-   */
-  private _resolveExtensionType(path: string): AssetConstructor | undefined {
-    const [withoutQueryHash = ''] = path.split(/[?#]/, 1);
-    const basename = withoutQueryHash.split('/').pop() ?? '';
-    const parts = basename.split('.');
-
-    for (let i = 1; i < parts.length; i++) {
-      const ctor = this._extensionMap.get(parts.slice(i).join('.').toLowerCase());
-
-      if (ctor !== undefined) {
-        return ctor;
-      }
-    }
-
-    return undefined;
   }
 }

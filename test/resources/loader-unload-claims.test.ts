@@ -35,7 +35,7 @@ function refSize(loader: Loader): number {
   return (loader as unknown as { _refs: Map<string, unknown> })._refs.size;
 }
 function keyOf(loader: Loader, type: unknown, source: string): string {
-  return (loader as unknown as { _key(t: unknown, s: string): string })._key(type, source);
+  return (loader as unknown as { _typeRegistry: { _key(t: unknown, s: string): string } })._typeRegistry._key(type, source);
 }
 
 describe('Loader unload()/unloadAll() claim consistency (A3)', () => {
