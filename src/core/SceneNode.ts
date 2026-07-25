@@ -297,7 +297,11 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
     return this._parentNode;
   }
 
-  public set parent(parent: Container | null) {
+  /**
+   * Set this node's parent without going through {@link Container.addChild}.
+   * @internal
+   */
+  public _setParent(parent: Container | null): void {
     this._parentNode = parent;
   }
 
