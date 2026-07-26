@@ -27,7 +27,7 @@ export interface AssetResidencySignals {
 /**
  * Owns claim/refcount tracking, in-flight fetch dedup, the resident-resource
  * store, deferred-handle / value-ref healing (asset-system v2 §7), and the
- * background-loading queue for a {@link Loader} instance. Extracted from
+ * background-loading queue for a `Loader` instance. Extracted from
  * `Loader` (Loader split, Slice 3) — every method here is a direct,
  * behavior-preserving relocation except {@link _getAliasesForIdentity} and
  * {@link _getHandleKey}, two small new read accessors `Loader`'s kept
@@ -173,6 +173,11 @@ export class AssetResidency {
 
     if (adapter !== undefined && stored !== undefined) {
       const entry = this._deferred.get(key);
+      // Re-arm every live consumer handle in place: the representative AND any
+      // co-handle adopted from the stored donor (audit A5), so a later claim
+      // heals them all — not just the canonical one. The stored donor is itself
+      // a member (registered at store time); guard the fallback for the (defensive)
+      // case where no entry exists.
       let evictedStored = false;
 
       if (entry !== undefined) {
@@ -191,11 +196,19 @@ export class AssetResidency {
 
       this._resources.get(type)?.delete(source);
 
+      // Keep the handles registered (weakly) so the next claim heals them in
+      // place; the entry persists from store time, carrying the original options.
       if (entry === undefined) {
         this._createDeferredEntry(key, stored as object);
       }
 
       this._evicted.add(key);
+      // A load that just settled may leave a resolved-but-not-yet-cleaned
+      // in-flight entry (its `.finally` cleanup is a pending microtask). Drop it
+      // so the reclaim's re-fetch starts fresh instead of deduping onto that
+      // stale resolved promise, which would never re-fill the re-armed handle.
+      // The reclaim's fresh entry is protected from this stale `.finally` by the
+      // self-entry identity guard in `_trackInFlight`.
       this._inFlight.delete(key);
     }
 
@@ -236,6 +249,9 @@ export class AssetResidency {
       throw new Error(`Loader._adopt: no constructor registered for kind "${meta.kind}".`);
     }
 
+    // A freshly-created catalog leaf is 'idle' until adopted; entering residency
+    // here transitions it to 'loading' (asset-system v2 §7). A re-adopted handle
+    // already loading/ready/failed is left untouched.
     const leafState = (handle as { _loadState?: { value: string; begin(): void } })._loadState;
     if (leafState?.value === 'idle') leafState.begin();
 
@@ -249,6 +265,9 @@ export class AssetResidency {
         this._refs.set(key, { refs: new Set([handle]), options: meta.opts });
         this._handleKeys.set(handle, key);
 
+        // Mirrors _getRef's stored-fast-path: a value already sitting in
+        // `_resources` (stored elsewhere before this leaf was adopted) fills
+        // this ref immediately instead of leaving it 'loading' forever.
         if (stored !== undefined) {
           handle._fill(stored);
         } else if (background) {
@@ -257,6 +276,10 @@ export class AssetResidency {
           this._startRefFetch(ctor, meta.src, meta.opts);
         }
       } else if (!existingRef.refs.has(handle)) {
+        // A distinct ref for a key already in flight (or already stored): join
+        // the key's ref set so the single fetch fills it too (§7 multi-handle
+        // fill). If the value already converged, fill immediately; otherwise a
+        // conflicting FETCH option (source-keyed decode can't differ) warns.
         existingRef.refs.add(handle);
         this._handleKeys.set(handle, key);
 
@@ -266,6 +289,7 @@ export class AssetResidency {
           this._warnOnFetchOptionConflict(ctor, meta.src, key, existingRef.options, meta.opts);
         }
       }
+      // else: the SAME ref re-adopted — Set membership makes this a no-op.
 
       this._claim(key, ctor, meta.src, claimer);
 
@@ -289,6 +313,18 @@ export class AssetResidency {
     }
 
     if (stored !== undefined && this._handleKeys.get(handle) !== key) {
+      // Already stored for this key (e.g. loaded elsewhere before this leaf was
+      // adopted — the core catalog scenario) and this exact handle has not been
+      // filled/registered yet: transplant the stored donor into THIS handle in
+      // place (per-catalog identity — do NOT swap to the stored object; the
+      // caller already holds this leaf) and register it so `release(handle)`
+      // can resolve its key.
+      //
+      // Enter the co-handle into the key's (persistent) deferred set so a LATER
+      // evict+heal of this key re-arms and re-fills it too (audit A5). The stored
+      // donor was itself registered here at store time, so the entry already
+      // exists (its representative stays canonical); the co-handle only ever
+      // joins, never displaces it.
       const adapter = this._typeRegistry.getSeamlessAdapter(ctor);
 
       adapter?.fill(handle, stored);
@@ -297,9 +333,15 @@ export class AssetResidency {
 
       this._addDeferredHandle(key, entry, handle);
     } else if (deferredEntry !== undefined && stored === undefined && !deferredEntry.handles.has(handle)) {
+      // A distinct handle is in flight for this key and nothing is stored yet:
+      // join the key's handle set so `_storeResource` fills THIS handle too
+      // (§7 multi-handle fill — this is the former silent hang). A conflicting
+      // FETCH option (source-keyed decode can't differ) warns; differing
+      // per-handle sampler options are fine (each handle carries its own).
       this._addDeferredHandle(key, deferredEntry, handle);
       this._warnOnFetchOptionConflict(ctor, meta.src, key, deferredEntry.options, meta.opts);
     }
+    // else: the SAME handle re-adopted, or already filled — a no-op.
 
     this._claim(key, ctor, meta.src, claimer);
   }
@@ -521,6 +563,12 @@ export class AssetResidency {
       return false;
     }
 
+    // Same-prototype instances compare structurally by their own enumerable
+    // keys — deeply-equal options of any shared class, not just plain objects,
+    // count as equivalent. Built-ins whose state is NOT
+    // carried in enumerable own keys need explicit handling: Dates compare by
+    // timestamp; other exotic containers stay reference-only (Object.is above)
+    // so two distinct-but-similar instances never count as equivalent.
     if (left instanceof Date) {
       return left.getTime() === (right as Date).getTime();
     }
@@ -653,6 +701,10 @@ export class AssetResidency {
   private _trackInFlight(type: AssetConstructor, alias: string, promise: Promise<unknown>): Promise<unknown> {
     const key = this._typeRegistry._key(type, alias);
     const trackedPromise = promise.finally(() => {
+      // Clear only our OWN entry: a superseding load (e.g. a reclaim re-fetch
+      // after an eviction dropped and re-added this key) may already own the
+      // slot. Deleting it unconditionally would un-dedup a concurrent load and
+      // let a second fetch overwrite the healed handle with its raw donor.
       if (this._inFlight.get(key) === trackedPromise) {
         this._inFlight.delete(key);
       }
@@ -660,6 +712,9 @@ export class AssetResidency {
       this._preventStoreKeys.delete(key);
     });
 
+    // Non-swallowing observer: fails deferred handles / value refs (fresh
+    // error each attempt) and dispatches onError for entry-backed fetches —
+    // regardless of which verb (get/load/background) started the attempt.
     trackedPromise.catch((error: unknown) => this._onTrackedFailure(type, alias, key, error));
     this._inFlight.set(key, trackedPromise);
 
@@ -741,6 +796,10 @@ export class AssetResidency {
     const key = this._typeRegistry._key(type, alias);
 
     if (this._preventStoreKeys.delete(key)) {
+      // The asset was unloaded while its fetch was in flight. A deferred handle
+      // waiting on this key must not stay 'loading' forever: fail it so
+      // `.loaded` rejects. The entry stays (like any failed fetch) so a later
+      // get() retries and heals the SAME handle in place.
       const preventedEntry = this._deferred.get(key);
 
       if (preventedEntry !== undefined) {
@@ -765,6 +824,10 @@ export class AssetResidency {
       return resource;
     }
 
+    // Seamless intercept: a deferred handle registered for this (type, source)
+    // absorbs the fetched payload in place and becomes the stored resource, so
+    // every consumer — get() before or after load(), and load()'s own promise —
+    // sees exactly ONE instance per source.
     const deferredEntry = this._deferred.get(key);
     let filledDeferredHandle = false;
 
@@ -772,6 +835,10 @@ export class AssetResidency {
       const adapter = this._typeRegistry.getSeamlessAdapter(type);
       let representative: object | undefined;
 
+      // Fill EVERY in-flight handle for the key from the single decoded donor
+      // (§7 multi-handle fill). The first handle is the representative — it
+      // becomes the canonical `_resources` entry, mirroring the old
+      // single-handle contract (which object is canonical for eviction).
       for (const handle of deferredEntry.handles) {
         representative ??= handle;
 
@@ -779,6 +846,12 @@ export class AssetResidency {
           continue;
         }
 
+        // A non-get producer (load(), bundle, background) may store into a key
+        // whose handle is 'failed' (e.g. an earlier get() 404'd). fill() → settle()
+        // must run from a re-armed state so `.loaded` re-materializes a resolved
+        // promise; without begin() the handle would read 'ready' while its cached
+        // `.loaded` stayed permanently rejected. Skip a handle already 'ready'
+        // (filled by an earlier producer) — filling twice is a no-op at best.
         const state = adapter.stateOf(handle);
 
         if (state === 'ready') {
@@ -792,12 +865,18 @@ export class AssetResidency {
         adapter.fill(handle, resource);
       }
 
+      // The entry is NOT dropped here: it persists as the key's live-handle
+      // registry so a co-handle adopt (audit A5) joins it and a refcount-0
+      // eviction re-arms every consumer. The representative stays canonical.
       if (representative !== undefined && representative !== resource) {
         resource = representative;
         filledDeferredHandle = true;
       }
     }
 
+    // Value-asset refs fill from whatever producer stores the value; the raw
+    // value stays the stored resource (load() keeps resolving it). Fill every
+    // in-flight ref for the key (§7 multi-handle fill).
     const refEntry = this._refs.get(key);
 
     if (refEntry !== undefined) {
@@ -816,16 +895,30 @@ export class AssetResidency {
 
     typeResources.set(alias, resource);
 
+    // Record the canonical reverse key (first alias wins) for object resources.
     if (typeof resource === 'object' && resource !== null && !this._resourceKeys.has(resource)) {
       this._resourceKeys.set(resource, { type, source: alias });
     }
 
+    // Register the stored seamless resource as its key's representative so a
+    // later eviction re-arms it and a co-handle adopt (audit A5) joins the same
+    // set. A resource that already came from a deferred handle is a member
+    // already; a plain `load()` donor (no prior get()) is added here. Held
+    // weakly, so a fully-released source does not pin its evicted payload (A4).
     if (typeof resource === 'object' && resource !== null && this._typeRegistry.hasSeamlessAdapter(type) && this._deferred.get(key) === undefined) {
       this._createDeferredEntry(key, resource);
     }
 
     this._signals.onLoaded.dispatch(type, alias, resource);
 
+    // §4.7 free-on-arrival: a deferred handle whose every claimer released
+    // during the in-flight fetch has now converged into `_resources` at
+    // refcount 0. `.loaded` was already settled by the fill above, so an
+    // awaiter holding that promise still resolves (the asset WAS complete);
+    // evicting here drops the payload in place (re-arming `.loaded` to
+    // 'loading') so it does not linger unclaimed. Gated on an actual deferred
+    // fill: a never-claimed bundle/container store (no `_deferred` entry) must
+    // persist, not be freed on arrival.
     if (filledDeferredHandle && !this._claims.has(key)) {
       this._evictKey(key, type, alias);
     }
@@ -956,16 +1049,25 @@ export class AssetResidency {
     const ctor = type;
     const aliasKey = this._typeRegistry._key(ctor, alias);
 
+    // Snapshot BEFORE the delete: a key whose resource is already stored has a
+    // SETTLED fetch — any lingering `_inFlight` entry for it is stale (its
+    // `.finally` cleanup microtask has not yet run), not a live fetch. This is
+    // the signal that separates a genuine in-flight unload (fail-in-place, keep
+    // the handle) from a settled one (forget it, drop the stale entry).
     const hadResource = this._resources.get(ctor)?.has(alias) ?? false;
 
     this._resources.get(ctor)?.delete(alias);
 
+    // A genuine in-flight fetch (not yet stored) is prevented from writing its
+    // result once it arrives, so a deferred handle fails in place instead of
+    // silently resurrecting the asset.
     const identityKey = this._aliasKeyToIdentityKey.get(aliasKey);
     const liveFetch = !hadResource && (this._inFlight.has(aliasKey) || (identityKey !== undefined && this._inFlightByIdentity.has(identityKey)));
     if (liveFetch) {
       this._preventStoreKeys.add(aliasKey);
     }
 
+    // Clean up alias ↔ identity tracking
     if (identityKey !== undefined) {
       this._aliasKeyToIdentityKey.delete(aliasKey);
       const aliasSet = this._identityKeyToAliases.get(identityKey);
@@ -989,6 +1091,9 @@ export class AssetResidency {
    */
   public unloadAll(type?: AssetConstructor): void {
     if (type) {
+      // Route every stored alias — and any claim-tracked key of this type that
+      // never reached _resources (in-flight / deferred-only) — through
+      // _unloadOne so the claim/handle maps are cleared, not just _resources.
       const aliases = new Set<string>(this._resources.get(type)?.keys());
 
       for (const [, entry] of this._claims) {
@@ -1002,6 +1107,11 @@ export class AssetResidency {
       return;
     }
 
+    // Global reset. Snapshot the keys with a stored resource first: their
+    // in-flight entries (if any) are stale (resolved-but-uncleaned), so they can
+    // be dropped, while a not-yet-stored key with a live `_inFlight` entry is a
+    // genuine fetch that must be preserved (its handle fills or fails in place) —
+    // honoring "does not cancel in-flight fetches".
     const settledKeys = new Set<string>();
     for (const [ctor, typeMap] of this._resources) {
       for (const alias of typeMap.keys()) settledKeys.add(this._typeRegistry._key(ctor, alias));
@@ -1013,7 +1123,7 @@ export class AssetResidency {
 
     for (const [key, entry] of this._deferred) {
       if (this._inFlight.has(key) && !settledKeys.has(key)) {
-        this._preventStoreKeys.add(key);
+        this._preventStoreKeys.add(key); // genuine in-flight: fail/heal in place on arrival
         continue;
       }
 
@@ -1134,6 +1244,8 @@ export class AssetResidency {
     this._identityKeyToAliases.clear();
     this._deferred.clear();
     this._refs.clear();
+    // Not part of the original Loader.destroy() — clearing claim/eviction bookkeeping
+    // too is more correct for a full teardown; added during the Loader-split extraction.
     this._claims.clear();
     this._evicted.clear();
     this._backgroundQueue.length = 0;

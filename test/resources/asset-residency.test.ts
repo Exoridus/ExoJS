@@ -3,6 +3,7 @@ import { describe, expect, test, vi } from 'vitest';
 import { Asset } from '#resources/Asset';
 import { AssetDecoder } from '#resources/AssetDecoder';
 import type { AssetFactory } from '#resources/AssetFactory';
+import type { AssetResidencySignals } from '#resources/AssetResidency';
 import { AssetResidency } from '#resources/AssetResidency';
 import { AssetTypeRegistry } from '#resources/AssetTypeRegistry';
 import type { CacheRequest, CacheStrategy } from '#resources/CacheStrategy';
@@ -59,7 +60,12 @@ function createResidency(overrides: { cacheStrategy?: CacheStrategy; concurrency
   const onLoaded = { dispatch: vi.fn() } as unknown as import('#core/Signal').Signal<[unknown, string, unknown]>;
   const onError = { dispatch: vi.fn() } as unknown as import('#core/Signal').Signal<[unknown, string, Error]>;
 
-  const residency = new AssetResidency(typeRegistry, decoder, { onProgress, onLoaded, onError } as never, overrides.concurrency ?? 6);
+  const residency = new AssetResidency(
+    typeRegistry,
+    decoder,
+    { onProgress, onLoaded, onError } as unknown as AssetResidencySignals,
+    overrides.concurrency ?? 6,
+  );
 
   return { residency, typeRegistry, decoder, strategy, onProgress, onLoaded, onError };
 }
@@ -92,7 +98,10 @@ describe('AssetResidency', () => {
       const { residency, typeRegistry } = createResidency({ cacheStrategy: strategy });
       const adapter = createFakeSeamlessAdapter();
       typeRegistry.registerSeamlessAdapter(TypeA, adapter);
-      typeRegistry.register(TypeA, fakeFactory(() => 'decoded'));
+      typeRegistry.register(
+        TypeA,
+        fakeFactory(() => 'decoded'),
+      );
 
       const scope = Symbol('scope');
       const key = typeRegistry._key(TypeA, 'a.png');
@@ -103,10 +112,21 @@ describe('AssetResidency', () => {
 
       expect(residency._peekResource(TypeA, 'a.png')).toBeNull();
 
+      // The first `_getSeamless(...)` call above already started (and completed) a
+      // fetch, so `requests` is already non-empty by this point — snapshot the count
+      // right before the re-claim so the assertion below can only pass if the
+      // re-claim itself drove a NEW fetch, not just the original one.
+      const requestsBeforeReclaim = requests.length;
+
       residency._claim(key, TypeA, 'a.png', scope);
       await new Promise(r => setTimeout(r, 0));
 
-      expect(requests.length).toBeGreaterThan(0);
+      expect(requests.length).toBeGreaterThan(requestsBeforeReclaim);
+      // The SAME handle heals in place: eviction re-armed it to 'loading' (not
+      // 'failed'), so the re-fetch's arrival goes straight to fill(), and the
+      // healed handle becomes the resident resource again.
+      expect(adapter.fill).toHaveBeenCalledWith(handle, 'decoded');
+      expect(residency._peekResource(TypeA, 'a.png')).toBe(handle);
     });
 
     test('releaseScope releases every key held under that scope', () => {
@@ -132,7 +152,7 @@ describe('AssetResidency', () => {
 
   describe('_storeResource — multi-handle fill and free-on-arrival', () => {
     test('fills every deferred handle registered for the key from one decode (multi-handle fill)', () => {
-      const { residency, typeRegistry } = createResidency();
+      const { residency, typeRegistry, onLoaded } = createResidency();
       const adapter = createFakeSeamlessAdapter();
       typeRegistry.registerSeamlessAdapter(TypeA, adapter);
 
@@ -147,6 +167,9 @@ describe('AssetResidency', () => {
 
       expect(stored).toBe(handleA);
       expect(adapter.fill).toHaveBeenCalledWith(handleB, donor);
+      // The signals boundary — onLoaded dispatches with the REPRESENTATIVE handle
+      // (handleA), the same value _storeResource returned above, not the raw donor.
+      expect(onLoaded.dispatch).toHaveBeenCalledWith(TypeA, 'a.png', handleA);
     });
 
     test('free-on-arrival: a key whose last claim released mid-fetch evicts immediately once the fetch lands', () => {
@@ -179,27 +202,53 @@ describe('AssetResidency', () => {
       expect(adapter.fail).toHaveBeenCalledWith(handle, expect.any(Error));
       expect(residency._peekResource(TypeA, 'a.png')).toBeNull();
     });
+
+    test('a rejected fetch dispatches onError with the failing type/alias/error (signals boundary)', async () => {
+      const strategy = createFakeStrategy();
+      (strategy.resolve as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('network down'));
+      const { residency, typeRegistry, onError } = createResidency({ cacheStrategy: strategy });
+      const adapter = createFakeSeamlessAdapter();
+      typeRegistry.registerSeamlessAdapter(TypeA, adapter);
+      typeRegistry.register(
+        TypeA,
+        fakeFactory(() => 'unused'),
+      );
+
+      residency._getSeamless(TypeA, adapter, 'fail.png');
+      await new Promise(r => setTimeout(r, 0));
+
+      expect(onError.dispatch).toHaveBeenCalledWith(TypeA, 'fail.png', expect.any(Error));
+    });
   });
 
   describe('background queue', () => {
     test('enqueueBackgroundFetch defers the fetch until drained by awaitBackground', async () => {
       const requests: CacheRequest[] = [];
       const strategy = createFakeStrategy(r => (requests.push(r), 'bg-value'));
-      const { residency, typeRegistry } = createResidency({ cacheStrategy: strategy });
-      typeRegistry.register(TypeA, fakeFactory(() => 'bg-value'));
+      const { residency, typeRegistry, onProgress } = createResidency({ cacheStrategy: strategy });
+      typeRegistry.register(
+        TypeA,
+        fakeFactory(() => 'bg-value'),
+      );
 
       residency._enqueueBackgroundFetch(TypeA, 'bg.png', undefined);
       await residency.awaitBackground();
 
       expect(requests).toHaveLength(1);
       expect(residency._peekResource(TypeA, 'bg.png')).toBe('bg-value');
+      // The signals boundary — onProgress dispatches the (loaded, total) counts as
+      // the single queued entry completes.
+      expect(onProgress.dispatch).toHaveBeenCalledWith(1, 1);
     });
 
     test('a direct claim on a queued key boosts it out of the background queue immediately', async () => {
       const requests: CacheRequest[] = [];
       const strategy = createFakeStrategy(r => (requests.push(r), 'boosted-value'));
       const { residency, typeRegistry } = createResidency({ cacheStrategy: strategy, concurrency: 0 });
-      typeRegistry.register(TypeA, fakeFactory(() => 'boosted-value'));
+      typeRegistry.register(
+        TypeA,
+        fakeFactory(() => 'boosted-value'),
+      );
 
       residency._enqueueBackgroundFetch(TypeA, 'boost.png', undefined);
       expect(requests).toHaveLength(0); // concurrency 0: nothing started yet
@@ -210,11 +259,22 @@ describe('AssetResidency', () => {
     });
 
     test('setConcurrency changes how many entries drain concurrently', async () => {
-      const { residency } = createResidency({ concurrency: 1 });
-      residency.setConcurrency(3);
-      // Behavioral confirmation happens via the private _concurrency field driving _drainBackground's
-      // while-loop condition; asserting the setter took effect is sufficient at this class's boundary.
-      expect(residency).toBeDefined();
+      const requests: CacheRequest[] = [];
+      const strategy = createFakeStrategy(r => (requests.push(r), 'value'));
+      const { residency, typeRegistry } = createResidency({ cacheStrategy: strategy, concurrency: 0 });
+      typeRegistry.register(
+        TypeA,
+        fakeFactory(() => 'value'),
+      );
+
+      residency._enqueueBackgroundFetch(TypeA, 'a.png', undefined);
+      residency._enqueueBackgroundFetch(TypeA, 'b.png', undefined);
+      expect(requests).toHaveLength(0); // concurrency 0: nothing can drain yet
+
+      residency.setConcurrency(2);
+      await residency.awaitBackground();
+
+      expect(requests).toHaveLength(2);
     });
   });
 
@@ -264,7 +324,10 @@ describe('AssetResidency', () => {
     test('_getAliasesForIdentity reflects loadSingleAsset alias registration', async () => {
       const strategy = createFakeStrategy(() => 'v');
       const { residency, typeRegistry } = createResidency({ cacheStrategy: strategy });
-      typeRegistry.register(TypeA, fakeFactory(() => 'v'));
+      typeRegistry.register(
+        TypeA,
+        fakeFactory(() => 'v'),
+      );
 
       // Asset's public constructor facade is `Asset.kind(kind, source, options?)` (see
       // src/resources/Asset.ts's AssetFacade / test/resources/loader.test.ts usage) — the
