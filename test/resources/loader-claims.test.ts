@@ -122,9 +122,9 @@ describe('refcount / claims', () => {
     const loader = createCoreLoader({ concurrency: 1 });
     loader.load(Assets.from({ a: 'a.ogg', b: 'b.ogg', c: 'c.ogg' }), { background: true });
 
-    expect(loader['_isQueuedInBackground'](Sound, 'c.ogg')).toBe(true); // still queued behind the cap
+    expect(loader['_residency']['_isQueuedInBackground'](Sound, 'c.ogg')).toBe(true); // still queued behind the cap
     loader.release(Sound, 'c.ogg');
-    expect(loader['_isQueuedInBackground'](Sound, 'c.ogg')).toBe(false); // dropped at refcount 0
+    expect(loader['_residency']['_isQueuedInBackground'](Sound, 'c.ogg')).toBe(false); // dropped at refcount 0
   });
 
   test('two distinct claim scopes keep the payload until both release', async () => {
@@ -149,7 +149,7 @@ describe('refcount / claims', () => {
 
     const handle = loader.get('boom.ogg');
     // Fetch is in flight: the handle is still deferred, not yet in _resources.
-    expect(loader['_deferred'].has(key)).toBe(true);
+    expect(loader['_residency']['_deferred'].has(key)).toBe(true);
     expect(handle.loadState).toBe('loading');
 
     // Capture .loaded BEFORE the fill so the awaiter holds the promise that the
@@ -167,8 +167,8 @@ describe('refcount / claims', () => {
     expect(handle.audioBuffer).toBeNull();
     expect(handle.loadState).toBe('loading');
     // Identity held: the handle is re-registered as a deferred, evicted placeholder.
-    expect(loader['_resources'].get(Sound as never)?.has('boom.ogg')).toBe(false);
-    expect(loader['_deferred'].has(key)).toBe(true);
+    expect(loader['_residency']['_resources'].get(Sound as never)?.has('boom.ogg')).toBe(false);
+    expect(loader['_residency']['_deferred'].has(key)).toBe(true);
   });
 
   test('a concurrent load in the reclaim window does not overwrite the healed handle (identity race)', async () => {
@@ -178,7 +178,7 @@ describe('refcount / claims', () => {
 
     const handle = loader.get('boom.ogg');
     await handle.loaded;
-    expect(loader['_resources'].get(Sound as never)?.get('boom.ogg')).toBe(handle);
+    expect(loader['_residency']['_resources'].get(Sound as never)?.get('boom.ogg')).toBe(handle);
 
     // Evict: drops the stale in-flight entry (whose .finally is still pending).
     loader.release(handle);
@@ -199,7 +199,7 @@ describe('refcount / claims', () => {
     await concurrent;
 
     // Identity preserved: still the handle, not a raw donor Sound.
-    expect(loader['_resources'].get(Sound as never)?.get('boom.ogg')).toBe(handle);
+    expect(loader['_residency']['_resources'].get(Sound as never)?.get('boom.ogg')).toBe(handle);
     expect(handle.audioBuffer).not.toBeNull();
   });
 

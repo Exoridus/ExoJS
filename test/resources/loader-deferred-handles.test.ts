@@ -28,13 +28,13 @@ const mockFetchImage = (): void => {
 
 /** Typed introspection over the private deferred registry. */
 function deferredHandles(loader: Loader, key: string): WeakHandleSet | undefined {
-  return (loader as unknown as { _deferred: Map<string, { handles: WeakHandleSet }> })._deferred.get(key)?.handles;
+  return (loader as unknown as { _residency: { _deferred: Map<string, { handles: WeakHandleSet }> } })._residency._deferred.get(key)?.handles;
 }
 function deferredHas(loader: Loader, key: string): boolean {
-  return (loader as unknown as { _deferred: Map<string, unknown> })._deferred.has(key);
+  return (loader as unknown as { _residency: { _deferred: Map<string, unknown> } })._residency._deferred.has(key);
 }
 function evictedHas(loader: Loader, key: string): boolean {
-  return (loader as unknown as { _evicted: Set<string> })._evicted.has(key);
+  return (loader as unknown as { _residency: { _evicted: Set<string> } })._residency._evicted.has(key);
 }
 function keyOf(loader: Loader, source: string): string {
   return (loader as unknown as { _typeRegistry: { _key(t: unknown, s: string): string } })._typeRegistry._key(Texture, source);

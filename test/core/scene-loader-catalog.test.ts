@@ -70,7 +70,7 @@ describe('SceneLoader catalog adopt', () => {
     expect(assets.ship.loadState).toBe('ready');
 
     const key = loader['_typeRegistry']['_key'](Texture, 'ship.png');
-    expect(loader['_claims'].get(key)?.scopes.size).toBe(1);
+    expect(loader['_residency']['_claims'].get(key)?.scopes.size).toBe(1);
 
     sceneLoader.destroy();
     // last claim gone → evicted (payload dropped, identity kept, back to 'loading')
@@ -89,7 +89,7 @@ describe('SceneLoader catalog adopt', () => {
     expect(assets.ship).toBeInstanceOf(Texture);
 
     const key = loader['_typeRegistry']['_key'](Texture, 'ship.png');
-    expect(loader['_claims'].get(key)?.scopes.size).toBe(1);
+    expect(loader['_residency']['_claims'].get(key)?.scopes.size).toBe(1);
 
     sceneLoader.destroy();
     expect(assets.ship.loadState).toBe('loading');
@@ -109,7 +109,7 @@ describe('SceneLoader catalog adopt', () => {
     expect(assets.ship.loadState).toBe('ready');
 
     const key = loader['_typeRegistry']['_key'](Texture, 'ship.png');
-    expect(loader['_claims'].get(key)?.scopes.size).toBe(1);
+    expect(loader['_residency']['_claims'].get(key)?.scopes.size).toBe(1);
 
     sceneLoader.destroy();
     expect(assets.ship.loadState).toBe('loading');
