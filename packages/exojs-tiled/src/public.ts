@@ -112,9 +112,9 @@ import type { TileMap } from '@codexo/exojs-tilemap';
 import type { TiledMap } from './TiledMap';
 
 declare module '@codexo/exojs' {
-  interface ExtensionTypeMap {
-    /** `.tmj` path-only loads resolve to the generic runtime {@link TileMap}. */
-    tmj: TileMap;
+  interface ExtensionKindMap {
+    /** `.tmj` bare-path loads resolve to the generic runtime `tileMap` type ({@link TileMap}). */
+    tmj: 'tileMap';
   }
   interface AssetDefinitions {
     tileMap: {

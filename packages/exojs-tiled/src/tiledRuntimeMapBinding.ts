@@ -21,8 +21,8 @@ import { resolveTiledOptions,type TiledLoadOptions } from './tiledOptions';
  * (no duplicate JSON fetches).
  *
  * Claiming the `tmj` extension enables the auto-routing shorthand
- * `loader.load('world.tmj')` — the {@link ExtensionTypeMap} augmentation in
- * this package maps `'tmj' → TileMap`.
+ * `loader.load('world.tmj')` — the `ExtensionKindMap` augmentation in this
+ * package maps the `tmj` suffix to the `'tileMap'` type.
  */
 export const tiledRuntimeMapBinding = defineAsset<TileMap, TiledLoadOptions>({
   ctor: TileMap,

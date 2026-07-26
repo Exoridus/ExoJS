@@ -81,9 +81,9 @@ export {
 import type { LdtkMap } from './LdtkMap';
 
 declare module '@codexo/exojs' {
-  interface ExtensionTypeMap {
-    /** `.ldtk` path-only loads resolve to {@link LdtkMap}. */
-    ldtk: LdtkMap;
+  interface ExtensionKindMap {
+    /** `.ldtk` bare-path loads resolve to the `ldtkMap` type ({@link LdtkMap}). */
+    ldtk: 'ldtkMap';
   }
   interface AssetDefinitions {
     ldtkMap: {

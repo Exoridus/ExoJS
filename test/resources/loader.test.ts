@@ -1,5 +1,6 @@
 ﻿import type { AssetHandler } from '#extensions/Extension';
 import { materializeAssetBindings } from '#extensions/materialize';
+import { BmFont } from '#rendering/text/BmFont';
 import { Texture } from '#rendering/texture/Texture';
 import { Asset } from '#resources/Asset';
 import { encodeContainer } from '#resources/AssetContainer';
@@ -9,7 +10,7 @@ import type { CacheStore } from '#resources/CacheStore';
 import { coreAssetBindings } from '#resources/coreAssetBindings';
 import { defineAsset } from '#resources/defineAsset';
 import { Loader } from '#resources/Loader';
-import { TextAsset } from '#resources/tokens';
+import { FontAsset, TextAsset } from '#resources/tokens';
 
 /** Create a Loader with all core asset bindings pre-installed. */
 function createCoreLoader(options?: ConstructorParameters<typeof Loader>[0]): Loader {
@@ -1730,5 +1731,92 @@ describe('bare-path descriptor normalization', () => {
     // `aseprite.json` beats `json`; a plain `.json` still takes the global default.
     await expect(loader.load('hero.aseprite.json' as never)).resolves.toBe('overridden');
     expect(loader._peekResource(TextAsset, 'plain.json')).toBeNull();
+  });
+});
+
+describe('bare-path loading for non-leaf resource types', () => {
+  const originalFetch = global.fetch;
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  // Non-leaf types (font, bmFont, svg, image, music, video) have no bare-path
+  // inference at the TYPE level — `KindByPath` resolves them to `never`, so these
+  // calls need the `as never` cast. The RUNTIME branch still resolves them via
+  // the app-local override table that `bindAsset`'s `type` + `extensions` feed,
+  // which is what these two tests pin.
+
+  test('load(path) for the font type infers the family from the filename', async () => {
+    const loader = new Loader({ basePath: '/' });
+    let received: unknown;
+
+    // Mirrors the core font binding's wiring (jsdom has no FontFace, so the
+    // conditional core binding is absent here).
+    loader.bindAsset<string, { family: string }>(
+      { ctor: FontAsset, type: 'font', typeNames: ['font'], extensions: ['woff2'] },
+      {
+        load: async request => {
+          received = request.options;
+
+          return 'face';
+        },
+      },
+    );
+
+    await expect(loader.load('fonts/Roboto.woff2' as never)).resolves.toBe('face');
+    // The filename (minus directory, extension and query) becomes the family.
+    expect(received).toEqual({ family: 'Roboto' });
+  });
+
+  test('load(path) for the font type strips a query string before inferring the family', async () => {
+    const loader = new Loader({ basePath: '/' });
+    let received: unknown;
+
+    loader.bindAsset<string, { family: string }>(
+      { ctor: FontAsset, type: 'font', typeNames: ['font'], extensions: ['woff2'] },
+      {
+        load: async request => {
+          received = request.options;
+
+          return 'face';
+        },
+      },
+    );
+
+    await loader.load('fonts/Roboto.woff2?v=2' as never);
+
+    expect(received).toEqual({ family: 'Roboto' });
+  });
+
+  test('load(path) resolves a bmFont suffix through the override table to the bmFont handler', async () => {
+    const loader = createCoreLoader({ basePath: '/' });
+
+    global.fetch = vi.fn(
+      async (): Promise<Response> =>
+        ({
+          ok: true,
+          status: 200,
+          statusText: 'OK',
+          text: async () => 'common lineHeight=32 base=26\nchars count=0\n',
+          json: async () => ({}),
+          arrayBuffer: async () => new ArrayBuffer(0),
+        }) as unknown as Response,
+    );
+
+    const font = await loader.load('fonts/ui.fnt' as never);
+
+    expect(font).toBeInstanceOf(BmFont);
+    // Resolved through `_resolveTypeForPath` → 'bmFont' → `_ctorForType` → BmFont,
+    // not through any leaf/value channel.
+    expect(loader._peekResource(BmFont, 'fonts/ui.fnt')).toBe(font);
+  });
+
+  test('load(path) for a non-leaf type whose handler is unbound reports the resolved type', () => {
+    const loader = new Loader({ basePath: '/' });
+
+    loader.registerType('woff2', 'font');
+
+    expect(() => loader.load('fonts/Roboto.woff2' as never)).toThrow('no asset handler bound for type "font"');
   });
 });
