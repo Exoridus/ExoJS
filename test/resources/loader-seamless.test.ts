@@ -4,6 +4,7 @@ import { logger, LogSeverity } from '#core/logging';
 import { materializeAssetBindings } from '#extensions/materialize';
 import { Texture } from '#rendering/texture/Texture';
 import { ScaleModes } from '#rendering/types';
+import { Asset } from '#resources/Asset';
 import { Assets } from '#resources/Assets';
 import { coreAssetBindings } from '#resources/coreAssetBindings';
 import { Loader } from '#resources/Loader';
@@ -137,6 +138,35 @@ describe('Loader seamless get (Texture)', () => {
     class Adapterless {}
 
     expect(() => loader.get(Adapterless, 'never-loaded')).toThrow('Missing resource');
+  });
+
+  test('legacy alias lookup round-trips a bindAsset-bound type whose handler legitimately resolves to null/undefined', async () => {
+    const loader = createCoreLoader();
+
+    // A bindAsset-bound custom type (adapterless — no seamless adapter, no
+    // value token) whose handler resolves `null`/`undefined` as the actual
+    // stored resource. The legacy lookup must distinguish "never loaded" from
+    // "loaded, and the resource itself is nullish" — presence, not truthiness
+    // (a `Map.has()` check, not a `!== null` check on the read value). Both
+    // nullish values read back as `null` via `_peekResource`'s pre-existing
+    // "non-throwing lookup" contract (`?? null`, unrelated to this fix) — what
+    // matters here is that a STORED nullish resource no longer throws.
+    class Nullable {}
+
+    loader.bindAsset<null | undefined>(
+      { type: Nullable, typeNames: ['nullable'] },
+      {
+        load: async request => (request.source === 'undef' ? undefined : null),
+      },
+    );
+
+    await loader.load(new Asset({ kind: 'nullable', source: 'null' }));
+    await loader.load(new Asset({ kind: 'nullable', source: 'undef' }));
+
+    expect(loader.get(Nullable, 'null')).toBeNull();
+    expect(loader.get(Nullable, 'undef')).toBeNull();
+    // A genuinely never-loaded source of the same type still throws.
+    expect(() => loader.get(Nullable, 'never-loaded')).toThrow('Missing resource');
   });
 
   test('conflicting FETCH options (mimeType) warn once and the first call wins', async () => {

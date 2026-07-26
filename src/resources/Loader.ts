@@ -777,15 +777,14 @@ export class Loader {
     // or a bare path for those.
     const ctor = typeOrPath as Loadable;
     const src = source as string;
-    const resource = this._residency._peekResource(ctor, src);
 
-    if (resource === null) {
+    if (!this._residency._hasStored(ctor, src)) {
       throw new Error(`Missing resource "${src}" for type ${ctor.name}.`);
     }
 
     this._claim(this._typeRegistry._key(ctor, src), ctor, src, claimer);
 
-    return resource;
+    return this._residency._peekResource(ctor, src);
   }
 
   /**
