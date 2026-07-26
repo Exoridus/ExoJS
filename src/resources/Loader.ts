@@ -7,6 +7,7 @@ import type { Texture } from '#rendering/texture/Texture';
 
 import { type Asset, AssetImpl, type ValueAsset } from './Asset';
 import { parseContainer } from './AssetContainer';
+import { AssetDecoder } from './AssetDecoder';
 import type {
   AssetDefinitions,
   AssetInput,
@@ -250,6 +251,7 @@ interface QueueEntry {
  */
 export class Loader {
   private readonly _typeRegistry = new AssetTypeRegistry();
+  private readonly _decoder: AssetDecoder;
   private readonly _resources = new Map<AssetConstructor, Map<string, unknown>>();
   // Reverse lookup: loaded resource object → the (type, source) it was first
   // stored under. Backs {@link Loader.keyFor} for scene serialization. A
@@ -258,8 +260,6 @@ export class Loader {
   private readonly _resourceKeys = new WeakMap<object, { type: AssetConstructor; source: string }>();
   private readonly _inFlight = new Map<string, Promise<unknown>>();
   private readonly _preventStoreKeys = new Set<string>();
-  private readonly _stores: readonly CacheStore[];
-  private readonly _cacheStrategy: CacheStrategy;
 
   // ── Identity / alias tracking for the new Asset API ───────────────────────
   // Maps alias key (`${typeId}:${alias}`) to an identity key (`id:${typeId}:${source}`)
@@ -338,8 +338,6 @@ export class Loader {
   /** Deferred handle / value-ref → its resource key, for `release(handle)`. @internal */
   private readonly _handleKeys = new WeakMap<object, string>();
 
-  private _basePath: string;
-  private _fetchOptions: RequestInit;
   private _concurrency: number;
 
   private _fgBatchActive = 0;
@@ -369,11 +367,17 @@ export class Loader {
   public readonly onLoadError = new Signal<[key: string, error: Error]>();
 
   public constructor(options: LoaderOptions = {}) {
-    this._basePath = options.basePath ?? '';
-    this._fetchOptions = options.fetchOptions ?? {};
     this._concurrency = options.concurrency ?? 6;
-    this._stores = options.cache ? (Array.isArray(options.cache) ? options.cache : [options.cache]) : [];
-    this._cacheStrategy = options.cacheStrategy ?? new CacheFirstStrategy();
+
+    const stores = options.cache ? (Array.isArray(options.cache) ? options.cache : [options.cache]) : [];
+    const cacheStrategy = options.cacheStrategy ?? new CacheFirstStrategy();
+
+    this._decoder = new AssetDecoder(this, this._typeRegistry, (type, alias, resource) => this._storeResource(type, alias, resource), {
+      basePath: options.basePath ?? '',
+      fetchOptions: options.fetchOptions ?? {},
+      stores,
+      cacheStrategy,
+    });
   }
 
   // -----------------------------------------------------------------------
@@ -421,7 +425,7 @@ export class Loader {
    * @param url Path to the container file, resolved against the loader base path.
    */
   public async loadContainer(url: string): Promise<void> {
-    const buffer = await this._contextFetch<ArrayBuffer>(url, '__ctx_binary', response => response.arrayBuffer());
+    const buffer = await this._decoder._contextFetch<ArrayBuffer>(url, '__ctx_binary', response => response.arrayBuffer());
     const { entries, dataStart } = parseContainer(buffer);
 
     // Resolve every type up front so an unknown type fails before any asset is stored.
@@ -440,7 +444,7 @@ export class Loader {
         const start = dataStart + entry.offset;
         const slice = buffer.slice(start, start + entry.length);
 
-        return this._injectSource(type, entry.alias, slice, entry.options);
+        return this._decoder._injectSource(type, entry.alias, slice, entry.options);
       }),
     );
   }
@@ -1146,11 +1150,11 @@ export class Loader {
    * passed through unchanged.
    */
   public get basePath(): string {
-    return this._basePath;
+    return this._decoder.basePath;
   }
 
   public set basePath(value: string) {
-    this._basePath = value;
+    this._decoder.basePath = value;
   }
 
   /**
@@ -1158,11 +1162,11 @@ export class Loader {
    * Override per-load with the `options` argument of {@link load}.
    */
   public get fetchOptions(): RequestInit {
-    return this._fetchOptions;
+    return this._decoder.fetchOptions;
   }
 
   public set fetchOptions(value: RequestInit) {
-    this._fetchOptions = value;
+    this._decoder.fetchOptions = value;
   }
 
   // -----------------------------------------------------------------------
@@ -1227,11 +1231,7 @@ export class Loader {
     // Order matters: bound-handler destroy must run after store destroy (mirrors
     // the original inline teardown order) — see the regression test in loader.test.ts.
     this._typeRegistry.destroyFactories();
-
-    for (const store of this._stores) {
-      store.destroy();
-    }
-
+    this._decoder.destroy();
     this._typeRegistry.destroyHandlers();
 
     this._resources.clear();
@@ -1670,7 +1670,7 @@ export class Loader {
 
     const path = explicitPath ?? alias;
 
-    return this._trackInFlight(type, alias, this._dispatchFetch(type, alias, path, options));
+    return this._trackInFlight(type, alias, this._decoder._dispatchFetch(type, alias, path, options));
   }
 
   private _createLoadingQueue<T>(
@@ -1808,11 +1808,11 @@ export class Loader {
     let fetchPromise: Promise<unknown>;
     if (handlerEntry) {
       const fullConfig = { source, ...extraOnly };
-      const context = this._buildHandlerContext(identityKey);
-      fetchPromise = this._fetchWithHandler(type, alias, source, fullConfig, handlerEntry.load, context);
+      const context = this._decoder._buildHandlerContext(identityKey);
+      fetchPromise = this._decoder._fetchWithHandler(type, alias, source, fullConfig, handlerEntry.load, context);
     } else {
       const options = Object.keys(extraOnly).length > 0 ? extraOnly : undefined;
-      fetchPromise = this._fetch(type, alias, source, options);
+      fetchPromise = this._decoder._fetch(type, alias, source, options);
     }
 
     const tracked: Promise<unknown> = fetchPromise
@@ -1839,147 +1839,6 @@ export class Loader {
 
     this._inFlightByIdentity.set(identityKey, tracked);
     return tracked;
-  }
-
-  /**
-   * Calls a handler-based custom asset loader and stores the result.
-   *
-   * Unlike `_fetch`, this does NOT automatically bypass caching — the handler
-   * controls caching by calling `context.fetchText` / `context.fetchArrayBuffer`
-   * / `context.fetchJson`, which route through the loader's cache strategy.
-   */
-  private async _fetchWithHandler(
-    type: AssetConstructor,
-    alias: string,
-    source: string,
-    fullConfig: unknown,
-    handler: (config: unknown, ctx: AssetLoaderContext) => Promise<unknown>,
-    context: AssetLoaderContext,
-  ): Promise<unknown> {
-    const url = this._resolveUrl(source);
-    try {
-      const resource = await handler(fullConfig, context);
-
-      return this._storeResource(type, alias, resource);
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : String(error);
-      throw new Error(`Failed to load "${alias}" from "${url}": ${message}`, { cause: error });
-    }
-  }
-
-  /**
-   * Builds an {@link AssetLoaderContext} for a handler invocation.
-   *
-   * The `fetch*` helpers on the returned context route through the loader's
-   * configured cache strategy and IDB stores, using `source` as the IDB key
-   * (so the same URL is never fetched twice regardless of the asset alias).
-   */
-  private _buildHandlerContext(identityKey: string): AssetLoaderContext {
-    const ctx: AssetLoaderContext = {
-      loader: this,
-      identityKey,
-      fetchText: (source: string) => this._contextFetch<string>(source, '__ctx_text', r => r.text()),
-      fetchArrayBuffer: (source: string) => this._contextFetch<ArrayBuffer>(source, '__ctx_binary', r => r.arrayBuffer()),
-      fetchJson: <T = unknown>(source: string) => this._contextFetch<T>(source, '__ctx_json', r => r.json() as Promise<T>),
-    };
-    return ctx;
-  }
-
-  /**
-   * Fetches `source` through the loader's cache strategy with an inline
-   * pass-through factory, using `source` as the IDB key.
-   *
-   * `process` converts the raw `Response` to the storable intermediate form
-   * (e.g. `r.text()`, `r.arrayBuffer()`, `r.json()`).  `create` is always the
-   * identity function — the cached value is returned unchanged.
-   */
-  private _contextFetch<T>(source: string, storageName: string, process: (response: Response) => Promise<T>): Promise<T> {
-    const url = this._resolveUrl(source);
-    const factory: AssetFactory<T> = {
-      storageName,
-      process,
-      create: data => Promise.resolve(data as T),
-      // eslint-disable-next-line @typescript-eslint/no-empty-function
-      destroy() {},
-    };
-    return this._cacheStrategy.resolve(
-      { storageName, key: source, url, requestOptions: this._fetchOptions, factory, options: undefined },
-      this._stores,
-    ) as Promise<T>;
-  }
-
-  /**
-   * Construct an asset from in-memory `bytes` (no fetch) and store it under
-   * `alias`. Uses the type's {@link AssetHandler.createFromBytes} when present,
-   * otherwise a `register()`-style factory; throws if neither can build from
-   * bytes. The backing path for {@link loadContainer}.
-   */
-  private async _injectSource(type: AssetConstructor, alias: string, bytes: ArrayBuffer, options?: unknown): Promise<void> {
-    const handlerEntry = this._typeRegistry.getHandler(type);
-    let resource: unknown;
-
-    if (handlerEntry?.createFromBytes) {
-      resource = await handlerEntry.createFromBytes(bytes, options);
-    } else if (this._typeRegistry.hasFactory(type)) {
-      resource = await this._typeRegistry.resolveFactory(type).create(bytes, options);
-    } else {
-      throw new Error(`Asset type "${type.name}" cannot be built from container bytes (no createFromBytes handler).`);
-    }
-
-    this._storeResource(type, alias, resource);
-  }
-
-  /**
-   * Dispatches a load through the `bindAsset` handler path if one is
-   * registered for `type`, otherwise through the plain `register()`-based
-   * {@link _fetch}. Shared by the foreground ({@link _loadSingle}) and
-   * background ({@link _startBackgroundEntry}) fetch dispatchers so both
-   * honor `bindAsset` handlers identically.
-   */
-  private _dispatchFetch(type: AssetConstructor, alias: string, path: string, options?: unknown): Promise<unknown> {
-    const handlerEntry = this._typeRegistry.getHandler(type);
-
-    if (!handlerEntry) {
-      return this._fetch(type, alias, path, options);
-    }
-
-    const identityKey = this._typeRegistry._identityKey(type, path);
-    const config: Record<string, unknown> = { source: path };
-
-    if (options !== null && options !== undefined && typeof options === 'object') {
-      Object.assign(config, options as Record<string, unknown>);
-    }
-
-    const context = this._buildHandlerContext(identityKey);
-
-    return this._fetchWithHandler(type, alias, path, config, handlerEntry.load, context);
-  }
-
-  private async _fetch(type: AssetConstructor, alias: string, path: string, options?: unknown): Promise<unknown> {
-    const factory = this._typeRegistry.resolveFactory(type);
-    const url = this._resolveUrl(path);
-
-    try {
-      const resource = await this._cacheStrategy.resolve(
-        {
-          storageName: factory.storageName,
-          key: path, // source-path as IDB key so same resource is not cached multiple times under different aliases
-          url,
-          requestOptions: this._fetchOptions,
-          factory,
-          options,
-        },
-        this._stores,
-      );
-
-      return this._storeResource(type, alias, resource);
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : String(error);
-
-      throw new Error(`Failed to load "${alias}" from "${url}": ${message}`, {
-        cause: error,
-      });
-    }
   }
 
   // -----------------------------------------------------------------------
@@ -2066,7 +1925,7 @@ export class Loader {
   private _startBackgroundEntry(entry: QueueEntry): void {
     this._backgroundActive++;
 
-    this._trackInFlight(entry.type, entry.alias, this._dispatchFetch(entry.type, entry.alias, entry.path, entry.options))
+    this._trackInFlight(entry.type, entry.alias, this._decoder._dispatchFetch(entry.type, entry.alias, entry.path, entry.options))
       .catch(error => {
         const err = this._normalizeError(error);
         const key2 = this._typeRegistry._key(entry.type, entry.alias);
@@ -2454,13 +2313,5 @@ export class Loader {
     }
 
     return resource;
-  }
-
-  private _resolveUrl(path: string): string {
-    if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('//') || path.startsWith('/')) {
-      return path;
-    }
-
-    return `${this._basePath}${path}`;
   }
 }
