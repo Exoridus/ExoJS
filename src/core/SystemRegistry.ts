@@ -9,6 +9,14 @@ import type { Destroyable } from './types';
 export interface SystemRegistrationOptions {
   /** Overrides {@link System.order} for this registration only. */
   readonly order?: number;
+  /**
+   * Systems this one must run before, additive to (not a replacement for)
+   * `order` — see {@link SystemRegistry} class docs for how `before`/`after`
+   * combine with `order`/registration sequence.
+   */
+  readonly before?: readonly System[];
+  /** Systems this one must run after. See {@link SystemRegistrationOptions.before}. */
+  readonly after?: readonly System[];
 }
 
 interface SystemRegistration {
@@ -16,6 +24,8 @@ interface SystemRegistration {
   /** Monotonic insertion counter, assigned when the system structurally enters the registry. Tie-breaks `order` and drives reverse-order destruction. */
   readonly sequence: number;
   readonly order: number;
+  readonly before: readonly System[];
+  readonly after: readonly System[];
   active: boolean;
 }
 
@@ -38,8 +48,89 @@ type PendingMutation = PendingAdd | PendingRemove;
 // narrowing on a boolean-literal tag is unreliable there.
 const isPendingAdd = (mutation: PendingMutation): mutation is PendingAdd => mutation.add;
 
-const sortRegistrations = (list: SystemRegistration[]): void => {
-  list.sort((a, b) => a.order - b.order || a.sequence - b.sequence);
+const tieBreak = (a: SystemRegistration, b: SystemRegistration): number => a.order - b.order || a.sequence - b.sequence;
+
+/**
+ * Sorts `list` in place. Pure `order`/`sequence` comparison when no
+ * registration in `list` declares `before`/`after` — identical to the
+ * original plain-sort behaviour. Otherwise resolves `before`/`after` against
+ * `registrations` (only edges where BOTH ends are present in `list` count —
+ * a phase-mismatched or not-yet-registered target is silently a no-op) and
+ * topologically sorts (Kahn's algorithm), using `tieBreak` to pick among
+ * simultaneously-ready registrations at each step. Throws if a cycle leaves
+ * registrations that never become ready.
+ */
+const sortRegistrations = (list: SystemRegistration[], registrations: ReadonlyMap<System, SystemRegistration>): void => {
+  if (list.every(reg => reg.before.length === 0 && reg.after.length === 0)) {
+    list.sort(tieBreak);
+
+    return;
+  }
+
+  const inList = new Set(list);
+  const successors = new Map<SystemRegistration, SystemRegistration[]>(list.map(reg => [reg, []]));
+  const indegree = new Map<SystemRegistration, number>(list.map(reg => [reg, 0]));
+
+  const addEdge = (earlier: SystemRegistration, later: SystemRegistration): void => {
+    if (earlier === later) {
+      return;
+    }
+
+    successors.get(earlier)!.push(later);
+    indegree.set(later, indegree.get(later)! + 1);
+  };
+
+  for (const reg of list) {
+    for (const target of reg.before) {
+      const targetReg = registrations.get(target);
+
+      if (targetReg !== undefined && inList.has(targetReg)) {
+        addEdge(reg, targetReg);
+      }
+    }
+
+    for (const dependency of reg.after) {
+      const dependencyReg = registrations.get(dependency);
+
+      if (dependencyReg !== undefined && inList.has(dependencyReg)) {
+        addEdge(dependencyReg, reg);
+      }
+    }
+  }
+
+  const ready = list.filter(reg => indegree.get(reg) === 0);
+  const sorted: SystemRegistration[] = [];
+
+  while (ready.length > 0) {
+    ready.sort(tieBreak);
+
+    const next = ready.shift()!;
+
+    sorted.push(next);
+
+    for (const successor of successors.get(next)!) {
+      const remaining = indegree.get(successor)! - 1;
+
+      indegree.set(successor, remaining);
+
+      if (remaining === 0) {
+        ready.push(successor);
+      }
+    }
+  }
+
+  if (sorted.length !== list.length) {
+    const sortedSet = new Set(sorted);
+    const stuckNames = list
+      .filter(reg => !sortedSet.has(reg))
+      .map(reg => reg.system.constructor?.name ?? 'system')
+      .join(', ');
+
+    throw new Error(`SystemRegistry: cycle detected in before/after constraints among: ${stuckNames}`);
+  }
+
+  list.length = 0;
+  list.push(...sorted);
 };
 
 const removeRegistration = (list: SystemRegistration[], registration: SystemRegistration): void => {
@@ -57,6 +148,14 @@ const removeRegistration = (list: SystemRegistration[], registration: SystemRegi
  * (`fixedUpdate`/`update`/`draw`); within a phase, systems run in ascending
  * `order` (ties keep registration order) and are destroyed in reverse
  * registration order when the registry is destroyed.
+ *
+ * {@link SystemRegistrationOptions.before}/{@link SystemRegistrationOptions.after}
+ * layer a dependency graph on top of `order`, additive rather than a
+ * replacement: `order`/registration sequence still decide ties among
+ * registrations the graph doesn't relate to each other. A `before`/`after`
+ * reference to a system outside the current phase — a different phase, or
+ * never registered — is silently a no-op there, not an error. A cycle throws
+ * once the affected phase list is next sorted.
  *
  * Structural mutations are frame-scoped (definition §9.6): a system added
  * during a frame — whether from outside or from another system's own
@@ -186,7 +285,7 @@ export class SystemRegistry implements Destroyable {
     }
 
     if (this._fixedDirty) {
-      sortRegistrations(this._fixedList);
+      sortRegistrations(this._fixedList, this._registrations);
       this._fixedDirty = false;
     }
 
@@ -204,7 +303,7 @@ export class SystemRegistry implements Destroyable {
     }
 
     if (this._updateDirty) {
-      sortRegistrations(this._updateList);
+      sortRegistrations(this._updateList, this._registrations);
       this._updateDirty = false;
     }
 
@@ -222,7 +321,7 @@ export class SystemRegistry implements Destroyable {
     }
 
     if (this._drawDirty) {
-      sortRegistrations(this._drawList);
+      sortRegistrations(this._drawList, this._registrations);
       this._drawDirty = false;
     }
 
@@ -262,6 +361,8 @@ export class SystemRegistry implements Destroyable {
       system,
       sequence: this._sequence++,
       order: options?.order ?? system.order ?? 0,
+      before: options?.before ?? [],
+      after: options?.after ?? [],
       active: true,
     };
 
