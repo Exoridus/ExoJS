@@ -17,7 +17,7 @@ import type {
   ResourceForKind,
   ValueAssetKind,
 } from './AssetDefinitions';
-import { createLeaf } from './assetKindRegistry';
+import { createLeaf, getAssetKind } from './assetKindRegistry';
 import { _readMeta } from './assetMeta';
 import type { AssetRef } from './AssetRef';
 import { AssetResidency, type AssetResidencySignals } from './AssetResidency';
@@ -26,11 +26,10 @@ import { AssetTypeRegistry, type HandlerEntry } from './AssetTypeRegistry';
 import { CacheFirstStrategy } from './CacheFirstStrategy';
 import type { CacheStore } from './CacheStore';
 import type { CacheStrategy } from './CacheStrategy';
-import { resolveKindByPath } from './extensionKindRegistry';
 import type { AssetConstructor } from './FactoryRegistry';
 import { LoadingQueue } from './LoadingQueue';
 import type { SeamlessAdapter } from './seamless';
-import { BinaryAsset, CsvAsset, FontAsset, type ImageAsset, Json, SubtitleAsset, type SvgAsset, TextAsset, WasmAsset, XmlAsset } from './tokens';
+import { BinaryAsset, CsvAsset, Json, SubtitleAsset, TextAsset, WasmAsset, XmlAsset } from './tokens';
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -49,50 +48,16 @@ export type InferLoadedMap<M extends Record<string, AssetInput>> = {
 };
 
 /**
- * Maps a {@link Loadable} constructor to the concrete type returned by
- * {@link Loader.load}.
+ * Maps file extensions (without leading dot, lower-case) to the resource a
+ * bare path with that suffix produces.
  *
- * Token classes ({@link Json}, {@link TextAsset}, {@link SvgAsset},
- * {@link VttAsset}) are special-cased because their return types do not match
- * their constructor type. All other loadables return the instance type inferred
- * from the constructor.
- */
-
-export type LoadReturn<T> = T extends typeof Json
-  ? unknown
-  : T extends typeof TextAsset
-    ? string
-    : T extends typeof SvgAsset
-      ? HTMLImageElement
-      : T extends typeof SubtitleAsset
-        ? VTTCue[]
-        : T extends typeof XmlAsset
-          ? Document
-          : T extends typeof CsvAsset
-            ? string[][]
-            : T extends typeof ImageAsset
-              ? HTMLImageElement
-              : T extends typeof FontAsset
-                ? FontFace
-                : T extends typeof BinaryAsset
-                  ? ArrayBuffer
-                  : T extends typeof WasmAsset
-                    ? WebAssembly.Module
-                    : // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                      T extends abstract new (...args: any[]) => infer R
-                      ? R
-                      : never;
-
-/**
- * Maps file extensions (without leading dot, lower-case) to the asset type
- * returned by {@link Loader.load} when called with a plain path string.
- *
- * Extend via declaration merging to register custom extension → type mappings:
- * ```ts
- * declare module 'exojs' {
- *   interface ExtensionTypeMap { tmj: TiledMap; }
- * }
- * ```
+ * This map no longer drives any call signature — bare-path inference for
+ * {@link Loader.get}/{@link Loader.load} runs entirely through
+ * `ExtensionKindMap`/`KindByPath` (suffix → {@link AssetDefinitions} type), which
+ * is also the map to extend by declaration merging. What remains here is the
+ * hand-maintained *twin* that `AssetDefinitions.ts`'s `AssertKindTypeMapsAgree`
+ * cross-checks: on every shared suffix, the kind's resource and this map's
+ * resource must agree, so a drift in either table fails to compile.
  */
 export interface ExtensionTypeMap {
   fnt: BmFont;
@@ -112,42 +77,6 @@ export interface ExtensionTypeMap {
   m4a: Sound;
   aac: Sound;
 }
-
-/** Last path segment of `S` (everything after the final `/`). */
-type Basename<S extends string> = S extends `${string}/${infer Rest}` ? Basename<Rest> : S;
-
-/** `S` without a trailing `?query` or `#fragment` part. */
-type StripQueryHash<S extends string> = S extends `${infer P}?${string}` ? P : S extends `${infer P}#${string}` ? P : S;
-
-/**
- * Longest registered dot-suffix of a basename. Walks dots left to right, so
- * the longest candidate (`aseprite.json`) is checked before shorter ones
- * (`json`); resolves to `never` when no suffix is a registered extension.
- */
-type MatchExtension<S extends string> = S extends `${string}.${infer Rest}`
-  ? Lowercase<Rest> extends keyof ExtensionTypeMap
-    ? Lowercase<Rest>
-    : MatchExtension<Rest>
-  : never;
-
-/**
- * The registered extension key inferred from a path literal — basename-only,
- * longest-suffix-first (Entscheidung #14) — or `never` when no dot-suffix of
- * the basename is registered in {@link ExtensionTypeMap}.
- */
-export type PathExtension<S extends string> = MatchExtension<Basename<StripQueryHash<S>>>;
-
-/**
- * Resolves the return type for {@link Loader.load} when called with a plain
- * path string. Returns `unknown` when the extension is not in
- * {@link ExtensionTypeMap} — the string-path overload rejects such paths at
- * compile time; use the descriptor form (`load(Asset.type(type, path))`) instead.
- *
- * The `[PathExtension<S>] extends [never]` guard is load-bearing: indexing
- * {@link ExtensionTypeMap} with `never` would silently produce `never` rather
- * than the intended `unknown` fallback.
- */
-export type LoadByPath<S extends string> = [PathExtension<S>] extends [never] ? unknown : ExtensionTypeMap[PathExtension<S>];
 
 /**
  * Context object passed to custom asset-type load handlers bound via
@@ -269,6 +198,44 @@ export class Loader {
     return (this._valueTokenByKind as Partial<Record<string, AssetConstructor>>)[kind];
   }
 
+  /**
+   * Normalize a bare path to the canonical descriptor shape every `get`/`load`
+   * input funnels through. The suffix is resolved basename-only and
+   * longest-suffix-first, consulting this app's {@link registerType} override
+   * before the global `defineAsset` default — so `Asset.type(type, path)` and a
+   * bare `path` reach the same type for the same suffix.
+   *
+   * @throws when no layer knows the suffix — a dynamic string can only be
+   * resolved by naming its type explicitly.
+   */
+  private _normalizeToDescriptor(input: string): { type: keyof AssetDefinitions; source: string } {
+    const type = this._typeRegistry._resolveTypeForPath(input);
+
+    if (type === undefined) {
+      throw new Error(
+        `Loader: no type registered for any extension of "${input}". Register one via defineAsset() (its extensions) or ` +
+          `loader.registerType(extension, type), or name the type explicitly with Asset.type(type, "${input}").`,
+      );
+    }
+
+    return { type, source: input };
+  }
+
+  /**
+   * The constructor a descriptor type dispatches to: this loader's own
+   * `typeNames` binding first, then the built-in value token — which exists
+   * without any binding installed, so a value type still resolves on a loader
+   * that only registered a handler by constructor.
+   */
+  private _ctorForType(type: keyof AssetDefinitions): AssetConstructor | undefined {
+    return this._typeRegistry.resolveTypeName(type) ?? this._valueTokenForKind(type);
+  }
+
+  /** Guidance for a suffix that resolved to a type no handler is bound to on this loader. */
+  private _unboundTypeMessage(type: keyof AssetDefinitions, path: string): string {
+    return `Loader: no asset handler bound for type "${type}" (inferred from "${path}"). Bind it via defineAsset()/bindAsset() first.`;
+  }
+
   // ── Refcount / claims (asset-system v2 §4.7) ──────────────────────────────
   /** App-lifetime claim scope for direct `app.loader.get/load(…)` calls. @internal */
   private readonly _rootClaimer = Symbol('app-loader');
@@ -387,9 +354,17 @@ export class Loader {
   /**
    * Fetches and processes one or more assets.
    *
-   * - **Path string** — inferred from the file extension; resolves the asset.
-   * - **Asset<T>** — a single typed asset reference from `Asset.type(...)`.
+   * Every accepted input normalizes to the same canonical descriptor shape
+   * (`{ type, source }`) before dispatch:
+   *
+   * - **Path string** — normalized by suffix through the app-local
+   *   {@link registerType} override and then the global `defineAsset` default
+   *   (basename-only, longest-suffix-first). Only *leaf-capable* suffixes are
+   *   accepted at compile time; a non-leaf type (`bmFont`, `font`, `svg`,
+   *   `image`, `music`, `video`) must be named explicitly with `Asset.type(...)`.
+   * - **Asset<T>** — an explicit descriptor from `Asset.type(...)`.
    * - **Assets<M>** — a typed catalog from `Assets.from(...)`; keys become aliases.
+   * - **A catalog leaf** — an `Assets.from()` property, adopted and resolved.
    *
    * (The inline record-catalog form `{ alias: { type, source } }` is no longer a
    * public overload — build catalogs with `Assets.from(...)`; a runtime record
@@ -401,6 +376,13 @@ export class Loader {
    *
    * Per-asset options ride on the `Asset.type(type, source, options)` descriptor
    * (or the extra fields of a config object).
+   *
+   * @example
+   * ```ts
+   * const texture = await loader.load('image/hero.png');                       // Texture
+   * const font    = await loader.load(Asset.type('bmFont', 'fonts/ui.fnt'));   // BmFont
+   * const level   = await loader.load(Asset.type<LevelData>('json', 'l1.json'));
+   * ```
    */
   public load<T>(asset: Asset<T>): LoadingQueue<T>;
   public load<M extends Record<string, AssetInput>>(assets: Assets<M>, options?: LoadOptions): LoadingQueue<InferLoadedMap<M>>;
@@ -411,42 +393,34 @@ export class Loader {
   public load<T extends object>(leaf: T, options?: LoadOptions): LoadingQueue<T>;
 
   // -----------------------------------------------------------------------
-  // Loading — extension-based (type inferred from file extension)
+  // Loading — bare path (type normalized from the file suffix)
   // -----------------------------------------------------------------------
 
   /**
-   * Fetches an asset by path, inferring the type from the file extension.
+   * Fetches an asset by path, normalizing the suffix to an
+   * {@link AssetDefinitions} type before dispatch. Resolution is basename-only
+   * and longest-suffix-first (`hero.aseprite.json` tries `aseprite.json` before
+   * `json`), and consults the app-local {@link registerType} override before the
+   * global `defineAsset` default.
    *
-   * Built-in extension mappings:
-   * - `.fnt` → {@link BmFont}
-   * - `.woff`, `.woff2`, `.ttf`, `.otf` → `FontFace` (family inferred from filename)
-   *
-   * Register additional mappings via `defineAsset` (its `extensions`).
-   * Extend the return type by augmenting {@link ExtensionTypeMap}.
-   *
-   * Paths whose extension is **not** in {@link ExtensionTypeMap} are rejected at
-   * compile time — use the descriptor form (`load(Asset.type(type, path))`) for
-   * unregistered extensions.
+   * Only **leaf-capable** suffixes are accepted at compile time — those a
+   * catalog can also materialize (`ExtensionKindMap`, the map to augment by
+   * declaration merging). Non-leaf resource types (`bmFont`, `font`, `svg`,
+   * `image`, `music`, `video`) and unregistered suffixes are rejected here;
+   * name them with `load(Asset.type(type, path))` instead.
    *
    * ```ts
-   * const font = await loader.load('fonts/ui.fnt');           // BmFont
-   * const face = await loader.load('fonts/Roboto.woff2');     // FontFace, family='Roboto'
-   * const bm   = await loader.load<BmFont>('fonts/ui.fnt');   // validated cast
+   * const texture = await loader.load('image/hero.png');                     // Texture
+   * const level   = await loader.load('data/level.json');                    // unknown
+   * const font    = await loader.load(Asset.type('bmFont', 'fonts/ui.fnt')); // BmFont
    * ```
    */
-  // Generic form — caller narrows R while extension still must be registered.
-
-  // The `[PathExtension<S>] extends [never]` tuple guard is deliberate: the
-  // distributive `never extends keyof …` is vacuously TRUE, which would wrongly
-  // ACCEPT paths whose extension is unregistered.
-  public load<R, S extends string>(path: [PathExtension<S>] extends [never] ? never : S): LoadingQueue<R>;
-  // Inferred form — R comes from ExtensionTypeMap.
-  public load<S extends string>(path: [PathExtension<S>] extends [never] ? never : S): LoadingQueue<LoadByPath<S>>;
-  // Value-inclusive form — a bare value suffix (json/txt/csv/…) resolves the raw
-  // resource value (asset-system v2 §4.4); `ResourceForKind<'json'>` = `unknown`.
-  // Single-arg only: the runtime bare-path branch fires solely for
-  // `arg1 === undefined`, so an `options?` param here would advertise a
-  // parameter the runtime ignores (per-asset options go through `Asset.type(type, src, opts)`).
+  // The `[KindByPath<S>] extends [never]` tuple guard is deliberate: the
+  // distributive `never extends …` is vacuously TRUE, which would wrongly
+  // ACCEPT paths whose suffix is unregistered.
+  //
+  // Single-arg only: per-asset options go through `Asset.type(type, src, opts)`,
+  // so an `options?` param here would advertise a parameter the runtime ignores.
   public load<S extends string>(path: [KindByPath<S>] extends [never] ? never : S): LoadingQueue<ResourceForKind<KindByPath<S>>>;
 
   // -----------------------------------------------------------------------
@@ -506,26 +480,18 @@ export class Loader {
       return this._createAdoptedQueue([['value', leaf]], results => results.get('value'));
     }
 
-    // 2b. Extension-based: single path string with no type token
-    if (typeof arg0 === 'string' && arg1 === undefined) {
-      const path = arg0;
-      let ctor = this._typeRegistry._resolveExtensionType(path);
-
-      // Value-kind fallback: a bare path whose suffix maps to a value kind
-      // resolves the raw value via the value token (asset-system v2 §4.4).
-      if (ctor === undefined) {
-        const kind = resolveKindByPath(path);
-        const valueToken = kind !== undefined ? this._valueTokenForKind(kind) : undefined;
-
-        if (valueToken !== undefined) ctor = valueToken;
-      }
+    // 2b. Bare path string — normalize it to a `{ type, source }` descriptor and
+    // dispatch on the type's bound constructor.
+    if (typeof arg0 === 'string') {
+      const { type, source: path } = this._normalizeToDescriptor(arg0);
+      const ctor = this._ctorForType(type);
 
       if (ctor === undefined) {
-        throw new Error(`Loader: no type registered for any extension of "${path}". Register one via defineAsset() (its extensions).`);
+        throw new Error(this._unboundTypeMessage(type, path));
       }
 
-      // FontAsset requires a family option — infer it from the filename when not provided
-      const options: unknown = ctor === FontAsset ? { family: (path.split('/').pop()?.split(/[?#]/)[0] ?? '').replace(/\.[^.]+$/, '') } : undefined;
+      // The font type requires a family option — infer it from the filename when not provided
+      const options: unknown = type === 'font' ? { family: (path.split('/').pop()?.split(/[?#]/)[0] ?? '').replace(/\.[^.]+$/, '') } : undefined;
 
       this._claim(this._typeRegistry._key(ctor, path), ctor, path, claimer);
       this._onFgBatchStart(path, path);
@@ -615,13 +581,16 @@ export class Loader {
    * show the {@link Texture.missing} checker; calling `get` again for a
    * `'failed'` source retries and heals the same handle in place.
    *
-   * The asset type is inferred from the file extension (basename-only,
-   * longest-suffix-first; see {@link ExtensionTypeMap}). Accepts only paths
-   * whose inferred type has a seamless adapter (compile-time gate); dynamic
-   * strings resolving to an unregistered extension or a non-seamless type throw
-   * with guidance. The same source always yields the same instance — also
-   * across {@link load} — and options are first-wins: conflicting options on a
-   * later call are ignored with a one-time dev warning.
+   * The path is normalized to an {@link AssetDefinitions} type by its suffix
+   * (basename-only, longest-suffix-first), consulting the app-local
+   * {@link registerType} override before the global `defineAsset` default. A
+   * resource suffix yields its heal-in-place handle; a value suffix (`json`,
+   * `txt`, `csv`, …) yields a stable {@link AssetRef}. Only leaf-capable
+   * suffixes are accepted at compile time (`ExtensionKindMap`); dynamic strings
+   * resolving to an unregistered suffix or a non-leaf type throw with guidance.
+   * The same source always yields the same instance — also across
+   * {@link load} — and options are first-wins: conflicting options on a later
+   * call are ignored with a one-time dev warning.
    *
    * @remarks For a seamless type, `get('sprite.png')` on an unloaded source
    * returns a `'loading'` placeholder and fetches URL `<source>` — it no longer
@@ -634,23 +603,7 @@ export class Loader {
    * is no longer completely silent; production builds stay quiet. For a dynamic
    * source, use `get(Asset.type('texture', dynamicPath))`.
    */
-  public get<S extends string>(path: LoadByPath<S> extends Texture | Sound ? S : never, options?: unknown): LoadByPath<S>;
-
-  /**
-   * Bare-path seamless/value access: a resource suffix yields its handle, a
-   * value suffix yields a stable {@link AssetRef}, inferred from the file
-   * extension. Broader fallback below the resource-only overload above.
-   */
   public get<S extends string>(path: [KindByPath<S>] extends [never] ? never : S, options?: unknown): LeafForPath<S>;
-
-  /**
-   * Legacy in-memory lookup: retrieves a previously loaded asset by type + alias
-   * (for non-seamless types and `loadContainer`-loaded assets). This is a cache
-   * lookup, NOT a fetch — the token *fetch* forms `get(Type, src)` were removed.
-   * Prefer bare-path `get('x.png')` or `get(Asset.type(...))`.
-   * @advanced
-   */
-  public get<T extends Loadable>(type: T, alias: string): LoadReturn<T>;
 
   /**
    * Adopts an {@link Assets} catalog: every handle-hybrid leaf is registered,
@@ -686,8 +639,8 @@ export class Loader {
    * it — the same object, healing in place once its payload arrives.
    */
   public get<T extends object>(leaf: T): T;
-  public get(typeOrPath: Loadable | string | object, source?: unknown): unknown {
-    return this._getClaimed(this._rootClaimer, typeOrPath, source);
+  public get(input: string | object, options?: unknown): unknown {
+    return this._getClaimed(this._rootClaimer, input, options);
   }
 
   /**
@@ -699,13 +652,13 @@ export class Loader {
    * handle reads `'loading'`, which `_getSeamless` alone would not re-fetch).
    * @internal
    */
-  public _getClaimed(claimer: symbol, typeOrPath: Loadable | string | object, source?: unknown): unknown {
+  public _getClaimed(claimer: symbol, input: string | object, options?: unknown): unknown {
     // Assets<M> container — adopt every handle-hybrid leaf (fill in place, claim
     // under `claimer`) and return the leaves keyed by their record key.
-    if (typeOrPath instanceof AssetsImpl) {
+    if (input instanceof AssetsImpl) {
       const out: Record<string, unknown> = {};
 
-      const entries = Object.entries((typeOrPath as AssetsImpl<Record<string, AssetInput>>).entries) as Array<[string, object]>;
+      const entries = Object.entries((input as AssetsImpl<Record<string, AssetInput>>).entries) as Array<[string, object]>;
       for (const [k, leaf] of entries) {
         this._adopt(leaf, claimer);
         out[k] = leaf;
@@ -720,8 +673,8 @@ export class Loader {
     // resource kind the seamless placeholder handle. Mirrors `load`'s AssetImpl
     // branch and the single-meta-leaf path below. Must precede the string branch
     // (an AssetImpl carries no stamped meta, so the guard above misses it).
-    if (typeOrPath instanceof AssetImpl) {
-      const { type, source: src, ...rest } = typeOrPath._config;
+    if (input instanceof AssetImpl) {
+      const { type, source: src, ...rest } = input._config;
       const opts = Object.keys(rest).length > 0 ? rest : undefined;
 
       let leaf: object;
@@ -737,63 +690,51 @@ export class Loader {
     }
 
     // Single meta-stamped leaf (e.g. `get(assets.ship)`) — adopt and return it.
-    if (_readMeta(typeOrPath) !== undefined) {
-      this._adopt(typeOrPath as object, claimer);
+    if (_readMeta(input) !== undefined) {
+      this._adopt(input as object, claimer);
 
-      return typeOrPath;
+      return input;
     }
 
-    if (typeof typeOrPath === 'string') {
-      const path = typeOrPath;
-      const ctor = this._typeRegistry._resolveExtensionType(path);
-
-      if (ctor !== undefined) {
-        const pathAdapter = this._typeRegistry.getSeamlessAdapter(ctor);
-
-        if (pathAdapter !== undefined) {
-          const handle = this._residency._getSeamless(ctor, pathAdapter, path, source);
-          this._claim(this._typeRegistry._key(ctor, path), ctor, path, claimer);
-
-          return handle;
-        }
-      }
-
-      // Value-kind fallback: a bare path whose suffix maps to a value kind →
-      // stable AssetRef (asset-system v2 §4.2/§4.4). get()'s string overload
-      // passes the second arg as options via `source`.
-      const kind = resolveKindByPath(path);
-      const valueToken = kind !== undefined ? this._valueTokenForKind(kind) : undefined;
-
-      if (valueToken !== undefined) {
-        const ref = this._residency._getRef(valueToken, path, source);
-        this._claim(this._typeRegistry._key(valueToken, path), valueToken, path, claimer);
-
-        return ref;
-      }
-
-      // Neither seamless nor value: keep the existing guidance errors.
-      if (ctor === undefined) {
-        throw new Error(`Loader: no type registered for any extension of "${path}". Register one via defineAsset() (its extensions).`);
-      }
-
-      throw new Error(`Loader: type ${this._typeRegistry._describeType(ctor)} inferred from "${path}" has no seamless adapter — use load() instead.`);
+    // Anything left must be a bare path string: an object that reaches here is
+    // neither a catalog, a descriptor, nor an adopted leaf.
+    if (typeof input !== 'string') {
+      throw new Error('Loader: get() accepts a path string, an Asset.type(...) descriptor, an Assets catalog, or one of its leaves.');
     }
 
-    // Not a container, meta-leaf, or path string: a Loadable type token.
-    // In-memory lookup for a non-seamless / non-value type (e.g. a bindAsset-
-    // bound custom type populated by loadContainer): read the stored resource by
-    // source key. Seamless/value fetch-by-token has been removed — use `Asset.type(...)`
-    // or a bare path for those.
-    const ctor = typeOrPath as Loadable;
-    const src = source as string;
+    // Bare path string — normalize it to a `{ type, source }` descriptor, then
+    // hand it to the SAME source-keyed dedup the catalog leaves use: a seamless
+    // type yields its shared heal-in-place handle, a value type its shared
+    // AssetRef. (This is deliberately NOT routed through `createLeaf` like the
+    // `Asset.type(...)` branch above — a bare path is instance-deduped by
+    // source, and `createLeaf` mints a fresh leaf per call.)
+    const { type, source: path } = this._normalizeToDescriptor(input);
+    const ctor = this._ctorForType(type);
 
-    if (!this._residency._hasStored(ctor, src)) {
-      throw new Error(`Missing resource "${src}" for type ${ctor.name}.`);
+    if (ctor === undefined) {
+      throw new Error(this._unboundTypeMessage(type, path));
     }
 
-    this._claim(this._typeRegistry._key(ctor, src), ctor, src, claimer);
+    const adapter = this._typeRegistry.getSeamlessAdapter(ctor);
 
-    return this._residency._getStored(ctor, src);
+    if (adapter !== undefined) {
+      const handle = this._residency._getSeamless(ctor, adapter, path, options);
+      this._claim(this._typeRegistry._key(ctor, path), ctor, path, claimer);
+
+      return handle;
+    }
+
+    if (getAssetKind(type)?.isValue === true) {
+      const ref = this._residency._getRef(ctor, path, options);
+      this._claim(this._typeRegistry._key(ctor, path), ctor, path, claimer);
+
+      return ref;
+    }
+
+    throw new Error(
+      `Loader: type "${type}" inferred from "${path}" has no seamless adapter and is not a value type — ` +
+        `use load(Asset.type('${type}', '${path}')) instead.`,
+    );
   }
 
   /**
@@ -809,9 +750,10 @@ export class Loader {
    *
    * @remarks The `release(handle)` form resolves the key via an internal handle
    * → key map that is populated ONLY for seamless handles and value-refs. A
-   * non-seamless legacy asset (e.g. `get(SomeNonSeamlessType, alias)`) has no
-   * such entry, so `release(handle)` silently can't find its key and won't drop
-   * the claim — use the `release(type, source)` form for those.
+   * non-leaf asset (one loaded with `load(Asset.type('bmFont', …))`, or unpacked
+   * by {@link loadContainer}) has no such entry, so `release(handle)` silently
+   * can't find its key and won't drop the claim — use the `release(type, source)`
+   * form for those.
    */
   public release(handle: object): void;
   public release(type: AssetConstructor, source: string): void;

@@ -632,8 +632,8 @@ export class AssetResidency {
    * in-flight deduplication.
    *
    * Multiple aliases that point to the same source share a single network
-   * fetch. Each alias is stored independently in the resource store so that
-   * `get(type, alias)` works for all of them.
+   * fetch. Each alias is stored independently in the resource store, so every
+   * alias resolves to the same payload.
    * @internal
    */
   public async _loadSingleAsset(type: AssetConstructor, alias: string, asset: Asset<unknown>): Promise<unknown> {
@@ -1187,8 +1187,8 @@ export class AssetResidency {
   /**
    * Non-throwing in-memory lookup: the resource stored under `(type, source)`,
    * or `null` if none is held. Backs `Loader._peekResource` (scene
-   * deserialization). For a lookup that preserves a legitimately-stored
-   * `undefined` instead of coalescing it to `null`, see {@link _getStored}.
+   * deserialization). Coalesces a legitimately-stored `null`/`undefined` to
+   * `null`; use {@link _hasStored} when the distinction matters.
    * @internal
    */
   public _peekResource(type: AssetConstructor, source: string): unknown {
@@ -1200,21 +1200,10 @@ export class AssetResidency {
    * the value is (including a legitimately-stored `null`/`undefined` from a
    * `bindAsset`-bound custom type). Unlike {@link _peekResource}, this
    * distinguishes "no entry" from "entry present with a nullish value" — the
-   * presence check `Loader._getClaimed`'s legacy-token branch needs. @internal
+   * presence check the load fast paths need. @internal
    */
   public _hasStored(type: AssetConstructor, source: string): boolean {
     return this._resources.get(type)?.has(source) ?? false;
-  }
-
-  /**
-   * The raw stored value under `(type, source)` — `undefined` both for absent
-   * and for a resource legitimately stored as `undefined` (unlike
-   * {@link _peekResource}, which normalizes both cases to `null`). Pair with
-   * {@link _hasStored} to distinguish "absent" from "present but nullish."
-   * @internal
-   */
-  public _getStored(type: AssetConstructor, source: string): unknown {
-    return this._resources.get(type)?.get(source);
   }
 
   /**

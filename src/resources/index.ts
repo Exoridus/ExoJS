@@ -19,17 +19,7 @@ export { IndexedDbKeyValueStore } from './IndexedDbKeyValueStore';
 export type { IndexedDbStoreOptions } from './IndexedDbStore';
 export { IndexedDbStore } from './IndexedDbStore';
 export type { KeyValueStore } from './KeyValueStore';
-export type {
-  AssetLoaderContext,
-  ExtensionTypeMap,
-  InferLoadedMap,
-  Loadable,
-  LoadByPath,
-  LoaderOptions,
-  LoadOptions,
-  LoadReturn,
-  PathExtension,
-} from './Loader';
+export type { AssetLoaderContext, ExtensionTypeMap, InferLoadedMap, Loadable, LoaderOptions, LoadOptions } from './Loader';
 export { Loader } from './Loader';
 export type { LoadingProgress } from './LoadingQueue';
 export { LoadingQueue } from './LoadingQueue';

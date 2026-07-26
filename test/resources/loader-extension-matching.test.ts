@@ -1,15 +1,17 @@
 import { expectTypeOf } from 'vitest';
 
 import { materializeAssetBindings } from '#extensions/materialize';
-import type { BmFont } from '#rendering/text/BmFont';
+import type { Texture } from '#rendering/texture/Texture';
+import type { KindByPath, LeafForPath } from '#resources/AssetDefinitions';
+import type { AssetRef } from '#resources/AssetRef';
 import { coreAssetBindings } from '#resources/coreAssetBindings';
 import { registerExtensionKind } from '#resources/extensionKindRegistry';
-import { type LoadByPath, Loader, type PathExtension } from '#resources/Loader';
+import { Loader } from '#resources/Loader';
 
 // Test-only compound registration (type level).
-declare module '#resources/Loader' {
-  interface ExtensionTypeMap {
-    'mock.json': string;
+declare module '#resources/AssetDefinitions' {
+  interface ExtensionKindMap {
+    'mock.json': 'json';
   }
 }
 
@@ -21,18 +23,21 @@ function createCoreLoader(): Loader {
 
 describe('compound extension matching (#14)', () => {
   test('type-level: basename-only, longest-suffix-first', () => {
-    // Simple extension still resolves.
-    expectTypeOf<PathExtension<'fonts/ui.fnt'>>().toEqualTypeOf<'fnt'>();
-    // Dot in a directory name no longer breaks resolution (old bug: '2/ui.fnt').
-    expectTypeOf<PathExtension<'assets/v1.2/ui.fnt'>>().toEqualTypeOf<'fnt'>();
+    // Simple suffix still resolves.
+    expectTypeOf<KindByPath<'sprites/ship.png'>>().toEqualTypeOf<'texture'>();
+    // Dot in a directory name no longer breaks resolution (old bug: '2/ship.png').
+    expectTypeOf<KindByPath<'assets/v1.2/ship.png'>>().toEqualTypeOf<'texture'>();
     // Compound key wins over its shorter suffix.
-    expectTypeOf<PathExtension<'hero.mock.json'>>().toEqualTypeOf<'mock.json'>();
-    // Unregistered extension resolves to never → LoadByPath falls back to unknown.
-    expectTypeOf<PathExtension<'theme.custom'>>().toEqualTypeOf<never>();
-    expectTypeOf<LoadByPath<'theme.custom'>>().toEqualTypeOf<unknown>();
-    expectTypeOf<LoadByPath<'fonts/ui.fnt'>>().toEqualTypeOf<BmFont>();
+    expectTypeOf<KindByPath<'hero.mock.json'>>().toEqualTypeOf<'json'>();
+    // A non-leaf resource type has no bare-path inference — name it with Asset.type().
+    expectTypeOf<KindByPath<'fonts/ui.fnt'>>().toEqualTypeOf<never>();
+    // Unregistered suffix resolves to never → LeafForPath falls back to unknown.
+    expectTypeOf<KindByPath<'theme.custom'>>().toEqualTypeOf<never>();
+    expectTypeOf<LeafForPath<'theme.custom'>>().toEqualTypeOf<unknown>();
+    expectTypeOf<LeafForPath<'sprites/ship.png'>>().toEqualTypeOf<Texture>();
+    expectTypeOf<LeafForPath<'hero.mock.json'>>().toEqualTypeOf<AssetRef<unknown>>();
     // Query/hash suffixes are stripped before matching.
-    expectTypeOf<PathExtension<'ui.fnt?v=2'>>().toEqualTypeOf<'fnt'>();
+    expectTypeOf<KindByPath<'ship.png?v=2'>>().toEqualTypeOf<'texture'>();
   });
 
   test('runtime: longest registered suffix wins, basename only', async () => {

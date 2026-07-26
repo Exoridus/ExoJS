@@ -48,7 +48,11 @@ export class AssetTypeRegistry {
    * Atomically bind all keys for one AssetBinding to a pre-created handler.
    * Validates all keys BEFORE mutating any map. Any already-registered key
    * throws before any mutation. When `type` is given, its extensions also feed
-   * the app-local override table read by `registerType`/`resolveExtensionType`.
+   * the app-local override table read by `registerType`/`resolveExtensionType`
+   * — and only then do they take part in bare-path resolution
+   * ({@link _resolveTypeForPath}). A binding that declares `extensions` without
+   * a `type` still reserves those suffixes (so a later conflicting binding
+   * throws), but its assets must be named with `Asset.type(...)`.
    */
   public bindAsset<Result = unknown, Options = undefined>(
     keys: {
@@ -221,21 +225,28 @@ export class AssetTypeRegistry {
   }
 
   /**
-   * Resolve the registered asset type for a path by matching the basename's
-   * dot-suffixes longest-first: `hero.aseprite.json` tries `aseprite.json`
-   * before `json`. Query/hash suffixes are ignored.
+   * Resolve the effective {@link AssetDefinitions} type for a whole path by
+   * matching the basename's dot-suffixes longest-first: `hero.aseprite.json`
+   * tries `aseprite.json` before `json`. Query/hash suffixes are ignored. Each
+   * candidate suffix goes through {@link resolveExtensionType}, so the app-local
+   * `registerType` override is consulted before the global default.
+   *
+   * This is the single bare-path resolution funnel: a `bindAsset` binding feeds
+   * it only through its declared `type` (which `defineAsset` always sets), not
+   * through the constructor-keyed extension map — that map now only guards
+   * against duplicate extension registrations.
    * @internal
    */
-  public _resolveExtensionType(path: string): AssetConstructor | undefined {
+  public _resolveTypeForPath(path: string): keyof AssetDefinitions | undefined {
     const [withoutQueryHash = ''] = path.split(/[?#]/, 1);
     const basename = withoutQueryHash.split('/').pop() ?? '';
     const parts = basename.split('.');
 
     for (let i = 1; i < parts.length; i++) {
-      const ctor = this._extensionMap.get(parts.slice(i).join('.').toLowerCase());
+      const type = this.resolveExtensionType(parts.slice(i).join('.'));
 
-      if (ctor !== undefined) {
-        return ctor;
+      if (type !== undefined) {
+        return type;
       }
     }
 

@@ -104,16 +104,37 @@ describe('AssetTypeRegistry', () => {
     expect(registry._identityKey(TypeA, 'a.png')).not.toBe(registry._key(TypeA, 'a.png'));
   });
 
-  test('_resolveExtensionType matches the longest registered dot-suffix first', () => {
+  test('_resolveTypeForPath matches the longest registered dot-suffix first', () => {
     const registry = new AssetTypeRegistry();
     const handler = { load: vi.fn(async () => ({})) };
 
-    registry.bindAsset({ ctor: TypeA, extensions: ['json'] }, handler);
-    registry.bindAsset({ ctor: TypeB, extensions: ['aseprite.json'] }, handler);
+    registry.bindAsset({ ctor: TypeA, type: 'json', extensions: ['json'] }, handler);
+    registry.bindAsset({ ctor: TypeB, type: 'text', extensions: ['aseprite.json'] }, handler);
 
-    expect(registry._resolveExtensionType('hero.aseprite.json')).toBe(TypeB);
-    expect(registry._resolveExtensionType('plain.json')).toBe(TypeA);
-    expect(registry._resolveExtensionType('no-extension-match.xyz')).toBeUndefined();
+    expect(registry._resolveTypeForPath('hero.aseprite.json')).toBe('text');
+    expect(registry._resolveTypeForPath('plain.json')).toBe('json');
+    expect(registry._resolveTypeForPath('no-extension-match.xyz')).toBeUndefined();
+  });
+
+  test('_resolveTypeForPath ignores an extension bound without a `type` (bare path needs Asset.type)', () => {
+    const registry = new AssetTypeRegistry();
+
+    registry.bindAsset({ ctor: TypeA, extensions: ['bnd'] }, { load: vi.fn(async () => ({})) });
+
+    expect(registry.hasExtension('bnd')).toBe(true);
+    expect(registry._resolveTypeForPath('thing.bnd')).toBeUndefined();
+  });
+
+  test('_resolveTypeForPath prefers the app-local override over the global default', () => {
+    const registry = new AssetTypeRegistry();
+
+    registerExtensionKind('globaldefault', 'json'); // the global (defineAsset) layer
+
+    expect(registry._resolveTypeForPath('config.globaldefault')).toBe('json');
+
+    registry.registerType('globaldefault', 'text'); // the app-local layer wins
+
+    expect(registry._resolveTypeForPath('config.globaldefault')).toBe('text');
   });
 
   test('_describeType falls back to a placeholder name for an anonymous constructor', () => {

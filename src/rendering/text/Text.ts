@@ -51,7 +51,7 @@ export interface TextOptions extends TextStyleOptions, LayoutOptions {
  * label renders immediately with the correct glyphs — no async waiting needed.
  *
  * ```ts
- * const face = await loader.load(FontFactory, 'roboto.woff2', { family: 'Roboto' });
+ * const face = await loader.load(Asset.type('font', 'roboto.woff2', { family: 'Roboto' }));
  * const label = new Text('Score: 0', { font: face, fontSize: 24 });
  * scene.addChild(label); // renders immediately with Roboto
  * ```

@@ -28,7 +28,7 @@ export interface DeferredTextureOptions extends PreSizeOptions {
  * Per-type strategy for seamless deferred asset handles (asset-system v2).
  *
  * A seamless type hands out a stable placeholder handle synchronously from
- * `loader.get(Type, source)`; when the payload arrives, {@link fill}
+ * `loader.get(source)`; when the payload arrives, {@link fill}
  * transplants it into the handle **in place** so every existing consumer
  * "pops up" without re-wiring. {@link fail} swaps in a visible error payload
  * instead. The handle's identity never changes across the whole lifecycle.

@@ -140,7 +140,7 @@ export class BmFontAdapter implements GlyphProvider {
  * ## Usage
  *
  * ```ts
- * const font  = await loader.load('fonts/ui.fnt');   // BmFont, no setup needed
+ * const font  = await loader.load(Asset.type('bmFont', 'fonts/ui.fnt')); // BmFont, no setup needed
  * const label = new BitmapText('Score: 0', font, { msdf: true });
  * scene.addChild(label);
  *

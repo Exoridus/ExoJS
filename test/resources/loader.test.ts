@@ -3,6 +3,7 @@ import { materializeAssetBindings } from '#extensions/materialize';
 import { Texture } from '#rendering/texture/Texture';
 import { Asset } from '#resources/Asset';
 import { encodeContainer } from '#resources/AssetContainer';
+import { AssetRef } from '#resources/AssetRef';
 import { Assets } from '#resources/Assets';
 import type { CacheStore } from '#resources/CacheStore';
 import { coreAssetBindings } from '#resources/coreAssetBindings';
@@ -508,7 +509,7 @@ describe('Asset / Assets identity and alias semantics', () => {
     expect(loader._peekResource(MockAssetType, 'heroB')).not.toBeNull();
   });
 
-  test('get() resolves both aliases after multi-alias load', async () => {
+  test('both aliases resolve to the same stored resource after multi-alias load', async () => {
     const loader = new Loader({ basePath: '/' });
 
     bindMockAsset(loader);
@@ -518,7 +519,8 @@ describe('Asset / Assets identity and alias semantics', () => {
 
     await loader.load({ heroA: hero, heroB: hero });
 
-    expect(loader.get(MockAssetType, 'heroA')).toBe(loader.get(MockAssetType, 'heroB'));
+    expect(loader._peekResource(MockAssetType, 'heroA')).toBe(loader._peekResource(MockAssetType, 'heroB'));
+    expect(loader._peekResource(MockAssetType, 'heroA')).not.toBeNull();
   });
 
   test('unload(asset) removes asset loaded by source-as-alias (single Asset load)', async () => {
@@ -1262,14 +1264,29 @@ describe('bindAsset() — direct handler binding', () => {
     expect(result).toBeInstanceOf(BoundAsset);
   });
 
-  test('binds by extension: load(path) resolves via the handler', async () => {
+  test('binds by extension + type: load(path) normalizes the suffix and resolves via the handler', async () => {
+    const loader = new Loader({ basePath: '/' });
+
+    // `type` is what puts an extension into the bare-path resolution table;
+    // `typeNames` is what maps that type back to this constructor.
+    loader.bindAsset<BoundAsset>(
+      { ctor: BoundAsset, type: 'boundAsset', typeNames: ['boundAsset'], extensions: ['bnd'] },
+      { load: async request => new BoundAsset(request.source) },
+    );
+
+    // `bnd` is not in ExtensionKindMap, so the typed bare-path overload rejects
+    // it at compile time — the runtime override table still resolves it.
+    const result = await loader.load('thing.bnd' as never);
+
+    expect(result).toBeInstanceOf(BoundAsset);
+  });
+
+  test('binds by extension WITHOUT a type: the bare path stays unresolvable', async () => {
     const loader = new Loader({ basePath: '/' });
 
     loader.bindAsset<BoundAsset>({ ctor: BoundAsset, extensions: ['bnd'] }, { load: async request => new BoundAsset(request.source) });
 
-    const result = await loader.load<BoundAsset>('thing.bnd');
-
-    expect(result).toBeInstanceOf(BoundAsset);
+    expect(() => loader.load('thing.bnd' as never)).toThrow('no type registered');
   });
 
   test('getIdentityKey is forwarded and deduplicates in-flight loads', async () => {
@@ -1314,7 +1331,7 @@ describe('bindAsset() — direct handler binding', () => {
 
     await loader.loadContainer('pack.exoa');
 
-    expect((loader.get(BoundAsset, 'x') as BoundAsset).value).toBe('hi');
+    expect((loader._peekResource(BoundAsset, 'x') as BoundAsset).value).toBe('hi');
   });
 
   test('throws on a duplicate extension within the same bindAsset() call', () => {
@@ -1651,5 +1668,67 @@ describe('non-Error throws are stringified when wrapping fetch/handler failures'
     const asset = new Asset({ type: 'richAsset', source: 'y.json', format: 'y' });
 
     await expect(loader.load(asset)).rejects.toThrow(/Failed to load "y\.json" from "\/assets\/y\.json": plain string failure/);
+  });
+});
+
+describe('bare-path descriptor normalization', () => {
+  /** Binds `TextAsset` as the app's `text` type so a re-pointed suffix has somewhere to land. */
+  function bindTextType(loader: Loader, result = 'overridden'): void {
+    loader.bindAsset<string>({ ctor: TextAsset, type: 'text', typeNames: ['text'] }, { load: async () => result });
+  }
+
+  test('get() resolves a bare path through the app-local type override, not the global default', async () => {
+    const loader = new Loader({ basePath: '/' });
+
+    // Globally `.json` maps to the `json` value type; this app re-points it.
+    loader.registerType('json', 'text');
+    bindTextType(loader);
+
+    const ref = loader.get('config.json');
+
+    expect(ref).toBeInstanceOf(AssetRef);
+    await expect(ref.loaded).resolves.toBe('overridden');
+    // Keyed under the OVERRIDE's constructor, not the global default's.
+    expect(loader._peekResource(TextAsset, 'config.json')).toBe('overridden');
+  });
+
+  test('load() resolves a bare path through the app-local type override', async () => {
+    const loader = new Loader({ basePath: '/' });
+
+    loader.registerType('json', 'text');
+    bindTextType(loader);
+
+    await expect(loader.load('config.json')).resolves.toBe('overridden');
+  });
+
+  test('without an override the same bare path still resolves to the global default type', async () => {
+    const loader = new Loader({ basePath: '/' });
+
+    bindTextType(loader);
+
+    // `.json` → the global `json` type, whose constructor has no handler here —
+    // proving the path did NOT route to the bound `text` handler.
+    const ref = loader.get('config.json');
+
+    expect(ref).toBeInstanceOf(AssetRef);
+    await expect(ref.loaded).rejects.toThrow(/No asset handler registered/);
+  });
+
+  test('an unresolvable suffix names Asset.type() in its guidance', () => {
+    const loader = new Loader({ basePath: '/' });
+
+    expect(() => loader.get('theme.custom' as never)).toThrow(/no type registered for any extension of "theme\.custom"/);
+    expect(() => loader.get('theme.custom' as never)).toThrow(/Asset\.type\(type, "theme\.custom"\)/);
+  });
+
+  test('the longest registered suffix wins over its bare tail', async () => {
+    const loader = new Loader({ basePath: '/' });
+
+    loader.registerType('aseprite.json', 'text');
+    bindTextType(loader);
+
+    // `aseprite.json` beats `json`; a plain `.json` still takes the global default.
+    await expect(loader.load('hero.aseprite.json' as never)).resolves.toBe('overridden');
+    expect(loader._peekResource(TextAsset, 'plain.json')).toBeNull();
   });
 });
