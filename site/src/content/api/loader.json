@@ -6,10 +6,10 @@
   "subsystem": "resources",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 40,
+  "memberCount": 36,
   "counts": {
     "constructors": 1,
-    "methods": 30,
+    "methods": 26,
     "properties": 2,
     "events": 7
   },
@@ -159,142 +159,6 @@
         },
         {
           "name": "get",
-          "signature": "get(path: LoadByPath<S> extends Sound | Texture ? S : never, options?: unknown): LoadByPath<S>",
-          "signatureTokens": [
-            {
-              "text": "get",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "path",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "LoadByPath",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "S",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": " ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "extends",
-              "kind": "keyword"
-            },
-            {
-              "text": " ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Sound",
-              "kind": "type"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Texture",
-              "kind": "type"
-            },
-            {
-              "text": " ? ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "S",
-              "kind": "type"
-            },
-            {
-              "text": " : ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "never",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "options",
-              "kind": "param"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "unknown",
-              "kind": "keyword"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "LoadByPath",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "S",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            }
-          ],
-          "params": [
-            {
-              "name": "path",
-              "type": "LoadByPath<S> extends Sound | Texture ? S : never",
-              "optional": false
-            },
-            {
-              "name": "options",
-              "type": "unknown",
-              "optional": true
-            }
-          ],
-          "returnType": "LoadByPath<S>",
-          "description": "Seamless deferred access by path (asset-system v2). Returns SYNCHRONOUSLY and never throws: an already-loaded source returns the stored resource; an unknown source returns a placeholder handle immediately, starts the fetch, and fills the handle in place when the payload arrives (track it via Texture.loadState / Texture.loaded). Failed loads show the Texture.missing checker; calling get again for a 'failed' source retries and heals the same handle in place. The asset type is inferred from the file extension (basename-only, longest-suffix-first; see ExtensionTypeMap). Accepts only paths whose inferred type has a seamless adapter (compile-time gate); dynamic strings resolving to an unregistered extension or a non-seamless type throw with guidance. The same source always yields the same instance — also across load — and options are first-wins: conflicting options on a later call are ignored with a one-time dev warning."
-        },
-        {
-          "name": "get",
           "signature": "get(path: [KindByPath<S>] extends [never] ? never : S, options?: unknown): LeafForPath<S>",
           "signatureTokens": [
             {
@@ -435,87 +299,7 @@
             }
           ],
           "returnType": "LeafForPath<S>",
-          "description": "Bare-path seamless/value access: a resource suffix yields its handle, a value suffix yields a stable AssetRef, inferred from the file extension. Broader fallback below the resource-only overload above."
-        },
-        {
-          "name": "get",
-          "signature": "get(type: T, alias: string): LoadReturn<T>",
-          "signatureTokens": [
-            {
-              "text": "get",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "type",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "T",
-              "kind": "type"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "alias",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "string",
-              "kind": "keyword"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "LoadReturn",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "T",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            }
-          ],
-          "params": [
-            {
-              "name": "type",
-              "type": "T",
-              "optional": false
-            },
-            {
-              "name": "alias",
-              "type": "string",
-              "optional": false
-            }
-          ],
-          "returnType": "LoadReturn<T>",
-          "description": "Legacy in-memory lookup: retrieves a previously loaded asset by type + alias (for non-seamless types and loadContainer-loaded assets). This is a cache lookup, NOT a fetch — the token *fetch* forms get(Type, src) were removed. Prefer bare-path get('x.png') or get(Asset.type(...))."
+          "description": "Seamless deferred access by path (asset-system v2). Returns SYNCHRONOUSLY and never throws: an already-loaded source returns the stored resource; an unknown source returns a placeholder handle immediately, starts the fetch, and fills the handle in place when the payload arrives (track it via Texture.loadState / Texture.loaded). Failed loads show the Texture.missing checker; calling get again for a 'failed' source retries and heals the same handle in place. The path is normalized to an AssetDefinitions type by its suffix (basename-only, longest-suffix-first), consulting the app-local registerType override before the global defineAsset default. A resource suffix yields its heal-in-place handle; a value suffix (json, txt, csv, …) yields a stable AssetRef. Only leaf-capable suffixes are accepted at compile time (ExtensionKindMap); dynamic strings resolving to an unregistered suffix or a non-leaf type throw with guidance. The same source always yields the same instance — also across load — and options are first-wins: conflicting options on a later call are ignored with a one-time dev warning."
         },
         {
           "name": "get",
@@ -716,7 +500,7 @@
             }
           ],
           "returnType": "T",
-          "description": "Seamless deferred access by path (asset-system v2). Returns SYNCHRONOUSLY and never throws: an already-loaded source returns the stored resource; an unknown source returns a placeholder handle immediately, starts the fetch, and fills the handle in place when the payload arrives (track it via Texture.loadState / Texture.loaded). Failed loads show the Texture.missing checker; calling get again for a 'failed' source retries and heals the same handle in place. The asset type is inferred from the file extension (basename-only, longest-suffix-first; see ExtensionTypeMap). Accepts only paths whose inferred type has a seamless adapter (compile-time gate); dynamic strings resolving to an unregistered extension or a non-seamless type throw with guidance. The same source always yields the same instance — also across load — and options are first-wins: conflicting options on a later call are ignored with a one-time dev warning."
+          "description": "Seamless deferred access by path (asset-system v2). Returns SYNCHRONOUSLY and never throws: an already-loaded source returns the stored resource; an unknown source returns a placeholder handle immediately, starts the fetch, and fills the handle in place when the payload arrives (track it via Texture.loadState / Texture.loaded). Failed loads show the Texture.missing checker; calling get again for a 'failed' source retries and heals the same handle in place. The path is normalized to an AssetDefinitions type by its suffix (basename-only, longest-suffix-first), consulting the app-local registerType override before the global defineAsset default. A resource suffix yields its heal-in-place handle; a value suffix (json, txt, csv, …) yields a stable AssetRef. Only leaf-capable suffixes are accepted at compile time (ExtensionKindMap); dynamic strings resolving to an unregistered suffix or a non-leaf type throw with guidance. The same source always yields the same instance — also across load — and options are first-wins: conflicting options on a later call are ignored with a one-time dev warning."
         },
         {
           "name": "get",
@@ -1062,7 +846,7 @@
             }
           ],
           "returnType": "LoadingQueue<T>",
-          "description": "Fetches and processes one or more assets. - **Path string** — inferred from the file extension; resolves the asset. - **Asset<T>** — a single typed asset reference from Asset.type(...). - **Assets<M>** — a typed catalog from Assets.from(...); keys become aliases. (The inline record-catalog form { alias: { type, source } } is no longer a public overload — build catalogs with Assets.from(...); a runtime record fallback is retained only for internal multi-alias plumbing.) In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Per-asset options ride on the Asset.type(type, source, options) descriptor (or the extra fields of a config object)."
+          "description": "Fetches and processes one or more assets. Every accepted input normalizes to the same canonical descriptor shape ({ type, source }) before dispatch: - **Path string** — normalized by suffix through the app-local registerType override and then the global defineAsset default (basename-only, longest-suffix-first). Only *leaf-capable* suffixes are accepted at compile time; a non-leaf type (bmFont, font, svg, image, music, video) must be named explicitly with Asset.type(...). - **Asset<T>** — an explicit descriptor from Asset.type(...). - **Assets<M>** — a typed catalog from Assets.from(...); keys become aliases. - **A catalog leaf** — an Assets.from() property, adopted and resolved. (The inline record-catalog form { alias: { type, source } } is no longer a public overload — build catalogs with Assets.from(...); a runtime record fallback is retained only for internal multi-alias plumbing.) In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Per-asset options ride on the Asset.type(type, source, options) descriptor (or the extra fields of a config object)."
         },
         {
           "name": "load",
@@ -1170,7 +954,7 @@
             }
           ],
           "returnType": "LoadingQueue<InferLoadedMap<M>>",
-          "description": "Fetches and processes one or more assets. - **Path string** — inferred from the file extension; resolves the asset. - **Asset<T>** — a single typed asset reference from Asset.type(...). - **Assets<M>** — a typed catalog from Assets.from(...); keys become aliases. (The inline record-catalog form { alias: { type, source } } is no longer a public overload — build catalogs with Assets.from(...); a runtime record fallback is retained only for internal multi-alias plumbing.) In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Per-asset options ride on the Asset.type(type, source, options) descriptor (or the extra fields of a config object)."
+          "description": "Fetches and processes one or more assets. Every accepted input normalizes to the same canonical descriptor shape ({ type, source }) before dispatch: - **Path string** — normalized by suffix through the app-local registerType override and then the global defineAsset default (basename-only, longest-suffix-first). Only *leaf-capable* suffixes are accepted at compile time; a non-leaf type (bmFont, font, svg, image, music, video) must be named explicitly with Asset.type(...). - **Asset<T>** — an explicit descriptor from Asset.type(...). - **Assets<M>** — a typed catalog from Assets.from(...); keys become aliases. - **A catalog leaf** — an Assets.from() property, adopted and resolved. (The inline record-catalog form { alias: { type, source } } is no longer a public overload — build catalogs with Assets.from(...); a runtime record fallback is retained only for internal multi-alias plumbing.) In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Per-asset options ride on the Asset.type(type, source, options) descriptor (or the extra fields of a config object)."
         },
         {
           "name": "load",
@@ -1266,7 +1050,7 @@
             }
           ],
           "returnType": "LoadingQueue<T>",
-          "description": "Fetches and processes one or more assets. - **Path string** — inferred from the file extension; resolves the asset. - **Asset<T>** — a single typed asset reference from Asset.type(...). - **Assets<M>** — a typed catalog from Assets.from(...); keys become aliases. (The inline record-catalog form { alias: { type, source } } is no longer a public overload — build catalogs with Assets.from(...); a runtime record fallback is retained only for internal multi-alias plumbing.) In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Per-asset options ride on the Asset.type(type, source, options) descriptor (or the extra fields of a config object)."
+          "description": "Fetches and processes one or more assets. Every accepted input normalizes to the same canonical descriptor shape ({ type, source }) before dispatch: - **Path string** — normalized by suffix through the app-local registerType override and then the global defineAsset default (basename-only, longest-suffix-first). Only *leaf-capable* suffixes are accepted at compile time; a non-leaf type (bmFont, font, svg, image, music, video) must be named explicitly with Asset.type(...). - **Asset<T>** — an explicit descriptor from Asset.type(...). - **Assets<M>** — a typed catalog from Assets.from(...); keys become aliases. - **A catalog leaf** — an Assets.from() property, adopted and resolved. (The inline record-catalog form { alias: { type, source } } is no longer a public overload — build catalogs with Assets.from(...); a runtime record fallback is retained only for internal multi-alias plumbing.) In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Per-asset options ride on the Asset.type(type, source, options) descriptor (or the extra fields of a config object)."
         },
         {
           "name": "load",
@@ -1350,305 +1134,7 @@
             }
           ],
           "returnType": "LoadingQueue<T>",
-          "description": "Fetches and processes one or more assets. - **Path string** — inferred from the file extension; resolves the asset. - **Asset<T>** — a single typed asset reference from Asset.type(...). - **Assets<M>** — a typed catalog from Assets.from(...); keys become aliases. (The inline record-catalog form { alias: { type, source } } is no longer a public overload — build catalogs with Assets.from(...); a runtime record fallback is retained only for internal multi-alias plumbing.) In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Per-asset options ride on the Asset.type(type, source, options) descriptor (or the extra fields of a config object)."
-        },
-        {
-          "name": "load",
-          "signature": "load(path: [MatchExtension<Basename<StripQueryHash<S>>>] extends [never] ? never : S): LoadingQueue<R>",
-          "signatureTokens": [
-            {
-              "text": "load",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "path",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "[",
-              "kind": "punctuation"
-            },
-            {
-              "text": "MatchExtension",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Basename",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "StripQueryHash",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "S",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": "]",
-              "kind": "punctuation"
-            },
-            {
-              "text": " ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "extends",
-              "kind": "keyword"
-            },
-            {
-              "text": " ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "[",
-              "kind": "punctuation"
-            },
-            {
-              "text": "never",
-              "kind": "keyword"
-            },
-            {
-              "text": "]",
-              "kind": "punctuation"
-            },
-            {
-              "text": " ? ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "never",
-              "kind": "keyword"
-            },
-            {
-              "text": " : ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "S",
-              "kind": "type"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "LoadingQueue",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "R",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            }
-          ],
-          "params": [
-            {
-              "name": "path",
-              "type": "[MatchExtension<Basename<StripQueryHash<S>>>] extends [never] ? never : S",
-              "optional": false
-            }
-          ],
-          "returnType": "LoadingQueue<R>",
-          "description": "Fetches an asset by path, inferring the type from the file extension. Built-in extension mappings: - .fnt → BmFont - .woff, .woff2, .ttf, .otf → FontFace (family inferred from filename) Register additional mappings via defineAsset (its extensions). Extend the return type by augmenting ExtensionTypeMap. Paths whose extension is **not** in ExtensionTypeMap are rejected at compile time — use the descriptor form (load(Asset.type(type, path))) for unregistered extensions. ts const font = await loader.load('fonts/ui.fnt'); // BmFont const face = await loader.load('fonts/Roboto.woff2'); // FontFace, family='Roboto' const bm = await loader.load<BmFont>('fonts/ui.fnt'); // validated cast "
-        },
-        {
-          "name": "load",
-          "signature": "load(path: [MatchExtension<Basename<StripQueryHash<S>>>] extends [never] ? never : S): LoadingQueue<LoadByPath<S>>",
-          "signatureTokens": [
-            {
-              "text": "load",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "path",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "[",
-              "kind": "punctuation"
-            },
-            {
-              "text": "MatchExtension",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Basename",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "StripQueryHash",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "S",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": "]",
-              "kind": "punctuation"
-            },
-            {
-              "text": " ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "extends",
-              "kind": "keyword"
-            },
-            {
-              "text": " ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "[",
-              "kind": "punctuation"
-            },
-            {
-              "text": "never",
-              "kind": "keyword"
-            },
-            {
-              "text": "]",
-              "kind": "punctuation"
-            },
-            {
-              "text": " ? ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "never",
-              "kind": "keyword"
-            },
-            {
-              "text": " : ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "S",
-              "kind": "type"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "LoadingQueue",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "LoadByPath",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "S",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            }
-          ],
-          "params": [
-            {
-              "name": "path",
-              "type": "[MatchExtension<Basename<StripQueryHash<S>>>] extends [never] ? never : S",
-              "optional": false
-            }
-          ],
-          "returnType": "LoadingQueue<LoadByPath<S>>",
-          "description": "Fetches and processes one or more assets. - **Path string** — inferred from the file extension; resolves the asset. - **Asset<T>** — a single typed asset reference from Asset.type(...). - **Assets<M>** — a typed catalog from Assets.from(...); keys become aliases. (The inline record-catalog form { alias: { type, source } } is no longer a public overload — build catalogs with Assets.from(...); a runtime record fallback is retained only for internal multi-alias plumbing.) In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Per-asset options ride on the Asset.type(type, source, options) descriptor (or the extra fields of a config object)."
+          "description": "Fetches and processes one or more assets. Every accepted input normalizes to the same canonical descriptor shape ({ type, source }) before dispatch: - **Path string** — normalized by suffix through the app-local registerType override and then the global defineAsset default (basename-only, longest-suffix-first). Only *leaf-capable* suffixes are accepted at compile time; a non-leaf type (bmFont, font, svg, image, music, video) must be named explicitly with Asset.type(...). - **Asset<T>** — an explicit descriptor from Asset.type(...). - **Assets<M>** — a typed catalog from Assets.from(...); keys become aliases. - **A catalog leaf** — an Assets.from() property, adopted and resolved. (The inline record-catalog form { alias: { type, source } } is no longer a public overload — build catalogs with Assets.from(...); a runtime record fallback is retained only for internal multi-alias plumbing.) In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Per-asset options ride on the Asset.type(type, source, options) descriptor (or the extra fields of a config object)."
         },
         {
           "name": "load",
@@ -1791,7 +1277,7 @@
             }
           ],
           "returnType": "LoadingQueue<ResourceForKind<KindByPath<S>>>",
-          "description": "Fetches and processes one or more assets. - **Path string** — inferred from the file extension; resolves the asset. - **Asset<T>** — a single typed asset reference from Asset.type(...). - **Assets<M>** — a typed catalog from Assets.from(...); keys become aliases. (The inline record-catalog form { alias: { type, source } } is no longer a public overload — build catalogs with Assets.from(...); a runtime record fallback is retained only for internal multi-alias plumbing.) In-flight and already-loaded assets are de-duplicated: calling load for the same (type, alias) pair while a fetch is in progress attaches to the existing promise rather than issuing a second request. Per-asset options ride on the Asset.type(type, source, options) descriptor (or the extra fields of a config object)."
+          "description": "Fetches an asset by path, normalizing the suffix to an AssetDefinitions type before dispatch. Resolution is basename-only and longest-suffix-first (hero.aseprite.json tries aseprite.json before json), and consults the app-local registerType override before the global defineAsset default. Only **leaf-capable** suffixes are accepted at compile time — those a catalog can also materialize (ExtensionKindMap, the map to augment by declaration merging). Non-leaf resource types (bmFont, font, svg, image, music, video) and unregistered suffixes are rejected here; name them with load(Asset.type(type, path)) instead. ts const texture = await loader.load('image/hero.png'); // Texture const level = await loader.load('data/level.json'); // unknown const font = await loader.load(Asset.type('bmFont', 'fonts/ui.fnt')); // BmFont "
         },
         {
           "name": "loadContainer",

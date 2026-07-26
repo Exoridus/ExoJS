@@ -1,6 +1,6 @@
 {
   "title": "ExtensionTypeMap",
-  "description": "Maps file extensions (without leading dot, lower-case) to the asset type returned by Loader.load when called with a plain path string. Extend via declaration merging to register custom extension → type mappings: ```ts declare module 'exojs' { interface ExtensionTypeMap { tmj: TiledMap; } } ```",
+  "description": "Maps file extensions (without leading dot, lower-case) to the resource a bare path with that suffix produces. This map no longer drives any call signature — bare-path inference for Loader.get/Loader.load runs entirely through `ExtensionKindMap`/`KindByPath` (suffix → AssetDefinitions type), which is also the map to extend by declaration merging. What remains here is the hand-maintained *twin* that `AssetDefinitions.ts`'s `AssertKindTypeMapsAgree` cross-checks: on every shared suffix, the kind's resource and this map's resource must agree, so a drift in either table fails to compile.",
   "symbol": "ExtensionTypeMap",
   "kind": "interface",
   "subsystem": "resources",
@@ -19,8 +19,8 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Maps file extensions (without leading dot, lower-case) to the asset type returned by Loader.load when called with a plain path string.",
-        "Extend via declaration merging to register custom extension → type mappings: ```ts declare module 'exojs' { interface ExtensionTypeMap { tmj: TiledMap; } } ```"
+        "Maps file extensions (without leading dot, lower-case) to the resource a bare path with that suffix produces.",
+        "This map no longer drives any call signature — bare-path inference for Loader.get/Loader.load runs entirely through `ExtensionKindMap`/`KindByPath` (suffix → AssetDefinitions type), which is also the map to extend by declaration merging. What remains here is the hand-maintained *twin* that `AssetDefinitions.ts`'s `AssertKindTypeMapsAgree` cross-checks: on every shared suffix, the kind's resource and this map's resource must agree, so a drift in either table fails to compile."
       ],
       "importLine": "import { ExtensionTypeMap } from '@codexo/exojs'",
       "sourceLink": null
