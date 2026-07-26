@@ -302,6 +302,16 @@ export class AssetTypeRegistry {
     return type.name.length > 0 ? type.name : '(anonymous type)';
   }
 
+  /**
+   * Builds the standard "no `bindAsset` handler registered" error for `type`,
+   * shared by every dispatch path (`AssetDecoder._dispatchFetch`,
+   * `AssetResidency._loadSingleAsset`) that requires one.
+   * @internal
+   */
+  public _missingHandlerError(type: AssetConstructor): Error {
+    return new Error(`No asset handler registered for ${this._describeType(type)}. Bind one via defineAsset()/bindAsset() first.`);
+  }
+
   /** Destroys every bound `bindAsset` handler (deduplicated by identity) and clears handler/adapter maps. */
   public destroyHandlers(): void {
     const destroyedHandlers = new Set<AssetHandler>();

@@ -668,9 +668,7 @@ export class AssetResidency {
       const context = this._decoder._buildHandlerContext(identityKey, handlerEntry.storageName);
       fetchPromise = this._decoder._fetchWithHandler(type, alias, source, fullConfig, handlerEntry.load, context);
     } else {
-      fetchPromise = Promise.reject(
-        new Error(`No asset handler registered for ${this._typeRegistry._describeType(type)}. Bind one via defineAsset()/bindAsset() first.`),
-      );
+      fetchPromise = Promise.reject(this._typeRegistry._missingHandlerError(type));
     }
 
     const tracked: Promise<unknown> = fetchPromise

@@ -166,9 +166,7 @@ export class AssetDecoder {
     const handlerEntry = this._typeRegistry.getHandler(type);
 
     if (!handlerEntry) {
-      return Promise.reject(
-        new Error(`No asset handler registered for ${this._typeRegistry._describeType(type)}. Bind one via defineAsset()/bindAsset() first.`),
-      );
+      return Promise.reject(this._typeRegistry._missingHandlerError(type));
     }
 
     const identityKey = this._typeRegistry._identityKey(type, path);

@@ -323,6 +323,27 @@ describe('AssetResidency', () => {
       expect(residency._getAliasesForIdentity(identityKey)).toEqual(new Set(['alias1']));
     });
 
+    test('_loadSingleAsset rejects with a clear error when no bindAsset handler is registered for the type', async () => {
+      const { residency } = createResidency();
+      const asset = Asset.type('json', 'a.png');
+
+      await expect(residency._loadSingleAsset(TypeA, 'alias1', asset)).rejects.toThrow(/No asset handler registered for TypeA/);
+    });
+
+    test('_loadSingleAsset routes context.fetchText through the bindAsset binding storageName instead of the shared namespace', async () => {
+      const requests: CacheRequest[] = [];
+      const strategy = createFakeStrategy(r => (requests.push(r), 'ns-value'));
+      const { residency, typeRegistry } = createResidency({ cacheStrategy: strategy });
+
+      typeRegistry.bindAsset({ ctor: TypeA, storageName: 'my-type-ns' }, { load: async (request, ctx) => ctx.fetchText(request.source) });
+
+      const asset = Asset.type('json', 'a.png');
+      const result = await residency._loadSingleAsset(TypeA, 'alias1', asset);
+
+      expect(requests[0]?.storageName).toBe('my-type-ns');
+      expect(result).toBe('ns-value');
+    });
+
     test('_getHandleKey resolves a deferred handle back to its resource key', () => {
       const { residency, typeRegistry } = createResidency();
       const adapter = createFakeSeamlessAdapter();

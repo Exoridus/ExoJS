@@ -904,7 +904,7 @@
             }
           ],
           "returnType": "boolean",
-          "description": "Returns true if a handler or factory is already registered for the given constructor."
+          "description": "Returns true if a handler is already registered for the given constructor."
         },
         {
           "name": "keyFor",

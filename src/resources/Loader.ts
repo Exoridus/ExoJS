@@ -981,7 +981,7 @@ export class Loader {
   }
 
   /**
-   * Returns true if a handler or factory is already registered for the given constructor.
+   * Returns true if a handler is already registered for the given constructor.
    * @advanced
    */
   public hasLoadable(type: AssetConstructor): boolean {
