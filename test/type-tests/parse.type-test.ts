@@ -13,7 +13,7 @@ interface Config {
 }
 
 const catalog = Assets.from({
-  config: { kind: 'json', source: 'config.json', parse: (raw: unknown): Config => raw as Config },
+  config: { type: 'json', source: 'config.json', parse: (raw: unknown): Config => raw as Config },
 });
 
 // value config with `parse` → AssetRef<R>

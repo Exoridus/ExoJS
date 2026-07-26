@@ -142,7 +142,7 @@ export type PathExtension<S extends string> = MatchExtension<Basename<StripQuery
  * Resolves the return type for {@link Loader.load} when called with a plain
  * path string. Returns `unknown` when the extension is not in
  * {@link ExtensionTypeMap} — the string-path overload rejects such paths at
- * compile time; use the descriptor form (`load(Asset.kind(kind, path))`) instead.
+ * compile time; use the descriptor form (`load(Asset.type(type, path))`) instead.
  *
  * The `[PathExtension<S>] extends [never]` guard is load-bearing: indexing
  * {@link ExtensionTypeMap} with `never` would silently produce `never` rather
@@ -392,10 +392,10 @@ export class Loader {
    * Fetches and processes one or more assets.
    *
    * - **Path string** — inferred from the file extension; resolves the asset.
-   * - **Asset<T>** — a single typed asset reference from `Asset.kind(...)`.
+   * - **Asset<T>** — a single typed asset reference from `Asset.type(...)`.
    * - **Assets<M>** — a typed catalog from `Assets.from(...)`; keys become aliases.
    *
-   * (The inline record-catalog form `{ alias: { kind, source } }` is no longer a
+   * (The inline record-catalog form `{ alias: { type, source } }` is no longer a
    * public overload — build catalogs with `Assets.from(...)`; a runtime record
    * fallback is retained only for internal multi-alias plumbing.)
    *
@@ -403,7 +403,7 @@ export class Loader {
    * for the same (type, alias) pair while a fetch is in progress attaches
    * to the existing promise rather than issuing a second request.
    *
-   * Per-asset options ride on the `Asset.kind(kind, source, options)` descriptor
+   * Per-asset options ride on the `Asset.type(type, source, options)` descriptor
    * (or the extra fields of a config object).
    */
   public load<T>(asset: Asset<T>): LoadingQueue<T>;
@@ -429,7 +429,7 @@ export class Loader {
    * Extend the return type by augmenting {@link ExtensionTypeMap}.
    *
    * Paths whose extension is **not** in {@link ExtensionTypeMap} are rejected at
-   * compile time — use the descriptor form (`load(Asset.kind(kind, path))`) for
+   * compile time — use the descriptor form (`load(Asset.type(type, path))`) for
    * unregistered extensions.
    *
    * ```ts
@@ -450,7 +450,7 @@ export class Loader {
   // resource value (asset-system v2 §4.4); `ResourceForKind<'json'>` = `unknown`.
   // Single-arg only: the runtime bare-path branch fires solely for
   // `arg1 === undefined`, so an `options?` param here would advertise a
-  // parameter the runtime ignores (per-asset options go through `Asset.kind(kind, src, opts)`).
+  // parameter the runtime ignores (per-asset options go through `Asset.type(type, src, opts)`).
   public load<S extends string>(path: [KindByPath<S>] extends [never] ? never : S): LoadingQueue<ResourceForKind<KindByPath<S>>>;
 
   // -----------------------------------------------------------------------
@@ -636,7 +636,7 @@ export class Loader {
    * When such a fetch DOES fail, a **development build** logs a one-time
    * (per-source) warning naming the literal path and how to fix it, so the 404
    * is no longer completely silent; production builds stay quiet. For a dynamic
-   * source, use `get(Asset.kind('texture', dynamicPath))`.
+   * source, use `get(Asset.type('texture', dynamicPath))`.
    */
   public get<S extends string>(path: LoadByPath<S> extends Texture | Sound ? S : never, options?: unknown): LoadByPath<S>;
 
@@ -651,7 +651,7 @@ export class Loader {
    * Legacy in-memory lookup: retrieves a previously loaded asset by type + alias
    * (for non-seamless types and `loadContainer`-loaded assets). This is a cache
    * lookup, NOT a fetch — the token *fetch* forms `get(Type, src)` were removed.
-   * Prefer bare-path `get('x.png')` or `get(Asset.kind(...))`.
+   * Prefer bare-path `get('x.png')` or `get(Asset.type(...))`.
    * @advanced
    */
   public get<T extends Loadable>(type: T, alias: string): LoadReturn<T>;
@@ -665,20 +665,20 @@ export class Loader {
   public get<M extends Record<string, AssetInput>>(catalog: Assets<M>): InferAssetsProperties<M>;
 
   /**
-   * Seamless/value access from an `Asset.kind(...)` descriptor (asset-system v2 §4.2) —
+   * Seamless/value access from an `Asset.type(...)` descriptor (asset-system v2 §4.2) —
    * the replacement for the removed `get(Type, dynamicSource)` form. Builds and
    * adopts the descriptor's handle-hybrid leaf: a resource kind yields its
    * heal-in-place handle, a value kind a stable {@link AssetRef}. A kind with
    * neither a seamless adapter nor a value channel throws with guidance to use
-   * `load(Asset.kind(...))`.
+   * `load(Asset.type(...))`.
    *
    * The return type follows the {@link ValueAsset} brand (as {@link InferCatalogLeaf}
-   * does): a value-kind descriptor (`Asset.kind<T>('json', …)`) returns
+   * does): a value-kind descriptor (`Asset.type<T>('json', …)`) returns
    * `AssetRef<T>` — even for an object payload — while a resource-kind descriptor
    * returns the resource itself, so the type always matches the runtime value.
    *
    * Unlike bare-path `get('x.png')`, this form is **not instance-deduped by
-   * source**: each call builds a fresh leaf, so repeated `get(Asset.kind(kind, sameSrc))`
+   * source**: each call builds a fresh leaf, so repeated `get(Asset.type(type, sameSrc))`
    * accumulates distinct handles (all healing to the same deduped backend
    * payload). It is the dynamic-source escape hatch — capture the handle once.
    */
@@ -718,21 +718,21 @@ export class Loader {
       return out;
     }
 
-    // Single `Asset.kind(...)` descriptor (e.g. `get(Asset.kind('json', 'x.json'))` /
-    // `get(Asset.kind('texture', dynamicPath))`) — build its handle-hybrid leaf from the
+    // Single `Asset.type(...)` descriptor (e.g. `get(Asset.type('json', 'x.json'))` /
+    // `get(Asset.type('texture', dynamicPath))`) — build its handle-hybrid leaf from the
     // config, adopt it, and return it. A value kind yields an AssetRef, a
     // resource kind the seamless placeholder handle. Mirrors `load`'s AssetImpl
     // branch and the single-meta-leaf path below. Must precede the string branch
     // (an AssetImpl carries no stamped meta, so the guard above misses it).
     if (typeOrPath instanceof AssetImpl) {
-      const { kind, source: src, ...rest } = typeOrPath._config;
+      const { type, source: src, ...rest } = typeOrPath._config;
       const opts = Object.keys(rest).length > 0 ? rest : undefined;
 
       let leaf: object;
       try {
-        leaf = createLeaf(kind, src, opts);
+        leaf = createLeaf(type, src, opts);
       } catch {
-        throw new Error(`Loader: get() is for seamless/value assets; the "${kind}" kind has neither — use load(Asset.kind('${kind}', ...)) instead.`);
+        throw new Error(`Loader: get() is for seamless/value assets; the "${type}" kind has neither — use load(Asset.type('${type}', ...)) instead.`);
       }
 
       this._adopt(leaf, claimer);
@@ -786,7 +786,7 @@ export class Loader {
     // Not a container, meta-leaf, or path string: a Loadable type token.
     // In-memory lookup for a non-seamless / non-value type (e.g. a bindAsset-
     // bound custom type populated by loadContainer): read the stored resource by
-    // source key. Seamless/value fetch-by-token has been removed — use `Asset.kind(...)`
+    // source key. Seamless/value fetch-by-token has been removed — use `Asset.type(...)`
     // or a bare path for those.
     const ctor = typeOrPath as Loadable;
     const src = source as string;
@@ -870,7 +870,7 @@ export class Loader {
   public unload(arg0: unknown, arg1?: unknown): this {
     if (arg0 instanceof AssetImpl) {
       const asset = arg0 as Asset<unknown>;
-      const ctor = this._typeRegistry.resolveTypeName(asset.kind);
+      const ctor = this._typeRegistry.resolveTypeName(asset.type);
 
       if (!ctor) return this;
 
@@ -970,7 +970,7 @@ export class Loader {
    * @internal
    */
   public bindAsset<Result = unknown, Options = undefined>(
-    keys: { type: AssetConstructor<Result>; typeNames?: readonly string[]; extensions?: readonly string[]; seamless?: SeamlessAdapter<Result> },
+    keys: { ctor: AssetConstructor<Result>; typeNames?: readonly string[]; extensions?: readonly string[]; seamless?: SeamlessAdapter<Result> },
     handler: AssetHandler<Result, Options>,
   ): void {
     this._typeRegistry.bindAsset(keys, handler);
@@ -1094,12 +1094,12 @@ export class Loader {
 
     const itemPromises = items.map(({ alias, asset }) => {
       this._onFgBatchStart(alias, asset.source);
-      const ctor = this._typeRegistry.resolveTypeName(asset.kind);
+      const ctor = this._typeRegistry.resolveTypeName(asset.type);
 
       if (!ctor) {
         // Must call _notifyItem(false) so LoadingProgress doesn't remain stuck.
         return Promise.reject<unknown>(
-          new Error(`No constructor registered for asset type "${asset.kind}". Bind it via defineAsset()/bindAsset() first.`),
+          new Error(`No constructor registered for asset type "${asset.type}". Bind it via defineAsset()/bindAsset() first.`),
         ).then(
           () => {
             notifyFn?.(true);

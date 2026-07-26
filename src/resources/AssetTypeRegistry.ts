@@ -53,7 +53,7 @@ export class AssetTypeRegistry {
    * throws before any mutation.
    */
   public bindAsset<Result = unknown, Options = undefined>(
-    keys: { type: AssetConstructor<Result>; typeNames?: readonly string[]; extensions?: readonly string[]; seamless?: SeamlessAdapter<Result> },
+    keys: { ctor: AssetConstructor<Result>; typeNames?: readonly string[]; extensions?: readonly string[]; seamless?: SeamlessAdapter<Result> },
     handler: AssetHandler<Result, Options>,
   ): void {
     const normalizedExts: string[] = [];
@@ -76,8 +76,8 @@ export class AssetTypeRegistry {
     }
 
     // Validate: detect conflicts with already-registered keys — throw before any mutation
-    if (this._handlerFunctions.has(keys.type)) {
-      throw new Error(`An asset handler is already registered for ${keys.type.name}.`);
+    if (this._handlerFunctions.has(keys.ctor)) {
+      throw new Error(`An asset handler is already registered for ${keys.ctor.name}.`);
     }
 
     for (const name of resolvedNames) {
@@ -112,18 +112,18 @@ export class AssetTypeRegistry {
     const boundIdentityKey = handler.getIdentityKey?.bind(handler);
     const boundCreateFromBytes = handler.createFromBytes?.bind(handler);
 
-    this._handlerFunctions.set(keys.type, {
+    this._handlerFunctions.set(keys.ctor, {
       load: (config, ctx) => handler.load(toRequest(config), ctx),
       ...(boundIdentityKey && { getIdentityKey: (config: unknown) => boundIdentityKey(toRequest(config)) }),
       ...(boundCreateFromBytes && { createFromBytes: (bytes: ArrayBuffer, options?: unknown) => boundCreateFromBytes(bytes, options as Options) }),
     });
 
     for (const name of resolvedNames) {
-      this._assetTypeMap.set(name, keys.type);
+      this._assetTypeMap.set(name, keys.ctor);
     }
 
     for (const ext of normalizedExts) {
-      this._extensionMap.set(ext, keys.type);
+      this._extensionMap.set(ext, keys.ctor);
     }
 
     // Own this handler for lifecycle management. Cast to the erased AssetHandler
@@ -131,7 +131,7 @@ export class AssetTypeRegistry {
     this._boundHandlers.push(handler as AssetHandler);
 
     if (keys.seamless !== undefined) {
-      this.registerSeamlessAdapter(keys.type, keys.seamless);
+      this.registerSeamlessAdapter(keys.ctor, keys.seamless);
     }
   }
 

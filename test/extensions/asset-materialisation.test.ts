@@ -35,7 +35,7 @@ describe('materializeAssetBindings', () => {
   it('creates one handler per Loader per Binding', () => {
     const handler = createTestHandler();
     const createFn = vi.fn(() => handler);
-    const binding: AssetBinding = { type: TypeA as never, create: createFn };
+    const binding: AssetBinding = { ctor: TypeA as never, create: createFn };
     const loader = new Loader();
 
     materializeAssetBindings(loader, [binding]);
@@ -50,7 +50,7 @@ describe('materializeAssetBindings', () => {
     const handler2 = createTestHandler();
     let callCount = 0;
     const createFn = vi.fn(() => (callCount++ === 0 ? handler1 : handler2));
-    const binding: AssetBinding = { type: TypeA as never, create: createFn };
+    const binding: AssetBinding = { ctor: TypeA as never, create: createFn };
 
     const loaderA = new Loader();
     const loaderB = new Loader();
@@ -64,7 +64,7 @@ describe('materializeAssetBindings', () => {
 
   it('loader.hasLoadable returns true after bindAsset', () => {
     const handler = createTestHandler();
-    const binding: AssetBinding = { type: TypeA as never, create: () => handler };
+    const binding: AssetBinding = { ctor: TypeA as never, create: () => handler };
     const loader = new Loader();
 
     materializeAssetBindings(loader, [binding]);
@@ -74,8 +74,8 @@ describe('materializeAssetBindings', () => {
   });
 
   it('duplicate type key throws before any mutation', () => {
-    const bindingA: AssetBinding = { type: TypeA as never, create: () => createTestHandler() };
-    const bindingB: AssetBinding = { type: TypeA as never, create: () => createTestHandler() };
+    const bindingA: AssetBinding = { ctor: TypeA as never, create: () => createTestHandler() };
+    const bindingB: AssetBinding = { ctor: TypeA as never, create: () => createTestHandler() };
     const loader = new Loader();
 
     expect(() => materializeAssetBindings(loader, [bindingA, bindingB])).toThrow('An asset handler is already registered for TypeA');
@@ -85,8 +85,8 @@ describe('materializeAssetBindings', () => {
   });
 
   it('duplicate typeName throws before any mutation', () => {
-    const bindingA: AssetBinding = { type: TypeA as never, typeNames: ['myType'], create: () => createTestHandler() };
-    const bindingB: AssetBinding = { type: TypeB as never, typeNames: ['myType'], create: () => createTestHandler() };
+    const bindingA: AssetBinding = { ctor: TypeA as never, typeNames: ['myType'], create: () => createTestHandler() };
+    const bindingB: AssetBinding = { ctor: TypeB as never, typeNames: ['myType'], create: () => createTestHandler() };
     const loader = new Loader();
 
     expect(() => materializeAssetBindings(loader, [bindingA, bindingB])).toThrow('Asset type name "myType" is already registered');
@@ -105,11 +105,11 @@ describe('materializeAssetBindings', () => {
         return {};
       },
     };
-    const binding: AssetBinding = { type: TypeA as never, typeNames: ['withOpts'], create: () => handler };
+    const binding: AssetBinding = { ctor: TypeA as never, typeNames: ['withOpts'], create: () => handler };
     const loader = new Loader();
     materializeAssetBindings(loader, [binding]);
 
-    await loader.load(new Asset({ kind: 'withOpts', source: 'thing.dat', family: 'Kenney Future', size: 32 })).catch(() => undefined);
+    await loader.load(new Asset({ type: 'withOpts', source: 'thing.dat', family: 'Kenney Future', size: 32 })).catch(() => undefined);
 
     expect(seen?.source).toBe('thing.dat');
     expect(seen?.options).toEqual({ family: 'Kenney Future', size: 32 });
@@ -124,11 +124,11 @@ describe('materializeAssetBindings', () => {
         return {};
       },
     };
-    const binding: AssetBinding = { type: TypeA as never, typeNames: ['noOpts'], create: () => handler };
+    const binding: AssetBinding = { ctor: TypeA as never, typeNames: ['noOpts'], create: () => handler };
     const loader = new Loader();
     materializeAssetBindings(loader, [binding]);
 
-    await loader.load(new Asset({ kind: 'noOpts', source: 'thing.dat' })).catch(() => undefined);
+    await loader.load(new Asset({ type: 'noOpts', source: 'thing.dat' })).catch(() => undefined);
 
     expect(seen?.source).toBe('thing.dat');
     expect(seen?.options).toBeUndefined();
@@ -137,7 +137,7 @@ describe('materializeAssetBindings', () => {
 
   it('multiple typeNames on a single binding all register', () => {
     const handler = createTestHandler();
-    const binding: AssetBinding = { type: TypeA as never, typeNames: ['alpha', 'beta'], create: () => handler };
+    const binding: AssetBinding = { ctor: TypeA as never, typeNames: ['alpha', 'beta'], create: () => handler };
     const loader = new Loader();
 
     materializeAssetBindings(loader, [binding]);
@@ -148,8 +148,8 @@ describe('materializeAssetBindings', () => {
   });
 
   it('a typeName conflict across the two names of one binding is detected', () => {
-    const bindingA: AssetBinding = { type: TypeA as never, typeNames: ['shared'], create: () => createTestHandler() };
-    const bindingB: AssetBinding = { type: TypeB as never, typeNames: ['other', 'shared'], create: () => createTestHandler() };
+    const bindingA: AssetBinding = { ctor: TypeA as never, typeNames: ['shared'], create: () => createTestHandler() };
+    const bindingB: AssetBinding = { ctor: TypeB as never, typeNames: ['other', 'shared'], create: () => createTestHandler() };
     const loader = new Loader();
 
     expect(() => materializeAssetBindings(loader, [bindingA, bindingB])).toThrow('Asset type name "shared" is already registered');
@@ -159,8 +159,8 @@ describe('materializeAssetBindings', () => {
   });
 
   it('duplicate extension key throws before any mutation', () => {
-    const bindingA: AssetBinding = { type: TypeA as never, extensions: ['tmj'], create: () => createTestHandler() };
-    const bindingB: AssetBinding = { type: TypeB as never, extensions: ['tmj'], create: () => createTestHandler() };
+    const bindingA: AssetBinding = { ctor: TypeA as never, extensions: ['tmj'], create: () => createTestHandler() };
+    const bindingB: AssetBinding = { ctor: TypeB as never, extensions: ['tmj'], create: () => createTestHandler() };
     const loader = new Loader();
 
     expect(() => materializeAssetBindings(loader, [bindingA, bindingB])).toThrow('File extension ".tmj" is already mapped');
@@ -169,7 +169,7 @@ describe('materializeAssetBindings', () => {
 
   it('extension keys are normalised (dot stripped, lowercased)', () => {
     const handler = createTestHandler();
-    const binding: AssetBinding = { type: TypeA as never, extensions: ['.TMJ', '.PNG'], create: () => handler };
+    const binding: AssetBinding = { ctor: TypeA as never, extensions: ['.TMJ', '.PNG'], create: () => handler };
     const loader = new Loader();
 
     materializeAssetBindings(loader, [binding]);
@@ -182,7 +182,7 @@ describe('materializeAssetBindings', () => {
 
   it('typeName registers hasAssetType', () => {
     const handler = createTestHandler();
-    const binding: AssetBinding = { type: TypeA as never, typeNames: ['typeAlpha'], create: () => handler };
+    const binding: AssetBinding = { ctor: TypeA as never, typeNames: ['typeAlpha'], create: () => handler };
     const loader = new Loader();
 
     materializeAssetBindings(loader, [binding]);
@@ -193,7 +193,7 @@ describe('materializeAssetBindings', () => {
 
   it('handler.destroy() is called on loader.destroy()', () => {
     const handler = createTestHandler();
-    const binding: AssetBinding = { type: TypeA as never, create: () => handler };
+    const binding: AssetBinding = { ctor: TypeA as never, create: () => handler };
     const loader = new Loader();
 
     materializeAssetBindings(loader, [binding]);
@@ -206,7 +206,7 @@ describe('materializeAssetBindings', () => {
     const handler = createTestHandler();
     const loader = new Loader();
 
-    loader.bindAsset({ type: TypeA as never }, handler);
+    loader.bindAsset({ ctor: TypeA as never }, handler);
     loader.destroy();
 
     expect(handler.destroy).toHaveBeenCalledTimes(1);
@@ -216,7 +216,7 @@ describe('materializeAssetBindings', () => {
     const { ExtensionRegistry } = await import('#extensions/ExtensionRegistry');
     const handler = createTestHandler();
     const binding: AssetBinding = {
-      type: TypeA as never,
+      ctor: TypeA as never,
       typeNames: ['testType'],
       extensions: ['tstx'],
       create: () => handler,
@@ -229,7 +229,7 @@ describe('materializeAssetBindings', () => {
     const hasSpy = vi.spyOn(ExtensionRegistry, 'has');
 
     // Load via the config (typeName) path
-    await loader.load(new Asset({ kind: 'testType', source: 'test.tstx' })).catch(() => {
+    await loader.load(new Asset({ type: 'testType', source: 'test.tstx' })).catch(() => {
       // ignore load error (no actual fetch)
     });
 

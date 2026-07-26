@@ -22,7 +22,7 @@ describe('idle load state', () => {
   it('unadopted catalog leaves are idle', () => {
     const assets = Assets.from({
       ship: 'sprites/ship.png', // resource leaf
-      level: { kind: 'json', source: 'l.json' }, // value leaf
+      level: { type: 'json', source: 'l.json' }, // value leaf
     });
 
     expect(assets.ship.state).toBe('idle');
@@ -48,7 +48,7 @@ describe('idle load state', () => {
     const loader = createCoreLoader();
     loader.setConcurrency(0); // park the background queue so the transition is observable
 
-    const assets = Assets.from({ ship: { kind: 'texture', source: 'ship.png' } });
+    const assets = Assets.from({ ship: { type: 'texture', source: 'ship.png' } });
     expect(assets.ship.state).toBe('idle');
 
     loader.load(assets, { background: true });

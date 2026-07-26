@@ -146,7 +146,7 @@ describe('AssetDecoder', () => {
     const { decoder, typeRegistry, storeResource } = createDecoder();
     const load = vi.fn(async (config: unknown) => ({ config }));
 
-    typeRegistry.bindAsset({ type: TypeA }, { load });
+    typeRegistry.bindAsset({ ctor: TypeA }, { load });
 
     await decoder._dispatchFetch(TypeA, 'hero', 'hero.png', { scale: 2 });
 
@@ -158,7 +158,7 @@ describe('AssetDecoder', () => {
     const { decoder, typeRegistry, storeResource } = createDecoder();
     const createFromBytes = vi.fn(async (bytes: ArrayBuffer) => `from-bytes:${bytes.byteLength}`);
 
-    typeRegistry.bindAsset({ type: TypeA }, { load: vi.fn(), createFromBytes });
+    typeRegistry.bindAsset({ ctor: TypeA }, { load: vi.fn(), createFromBytes });
 
     await decoder._injectSource(TypeA, 'hero', new ArrayBuffer(4));
 

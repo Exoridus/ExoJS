@@ -77,7 +77,7 @@ describe('SvgFactory', () => {
     lastImage().dispatchEvent(new Event('error'));
 
     await expect(promise).rejects.toThrow(
-      'Failed to decode SVG source — the markup may be malformed, or (if loaded with the wrong Asset.kind) not SVG at all.',
+      'Failed to decode SVG source — the markup may be malformed, or (if loaded with the wrong Asset.type) not SVG at all.',
     );
   });
 

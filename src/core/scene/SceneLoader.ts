@@ -29,7 +29,7 @@ export class SceneLoader implements Destroyable {
   // Legacy in-memory lookup by type + alias (advanced — mirrors Loader.get; a cache
   // lookup, not a token fetch, which was removed).
   public get<T extends Loadable>(type: T, alias: string): LoadReturn<T>;
-  // Seamless/value access from an `Asset.kind()` descriptor (mirrors Loader.get(asset)):
+  // Seamless/value access from an `Asset.type()` descriptor (mirrors Loader.get(asset)):
   // a value-kind descriptor returns AssetRef<T>, a resource-kind descriptor the resource.
   public get<T>(asset: ValueAsset<T>): AssetRef<T>;
   public get<T>(asset: Asset<T>): T;

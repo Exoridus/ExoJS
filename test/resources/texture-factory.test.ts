@@ -109,7 +109,7 @@ describe('TextureFactory', () => {
       lastImage().dispatchEvent(new Event('error'));
 
       await expect(promise).rejects.toThrow(
-        'Failed to decode image source — the bytes may be corrupted, an unsupported format, or (if loaded with the wrong Asset.kind) not an image at all.',
+        'Failed to decode image source — the bytes may be corrupted, an unsupported format, or (if loaded with the wrong Asset.type) not an image at all.',
       );
     });
 

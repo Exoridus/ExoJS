@@ -47,7 +47,7 @@ export interface AssetDefinitions {
 }
 
 export type AnyAssetConfig = {
-  [K in keyof AssetDefinitions]: { kind: K } & AssetDefinitions[K]['config'] &
+  [K in keyof AssetDefinitions]: { type: K } & AssetDefinitions[K]['config'] &
     // `parse` is a value-kind-only, SYNCHRONOUS post-load transform (delta §4/§5):
     // it maps the decoded raw value and may not return a Promise (async parse is a
     // follow-up — it would need the fill/store flow to await).
@@ -72,7 +72,7 @@ export type InferAssetResource<I extends AssetInput> =
     ? T
     : I extends { parse: (raw: never) => infer R }
       ? R
-      : I extends { kind: infer K extends keyof AssetDefinitions }
+      : I extends { type: infer K extends keyof AssetDefinitions }
         ? AssetDefinitions[K]['resource']
         : never;
 
@@ -145,14 +145,14 @@ export type LeafForPath<S extends string> = [KindByPath<S>] extends [never]
     ? AssetRef<ResourceForKind<KindByPath<S>>>
     : ResourceForKind<KindByPath<S>>;
 
-/** A single catalog field input: a bare path string, an `Asset.kind(...)` descriptor, or an explicit config. */
+/** A single catalog field input: a bare path string, an `Asset.type(...)` descriptor, or an explicit config. */
 export type CatalogEntry = string | Asset<unknown> | AnyAssetConfig;
 
 /**
  * The leaf type a {@link CatalogEntry} materializes as. A {@link ValueAsset}
- * brand (from `Asset.kind<T>('json', …)`) classifies as `AssetRef<T>` FIRST,
+ * brand (from `Asset.type<T>('json', …)`) classifies as `AssetRef<T>` FIRST,
  * before the `T extends object` heuristic that (only) the unbranded legacy
- * `Asset.kind(...)` descriptors still rely on.
+ * `Asset.type(...)` descriptors still rely on.
  */
 export type InferCatalogLeaf<E extends CatalogEntry> = E extends string
   ? LeafForPath<E>
@@ -162,7 +162,7 @@ export type InferCatalogLeaf<E extends CatalogEntry> = E extends string
       ? T extends object
         ? T
         : AssetRef<T>
-      : E extends { kind: infer K extends keyof AssetDefinitions }
+      : E extends { type: infer K extends keyof AssetDefinitions }
         ? E extends { parse: (raw: never) => infer R }
           ? K extends ValueAssetKind
             ? AssetRef<R>

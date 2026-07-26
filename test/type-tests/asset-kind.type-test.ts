@@ -1,9 +1,9 @@
-// Type contract for the `Asset.kind()` descriptor builder (asset-system v2
+// Type contract for the `Asset.type()` descriptor builder (asset-system v2
 // delta §3). Compiled by `tsconfig.type-tests.json` (strict:false example
 // project) via `pnpm typecheck:type-tests`, NOT collected by vitest (no
-// `.test.ts` suffix). This is the hard type-level guarantee that `Asset.kind`
+// `.test.ts` suffix). This is the hard type-level guarantee that `Asset.type`
 // is a strongly typed builder, not a `string`-keyed helper — without it,
-// `Asset.kind` would be a regression over the `.of()` statics it replaces.
+// `Asset.type` would be a regression over the `.of()` statics it replaces.
 
 import { Asset, type Texture, type ValueAsset } from '@codexo/exojs';
 
@@ -18,31 +18,31 @@ interface LevelData {
 }
 
 // (1) resource inference from kind — no <T>, resource type comes from the kind.
-const shipDesc = Asset.kind('texture', 'p.png');
+const shipDesc = Asset.type('texture', 'p.png');
 type _ShipIsTexture = Expect<Equal<typeof shipDesc, Asset<Texture>>>;
 
 // (2) value kind: <T> annotates the decoded value — branded ValueAsset.
-const levelDesc = Asset.kind<LevelData>('json', 'l.json');
+const levelDesc = Asset.type<LevelData>('json', 'l.json');
 type _LevelIsTyped = Expect<Equal<typeof levelDesc, ValueAsset<LevelData>>>;
 
 // (3) value kind without <T> stays unknown — still branded.
-const rawJson = Asset.kind('json', 'l.json');
+const rawJson = Asset.type('json', 'l.json');
 type _RawJsonUnknown = Expect<Equal<typeof rawJson, ValueAsset<unknown>>>;
 
 // (4) kind-specific options are accepted.
-const withOpts = Asset.kind('texture', 'p.png', { mimeType: 'image/png' });
+const withOpts = Asset.type('texture', 'p.png', { mimeType: 'image/png' });
 void withOpts;
 
 // ── Negatives — each MUST fail to compile ─────────────────────────────────────
 
 // @ts-expect-error — <T> is not allowed on a resource kind (type fixed by kind).
-Asset.kind<LevelData>('texture', 'p.png');
+Asset.type<LevelData>('texture', 'p.png');
 
 // @ts-expect-error — an unregistered kind is not widened to string.
-Asset.kind('nope', 'x.bin');
+Asset.type('nope', 'x.bin');
 
 // @ts-expect-error — a wrong-kind option is rejected.
-Asset.kind('texture', 'p.png', { delimiter: ',' });
+Asset.type('texture', 'p.png', { delimiter: ',' });
 
 export type { _LevelIsTyped, _RawJsonUnknown, _ShipIsTexture };
 void Asset;

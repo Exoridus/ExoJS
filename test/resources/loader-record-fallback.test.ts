@@ -52,8 +52,8 @@ describe('Loader.load record fallback (A1)', () => {
     const loader = createCoreLoader();
 
     const result = await loader.load({
-      a: { kind: 'texture', source: 'a.png' },
-      b: { kind: 'texture', source: 'b.png', mimeType: 'image/png' },
+      a: { type: 'texture', source: 'a.png' },
+      b: { type: 'texture', source: 'b.png', mimeType: 'image/png' },
     } as never);
 
     expect((result as { a: Texture }).a).toBeInstanceOf(Texture);
@@ -65,7 +65,7 @@ describe('Loader.load record fallback (A1)', () => {
 
     const result = await loader.load({
       a: 'a.png',
-      b: Asset.kind('texture', 'b.png'),
+      b: Asset.type('texture', 'b.png'),
     } as never);
 
     expect((result as { a: Texture }).a).toBeInstanceOf(Texture);

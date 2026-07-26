@@ -329,15 +329,15 @@ describe('AssetResidency', () => {
         fakeFactory(() => 'v'),
       );
 
-      // Asset's public constructor facade is `Asset.kind(kind, source, options?)` (see
+      // Asset's public constructor facade is `Asset.type(kind, source, options?)` (see
       // src/resources/Asset.ts's AssetFacade / test/resources/loader.test.ts usage) — the
-      // brief's `new Asset({ kind: 'x', ... })` doesn't compile against AssetFacade's typed
+      // brief's `new Asset({ type: 'x', ... })` doesn't compile against AssetFacade's typed
       // overload (`kind` must be a real `keyof AssetDefinitions`, and the class is exported
       // as a facade, not a plain constructible). 'json' is an arbitrary real kind here; this
       // asset is never actually decoded as JSON since TypeA has no bindAsset handler bound to
       // that kind — _loadSingleAsset only reads `.source`/`._config`/identity, so the kind
       // choice is inert for what this test verifies.
-      const asset = Asset.kind('json', 'a.png');
+      const asset = Asset.type('json', 'a.png');
       await residency._loadSingleAsset(TypeA, 'alias1', asset);
 
       const identityKey = typeRegistry._resolveAssetIdentityKey(TypeA, asset);

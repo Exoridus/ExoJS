@@ -42,7 +42,7 @@ export interface BmFontData {
  *
  * ```ts
  * const font = await loader.load('fonts/ui.fnt');        // BmFont via extension
- * const font = await loader.load(Asset.kind('bmFont', 'fonts/ui.fnt')); // explicit descriptor
+ * const font = await loader.load(Asset.type('bmFont', 'fonts/ui.fnt')); // explicit descriptor
  * const label = new BitmapText('Score: 0', font);
  * ```
  * @stable

@@ -9,7 +9,7 @@ import { Assets } from '#resources/Assets';
 
 describe('Assets.one', () => {
   it('builds a single idle value leaf from a config', () => {
-    const chunk = Assets.one({ kind: 'json', source: 'c.json' });
+    const chunk = Assets.one({ type: 'json', source: 'c.json' });
 
     expect(chunk).toBeInstanceOf(AssetRef);
     expect(chunk.state).toBe('idle');
@@ -22,8 +22,8 @@ describe('Assets.one', () => {
     expect(ship.state).toBe('idle');
   });
 
-  it('accepts an Asset.kind() descriptor (same descriptor set as a catalog field)', () => {
-    const cfg = Assets.one(Asset.kind('json', 'c.json'));
+  it('accepts an Asset.type() descriptor (same descriptor set as a catalog field)', () => {
+    const cfg = Assets.one(Asset.type('json', 'c.json'));
 
     expect(cfg).toBeInstanceOf(AssetRef);
   });

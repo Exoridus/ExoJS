@@ -48,8 +48,8 @@ export function materializeAssetBindings(loader: Loader, bindings: readonly Asse
   const seenExts = new Set<string>();
 
   for (const binding of bindings) {
-    if (seenTypes.has(binding.type) || loader.hasLoadable(binding.type)) {
-      throw new Error(`An asset handler is already registered for ${binding.type.name}.`);
+    if (seenTypes.has(binding.ctor) || loader.hasLoadable(binding.ctor)) {
+      throw new Error(`An asset handler is already registered for ${binding.ctor.name}.`);
     }
 
     for (const name of binding.typeNames ?? []) {
@@ -70,7 +70,7 @@ export function materializeAssetBindings(loader: Loader, bindings: readonly Asse
       seenExts.add(key);
     }
 
-    seenTypes.add(binding.type);
+    seenTypes.add(binding.ctor);
   }
 
   // --- Materialise: all pre-validation passed ---
@@ -79,7 +79,7 @@ export function materializeAssetBindings(loader: Loader, bindings: readonly Asse
 
     loader.bindAsset(
       {
-        type: binding.type,
+        ctor: binding.ctor,
         ...(binding.typeNames !== undefined && { typeNames: binding.typeNames }),
         ...(binding.extensions !== undefined && { extensions: binding.extensions }),
         ...(binding.seamless !== undefined && { seamless: binding.seamless }),

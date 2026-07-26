@@ -13,7 +13,7 @@ function normalizeExt(ext: string): string {
  * Compound suffixes (`atlas.json`) are allowed and win over their bare tail
  * (`json`) via longest-suffix-first resolution. Registering a **bare** suffix
  * already claimed by a *different* kind is a **loud conflict** (§5.1): it throws
- * naming both kinds and pointing to the compound-suffix / `Asset.kind(...)` escape
+ * naming both kinds and pointing to the compound-suffix / `Asset.type(...)` escape
  * hatches, replacing the old silent clobber. Idempotent for the same
  * `(ext, kind)` pair.
  */
@@ -24,7 +24,7 @@ export function registerExtensionKind(ext: string, kind: keyof AssetDefinitions)
     throw new Error(
       `extensionKindRegistry: suffix ".${key}" is already registered as kind "${existing}", ` +
         `cannot also register it as "${kind}". Use a compound suffix (e.g. "${kind}.${key}") ` +
-        `or annotate individual assets with Asset.kind(...) instead of a bare path.`,
+        `or annotate individual assets with Asset.type(...) instead of a bare path.`,
     );
   }
   extToKind.set(key, kind);

@@ -208,7 +208,7 @@ export class Texture {
   /**
    * Load lifecycle of this texture. Directly constructed textures are
    * `'ready'`; deferred handles returned by `loader.get('hero.png')` /
-   * `loader.get(Asset.kind('texture', src))` start `'loading'` and become `'ready'` once
+   * `loader.get(Asset.type('texture', src))` start `'loading'` and become `'ready'` once
    * the payload fills in, or `'failed'` (showing the {@link Texture.missing}
    * checker) when the load errors.
    */

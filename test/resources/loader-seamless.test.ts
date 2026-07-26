@@ -156,14 +156,14 @@ describe('Loader seamless get (Texture)', () => {
     class Nullable {}
 
     loader.bindAsset<null | undefined>(
-      { type: Nullable, typeNames: ['nullable'] },
+      { ctor: Nullable, typeNames: ['nullable'] },
       {
         load: async request => (request.source === 'undef' ? undefined : null),
       },
     );
 
-    await loader.load(new Asset({ kind: 'nullable', source: 'null' }));
-    await loader.load(new Asset({ kind: 'nullable', source: 'undef' }));
+    await loader.load(new Asset({ type: 'nullable', source: 'null' }));
+    await loader.load(new Asset({ type: 'nullable', source: 'undef' }));
 
     expect(loader.get(Nullable, 'null')).toBeNull();
     expect(loader.get(Nullable, 'undef')).toBeUndefined();
@@ -225,7 +225,7 @@ describe('Loader seamless get (Texture)', () => {
     mockFetchImage();
     const loader = createCoreLoader();
 
-    const catalog = new Assets({ ship: { kind: 'texture', source: 'ship.png', samplerOptions: { scaleMode: ScaleModes.Nearest } } });
+    const catalog = new Assets({ ship: { type: 'texture', source: 'ship.png', samplerOptions: { scaleMode: ScaleModes.Nearest } } });
     loader.load(catalog, { background: true });
 
     // A bare get() for the same source returns the adopted leaf, whose sampler

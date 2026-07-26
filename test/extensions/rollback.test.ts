@@ -56,7 +56,7 @@ describe('rollback behaviour', () => {
   it('asset setup error: original error propagates', () => {
     const loader = new Loader();
     const binding: AssetBinding = {
-      type: class FakeAsset {} as never,
+      ctor: class FakeAsset {} as never,
       create: () => {
         throw new Error('asset factory failed');
       },
@@ -70,7 +70,7 @@ describe('rollback behaviour', () => {
     const loader = new Loader();
     const destroySpy = vi.spyOn(loader, 'destroy');
     const binding: AssetBinding = {
-      type: class FakeAsset {} as never,
+      ctor: class FakeAsset {} as never,
       create: () => {
         throw new Error('factory failed');
       },

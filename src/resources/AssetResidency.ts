@@ -643,7 +643,7 @@ export class AssetResidency {
 
     const source = asset.source;
     const rawConfig = asset._config as Record<string, unknown>;
-    const { kind: _kind, source: _src, ...extraOnly } = rawConfig;
+    const { type: _type, source: _src, ...extraOnly } = rawConfig;
 
     const handlerEntry = this._typeRegistry.getHandler(type);
     const identityKey = this._typeRegistry._resolveAssetIdentityKey(type, asset);

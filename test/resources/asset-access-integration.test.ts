@@ -53,7 +53,7 @@ describe('S2 asset-access surface (integration)', () => {
     const assets = Assets.from({
       ship: 'sprites/ship.png', // bare → Texture (resource leaf)
       config: 'data/config.json', // bare → AssetRef (value leaf)
-      level: Asset.kind<{ hp: number }>('json', 'levels/1.json'), // .of → AssetRef
+      level: Asset.type<{ hp: number }>('json', 'levels/1.json'), // .of → AssetRef
     });
 
     // Constructed in a field-initializer position — NO loader involved yet.
@@ -75,7 +75,7 @@ describe('S2 asset-access surface (integration)', () => {
 
     const assets = Assets.from({
       ship: 'sprites/ship.png',
-      level: Asset.kind<{ hp: number }>('json', 'levels/1.json'),
+      level: Asset.type<{ hp: number }>('json', 'levels/1.json'),
     });
     const ship = assets.ship; // capture identity to prove in-place heal
 

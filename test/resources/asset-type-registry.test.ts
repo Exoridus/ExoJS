@@ -48,7 +48,7 @@ describe('AssetTypeRegistry', () => {
     const registry = new AssetTypeRegistry();
     const handler = { load: vi.fn(async () => ({})) };
 
-    registry.bindAsset({ type: TypeA, typeNames: ['type-a'], extensions: ['ta'] }, handler);
+    registry.bindAsset({ ctor: TypeA, typeNames: ['type-a'], extensions: ['ta'] }, handler);
 
     expect(registry.hasAssetType('type-a')).toBe(true);
     expect(registry.hasExtension('.ta')).toBe(true);
@@ -60,9 +60,9 @@ describe('AssetTypeRegistry', () => {
     const registry = new AssetTypeRegistry();
     const handler = { load: vi.fn(async () => ({})) };
 
-    registry.bindAsset({ type: TypeA, typeNames: ['type-a'] }, handler);
+    registry.bindAsset({ ctor: TypeA, typeNames: ['type-a'] }, handler);
 
-    expect(() => registry.bindAsset({ type: TypeA, typeNames: ['type-a-again'] }, handler)).toThrow(/already registered/);
+    expect(() => registry.bindAsset({ ctor: TypeA, typeNames: ['type-a-again'] }, handler)).toThrow(/already registered/);
     // The failed second call must not have registered its type name.
     expect(registry.hasAssetType('type-a-again')).toBe(false);
   });
@@ -71,10 +71,10 @@ describe('AssetTypeRegistry', () => {
     const registry = new AssetTypeRegistry();
     const handler = { load: vi.fn(async () => ({})) };
 
-    registry.bindAsset({ type: TypeA, typeNames: ['shared-name'] }, handler);
+    registry.bindAsset({ ctor: TypeA, typeNames: ['shared-name'] }, handler);
 
     const otherHandler = { load: vi.fn(async () => ({})) };
-    expect(() => registry.bindAsset({ type: TypeB, typeNames: ['shared-name'] }, otherHandler)).toThrow(/already registered/);
+    expect(() => registry.bindAsset({ ctor: TypeB, typeNames: ['shared-name'] }, otherHandler)).toThrow(/already registered/);
     expect(registry.hasLoadable(TypeB)).toBe(false);
   });
 
@@ -83,7 +83,7 @@ describe('AssetTypeRegistry', () => {
     const handler = { load: vi.fn(async () => ({})) };
     const adapter = { createPlaceholder: vi.fn(), stateOf: vi.fn(), begin: vi.fn(), fill: vi.fn(), fail: vi.fn(), evict: vi.fn() };
 
-    registry.bindAsset({ type: TypeA, seamless: adapter as never }, handler);
+    registry.bindAsset({ ctor: TypeA, seamless: adapter as never }, handler);
 
     expect(registry.hasSeamlessAdapter(TypeA)).toBe(true);
   });
@@ -100,8 +100,8 @@ describe('AssetTypeRegistry', () => {
     const registry = new AssetTypeRegistry();
     const handler = { load: vi.fn(async () => ({})) };
 
-    registry.bindAsset({ type: TypeA, extensions: ['json'] }, handler);
-    registry.bindAsset({ type: TypeB, extensions: ['aseprite.json'] }, handler);
+    registry.bindAsset({ ctor: TypeA, extensions: ['json'] }, handler);
+    registry.bindAsset({ ctor: TypeB, extensions: ['aseprite.json'] }, handler);
 
     expect(registry._resolveExtensionType('hero.aseprite.json')).toBe(TypeB);
     expect(registry._resolveExtensionType('plain.json')).toBe(TypeA);
@@ -121,7 +121,7 @@ describe('AssetTypeRegistry', () => {
     const destroy = vi.fn();
     const handler = { load: vi.fn(async () => ({})), destroy };
 
-    registry.bindAsset({ type: TypeA }, handler);
+    registry.bindAsset({ ctor: TypeA }, handler);
     registry.destroy();
 
     expect(destroy).toHaveBeenCalledTimes(1);

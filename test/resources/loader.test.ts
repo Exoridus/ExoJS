@@ -204,7 +204,7 @@ describe('Loader', () => {
     // A fetch that never settles keeps the adopted ref in its 'loading' state.
     global.fetch = vi.fn((): Promise<Response> => new Promise<Response>(() => {}));
 
-    const ref = loader.get(Asset.kind('text', 'nope'));
+    const ref = loader.get(Asset.type('text', 'nope'));
 
     expect(ref.loadState).toBe('loading');
     expect(() => ref.value).toThrow("'loading'");
@@ -234,8 +234,8 @@ describe('Loader', () => {
 
     materializeAssetBindings(loader, [
       defineAsset<DummyAsset>({
-        type: DummyAsset,
-        kind: 'dummyAsset',
+        ctor: DummyAsset,
+        type: 'dummyAsset',
         isValue: false,
         create: () => ({
           async load(request, ctx) {
@@ -246,7 +246,7 @@ describe('Loader', () => {
     ]);
     mockFetch('raw');
 
-    const result = await loader.load(new Asset({ kind: 'dummyAsset', source: 'thing.dat' }));
+    const result = await loader.load(new Asset({ type: 'dummyAsset', source: 'thing.dat' }));
 
     expect(result).toBeInstanceOf(DummyAsset);
     expect(result.value).toBe('raw');
@@ -362,8 +362,8 @@ describe('Loader', () => {
 
     materializeAssetBindings(loader, [
       defineAsset<FirstType>({
-        type: FirstType,
-        kind: 'firstType',
+        ctor: FirstType,
+        type: 'firstType',
         isValue: false,
         create: () => ({
           async load(request, ctx) {
@@ -373,8 +373,8 @@ describe('Loader', () => {
         }),
       }),
       defineAsset<SecondType>({
-        type: SecondType,
-        kind: 'secondType',
+        ctor: SecondType,
+        type: 'secondType',
         isValue: false,
         create: () => ({
           async load(request, ctx) {
@@ -388,8 +388,8 @@ describe('Loader', () => {
     mockFetch();
 
     const [first, second] = await Promise.all([
-      loader.load(new Asset({ kind: 'firstType', source: 'shared.asset' })),
-      loader.load(new Asset({ kind: 'secondType', source: 'shared.asset' })),
+      loader.load(new Asset({ type: 'firstType', source: 'shared.asset' })),
+      loader.load(new Asset({ type: 'secondType', source: 'shared.asset' })),
     ]);
 
     expect(first).toBeInstanceOf(FirstType);
@@ -410,7 +410,7 @@ describe('LoadingQueue progress tracking', () => {
     // 'mockAsset' is in AssetDefinitions (via declaration merge above) but we
     // deliberately do NOT call loader.registerAssetType() so that the runtime
     // has no constructor registered for it → "no constructor" rejection path.
-    const asset = new Asset({ kind: 'mockAsset', source: 'test.dat' });
+    const asset = new Asset({ type: 'mockAsset', source: 'test.dat' });
 
     const queue = loader.load(asset);
     let lastProgress = queue.progress;
@@ -433,7 +433,7 @@ describe('LoadingQueue progress tracking', () => {
     // registerAssetType form; failure is driven by source rather than a factory
     // mock).
     loader.bindAsset<string>(
-      { type: MockAssetType, typeNames: ['mockAsset'] },
+      { ctor: MockAssetType, typeNames: ['mockAsset'] },
       {
         load: async request => {
           if (request.source === 'bad.dat') {
@@ -446,8 +446,8 @@ describe('LoadingQueue progress tracking', () => {
     );
     mockFetch();
 
-    const goodAsset = new Asset({ kind: 'mockAsset', source: 'good.dat' });
-    const badAsset = new Asset({ kind: 'mockAsset', source: 'bad.dat' });
+    const goodAsset = new Asset({ type: 'mockAsset', source: 'good.dat' });
+    const badAsset = new Asset({ type: 'mockAsset', source: 'bad.dat' });
 
     const queue = loader.load({ good: goodAsset, bad: badAsset });
     let lastProgress = queue.progress;
@@ -508,7 +508,7 @@ describe('Asset / Assets identity and alias semantics', () => {
   // the context so cross-alias network dedup stays observable.
   function bindMockAsset(loader: Loader): void {
     loader.bindAsset<string>(
-      { type: MockAssetType, typeNames: ['mockAsset'] },
+      { ctor: MockAssetType, typeNames: ['mockAsset'] },
       {
         load: async (request, ctx) => {
           await ctx.fetchText(request.source);
@@ -524,7 +524,7 @@ describe('Asset / Assets identity and alias semantics', () => {
     bindMockAsset(loader);
     mockFetch();
 
-    const hero = new Asset({ kind: 'mockAsset', source: 'images/hero.dat' });
+    const hero = new Asset({ type: 'mockAsset', source: 'images/hero.dat' });
 
     await loader.load({ heroA: hero, heroB: hero });
 
@@ -539,7 +539,7 @@ describe('Asset / Assets identity and alias semantics', () => {
     bindMockAsset(loader);
     mockFetch();
 
-    const hero = new Asset({ kind: 'mockAsset', source: 'images/hero.dat' });
+    const hero = new Asset({ type: 'mockAsset', source: 'images/hero.dat' });
 
     await loader.load({ heroA: hero, heroB: hero });
 
@@ -552,7 +552,7 @@ describe('Asset / Assets identity and alias semantics', () => {
     bindMockAsset(loader);
     mockFetch();
 
-    const hero = new Asset({ kind: 'mockAsset', source: 'images/hero.dat' });
+    const hero = new Asset({ type: 'mockAsset', source: 'images/hero.dat' });
 
     await loader.load(hero);
 
@@ -569,7 +569,7 @@ describe('Asset / Assets identity and alias semantics', () => {
     bindMockAsset(loader);
     mockFetch();
 
-    const hero = new Asset({ kind: 'mockAsset', source: 'images/hero.dat' });
+    const hero = new Asset({ type: 'mockAsset', source: 'images/hero.dat' });
 
     await loader.load({ heroA: hero, heroB: hero });
 
@@ -595,8 +595,8 @@ describe('Asset / Assets identity and alias semantics', () => {
     );
 
     const container = new Assets({
-      hero: { kind: 'texture', source: 'hero.png' },
-      logo: { kind: 'texture', source: 'logo.png' },
+      hero: { type: 'texture', source: 'hero.png' },
+      logo: { type: 'texture', source: 'logo.png' },
     });
 
     await loader.load(container);
@@ -621,7 +621,7 @@ describe('Asset / Assets identity and alias semantics', () => {
     bindMockAsset(loader);
     mockFetch();
 
-    const hero = new Asset({ kind: 'mockAsset', source: 'hero.dat' });
+    const hero = new Asset({ type: 'mockAsset', source: 'hero.dat' });
 
     await loader.load({ a: hero, b: hero, c: hero });
 
@@ -647,7 +647,7 @@ describe('Assets reserved "entries" key', () => {
   test('does not throw for a normal asset name', () => {
     expect(() => {
       new Assets({
-        logo: { kind: 'texture', source: '/logo.png' },
+        logo: { type: 'texture', source: '/logo.png' },
       });
     }).not.toThrow();
   });
@@ -682,7 +682,7 @@ describe('bindAsset() handler — cache-aware AssetLoaderContext', () => {
     let capturedKey = '';
 
     loader.bindAsset<string>(
-      { type: RichAsset, typeNames: ['richAsset'] },
+      { ctor: RichAsset, typeNames: ['richAsset'] },
       {
         load: async (_request, ctx) => {
           capturedKey = ctx.identityKey;
@@ -691,7 +691,7 @@ describe('bindAsset() handler — cache-aware AssetLoaderContext', () => {
       },
     );
 
-    await loader.load(new Asset({ kind: 'richAsset', source: 'a.json', format: 'x' }));
+    await loader.load(new Asset({ type: 'richAsset', source: 'a.json', format: 'x' }));
     expect(capturedKey).toMatch(/^id:\d+:/);
   });
 
@@ -699,9 +699,9 @@ describe('bindAsset() handler — cache-aware AssetLoaderContext', () => {
     mockFetchText('hello world');
     const loader = new Loader({ basePath: '/assets/' });
 
-    loader.bindAsset<string>({ type: RichAsset, typeNames: ['richAsset'] }, { load: async (request, ctx) => ctx.fetchText(request.source) });
+    loader.bindAsset<string>({ ctor: RichAsset, typeNames: ['richAsset'] }, { load: async (request, ctx) => ctx.fetchText(request.source) });
 
-    const result = await loader.load(new Asset({ kind: 'richAsset', source: 'file.txt', format: 'txt' }));
+    const result = await loader.load(new Asset({ type: 'richAsset', source: 'file.txt', format: 'txt' }));
     expect(result).toBe('hello world');
     expect(global.fetch).toHaveBeenCalledWith('/assets/file.txt', expect.anything());
   });
@@ -710,14 +710,14 @@ describe('bindAsset() handler — cache-aware AssetLoaderContext', () => {
     mockFetchText('cached content');
     const loader = new Loader({ basePath: '/' });
 
-    loader.bindAsset<string>({ type: RichAsset, typeNames: ['richAsset'] }, { load: async (request, ctx) => ctx.fetchText(request.source) });
+    loader.bindAsset<string>({ ctor: RichAsset, typeNames: ['richAsset'] }, { load: async (request, ctx) => ctx.fetchText(request.source) });
 
     // First load — populates in-memory result
-    await loader.load(new Asset({ kind: 'richAsset', source: 'file.txt', format: 'txt' }));
+    await loader.load(new Asset({ type: 'richAsset', source: 'file.txt', format: 'txt' }));
     // Reset the mock so we can check if it was called during the second load
     (global.fetch as MockInstance).mockClear();
     // Second load — same asset, should be served from _resources (no new fetch call)
-    await loader.load(new Asset({ kind: 'richAsset', source: 'file.txt', format: 'txt' }));
+    await loader.load(new Asset({ type: 'richAsset', source: 'file.txt', format: 'txt' }));
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
@@ -726,7 +726,7 @@ describe('bindAsset() handler — cache-aware AssetLoaderContext', () => {
     const loader = new Loader({ basePath: '/' });
 
     loader.bindAsset<string>(
-      { type: RichAsset, typeNames: ['richAsset'] },
+      { ctor: RichAsset, typeNames: ['richAsset'] },
       {
         load: async (request, ctx) => {
           const data = await ctx.fetchJson<{ value: number }>(request.source);
@@ -735,7 +735,7 @@ describe('bindAsset() handler — cache-aware AssetLoaderContext', () => {
       },
     );
 
-    const result = await loader.load(new Asset({ kind: 'richAsset', source: 'data.json', format: 'json' }));
+    const result = await loader.load(new Asset({ type: 'richAsset', source: 'data.json', format: 'json' }));
     expect(result).toBe('42');
   });
 
@@ -744,7 +744,7 @@ describe('bindAsset() handler — cache-aware AssetLoaderContext', () => {
     const loader = new Loader({ basePath: '/' });
 
     loader.bindAsset<string>(
-      { type: RichAsset, typeNames: ['richAsset'] },
+      { ctor: RichAsset, typeNames: ['richAsset'] },
       {
         load: async (request, ctx) => {
           const buf = await ctx.fetchArrayBuffer(request.source);
@@ -753,7 +753,7 @@ describe('bindAsset() handler — cache-aware AssetLoaderContext', () => {
       },
     );
 
-    const result = await loader.load(new Asset({ kind: 'richAsset', source: 'data.bin', format: 'bin' }));
+    const result = await loader.load(new Asset({ type: 'richAsset', source: 'data.bin', format: 'bin' }));
     expect(Number(result)).toBeGreaterThan(0);
   });
 
@@ -762,7 +762,7 @@ describe('bindAsset() handler — cache-aware AssetLoaderContext', () => {
     const loadOrder: string[] = [];
 
     loader.bindAsset<string, { format: string }>(
-      { type: RichAsset, typeNames: ['richAsset'] },
+      { ctor: RichAsset, typeNames: ['richAsset'] },
       {
         getIdentityKey: request => `${request.source}:${request.options?.format}`,
         load: async request => {
@@ -772,8 +772,8 @@ describe('bindAsset() handler — cache-aware AssetLoaderContext', () => {
       },
     );
 
-    const tmx = new Asset({ kind: 'richAsset', source: 'map.tmx', format: 'tmx' });
-    const json = new Asset({ kind: 'richAsset', source: 'map.tmx', format: 'tiled-json' });
+    const tmx = new Asset({ type: 'richAsset', source: 'map.tmx', format: 'tmx' });
+    const json = new Asset({ type: 'richAsset', source: 'map.tmx', format: 'tiled-json' });
 
     const [resTmx, resJson] = await Promise.all([loader.load(tmx), loader.load(json)]);
 
@@ -789,7 +789,7 @@ describe('bindAsset() handler — cache-aware AssetLoaderContext', () => {
     const loader = new Loader({ basePath: '/' });
 
     loader.bindAsset<string>(
-      { type: RichAsset, typeNames: ['richAsset'] },
+      { ctor: RichAsset, typeNames: ['richAsset'] },
       {
         load: async request => {
           callCount++;
@@ -798,8 +798,8 @@ describe('bindAsset() handler — cache-aware AssetLoaderContext', () => {
       },
     );
 
-    const a1 = new Asset({ kind: 'richAsset', source: 'shared.dat', format: 'x' });
-    const a2 = new Asset({ kind: 'richAsset', source: 'shared.dat', format: 'x' });
+    const a1 = new Asset({ type: 'richAsset', source: 'shared.dat', format: 'x' });
+    const a2 = new Asset({ type: 'richAsset', source: 'shared.dat', format: 'x' });
 
     const [r1, r2] = await Promise.all([loader.load(a1), loader.load(a2)]);
 
@@ -852,9 +852,9 @@ describe('handler context.fetch* — IDB store names (Fix 1 regression)', () => 
     const { store, saves } = makeMockStore();
     const loader = new Loader({ basePath: '/', cache: store });
 
-    loader.bindAsset<string>({ type: RichAsset, typeNames: ['richAsset'] }, { load: async (request, ctx) => ctx.fetchText(request.source) });
+    loader.bindAsset<string>({ ctor: RichAsset, typeNames: ['richAsset'] }, { load: async (request, ctx) => ctx.fetchText(request.source) });
 
-    await loader.load(new Asset({ kind: 'richAsset', source: 'file.txt', format: 'txt' }));
+    await loader.load(new Asset({ type: 'richAsset', source: 'file.txt', format: 'txt' }));
 
     expect(saves).toContainEqual({ storageName: '__ctx_text', key: 'file.txt' });
   });
@@ -865,7 +865,7 @@ describe('handler context.fetch* — IDB store names (Fix 1 regression)', () => 
     const loader = new Loader({ basePath: '/', cache: store });
 
     loader.bindAsset<string>(
-      { type: RichAsset, typeNames: ['richAsset'] },
+      { ctor: RichAsset, typeNames: ['richAsset'] },
       {
         load: async (request, ctx) => {
           const data = await ctx.fetchJson<{ n: number }>(request.source);
@@ -874,7 +874,7 @@ describe('handler context.fetch* — IDB store names (Fix 1 regression)', () => 
       },
     );
 
-    await loader.load(new Asset({ kind: 'richAsset', source: 'data.json', format: 'json' }));
+    await loader.load(new Asset({ type: 'richAsset', source: 'data.json', format: 'json' }));
 
     expect(saves).toContainEqual({ storageName: '__ctx_json', key: 'data.json' });
   });
@@ -885,7 +885,7 @@ describe('handler context.fetch* — IDB store names (Fix 1 regression)', () => 
     const loader = new Loader({ basePath: '/', cache: store });
 
     loader.bindAsset<string>(
-      { type: RichAsset, typeNames: ['richAsset'] },
+      { ctor: RichAsset, typeNames: ['richAsset'] },
       {
         load: async (request, ctx) => {
           const buf = await ctx.fetchArrayBuffer(request.source);
@@ -894,7 +894,7 @@ describe('handler context.fetch* — IDB store names (Fix 1 regression)', () => 
       },
     );
 
-    await loader.load(new Asset({ kind: 'richAsset', source: 'data.bin', format: 'bin' }));
+    await loader.load(new Asset({ type: 'richAsset', source: 'data.bin', format: 'bin' }));
 
     expect(saves).toContainEqual({ storageName: '__ctx_binary', key: 'data.bin' });
   });
@@ -918,13 +918,13 @@ describe('handler context.fetch* — IDB store names (Fix 1 regression)', () => 
     };
     const loader = new Loader({ basePath: '/', cache: store });
 
-    loader.bindAsset<string>({ type: RichAsset, typeNames: ['richAsset'] }, { load: async (request, ctx) => ctx.fetchText(request.source) });
+    loader.bindAsset<string>({ ctor: RichAsset, typeNames: ['richAsset'] }, { load: async (request, ctx) => ctx.fetchText(request.source) });
 
     // First load — populates _resources; context.fetchText goes to network, store has no entry yet
-    await loader.load(new Asset({ kind: 'richAsset', source: 'file.txt', format: 'txt' }));
+    await loader.load(new Asset({ type: 'richAsset', source: 'file.txt', format: 'txt' }));
     // Second load — served from _resources, handler not called, store not consulted
     (global.fetch as MockInstance).mockClear();
-    await loader.load(new Asset({ kind: 'richAsset', source: 'file.txt', format: 'txt' }));
+    await loader.load(new Asset({ type: 'richAsset', source: 'file.txt', format: 'txt' }));
     expect(global.fetch).not.toHaveBeenCalled();
   });
 });
@@ -936,15 +936,15 @@ describe('unload(asset) + getIdentityKey — identity discrimination (Fix 2 regr
     const loader = new Loader({ basePath: '/' });
 
     loader.bindAsset<string, { format: string }>(
-      { type: RichAsset, typeNames: ['richAsset'] },
+      { ctor: RichAsset, typeNames: ['richAsset'] },
       {
         getIdentityKey: request => `${request.source}:${request.options?.format}`,
         load: async request => `result:${request.options!.format}`,
       },
     );
 
-    const tmxMap = new Asset({ kind: 'richAsset', source: 'map.dat', format: 'tmx' });
-    const rpgMap = new Asset({ kind: 'richAsset', source: 'map.dat', format: 'rpg-maker' });
+    const tmxMap = new Asset({ type: 'richAsset', source: 'map.dat', format: 'tmx' });
+    const rpgMap = new Asset({ type: 'richAsset', source: 'map.dat', format: 'rpg-maker' });
 
     await loader.load({ tmxA: tmxMap, tmxB: tmxMap, rpgA: rpgMap });
 
@@ -964,9 +964,9 @@ describe('unload(asset) + getIdentityKey — identity discrimination (Fix 2 regr
   test('unload(asset) without getIdentityKey still removes all source-based aliases', async () => {
     const loader = new Loader({ basePath: '/' });
 
-    loader.bindAsset<string>({ type: RichAsset, typeNames: ['richAsset'] }, { load: async request => `result:${request.source}` });
+    loader.bindAsset<string>({ ctor: RichAsset, typeNames: ['richAsset'] }, { load: async request => `result:${request.source}` });
 
-    const asset = new Asset({ kind: 'richAsset', source: 'shared.dat', format: 'x' });
+    const asset = new Asset({ type: 'richAsset', source: 'shared.dat', format: 'x' });
 
     await loader.load({ a: asset, b: asset });
 
@@ -985,15 +985,15 @@ describe('unload(asset) + getIdentityKey — identity discrimination (Fix 2 regr
     const loader = new Loader({ basePath: '/' });
 
     loader.bindAsset<string, { format: string }>(
-      { type: RichAsset, typeNames: ['richAsset'] },
+      { ctor: RichAsset, typeNames: ['richAsset'] },
       {
         getIdentityKey: request => `${request.source}:${request.options?.format}`,
         load: async request => `result:${request.options!.format}`,
       },
     );
 
-    const tmxMap = new Asset({ kind: 'richAsset', source: 'map.dat', format: 'tmx' });
-    const rpgMap = new Asset({ kind: 'richAsset', source: 'map.dat', format: 'rpg-maker' });
+    const tmxMap = new Asset({ type: 'richAsset', source: 'map.dat', format: 'tmx' });
+    const rpgMap = new Asset({ type: 'richAsset', source: 'map.dat', format: 'rpg-maker' });
 
     await loader.load({ tmxA: tmxMap, rpgA: rpgMap });
 
@@ -1054,8 +1054,8 @@ describe('keyFor()', () => {
 
     materializeAssetBindings(loader, [
       defineAsset<DummyAsset>({
-        type: DummyAsset,
-        kind: 'dummyAsset',
+        ctor: DummyAsset,
+        type: 'dummyAsset',
         isValue: false,
         create: () => ({
           async load(request, ctx) {
@@ -1066,7 +1066,7 @@ describe('keyFor()', () => {
     ]);
     mockFetch();
 
-    const result = await loader.load(new Asset({ kind: 'dummyAsset', source: 'thing.dat' }));
+    const result = await loader.load(new Asset({ type: 'dummyAsset', source: 'thing.dat' }));
 
     expect(loader.keyFor(result)).toEqual({ type: DummyAsset, source: 'thing.dat' });
   });
@@ -1085,7 +1085,7 @@ describe('keyFor()', () => {
 describe('unload() edge cases', () => {
   test('unload(asset) is a no-op when the asset type was never registered', () => {
     const loader = new Loader({ basePath: '/' });
-    const orphan = new Asset({ kind: 'mockAsset', source: 'x.dat' });
+    const orphan = new Asset({ type: 'mockAsset', source: 'x.dat' });
 
     expect(() => loader.unload(orphan)).not.toThrow();
   });
@@ -1093,9 +1093,9 @@ describe('unload() edge cases', () => {
   test('unload(asset) falls back to source-as-alias when the asset was never loaded', () => {
     const loader = new Loader({ basePath: '/' });
 
-    loader.bindAsset<string>({ type: MockAssetType, typeNames: ['mockAsset'] }, { load: async request => `loaded:${request.source}` });
+    loader.bindAsset<string>({ ctor: MockAssetType, typeNames: ['mockAsset'] }, { load: async request => `loaded:${request.source}` });
 
-    const neverLoaded = new Asset({ kind: 'mockAsset', source: 'never.dat' });
+    const neverLoaded = new Asset({ type: 'mockAsset', source: 'never.dat' });
 
     expect(() => loader.unload(neverLoaded)).not.toThrow();
     expect(loader._peekResource(MockAssetType, 'never.dat')).toBeNull();
@@ -1106,7 +1106,7 @@ describe('unload() edge cases', () => {
     // thrown. A bare loader (no core bindings) never adopted the leaf, so its
     // release finds no registered key and does nothing.
     const loader = new Loader({ basePath: '/' });
-    const container = new Assets({ orphan: { kind: 'texture', source: 'x.png' } });
+    const container = new Assets({ orphan: { type: 'texture', source: 'x.png' } });
 
     expect(() => loader.unload(container)).not.toThrow();
   });
@@ -1114,7 +1114,7 @@ describe('unload() edge cases', () => {
   test('unload(assets) is a silent no-op when the container was never adopted/loaded', () => {
     // Intent preserved: unloading entries that were never tracked does nothing.
     const loader = createCoreLoader({ basePath: '/' });
-    const container = new Assets({ orphan: { kind: 'texture', source: 'never.png' } });
+    const container = new Assets({ orphan: { type: 'texture', source: 'never.png' } });
 
     expect(() => loader.unload(container)).not.toThrow();
     expect(loader._peekResource(Texture, 'never.png')).toBeNull();
@@ -1194,7 +1194,7 @@ describe('hasLoadable() / hasAssetType() / hasExtension()', () => {
 
     expect(loader.hasAssetType('probeType')).toBe(false);
     expect(loader.hasExtension('probe')).toBe(false);
-    loader.bindAsset<ProbeAsset>({ type: ProbeAsset, typeNames: ['probeType'], extensions: ['PROBE'] }, { load: async () => new ProbeAsset() });
+    loader.bindAsset<ProbeAsset>({ ctor: ProbeAsset, typeNames: ['probeType'], extensions: ['PROBE'] }, { load: async () => new ProbeAsset() });
     expect(loader.hasAssetType('probeType')).toBe(true);
     expect(loader.hasExtension('probe')).toBe(true);
     expect(loader.hasExtension('.probe')).toBe(true);
@@ -1205,7 +1205,7 @@ describe('hasLoadable() / hasAssetType() / hasExtension()', () => {
     class HandlerAsset {}
 
     expect(loader.hasLoadable(HandlerAsset)).toBe(false);
-    loader.bindAsset<string>({ type: HandlerAsset, typeNames: ['handlerType'] }, { load: async () => 'ok' });
+    loader.bindAsset<string>({ ctor: HandlerAsset, typeNames: ['handlerType'] }, { load: async () => 'ok' });
     const ctor = loader['_typeRegistry']['resolveTypeName']('handlerType')!;
 
     expect(loader.hasLoadable(ctor)).toBe(true);
@@ -1233,14 +1233,14 @@ describe('bindAsset() — direct handler binding', () => {
 
     materializeAssetBindings(loader, [
       defineAsset<BoundAsset>({
-        type: BoundAsset,
-        kind: 'boundAsset',
+        ctor: BoundAsset,
+        type: 'boundAsset',
         isValue: false,
         create: () => ({ load: async request => new BoundAsset(request.source) }),
       }),
     ]);
 
-    const result = (await loader.load(new Asset({ kind: 'boundAsset', source: 'thing.bin' }))) as BoundAsset;
+    const result = (await loader.load(new Asset({ type: 'boundAsset', source: 'thing.bin' }))) as BoundAsset;
 
     expect(result).toBeInstanceOf(BoundAsset);
     expect(result.value).toBe('thing.bin');
@@ -1252,8 +1252,8 @@ describe('bindAsset() — direct handler binding', () => {
 
     materializeAssetBindings(loader, [
       defineAsset<BoundAsset, { scale: number }>({
-        type: BoundAsset,
-        kind: 'boundAsset',
+        ctor: BoundAsset,
+        type: 'boundAsset',
         isValue: false,
         create: () => ({
           load: async request => {
@@ -1264,7 +1264,7 @@ describe('bindAsset() — direct handler binding', () => {
       }),
     ]);
 
-    await loader.load(new Asset({ kind: 'boundAsset', source: 'thing.bin', scale: 3 }));
+    await loader.load(new Asset({ type: 'boundAsset', source: 'thing.bin', scale: 3 }));
 
     expect(receivedConfig).toMatchObject({ source: 'thing.bin', options: { scale: 3 } });
   });
@@ -1272,9 +1272,9 @@ describe('bindAsset() — direct handler binding', () => {
   test('binds by typeName: config-map load resolves via the handler', async () => {
     const loader = new Loader({ basePath: '/' });
 
-    loader.bindAsset<BoundAsset>({ type: BoundAsset, typeNames: ['boundAsset'] }, { load: async request => new BoundAsset(request.source) });
+    loader.bindAsset<BoundAsset>({ ctor: BoundAsset, typeNames: ['boundAsset'] }, { load: async request => new BoundAsset(request.source) });
 
-    const result = await loader.load(new Asset({ kind: 'boundAsset', source: 'level.dat' }));
+    const result = await loader.load(new Asset({ type: 'boundAsset', source: 'level.dat' }));
 
     expect(result).toBeInstanceOf(BoundAsset);
   });
@@ -1282,7 +1282,7 @@ describe('bindAsset() — direct handler binding', () => {
   test('binds by extension: load(path) resolves via the handler', async () => {
     const loader = new Loader({ basePath: '/' });
 
-    loader.bindAsset<BoundAsset>({ type: BoundAsset, extensions: ['bnd'] }, { load: async request => new BoundAsset(request.source) });
+    loader.bindAsset<BoundAsset>({ ctor: BoundAsset, extensions: ['bnd'] }, { load: async request => new BoundAsset(request.source) });
 
     const result = await loader.load<BoundAsset>('thing.bnd');
 
@@ -1294,7 +1294,7 @@ describe('bindAsset() — direct handler binding', () => {
     let calls = 0;
 
     loader.bindAsset<BoundAsset, { scale: number }>(
-      { type: BoundAsset, typeNames: ['boundAsset'] },
+      { ctor: BoundAsset, typeNames: ['boundAsset'] },
       {
         getIdentityKey: request => `${request.source}:${request.options?.scale ?? 1}`,
         load: async request => {
@@ -1304,8 +1304,8 @@ describe('bindAsset() — direct handler binding', () => {
       },
     );
 
-    const a = new Asset({ kind: 'boundAsset', source: 'shared.dat', scale: 2 });
-    const b = new Asset({ kind: 'boundAsset', source: 'shared.dat', scale: 2 });
+    const a = new Asset({ type: 'boundAsset', source: 'shared.dat', scale: 2 });
+    const b = new Asset({ type: 'boundAsset', source: 'shared.dat', scale: 2 });
 
     await Promise.all([loader.load(a), loader.load(b)]);
 
@@ -1316,7 +1316,7 @@ describe('bindAsset() — direct handler binding', () => {
     const loader = new Loader({ basePath: '/' });
 
     loader.bindAsset<BoundAsset>(
-      { type: BoundAsset, typeNames: ['boundAsset'] },
+      { ctor: BoundAsset, typeNames: ['boundAsset'] },
       {
         load: async request => new BoundAsset(request.source),
         createFromBytes: async bytes => new BoundAsset(new TextDecoder().decode(bytes)),
@@ -1338,16 +1338,16 @@ describe('bindAsset() — direct handler binding', () => {
     const loader = new Loader({ basePath: '/' });
     const handler: AssetHandler<BoundAsset> = { load: async request => new BoundAsset(request.source) };
 
-    expect(() => loader.bindAsset<BoundAsset>({ type: BoundAsset, extensions: ['bnd', 'BND'] }, handler)).toThrow(/Duplicate extension key/);
+    expect(() => loader.bindAsset<BoundAsset>({ ctor: BoundAsset, extensions: ['bnd', 'BND'] }, handler)).toThrow(/Duplicate extension key/);
   });
 
   test('throws when a handler is already registered for the type', () => {
     const loader = new Loader({ basePath: '/' });
     const handler: AssetHandler<BoundAsset> = { load: async request => new BoundAsset(request.source) };
 
-    loader.bindAsset<BoundAsset>({ type: BoundAsset }, handler);
+    loader.bindAsset<BoundAsset>({ ctor: BoundAsset }, handler);
 
-    expect(() => loader.bindAsset<BoundAsset>({ type: BoundAsset }, handler)).toThrow(/already registered/);
+    expect(() => loader.bindAsset<BoundAsset>({ ctor: BoundAsset }, handler)).toThrow(/already registered/);
   });
 
   test('throws when a typeName is already registered', () => {
@@ -1355,9 +1355,9 @@ describe('bindAsset() — direct handler binding', () => {
     const handlerA: AssetHandler<BoundAsset> = { load: async request => new BoundAsset(request.source) };
     const handlerB: AssetHandler<OtherBoundAsset> = { load: async () => new OtherBoundAsset() };
 
-    loader.bindAsset<BoundAsset>({ type: BoundAsset, typeNames: ['dupName'] }, handlerA);
+    loader.bindAsset<BoundAsset>({ ctor: BoundAsset, typeNames: ['dupName'] }, handlerA);
 
-    expect(() => loader.bindAsset<OtherBoundAsset>({ type: OtherBoundAsset, typeNames: ['dupName'] }, handlerB)).toThrow(/already registered/);
+    expect(() => loader.bindAsset<OtherBoundAsset>({ ctor: OtherBoundAsset, typeNames: ['dupName'] }, handlerB)).toThrow(/already registered/);
   });
 
   test('throws when an extension is already mapped to another type', () => {
@@ -1365,9 +1365,9 @@ describe('bindAsset() — direct handler binding', () => {
     const handlerA: AssetHandler<BoundAsset> = { load: async request => new BoundAsset(request.source) };
     const handlerB: AssetHandler<OtherBoundAsset> = { load: async () => new OtherBoundAsset() };
 
-    loader.bindAsset<BoundAsset>({ type: BoundAsset, extensions: ['dupext'] }, handlerA);
+    loader.bindAsset<BoundAsset>({ ctor: BoundAsset, extensions: ['dupext'] }, handlerA);
 
-    expect(() => loader.bindAsset<OtherBoundAsset>({ type: OtherBoundAsset, extensions: ['dupext'] }, handlerB)).toThrow(/already mapped/);
+    expect(() => loader.bindAsset<OtherBoundAsset>({ ctor: OtherBoundAsset, extensions: ['dupext'] }, handlerB)).toThrow(/already mapped/);
   });
 });
 
@@ -1408,9 +1408,9 @@ describe('loadContainer()', () => {
     const loader = createCoreLoaderLocal();
     await loader.loadContainer('assets/pack.exoa');
 
-    expect(loader.get(Asset.kind('json', 'level')).value).toEqual({ score: 42 });
-    expect(loader.get(Asset.kind('text', 'readme')).value).toBe('hello world');
-    expect(new Uint8Array(loader.get(Asset.kind('binary', 'blob')).value)).toEqual(new Uint8Array([1, 2, 3, 4]));
+    expect(loader.get(Asset.type('json', 'level')).value).toEqual({ score: 42 });
+    expect(loader.get(Asset.type('text', 'readme')).value).toBe('hello world');
+    expect(new Uint8Array(loader.get(Asset.type('binary', 'blob')).value)).toEqual(new Uint8Array([1, 2, 3, 4]));
   });
 
   test('throws on an unknown asset type and stores nothing', async () => {
@@ -1429,7 +1429,7 @@ describe('loadContainer()', () => {
     loader.register(DummyAsset, factory);
     // A handler binds the 'dummy' type name but supplies no createFromBytes, so
     // container injection falls back to the registered factory.
-    loader.bindAsset<DummyAsset>({ type: DummyAsset, typeNames: ['dummy'] }, { load: async request => new DummyAsset(request.source) });
+    loader.bindAsset<DummyAsset>({ ctor: DummyAsset, typeNames: ['dummy'] }, { load: async request => new DummyAsset(request.source) });
 
     const container = encodeContainer([{ alias: 'x', type: 'dummy', bytes: new TextEncoder().encode('raw-bytes') }]);
     mockContainerFetch(container);
@@ -1443,7 +1443,7 @@ describe('loadContainer()', () => {
     class BareAsset {}
     const loader = new Loader({ basePath: '/' });
 
-    loader.bindAsset<BareAsset>({ type: BareAsset, typeNames: ['bare'] }, { load: async () => new BareAsset() });
+    loader.bindAsset<BareAsset>({ ctor: BareAsset, typeNames: ['bare'] }, { load: async () => new BareAsset() });
 
     const container = encodeContainer([{ alias: 'x', type: 'bare', bytes: new Uint8Array([1]) }]);
     mockContainerFetch(container);
@@ -1463,7 +1463,7 @@ describe('destroy()', () => {
     const handlerDestroy = vi.fn();
     const loader = new Loader({ basePath: '/', cache: store });
 
-    loader.bindAsset<unknown>({ type: DestroyAsset }, { load: async () => 'x', destroy: handlerDestroy });
+    loader.bindAsset<unknown>({ ctor: DestroyAsset }, { load: async () => 'x', destroy: handlerDestroy });
     loader.onLoaded.add(() => {});
 
     loader.destroy();
@@ -1480,8 +1480,8 @@ describe('destroy()', () => {
     const handler: AssetHandler<unknown> = { load: async () => 'x', destroy };
     const loader = new Loader({ basePath: '/' });
 
-    loader.bindAsset({ type: DestroyAssetA }, handler);
-    loader.bindAsset({ type: DestroyAssetB }, handler);
+    loader.bindAsset({ ctor: DestroyAssetA }, handler);
+    loader.bindAsset({ ctor: DestroyAssetB }, handler);
 
     loader.destroy();
 
@@ -1492,7 +1492,7 @@ describe('destroy()', () => {
     class NoDestroyAsset {}
     const loader = new Loader({ basePath: '/' });
 
-    loader.bindAsset({ type: NoDestroyAsset }, { load: async () => 'x' });
+    loader.bindAsset({ ctor: NoDestroyAsset }, { load: async () => 'x' });
 
     expect(() => loader.destroy()).not.toThrow();
   });
@@ -1504,7 +1504,7 @@ describe('destroy()', () => {
     const handlerDestroy = vi.fn(() => order.push('handler'));
     const loader = new Loader({ basePath: '/', cache: store });
 
-    loader.bindAsset({ type: OrderAsset }, { load: async () => 'x', destroy: handlerDestroy });
+    loader.bindAsset({ ctor: OrderAsset }, { load: async () => 'x', destroy: handlerDestroy });
 
     loader.destroy();
 
@@ -1523,7 +1523,7 @@ describe('handler load() rejection is wrapped with url + cause', () => {
     const loader = new Loader({ basePath: '/assets/' });
 
     loader.bindAsset<string>(
-      { type: RichAsset, typeNames: ['richAsset'] },
+      { ctor: RichAsset, typeNames: ['richAsset'] },
       {
         load: async () => {
           throw new Error('handler exploded');
@@ -1531,7 +1531,7 @@ describe('handler load() rejection is wrapped with url + cause', () => {
       },
     );
 
-    const asset = new Asset({ kind: 'richAsset', source: 'x.json', format: 'x' });
+    const asset = new Asset({ type: 'richAsset', source: 'x.json', format: 'x' });
     const error: Error = await loader.load(asset).catch((e: unknown) => e as Error);
 
     expect(error.message).toMatch(/Failed to load "x\.json" from "\/assets\/x\.json": handler exploded/);
@@ -1556,8 +1556,8 @@ describe('Asset-based load() — extra config fields as handler options', () => 
     const receivedOptions: unknown[] = [];
     materializeAssetBindings(loader, [
       defineAsset<string, { format: string }>({
-        type: MockAssetType,
-        kind: 'mockAsset',
+        ctor: MockAssetType,
+        type: 'mockAsset',
         isValue: false,
         create: () => ({
           async load(request) {
@@ -1568,7 +1568,7 @@ describe('Asset-based load() — extra config fields as handler options', () => 
       }),
     ]);
 
-    await loader.load(new Asset({ kind: 'mockAsset', source: 'extra.dat', format: 'tiled' }));
+    await loader.load(new Asset({ type: 'mockAsset', source: 'extra.dat', format: 'tiled' }));
 
     expect(receivedOptions[0]).toMatchObject({ format: 'tiled' });
   });
@@ -1602,9 +1602,9 @@ describe('unload()-during-in-flight identity cleanup on rejection', () => {
     const loader = new Loader({ basePath: '/' });
     const deferred = createDeferred<unknown>();
 
-    loader.bindAsset<unknown>({ type: RichAsset, typeNames: ['richAsset'] }, { load: async () => deferred.promise });
+    loader.bindAsset<unknown>({ ctor: RichAsset, typeNames: ['richAsset'] }, { load: async () => deferred.promise });
 
-    const asset = new Asset({ kind: 'richAsset', source: 'x.dat', format: 'x' });
+    const asset = new Asset({ type: 'richAsset', source: 'x.dat', format: 'x' });
     const pending = loader.load(asset);
 
     // Unload while still in flight: this clears `_identityKeyToAliases` for this
@@ -1625,8 +1625,8 @@ describe('unloadAll() with no type argument', () => {
     loader.register(TextAsset, textFactory as AssetFactory<TextAsset>);
     materializeAssetBindings(loader, [
       defineAsset<DummyAsset>({
-        type: DummyAsset,
-        kind: 'dummyAsset',
+        ctor: DummyAsset,
+        type: 'dummyAsset',
         isValue: false,
         create: () => ({
           async load(request, ctx) {
@@ -1638,7 +1638,7 @@ describe('unloadAll() with no type argument', () => {
     global.fetch = vi.fn(async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', text: async () => 'raw' }) as unknown as Response);
 
     await loader.load('a.txt');
-    await loader.load(new Asset({ kind: 'dummyAsset', source: 'b.dat' }));
+    await loader.load(new Asset({ type: 'dummyAsset', source: 'b.dat' }));
 
     expect(loader._peekResource(TextAsset, 'a.txt')).not.toBeNull();
     expect(loader._peekResource(DummyAsset, 'b.dat')).not.toBeNull();
@@ -1654,9 +1654,9 @@ describe('load({ alias: config }) — plain object values are auto-wrapped in an
   test('a plain (non-Asset) config object value loads correctly', async () => {
     const loader = new Loader({ basePath: '/' });
 
-    loader.bindAsset<string>({ type: MockAssetType, typeNames: ['mockAsset'] }, { load: async request => `loaded:${request.source}` });
+    loader.bindAsset<string>({ ctor: MockAssetType, typeNames: ['mockAsset'] }, { load: async request => `loaded:${request.source}` });
 
-    await loader.load({ hero: { kind: 'mockAsset', source: 'hero.dat' } });
+    await loader.load({ hero: { type: 'mockAsset', source: 'hero.dat' } });
 
     expect(loader._peekResource(MockAssetType, 'hero')).not.toBeNull();
   });
@@ -1675,7 +1675,7 @@ describe('non-Error throws are stringified when wrapping fetch/handler failures'
     const loader = new Loader({ basePath: '/assets/' });
 
     loader.bindAsset<string>(
-      { type: RichAsset, typeNames: ['richAsset'] },
+      { ctor: RichAsset, typeNames: ['richAsset'] },
       {
         load: async () => {
           // eslint-disable-next-line @typescript-eslint/only-throw-error
@@ -1684,7 +1684,7 @@ describe('non-Error throws are stringified when wrapping fetch/handler failures'
       },
     );
 
-    const asset = new Asset({ kind: 'richAsset', source: 'y.json', format: 'y' });
+    const asset = new Asset({ type: 'richAsset', source: 'y.json', format: 'y' });
 
     await expect(loader.load(asset)).rejects.toThrow(/Failed to load "y\.json" from "\/assets\/y\.json": plain string failure/);
   });

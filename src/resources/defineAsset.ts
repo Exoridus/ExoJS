@@ -15,15 +15,15 @@ import type { SeamlessAdapter } from './seamless';
  */
 export interface DefineAssetDescriptor<Result, Options> {
   /** The runtime constructor the produced asset is an instance of. */
-  readonly type: AssetConstructor<Result>;
+  readonly ctor: AssetConstructor<Result>;
   /** The {@link AssetDefinitions} key this type registers under. */
-  readonly kind: keyof AssetDefinitions;
+  readonly type: keyof AssetDefinitions;
   /** File suffixes that map to this type. Feeds the per-loader map and — for a leaf-capable kind — global bare-path inference. */
   readonly extensions?: readonly string[];
   /**
-   * Config-map type names resolving to this handler. Defaults to `[kind]`.
+   * Config-map type names resolving to this handler. Defaults to `[type]`.
    * @internal — internal alias-compat only; not part of the public extension
-   * surface (extensions should rely on `kind`).
+   * surface (extensions should rely on `type`).
    */
   readonly typeNames?: readonly string[];
   /** Seamless placeholder adapter for a resource kind that heals in place. */
@@ -42,7 +42,7 @@ export interface DefineAssetDescriptor<Result, Options> {
  *
  * A **non-leaf** resource kind (`isValue: false` and no adapter — e.g. `bmFont`,
  * `font`) has no placeholder strategy, so it is deliberately NOT registered
- * globally: its bare path cannot be inferred and must be declared via `Asset.kind(...)`
+ * globally: its bare path cannot be inferred and must be declared via `Asset.type(...)`
  * or an explicit config. Its `extensions` still travel on the returned binding
  * for the per-Loader map.
  *
@@ -56,19 +56,19 @@ export function defineAsset<Result = unknown, Options = undefined>(descriptor: D
   const leafCapable = descriptor.seamless !== undefined || isValue;
 
   if (leafCapable) {
-    registerAssetKind(descriptor.kind, {
+    registerAssetKind(descriptor.type, {
       ...(descriptor.seamless !== undefined && { adapter: descriptor.seamless }),
       isValue,
     });
     for (const ext of descriptor.extensions ?? []) {
-      registerExtensionKind(ext, descriptor.kind);
+      registerExtensionKind(ext, descriptor.type);
     }
   }
 
   return {
+    ctor: descriptor.ctor,
     type: descriptor.type,
-    kind: descriptor.kind,
-    typeNames: descriptor.typeNames ?? [descriptor.kind],
+    typeNames: descriptor.typeNames ?? [descriptor.type],
     ...(descriptor.extensions !== undefined && { extensions: descriptor.extensions }),
     ...(descriptor.seamless !== undefined && { seamless: descriptor.seamless }),
     create: descriptor.create,

@@ -200,9 +200,9 @@ describe('Loader.loadContainer', () => {
     await loader.loadContainer('assets/pack.exoa');
 
     expect(fetchSpy).toHaveBeenCalledTimes(1);
-    expect(loader.get(Asset.kind('json', 'level')).value).toEqual({ score: 42 });
-    expect(loader.get(Asset.kind('text', 'readme')).value).toBe('hello world');
-    expect(new Uint8Array(loader.get(Asset.kind('binary', 'blob')).value)).toEqual(new Uint8Array([1, 2, 3, 4]));
+    expect(loader.get(Asset.type('json', 'level')).value).toEqual({ score: 42 });
+    expect(loader.get(Asset.type('text', 'readme')).value).toBe('hello world');
+    expect(new Uint8Array(loader.get(Asset.type('binary', 'blob')).value)).toEqual(new Uint8Array([1, 2, 3, 4]));
   });
 
   test('throws on an unknown asset type and stores nothing', async () => {
