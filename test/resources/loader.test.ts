@@ -1212,6 +1212,17 @@ describe('hasLoadable() / hasAssetType() / hasExtension()', () => {
   });
 });
 
+describe('registerType()', () => {
+  test('passes through to the underlying AssetTypeRegistry and returns `this` for chaining', () => {
+    const loader = new Loader({ basePath: '/' });
+
+    const result = loader.registerType('probe', 'text');
+
+    expect(result).toBe(loader);
+    expect(loader['_typeRegistry'].resolveExtensionType('probe')).toBe('text');
+  });
+});
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Coverage sweep — bindAsset() direct handler binding
 // ─────────────────────────────────────────────────────────────────────────────

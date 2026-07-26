@@ -53,7 +53,8 @@ export class AssetTypeRegistry {
   /**
    * Atomically bind all keys for one AssetBinding to a pre-created handler.
    * Validates all keys BEFORE mutating any map. Any already-registered key
-   * throws before any mutation.
+   * throws before any mutation. When `type` is given, its extensions also feed
+   * the app-local override table read by `registerType`/`resolveExtensionType`.
    */
   public bindAsset<Result = unknown, Options = undefined>(
     keys: {

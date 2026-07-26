@@ -112,8 +112,10 @@ export interface AssetBinding<Result = unknown, Options = undefined> {
    * The {@link AssetDefinitions} key this binding produces. When present, the
    * binding was built by `defineAsset`, which registered the type's placeholder
    * strategy and suffix→type inference GLOBALLY at import (so loader-free
-   * `Assets.from` resolves it). Purely informational on the binding itself —
-   * `materializeAssetBindings` does not consume it.
+   * `Assets.from` resolves it). `materializeAssetBindings` forwards it into
+   * `Loader.bindAsset`, which uses it to populate this Loader's app-local
+   * extension-override table (`AssetTypeRegistry.registerType`/`resolveExtensionType`)
+   * for every declared extension.
    */
   readonly type?: keyof AssetDefinitions;
   /** Optional seamless-handle adapter (asset-system v2), registered alongside the handler. */
