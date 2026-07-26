@@ -28,6 +28,9 @@ declare module '#resources/AssetDefinitions' {
     dummyAsset: { resource: DummyAsset; config: { source: string } };
     firstType: { resource: unknown; config: { source: string } };
     secondType: { resource: unknown; config: { source: string } };
+    // A package-shaped kind: no seamless adapter, so `defineAsset` defaults it
+    // to a value kind at runtime and the entry mirrors that with `isValue`.
+    packageLeaf: { resource: string; config: { source: string }; isValue: true };
   }
 }
 
@@ -47,6 +50,9 @@ function bindTextAsset(loader: Loader, create: (text: string) => string | Promis
 
   return { create: createSpy };
 }
+
+/** Stand-in constructor for a package-declared, seamless-less asset type. */
+class PackageLeafAsset {}
 
 class DummyAsset {
   constructor(public readonly value: string) {}
@@ -1818,5 +1824,55 @@ describe('bare-path loading for non-leaf resource types', () => {
     loader.registerType('woff2', 'font');
 
     expect(() => loader.load('fonts/Roboto.woff2' as never)).toThrow('no asset handler bound for type "font"');
+  });
+});
+
+describe('value-kind leaves for declaration-merged package types', () => {
+  const originalFetch = global.fetch;
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  // The runtime half of the `ValueAssetKind` contract. `defineAsset` computes
+  // `isValue ?? seamless === undefined`, so a binding that ships no seamless
+  // adapter — the normal shape for an extension package type — hands out an
+  // `AssetRef` wrapper from `get()`, never the bare resource. The type side
+  // mirrors this with `isValue: true` on the `AssetDefinitions` entry; this test
+  // pins the runtime behaviour that marker claims, so the two cannot drift
+  // silently into `get()` being typed as the unwrapped resource.
+  test('a bare path for a seamless-less package kind yields an AssetRef, not the resource', async () => {
+    const loader = new Loader({ basePath: '/' });
+
+    materializeAssetBindings(loader, [
+      defineAsset<string>({
+        ctor: PackageLeafAsset,
+        type: 'packageLeaf',
+        extensions: ['pkgleaf'],
+        create: () => ({ load: async () => 'payload' }),
+      }),
+    ]);
+
+    const leaf = loader.get('level.pkgleaf' as never);
+
+    expect(leaf).toBeInstanceOf(AssetRef);
+    await expect((leaf as AssetRef<string>).loaded).resolves.toBe('payload');
+  });
+
+  test('the same kind reached through Asset.type() also yields an AssetRef', async () => {
+    const loader = new Loader({ basePath: '/' });
+
+    materializeAssetBindings(loader, [
+      defineAsset<string>({
+        ctor: PackageLeafAsset,
+        type: 'packageLeaf',
+        extensions: ['pkgleaf'],
+        create: () => ({ load: async () => 'payload' }),
+      }),
+    ]);
+
+    const leaf = loader.get(Asset.type('packageLeaf', 'level.pkgleaf'));
+
+    expect(leaf).toBeInstanceOf(AssetRef);
   });
 });

@@ -1,6 +1,6 @@
 {
   "title": "AssetDefinitions",
-  "description": "",
+  "description": "Every asset type known to the engine, keyed by its `type` string. Extension packages add their own via declaration merging. An entry declares the runtime `resource` it produces and the `config` it accepts; it may also carry `isValue: true` to mirror a binding whose leaf is a deferred AssetRef rather than a heal-in-place handle — required whenever `defineAsset` is called without a `seamless` adapter (see ValueAssetKind).",
   "symbol": "AssetDefinitions",
   "kind": "interface",
   "subsystem": "resources",
@@ -18,7 +18,10 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [],
+      "paragraphs": [
+        "Every asset type known to the engine, keyed by its `type` string.",
+        "Extension packages add their own via declaration merging. An entry declares the runtime `resource` it produces and the `config` it accepts; it may also carry `isValue: true` to mirror a binding whose leaf is a deferred AssetRef rather than a heal-in-place handle — required whenever `defineAsset` is called without a `seamless` adapter (see ValueAssetKind)."
+      ],
       "importLine": "import { AssetDefinitions } from '@codexo/exojs'",
       "sourceLink": null
     },

@@ -11,11 +11,11 @@ import type {
   AssetDefinitions,
   AssetInput,
   CatalogEntry,
+  CoreValueAssetKind,
   InferAssetResource,
   KindByPath,
   LeafForPath,
   ResourceForKind,
-  ValueAssetKind,
 } from './AssetDefinitions';
 import { createLeaf, getAssetKind } from './assetKindRegistry';
 import { _readMeta } from './assetMeta';
@@ -178,11 +178,16 @@ export class Loader {
   private readonly _decoder: AssetDecoder;
   private readonly _residency: AssetResidency;
 
-  // Single source for the value kind ↔ dispatch token mapping: both the
-  // membership set below and `_valueTokenForKind` derive from it, and a
-  // `Record<ValueAssetKind, …>` is compile-checked to cover exactly the value
-  // kinds (vtt + srt share the SubtitleAsset token). @internal
-  private readonly _valueTokenByKind: Readonly<Record<ValueAssetKind, AssetConstructor>> = {
+  // Single source for the value kind ↔ dispatch token mapping, and the
+  // no-bindings fallback `_ctorForType` leans on. Keyed by
+  // `CoreValueAssetKind`, NOT `ValueAssetKind`: only the built-in tokens exist
+  // without a binding installed, and the wider union is extensible by
+  // declaration merging (a package's `isValue: true` kind has no built-in
+  // token, and requiring one here would break any build that sees the
+  // augmentation). The `Record<CoreValueAssetKind, …>` stays compile-checked to
+  // cover exactly the core value kinds (vtt + srt share the SubtitleAsset
+  // token). @internal
+  private readonly _valueTokenByKind: Readonly<Record<CoreValueAssetKind, AssetConstructor>> = {
     json: Json,
     text: TextAsset,
     csv: CsvAsset,

@@ -11,6 +11,16 @@ import type { Asset, ValueAsset } from './Asset';
 import type { AssetRef } from './AssetRef';
 import type { ExtensionTypeMap } from './Loader';
 
+/**
+ * Every asset type known to the engine, keyed by its `type` string.
+ *
+ * Extension packages add their own via declaration merging. An entry declares
+ * the runtime `resource` it produces and the `config` it accepts; it may also
+ * carry `isValue: true` to mirror a binding whose leaf is a deferred
+ * {@link AssetRef} rather than a heal-in-place handle — required whenever
+ * `defineAsset` is called without a `seamless` adapter (see
+ * {@link ValueAssetKind}).
+ */
 export interface AssetDefinitions {
   bmFont: { resource: BmFont; config: { source: string } };
   texture: { resource: Texture; config: { source: string; mimeType?: string; samplerOptions?: Partial<SamplerOptions> } };
@@ -55,15 +65,50 @@ export type AnyAssetConfig = {
 }[keyof AssetDefinitions];
 
 /**
- * Kinds whose catalog leaf is a deferred {@link AssetRef} rather than a
- * heal-in-place resource handle. This is the type-level mirror of the
- * `isValue: true` registrations in `seamless.ts` — keep the two in sync.
+ * The built-in kinds whose catalog leaf is a deferred {@link AssetRef} rather
+ * than a heal-in-place resource handle — the type-level mirror of the core
+ * `isValue: true` registrations in `coreAssetBindings.ts`.
  *
  * A structural `R extends object` heuristic cannot classify these, because
  * several value resources (`Document`, `VTTCue[]`, `ArrayBuffer`,
  * `WebAssembly.Module`) are object types; only an explicit kind list is correct.
  */
-export type ValueAssetKind = 'json' | 'text' | 'csv' | 'xml' | 'srt' | 'vtt' | 'binary' | 'wasm';
+export type CoreValueAssetKind = 'json' | 'text' | 'csv' | 'xml' | 'srt' | 'vtt' | 'binary' | 'wasm';
+
+/**
+ * Kinds that a declaration-merged {@link AssetDefinitions} entry marks as value
+ * kinds with `isValue: true`.
+ *
+ * `defineAsset` decides this at RUNTIME as `isValue ?? seamless === undefined`,
+ * so a binding that ships no seamless adapter — the common case for a package
+ * type like `tileMap` or `ldtkMap` — is a value kind and hands out an
+ * `AssetRef`. The type system cannot see seamless adapters, so an extension
+ * package that omits `seamless` must say so here, or `get(...)` would be typed
+ * as the bare resource while returning an `AssetRef` wrapper at runtime.
+ *
+ * ```ts
+ * declare module '@codexo/exojs' {
+ *   interface AssetDefinitions {
+ *     tileMap: { resource: TileMap; config: { source: string }; isValue: true };
+ *   }
+ * }
+ * ```
+ */
+type DeclaredValueAssetKind = {
+  [K in keyof AssetDefinitions]: AssetDefinitions[K] extends { isValue: true } ? K : never;
+}[keyof AssetDefinitions];
+
+/**
+ * Kinds whose catalog leaf is a deferred {@link AssetRef}: the built-in
+ * {@link CoreValueAssetKind}s plus every declaration-merged kind that opts in
+ * with `isValue: true`.
+ */
+// `DeclaredValueAssetKind` collapses to `never` in a build that sees no
+// declaration-merged entries (the engine's own `tsc --noEmit`, which compiles
+// `src/` alone), which is exactly when the union member is redundant — but it is
+// load-bearing for any consumer build that DOES see a package augmentation.
+// eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
+export type ValueAssetKind = CoreValueAssetKind | DeclaredValueAssetKind;
 
 export type AssetInput = AnyAssetConfig | Asset<unknown>;
 

@@ -28,6 +28,9 @@ declare module '@codexo/exojs' {
     asepriteSheet: {
       resource: AsepriteSheet;
       config: { source: string };
+      // No `seamless` adapter on `asepriteBinding`, so `defineAsset` defaults
+      // this to a value kind: its leaf is an `AssetRef<AsepriteSheet>`.
+      isValue: true;
     };
   }
 }
