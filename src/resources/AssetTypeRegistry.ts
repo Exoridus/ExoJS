@@ -1,7 +1,9 @@
 import type { AssetHandler, AssetLoadRequest } from '#extensions/Extension';
 
 import type { Asset } from './Asset';
+import type { AssetDefinitions } from './AssetDefinitions';
 import type { AssetFactory } from './AssetFactory';
+import { getExtensionKind } from './extensionKindRegistry';
 import type { AssetConstructor } from './FactoryRegistry';
 import { FactoryRegistry } from './FactoryRegistry';
 import type { AssetLoaderContext } from './Loader';
@@ -31,6 +33,7 @@ export class AssetTypeRegistry {
   private readonly _extensionMap = new Map<string, AssetConstructor>();
   private readonly _boundHandlers: AssetHandler[] = [];
   private readonly _seamlessAdapters = new Map<AssetConstructor, SeamlessAdapter<unknown>>();
+  private readonly _extensionOverrides = new Map<string, keyof AssetDefinitions>();
   private _nextTypeId = 1;
 
   /** Registers a factory for `type`. Prototype-chain aware — see {@link FactoryRegistry}. */
@@ -53,7 +56,13 @@ export class AssetTypeRegistry {
    * throws before any mutation.
    */
   public bindAsset<Result = unknown, Options = undefined>(
-    keys: { ctor: AssetConstructor<Result>; typeNames?: readonly string[]; extensions?: readonly string[]; seamless?: SeamlessAdapter<Result> },
+    keys: {
+      ctor: AssetConstructor<Result>;
+      type?: keyof AssetDefinitions;
+      typeNames?: readonly string[];
+      extensions?: readonly string[];
+      seamless?: SeamlessAdapter<Result>;
+    },
     handler: AssetHandler<Result, Options>,
   ): void {
     const normalizedExts: string[] = [];
@@ -92,6 +101,12 @@ export class AssetTypeRegistry {
       }
     }
 
+    // Validate: a binding that declares its AssetDefinitions `type` writes its
+    // extensions into the same app-local override table `registerType` writes
+    // into — check for conflicts up front so this binding stays atomic with
+    // itself, consistent with the other checks in this validation pass.
+    this._validateExtensionOverrides(normalizedExts, keys.type);
+
     // All validation passed — install atomically.
     // Localized type-erasure boundary: the internal registry uses a flat config
     // `{ source, ...fields }`. The public AssetHandler<Result, Options> interface
@@ -125,6 +140,8 @@ export class AssetTypeRegistry {
     for (const ext of normalizedExts) {
       this._extensionMap.set(ext, keys.ctor);
     }
+
+    this._applyExtensionOverrides(normalizedExts, keys.type);
 
     // Own this handler for lifecycle management. Cast to the erased AssetHandler
     // for storage; destroy() is the only method called on entries in this array.
@@ -236,6 +253,61 @@ export class AssetTypeRegistry {
     }
 
     return undefined;
+  }
+
+  /** Throws if `type` conflicts with an already-registered override for `key`; no-ops (including the idempotent same-type case) otherwise. */
+  private _checkExtensionOverride(key: string, type: keyof AssetDefinitions): void {
+    const existing = this._extensionOverrides.get(key);
+
+    if (existing !== undefined && existing !== type) {
+      throw new Error(
+        `AssetTypeRegistry: extension ".${key}" is already registered to type "${existing}" on this ` +
+          `app, cannot also register it as "${type}". Use Asset.type(...) for a one-off exception ` +
+          `instead of a second app-wide override.`,
+      );
+    }
+  }
+
+  /** `bindAsset` validation step: no-ops when `type` is absent (see `_checkExtensionOverride`). */
+  private _validateExtensionOverrides(extensions: readonly string[], type: keyof AssetDefinitions | undefined): void {
+    if (type === undefined) return;
+
+    for (const ext of extensions) {
+      this._checkExtensionOverride(ext, type);
+    }
+  }
+
+  /** `bindAsset` install step: writes `extensions` into the `registerType` table under `type`; no-ops when `type` is absent. */
+  private _applyExtensionOverrides(extensions: readonly string[], type: keyof AssetDefinitions | undefined): void {
+    if (type === undefined) return;
+
+    for (const ext of extensions) {
+      this.registerType(ext, type);
+    }
+  }
+
+  /**
+   * Registers an app-local extension→type override, consulted before the global
+   * default table populated by `defineAsset`/`bindAsset`. Idempotent for the same
+   * (extension, type) pair; throws if a DIFFERENT type is already registered for
+   * this extension on this registry.
+   */
+  public registerType(extension: string, type: keyof AssetDefinitions): void {
+    const key = extension.replace(/^\.+/, '').toLowerCase();
+
+    this._checkExtensionOverride(key, type);
+    this._extensionOverrides.set(key, type);
+  }
+
+  /**
+   * Resolves an extension to its effective type for this app: the app-local
+   * override if one is registered, otherwise the global default. `undefined`
+   * when neither layer has an entry.
+   */
+  public resolveExtensionType(extension: string): keyof AssetDefinitions | undefined {
+    const key = extension.replace(/^\.+/, '').toLowerCase();
+
+    return this._extensionOverrides.get(key) ?? getExtensionKind(key);
   }
 
   /** @internal */

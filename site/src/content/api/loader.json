@@ -6,10 +6,10 @@
   "subsystem": "resources",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 40,
+  "memberCount": 41,
   "counts": {
     "constructors": 1,
-    "methods": 30,
+    "methods": 31,
     "properties": 2,
     "events": 7
   },
@@ -2035,6 +2035,82 @@
           ],
           "returnType": "this",
           "description": "Registers the seamless-handle adapter for type, enabling the deferred get(type, source) form for it. One adapter per type."
+        },
+        {
+          "name": "registerType",
+          "signature": "registerType(extension: string, type: keyof AssetDefinitions): this",
+          "signatureTokens": [
+            {
+              "text": "registerType",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "extension",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "type",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "keyof",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetDefinitions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "extension",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "type",
+              "type": "keyof AssetDefinitions",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Registers an app-local extension→type override for bare-path resolution (get('level.json'), Assets.from('level.json')), taking precedence over the global default for this Loader only. See AssetTypeRegistry.registerType."
         },
         {
           "name": "release",

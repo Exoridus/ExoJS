@@ -80,6 +80,7 @@ export function materializeAssetBindings(loader: Loader, bindings: readonly Asse
     loader.bindAsset(
       {
         ctor: binding.ctor,
+        ...(binding.type !== undefined && { type: binding.type }),
         ...(binding.typeNames !== undefined && { typeNames: binding.typeNames }),
         ...(binding.extensions !== undefined && { extensions: binding.extensions }),
         ...(binding.seamless !== undefined && { seamless: binding.seamless }),

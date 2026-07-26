@@ -345,6 +345,17 @@ export class Loader {
   }
 
   /**
+   * Registers an app-local extension→type override for bare-path resolution
+   * (`get('level.json')`, `Assets.from('level.json')`), taking precedence over
+   * the global default for this Loader only. See `AssetTypeRegistry.registerType`.
+   */
+  public registerType(extension: string, type: keyof AssetDefinitions): this {
+    this._typeRegistry.registerType(extension, type);
+
+    return this;
+  }
+
+  /**
    * Load every asset packed into a binary container (`.exoa`) in a **single
    * request**. A container is one file with an embedded index: its bytes are
    * fetched once (and cached
@@ -970,7 +981,13 @@ export class Loader {
    * @internal
    */
   public bindAsset<Result = unknown, Options = undefined>(
-    keys: { ctor: AssetConstructor<Result>; typeNames?: readonly string[]; extensions?: readonly string[]; seamless?: SeamlessAdapter<Result> },
+    keys: {
+      ctor: AssetConstructor<Result>;
+      type?: keyof AssetDefinitions;
+      typeNames?: readonly string[];
+      extensions?: readonly string[];
+      seamless?: SeamlessAdapter<Result>;
+    },
     handler: AssetHandler<Result, Options>,
   ): void {
     this._typeRegistry.bindAsset(keys, handler);

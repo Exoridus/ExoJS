@@ -1,7 +1,8 @@
-import { describe, expect, test, vi } from 'vitest';
+import { describe, expect, it, test, vi } from 'vitest';
 
 import type { AssetFactory } from '#resources/AssetFactory';
 import { AssetTypeRegistry } from '#resources/AssetTypeRegistry';
+import { _resetExtensionKindsForTest, registerExtensionKind } from '#resources/extensionKindRegistry';
 
 class TypeA {}
 class TypeB {}
@@ -126,5 +127,63 @@ describe('AssetTypeRegistry', () => {
 
     expect(destroy).toHaveBeenCalledTimes(1);
     expect(registry.hasLoadable(TypeA)).toBe(false);
+  });
+
+  test('bindAsset with a `type` writes its extensions into the registerType override table', () => {
+    _resetExtensionKindsForTest();
+
+    const registry = new AssetTypeRegistry();
+    const handler = { load: vi.fn(async () => ({})) };
+
+    registry.bindAsset({ ctor: TypeA, type: 'json', extensions: ['ldtk'] }, handler);
+
+    expect(registry.resolveExtensionType('ldtk')).toBe('json');
+  });
+
+  test('bindAsset throws when its `type` conflicts with an already-registered override, without mutating any state', () => {
+    const registry = new AssetTypeRegistry();
+    const handler = { load: vi.fn(async () => ({})) };
+
+    registry.registerType('ldtk', 'text');
+
+    expect(() => registry.bindAsset({ ctor: TypeA, type: 'json', extensions: ['ldtk'] }, handler)).toThrow(/already registered/);
+    expect(registry.hasLoadable(TypeA)).toBe(false);
+    expect(registry.hasExtension('ldtk')).toBe(false);
+    expect(registry.resolveExtensionType('ldtk')).toBe('text');
+  });
+});
+
+describe('AssetTypeRegistry.registerType', () => {
+  it('an app-local override wins over the global default for that extension', () => {
+    _resetExtensionKindsForTest();
+    registerExtensionKind('json', 'json'); // global default
+
+    const registry = new AssetTypeRegistry();
+    registry.registerType('json', 'text');
+
+    expect(registry.resolveExtensionType('json')).toBe('text');
+  });
+
+  it('falls back to the global default when no app override exists', () => {
+    _resetExtensionKindsForTest();
+    registerExtensionKind('json', 'json');
+
+    const registry = new AssetTypeRegistry();
+
+    expect(registry.resolveExtensionType('json')).toBe('json');
+  });
+
+  it('is idempotent for registering the same (extension, type) pair twice', () => {
+    const registry = new AssetTypeRegistry();
+    registry.registerType('json', 'text');
+
+    expect(() => registry.registerType('json', 'text')).not.toThrow();
+  });
+
+  it('throws when a DIFFERENT override is registered for an already-overridden extension', () => {
+    const registry = new AssetTypeRegistry();
+    registry.registerType('json', 'text');
+
+    expect(() => registry.registerType('json', 'json')).toThrow(/already registered/);
   });
 });
