@@ -1,9 +1,11 @@
 /// <reference types="@webgpu/types" />
 
 /**
- * Owning wrapper around a `GPUBuffer` allocated with `STORAGE | COPY_DST | COPY_SRC`.
- * Designed for the data-oriented ParticleSystem GPU path: one storage
- * buffer per SoA channel, written to from CPU each spawn frame, read by
+ * Owning wrapper around a `GPUBuffer` allocated with `STORAGE | COPY_DST | COPY_SRC`,
+ * plus any `extraUsage` flags passed at construction (e.g. `GPUBufferUsage.VERTEX`
+ * for a buffer a compute shader writes and a render pass then reads as instanced
+ * vertex input). Designed for the data-oriented ParticleSystem GPU path: one
+ * storage buffer per SoA channel, written to from CPU each spawn frame, read by
  * compute shaders, and (optionally) read back to CPU for expire detection.
  *
  * Lifetime: the caller (typically `ParticleGpuState`) owns the buffer and
@@ -17,14 +19,14 @@ export class WebGpuStorageBuffer {
 
   private _readbackBuffer: GPUBuffer | null = null;
 
-  public constructor(device: GPUDevice, byteLength: number, label = 'storage') {
+  public constructor(device: GPUDevice, byteLength: number, label = 'storage', extraUsage: GPUBufferUsageFlags = 0) {
     this.device = device;
     this.byteLength = byteLength;
     this.label = label;
     this.buffer = device.createBuffer({
       label,
       size: byteLength,
-      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC | extraUsage,
     });
   }
 
