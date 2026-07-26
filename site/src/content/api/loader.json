@@ -2020,7 +2020,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Dispatched when an asset fails to load during background or bundle loading."
+          "description": "Fires whenever a fetch fails for a resident or claimed asset — the production-safe way to observe seamless/value-ref failures. A failed get()/load() placeholder or AssetRef heals silently by design (no exception at the call site); this signal is the supported channel for surfacing that failure to application code, in both development and production builds."
         },
         {
           "name": "onLoadComplete",

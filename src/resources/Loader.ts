@@ -253,7 +253,14 @@ export class Loader {
   public readonly onProgress = new Signal<[loaded: number, total: number]>();
   /** Dispatched when any asset finishes loading and is stored in memory. */
   public readonly onLoaded = new Signal<[type: AssetConstructor, alias: string, resource: unknown]>();
-  /** Dispatched when an asset fails to load during background or bundle loading. */
+  /**
+   * Fires whenever a fetch fails for a resident or claimed asset — the
+   * production-safe way to observe seamless/value-ref failures. A failed
+   * `get()`/`load()` placeholder or `AssetRef` heals silently by design (no
+   * exception at the call site); this signal is the supported channel for
+   * surfacing that failure to application code, in both development and
+   * production builds.
+   */
   public readonly onError = new Signal<[type: AssetConstructor, alias: string, error: Error]>();
 
   /** Fired when the first asset in a new load batch starts fetching. */
