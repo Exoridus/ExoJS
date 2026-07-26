@@ -1194,8 +1194,8 @@ export class AssetResidency {
   /**
    * Non-throwing in-memory lookup: the resource stored under `(type, source)`,
    * or `null` if none is held. Backs `Loader._peekResource` (scene
-   * deserialization) and `Loader._getClaimed`'s legacy-token branch (return
-   * value only — see {@link _hasStored} for the presence check).
+   * deserialization). For a lookup that preserves a legitimately-stored
+   * `undefined` instead of coalescing it to `null`, see {@link _getStored}.
    * @internal
    */
   public _peekResource(type: AssetConstructor, source: string): unknown {
@@ -1211,6 +1211,17 @@ export class AssetResidency {
    */
   public _hasStored(type: AssetConstructor, source: string): boolean {
     return this._resources.get(type)?.has(source) ?? false;
+  }
+
+  /**
+   * The raw stored value under `(type, source)` — `undefined` both for absent
+   * and for a resource legitimately stored as `undefined` (unlike
+   * {@link _peekResource}, which normalizes both cases to `null`). Pair with
+   * {@link _hasStored} to distinguish "absent" from "present but nullish."
+   * @internal
+   */
+  public _getStored(type: AssetConstructor, source: string): unknown {
+    return this._resources.get(type)?.get(source);
   }
 
   /**

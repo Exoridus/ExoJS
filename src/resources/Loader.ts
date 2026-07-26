@@ -784,7 +784,7 @@ export class Loader {
 
     this._claim(this._typeRegistry._key(ctor, src), ctor, src, claimer);
 
-    return this._residency._peekResource(ctor, src);
+    return this._residency._getStored(ctor, src);
   }
 
   /**

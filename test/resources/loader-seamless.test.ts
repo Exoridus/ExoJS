@@ -147,10 +147,12 @@ describe('Loader seamless get (Texture)', () => {
     // value token) whose handler resolves `null`/`undefined` as the actual
     // stored resource. The legacy lookup must distinguish "never loaded" from
     // "loaded, and the resource itself is nullish" — presence, not truthiness
-    // (a `Map.has()` check, not a `!== null` check on the read value). Both
-    // nullish values read back as `null` via `_peekResource`'s pre-existing
-    // "non-throwing lookup" contract (`?? null`, unrelated to this fix) — what
-    // matters here is that a STORED nullish resource no longer throws.
+    // (a `Map.has()` check, not a `!== null` check on the read value). The
+    // legacy branch reads the raw stored value via `_getStored`, not
+    // `_peekResource` — so a stored `null` reads back as `null`, and a stored
+    // `undefined` reads back as `undefined`, unchanged from before this
+    // resource-residency split. What matters here is that a STORED nullish
+    // resource no longer throws.
     class Nullable {}
 
     loader.bindAsset<null | undefined>(
@@ -164,7 +166,7 @@ describe('Loader seamless get (Texture)', () => {
     await loader.load(new Asset({ kind: 'nullable', source: 'undef' }));
 
     expect(loader.get(Nullable, 'null')).toBeNull();
-    expect(loader.get(Nullable, 'undef')).toBeNull();
+    expect(loader.get(Nullable, 'undef')).toBeUndefined();
     // A genuinely never-loaded source of the same type still throws.
     expect(() => loader.get(Nullable, 'never-loaded')).toThrow('Missing resource');
   });
