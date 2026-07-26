@@ -1,7 +1,9 @@
-﻿/// <reference types="@webgpu/types" />
+/// <reference types="@webgpu/types" />
 
 import type { Rectangle } from '@codexo/exojs';
 import type { Texture } from '@codexo/exojs';
+import type { ComputeBindGroupEntry } from '@codexo/exojs/renderer-sdk';
+import { reflectComputeBindings, WebGpuComputePipeline, WebGpuStorageBuffer, WebGpuUniformBuffer } from '@codexo/exojs/renderer-sdk';
 
 import type { UpdateModule } from "#modules/UpdateModule";
 import type { WgslContribution, WgslUniformField } from "#modules/WgslContribution";
@@ -14,17 +16,24 @@ import type { ParticleSystem } from "#ParticleSystem";
  * - **8 packed storage buffers** for the per-particle SoA data:
  *   positions/velocities/scales/rotInfo/timing as `vec2<f32>`, color and
  *   textureIndex as `u32`, plus the instance output buffer. Sits at the
- *   default WebGPU `maxStorageBuffersPerShaderStage = 8` limit.
- * - **One uniform buffer** for sim state (`dt`, `liveCount`).
- * - **One uniform buffer** for module configs (concatenated per-module
- *   structs with WGSL std140-ish alignment).
- * - **One uniform buffer** for frame UVs — `array<vec4<f32>, N>` where N
- *   is the system's frame count (or 1 when no atlas is declared). Each
- *   vec4 is `(uvMinX, uvMinY, uvMaxX, uvMaxY)` already flipY-adjusted.
+ *   default WebGPU `maxStorageBuffersPerShaderStage = 8` limit. Built on
+ *   the shared {@link WebGpuStorageBuffer} SDK primitive.
+ * - **Three uniform buffers** (sim state `dt`/`liveCount`, module configs —
+ *   concatenated per-module structs with WGSL std140-ish alignment — and
+ *   frame UVs, `array<vec4<f32>, N>` where N is the system's frame count or
+ *   1 when no atlas is declared, each vec4 `(uvMinX, uvMinY, uvMaxX, uvMaxY)`
+ *   already flipY-adjusted), built on the shared {@link WebGpuUniformBuffer}
+ *   SDK primitive.
  * - **N 1D textures** for modules that use lookup tables (Curve / ColorGradient).
  * - **Composite compute pipeline** built once at construction by
  *   concatenating the integration step + every registered module body +
- *   the pack-instances step into a single shader.
+ *   the pack-instances step into a single shader, via the shared
+ *   {@link WebGpuComputePipeline} SDK primitive (two bind groups: group 0
+ *   holds uniforms + module lookup textures/samplers, group 1 holds the
+ *   8 SoA storage buffers). The bind-group *layouts* are derived straight
+ *   from the shader's own `@group`/`@binding` declarations via
+ *   {@link reflectComputeBindings} — no hand-written binding list kept in
+ *   sync with the WGSL text by hand.
  *
  * The compute shader's pack-instances step reads `textureIndex[i]`, looks
  * up the matching frame UV, and writes a 40-byte interleaved record into
@@ -49,24 +58,25 @@ export class ParticleGpuState {
   /** GPU buffer holding interleaved per-instance vertex data, written by compute, read as VERTEX by the renderer. */
   public readonly instanceBuffer: GPUBuffer;
 
-  private readonly _positions: GPUBuffer;
-  private readonly _velocities: GPUBuffer;
-  private readonly _scales: GPUBuffer;
-  private readonly _rotInfo: GPUBuffer;
-  private readonly _timing: GPUBuffer;
-  private readonly _color: GPUBuffer;
-  private readonly _textureIndex: GPUBuffer;
+  private readonly _positions: WebGpuStorageBuffer;
+  private readonly _velocities: WebGpuStorageBuffer;
+  private readonly _scales: WebGpuStorageBuffer;
+  private readonly _rotInfo: WebGpuStorageBuffer;
+  private readonly _timing: WebGpuStorageBuffer;
+  private readonly _color: WebGpuStorageBuffer;
+  private readonly _textureIndex: WebGpuStorageBuffer;
+  private readonly _instanceStorageBuffer: WebGpuStorageBuffer;
 
-  private readonly _simUniformBuffer: GPUBuffer;
+  private readonly _simUniformBuffer: WebGpuUniformBuffer;
   private readonly _simUniformData: ArrayBuffer = new ArrayBuffer(16);
   private readonly _simUniformView: DataView;
 
-  private readonly _moduleUniformBuffer: GPUBuffer | null;
+  private readonly _moduleUniformBuffer: WebGpuUniformBuffer | null;
   private readonly _moduleUniformData: ArrayBuffer | null;
   private readonly _moduleUniformView: DataView | null;
   private readonly _moduleSlots: readonly ModuleSlot[];
 
-  private readonly _framesUniformBuffer: GPUBuffer;
+  private readonly _framesUniformBuffer: WebGpuUniformBuffer;
   private readonly _framesUniformData: ArrayBuffer;
   private readonly _framesUniformView: Float32Array;
   private readonly _frameCount: number;
@@ -75,7 +85,7 @@ export class ParticleGpuState {
   private readonly _samplerFiltering: GPUSampler;
   private readonly _samplerNonFiltering: GPUSampler;
 
-  private readonly _pipeline: GPUComputePipeline;
+  private readonly _pipelineWrapper: WebGpuComputePipeline;
   private readonly _bindGroup0: GPUBindGroup;
   private readonly _bindGroup1: GPUBindGroup;
 
@@ -117,11 +127,7 @@ export class ParticleGpuState {
     if (uniformOffset > 0) {
       this._moduleUniformData = new ArrayBuffer(totalUniformBytes);
       this._moduleUniformView = new DataView(this._moduleUniformData);
-      this._moduleUniformBuffer = device.createBuffer({
-        label: 'particle-module-uniforms',
-        size: totalUniformBytes,
-        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-      });
+      this._moduleUniformBuffer = new WebGpuUniformBuffer(device, totalUniformBytes, 'particle-module-uniforms');
     } else {
       this._moduleUniformData = null;
       this._moduleUniformView = null;
@@ -132,64 +138,25 @@ export class ParticleGpuState {
     this._frameCount = Math.max(1, frames.length);
     this._framesUniformData = new ArrayBuffer(this._frameCount * 16);
     this._framesUniformView = new Float32Array(this._framesUniformData);
-    this._framesUniformBuffer = device.createBuffer({
-      label: 'particle-frames-uniforms',
-      size: this._framesUniformData.byteLength,
-      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-    });
+    this._framesUniformBuffer = new WebGpuUniformBuffer(device, this._framesUniformData.byteLength, 'particle-frames-uniforms');
     this._writeFrames(frames, texture);
 
     const vec2Bytes = capacity * 8;
     const u32Bytes = capacity * 4;
 
-    this._positions = device.createBuffer({
-      label: 'particle-positions',
-      size: vec2Bytes,
-      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-    });
-    this._velocities = device.createBuffer({
-      label: 'particle-velocities',
-      size: vec2Bytes,
-      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-    });
-    this._scales = device.createBuffer({
-      label: 'particle-scales',
-      size: vec2Bytes,
-      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-    });
-    this._rotInfo = device.createBuffer({
-      label: 'particle-rotInfo',
-      size: vec2Bytes,
-      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-    });
-    this._timing = device.createBuffer({
-      label: 'particle-timing',
-      size: vec2Bytes,
-      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-    });
-    this._color = device.createBuffer({
-      label: 'particle-color',
-      size: u32Bytes,
-      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-    });
-    this._textureIndex = device.createBuffer({
-      label: 'particle-textureIndex',
-      size: u32Bytes,
-      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-    });
+    this._positions = new WebGpuStorageBuffer(device, vec2Bytes, 'particle-positions');
+    this._velocities = new WebGpuStorageBuffer(device, vec2Bytes, 'particle-velocities');
+    this._scales = new WebGpuStorageBuffer(device, vec2Bytes, 'particle-scales');
+    this._rotInfo = new WebGpuStorageBuffer(device, vec2Bytes, 'particle-rotInfo');
+    this._timing = new WebGpuStorageBuffer(device, vec2Bytes, 'particle-timing');
+    this._color = new WebGpuStorageBuffer(device, u32Bytes, 'particle-color');
+    this._textureIndex = new WebGpuStorageBuffer(device, u32Bytes, 'particle-textureIndex');
 
-    this.instanceBuffer = device.createBuffer({
-      label: 'particle-instance-output',
-      size: capacity * instanceBytes,
-      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-    });
+    this._instanceStorageBuffer = new WebGpuStorageBuffer(device, capacity * instanceBytes, 'particle-instance-output', GPUBufferUsage.VERTEX);
+    this.instanceBuffer = this._instanceStorageBuffer.buffer;
 
     this._simUniformView = new DataView(this._simUniformData);
-    this._simUniformBuffer = device.createBuffer({
-      label: 'particle-sim-uniforms',
-      size: 16,
-      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-    });
+    this._simUniformBuffer = new WebGpuUniformBuffer(device, 16, 'particle-sim-uniforms');
 
     // r32float textures aren't filterable in core WebGPU (would require
     // the optional `float32-filterable` feature). Use `nearest` for
@@ -229,55 +196,15 @@ export class ParticleGpuState {
 
     const wgsl = this._buildShader(slots);
 
-    const bindGroup0Layout = this._buildBindGroup0Layout(slots);
-    const bindGroup1Layout = device.createBindGroupLayout({
-      label: 'particle-soa-bgl',
-      entries: [
-        { binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
-        { binding: 1, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
-        { binding: 2, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
-        { binding: 3, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
-        { binding: 4, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
-        { binding: 5, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
-        { binding: 6, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'read-only-storage' } }, // textureIndex (matches WGSL `var<storage, read>`)
-        { binding: 7, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } },
-      ],
+    this._pipelineWrapper = WebGpuComputePipeline.create(device, {
+      wgsl,
+      workgroupSize,
+      bindingGroups: reflectComputeBindings(wgsl, { nonFilteringResources: this._nonFilteringResourceNames(slots) }),
+      label: 'particle-compute',
     });
 
-    const pipelineLayout = device.createPipelineLayout({
-      label: 'particle-compute-layout',
-      bindGroupLayouts: [bindGroup0Layout, bindGroup1Layout],
-    });
-
-    const shaderModule = device.createShaderModule({
-      label: 'particle-compute-shader',
-      code: wgsl,
-    });
-
-    this._pipeline = device.createComputePipeline({
-      label: 'particle-compute-pipeline',
-      layout: pipelineLayout,
-      compute: {
-        module: shaderModule,
-        entryPoint: 'main',
-      },
-    });
-
-    this._bindGroup0 = this._buildBindGroup0(bindGroup0Layout, slots);
-    this._bindGroup1 = device.createBindGroup({
-      label: 'particle-soa-bg',
-      layout: bindGroup1Layout,
-      entries: [
-        { binding: 0, resource: { buffer: this._positions } },
-        { binding: 1, resource: { buffer: this._velocities } },
-        { binding: 2, resource: { buffer: this._scales } },
-        { binding: 3, resource: { buffer: this._rotInfo } },
-        { binding: 4, resource: { buffer: this._timing } },
-        { binding: 5, resource: { buffer: this._color } },
-        { binding: 6, resource: { buffer: this._textureIndex } },
-        { binding: 7, resource: { buffer: this.instanceBuffer } },
-      ],
-    });
+    this._bindGroup0 = this._pipelineWrapper.createBindGroup(0, this._buildBindGroup0Entries(slots), 'particle-uniforms-bg');
+    this._bindGroup1 = this._pipelineWrapper.createBindGroup(1, this._buildSoaBindGroupEntries(), 'particle-soa-bg');
 
     // Modules upload their lookup textures.
     for (const slot of slots) {
@@ -310,10 +237,8 @@ export class ParticleGpuState {
     const encoder = this.device.createCommandEncoder({ label: 'particle-compute' });
     const pass = encoder.beginComputePass({ label: 'particle-compute-pass' });
 
-    pass.setPipeline(this._pipeline);
-    pass.setBindGroup(0, this._bindGroup0);
-    pass.setBindGroup(1, this._bindGroup1);
-    pass.dispatchWorkgroups(Math.ceil(liveCount / workgroupSize));
+    this._pipelineWrapper.dispatch(pass, liveCount, [this._bindGroup0, this._bindGroup1]);
+
     pass.end();
 
     this.device.queue.submit([encoder.finish()]);
@@ -327,7 +252,7 @@ export class ParticleGpuState {
     this._timing.destroy();
     this._color.destroy();
     this._textureIndex.destroy();
-    this.instanceBuffer.destroy();
+    this._instanceStorageBuffer.destroy();
     this._simUniformBuffer.destroy();
     this._framesUniformBuffer.destroy();
     this._moduleUniformBuffer?.destroy();
@@ -367,7 +292,7 @@ export class ParticleGpuState {
       }
     }
 
-    this.device.queue.writeBuffer(this._framesUniformBuffer, 0, this._framesUniformData);
+    this._framesUniformBuffer.write(this._framesUniformView);
   }
 
   /**
@@ -376,12 +301,12 @@ export class ParticleGpuState {
    * Slots not in the dirty set are left alone — GPU keeps the integrated
    * state from previous compute dispatches.
    *
-   * Each dirty slot triggers 7 small `queue.writeBuffer` calls (one per
-   * SoA channel). For typical spawn rates (≤200/s) this is negligible
-   * (≤1400 calls/s); contiguous-range batching is a future optimisation.
+   * Each dirty slot triggers 7 small writes (one per SoA channel, via
+   * {@link WebGpuStorageBuffer.write}). For typical spawn rates (≤200/s)
+   * this is negligible (≤1400 calls/s); contiguous-range batching is a
+   * future optimisation.
    */
   public uploadDirty(system: ParticleSystem, slots: Iterable<number>): void {
-    const queue = this.device.queue;
     const scratch2 = this._dirtyScratchVec2;
     const scratch1 = this._dirtyScratchU32;
 
@@ -391,29 +316,29 @@ export class ParticleGpuState {
 
       scratch2[0] = system.posX[slot]!;
       scratch2[1] = system.posY[slot]!;
-      queue.writeBuffer(this._positions, byteOffset2, scratch2.buffer, 0, 8);
+      this._positions.write(scratch2, byteOffset2);
 
       scratch2[0] = system.velX[slot]!;
       scratch2[1] = system.velY[slot]!;
-      queue.writeBuffer(this._velocities, byteOffset2, scratch2.buffer, 0, 8);
+      this._velocities.write(scratch2, byteOffset2);
 
       scratch2[0] = system.scaleX[slot]!;
       scratch2[1] = system.scaleY[slot]!;
-      queue.writeBuffer(this._scales, byteOffset2, scratch2.buffer, 0, 8);
+      this._scales.write(scratch2, byteOffset2);
 
       scratch2[0] = system.rotations[slot]!;
       scratch2[1] = system.rotationSpeeds[slot]!;
-      queue.writeBuffer(this._rotInfo, byteOffset2, scratch2.buffer, 0, 8);
+      this._rotInfo.write(scratch2, byteOffset2);
 
       scratch2[0] = system.elapsed[slot]!;
       scratch2[1] = system.lifetime[slot]!;
-      queue.writeBuffer(this._timing, byteOffset2, scratch2.buffer, 0, 8);
+      this._timing.write(scratch2, byteOffset2);
 
       scratch1[0] = system.color[slot]!;
-      queue.writeBuffer(this._color, byteOffset1, scratch1.buffer, 0, 4);
+      this._color.write(scratch1, byteOffset1);
 
       scratch1[0] = system.textureIndex[slot]!;
-      queue.writeBuffer(this._textureIndex, byteOffset1, scratch1.buffer, 0, 4);
+      this._textureIndex.write(scratch1, byteOffset1);
     }
   }
 
@@ -423,7 +348,7 @@ export class ParticleGpuState {
   private _writeSimUniforms(dt: number, liveCount: number): void {
     this._simUniformView.setFloat32(0, dt, true);
     this._simUniformView.setUint32(4, liveCount, true);
-    this.device.queue.writeBuffer(this._simUniformBuffer, 0, this._simUniformData);
+    this._simUniformBuffer.write(this._simUniformView);
   }
 
   private _writeModuleUniforms(dt: number): void {
@@ -435,52 +360,40 @@ export class ParticleGpuState {
       slot.module.writeUniforms?.(this._moduleUniformView, slot.uniformByteOffset, dt);
     }
 
-    this.device.queue.writeBuffer(this._moduleUniformBuffer, 0, this._moduleUniformData);
+    this._moduleUniformBuffer.write(this._moduleUniformView);
   }
 
-  private _buildBindGroup0Layout(slots: readonly ModuleSlot[]): GPUBindGroupLayout {
-    const entries: GPUBindGroupLayoutEntry[] = [
-      { binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform' } },
-      { binding: 1, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform' } },
-    ];
-
-    if (this._moduleUniformBuffer !== null) {
-      entries.push({ binding: 2, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'uniform' } });
-    }
-
-    let textureBindingIndex = this._moduleUniformBuffer !== null ? 3 : 2;
+  /**
+   * WGSL variable names of module lookup textures/samplers whose format isn't natively
+   * filterable (`r32float` Curve LUTs) — fed to {@link reflectComputeBindings} so it declares
+   * `'unfilterable-float'`/`'non-filtering'` for those specific bindings instead of the default
+   * `'float'`/`'filtering'`, an ambiguity the WGSL text itself can't resolve (see that
+   * function's doc comment).
+   */
+  private _nonFilteringResourceNames(slots: readonly ModuleSlot[]): Set<string> {
+    const names = new Set<string>();
 
     for (const slot of slots) {
       for (const t of slot.contribution.textures ?? []) {
-        const filterable = t.format !== 'r32float';
-
-        entries.push({
-          binding: textureBindingIndex++,
-          visibility: GPUShaderStage.COMPUTE,
-          texture: {
-            viewDimension: '1d',
-            sampleType: filterable ? 'float' : 'unfilterable-float',
-          },
-        });
-        entries.push({
-          binding: textureBindingIndex++,
-          visibility: GPUShaderStage.COMPUTE,
-          sampler: { type: filterable ? 'filtering' : 'non-filtering' },
-        });
+        if (t.format === 'r32float') {
+          names.add(`u_${slot.contribution.key}_${t.name}`);
+          names.add(`u_${slot.contribution.key}_${t.name}_sampler`);
+        }
       }
     }
 
-    return this.device.createBindGroupLayout({ label: 'particle-uniforms-bgl', entries });
+    return names;
   }
 
-  private _buildBindGroup0(layout: GPUBindGroupLayout, slots: readonly ModuleSlot[]): GPUBindGroup {
-    const entries: GPUBindGroupEntry[] = [
-      { binding: 0, resource: { buffer: this._simUniformBuffer } },
-      { binding: 1, resource: { buffer: this._framesUniformBuffer } },
+  /** Group-0 bind-group entries, matching group 0's bindings (reflected from the shader text) one-to-one. */
+  private _buildBindGroup0Entries(slots: readonly ModuleSlot[]): ComputeBindGroupEntry[] {
+    const entries: ComputeBindGroupEntry[] = [
+      { binding: 0, buffer: this._simUniformBuffer.buffer },
+      { binding: 1, buffer: this._framesUniformBuffer.buffer },
     ];
 
     if (this._moduleUniformBuffer !== null) {
-      entries.push({ binding: 2, resource: { buffer: this._moduleUniformBuffer } });
+      entries.push({ binding: 2, buffer: this._moduleUniformBuffer.buffer });
     }
 
     let textureBindingIndex = this._moduleUniformBuffer !== null ? 3 : 2;
@@ -491,12 +404,26 @@ export class ParticleGpuState {
         const filterable = t.format !== 'r32float';
         const sampler = filterable ? this._samplerFiltering : this._samplerNonFiltering;
 
-        entries.push({ binding: textureBindingIndex++, resource: tex.createView({ dimension: '1d' }) });
-        entries.push({ binding: textureBindingIndex++, resource: sampler });
+        entries.push({ binding: textureBindingIndex++, textureView: tex.createView({ dimension: '1d' }) });
+        entries.push({ binding: textureBindingIndex++, sampler });
       }
     }
 
-    return this.device.createBindGroup({ label: 'particle-uniforms-bg', layout, entries });
+    return entries;
+  }
+
+  /** Group-1 bind-group entries: the 8 SoA storage buffers, matching group 1's bindings (reflected from the shader text) one-to-one. */
+  private _buildSoaBindGroupEntries(): ComputeBindGroupEntry[] {
+    return [
+      { binding: 0, buffer: this._positions.buffer },
+      { binding: 1, buffer: this._velocities.buffer },
+      { binding: 2, buffer: this._scales.buffer },
+      { binding: 3, buffer: this._rotInfo.buffer },
+      { binding: 4, buffer: this._timing.buffer },
+      { binding: 5, buffer: this._color.buffer },
+      { binding: 6, buffer: this._textureIndex.buffer },
+      { binding: 7, buffer: this._instanceStorageBuffer.buffer },
+    ];
   }
 
   private _buildShader(slots: readonly ModuleSlot[]): string {
