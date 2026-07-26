@@ -1,10 +1,10 @@
 import { describe, expect, test, vi } from 'vitest';
 
-import type { AssetFactory } from '#resources/AssetFactory';
 import { AssetDecoder } from '#resources/AssetDecoder';
+import type { AssetFactory } from '#resources/AssetFactory';
 import { AssetTypeRegistry } from '#resources/AssetTypeRegistry';
-import type { CacheRequest, CacheStrategy } from '#resources/CacheStrategy';
 import type { CacheStore } from '#resources/CacheStore';
+import type { CacheRequest, CacheStrategy } from '#resources/CacheStrategy';
 import type { Loader } from '#resources/Loader';
 
 class TypeA {}
@@ -75,7 +75,10 @@ describe('AssetDecoder', () => {
     const { strategy, requests } = createFakeStrategy(() => 'decoded-value');
     const { decoder, typeRegistry, storeResource } = createDecoder({ cacheStrategy: strategy, basePath: 'assets/' });
 
-    typeRegistry.register(TypeA, fakeFactory(() => new TypeA()));
+    typeRegistry.register(
+      TypeA,
+      fakeFactory(() => new TypeA()),
+    );
 
     const result = await decoder._fetch(TypeA, 'hero', 'hero.png');
 
@@ -90,7 +93,10 @@ describe('AssetDecoder', () => {
     (strategy.resolve as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('network down'));
     const { decoder, typeRegistry, storeResource } = createDecoder({ cacheStrategy: strategy });
 
-    typeRegistry.register(TypeA, fakeFactory(() => new TypeA()));
+    typeRegistry.register(
+      TypeA,
+      fakeFactory(() => new TypeA()),
+    );
 
     await expect(decoder._fetch(TypeA, 'hero', 'hero.png')).rejects.toThrow(/Failed to load "hero" from "hero.png": network down/);
     expect(storeResource).not.toHaveBeenCalled();
@@ -125,7 +131,10 @@ describe('AssetDecoder', () => {
     const { strategy, requests } = createFakeStrategy(() => 'plain-fetch-value');
     const { decoder, typeRegistry, storeResource } = createDecoder({ cacheStrategy: strategy });
 
-    typeRegistry.register(TypeA, fakeFactory(() => new TypeA()));
+    typeRegistry.register(
+      TypeA,
+      fakeFactory(() => new TypeA()),
+    );
 
     await decoder._dispatchFetch(TypeA, 'hero', 'hero.png');
 
@@ -160,7 +169,10 @@ describe('AssetDecoder', () => {
   test('_injectSource falls back to a register()-based factory when no createFromBytes handler exists', async () => {
     const { decoder, typeRegistry, storeResource } = createDecoder();
 
-    typeRegistry.register(TypeA, fakeFactory((bytes: unknown) => `from-factory:${(bytes as ArrayBuffer).byteLength}`));
+    typeRegistry.register(
+      TypeA,
+      fakeFactory((bytes: unknown) => `from-factory:${(bytes as ArrayBuffer).byteLength}`),
+    );
 
     await decoder._injectSource(TypeA, 'hero', new ArrayBuffer(8));
 

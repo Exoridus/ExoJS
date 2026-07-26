@@ -1,5 +1,7 @@
-import type { AssetTypeRegistry } from './AssetTypeRegistry';
+import type { AssetHandler } from '#extensions/Extension';
+
 import type { AssetFactory } from './AssetFactory';
+import type { AssetTypeRegistry } from './AssetTypeRegistry';
 import type { CacheStore } from './CacheStore';
 import type { CacheStrategy } from './CacheStrategy';
 import type { AssetConstructor } from './FactoryRegistry';
@@ -50,11 +52,7 @@ export class AssetDecoder {
     this._fetchOptions = options.fetchOptions;
   }
 
-  /**
-   * Base path prepended to every relative asset URL at fetch time.
-   * Absolute URLs (starting with `http://`, `https://`, or `//`) are
-   * passed through unchanged.
-   */
+  /** Base path prepended to relative asset URLs at fetch time. @see Loader.basePath for the full contract. */
   public get basePath(): string {
     return this._basePath;
   }

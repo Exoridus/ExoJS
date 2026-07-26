@@ -1228,8 +1228,9 @@ export class Loader {
    * registered via `bindAsset`.
    */
   public destroy(): void {
-    // Order matters: bound-handler destroy must run after store destroy (mirrors
-    // the original inline teardown order) — see the regression test in loader.test.ts.
+    // Order matters: bound-handler destroy must run after store destroy (via
+    // this._decoder.destroy(), which mirrors the original inline teardown
+    // order) — see the regression test in loader.test.ts.
     this._typeRegistry.destroyFactories();
     this._decoder.destroy();
     this._typeRegistry.destroyHandlers();
