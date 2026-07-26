@@ -224,7 +224,12 @@ export class WebGpuComputePipeline {
    * created with `GPUBufferUsage.INDIRECT` (plus `STORAGE` if a compute
    * shader is what writes the counts into it).
    */
-  public dispatchIndirect(passEncoder: GPUComputePassEncoder, indirectBuffer: GPUBuffer, indirectOffset: number, bindGroups: readonly GPUBindGroup[] = []): void {
+  public dispatchIndirect(
+    passEncoder: GPUComputePassEncoder,
+    indirectBuffer: GPUBuffer,
+    indirectOffset: number,
+    bindGroups: readonly GPUBindGroup[] = [],
+  ): void {
     this._bind(passEncoder, bindGroups);
     passEncoder.dispatchWorkgroupsIndirect(indirectBuffer, indirectOffset);
   }

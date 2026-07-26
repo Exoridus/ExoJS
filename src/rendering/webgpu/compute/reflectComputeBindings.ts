@@ -98,7 +98,8 @@ const stripComments = (source: string): string => source.replaceAll(/\/\/.*$/gm,
 const uniformBufferDecl = /@group\((\d+)\)\s*@binding\((\d+)\)\s*var\s*<uniform>\s*(\w+)\s*:/g;
 const storageBufferDecl = /@group\((\d+)\)\s*@binding\((\d+)\)\s*var\s*<storage\s*,\s*(read_write|read)\s*>\s*(\w+)\s*:/g;
 const samplerDecl = /@group\((\d+)\)\s*@binding\((\d+)\)\s*var\s+(\w+)\s*:\s*(sampler_comparison|sampler)\s*;/g;
-const textureDecl = /@group\((\d+)\)\s*@binding\((\d+)\)\s*var\s+(\w+)\s*:\s*(texture_1d|texture_2d|texture_2d_array|texture_3d|texture_cube|texture_cube_array)<(f32|i32|u32)>\s*;/g;
+const textureDecl =
+  /@group\((\d+)\)\s*@binding\((\d+)\)\s*var\s+(\w+)\s*:\s*(texture_1d|texture_2d|texture_2d_array|texture_3d|texture_cube|texture_cube_array)<(f32|i32|u32)>\s*;/g;
 const storageTextureDecl =
   /@group\((\d+)\)\s*@binding\((\d+)\)\s*var\s+(\w+)\s*:\s*(texture_storage_1d|texture_storage_2d|texture_storage_2d_array|texture_storage_3d)<([\w-]+)\s*,\s*(read_write|read|write)\s*>\s*;/g;
 

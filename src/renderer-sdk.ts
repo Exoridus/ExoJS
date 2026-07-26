@@ -44,7 +44,7 @@ export type { WebGl2VertexArrayObjectRuntime } from '#rendering/webgl2/WebGl2Ver
 export { WebGl2VertexArrayObject } from '#rendering/webgl2/WebGl2VertexArrayObject';
 export { AbstractWebGpuRenderer } from '#rendering/webgpu/AbstractWebGpuRenderer';
 export type { ComputeBindGroupEntry, ComputeBinding } from '#rendering/webgpu/compute/index';
-export { reflectComputeBindings,WebGpuComputePipeline, WebGpuStorageBuffer, WebGpuUniformBuffer } from '#rendering/webgpu/compute/index';
+export { reflectComputeBindings, WebGpuComputePipeline, WebGpuStorageBuffer, WebGpuUniformBuffer } from '#rendering/webgpu/compute/index';
 export { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 export { getWebGpuBlendState } from '#rendering/webgpu/WebGpuBlendState';
 export type { WebGpuActiveRenderPass } from '#rendering/webgpu/WebGpuPassCoordinator';
