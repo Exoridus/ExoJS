@@ -26,13 +26,13 @@ const mockFetchImage = (): void => {
 
 /** Introspection helpers over the private claim/handle maps. */
 function claimSize(loader: Loader): number {
-  return (loader as unknown as { _claims: Map<string, unknown> })._claims.size;
+  return (loader as unknown as { _residency: { _claims: Map<string, unknown> } })._residency._claims.size;
 }
 function deferredSize(loader: Loader): number {
-  return (loader as unknown as { _deferred: Map<string, unknown> })._deferred.size;
+  return (loader as unknown as { _residency: { _deferred: Map<string, unknown> } })._residency._deferred.size;
 }
 function refSize(loader: Loader): number {
-  return (loader as unknown as { _refs: Map<string, unknown> })._refs.size;
+  return (loader as unknown as { _residency: { _refs: Map<string, unknown> } })._residency._refs.size;
 }
 function keyOf(loader: Loader, type: unknown, source: string): string {
   return (loader as unknown as { _typeRegistry: { _key(t: unknown, s: string): string } })._typeRegistry._key(type, source);
@@ -58,14 +58,14 @@ describe('Loader unload()/unloadAll() claim consistency (A3)', () => {
     await handle.loaded;
 
     const key = keyOf(loader, Texture, 'ship.png');
-    expect((loader as unknown as { _claims: Map<string, unknown> })._claims.has(key)).toBe(true);
+    expect((loader as unknown as { _residency: { _claims: Map<string, unknown> } })._residency._claims.has(key)).toBe(true);
 
     loader.unload(Texture, 'ship.png');
 
     // Resource is gone AND the stale claim was cleared (previously it leaked,
     // holding refcount > 0 forever).
     expect(loader._peekResource(Texture, 'ship.png')).toBeNull();
-    expect((loader as unknown as { _claims: Map<string, unknown> })._claims.has(key)).toBe(false);
+    expect((loader as unknown as { _residency: { _claims: Map<string, unknown> } })._residency._claims.has(key)).toBe(false);
   });
 
   test('repeated load -> unloadAll cycles do not grow the claim/deferred/ref maps', async () => {

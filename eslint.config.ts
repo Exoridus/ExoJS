@@ -895,6 +895,18 @@ export default defineConfig([
     },
   },
 
+  // Relocated verbatim from Loader.ts (Loader split, Slice 3): claim/refcount
+  // tracking, multi-handle fill, and options-equivalence branching are
+  // inherently branchy state machines that predate the split and were already
+  // exempted from `complexity` there — same code, same justification.
+  {
+    files: ['src/resources/AssetResidency.ts'],
+    rules: {
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      complexity: 'off',
+    },
+  },
+
   {
     files: ['src/resources/factories/SubtitleFactory.ts'],
     rules: {

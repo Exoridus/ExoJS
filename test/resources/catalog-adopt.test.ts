@@ -236,11 +236,11 @@ describe('Loader._adopt', () => {
     // always targets the app-lifetime root claimer (same scope loader.get()
     // claimed under above), so it must now actually drop that scope.
     const key = loader['_typeRegistry']['_key'](Texture, 'x.png');
-    expect(loader['_claims'].get(key)?.scopes.has(loader['_rootClaimer'])).toBe(true);
+    expect(loader['_residency']['_claims'].get(key)?.scopes.has(loader['_rootClaimer'])).toBe(true);
 
     loader.release(leaf);
 
-    expect(loader['_claims'].get(key)?.scopes.has(loader['_rootClaimer'])).toBe(false);
+    expect(loader['_residency']['_claims'].get(key)?.scopes.has(loader['_rootClaimer'])).toBe(false);
     expect(stored.loadState).toBe('ready'); // adopter's own claim still holds it alive
     expect(stored.width).toBe(4);
 
@@ -291,11 +291,11 @@ describe('Loader._adopt', () => {
 
     // Bug: release(handle) couldn't resolve the key for this branch either.
     const key = loader['_typeRegistry']['_key'](Json, 'cfg.json');
-    expect(loader['_claims'].get(key)?.scopes.has(loader['_rootClaimer'])).toBe(true);
+    expect(loader['_residency']['_claims'].get(key)?.scopes.has(loader['_rootClaimer'])).toBe(true);
 
     loader.release(leaf);
 
-    expect(loader['_claims'].get(key)?.scopes.has(loader['_rootClaimer'])).toBe(false);
+    expect(loader['_residency']['_claims'].get(key)?.scopes.has(loader['_rootClaimer'])).toBe(false);
   });
 
   test('throws for a value with no assetMeta stamp', () => {
