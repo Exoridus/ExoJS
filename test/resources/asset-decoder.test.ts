@@ -141,13 +141,8 @@ describe('AssetDecoder', () => {
 
     await decoder._dispatchFetch(TypeA, 'hero', 'hero.png', { scale: 2 });
 
-    expect(load).toHaveBeenCalledTimes(1);
-    const [configArg, contextArg] = load.mock.calls[0] as [unknown, unknown];
-
-    // Config should have source and include scale (either merged at top level or in options)
-    expect(configArg).toMatchObject({ source: 'hero.png' });
-    expect(contextArg).toMatchObject({ identityKey: expect.any(String) });
-    expect(storeResource).toHaveBeenCalledWith(TypeA, 'hero', expect.any(Object));
+    expect(load).toHaveBeenCalledWith({ source: 'hero.png', options: { scale: 2 } }, expect.objectContaining({ identityKey: expect.any(String) }));
+    expect(storeResource).toHaveBeenCalledWith(TypeA, 'hero', { config: { source: 'hero.png', options: { scale: 2 } } });
   });
 
   test('_injectSource uses createFromBytes when the handler provides it, and stores via the callback', async () => {
