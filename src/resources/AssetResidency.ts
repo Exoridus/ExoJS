@@ -453,9 +453,8 @@ export class AssetResidency {
    * Register a fresh deferred entry for `key` holding `handle` weakly, wire the
    * reverse `handle → key` lookup, and arm GC pruning. Returns the entry so the
    * caller can add further co-handles.
-   * @internal
    */
-  public _createDeferredEntry(key: string, handle: object, options?: unknown): { readonly handles: WeakHandleSet; readonly options: unknown } {
+  private _createDeferredEntry(key: string, handle: object, options?: unknown): { readonly handles: WeakHandleSet; readonly options: unknown } {
     const entry = { handles: new WeakHandleSet(handle), options };
 
     this._deferred.set(key, entry);
@@ -488,9 +487,8 @@ export class AssetResidency {
    * later one is silently dropped. Per-handle sampler / pre-size options never
    * conflict — each handle carries its own — so they are stripped before the
    * comparison and never warn. A `undefined` second option is a plain reuse.
-   * @internal
    */
-  public _warnOnFetchOptionConflict(type: AssetConstructor, source: string, key: string, existingOptions: unknown, newOptions: unknown): void {
+  private _warnOnFetchOptionConflict(type: AssetConstructor, source: string, key: string, existingOptions: unknown, newOptions: unknown): void {
     if (newOptions === undefined || this._fetchOptionsEquivalent(existingOptions, newOptions)) {
       return;
     }
@@ -605,7 +603,7 @@ export class AssetResidency {
 
   /** @internal */
   public async _loadSingle(type: AssetConstructor, alias: string, options?: unknown, explicitPath?: string): Promise<unknown> {
-    if (this._hasResource(type, alias)) {
+    if (this._hasStored(type, alias)) {
       const typeMap = this._resources.get(type);
       if (typeMap?.has(alias) === true) {
         return typeMap.get(alias);
@@ -639,7 +637,7 @@ export class AssetResidency {
    * @internal
    */
   public async _loadSingleAsset(type: AssetConstructor, alias: string, asset: Asset<unknown>): Promise<unknown> {
-    if (this._hasResource(type, alias)) {
+    if (this._hasStored(type, alias)) {
       return this._resources.get(type)?.get(alias);
     }
 
@@ -772,10 +770,6 @@ export class AssetResidency {
 
   private _normalizeError(error: unknown): Error {
     return error instanceof Error ? error : new Error(String(error));
-  }
-
-  private _hasResource(type: AssetConstructor, alias: string): boolean {
-    return this._resources.get(type)?.has(alias) ?? false;
   }
 
   // -----------------------------------------------------------------------
@@ -938,7 +932,7 @@ export class AssetResidency {
    * @internal
    */
   public _enqueueBackgroundFetch(type: AssetConstructor, source: string, options: unknown): void {
-    if (this._hasResource(type, source)) return;
+    if (this._hasStored(type, source)) return;
     if (this._inFlight.has(this._typeRegistry._key(type, source))) return;
     if (this._isQueuedInBackground(type, source)) return;
 
@@ -960,7 +954,7 @@ export class AssetResidency {
       }
       const key = this._typeRegistry._key(entry.type, entry.alias);
 
-      if (this._hasResource(entry.type, entry.alias) || this._inFlight.has(key)) {
+      if (this._hasStored(entry.type, entry.alias) || this._inFlight.has(key)) {
         this._backgroundLoaded++;
         this._onBackgroundItemDone();
         continue;
@@ -1271,6 +1265,18 @@ export class AssetResidency {
     // too is more correct for a full teardown; added during the Loader-split extraction.
     this._claims.clear();
     this._evicted.clear();
+
     this._backgroundQueue.length = 0;
+    this._backgroundActive = 0;
+    this._backgroundLoaded = 0;
+    this._backgroundTotal = 0;
+
+    // A pending awaitBackground() caller must not hang forever past destroy().
+    if (this._backgroundResolve) {
+      const resolve = this._backgroundResolve;
+
+      this._backgroundResolve = null;
+      resolve();
+    }
   }
 }

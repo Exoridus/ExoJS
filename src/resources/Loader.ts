@@ -236,6 +236,14 @@ export interface LoadOptions {
  * const loader = new Loader({ basePath: '/assets/', cache: new IndexedDbStore('game') });
  * const { hero } = await loader.load(Assets.from({ hero: 'hero.png' }));
  * ```
+ *
+ * @remarks Internally, `Loader` is a thin orchestrator over three collaborators:
+ * `AssetTypeRegistry` (type/extension/handler registration), `AssetDecoder`
+ * (URL resolution, cache-strategy dispatch, `bindAsset` handler invocation),
+ * and `AssetResidency` (claims, in-flight dedup, the resident-resource store,
+ * deferred-handle healing, the background queue). `Loader` itself keeps the
+ * public call-shape dispatch (`load`/`get`/`unload` and their `@internal`
+ * scene-scope entry points) and the foreground-batch progress signals.
  */
 export class Loader {
   private readonly _typeRegistry = new AssetTypeRegistry();
@@ -290,6 +298,11 @@ export class Loader {
     const stores = options.cache ? (Array.isArray(options.cache) ? options.cache : [options.cache]) : [];
     const cacheStrategy = options.cacheStrategy ?? new CacheFirstStrategy();
 
+    // The callback below reads `this._residency` before it's assigned two
+    // statements down — safe only because AssetDecoder's constructor never
+    // invokes it synchronously (it fires later, on a real fetch resolving).
+    // If AssetDecoder's construction ever changes to eagerly call back into
+    // the loader, this ordering must change too.
     this._decoder = new AssetDecoder(this, this._typeRegistry, (type, alias, resource) => this._residency._storeResource(type, alias, resource), {
       basePath: options.basePath ?? '',
       fetchOptions: options.fetchOptions ?? {},
@@ -685,9 +698,9 @@ export class Loader {
    * Claimed variant of {@link get}: identical resolution, but each resolved key
    * is claimed under `claimer` (refcount). The public {@link get} delegates here
    * under the app-lifetime {@link _rootClaimer}; the scene-scoped loader proxy
-   * passes its own scope. `_claim` runs AFTER `_getSeamless`/`_getRef` so an
-   * evicted key's re-fetch is driven from here (the re-armed handle reads
-   * `'loading'`, which `_getSeamless` alone would not re-fetch).
+   * passes its own scope. `_claim` runs AFTER `AssetResidency._getSeamless`/
+   * `_getRef` so an evicted key's re-fetch is driven from here (the re-armed
+   * handle reads `'loading'`, which `_getSeamless` alone would not re-fetch).
    * @internal
    */
   public _getClaimed(claimer: symbol, typeOrPath: Loadable | string | object, source?: unknown): unknown {
@@ -1026,13 +1039,14 @@ export class Loader {
    * Adopt an externally-created handle-hybrid leaf (from `Assets.from()`) into
    * this loader: register it as the deferred/ref handle under its normalized
    * key, claim it under `claimer`, and drive the fetch. The existing fill site
-   * ({@link _storeResource}) transplants the fetched payload into this exact
-   * object, so every consumer that already holds the leaf pops in. Idempotent
-   * for a handle already adopted under the same key (no duplicate fetch).
+   * (`AssetResidency._storeResource`) transplants the fetched payload into this
+   * exact object, so every consumer that already holds the leaf pops in.
+   * Idempotent for a handle already adopted under the same key (no duplicate
+   * fetch).
    *
    * With `background`, the leaf is still registered + claimed + healed in place,
    * but its fetch is diverted into the low-priority background queue (see
-   * {@link _enqueueBackgroundFetch}) instead of started immediately —
+   * `AssetResidency._enqueueBackgroundFetch`) instead of started immediately —
    * `load(target, { background: true })`.
    * @internal
    */
@@ -1061,8 +1075,9 @@ export class Loader {
 
   /**
    * Release every claim held under a claim scope (a scene unloading its
-   * scene-private assets). Collect the held keys first, then release — `_release`
-   * mutates `_claims`, so we must not delete during iteration.
+   * scene-private assets). Collect the held keys first, then release —
+   * `AssetResidency._release` mutates its own claim map, so we must not
+   * delete during iteration.
    * @internal
    */
   public _releaseScope(claimer: symbol): void {
