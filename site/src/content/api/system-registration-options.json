@@ -6,11 +6,11 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 1,
+  "memberCount": 3,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 1,
+    "properties": 3,
     "events": 0
   },
   "sections": [
@@ -28,6 +28,80 @@
       "id": "properties",
       "title": "Properties",
       "members": [
+        {
+          "name": "after",
+          "signature": "after?: readonly System[]",
+          "signatureTokens": [
+            {
+              "text": "after",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "System",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Systems this one must run after. See SystemRegistrationOptions.before."
+        },
+        {
+          "name": "before",
+          "signature": "before?: readonly System[]",
+          "signatureTokens": [
+            {
+              "text": "before",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "System",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Systems this one must run before, additive to (not a replacement for) order — see SystemRegistry class docs for how before/after combine with order/registration sequence."
+        },
         {
           "name": "order",
           "signature": "order?: number",
