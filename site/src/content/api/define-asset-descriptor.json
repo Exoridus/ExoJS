@@ -90,6 +90,39 @@
           "description": "Loader-local handler factory, called once per Loader by materializeAssetBindings."
         },
         {
+          "name": "ctor",
+          "signature": "ctor: AssetConstructor<Result>",
+          "signatureTokens": [
+            {
+              "text": "ctor",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetConstructor",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Result",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The runtime constructor the produced asset is an instance of."
+        },
+        {
           "name": "extensions",
           "signature": "extensions?: readonly string[]",
           "signatureTokens": [
@@ -152,35 +185,6 @@
           "description": "Whether the catalog leaf is a deferred AssetRef (value kind). Defaults to seamless === undefined."
         },
         {
-          "name": "kind",
-          "signature": "kind: keyof AssetDefinitions",
-          "signatureTokens": [
-            {
-              "text": "kind",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "keyof",
-              "kind": "keyword"
-            },
-            {
-              "text": " ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "AssetDefinitions",
-              "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "The AssetDefinitions key this type registers under."
-        },
-        {
           "name": "seamless",
           "signature": "seamless?: SeamlessAdapter<Result>",
           "signatureTokens": [
@@ -219,7 +223,7 @@
         },
         {
           "name": "type",
-          "signature": "type: AssetConstructor<Result>",
+          "signature": "type: keyof AssetDefinitions",
           "signatureTokens": [
             {
               "text": "type",
@@ -230,25 +234,21 @@
               "kind": "punctuation"
             },
             {
-              "text": "AssetConstructor",
-              "kind": "type"
+              "text": "keyof",
+              "kind": "keyword"
             },
             {
-              "text": "<",
+              "text": " ",
               "kind": "punctuation"
             },
             {
-              "text": "Result",
+              "text": "AssetDefinitions",
               "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "The runtime constructor the produced asset is an instance of."
+          "description": "The AssetDefinitions key this type registers under."
         }
       ],
       "paragraphs": [],

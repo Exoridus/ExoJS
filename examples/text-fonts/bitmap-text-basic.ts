@@ -13,7 +13,7 @@ class BitmapTextBasicScene extends Scene {
     override async init(): Promise<void> {
         const app = this.app;
         if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        this.font = await this.loader.load(Asset.kind('bmFont', assets.demo.fonts.kenneyBlocksFnt));
+        this.font = await this.loader.load(Asset.type('bmFont', assets.demo.fonts.kenneyBlocksFnt));
 
         const font = this.font;
         const { width, height } = app.canvas;

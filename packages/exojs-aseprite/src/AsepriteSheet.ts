@@ -95,7 +95,7 @@ function avgFps(frameArray: AsepriteFrameData[], indices: number[]): number {
  *
  * @example
  * ```ts
- * const sheet = await loader.load(Asset.kind('asepriteSheet', 'hero.aseprite.json'));
+ * const sheet = await loader.load(Asset.type('asepriteSheet', 'hero.aseprite.json'));
  * const sprite = sheet.createAnimatedSprite();
  * sprite.play('run');
  * scene.addChild(sprite);

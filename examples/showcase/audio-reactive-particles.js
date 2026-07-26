@@ -21,9 +21,9 @@ class AudioReactiveParticlesScene extends Scene {
             throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const { width, height } = app.canvas;
         // AudioStream is a non-leaf resource kind (no seamless placeholder), so it
-        // is loaded directly through `Asset.kind('music', ...)` and awaited rather
+        // is loaded directly through `Asset.type('music', ...)` and awaited rather
         // than fetched synchronously via `get()`.
-        this.music = await this.loader.load(Asset.kind('music', assets.demo.audio.musicLoop));
+        this.music = await this.loader.load(Asset.type('music', assets.demo.audio.musicLoop));
         // Two parallel taps of the same track: the analyser gives per-band
         // energy (drives emission), the detector gives beats (recolours).
         this.analyser = new AudioAnalyser({ fftSize: 1024, source: app.audio.music });

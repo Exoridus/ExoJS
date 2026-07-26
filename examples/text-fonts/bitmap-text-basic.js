@@ -11,7 +11,7 @@ class BitmapTextBasicScene extends Scene {
         const app = this.app;
         if (app === null)
             throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        this.font = await this.loader.load(Asset.kind('bmFont', assets.demo.fonts.kenneyBlocksFnt));
+        this.font = await this.loader.load(Asset.type('bmFont', assets.demo.fonts.kenneyBlocksFnt));
         const font = this.font;
         const { width, height } = app.canvas;
         const marginX = width * 0.08;

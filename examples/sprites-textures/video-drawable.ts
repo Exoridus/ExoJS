@@ -28,9 +28,9 @@ class VideoDrawableScene extends Scene {
         const { width, height } = app.canvas;
 
         // Video is a non-leaf resource kind (no seamless placeholder, unlike
-        // Texture/Sound), so it is loaded directly through `Asset.kind('video', ...)`
+        // Texture/Sound), so it is loaded directly through `Asset.type('video', ...)`
         // and awaited rather than fetched synchronously via `get()`.
-        this.video = await this.loader.load(Asset.kind('video', VIDEOS[0].url));
+        this.video = await this.loader.load(Asset.type('video', VIDEOS[0].url));
         this.loadedVideos.add(VIDEOS[0].name);
 
         this.configureVideo();
@@ -84,7 +84,7 @@ class VideoDrawableScene extends Scene {
         this.switching = true;
         this.hud.setStatus(`Loading — ${entry.label}…`);
         try {
-            const loaded = await this.loader.load(Asset.kind('video', entry.url));
+            const loaded = await this.loader.load(Asset.type('video', entry.url));
             this.loadedVideos.add(entry.name);
             this.video.pause();
             this.videoIdx = idx;

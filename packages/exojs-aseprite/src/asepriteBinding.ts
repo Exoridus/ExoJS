@@ -103,24 +103,24 @@ function validateAsepriteData(raw: unknown, source: string): AsepriteData {
 /**
  * Declarative asset binding for {@link AsepriteSheet}.
  *
- * `loader.load(Asset.kind('asepriteSheet', 'hero.aseprite.json'))` fetches and validates the
+ * `loader.load(Asset.type('asepriteSheet', 'hero.aseprite.json'))` fetches and validates the
  * Aseprite JSON export, resolves the packed image URL from `meta.image`
  * (relative to the JSON source), loads the {@link Texture} via the Loader's
  * sub-load deduplication, and constructs a fully-parsed {@link AsepriteSheet}.
  *
  * The `aseprite` type name enables the asset-config shorthand:
- * `{ kind: 'aseprite', source: 'hero.aseprite.json' }`.
+ * `{ type: 'aseprite', source: 'hero.aseprite.json' }`.
  */
 export const asepriteBinding = defineAsset({
-  type: AsepriteSheet,
-  kind: 'asepriteSheet',
+  ctor: AsepriteSheet,
+  type: 'asepriteSheet',
   create() {
     return {
       async load(req, ctx): Promise<AsepriteSheet> {
         const raw = await ctx.fetchJson(req.source);
         const data = validateAsepriteData(raw, req.source);
         const imageUrl = resolveAsepriteUrl(data.meta.image, req.source);
-        const texture = await ctx.loader.load(Asset.kind('texture', imageUrl));
+        const texture = await ctx.loader.load(Asset.type('texture', imageUrl));
 
         return AsepriteSheet.parse(data, texture);
       },

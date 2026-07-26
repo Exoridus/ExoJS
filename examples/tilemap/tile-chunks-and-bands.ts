@@ -41,7 +41,7 @@ class TileChunksAndBandsScene extends Scene {
         // ── Tileset + two layers, built entirely in code ──────────────────
         // Await the atlas load: TileSet needs a TextureRegion with real
         // dimensions, so a not-yet-hydrated `loader.get()` handle is not enough.
-        const tilesTexture = await this.loader.load(Asset.kind('texture', assets.demo.tilesets.map.image));
+        const tilesTexture = await this.loader.load(Asset.type('texture', assets.demo.tilesets.map.image));
         const tileset = new TileSet({
             name: 'map',
             texture: new TextureRegion(tilesTexture, { x: 0, y: 0, width: tilesTexture.width, height: tilesTexture.height }),
@@ -76,7 +76,7 @@ class TileChunksAndBandsScene extends Scene {
 
         const characters = new Spritesheet(
             this.loader.get(assets.demo.spritesheets.platformerCharacters.image),
-            (await this.loader.load(Asset.kind('json', assets.demo.spritesheets.platformerCharacters.data))) as SpritesheetData,
+            (await this.loader.load(Asset.type('json', assets.demo.spritesheets.platformerCharacters.data))) as SpritesheetData,
         );
 
         this.explorer = characters.getFrameSprite('character_green_front').setAnchor(0.5);

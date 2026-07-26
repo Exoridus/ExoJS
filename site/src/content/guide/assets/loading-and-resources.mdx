@@ -25,9 +25,9 @@ The loader offers several forms. Pick the smallest one that covers your case:
 | Form | Best for |
 |------|----------|
 | `loader.load('hero.png')` | One asset, path doubles as its identity — no alias needed |
-| `Asset.kind('texture', path)` / `Asset.kind('sound', path)` / `Asset.kind<T>('json', path)` | The path is computed at runtime (not a literal), or you want an explicit type |
+| `Asset.type('texture', path)` / `Asset.type('sound', path)` / `Asset.type<T>('json', path)` | The path is computed at runtime (not a literal), or you want an explicit type |
 | `Assets.from({ hero: 'hero.png', … })` | A reusable, named group of assets shared across scenes |
-| `loader.load({ hero: { kind: 'texture', … }, … })` | Mixed types in one call, config objects with type-specific options |
+| `loader.load({ hero: { type: 'texture', … }, … })` | Mixed types in one call, config objects with type-specific options |
 
 When in doubt, start with a bare path string. Reach for `Assets.from` when the same group of assets is referenced from more than one place, and `X.of(...)` whenever the path isn't a string literal.
 
@@ -79,13 +79,13 @@ import { Asset, Texture, AudioStream } from '@codexo/exojs';
 
 // Dynamic path — not a string literal, so it needs an explicit token
 async _changeLevel(levelName: string) {
-    const bg = await this.app.loader.load(Asset.kind('texture', `image/levels/${levelName}.png`));
+    const bg = await this.app.loader.load(Asset.type('texture', `image/levels/${levelName}.png`));
     this.background.setTexture(bg);
 }
 
 // AudioStream, Video, BmFont, FontAsset, ImageAsset don't have a bare-path
 // form at all — they always need .of(), even for a literal path
-const music = await loader.load(Asset.kind('music', 'audio/theme.ogg'));
+const music = await loader.load(Asset.type('music', 'audio/theme.ogg'));
 ```
 
 <Callout type="pitfall" title="Never call get(X.of(...))">
@@ -100,7 +100,7 @@ When a scene needs different asset types, load them in parallel with `Promise.al
 async load(loader) {
     [this.sky, this.ambient, this.coin, this.jump, this.levels] = await Promise.all([
         loader.load('image/sky.png'),
-        loader.load(Asset.kind('music', 'audio/ambient.ogg')),
+        loader.load(Asset.type('music', 'audio/ambient.ogg')),
         loader.load('audio/coin.wav'),
         loader.load('audio/jump.wav'),
         loader.load('data/levels.json'),
@@ -149,8 +149,8 @@ import { Asset, Assets, AudioStream, Json } from '@codexo/exojs';
 
 export const TitleAssets = Assets.from({
     logo:   'sprites/logo.png',                        // bare path → Texture
-    music:  Asset.kind('music', 'audio/title.ogg'),          // non-seamless → needs .of()
-    config: Asset.kind<{ startLevel: string }>('json', 'data/config.json'),
+    music:  Asset.type('music', 'audio/title.ogg'),          // non-seamless → needs .of()
+    config: Asset.type<{ startLevel: string }>('json', 'data/config.json'),
 });
 ```
 
@@ -374,7 +374,7 @@ loader.unload(TitleAssets); // releases every leaf in the catalog
 ```
 
 <Callout type="hint" title="Non-seamless types have no placeholder">
-Types that aren't seamless — `AudioStream`, `Video`, `BmFont`, `FontAsset`, and custom types — have no placeholder to hand back, so there's nothing to `get()` speculatively. Load them by reference and hold onto the resolved value: `const music = await loader.load(Asset.kind('music', 'audio/theme.ogg'))`. There is no `has()`/`peek()` guard — for a seamless handle read `.ready` / `.state`; for a non-seamless resource, `await` the load (or its returned handle's `.loaded` promise) before you use it.
+Types that aren't seamless — `AudioStream`, `Video`, `BmFont`, `FontAsset`, and custom types — have no placeholder to hand back, so there's nothing to `get()` speculatively. Load them by reference and hold onto the resolved value: `const music = await loader.load(Asset.type('music', 'audio/theme.ogg'))`. There is no `has()`/`peek()` guard — for a seamless handle read `.ready` / `.state`; for a non-seamless resource, `await` the load (or its returned handle's `.loaded` promise) before you use it.
 </Callout>
 
 ## When are resources available?
@@ -388,12 +388,12 @@ The lifecycle guarantees that:
 
 ## Loading on demand
 
-`loader.load(...)` works any time, not just inside the `load` hook. A computed path isn't a string literal, so use `Asset.kind('texture', ...)`:
+`loader.load(...)` works any time, not just inside the `load` hook. A computed path isn't a string literal, so use `Asset.type('texture', ...)`:
 
 ```js
 async _changeLevel(levelName) {
     const bg = await this.app.loader.load(
-        Asset.kind('texture', `image/levels/${levelName}.png`)
+        Asset.type('texture', `image/levels/${levelName}.png`)
     );
     this.background.setTexture(bg);
 }
@@ -410,12 +410,12 @@ import { Asset, Assets, AudioStream, Json } from '@codexo/exojs';
 
 export const MenuAssets = Assets.from({
     logo:  'image/logo.png',
-    music: Asset.kind('music', 'audio/theme.ogg'),
+    music: Asset.type('music', 'audio/theme.ogg'),
 });
 
 export const Level1Assets = Assets.from({
     tiles: 'image/level-1/tiles.png',
-    map:   Asset.kind<{ spawn: [number, number] }>('json', 'data/level-1.json'),
+    map:   Asset.type<{ spawn: [number, number] }>('json', 'data/level-1.json'),
 });
 ```
 
@@ -551,7 +551,7 @@ export class HeightField {
     // Annotation static — how the type is loaded by reference (a dynamic path,
     // per-asset options, or a key inside `Assets.from({...})`).
     public static of(source: string): Asset<HeightField> {
-        return new Asset({ kind: 'heightField', source }) as unknown as Asset<HeightField>;
+        return new Asset({ type: 'heightField', source }) as unknown as Asset<HeightField>;
     }
 }
 
@@ -564,8 +564,8 @@ declare module '@codexo/exojs' {
 
 // 3. Bind the kind to a loader-local handler. Returns an AssetBinding.
 export const heightFieldBinding = defineAsset({
-    type:    HeightField,
-    kind:    'heightField',
+    ctor:    HeightField,
+    type:    'heightField',
     isValue: false, // a resource loaded by reference — see the note below
     create() {
         return {
@@ -608,8 +608,8 @@ const World = Assets.from({ level1: HeightField.of('maps/level-1.hf') });
 
 ```ts no-check
 export const heightFieldBinding = defineAsset({
-    type: HeightField,
-    kind: 'heightField',
+    ctor: HeightField,
+    type: 'heightField',
     seamless: heightFieldSeamlessAdapter, // heals in place, like Texture/Sound
     extensions: ['hf'],
     create() { /* … */ },

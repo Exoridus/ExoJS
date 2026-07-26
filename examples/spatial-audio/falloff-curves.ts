@@ -65,7 +65,7 @@ class FalloffCurvesScene extends Scene {
         // Each derived Sound below reads .audioBuffer synchronously, so the
         // shared source must be fully decoded first — await load() instead of
         // the deferred get() (whose placeholder audioBuffer is null until fill).
-        const source = await this.loader.load(Asset.kind('sound', 'audio/impact-light.ogg'));
+        const source = await this.loader.load(Asset.type('sound', 'audio/impact-light.ogg'));
         this.sounds = this.sources.map(() => new Sound(source.audioBuffer));
 
         this.graphics = new Graphics();

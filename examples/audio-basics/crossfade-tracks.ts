@@ -42,11 +42,11 @@ class CrossfadeTracksScene extends Scene {
         this.meterBaseY = height * 0.82;
 
         // AudioStream is a non-leaf resource kind (no seamless placeholder), so each
-        // track is loaded directly through `Asset.kind('music', ...)` and awaited. Both
+        // track is loaded directly through `Asset.type('music', ...)` and awaited. Both
         // tracks loop; the crossfade only swaps which one is audible.
         [this.trackA, this.trackB] = await Promise.all([
-            this.loader.load(Asset.kind('music', assets.demo.audio.musicA)),
-            this.loader.load(Asset.kind('music', assets.demo.audio.musicB)),
+            this.loader.load(Asset.type('music', assets.demo.audio.musicA)),
+            this.loader.load(Asset.type('music', assets.demo.audio.musicB)),
         ]);
 
         this.graphics = new Graphics();

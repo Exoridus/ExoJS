@@ -36,8 +36,8 @@ class TiledMapPhysicsActorScene extends Scene {
     private spritesheetData!: SpritesheetData;
 
     override async load(): Promise<void> {
-        this.tilesTexture = await this.loader.load(Asset.kind('texture', assets.demo.tilesets.map.image));
-        this.spritesheetData = (await this.loader.load(Asset.kind('json', assets.demo.spritesheets.platformerCharacters.data))) as SpritesheetData;
+        this.tilesTexture = await this.loader.load(Asset.type('texture', assets.demo.tilesets.map.image));
+        this.spritesheetData = (await this.loader.load(Asset.type('json', assets.demo.spritesheets.platformerCharacters.data))) as SpritesheetData;
     }
 
     override init(): void {

@@ -8,9 +8,9 @@ import { tiledRuntimeMapBinding } from './tiledRuntimeMapBinding';
  * Default immutable Tiled extension descriptor.
  *
  * Registers two asset bindings:
- * - {@link tiledRuntimeMapBinding} — `loader.load(Asset.kind('tileMap', 'world.tmj'))` →
+ * - {@link tiledRuntimeMapBinding} — `loader.load(Asset.type('tileMap', 'world.tmj'))` →
  *   returns a format-independent runtime {@link TileMap} (common case).
- * - {@link tiledMapBinding} — `loader.load(Asset.kind('tiledMap', 'world.tmj'))` →
+ * - {@link tiledMapBinding} — `loader.load(Asset.type('tiledMap', 'world.tmj'))` →
  *   returns the raw parsed {@link TiledMap} source model (advanced/diagnostic).
  *
  * Depends on {@link tilemapExtension} so that snapshot construction always

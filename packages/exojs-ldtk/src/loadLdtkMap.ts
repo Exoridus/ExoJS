@@ -24,7 +24,7 @@ async function loadLdtkTileset(
   if (def.relPath === null || def.relPath === '') return null;
 
   const imageUrl = resolveLdtkUrl(def.relPath, ldtkSource);
-  const texture = await context.loader.load(Asset.kind('texture', imageUrl));
+  const texture = await context.loader.load(Asset.type('texture', imageUrl));
 
   const tileSize = def.tileGridSize;
   const spacing = def.spacing ?? 0;

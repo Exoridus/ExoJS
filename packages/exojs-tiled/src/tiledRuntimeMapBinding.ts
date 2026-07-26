@@ -10,9 +10,9 @@ import { resolveTiledOptions,type TiledLoadOptions } from './tiledOptions';
  * Declarative asset binding for the runtime {@link TileMap} produced from a
  * `.tmj` Tiled map file.
  *
- * This is the common-case binding: `loader.load(Asset.kind('tileMap', 'world.tmj'))` fetches
+ * This is the common-case binding: `loader.load(Asset.type('tileMap', 'world.tmj'))` fetches
  * and validates the TMJ, resolves external `.tsj` tilesets, loads tileset
- * textures via the sub-load `loader.load(Asset.kind('tiledMap', source))`, and synchronously
+ * textures via the sub-load `loader.load(Asset.type('tiledMap', source))`, and synchronously
  * converts the parsed {@link TiledMap} source model into a format-independent
  * runtime {@link TileMap} via {@link TiledMap.toTileMap}.
  *
@@ -25,8 +25,8 @@ import { resolveTiledOptions,type TiledLoadOptions } from './tiledOptions';
  * this package maps `'tmj' → TileMap`.
  */
 export const tiledRuntimeMapBinding = defineAsset<TileMap, TiledLoadOptions>({
-  type: TileMap,
-  kind: 'tileMap',
+  ctor: TileMap,
+  type: 'tileMap',
   extensions: ['tmj'],
   create() {
     return {
@@ -35,7 +35,7 @@ export const tiledRuntimeMapBinding = defineAsset<TileMap, TiledLoadOptions>({
         return `${req.source}|${o.format}`;
       },
       async load(req, ctx) {
-        const tiledMap = await ctx.loader.load(Asset.kind('tiledMap', req.source, req.options));
+        const tiledMap = await ctx.loader.load(Asset.type('tiledMap', req.source, req.options));
         return tiledMap.toTileMap();
       },
     } satisfies AssetHandler<TileMap, TiledLoadOptions>;

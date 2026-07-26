@@ -19,7 +19,7 @@ class SpriteFollowsBodyScene extends Scene {
     hud;
     spritesheetData;
     async load() {
-        this.spritesheetData = (await this.loader.load(Asset.kind('json', assets.demo.spritesheets.platformerCharacters.data)));
+        this.spritesheetData = (await this.loader.load(Asset.type('json', assets.demo.spritesheets.platformerCharacters.data)));
     }
     init() {
         const app = this.app;

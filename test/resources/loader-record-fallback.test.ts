@@ -60,7 +60,7 @@ describe('Loader.load record fallback (A1)', () => {
     expect((result as { b: Texture }).b).toBeInstanceOf(Texture);
   });
 
-  test('mixed bare-string and Asset.kind descriptor values load', async () => {
+  test('mixed bare-string and Asset.type descriptor values load', async () => {
     const loader = createCoreLoader();
 
     const result = await loader.load({

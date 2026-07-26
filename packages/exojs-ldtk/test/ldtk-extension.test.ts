@@ -33,7 +33,7 @@ describe('@codexo/exojs-ldtk extension descriptor', () => {
 
 describe('@codexo/exojs-ldtk asset binding — ldtkMapBinding', () => {
   it('targets the LdtkMap constructor', () => {
-    expect(ldtkMapBinding.type).toBe(LdtkMap);
+    expect(ldtkMapBinding.ctor).toBe(LdtkMap);
   });
 
   it('has typeNames ["ldtkMap"]', () => {

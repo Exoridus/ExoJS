@@ -41,9 +41,9 @@ class BossIntroCinematicScene extends Scene {
             .setPosition(width * 0.62, height / 2)
             .setTint(new Color(255, 130, 130));
         // AudioStream is a non-leaf resource kind (no seamless placeholder), so it
-        // is loaded directly through `Asset.kind('music', ...)` and awaited rather
+        // is loaded directly through `Asset.type('music', ...)` and awaited rather
         // than fetched synchronously via `get()`.
-        this.music = await this.loader.load(Asset.kind('music', assets.demo.music.loopMain));
+        this.music = await this.loader.load(Asset.type('music', assets.demo.music.loopMain));
 
         this.hud = mountControls({
             title: 'Boss Intro Cinematic',

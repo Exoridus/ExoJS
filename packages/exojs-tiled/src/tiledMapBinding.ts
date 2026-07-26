@@ -8,15 +8,15 @@ import { resolveTiledOptions,type TiledLoadOptions } from './tiledOptions';
 /**
  * Declarative asset binding for {@link TiledMap}.
  *
- * `loader.load(Asset.kind('tiledMap', 'world.tmj'))` resolves through this
+ * `loader.load(Asset.type('tiledMap', 'world.tmj'))` resolves through this
  * binding, but no `extensions` are claimed, so a plain
  * `loader.load('world.tmj')` does not resolve to `TiledMap`. The `.tmj`
  * extension (and generic `.json` Tiled loading) is reserved for the
  * format-independent `TileMap` runtime asset binding.
  */
 export const tiledMapBinding = defineAsset<TiledMap, TiledLoadOptions>({
-  type: TiledMap,
-  kind: 'tiledMap',
+  ctor: TiledMap,
+  type: 'tiledMap',
   create() {
     return {
       getIdentityKey(req) {

@@ -21,7 +21,7 @@ class SpriteFollowsBodyScene extends Scene {
     private spritesheetData!: SpritesheetData;
 
     override async load(): Promise<void> {
-        this.spritesheetData = (await this.loader.load(Asset.kind('json', assets.demo.spritesheets.platformerCharacters.data))) as SpritesheetData;
+        this.spritesheetData = (await this.loader.load(Asset.type('json', assets.demo.spritesheets.platformerCharacters.data))) as SpritesheetData;
     }
 
     override init(): void {

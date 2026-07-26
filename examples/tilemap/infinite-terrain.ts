@@ -86,7 +86,7 @@ class InfiniteTerrainScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
 
     override async init(): Promise<void> {
-        const tilesTexture = await this.loader.load(Asset.kind('texture', assets.demo.tilesets.map.image));
+        const tilesTexture = await this.loader.load(Asset.type('texture', assets.demo.tilesets.map.image));
         this.tileset = new TileSet({
             name: 'biomes',
             texture: new TextureRegion(tilesTexture, { x: 0, y: 0, width: tilesTexture.width, height: tilesTexture.height }),
@@ -103,8 +103,8 @@ class InfiniteTerrainScene extends Scene {
         this.mapView = map.createView({ bands: { terrain: ['terrain'] } });
 
         const characters = new Spritesheet(
-            await this.loader.load(Asset.kind('texture', assets.demo.spritesheets.platformerCharacters.image)),
-            (await this.loader.load(Asset.kind('json', assets.demo.spritesheets.platformerCharacters.data))) as SpritesheetData,
+            await this.loader.load(Asset.type('texture', assets.demo.spritesheets.platformerCharacters.image)),
+            (await this.loader.load(Asset.type('json', assets.demo.spritesheets.platformerCharacters.data))) as SpritesheetData,
         );
 
         this.explorer = characters.getFrameSprite('character_green_front').setAnchor(0.5);

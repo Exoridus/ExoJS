@@ -18,8 +18,8 @@ import { loadLdtkMap } from './loadLdtkMap';
  * {@link LdtkMap.getLevelByName}.
  */
 export const ldtkMapBinding = defineAsset({
-  type: LdtkMap,
-  kind: 'ldtkMap',
+  ctor: LdtkMap,
+  type: 'ldtkMap',
   extensions: ['ldtk'],
   create() {
     return {

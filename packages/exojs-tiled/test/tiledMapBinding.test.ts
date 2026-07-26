@@ -37,17 +37,17 @@ function makeContext(fixtures: Record<string, unknown>) {
   };
 
   // Handles both Texture and TiledMap sub-loads (for the runtime binding below).
-  // Both now arrive as `Asset.kind(kind, src)` descriptors (asset form) rather than a
+  // Both now arrive as `Asset.type(kind, src)` descriptors (asset form) rather than a
   // `(constructor, url, opts)` token call.
   loaderLoad.mockImplementation(async (token: unknown): Promise<unknown> => {
-    const asset = token as { kind?: unknown; source?: unknown } | null;
-    if (asset?.kind === 'texture') {
+    const asset = token as { type?: unknown; source?: unknown } | null;
+    if (asset?.type === 'texture') {
       const tex = new Texture();
       tex.width = 32;
       tex.height = 32;
       return tex;
     }
-    if (asset?.kind === 'tiledMap') {
+    if (asset?.type === 'tiledMap') {
       return loadTiledMap(asset.source as string, context);
     }
     throw new Error(`tiledMapBinding.test: unexpected loader.load token: ${String(token)}`);
@@ -60,7 +60,7 @@ function makeContext(fixtures: Record<string, unknown>) {
 
 describe('tiledMapBinding descriptor', () => {
   it('targets TiledMap constructor', () => {
-    expect(tiledMapBinding.type).toBe(TiledMap);
+    expect(tiledMapBinding.ctor).toBe(TiledMap);
   });
 
   it('has typeNames ["tiledMap"]', () => {
@@ -107,7 +107,7 @@ describe('tiledMapBinding.load — minimal map', () => {
 
 // ── G-TILED-DIRECT-EQUIVALENCE ────────────────────────────────────────────────
 //
-// load(Asset.kind('tileMap', url)) must be semantically equivalent to load(Asset.kind('tiledMap', url)).toTileMap():
+// load(Asset.type('tileMap', url)) must be semantically equivalent to load(Asset.type('tiledMap', url)).toTileMap():
 // same dimensions, layer count, tileset count, and tile data.
 
 describe('G-TILED-DIRECT-EQUIVALENCE — load(TileMap) ≡ load(TiledMap).toTileMap()', () => {
