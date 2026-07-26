@@ -1,15 +1,15 @@
 {
   "title": "Loader",
-  "description": "Central asset management hub for ExoJS applications. The `Loader` orchestrates fetching, processing, caching, and retrieval of all engine asset types. It ships with built-in factories for every first-party type (Texture, Sound, AudioStream, Video, FontFace, HTMLImageElement, Json, text, SVG, VTT, binary, and WASM) and allows registering custom factories via register. Assets can be loaded in two ways: - **Direct** — `loader.load(Assets.from({ hero: 'hero.png' }))` fetches immediately and resolves to the finished assets. - **Background** — pass `{ background: true }` to `load(...)` to pre-warm assets at low priority; awaitBackground resolves once the queue drains. Once loaded, assets are stored in memory and returned from cache on subsequent `load` or get calls without re-fetching.",
+  "description": "Central asset management hub for ExoJS applications. The `Loader` orchestrates fetching, processing, caching, and retrieval of all engine asset types. It ships with built-in bindings for every first-party type (Texture, Sound, AudioStream, Video, FontFace, HTMLImageElement, Json, text, SVG, VTT, binary, and WASM) and allows registering custom types via bindAsset (or the higher-level `defineAsset`). Assets can be loaded in two ways: - **Direct** — `loader.load(Assets.from({ hero: 'hero.png' }))` fetches immediately and resolves to the finished assets. - **Background** — pass `{ background: true }` to `load(...)` to pre-warm assets at low priority; awaitBackground resolves once the queue drains. Once loaded, assets are stored in memory and returned from cache on subsequent `load` or get calls without re-fetching.",
   "symbol": "Loader",
   "kind": "class",
   "subsystem": "resources",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 41,
+  "memberCount": 40,
   "counts": {
     "constructors": 1,
-    "methods": 31,
+    "methods": 30,
     "properties": 2,
     "events": 7
   },
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Central asset management hub for ExoJS applications.",
-        "The `Loader` orchestrates fetching, processing, caching, and retrieval of all engine asset types. It ships with built-in factories for every first-party type (Texture, Sound, AudioStream, Video, FontFace, HTMLImageElement, Json, text, SVG, VTT, binary, and WASM) and allows registering custom factories via register.",
+        "The `Loader` orchestrates fetching, processing, caching, and retrieval of all engine asset types. It ships with built-in bindings for every first-party type (Texture, Sound, AudioStream, Video, FontFace, HTMLImageElement, Json, text, SVG, VTT, binary, and WASM) and allows registering custom types via bindAsset (or the higher-level `defineAsset`).",
         "Assets can be loaded in two ways: - **Direct** — `loader.load(Assets.from({ hero: 'hero.png' }))` fetches immediately and resolves to the finished assets. - **Background** — pass `{ background: true }` to `load(...)` to pre-warm assets at low priority; awaitBackground resolves once the queue drains.",
         "Once loaded, assets are stored in memory and returned from cache on subsequent `load` or get calls without re-fetching."
       ],
@@ -1851,98 +1851,6 @@
           ],
           "returnType": "Promise<void>",
           "description": "Load every asset packed into a binary container (.exoa) in a **single request**. A container is one file with an embedded index: its bytes are fetched once (and cached cross-session like any asset), then each slice is unpacked through its type's handler and stored under the entry's alias — retrievable with get exactly as if it had been loaded individually. Each entry's asset type must support byte-source construction (AssetHandler.createFromBytes); the factory-backed core types (textures, audio, JSON, text, binary, …) do. Throws on a malformed container, an unknown type, or a type that cannot be built from bytes."
-        },
-        {
-          "name": "register",
-          "signature": "register(type: AssetConstructor<T>, factory: AssetFactory<T>): this",
-          "signatureTokens": [
-            {
-              "text": "register",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "type",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "AssetConstructor",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "T",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "factory",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "AssetFactory",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "T",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "this",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "type",
-              "type": "AssetConstructor<T>",
-              "optional": false
-            },
-            {
-              "name": "factory",
-              "type": "AssetFactory<T>",
-              "optional": false
-            }
-          ],
-          "returnType": "this",
-          "description": "Registers a custom AssetFactory for type. Registration is prototype-chain aware: the factory will also handle any subclass of type that does not have its own explicit registration. Built-in types can be overridden by registering a replacement factory for the same constructor."
         },
         {
           "name": "registerSeamlessAdapter",

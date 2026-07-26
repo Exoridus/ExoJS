@@ -3,7 +3,6 @@ import { materializeAssetBindings } from '#extensions/materialize';
 import { Texture } from '#rendering/texture/Texture';
 import { Asset } from '#resources/Asset';
 import { encodeContainer } from '#resources/AssetContainer';
-import type { AssetFactory } from '#resources/AssetFactory';
 import { Assets } from '#resources/Assets';
 import type { CacheStore } from '#resources/CacheStore';
 import { coreAssetBindings } from '#resources/coreAssetBindings';
@@ -30,24 +29,25 @@ declare module '#resources/AssetDefinitions' {
   }
 }
 
-class MockTextFactory implements AssetFactory<string> {
-  public readonly storageName = 'text';
-  public readonly process = vi.fn(async (_response: Response): Promise<string> => 'fresh-source');
-  public readonly create = vi.fn(async (source: string): Promise<string> => `resource:${source}`);
+/**
+ * Binds TextAsset to a `bindAsset` handler that fetches raw text through
+ * `context.fetchText` (so basePath/fetchOptions/cache-strategy routing stays
+ * identical to a first-party binding) and then applies `create` to the raw
+ * text — the replacement for the removed `register()`-based factory path used
+ * throughout this file. `storageName: 'text'` mirrors the old
+ * `MockTextFactory.storageName`, so cache-store assertions keyed on `'text'`
+ * keep working unchanged.
+ */
+function bindTextAsset(loader: Loader, create: (text: string) => string | Promise<string> = text => `resource:${text}`): { create: MockInstance } {
+  const createSpy = vi.fn(create);
 
-  public destroy(): void {}
+  loader.bindAsset<string>({ ctor: TextAsset, storageName: 'text' }, { load: async (request, ctx) => createSpy(await ctx.fetchText(request.source)) });
+
+  return { create: createSpy };
 }
 
 class DummyAsset {
   constructor(public readonly value: string) {}
-}
-
-class DummyFactory implements AssetFactory<DummyAsset> {
-  public readonly storageName = 'dummy';
-  public readonly process = vi.fn(async (response: Response): Promise<string> => 'raw');
-  public readonly create = vi.fn(async (source: string): Promise<DummyAsset> => new DummyAsset(source));
-
-  public destroy(): void {}
 }
 
 interface Deferred<T> {
@@ -109,11 +109,10 @@ describe('Loader', () => {
   };
 
   test('load(Type, path) returns a single resource', async () => {
-    const factory = new MockTextFactory();
     const loader = new Loader({ basePath: '/' });
 
-    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
-    mockFetch();
+    bindTextAsset(loader);
+    mockFetch('fresh-source');
 
     const result = await loader.load('demo.txt');
 
@@ -121,10 +120,9 @@ describe('Loader', () => {
   });
 
   test('basePath prefixes relative fetch URLs', async () => {
-    const factory = new MockTextFactory();
     const loader = new Loader({ basePath: '/assets/' });
 
-    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
+    bindTextAsset(loader);
     mockFetch();
     await loader.load('demo.txt');
 
@@ -132,11 +130,10 @@ describe('Loader', () => {
   });
 
   test('fetchOptions are forwarded to fetch calls', async () => {
-    const factory = new MockTextFactory();
     const fetchOptions: RequestInit = { credentials: 'include', mode: 'same-origin' };
     const loader = new Loader({ basePath: '/', fetchOptions });
 
-    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
+    bindTextAsset(loader);
     mockFetch();
     await loader.load('demo.txt');
 
@@ -144,37 +141,34 @@ describe('Loader', () => {
   });
 
   test('load() deduplicates concurrent requests for the same alias', async () => {
-    const factory = new MockTextFactory();
     const loader = new Loader({ basePath: '/' });
 
-    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
+    bindTextAsset(loader);
     mockFetch();
 
     const [a, b] = await Promise.all([loader.load('same.txt'), loader.load('same.txt')]);
 
     expect(a).toBe(b);
-    expect(factory.process).toHaveBeenCalledTimes(1);
+    expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 
   test('throws on non-ok HTTP response', async () => {
-    const factory = new MockTextFactory();
     const loader = new Loader({ basePath: '/' });
 
-    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
+    bindTextAsset(loader);
     mockFetch404();
 
     await expect(loader.load('missing.txt')).rejects.toThrow('404 Not Found');
   });
 
   test('load() continues independently per item (fail-tolerant via Promise.allSettled pattern)', async () => {
-    const factory = new MockTextFactory();
     const loader = new Loader({ basePath: '/' });
 
-    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
+    const { create } = bindTextAsset(loader);
     mockFetch();
 
-    factory.create.mockImplementationOnce(async () => 'ok');
-    factory.create.mockImplementationOnce(async () => {
+    create.mockImplementationOnce(async () => 'ok');
+    create.mockImplementationOnce(async () => {
       throw new Error('broken');
     });
 
@@ -186,11 +180,10 @@ describe('Loader', () => {
   });
 
   test('get() retrieves a loaded value asset', async () => {
-    const factory = new MockTextFactory();
     const loader = new Loader({ basePath: '/' });
 
-    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
-    mockFetch();
+    bindTextAsset(loader);
+    mockFetch('fresh-source');
 
     expect(loader._peekResource(TextAsset, 'demo.txt')).toBeNull();
 
@@ -211,10 +204,9 @@ describe('Loader', () => {
   });
 
   test('unload() removes a resource, unloadAll() clears type', async () => {
-    const factory = new MockTextFactory();
     const loader = new Loader({ basePath: '/' });
 
-    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
+    bindTextAsset(loader);
     mockFetch();
 
     await loader.load('a.txt');
@@ -253,13 +245,12 @@ describe('Loader', () => {
   });
 
   test('reads from cache hit and skips network fetch', async () => {
-    const factory = new MockTextFactory();
     const cacheStore = createCacheStoreMock({
       load: vi.fn(async (): Promise<string> => 'cached-source'),
     });
     const loader = new Loader({ basePath: '/', cache: cacheStore });
 
-    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
+    bindTextAsset(loader);
     global.fetch = vi.fn(async (): Promise<Response> => {
       throw new Error('Unexpected network fetch on cache hit.');
     });
@@ -274,12 +265,11 @@ describe('Loader', () => {
   });
 
   test('falls back to network and persists source when cache misses', async () => {
-    const factory = new MockTextFactory();
     const cacheStore = createCacheStoreMock();
     const loader = new Loader({ basePath: '/', cache: cacheStore });
 
-    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
-    mockFetch();
+    bindTextAsset(loader);
+    mockFetch('fresh-source');
 
     const result = await loader.load('miss.txt');
 
@@ -289,26 +279,11 @@ describe('Loader', () => {
     expect(cacheStore.save).toHaveBeenCalledWith('text', 'miss.txt', 'fresh-source');
   });
 
-  test('deletes corrupt cached source and retries via network', async () => {
-    const factory = new MockTextFactory();
-    const cacheStore = createCacheStoreMock({
-      load: vi.fn(async (): Promise<string> => 'corrupt-source'),
-    });
-    const loader = new Loader({ basePath: '/', cache: cacheStore });
-
-    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
-    mockFetch();
-    factory.create.mockImplementationOnce(async (): Promise<string> => {
-      throw new Error('corrupt-cache');
-    });
-
-    const result = await loader.load('corrupt.txt');
-
-    expect(result).toBe('resource:fresh-source');
-    expect(cacheStore.delete).toHaveBeenCalledWith('text', 'corrupt.txt');
-    expect(global.fetch).toHaveBeenCalledTimes(1);
-    expect(factory.create).toHaveBeenCalledTimes(2);
-  });
+  // The corrupt-cache-entry delete+retry mechanism itself (a cached value that
+  // makes factory.create() throw) now lives entirely inside CacheFirstStrategy —
+  // context.fetchText()'s internal cache factory is a pass-through that never
+  // throws, so it's no longer reachable through a Loader-level bindAsset
+  // handler. See test/resources/cache-first-strategy.test.ts for direct coverage.
 
   test('load(Json, path) returns unknown by default', async () => {
     const loader = createCoreLoader({ basePath: '/' });
@@ -329,11 +304,10 @@ describe('Loader', () => {
   });
 
   test('does not reinsert a resource when unload() is called during in-flight fetch', async () => {
-    const factory = new MockTextFactory();
     const loader = new Loader({ basePath: '/' });
     const deferredFetch = createDeferred<Response>();
 
-    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
+    bindTextAsset(loader);
 
     global.fetch = vi.fn((_input: RequestInfo | URL): Promise<Response> => deferredFetch.promise);
 
@@ -345,7 +319,8 @@ describe('Loader', () => {
       ok: true,
       status: 200,
       statusText: 'OK',
-    } as Response);
+      text: async () => 'fresh-source',
+    } as unknown as Response);
 
     await expect(loadPromise).resolves.toBe('resource:fresh-source');
     expect(loader._peekResource(TextAsset, 'inflight.txt')).toBeNull();
@@ -1127,7 +1102,6 @@ describe('unload() edge cases', () => {
 
 describe('basePath / fetchOptions property accessors', () => {
   test('basePath getter/setter takes effect on subsequent loads', async () => {
-    const factory = new MockTextFactory();
     const loader = new Loader({ basePath: '/a/' });
 
     expect(loader.basePath).toBe('/a/');
@@ -1135,7 +1109,7 @@ describe('basePath / fetchOptions property accessors', () => {
     loader.basePath = '/b/';
     expect(loader.basePath).toBe('/b/');
 
-    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
+    bindTextAsset(loader);
     global.fetch = vi.fn(async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', text: async () => 'raw' }) as unknown as Response);
 
     await loader.load('demo.txt');
@@ -1144,7 +1118,6 @@ describe('basePath / fetchOptions property accessors', () => {
   });
 
   test('fetchOptions getter/setter takes effect on subsequent loads', async () => {
-    const factory = new MockTextFactory();
     const loader = new Loader({ basePath: '/', fetchOptions: { mode: 'cors' } });
 
     expect(loader.fetchOptions).toEqual({ mode: 'cors' });
@@ -1152,7 +1125,7 @@ describe('basePath / fetchOptions property accessors', () => {
     loader.fetchOptions = { mode: 'no-cors' };
     expect(loader.fetchOptions).toEqual({ mode: 'no-cors' });
 
-    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
+    bindTextAsset(loader);
     global.fetch = vi.fn(async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', text: async () => 'raw' }) as unknown as Response);
 
     await loader.load('demo.txt');
@@ -1167,10 +1140,9 @@ describe('basePath / fetchOptions property accessors', () => {
 
 describe('absolute URL passthrough', () => {
   test('an absolute https:// path bypasses basePath prefixing', async () => {
-    const factory = new MockTextFactory();
     const loader = new Loader({ basePath: '/assets/' });
 
-    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
+    bindTextAsset(loader);
     global.fetch = vi.fn(async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', text: async () => 'raw' }) as unknown as Response);
 
     await loader.load('https://cdn.example.com/x.txt');
@@ -1184,17 +1156,17 @@ describe('absolute URL passthrough', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('hasLoadable() / hasAssetType() / hasExtension()', () => {
-  test('reflect factory, type-name, and extension registrations', () => {
+  test('reflect a bindAsset() type-handler, type-name, and extension registration', () => {
     class ProbeAsset {}
     const loader = new Loader({ basePath: '/' });
 
     expect(loader.hasLoadable(ProbeAsset)).toBe(false);
-    loader.register(ProbeAsset, new DummyFactory() as unknown as AssetFactory<ProbeAsset>);
-    expect(loader.hasLoadable(ProbeAsset)).toBe(true);
-
     expect(loader.hasAssetType('probeType')).toBe(false);
     expect(loader.hasExtension('probe')).toBe(false);
+
     loader.bindAsset<ProbeAsset>({ ctor: ProbeAsset, typeNames: ['probeType'], extensions: ['PROBE'] }, { load: async () => new ProbeAsset() });
+
+    expect(loader.hasLoadable(ProbeAsset)).toBe(true);
     expect(loader.hasAssetType('probeType')).toBe(true);
     expect(loader.hasExtension('probe')).toBe(true);
     expect(loader.hasExtension('.probe')).toBe(true);
@@ -1433,24 +1405,7 @@ describe('loadContainer()', () => {
     await expect(loader.loadContainer('x.exoa')).rejects.toThrow(/unknown asset type "nonsense"/);
   });
 
-  test('uses a register()-based factory when the bound handler has no createFromBytes', async () => {
-    const factory = new DummyFactory();
-    const loader = new Loader({ basePath: '/' });
-
-    loader.register(DummyAsset, factory);
-    // A handler binds the 'dummy' type name but supplies no createFromBytes, so
-    // container injection falls back to the registered factory.
-    loader.bindAsset<DummyAsset>({ ctor: DummyAsset, typeNames: ['dummy'] }, { load: async request => new DummyAsset(request.source) });
-
-    const container = encodeContainer([{ alias: 'x', type: 'dummy', bytes: new TextEncoder().encode('raw-bytes') }]);
-    mockContainerFetch(container);
-
-    await loader.loadContainer('pack.exoa');
-
-    expect(loader.get(DummyAsset, 'x')).toBeInstanceOf(DummyAsset);
-  });
-
-  test('rejects when the resolved type supports neither createFromBytes nor a registered factory', async () => {
+  test('rejects when the resolved type has no createFromBytes handler', async () => {
     class BareAsset {}
     const loader = new Loader({ basePath: '/' });
 
@@ -1591,12 +1546,11 @@ describe('Asset-based load() — extra config fields as handler options', () => 
 
 describe('Loader constructor — cache option as an array of stores', () => {
   test('accepts an array of CacheStore instances', async () => {
-    const factory = new MockTextFactory();
     const storeA = createCacheStoreMock();
     const storeB = createCacheStoreMock();
     const loader = new Loader({ basePath: '/', cache: [storeA, storeB] });
 
-    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
+    bindTextAsset(loader);
     global.fetch = vi.fn(async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', text: async () => 'raw' }) as unknown as Response);
 
     await loader.load('demo.txt');
@@ -1630,10 +1584,9 @@ describe('unload()-during-in-flight identity cleanup on rejection', () => {
 
 describe('unloadAll() with no type argument', () => {
   test('clears every loaded type', async () => {
-    const textFactory = new MockTextFactory();
     const loader = new Loader({ basePath: '/' });
 
-    loader.register(TextAsset, textFactory as AssetFactory<TextAsset>);
+    bindTextAsset(loader);
     materializeAssetBindings(loader, [
       defineAsset<DummyAsset>({
         ctor: DummyAsset,
@@ -1698,19 +1651,5 @@ describe('non-Error throws are stringified when wrapping fetch/handler failures'
     const asset = new Asset({ type: 'richAsset', source: 'y.json', format: 'y' });
 
     await expect(loader.load(asset)).rejects.toThrow(/Failed to load "y\.json" from "\/assets\/y\.json": plain string failure/);
-  });
-
-  test('_fetch wraps a thrown non-Error value from a factory', async () => {
-    const factory = new MockTextFactory();
-    const loader = new Loader({ basePath: '/' });
-
-    loader.register(TextAsset, factory as AssetFactory<TextAsset>);
-    global.fetch = vi.fn(async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', text: async () => 'raw' }) as unknown as Response);
-    factory.create.mockImplementationOnce(async () => {
-      // eslint-disable-next-line @typescript-eslint/only-throw-error
-      throw 'raw string boom';
-    });
-
-    await expect(loader.load('boom.txt')).rejects.toThrow(/raw string boom/);
   });
 });

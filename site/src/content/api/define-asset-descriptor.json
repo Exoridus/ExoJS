@@ -6,11 +6,11 @@
   "subsystem": "resources",
   "importPath": "@codexo/exojs",
   "tier": "advanced",
-  "memberCount": 6,
+  "memberCount": 7,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 6,
+    "properties": 7,
     "events": 0
   },
   "sections": [
@@ -220,6 +220,31 @@
           "params": [],
           "returnType": null,
           "description": "Seamless placeholder adapter for a resource kind that heals in place."
+        },
+        {
+          "name": "storageName",
+          "signature": "storageName?: string",
+          "signatureTokens": [
+            {
+              "text": "storageName",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Optional per-type IDB namespace for context.fetchX() calls made by this binding's handler. Defaults to the shared __ctx_binary/__ctx_text/__ctx_json namespace."
         },
         {
           "name": "type",

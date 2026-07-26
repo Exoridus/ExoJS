@@ -2,10 +2,8 @@ import type { AssetHandler, AssetLoadRequest } from '#extensions/Extension';
 
 import type { Asset } from './Asset';
 import type { AssetDefinitions } from './AssetDefinitions';
-import type { AssetFactory } from './AssetFactory';
 import { getExtensionKind } from './extensionKindRegistry';
 import type { AssetConstructor } from './FactoryRegistry';
-import { FactoryRegistry } from './FactoryRegistry';
 import type { AssetLoaderContext } from './Loader';
 import type { SeamlessAdapter } from './seamless';
 
@@ -16,17 +14,18 @@ export interface HandlerEntry {
   getIdentityKey?: (config: unknown) => string;
   /** Optional byte-source constructor used by container loading (bypasses fetch). */
   createFromBytes?: (bytes: ArrayBuffer, options?: unknown) => Promise<unknown>;
+  /** Optional per-type IDB namespace for `context.fetchX()` calls made by this binding's handler. */
+  storageName?: string;
 }
 
 /**
  * Owns constructor-based asset type identification for a {@link Loader}
- * instance: registered factories, type-name and file-extension mappings,
- * `bindAsset` handlers, seamless-adapter bindings, and per-instance type IDs
- * / key derivation. Extracted from `Loader` (Loader split, Slice 1) — every
- * method here is a direct, behavior-preserving relocation.
+ * instance: type-name and file-extension mappings, `bindAsset` handlers,
+ * seamless-adapter bindings, and per-instance type IDs / key derivation.
+ * Extracted from `Loader` (Loader split, Slice 1) — every method here is a
+ * direct, behavior-preserving relocation.
  */
 export class AssetTypeRegistry {
-  private readonly _factories = new FactoryRegistry();
   private readonly _assetTypeMap = new Map<string, AssetConstructor>();
   private readonly _typeIds = new WeakMap<AssetConstructor, number>();
   private readonly _handlerFunctions = new Map<AssetConstructor, HandlerEntry>();
@@ -35,11 +34,6 @@ export class AssetTypeRegistry {
   private readonly _seamlessAdapters = new Map<AssetConstructor, SeamlessAdapter<unknown>>();
   private readonly _extensionOverrides = new Map<string, keyof AssetDefinitions>();
   private _nextTypeId = 1;
-
-  /** Registers a factory for `type`. Prototype-chain aware — see {@link FactoryRegistry}. */
-  public register<T>(type: AssetConstructor<T>, factory: AssetFactory<T>): void {
-    this._factories.register(type, factory);
-  }
 
   /** Registers the seamless-handle adapter for `type`. One adapter per type. */
   public registerSeamlessAdapter<T>(type: AssetConstructor<T>, adapter: SeamlessAdapter<T>): void {
@@ -63,6 +57,7 @@ export class AssetTypeRegistry {
       typeNames?: readonly string[];
       extensions?: readonly string[];
       seamless?: SeamlessAdapter<Result>;
+      storageName?: string;
     },
     handler: AssetHandler<Result, Options>,
   ): void {
@@ -132,6 +127,7 @@ export class AssetTypeRegistry {
       load: (config, ctx) => handler.load(toRequest(config), ctx),
       ...(boundIdentityKey && { getIdentityKey: (config: unknown) => boundIdentityKey(toRequest(config)) }),
       ...(boundCreateFromBytes && { createFromBytes: (bytes: ArrayBuffer, options?: unknown) => boundCreateFromBytes(bytes, options as Options) }),
+      ...(keys.storageName !== undefined && { storageName: keys.storageName }),
     });
 
     for (const name of resolvedNames) {
@@ -153,9 +149,9 @@ export class AssetTypeRegistry {
     }
   }
 
-  /** Returns true if a handler or factory is already registered for the given constructor. */
+  /** Returns true if a handler is already registered for the given constructor. */
   public hasLoadable(type: AssetConstructor): boolean {
-    return this._handlerFunctions.has(type) || this._factories.has(type);
+    return this._handlerFunctions.has(type);
   }
 
   /** Returns true if a type-name mapping is already registered. */
@@ -166,16 +162,6 @@ export class AssetTypeRegistry {
   /** Returns true if a file extension is already mapped to an asset type. Extension is normalised (leading dot stripped, lower-cased). */
   public hasExtension(ext: string): boolean {
     return this._extensionMap.has(ext.replace(/^\./, '').toLowerCase());
-  }
-
-  /** Returns true if a plain `register()` factory exists for `type` (not a `bindAsset` handler). */
-  public hasFactory(type: AssetConstructor): boolean {
-    return this._factories.has(type);
-  }
-
-  /** Resolves the `register()`-based factory for `type`. Throws if none is registered — see {@link FactoryRegistry.resolve}. */
-  public resolveFactory<T>(type: AssetConstructor<T>): AssetFactory<T> {
-    return this._factories.resolve(type);
   }
 
   /** The `bindAsset` handler entry for `type`, or `undefined`. */
@@ -316,11 +302,6 @@ export class AssetTypeRegistry {
     return type.name.length > 0 ? type.name : '(anonymous type)';
   }
 
-  /** Destroys the `register()`-based factory registry. */
-  public destroyFactories(): void {
-    this._factories.destroy();
-  }
-
   /** Destroys every bound `bindAsset` handler (deduplicated by identity) and clears handler/adapter maps. */
   public destroyHandlers(): void {
     const destroyedHandlers = new Set<AssetHandler>();
@@ -337,9 +318,8 @@ export class AssetTypeRegistry {
     this._seamlessAdapters.clear();
   }
 
-  /** Destroys the factory registry and every bound handler — see {@link destroyFactories}/{@link destroyHandlers}. */
+  /** Destroys every bound handler — see {@link destroyHandlers}. */
   public destroy(): void {
-    this.destroyFactories();
     this.destroyHandlers();
   }
 }

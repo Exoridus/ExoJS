@@ -1,32 +1,12 @@
 import { describe, expect, it, test, vi } from 'vitest';
 
-import type { AssetFactory } from '#resources/AssetFactory';
 import { AssetTypeRegistry } from '#resources/AssetTypeRegistry';
 import { _resetExtensionKindsForTest, registerExtensionKind } from '#resources/extensionKindRegistry';
 
 class TypeA {}
 class TypeB {}
 
-function fakeFactory<T>(create: () => T): AssetFactory<T> {
-  return {
-    storageName: 'test',
-    process: async (r: Response) => r,
-    create: async () => create(),
-    destroy: vi.fn(),
-  };
-}
-
 describe('AssetTypeRegistry', () => {
-  test('register/hasFactory/resolveFactory round-trip', () => {
-    const registry = new AssetTypeRegistry();
-    const factory = fakeFactory(() => new TypeA());
-
-    expect(registry.hasFactory(TypeA)).toBe(false);
-    registry.register(TypeA, factory);
-    expect(registry.hasFactory(TypeA)).toBe(true);
-    expect(registry.resolveFactory(TypeA)).toBe(factory);
-  });
-
   test('registerSeamlessAdapter throws on a duplicate registration for the same type', () => {
     const registry = new AssetTypeRegistry();
     const adapter = { createPlaceholder: vi.fn(), stateOf: vi.fn(), begin: vi.fn(), fill: vi.fn(), fail: vi.fn(), evict: vi.fn() };
@@ -55,6 +35,33 @@ describe('AssetTypeRegistry', () => {
     expect(registry.hasExtension('.ta')).toBe(true);
     expect(registry.hasLoadable(TypeA)).toBe(true);
     expect(registry.getHandler(TypeA)).toBeDefined();
+  });
+
+  test('hasLoadable() reflects only bindAsset handler registration, not just any known constructor', () => {
+    const registry = new AssetTypeRegistry();
+    const handler = { load: vi.fn(async () => ({})) };
+
+    expect(registry.hasLoadable(TypeA)).toBe(false);
+    registry.bindAsset({ ctor: TypeA }, handler);
+    expect(registry.hasLoadable(TypeA)).toBe(true);
+  });
+
+  test('bindAsset threads an optional storageName onto the stored HandlerEntry', () => {
+    const registry = new AssetTypeRegistry();
+    const handler = { load: vi.fn(async () => ({})) };
+
+    registry.bindAsset({ ctor: TypeA, storageName: 'custom-ns' }, handler);
+
+    expect(registry.getHandler(TypeA)?.storageName).toBe('custom-ns');
+  });
+
+  test('bindAsset without storageName leaves it undefined on the stored HandlerEntry', () => {
+    const registry = new AssetTypeRegistry();
+    const handler = { load: vi.fn(async () => ({})) };
+
+    registry.bindAsset({ ctor: TypeA }, handler);
+
+    expect(registry.getHandler(TypeA)?.storageName).toBeUndefined();
   });
 
   test('bindAsset throws on a duplicate handler for the same type, without touching unrelated state', () => {

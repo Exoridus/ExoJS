@@ -2,7 +2,6 @@ import { describe, expect, test, vi } from 'vitest';
 
 import { Asset } from '#resources/Asset';
 import { AssetDecoder } from '#resources/AssetDecoder';
-import type { AssetFactory } from '#resources/AssetFactory';
 import type { AssetResidencySignals } from '#resources/AssetResidency';
 import { AssetResidency } from '#resources/AssetResidency';
 import { AssetTypeRegistry } from '#resources/AssetTypeRegistry';
@@ -14,13 +13,11 @@ class TypeA {}
 
 const fakeLoader = {} as Loader;
 
-function fakeFactory<T>(create: (data: unknown, options?: unknown) => T): AssetFactory<T> {
-  return {
-    storageName: 'test',
-    process: async (r: Response) => r,
-    create: async (data: unknown, options?: unknown) => create(data, options),
-    destroy: vi.fn(),
-  };
+/** Binds TypeA to a bindAsset handler whose load() routes through context.fetchText — the
+ * replacement for the removed `register()`-based factory path used to make a bare
+ * constructor "loadable" for these AssetResidency-level tests. */
+function bindTypeA(typeRegistry: AssetTypeRegistry): void {
+  typeRegistry.bindAsset({ ctor: TypeA }, { load: async (request, ctx) => ctx.fetchText(request.source) });
 }
 
 /** Fake strategy that resolves to a canned value (or rejects, via mockRejectedValueOnce on .resolve). */
@@ -98,10 +95,7 @@ describe('AssetResidency', () => {
       const { residency, typeRegistry } = createResidency({ cacheStrategy: strategy });
       const adapter = createFakeSeamlessAdapter();
       typeRegistry.registerSeamlessAdapter(TypeA, adapter);
-      typeRegistry.register(
-        TypeA,
-        fakeFactory(() => 'decoded'),
-      );
+      bindTypeA(typeRegistry);
 
       const scope = Symbol('scope');
       const key = typeRegistry._key(TypeA, 'a.png');
@@ -209,10 +203,7 @@ describe('AssetResidency', () => {
       const { residency, typeRegistry, onError } = createResidency({ cacheStrategy: strategy });
       const adapter = createFakeSeamlessAdapter();
       typeRegistry.registerSeamlessAdapter(TypeA, adapter);
-      typeRegistry.register(
-        TypeA,
-        fakeFactory(() => 'unused'),
-      );
+      bindTypeA(typeRegistry);
 
       residency._getSeamless(TypeA, adapter, 'fail.png');
       await new Promise(r => setTimeout(r, 0));
@@ -226,10 +217,7 @@ describe('AssetResidency', () => {
       const requests: CacheRequest[] = [];
       const strategy = createFakeStrategy(r => (requests.push(r), 'bg-value'));
       const { residency, typeRegistry, onProgress } = createResidency({ cacheStrategy: strategy });
-      typeRegistry.register(
-        TypeA,
-        fakeFactory(() => 'bg-value'),
-      );
+      bindTypeA(typeRegistry);
 
       residency._enqueueBackgroundFetch(TypeA, 'bg.png', undefined);
       await residency.awaitBackground();
@@ -245,10 +233,7 @@ describe('AssetResidency', () => {
       const requests: CacheRequest[] = [];
       const strategy = createFakeStrategy(r => (requests.push(r), 'boosted-value'));
       const { residency, typeRegistry } = createResidency({ cacheStrategy: strategy, concurrency: 0 });
-      typeRegistry.register(
-        TypeA,
-        fakeFactory(() => 'boosted-value'),
-      );
+      bindTypeA(typeRegistry);
 
       residency._enqueueBackgroundFetch(TypeA, 'boost.png', undefined);
       expect(requests).toHaveLength(0); // concurrency 0: nothing started yet
@@ -262,10 +247,7 @@ describe('AssetResidency', () => {
       const requests: CacheRequest[] = [];
       const strategy = createFakeStrategy(r => (requests.push(r), 'value'));
       const { residency, typeRegistry } = createResidency({ cacheStrategy: strategy, concurrency: 0 });
-      typeRegistry.register(
-        TypeA,
-        fakeFactory(() => 'value'),
-      );
+      bindTypeA(typeRegistry);
 
       residency._enqueueBackgroundFetch(TypeA, 'a.png', undefined);
       residency._enqueueBackgroundFetch(TypeA, 'b.png', undefined);
@@ -324,10 +306,7 @@ describe('AssetResidency', () => {
     test('_getAliasesForIdentity reflects loadSingleAsset alias registration', async () => {
       const strategy = createFakeStrategy(() => 'v');
       const { residency, typeRegistry } = createResidency({ cacheStrategy: strategy });
-      typeRegistry.register(
-        TypeA,
-        fakeFactory(() => 'v'),
-      );
+      bindTypeA(typeRegistry);
 
       // Asset's public constructor facade is `Asset.type(kind, source, options?)` (see
       // src/resources/Asset.ts's AssetFacade / test/resources/loader.test.ts usage) — the

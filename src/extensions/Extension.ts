@@ -120,6 +120,8 @@ export interface AssetBinding<Result = unknown, Options = undefined> {
   readonly type?: keyof AssetDefinitions;
   /** Optional seamless-handle adapter (asset-system v2), registered alongside the handler. */
   readonly seamless?: SeamlessAdapter<Result>;
+  /** Optional per-type IDB namespace for `context.fetchX()` calls made by this binding's handler. Defaults to the shared `__ctx_binary`/`__ctx_text`/`__ctx_json` namespace. */
+  readonly storageName?: string;
   create(loader: Loader): AssetHandler<Result, Options>;
 }
 

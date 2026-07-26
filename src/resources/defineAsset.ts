@@ -30,6 +30,8 @@ export interface DefineAssetDescriptor<Result, Options> {
   readonly seamless?: SeamlessAdapter<Result>;
   /** Whether the catalog leaf is a deferred `AssetRef` (value kind). Defaults to `seamless === undefined`. */
   readonly isValue?: boolean;
+  /** Optional per-type IDB namespace for `context.fetchX()` calls made by this binding's handler. Defaults to the shared `__ctx_binary`/`__ctx_text`/`__ctx_json` namespace. */
+  readonly storageName?: string;
   /** Loader-local handler factory, called once per Loader by `materializeAssetBindings`. */
   readonly create: (loader: Loader) => AssetHandler<Result, Options>;
 }
@@ -71,6 +73,7 @@ export function defineAsset<Result = unknown, Options = undefined>(descriptor: D
     typeNames: descriptor.typeNames ?? [descriptor.type],
     ...(descriptor.extensions !== undefined && { extensions: descriptor.extensions }),
     ...(descriptor.seamless !== undefined && { seamless: descriptor.seamless }),
+    ...(descriptor.storageName !== undefined && { storageName: descriptor.storageName }),
     create: descriptor.create,
   };
 }

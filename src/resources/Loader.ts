@@ -17,7 +17,6 @@ import type {
   ResourceForKind,
   ValueAssetKind,
 } from './AssetDefinitions';
-import type { AssetFactory } from './AssetFactory';
 import { createLeaf } from './assetKindRegistry';
 import { _readMeta } from './assetMeta';
 import type { AssetRef } from './AssetRef';
@@ -217,10 +216,10 @@ export interface LoadOptions {
  * Central asset management hub for ExoJS applications.
  *
  * The `Loader` orchestrates fetching, processing, caching, and retrieval of
- * all engine asset types. It ships with built-in factories for every first-party
+ * all engine asset types. It ships with built-in bindings for every first-party
  * type (Texture, Sound, AudioStream, Video, FontFace, HTMLImageElement, Json, text,
- * SVG, VTT, binary, and WASM) and allows registering custom factories via
- * {@link register}.
+ * SVG, VTT, binary, and WASM) and allows registering custom types via
+ * {@link bindAsset} (or the higher-level `defineAsset`).
  *
  * Assets can be loaded in two ways:
  * - **Direct** — `loader.load(Assets.from({ hero: 'hero.png' }))` fetches
@@ -316,22 +315,8 @@ export class Loader {
   }
 
   // -----------------------------------------------------------------------
-  // Factory registration
+  // Type registration
   // -----------------------------------------------------------------------
-
-  /**
-   * Registers a custom {@link AssetFactory} for `type`.
-   *
-   * Registration is prototype-chain aware: the factory will also handle any
-   * subclass of `type` that does not have its own explicit registration.
-   * Built-in types can be overridden by registering a replacement factory
-   * for the same constructor.
-   */
-  public register<T>(type: AssetConstructor<T>, factory: AssetFactory<T>): this {
-    this._typeRegistry.register(type, factory);
-
-    return this;
-  }
 
   /**
    * Registers the seamless-handle adapter for `type`, enabling the deferred
@@ -987,6 +972,8 @@ export class Loader {
       typeNames?: readonly string[];
       extensions?: readonly string[];
       seamless?: SeamlessAdapter<Result>;
+      /** Optional per-type IDB namespace for `context.fetchX()` calls made by this binding's handler. Defaults to the shared `__ctx_binary`/`__ctx_text`/`__ctx_json` namespace. */
+      storageName?: string;
     },
     handler: AssetHandler<Result, Options>,
   ): void {
@@ -1034,7 +1021,6 @@ export class Loader {
     // Order matters: bound-handler destroy must run after store destroy (via
     // this._decoder.destroy(), which mirrors the original inline teardown
     // order) — see the regression test in loader.test.ts.
-    this._typeRegistry.destroyFactories();
     this._decoder.destroy();
     this._typeRegistry.destroyHandlers();
     this._residency.destroy();

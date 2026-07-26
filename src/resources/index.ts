@@ -2,7 +2,6 @@ export { AbstractAssetFactory } from './AbstractAssetFactory';
 export type { ValueAsset } from './Asset';
 export { Asset } from './Asset';
 export type { AnyAssetConfig, AssetDefinitions, AssetInput, InferAssetResource } from './AssetDefinitions';
-export type { AssetFactory } from './AssetFactory';
 export { AssetRef } from './AssetRef';
 export type { InferAssetsEntries } from './Assets';
 export { Assets } from './Assets';

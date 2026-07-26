@@ -1,7 +1,6 @@
 import { describe, expect, test, vi } from 'vitest';
 
 import { AssetDecoder } from '#resources/AssetDecoder';
-import type { AssetFactory } from '#resources/AssetFactory';
 import { AssetTypeRegistry } from '#resources/AssetTypeRegistry';
 import type { CacheStore } from '#resources/CacheStore';
 import type { CacheRequest, CacheStrategy } from '#resources/CacheStrategy';
@@ -10,15 +9,6 @@ import type { Loader } from '#resources/Loader';
 class TypeA {}
 
 const fakeLoader = {} as Loader;
-
-function fakeFactory<T>(create: (data: unknown, options?: unknown) => T): AssetFactory<T> {
-  return {
-    storageName: 'test',
-    process: async (r: Response) => r,
-    create: async (data: unknown, options?: unknown) => create(data, options),
-    destroy: vi.fn(),
-  };
-}
 
 const createCacheStoreMock = (overrides: Partial<CacheStore> = {}): CacheStore => ({
   load: vi.fn(async (): Promise<unknown | null> => null),
@@ -71,37 +61,6 @@ describe('AssetDecoder', () => {
     expect(decoder.fetchOptions).toEqual({ credentials: 'include' });
   });
 
-  test('_fetch resolves through the cache strategy with the base-path-prefixed URL and stores via the callback', async () => {
-    const { strategy, requests } = createFakeStrategy(() => 'decoded-value');
-    const { decoder, typeRegistry, storeResource } = createDecoder({ cacheStrategy: strategy, basePath: 'assets/' });
-
-    typeRegistry.register(
-      TypeA,
-      fakeFactory(() => new TypeA()),
-    );
-
-    const result = await decoder._fetch(TypeA, 'hero', 'hero.png');
-
-    expect(requests[0]?.url).toBe('assets/hero.png');
-    expect(requests[0]?.key).toBe('hero.png');
-    expect(storeResource).toHaveBeenCalledWith(TypeA, 'hero', 'decoded-value');
-    expect(result).toBe('decoded-value');
-  });
-
-  test('_fetch wraps a rejected cache-strategy resolve in a "Failed to load" error and never stores', async () => {
-    const { strategy } = createFakeStrategy();
-    (strategy.resolve as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('network down'));
-    const { decoder, typeRegistry, storeResource } = createDecoder({ cacheStrategy: strategy });
-
-    typeRegistry.register(
-      TypeA,
-      fakeFactory(() => new TypeA()),
-    );
-
-    await expect(decoder._fetch(TypeA, 'hero', 'hero.png')).rejects.toThrow(/Failed to load "hero" from "hero.png": network down/);
-    expect(storeResource).not.toHaveBeenCalled();
-  });
-
   test('_fetchWithHandler invokes the handler with the built context and stores the result', async () => {
     const { decoder, storeResource } = createDecoder();
     const handler = vi.fn(async () => 'handler-result');
@@ -127,19 +86,11 @@ describe('AssetDecoder', () => {
     expect(storeResource).not.toHaveBeenCalled();
   });
 
-  test('_dispatchFetch routes through _fetch when no bindAsset handler is registered', async () => {
-    const { strategy, requests } = createFakeStrategy(() => 'plain-fetch-value');
-    const { decoder, typeRegistry, storeResource } = createDecoder({ cacheStrategy: strategy });
+  test('_dispatchFetch rejects with a clear error when no bindAsset handler is registered for the type', async () => {
+    const { decoder, storeResource } = createDecoder();
 
-    typeRegistry.register(
-      TypeA,
-      fakeFactory(() => new TypeA()),
-    );
-
-    await decoder._dispatchFetch(TypeA, 'hero', 'hero.png');
-
-    expect(requests).toHaveLength(1);
-    expect(storeResource).toHaveBeenCalledWith(TypeA, 'hero', 'plain-fetch-value');
+    await expect(decoder._dispatchFetch(TypeA, 'hero', 'hero.png')).rejects.toThrow(/No asset handler registered for TypeA/);
+    expect(storeResource).not.toHaveBeenCalled();
   });
 
   test('_dispatchFetch routes through the bindAsset handler when one is registered, merging options into the config', async () => {
@@ -154,6 +105,18 @@ describe('AssetDecoder', () => {
     expect(storeResource).toHaveBeenCalledWith(TypeA, 'hero', { config: { source: 'hero.png', options: { scale: 2 } } });
   });
 
+  test('_dispatchFetch routes context.fetchText through the bindAsset binding storageName instead of the shared namespace', async () => {
+    const { strategy, requests } = createFakeStrategy(() => 'ns-value');
+    const { decoder, typeRegistry, storeResource } = createDecoder({ cacheStrategy: strategy });
+
+    typeRegistry.bindAsset({ ctor: TypeA, storageName: 'my-type-ns' }, { load: async (_config, ctx) => ctx.fetchText('hero.png') });
+
+    await decoder._dispatchFetch(TypeA, 'hero', 'hero.png');
+
+    expect(requests[0]?.storageName).toBe('my-type-ns');
+    expect(storeResource).toHaveBeenCalledWith(TypeA, 'hero', 'ns-value');
+  });
+
   test('_injectSource uses createFromBytes when the handler provides it, and stores via the callback', async () => {
     const { decoder, typeRegistry, storeResource } = createDecoder();
     const createFromBytes = vi.fn(async (bytes: ArrayBuffer) => `from-bytes:${bytes.byteLength}`);
@@ -166,20 +129,16 @@ describe('AssetDecoder', () => {
     expect(storeResource).toHaveBeenCalledWith(TypeA, 'hero', 'from-bytes:4');
   });
 
-  test('_injectSource falls back to a register()-based factory when no createFromBytes handler exists', async () => {
+  test('_injectSource throws when the bound handler has no createFromBytes, and never stores', async () => {
     const { decoder, typeRegistry, storeResource } = createDecoder();
 
-    typeRegistry.register(
-      TypeA,
-      fakeFactory((bytes: unknown) => `from-factory:${(bytes as ArrayBuffer).byteLength}`),
-    );
+    typeRegistry.bindAsset({ ctor: TypeA }, { load: vi.fn() });
 
-    await decoder._injectSource(TypeA, 'hero', new ArrayBuffer(8));
-
-    expect(storeResource).toHaveBeenCalledWith(TypeA, 'hero', 'from-factory:8');
+    await expect(decoder._injectSource(TypeA, 'hero', new ArrayBuffer(8))).rejects.toThrow(/cannot be built from container bytes/);
+    expect(storeResource).not.toHaveBeenCalled();
   });
 
-  test('_injectSource throws when the type has neither createFromBytes nor a factory, and never stores', async () => {
+  test('_injectSource throws when the type has no bound handler at all, and never stores', async () => {
     const { decoder, storeResource } = createDecoder();
 
     await expect(decoder._injectSource(TypeA, 'hero', new ArrayBuffer(4))).rejects.toThrow(/cannot be built from container bytes/);
