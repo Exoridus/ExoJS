@@ -112,13 +112,31 @@ export async function leafLoads(): Promise<void> {
   const metricsQueue = loader.load(bag.metrics, { background: true });
   expectType<Equal<Awaited<typeof metricsQueue>, AtlasMetrics>>();
 
-  // `get(leaf)` adopts and returns the leaf: a resource leaf as its resource, a
-  // value leaf as the ref itself (its payload arrives on the ref).
-  expectType<Equal<ReturnType<typeof getTexture>, Texture>>();
-  expectType<Equal<ReturnType<typeof getSound>, Sound>>();
-  expectType<Equal<ReturnType<typeof getAtlas>, SpriteAtlas>>();
-  expectType<Equal<ReturnType<typeof getConfig>, AssetRef<unknown>>>();
-  expectType<Equal<ReturnType<typeof getMetrics>, AssetRef<AtlasMetrics>>>();
+  // `get(leaf)` adopts and returns THE SAME leaf — brand included, because the
+  // runtime hands back the very stamped object it was given. A resource leaf
+  // stays its resource, a value leaf the ref itself (its payload arrives on the
+  // ref); both keep the stamp that makes them re-loadable below.
+  expectType<Equal<ReturnType<typeof getTexture>, CatalogResourceLeaf<Texture>>>();
+  expectType<Equal<ReturnType<typeof getSound>, CatalogResourceLeaf<Sound>>>();
+  expectType<Equal<ReturnType<typeof getAtlas>, CatalogResourceLeaf<SpriteAtlas>>>();
+  expectType<Equal<ReturnType<typeof getConfig>, CatalogValueLeaf<unknown>>>();
+  expectType<Equal<ReturnType<typeof getMetrics>, CatalogValueLeaf<AtlasMetrics>>>();
+
+  // A branded `get()` result stays ordinarily usable…
+  const gotTexture: Texture = loader.get(bag.player);
+  const gotSound: Sound = loader.get(bag.jump);
+  const gotMetrics: AssetRef<AtlasMetrics> = loader.get(bag.metrics);
+  void [gotTexture, gotSound, gotMetrics];
+
+  // …and round-trips back into a single-leaf `load()` with exact inference.
+  const roundTripTexture = loader.load(loader.get(bag.player));
+  expectType<Equal<typeof roundTripTexture, LoadingQueue<Texture>>>();
+
+  const roundTripConfig = loader.load(loader.get(bag.config));
+  expectType<Equal<typeof roundTripConfig, LoadingQueue<unknown>>>();
+
+  const roundTripMetrics = loader.load(loader.get(bag.metrics));
+  expectType<Equal<typeof roundTripMetrics, LoadingQueue<AtlasMetrics>>>();
 }
 
 function getTexture() {
@@ -158,7 +176,7 @@ export async function derivedLeaves(): Promise<void> {
   expectType<Equal<typeof extendedLeaf, Texture>>();
 
   const extendedKept = loader.get(extended.player);
-  expectType<Equal<typeof extendedKept, Texture>>();
+  expectType<Equal<typeof extendedKept, CatalogResourceLeaf<Texture>>>();
 }
 
 // --- SceneLoader mirrors the same surface ----------------------------------
@@ -173,8 +191,14 @@ export async function sceneLeaves(): Promise<void> {
   const sceneAtlas = await scene.loader.load(bag.atlas);
   expectType<Equal<typeof sceneAtlas, SpriteAtlas>>();
 
-  expectType<Equal<ReturnType<typeof sceneGetTexture>, Texture>>();
-  expectType<Equal<ReturnType<typeof sceneGetMetrics>, AssetRef<AtlasMetrics>>>();
+  expectType<Equal<ReturnType<typeof sceneGetTexture>, CatalogResourceLeaf<Texture>>>();
+  expectType<Equal<ReturnType<typeof sceneGetMetrics>, CatalogValueLeaf<AtlasMetrics>>>();
+
+  const sceneRoundTrip = scene.loader.load(scene.loader.get(bag.player));
+  expectType<Equal<typeof sceneRoundTrip, LoadingQueue<Texture>>>();
+
+  const sceneValueRoundTrip = scene.loader.load(scene.loader.get(bag.metrics));
+  expectType<Equal<typeof sceneValueRoundTrip, LoadingQueue<AtlasMetrics>>>();
 }
 
 function sceneGetTexture() {
@@ -182,6 +206,47 @@ function sceneGetTexture() {
 }
 function sceneGetMetrics() {
   return scene.loader.get(bag.metrics);
+}
+
+// --- get(descriptor) is branded too, and round-trips ------------------------
+//
+// The `Asset.type(...)` branch mints its leaf through `createLeaf`, so the
+// returned handle carries the very same `_assetMeta` stamp a catalog leaf does.
+
+export function descriptorLeaves(): void {
+  const descriptorTexture = loader.get(Asset.type('texture', 'player.png'));
+  expectType<Equal<typeof descriptorTexture, CatalogResourceLeaf<Texture>>>();
+
+  const plainTexture: Texture = descriptorTexture;
+  void plainTexture;
+
+  const descriptorQueue = loader.load(descriptorTexture);
+  expectType<Equal<typeof descriptorQueue, LoadingQueue<Texture>>>();
+
+  const descriptorMetrics = loader.get(Asset.type('atlasMetrics', 'atlases/hero.meta'));
+  expectType<Equal<typeof descriptorMetrics, CatalogValueLeaf<AtlasMetrics>>>();
+
+  const plainRef: AssetRef<AtlasMetrics> = descriptorMetrics;
+  void plainRef;
+
+  const descriptorValueQueue = loader.load(descriptorMetrics);
+  expectType<Equal<typeof descriptorValueQueue, LoadingQueue<AtlasMetrics>>>();
+
+  // The scene-scoped mirror brands identically.
+  const sceneDescriptorTexture = scene.loader.get(Asset.type('texture', 'player.png'));
+  expectType<Equal<typeof sceneDescriptorTexture, CatalogResourceLeaf<Texture>>>();
+  expectType<Equal<ReturnType<typeof sceneLoadDescriptorTexture>, LoadingQueue<Texture>>>();
+
+  const sceneDescriptorMetrics = scene.loader.get(Asset.type('atlasMetrics', 'atlases/hero.meta'));
+  expectType<Equal<typeof sceneDescriptorMetrics, CatalogValueLeaf<AtlasMetrics>>>();
+  expectType<Equal<ReturnType<typeof sceneLoadDescriptorMetrics>, LoadingQueue<AtlasMetrics>>>();
+}
+
+function sceneLoadDescriptorTexture() {
+  return scene.loader.load(scene.loader.get(Asset.type('texture', 'player.png')));
+}
+function sceneLoadDescriptorMetrics() {
+  return scene.loader.load(scene.loader.get(Asset.type('atlasMetrics', 'atlases/hero.meta')));
 }
 
 // --- negative: only a MATERIALIZED leaf is a leaf ---------------------------
@@ -227,6 +292,32 @@ export function negatives(): void {
   scene.loader.load(rawTexture);
   // @ts-expect-error — raw resource, scene loader `get`.
   scene.loader.get(rawTexture);
+}
+
+// --- negative: bare-path `get()` stays UNBRANDED -----------------------------
+//
+// The deliberate asymmetry: a bare path resolves through the source-keyed dedup
+// rather than `createLeaf`, so the handle it returns carries no `_assetMeta`
+// stamp at runtime — and must therefore not be re-loadable as a single leaf.
+
+export function barePathStaysUnbranded(): void {
+  const bareTexture = loader.get('player.png');
+  expectType<Equal<typeof bareTexture, Texture>>();
+
+  const bareRef = loader.get('config.json');
+  expectType<Equal<typeof bareRef, AssetRef<unknown>>>();
+
+  // @ts-expect-error — an unstamped bare-path handle is not a single leaf.
+  loader.load(bareTexture);
+  // @ts-expect-error — …nor is the bare-path AssetRef.
+  loader.load(bareRef);
+  // @ts-expect-error — inline form, same contract.
+  loader.load(loader.get('player.png'));
+
+  const sceneBareTexture = scene.loader.get('player.png');
+  expectType<Equal<typeof sceneBareTexture, Texture>>();
+  // @ts-expect-error — the scene mirror keeps the asymmetry.
+  scene.loader.load(sceneBareTexture);
 }
 
 void [texture, sound, config, atlas, metrics, new AssetRef<unknown>()];

@@ -6,10 +6,10 @@
   "subsystem": "resources",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 35,
+  "memberCount": 34,
   "counts": {
     "constructors": 1,
-    "methods": 25,
+    "methods": 24,
     "properties": 2,
     "events": 7
   },
@@ -374,7 +374,7 @@
         },
         {
           "name": "get",
-          "signature": "get(asset: ValueAsset<T>): AssetRef<T>",
+          "signature": "get(asset: CatalogValueLeaf<T> | ValueAsset<T>): CatalogValueLeaf<T>",
           "signatureTokens": [
             {
               "text": "get",
@@ -390,6 +390,26 @@
             },
             {
               "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CatalogValueLeaf",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
               "kind": "punctuation"
             },
             {
@@ -417,7 +437,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "AssetRef",
+              "text": "CatalogValueLeaf",
               "kind": "type"
             },
             {
@@ -436,16 +456,16 @@
           "params": [
             {
               "name": "asset",
-              "type": "ValueAsset<T>",
+              "type": "CatalogValueLeaf<T> | ValueAsset<T>",
               "optional": false
             }
           ],
-          "returnType": "AssetRef<T>",
-          "description": "Seamless/value access from an Asset.type(...) descriptor (asset-system v2 §4.2) — the replacement for the removed get(Type, dynamicSource) form. Builds and adopts the descriptor's handle-hybrid leaf: a resource type yields its heal-in-place handle, a value type a stable AssetRef. A type with neither a seamless adapter nor a value channel throws with guidance to use load(Asset.type(...)). The return type follows the ValueAsset brand (as InferCatalogLeaf does): a value-type descriptor (Asset.type<T>('json', …)) returns AssetRef<T> — even for an object payload — while a resource-type descriptor returns the resource itself, so the type always matches the runtime value. Unlike bare-path get('x.png'), this form is **not instance-deduped by source**: each call builds a fresh leaf, so repeated get(Asset.type(type, sameSrc)) accumulates distinct handles (all healing to the same deduped backend payload). It is the dynamic-source escape hatch — capture the handle once."
+          "returnType": "CatalogValueLeaf<T>",
+          "description": "Seamless/value access from an Asset.type(...) descriptor (asset-system v2 §4.2) — the replacement for the removed get(Type, dynamicSource) form. Builds and adopts the descriptor's handle-hybrid leaf: a resource type yields its heal-in-place handle, a value type a stable AssetRef. A type with neither a seamless adapter nor a value channel throws with guidance to use load(Asset.type(...)). The return type follows the ValueAsset brand (as InferCatalogLeaf does): a value-type descriptor (Asset.type<T>('json', …)) returns AssetRef<T> — even for an object payload — while a resource-type descriptor returns the resource itself, so the type always matches the runtime value. Both come back BRANDED, mirroring the _assetMeta stamp createLeaf applies, so the returned leaf can be fed straight back into a single-leaf load(…). Unlike bare-path get('x.png'), this form is **not instance-deduped by source**: each call builds a fresh leaf, so repeated get(Asset.type(type, sameSrc)) accumulates distinct handles (all healing to the same deduped backend payload). It is the dynamic-source escape hatch — capture the handle once."
         },
         {
           "name": "get",
-          "signature": "get(asset: Asset<T>): T",
+          "signature": "get(asset: Asset<T>): CatalogResourceLeaf<T>",
           "signatureTokens": [
             {
               "text": "get",
@@ -488,8 +508,20 @@
               "kind": "punctuation"
             },
             {
+              "text": "CatalogResourceLeaf",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
               "text": "T",
               "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             }
           ],
           "params": [
@@ -499,12 +531,12 @@
               "optional": false
             }
           ],
-          "returnType": "T",
+          "returnType": "CatalogResourceLeaf<T>",
           "description": "Seamless deferred access by path (asset-system v2). Returns SYNCHRONOUSLY: an already-loaded source returns the stored resource; an unknown source returns a placeholder handle immediately, starts the fetch, and fills the handle in place when the payload arrives (track it via loadState / loaded). Failed loads switch the handle to its failed representation; calling get again for a 'failed' source retries and heals the same handle in place. Invalid inputs and missing bindings throw synchronously before a fetch starts. The path is normalized to an AssetDefinitions type by its suffix (basename-only, longest-suffix-first), consulting the app-local registerType override, then the binding-declared type, then the global defineAsset default. A resource suffix yields its heal-in-place handle; a value suffix (json, txt, csv, …) yields a stable AssetRef. Only leaf-capable suffixes are accepted at compile time (ExtensionKindMap); dynamic strings resolving to an unregistered suffix or a non-leaf type throw with guidance. The same source always yields the same instance — also across load — and options are first-wins: conflicting options on a later call are ignored with a one-time dev warning."
         },
         {
           "name": "get",
-          "signature": "get(leaf: CatalogResourceLeaf<T>): T",
+          "signature": "get(leaf: CatalogResourceLeaf<T>): CatalogResourceLeaf<T>",
           "signatureTokens": [
             {
               "text": "get",
@@ -547,8 +579,20 @@
               "kind": "punctuation"
             },
             {
+              "text": "CatalogResourceLeaf",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
               "text": "T",
               "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             }
           ],
           "params": [
@@ -558,79 +602,8 @@
               "optional": false
             }
           ],
-          "returnType": "T",
-          "description": "Adopts a single handle-hybrid leaf (an Assets.from() property) and returns it — the same object, healing in place once its payload arrives. Matches on the catalog-leaf brand, so only a MATERIALIZED leaf is accepted; a raw resource instance has no _assetMeta stamp and is rejected here as it is at runtime."
-        },
-        {
-          "name": "get",
-          "signature": "get(leaf: CatalogValueLeaf<T>): AssetRef<T>",
-          "signatureTokens": [
-            {
-              "text": "get",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "leaf",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "CatalogValueLeaf",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "T",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "AssetRef",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "T",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            }
-          ],
-          "params": [
-            {
-              "name": "leaf",
-              "type": "CatalogValueLeaf<T>",
-              "optional": false
-            }
-          ],
-          "returnType": "AssetRef<T>",
-          "description": "Adopts a single value leaf and returns the ref itself — its payload arrives on the ref."
+          "returnType": "CatalogResourceLeaf<T>",
+          "description": "Adopts a single handle-hybrid leaf (an Assets.from() property) and returns it — the same object, healing in place once its payload arrives. Matches on the catalog-leaf brand, so only a MATERIALIZED leaf is accepted; a raw resource instance has no _assetMeta stamp and is rejected here as it is at runtime. The brand rides along on the result: the returned leaf is the very object that was passed in, stamp included, so it stays re-loadable."
         },
         {
           "name": "hasAssetType",

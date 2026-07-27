@@ -211,6 +211,18 @@ describe('Container children view', () => {
     expect(container.children).not.toBe(before);
   });
 
+  test('a snapshot handed out earlier is independent of later child mutations', () => {
+    const container = new Container();
+    const first = new DummyDrawable();
+    container.addChild(first);
+    const before = container.children;
+
+    container.addChild(new DummyDrawable());
+    container.removeChild(first);
+
+    expect(before).toEqual([first]);
+  });
+
   test('is a real Array — Array.isArray, length, and indexed access all work like before', () => {
     const container = new Container();
     const first = new DummyDrawable();
