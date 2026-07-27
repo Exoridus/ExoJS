@@ -1,7 +1,7 @@
 import type { Application } from '#core/Application';
 import type { Destroyable } from '#core/types';
 import type { Asset, ValueAsset } from '#resources/Asset';
-import type { AssetInput, KindByPath, LeafForPath, ResourceAssetObject, ResourceForKind } from '#resources/AssetDefinitions';
+import type { CatalogEntry, KindByPath, LeafForPath, ResourceAssetObject, ResourceForKind } from '#resources/AssetDefinitions';
 import type { AssetRef } from '#resources/AssetRef';
 import type { Assets, InferAssetsProperties } from '#resources/Assets';
 import type { InferLoadedMap, Loader, LoadOptions } from '#resources/Loader';
@@ -31,7 +31,7 @@ export class SceneLoader implements Destroyable {
   public get<T>(asset: ValueAsset<T>): AssetRef<T>;
   public get<T>(asset: Asset<T>): T;
   // Adopts an Assets catalog under the scene scope (mirrors Loader.get(catalog)).
-  public get<M extends Record<string, AssetInput>>(catalog: Assets<M>): InferAssetsProperties<M>;
+  public get<M extends Record<string, CatalogEntry>>(catalog: Assets<M>): InferAssetsProperties<M>;
   // Adopts a single handle-hybrid leaf under the scene scope (mirrors Loader.get(leaf)).
   public get<T extends ResourceAssetObject>(leaf: T): T;
   public get(input: string | object, options?: unknown): unknown {
@@ -39,7 +39,7 @@ export class SceneLoader implements Destroyable {
   }
 
   public load<T>(asset: Asset<T>): LoadingQueue<T>;
-  public load<M extends Record<string, AssetInput>>(assets: Assets<M>, options?: LoadOptions): LoadingQueue<InferLoadedMap<M>>;
+  public load<M extends Record<string, CatalogEntry>>(assets: Assets<M>, options?: LoadOptions): LoadingQueue<InferLoadedMap<M>>;
   // Single value-leaf (an `Assets.from()` AssetRef property): mirrors Loader.load(leaf).
   public load<T>(leaf: AssetRef<T>, options?: LoadOptions): LoadingQueue<T>;
   // Single handle-hybrid leaf (an `Assets.from()` property): mirrors Loader.load(leaf).

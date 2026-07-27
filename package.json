@@ -94,7 +94,7 @@
     "docs:api:check": "tsx scripts/check-api-docs-sync.ts",
     "typecheck": "tsc --noEmit",
     "typecheck:examples": "tsc --noEmit -p tsconfig.examples.json",
-    "typecheck:type-tests": "tsc --noEmit -p tsconfig.type-tests.json",
+    "typecheck:type-tests": "tsc --noEmit -p tsconfig.type-tests.json && tsc --noEmit -p tsconfig.type-tests-strict.json && tsc --noEmit -p tsconfig.type-tests-loose.json",
     "typecheck:guides": "tsx scripts/extract-guide-snippets.ts && tsc --noEmit -p tsconfig.guides.json",
     "typecheck:packages": "pnpm --filter \"@codexo/exojs-particles\" --filter \"@codexo/exojs-tilemap\" --filter \"@codexo/exojs-tiled\" --filter \"@codexo/exojs-physics\" --filter \"@codexo/exojs-audio-fx\" --filter \"@codexo/exojs-aseprite\" --filter \"@codexo/exojs-ldtk\" --filter \"@codexo/exojs-react\" typecheck",
     "typecheck:bench": "pnpm --filter @codexo/exojs-bench bench:setup && pnpm --filter @codexo/exojs-bench typecheck",

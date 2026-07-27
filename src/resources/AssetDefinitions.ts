@@ -219,6 +219,25 @@ export type InferCatalogLeaf<E extends CatalogEntry> = E extends string
             : AssetDefinitions[K]['resource']
         : never;
 
+/**
+ * The LOADED payload a {@link CatalogEntry} resolves to — what a
+ * `loader.load(catalog)` result map holds, as opposed to the handle-hybrid leaf
+ * {@link InferCatalogLeaf} materializes on the catalog itself.
+ *
+ * A bare path string is classified by its file suffix exactly as
+ * {@link LeafForPath} does, but resolves to the raw resource for every type: a
+ * value type's LOAD result is its decoded value (`unknown` for `json`), not the
+ * `AssetRef` wrapper its catalog property holds. Descriptors and explicit
+ * configs delegate to {@link InferAssetResource} unchanged.
+ */
+export type InferLoadedEntry<E extends CatalogEntry> = E extends string
+  ? [KindByPath<E>] extends [never]
+    ? unknown
+    : ResourceForKind<KindByPath<E>>
+  : E extends AssetInput
+    ? InferAssetResource<E>
+    : never;
+
 // Compile-time guard: every ExtensionKindMap value is a real AssetDefinitions type.
 type AssertKindMapValid = ExtensionKindMap[keyof ExtensionKindMap] extends keyof AssetDefinitions ? true : never;
 const _extensionKindMapIsValid: AssertKindMapValid = true;

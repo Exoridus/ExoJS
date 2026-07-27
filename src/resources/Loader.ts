@@ -9,7 +9,7 @@ import type {
   AssetInput,
   CatalogEntry,
   CoreValueAssetKind,
-  InferAssetResource,
+  InferLoadedEntry,
   KindByPath,
   LeafForPath,
   ResourceAssetObject,
@@ -40,9 +40,17 @@ import { BinaryAsset, CsvAsset, Json, SubtitleAsset, TextAsset, WasmAsset, XmlAs
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Loadable = abstract new (...args: any[]) => unknown;
 
-/** Maps each key of an `AssetInput` map to its resolved runtime resource type. */
-export type InferLoadedMap<M extends Record<string, AssetInput>> = {
-  [K in keyof M]: InferAssetResource<M[K]>;
+/**
+ * Maps each key of a catalog DEFINITION record to its resolved runtime resource
+ * type.
+ *
+ * Keyed on {@link CatalogEntry}, not `AssetInput`: a materialized catalog may
+ * have been defined with bare path strings, which `AssetInput` (configs and
+ * `Asset` descriptors only) does not cover — the loader consumes the already
+ * materialized leaves and must not re-validate the definition entries.
+ */
+export type InferLoadedMap<M extends Record<string, CatalogEntry>> = {
+  [K in keyof M]: InferLoadedEntry<M[K]>;
 };
 
 /**
@@ -388,7 +396,7 @@ export class Loader {
    * ```
    */
   public load<T>(asset: Asset<T>): LoadingQueue<T>;
-  public load<M extends Record<string, AssetInput>>(assets: Assets<M>, options?: LoadOptions): LoadingQueue<InferLoadedMap<M>>;
+  public load<M extends Record<string, CatalogEntry>>(assets: Assets<M>, options?: LoadOptions): LoadingQueue<InferLoadedMap<M>>;
   // Single value-leaf (an `Assets.from()` AssetRef property): `AssetRef.loaded` resolves
   // to the raw value, not the ref — this overload must win over the generic leaf one below.
   public load<T>(leaf: AssetRef<T>, options?: LoadOptions): LoadingQueue<T>;
@@ -623,7 +631,7 @@ export class Loader {
    * their record key. The catalog's own properties heal in place as payloads
    * arrive — the returned map holds those very leaves.
    */
-  public get<M extends Record<string, AssetInput>>(catalog: Assets<M>): InferAssetsProperties<M>;
+  public get<M extends Record<string, CatalogEntry>>(catalog: Assets<M>): InferAssetsProperties<M>;
 
   /**
    * Seamless/value access from an `Asset.type(...)` descriptor (asset-system v2 §4.2) —
@@ -773,7 +781,7 @@ export class Loader {
    */
   public release(handle: object): void;
   public release<T>(asset: Asset<T>): void;
-  public release<M extends Record<string, AssetInput>>(assets: Assets<M>): void;
+  public release<M extends Record<string, CatalogEntry>>(assets: Assets<M>): void;
   public release(type: AssetConstructor, source: string): void;
   public release(handleOrType: object | AssetConstructor, source?: string): void {
     if (typeof source === 'string') {

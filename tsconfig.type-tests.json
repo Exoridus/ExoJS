@@ -1,8 +1,12 @@
 {
-  // Strict:false type-level regression guards (S3 Phase 4.5, G2). Inherits the
-  // example project's `strict: false` / `strictNullChecks: false` settings and
-  // module resolution, but compiles only the dedicated type-test sources — not
-  // the whole example catalog — so it stays fast. Wired into `verify:quick`.
+  // Type-level regression guards. Inherits the example project's compiler
+  // settings and module resolution (`strict: true` — the example catalog is a
+  // copy-paste surface for strict-by-default scaffolds), but compiles only the
+  // dedicated type-test sources, not the whole example catalog, so it stays
+  // fast. Wired into `verify:quick` via `typecheck:type-tests`, which also runs
+  // the two narrower lanes beside it: `tsconfig.type-tests-strict.json` (the
+  // engine's own stricter profile) and `tsconfig.type-tests-loose.json`
+  // (`strictNullChecks: false`).
   "extends": "./tsconfig.examples.json",
   "include": ["test/type-tests/**/*.ts", "src/typings.d.ts"]
 }
