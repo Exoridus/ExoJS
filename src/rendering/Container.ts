@@ -45,7 +45,7 @@ export class Container extends RenderNode {
    * and bounds invalidation stay consistent.
    */
   public get children(): readonly RenderNode[] {
-    return (this._childrenView ??= Object.freeze(this._children.slice()));
+    return (this._childrenView ??= Object.freeze([...this._children]));
   }
 
   public get width(): number {
