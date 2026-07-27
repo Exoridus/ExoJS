@@ -4,7 +4,7 @@ import { describe, expectTypeOf, it } from 'vitest';
 
 import type { Texture } from '#rendering/texture/Texture';
 import { type AssetRef } from '#resources/AssetRef';
-import { Assets } from '#resources/Assets';
+import { type AnyAssets, Assets } from '#resources/Assets';
 import type { Loader } from '#resources/Loader';
 
 describe('Assets.from types', () => {
@@ -34,6 +34,40 @@ describe('Assets.compose / Assets.extend types', () => {
     const loadIt = (loader: Loader) => loader.load(composed);
 
     expectTypeOf(loadIt).returns.resolves.toEqualTypeOf<{ ship: Texture; level: unknown; tree: Texture }>();
+  });
+
+  // The `strict: false` counterpart lives in test/type-tests/assets-compose.type-test.ts;
+  // these run under the engine's own strict config.
+  it('types a conflict as a diagnostic no loader input accepts', () => {
+    const other = Assets.from({ ship: 'z.png' });
+    // Type-only: a conflicting composition THROWS at runtime, so the call is
+    // never made — only its return type is inspected.
+    const compose = () => Assets.compose(shared, other);
+    type Conflicted = ReturnType<typeof compose>;
+
+    // Not `never` (which would erase the explanation), not a string (which the
+    // loader's bare-path overloads take), and not a catalog.
+    expectTypeOf<[Conflicted] extends [never] ? true : false>().toEqualTypeOf<false>();
+    expectTypeOf<Conflicted extends string ? true : false>().toEqualTypeOf<false>();
+    expectTypeOf<Conflicted extends AnyAssets ? true : false>().toEqualTypeOf<false>();
+    expectTypeOf<Conflicted['_conflictingKeys']>().toEqualTypeOf<'ship'>();
+
+    const load = (loader: Loader, conflicted: Conflicted) =>
+      // @ts-expect-error — a conflicting composition is not a loader input.
+      loader.load(conflicted);
+    const get = (loader: Loader, conflicted: Conflicted) =>
+      // @ts-expect-error — nor a readable catalog.
+      loader.get(conflicted);
+
+    expectTypeOf(load).toBeFunction();
+    expectTypeOf(get).toBeFunction();
+  });
+
+  it('keeps the full key union when several keys collide', () => {
+    const twoOff = Assets.from({ ship: 'z.png', level: 'z.json' });
+    const compose = () => Assets.compose(shared, twoOff);
+
+    expectTypeOf<ReturnType<typeof compose>['_conflictingKeys']>().toEqualTypeOf<'ship' | 'level'>();
   });
 
   it('adds and deliberately re-types keys via extend', () => {

@@ -1,6 +1,6 @@
 {
   "title": "AnyAssets",
-  "description": "Any typed catalog, whatever its definition record — the constraint Assets.compose accepts its arguments under.",
+  "description": "Any typed catalog, whatever its definition record — the constraint Assets.compose accepts its arguments under, and the one to write when a generic API of your own takes an arbitrary catalog (`<C extends AnyAssets>`) without pinning its definition record.",
   "symbol": "AnyAssets",
   "kind": "type",
   "subsystem": "resources",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Any typed catalog, whatever its definition record — the constraint Assets.compose accepts its arguments under."
+        "Any typed catalog, whatever its definition record — the constraint Assets.compose accepts its arguments under, and the one to write when a generic API of your own takes an arbitrary catalog (`<C extends AnyAssets>`) without pinning its definition record."
       ],
       "importLine": "import { AnyAssets } from '@codexo/exojs'",
       "sourceLink": null
