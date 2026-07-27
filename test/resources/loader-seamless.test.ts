@@ -130,45 +130,50 @@ describe('Loader seamless get (Texture)', () => {
     expect(seen).toEqual([handle]);
   });
 
-  test('legacy alias lookup still throws for adapterless types', () => {
+  test('get() rejects an input that is neither a path, a descriptor, a catalog, nor a leaf', () => {
     const loader = createCoreLoader();
 
-    // A type that is neither a seamless handle nor a value token still falls
-    // through to the throwing legacy lookup (value tokens now return AssetRef).
+    // The constructor-token lookup form `get(SomeType, alias)` is gone: a plain
+    // object/constructor no longer has a branch to fall through to.
     class Adapterless {}
 
-    expect(() => loader.get(Adapterless, 'never-loaded')).toThrow('Missing resource');
+    expect(() => loader.get(Adapterless as unknown as object)).toThrow('accepts a path string');
+    expect(() => loader.get({} as object)).toThrow('accepts a path string');
   });
 
-  test('legacy alias lookup round-trips a bindAsset-bound type whose handler legitimately resolves to null/undefined', async () => {
+  test('a handler that legitimately resolves to null/undefined stores that value (presence, not truthiness)', async () => {
     const loader = createCoreLoader();
 
     // A bindAsset-bound custom type (adapterless — no seamless adapter, no
-    // value token) whose handler resolves `null`/`undefined` as the actual
-    // stored resource. The legacy lookup must distinguish "never loaded" from
-    // "loaded, and the resource itself is nullish" — presence, not truthiness
-    // (a `Map.has()` check, not a `!== null` check on the read value). The
-    // legacy branch reads the raw stored value via `_getStored`, not
-    // `_peekResource` — so a stored `null` reads back as `null`, and a stored
-    // `undefined` reads back as `undefined`, unchanged from before this
-    // resource-residency split. What matters here is that a STORED nullish
-    // resource no longer throws.
+    // value channel) whose handler resolves `null`/`undefined` as the actual
+    // stored resource. The residency store must distinguish "never loaded" from
+    // "loaded, and the resource itself is nullish" — presence, not truthiness (a
+    // `Map.has()` check, not a `!== null` check on the read value). Observable
+    // through the load fast path: a re-load of a stored nullish resource must
+    // NOT re-invoke the handler.
     class Nullable {}
 
+    let calls = 0;
+
     loader.bindAsset<null | undefined>(
-      { type: Nullable, typeNames: ['nullable'] },
+      { ctor: Nullable, typeNames: ['nullable'] },
       {
-        load: async request => (request.source === 'undef' ? undefined : null),
+        load: async request => {
+          calls++;
+
+          return request.source === 'undef' ? undefined : null;
+        },
       },
     );
 
-    await loader.load(new Asset({ kind: 'nullable', source: 'null' }));
-    await loader.load(new Asset({ kind: 'nullable', source: 'undef' }));
+    await expect(loader.load(new Asset({ type: 'nullable', source: 'null' }))).resolves.toBeNull();
+    await expect(loader.load(new Asset({ type: 'nullable', source: 'undef' }))).resolves.toBeUndefined();
+    expect(calls).toBe(2);
 
-    expect(loader.get(Nullable, 'null')).toBeNull();
-    expect(loader.get(Nullable, 'undef')).toBeUndefined();
-    // A genuinely never-loaded source of the same type still throws.
-    expect(() => loader.get(Nullable, 'never-loaded')).toThrow('Missing resource');
+    // Re-loading either source reads the stored nullish value instead of refetching.
+    await expect(loader.load(new Asset({ type: 'nullable', source: 'null' }))).resolves.toBeNull();
+    await expect(loader.load(new Asset({ type: 'nullable', source: 'undef' }))).resolves.toBeUndefined();
+    expect(calls).toBe(2);
   });
 
   test('conflicting FETCH options (mimeType) warn once and the first call wins', async () => {
@@ -225,7 +230,7 @@ describe('Loader seamless get (Texture)', () => {
     mockFetchImage();
     const loader = createCoreLoader();
 
-    const catalog = new Assets({ ship: { kind: 'texture', source: 'ship.png', samplerOptions: { scaleMode: ScaleModes.Nearest } } });
+    const catalog = new Assets({ ship: { type: 'texture', source: 'ship.png', samplerOptions: { scaleMode: ScaleModes.Nearest } } });
     loader.load(catalog, { background: true });
 
     // A bare get() for the same source returns the adopted leaf, whose sampler
@@ -392,15 +397,36 @@ describe('Loader seamless get (Texture)', () => {
     expect(errors).toEqual(['gone.png']);
   });
 
-  test('plain load() failures do NOT dispatch onError (legacy semantics unchanged)', async () => {
+  test('plain load() rejects and dispatches the same failure through onError exactly once', async () => {
     mockFetch404();
     const loader = createCoreLoader();
-    const errors: string[] = [];
+    const errors: Array<{ alias: string; error: Error }> = [];
 
-    loader.onError.add((_type, alias) => errors.push(alias));
+    loader.onError.add((_type, alias, error) => errors.push({ alias, error }));
 
-    await expect(loader.load('gone.png')).rejects.toThrow();
-    expect(errors).toEqual([]);
+    let rejected: unknown;
+    await loader.load('gone.png').catch(error => {
+      rejected = error;
+    });
+
+    expect(rejected).toBeInstanceOf(Error);
+    expect(errors).toEqual([{ alias: 'gone.png', error: rejected }]);
+  });
+
+  test('an explicit Asset.type() load rejects and also dispatches onError', async () => {
+    mockFetch404();
+    const loader = createCoreLoader();
+    const errors: Array<{ alias: string; error: Error }> = [];
+
+    loader.onError.add((_type, alias, error) => errors.push({ alias, error }));
+
+    let rejected: unknown;
+    await loader.load(Asset.type('texture', 'explicit-gone.png')).catch(error => {
+      rejected = error;
+    });
+
+    expect(rejected).toBeInstanceOf(Error);
+    expect(errors).toEqual([{ alias: 'explicit-gone.png', error: rejected }]);
   });
 
   test('a load()-initiated retry that fails again refreshes the handle error', async () => {

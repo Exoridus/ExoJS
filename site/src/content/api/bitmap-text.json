@@ -1,6 +1,6 @@
 {
   "title": "BitmapText",
-  "description": "Text node that renders from an offline-generated atlas — either a BMFont (AngelCode .fnt + .png) or an MSDF atlas (msdf-atlas-gen + .json). The atlas is pre-built so there is no runtime Canvas 2D rasterisation. All layout features (alignment, word-wrap, justify, leading, breakWords, whiteSpace, letterSpacing) and kerning pairs from the descriptor are fully supported. Outline effects are handled as shader uniforms — no extra draw calls, no atlas rebuilds. ## Usage ```ts const font = await loader.load('fonts/ui.fnt'); // BmFont, no setup needed const label = new BitmapText('Score: 0', font, { msdf: true }); scene.addChild(label); label.text = 'Score: 42'; // instant geometry rebuild label.style.align = 'center'; // immediate rebuild ```",
+  "description": "Text node that renders from an offline-generated atlas — either a BMFont (AngelCode .fnt + .png) or an MSDF atlas (msdf-atlas-gen + .json). The atlas is pre-built so there is no runtime Canvas 2D rasterisation. All layout features (alignment, word-wrap, justify, leading, breakWords, whiteSpace, letterSpacing) and kerning pairs from the descriptor are fully supported. Outline effects are handled as shader uniforms — no extra draw calls, no atlas rebuilds. ## Usage ```ts const font = await loader.load(Asset.type('bmFont', 'fonts/ui.fnt')); // BmFont, no setup needed const label = new BitmapText('Score: 0', font, { msdf: true }); scene.addChild(label); label.text = 'Score: 42'; // instant geometry rebuild label.style.align = 'center'; // immediate rebuild ```",
   "symbol": "BitmapText",
   "kind": "class",
   "subsystem": "rendering",
@@ -22,7 +22,7 @@
         "Text node that renders from an offline-generated atlas — either a BMFont (AngelCode .fnt + .png) or an MSDF atlas (msdf-atlas-gen + .json).",
         "The atlas is pre-built so there is no runtime Canvas 2D rasterisation. All layout features (alignment, word-wrap, justify, leading, breakWords, whiteSpace, letterSpacing) and kerning pairs from the descriptor are fully supported. Outline effects are handled as shader uniforms — no extra draw calls, no atlas rebuilds.",
         "## Usage",
-        "```ts const font = await loader.load('fonts/ui.fnt'); // BmFont, no setup needed const label = new BitmapText('Score: 0', font, { msdf: true }); scene.addChild(label);",
+        "```ts const font = await loader.load(Asset.type('bmFont', 'fonts/ui.fnt')); // BmFont, no setup needed const label = new BitmapText('Score: 0', font, { msdf: true }); scene.addChild(label);",
         "label.text = 'Score: 42'; // instant geometry rebuild label.style.align = 'center'; // immediate rebuild ```"
       ],
       "importLine": "import { BitmapText } from '@codexo/exojs'",

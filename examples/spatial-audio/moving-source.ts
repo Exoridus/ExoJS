@@ -36,7 +36,7 @@ class MovingSourceScene extends Scene {
         // audible while there is sustained signal to pan/attenuate. The derived
         // Sound below reads .audioBuffer synchronously, so await load() instead
         // of the deferred get() (whose placeholder audioBuffer is null until fill).
-        const source = await this.loader.load(Asset.kind('sound', 'audio/demo-loop-main.ogg'));
+        const source = await this.loader.load(Asset.type('sound', 'audio/demo-loop-main.ogg'));
         this.sound = new Sound(source.audioBuffer);
         this.listener = { x: width / 2, y: height / 2 };
         app.audio.listener.target = this.listener;

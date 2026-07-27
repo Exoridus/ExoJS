@@ -87,7 +87,7 @@ export class SvgFactory extends AbstractAssetFactory<HTMLImageElement> {
         'error',
         () => {
           finalize();
-          reject(new Error('Failed to decode SVG source — the markup may be malformed, or (if loaded with the wrong Asset.kind) not SVG at all.'));
+          reject(new Error('Failed to decode SVG source — the markup may be malformed, or (if loaded with the wrong Asset.type) not SVG at all.'));
         },
         { once: true },
       );

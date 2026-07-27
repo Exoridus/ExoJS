@@ -31,7 +31,7 @@
       "members": [
         {
           "name": "factory",
-          "signature": "factory: AssetFactory",
+          "signature": "factory: CacheRequestFactory",
           "signatureTokens": [
             {
               "text": "factory",
@@ -42,7 +42,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "AssetFactory",
+              "text": "CacheRequestFactory",
               "kind": "type"
             }
           ],
@@ -94,7 +94,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Factory-specific options forwarded to AssetFactory.create."
+          "description": "Type-specific options forwarded to factory.create."
         },
         {
           "name": "requestOptions",
@@ -136,7 +136,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The AssetFactory.storageName used as the cache namespace."
+          "description": "The binding/factory storage namespace used for cache lookups."
         },
         {
           "name": "url",

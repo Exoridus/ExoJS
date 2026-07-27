@@ -112,18 +112,23 @@ import type { TileMap } from '@codexo/exojs-tilemap';
 import type { TiledMap } from './TiledMap';
 
 declare module '@codexo/exojs' {
-  interface ExtensionTypeMap {
-    /** `.tmj` path-only loads resolve to the generic runtime {@link TileMap}. */
-    tmj: TileMap;
+  interface ExtensionKindMap {
+    /** `.tmj` bare-path loads resolve to the generic runtime `tileMap` type ({@link TileMap}). */
+    tmj: 'tileMap';
   }
   interface AssetDefinitions {
     tileMap: {
       resource: TileMap;
       config: { source: string; format?: 'tiled' };
+      // No `seamless` adapter on `tiledRuntimeMapBinding`, so `defineAsset`
+      // defaults this to a value type: its leaf is an `AssetRef<TileMap>`.
+      isValue: true;
     };
     tiledMap: {
       resource: TiledMap;
       config: { source: string; format?: 'tiled' };
+      /** See `tileMap` — `tiledMapBinding` ships no seamless adapter either. */
+      isValue: true;
     };
   }
 }

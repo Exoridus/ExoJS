@@ -38,7 +38,7 @@ class BlendmodesScene extends Scene {
     private cycle!: { set(value: number): void };
 
     // Note: passing `options` as a 3rd argument to `loader.get(…)` or
-    // `loader.load(Asset.kind('texture', …))` alongside a non-Json type currently mis-resolves
+    // `loader.load(Asset.type('texture', …))` alongside a non-Json type currently mis-resolves
     // the overload (falls through to the `Json` generic and types the result as
     // `unknown`) — see the flagged deviation in the migration report. `load()`
     // is awaited here purely to seed the fetch with `scaleMode: Nearest`; its
@@ -50,8 +50,8 @@ class BlendmodesScene extends Scene {
         const { width, height } = app.canvas;
 
         const samplerOptions = { scaleMode: ScaleModes.Nearest };
-        await this.loader.load(Asset.kind('texture', ALPHA_RINGS, { samplerOptions }));
-        await this.loader.load(Asset.kind('texture', assets.demo.textures.shipA, { samplerOptions }));
+        await this.loader.load(Asset.type('texture', ALPHA_RINGS, { samplerOptions }));
+        await this.loader.load(Asset.type('texture', assets.demo.textures.shipA, { samplerOptions }));
 
         const backgroundTexture = this.loader.get(ALPHA_RINGS);
         const shipTexture = this.loader.get(assets.demo.textures.shipA);

@@ -16,9 +16,9 @@ class LowBandCameraShakeScene extends Scene {
             throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const { width, height } = app.canvas;
         // AudioStream is a non-leaf resource kind (no seamless placeholder), so it
-        // is loaded directly through `Asset.kind('music', ...)` and awaited rather
+        // is loaded directly through `Asset.type('music', ...)` and awaited rather
         // than fetched synchronously via `get()`.
-        this.music = await this.loader.load(Asset.kind('music', assets.demo.audio.musicLoop));
+        this.music = await this.loader.load(Asset.type('music', assets.demo.audio.musicLoop));
         this.analyser = new AudioAnalyser({ fftSize: 1024, source: app.audio.music });
         this.view = new View(width / 2, height / 2, width, height);
         this.sprite = new Sprite(this.loader.get(assets.demo.textures.shipA)).setAnchor(0.5).setScale(3).setPosition(width / 2, height / 2);

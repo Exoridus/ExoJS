@@ -80,27 +80,20 @@ This is the same add-only model the [Tiled maps](/ExoJS/en/guide/assets/tiled-ma
 ## Loading a sheet
 
 <Callout type="pitfall" title="A bare path won't reach the Aseprite handler">
-The Aseprite binding claims no file extension, so `loader.load('hero.json')` falls through to the generic path loader instead of parsing the sheet. Load it by the `AsepriteSheet` token or the `'asepriteSheet'` type.
+The Aseprite binding claims no file extension, so `loader.load('hero.json')` falls through to the generic JSON handler instead of parsing the sheet. Name the `'asepriteSheet'` type explicitly with `Asset.type(...)`.
 </Callout>
 
-Once the extension is active, load the JSON export by the `AsepriteSheet` type token or by the
-`'asepriteSheet'` config-map type name:
+Once the extension is active, load the JSON export with an explicit descriptor:
 
 ```ts no-check
-import { AsepriteSheet } from '@codexo/exojs-aseprite';
+import { Asset } from '@codexo/exojs';
 
-// By type token (most explicit)
-const sheet = await loader.load(Asset.kind('asepriteSheet', 'sprites/hero.json'));
-
-// By config-map type name — the public `'asepriteSheet'` lookup
-const fromConfig = await loader.load({
-    hero: { kind: 'asepriteSheet', source: 'sprites/hero.json' },
-});
+const sheet = await loader.load(Asset.type('asepriteSheet', 'sprites/hero.json'));
 ```
 
 Unlike the Tiled adapter, the Aseprite binding does **not** claim a file extension — a bare
-`loader.load('sprites/hero.json')` will not route here. Always name the `AsepriteSheet` token or the
-`'asepriteSheet'` type. The handler fetches the JSON, validates it (throwing `AsepriteFormatError`
+`loader.load('sprites/hero.json')` will not route here. Always name the `'asepriteSheet'` type.
+The handler fetches the JSON, validates it (throwing `AsepriteFormatError`
 on a malformed document), resolves `meta.image` relative to the JSON source, sub-loads it as a
 `Texture` through the same loader, and returns a fully-parsed `AsepriteSheet`.
 
@@ -112,7 +105,7 @@ playable clip. Call `play(tag)` with a tag name to start it:
 
 ```js
 async load(loader) {
-    this.sheet = await loader.load(Asset.kind('asepriteSheet', 'sprites/hero.json'));
+    this.sheet = await loader.load(Asset.type('asepriteSheet', 'sprites/hero.json'));
 }
 
 init() {
@@ -179,7 +172,7 @@ maps it directly onto [`AnimatedSpriteClipDefinition.repeat`](/ExoJS/en/api/anim
 ```ts no-check
 import { AsepriteSheet } from '@codexo/exojs-aseprite';
 
-const sheet = await loader.load(Asset.kind('asepriteSheet', 'sprites/hero.json'));
+const sheet = await loader.load(Asset.type('asepriteSheet', 'sprites/hero.json'));
 const player = sheet.createAnimatedSprite();
 
 player.onComplete.add(clip => {
@@ -287,8 +280,7 @@ texture through the loader's own unload path when nothing else needs it.
 - **API reference:** [`AsepriteSheet`](/ExoJS/en/api/aseprite-sheet/) documents `clips`, `slices`,
   `spritesheet`, and `createAnimatedSprite()`; [`AnimatedSprite`](/ExoJS/en/api/animated-sprite/)
   documents clip definition (`repeat`, `frameDurations`, `frameOffsets`) and playback;
-  [`Loader`](/ExoJS/en/api/loader/) documents `load(...)` and the `'asepriteSheet'` config-map type
-  name.
+  [`Loader`](/ExoJS/en/api/loader/) documents `load(...)` and explicit `Asset.type(...)` descriptors.
 - **Guides:** [Sprites](/ExoJS/en/guide/rendering/sprites/) and
   [Loading & resources](/ExoJS/en/guide/assets/loading-and-resources/) cover the rendering and asset
   model the sheet plugs into.

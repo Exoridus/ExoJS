@@ -6,7 +6,7 @@ import type { CacheRequest, CacheStrategy } from './CacheStrategy';
  * falling back to the network.
  *
  * On a cache hit the stored value is fed directly to
- * {@link AssetFactory.create | factory.create}; if that throws (stale or
+ * `request.factory.create`; if that throws (stale or
  * corrupt entry) the entry is deleted and the next store is tried. Only once
  * all stores miss does the strategy fetch from the network and write the
  * processed source back to every store. Quota or serialisation errors during
@@ -14,7 +14,7 @@ import type { CacheRequest, CacheStrategy } from './CacheStrategy';
  * asset from loading.
  *
  * Returns the fully constructed resource — callers do not need to call
- * {@link AssetFactory.create} again.
+ * `request.factory.create` again.
  */
 export class CacheFirstStrategy implements CacheStrategy {
   public async resolve(request: CacheRequest, stores: readonly CacheStore[]): Promise<unknown> {

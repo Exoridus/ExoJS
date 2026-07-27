@@ -34,7 +34,7 @@ class AudioScene extends Scene {
     async load(loader) {
         const [laser, theme] = await Promise.all([
             loader.load('audio/laser.ogg'),
-            loader.load(Asset.kind('music', 'audio/theme.ogg')),
+            loader.load(Asset.type('music', 'audio/theme.ogg')),
         ]);
         this.laser = laser;
         this.theme = theme;

@@ -81,7 +81,7 @@ class InfiniteTerrainScene extends Scene {
     hudTimer = 0;
     hud;
     async init() {
-        const tilesTexture = await this.loader.load(Asset.kind('texture', assets.demo.tilesets.map.image));
+        const tilesTexture = await this.loader.load(Asset.type('texture', assets.demo.tilesets.map.image));
         this.tileset = new TileSet({
             name: 'biomes',
             texture: new TextureRegion(tilesTexture, { x: 0, y: 0, width: tilesTexture.width, height: tilesTexture.height }),
@@ -95,7 +95,7 @@ class InfiniteTerrainScene extends Scene {
         this.terrain = new TileLayer({ id: 1, name: 'terrain', tileWidth: TILE, tileHeight: TILE, tilesets: [this.tileset] });
         const map = new TileMap({ name: 'infinite-world', tileWidth: TILE, tileHeight: TILE, tilesets: [this.tileset], layers: [this.terrain] });
         this.mapView = map.createView({ bands: { terrain: ['terrain'] } });
-        const characters = new Spritesheet(await this.loader.load(Asset.kind('texture', assets.demo.spritesheets.platformerCharacters.image)), (await this.loader.load(Asset.kind('json', assets.demo.spritesheets.platformerCharacters.data))));
+        const characters = new Spritesheet(await this.loader.load(Asset.type('texture', assets.demo.spritesheets.platformerCharacters.image)), (await this.loader.load(Asset.type('json', assets.demo.spritesheets.platformerCharacters.data))));
         this.explorer = characters.getFrameSprite('character_green_front').setAnchor(0.5);
         this.explorer.setPosition(0, 0);
         this.explorer.setScale(1.25);

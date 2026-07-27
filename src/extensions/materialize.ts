@@ -2,6 +2,7 @@ import type { Application } from '#core/Application';
 import type { SerializationRegistry } from '#core/serialization/SerializationRegistry';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { DrawableConstructor } from '#rendering/Renderer';
+import { normalizeExtension } from '#resources/extensionKindRegistry';
 import type { AssetConstructor } from '#resources/FactoryRegistry';
 import type { Loader } from '#resources/Loader';
 
@@ -48,8 +49,12 @@ export function materializeAssetBindings(loader: Loader, bindings: readonly Asse
   const seenExts = new Set<string>();
 
   for (const binding of bindings) {
-    if (seenTypes.has(binding.type) || loader.hasLoadable(binding.type)) {
-      throw new Error(`An asset handler is already registered for ${binding.type.name}.`);
+    if (seenTypes.has(binding.ctor) || loader.hasLoadable(binding.ctor)) {
+      throw new Error(`An asset handler is already registered for ${binding.ctor.name}.`);
+    }
+
+    if (binding.seamless !== undefined && loader._hasSeamlessAdapter(binding.ctor)) {
+      throw new Error(`A seamless adapter is already registered for ${binding.ctor.name}.`);
     }
 
     for (const name of binding.typeNames ?? []) {
@@ -61,7 +66,7 @@ export function materializeAssetBindings(loader: Loader, bindings: readonly Asse
     }
 
     for (const ext of binding.extensions ?? []) {
-      const key = ext.replace(/^\./, '').toLowerCase();
+      const key = normalizeExtension(ext);
 
       if (seenExts.has(key) || loader.hasExtension(key)) {
         throw new Error(`File extension ".${key}" is already mapped to an asset type. Remove the conflicting binding.`);
@@ -70,7 +75,7 @@ export function materializeAssetBindings(loader: Loader, bindings: readonly Asse
       seenExts.add(key);
     }
 
-    seenTypes.add(binding.type);
+    seenTypes.add(binding.ctor);
   }
 
   // --- Materialise: all pre-validation passed ---
@@ -79,10 +84,12 @@ export function materializeAssetBindings(loader: Loader, bindings: readonly Asse
 
     loader.bindAsset(
       {
-        type: binding.type,
+        ctor: binding.ctor,
+        ...(binding.type !== undefined && { type: binding.type }),
         ...(binding.typeNames !== undefined && { typeNames: binding.typeNames }),
         ...(binding.extensions !== undefined && { extensions: binding.extensions }),
         ...(binding.seamless !== undefined && { seamless: binding.seamless }),
+        ...(binding.storageName !== undefined && { storageName: binding.storageName }),
       },
       handler,
     );

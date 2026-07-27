@@ -30,7 +30,7 @@ import { AudioAnalyser } from '@codexo/exojs-audio-fx';
 
 class VisualizerScene extends Scene {
     async load(loader) {
-        this.music = await loader.load(Asset.kind('music', 'audio/track.ogg'));
+        this.music = await loader.load(Asset.type('music', 'audio/track.ogg'));
     }
 
     init() {
@@ -197,7 +197,7 @@ import { AudioAnalyser, BeatDetector } from '@codexo/exojs-audio-fx';
 
 class AudioReactiveScene extends Scene {
     async load(loader) {
-        this.music = await loader.load(Asset.kind('music', 'audio/track.ogg'));
+        this.music = await loader.load(Asset.type('music', 'audio/track.ogg'));
     }
 
     init() {

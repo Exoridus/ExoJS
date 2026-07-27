@@ -31,8 +31,8 @@ class TiledMapPhysicsActorScene extends Scene {
     tilesTexture;
     spritesheetData;
     async load() {
-        this.tilesTexture = await this.loader.load(Asset.kind('texture', assets.demo.tilesets.map.image));
-        this.spritesheetData = (await this.loader.load(Asset.kind('json', assets.demo.spritesheets.platformerCharacters.data)));
+        this.tilesTexture = await this.loader.load(Asset.type('texture', assets.demo.tilesets.map.image));
+        this.spritesheetData = (await this.loader.load(Asset.type('json', assets.demo.spritesheets.platformerCharacters.data)));
     }
     init() {
         const app = this.app;

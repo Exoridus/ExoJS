@@ -86,7 +86,7 @@ describe('loadLdtkMap — happy path (absolute source)', () => {
     const { context: ctx, loaderLoad } = context();
     await loadLdtkMap(ABS_SOURCE, ctx);
     // resolveLdtkUrl('tiles.png', 'https://example.com/maps/world.ldtk')
-    expect(loaderLoad).toHaveBeenCalledWith(Asset.kind('texture', 'https://example.com/maps/tiles.png'));
+    expect(loaderLoad).toHaveBeenCalledWith(Asset.type('texture', 'https://example.com/maps/tiles.png'));
   });
 
   it('populates the Tiles layer with the gridTiles once the tileset is available', async () => {
@@ -529,7 +529,7 @@ describe('loadLdtkMap — atlas too small for any tile', () => {
     const map = await loadLdtkMap(ABS_SOURCE, context);
 
     // The texture load happens before the column check, so it IS requested.
-    expect(loaderLoad).toHaveBeenCalledWith(Asset.kind('texture', 'https://example.com/maps/tiny.png'));
+    expect(loaderLoad).toHaveBeenCalledWith(Asset.type('texture', 'https://example.com/maps/tiny.png'));
     expect(map.levels[0]!.layers[0]!.countNonEmptyTiles()).toBe(0);
   });
 });
@@ -563,7 +563,7 @@ describe('loadLdtkMap — relative-source URL resolution (#316)', () => {
     await expect(loadLdtkMap('maps/world.ldtk', context)).resolves.toBeDefined();
 
     // The texture is requested at the source-relative path, still relative.
-    expect(loaderLoad).toHaveBeenCalledWith(Asset.kind('texture', 'maps/tiles.png'));
+    expect(loaderLoad).toHaveBeenCalledWith(Asset.type('texture', 'maps/tiles.png'));
   });
 
   it('collapses ../ segments in a relPath against a relative source', async () => {
@@ -571,7 +571,7 @@ describe('loadLdtkMap — relative-source URL resolution (#316)', () => {
 
     await loadLdtkMap('maps/world.ldtk', context);
 
-    expect(loaderLoad).toHaveBeenCalledWith(Asset.kind('texture', 'art/tiles.png'));
+    expect(loaderLoad).toHaveBeenCalledWith(Asset.type('texture', 'art/tiles.png'));
   });
 
   it('still resolves against an absolute source (unchanged behaviour)', async () => {
@@ -579,7 +579,7 @@ describe('loadLdtkMap — relative-source URL resolution (#316)', () => {
 
     await loadLdtkMap('https://example.com/maps/world.ldtk', context);
 
-    expect(loaderLoad).toHaveBeenCalledWith(Asset.kind('texture', 'https://example.com/maps/tiles.png'));
+    expect(loaderLoad).toHaveBeenCalledWith(Asset.type('texture', 'https://example.com/maps/tiles.png'));
   });
 });
 

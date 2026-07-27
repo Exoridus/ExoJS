@@ -1,4 +1,4 @@
-// The value-brand fix (asset-system v2 delta §4): `Asset.kind<Config>('json', …)`
+// The value-brand fix (asset-system v2 delta §4): `Asset.type<Config>('json', …)`
 // must classify as `AssetRef<Config>` inside a catalog (not `Config`), and the
 // resolved map from `load(catalog)` unwraps it back to `Config`. Compiled by
 // `tsconfig.type-tests.json` via `pnpm typecheck:type-tests`.
@@ -13,8 +13,8 @@ interface Config {
 }
 
 const catalog = Assets.from({
-  ship: Asset.kind('texture', 'ship.png'),
-  config: Asset.kind<Config>('json', 'config.json'),
+  ship: Asset.type('texture', 'ship.png'),
+  config: Asset.type<Config>('json', 'config.json'),
 });
 
 // resource-kind descriptor → the resource leaf
@@ -39,10 +39,10 @@ type _ShipResolved = Expect<Equal<LoadedMap['ship'], Texture>>;
 // (regression guard: the brand-blind `T extends object` overload typed object
 // value kinds as the resource while runtime returned an AssetRef).
 function getConfig() {
-  return loader.get(Asset.kind<Config>('json', 'config.json'));
+  return loader.get(Asset.type<Config>('json', 'config.json'));
 }
 function getShip() {
-  return loader.get(Asset.kind('texture', 'ship.png'));
+  return loader.get(Asset.type('texture', 'ship.png'));
 }
 type _GetConfigIsRef = Expect<Equal<ReturnType<typeof getConfig>, AssetRef<Config>>>;
 type _GetShipIsTexture = Expect<Equal<ReturnType<typeof getShip>, Texture>>;

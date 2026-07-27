@@ -25,7 +25,9 @@ const parentConstructor = (type: AssetConstructor): AssetConstructor | null => {
  * first ancestor match. This means registering a factory for a base class
  * automatically handles all subclasses.
  *
- * @internal Used by {@link Loader}; consumers interact through `loader.register()`.
+ * @internal Standalone constructor→factory map; not wired into `Loader` or
+ * `AssetTypeRegistry` — kept as a reusable utility for anything that needs
+ * prototype-chain-aware factory resolution.
  */
 export class FactoryRegistry {
   private readonly _factories = new Registry<AssetConstructor, AssetFactory>({
@@ -46,7 +48,7 @@ export class FactoryRegistry {
     const factory = this._factories.resolve(type);
 
     if (!factory) {
-      throw new Error(`No factory registered for ${type.name}. ` + 'Register one with loader.register() before loading.');
+      throw new Error(`No factory registered for ${type.name}. Register one with register() before resolving.`);
     }
 
     return factory as AssetFactory<T>;

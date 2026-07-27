@@ -1,17 +1,13 @@
 // Each dispatch token carries a distinct nominal brand (`_token`, `declare`-only,
 // never emitted). Without it these otherwise-empty marker classes are
-// structurally interchangeable, so `LoadReturn<T>`'s `T extends typeof Json` /
-// `… typeof WasmAsset` probes collapse — e.g. `Asset<WebAssembly.Module>` is
-// `Asset<{}>` (Module is an empty interface), which every resource class's
-// `Asset.kind(...)` return is assignable to, making `LoadReturn<typeof Texture>` wrongly
-// resolve to `WebAssembly.Module`. The brand makes each token match only its own
-// `LoadReturn` branch and keeps resource classes out of all of them. (§5 typing bug.)
+// structurally interchangeable in constructor-based registry APIs and tests.
+// The brand keeps each token distinct from the others and from resource classes.
 
 /**
  * Dispatch token for generic JSON loading.
  *
- * `loader.load(Asset.kind('json', 'config.json'))` returns `Promise<unknown>`.
- * Narrow via generic: `loader.load(Asset.kind<Config>('json', 'config.json'))`.
+ * `loader.load(Asset.type('json', 'config.json'))` returns `Promise<unknown>`.
+ * Narrow via generic: `loader.load(Asset.type<Config>('json', 'config.json'))`.
  * Handles all JSON shapes — objects, arrays, scalars.
  */
 export abstract class Json {
@@ -21,7 +17,7 @@ export abstract class Json {
 /**
  * Dispatch token for plain text loading.
  *
- * `loader.load(Asset.kind('text', 'greeting.txt'))` returns `Promise<string>`.
+ * `loader.load(Asset.type('text', 'greeting.txt'))` returns `Promise<string>`.
  */
 export abstract class TextAsset {
   declare protected readonly _token: 'text';
@@ -30,7 +26,7 @@ export abstract class TextAsset {
 /**
  * Dispatch token for SVG loading.
  *
- * `loader.load(Asset.kind('svg', 'icon.svg'))` returns `Promise<HTMLImageElement>`.
+ * `loader.load(Asset.type('svg', 'icon.svg'))` returns `Promise<HTMLImageElement>`.
  */
 export abstract class SvgAsset {
   declare protected readonly _token: 'svg';
@@ -39,8 +35,8 @@ export abstract class SvgAsset {
 /**
  * Dispatch token for subtitle loading (WebVTT and SRT).
  *
- * `loader.load(Asset.kind('vtt', 'subs.vtt'))` returns `Promise<VTTCue[]>`.
- * `loader.load(Asset.kind('vtt', 'subs.srt'))` returns `Promise<VTTCue[]>`.
+ * `loader.load(Asset.type('vtt', 'subs.vtt'))` returns `Promise<VTTCue[]>`.
+ * `loader.load(Asset.type('vtt', 'subs.srt'))` returns `Promise<VTTCue[]>`.
  * Format is detected from the file extension; unknown extensions default to VTT.
  */
 export abstract class SubtitleAsset {
@@ -50,7 +46,7 @@ export abstract class SubtitleAsset {
 /**
  * Dispatch token for XML document loading.
  *
- * `loader.load(Asset.kind('xml', 'data.xml'))` returns `Promise<Document>`.
+ * `loader.load(Asset.type('xml', 'data.xml'))` returns `Promise<Document>`.
  * Throws if the file cannot be parsed as well-formed XML.
  */
 export abstract class XmlAsset {
@@ -60,7 +56,7 @@ export abstract class XmlAsset {
 /**
  * Dispatch token for CSV loading.
  *
- * `loader.load(Asset.kind('csv', 'table.csv'))` returns `Promise<string[][]>`.
+ * `loader.load(Asset.type('csv', 'table.csv'))` returns `Promise<string[][]>`.
  * Each inner array is one row; values are raw strings (no type coercion).
  */
 export abstract class CsvAsset {
@@ -70,7 +66,7 @@ export abstract class CsvAsset {
 /**
  * Dispatch token for image loading.
  *
- * `loader.load(Asset.kind('image', 'img.png'))` returns `Promise<HTMLImageElement>`.
+ * `loader.load(Asset.type('image', 'img.png'))` returns `Promise<HTMLImageElement>`.
  */
 export abstract class ImageAsset {
   declare protected readonly _token: 'image';
@@ -79,7 +75,7 @@ export abstract class ImageAsset {
 /**
  * Dispatch token for font loading.
  *
- * `loader.load(Asset.kind('font', 'font.woff2', { family: 'MyFont' }))` returns `Promise<FontFace>`.
+ * `loader.load(Asset.type('font', 'font.woff2', { family: 'MyFont' }))` returns `Promise<FontFace>`.
  */
 export abstract class FontAsset {
   declare protected readonly _token: 'font';
@@ -88,7 +84,7 @@ export abstract class FontAsset {
 /**
  * Dispatch token for binary data loading.
  *
- * `loader.load(Asset.kind('binary', 'data.bin'))` returns `Promise<ArrayBuffer>`.
+ * `loader.load(Asset.type('binary', 'data.bin'))` returns `Promise<ArrayBuffer>`.
  */
 export abstract class BinaryAsset {
   declare protected readonly _token: 'binary';
@@ -97,7 +93,7 @@ export abstract class BinaryAsset {
 /**
  * Dispatch token for WebAssembly module loading.
  *
- * `loader.load(Asset.kind('wasm', 'module.wasm'))` returns `Promise<WebAssembly.Module>`.
+ * `loader.load(Asset.type('wasm', 'module.wasm'))` returns `Promise<WebAssembly.Module>`.
  */
 export abstract class WasmAsset {
   declare protected readonly _token: 'wasm';

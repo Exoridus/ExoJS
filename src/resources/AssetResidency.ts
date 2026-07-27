@@ -246,7 +246,7 @@ export class AssetResidency {
     const ctor = this._typeRegistry.resolveTypeName(meta.kind);
 
     if (ctor === undefined) {
-      throw new Error(`Loader._adopt: no constructor registered for kind "${meta.kind}".`);
+      throw new Error(`Loader._adopt: no constructor registered for type "${meta.kind}".`);
     }
 
     // A freshly-created catalog leaf is 'idle' until adopted; entering residency
@@ -632,8 +632,8 @@ export class AssetResidency {
    * in-flight deduplication.
    *
    * Multiple aliases that point to the same source share a single network
-   * fetch. Each alias is stored independently in the resource store so that
-   * `get(type, alias)` works for all of them.
+   * fetch. Each alias is stored independently in the resource store, so every
+   * alias resolves to the same payload.
    * @internal
    */
   public async _loadSingleAsset(type: AssetConstructor, alias: string, asset: Asset<unknown>): Promise<unknown> {
@@ -643,7 +643,7 @@ export class AssetResidency {
 
     const source = asset.source;
     const rawConfig = asset._config as Record<string, unknown>;
-    const { kind: _kind, source: _src, ...extraOnly } = rawConfig;
+    const { type: _type, source: _src, ...extraOnly } = rawConfig;
 
     const handlerEntry = this._typeRegistry.getHandler(type);
     const identityKey = this._typeRegistry._resolveAssetIdentityKey(type, asset);
@@ -665,11 +665,10 @@ export class AssetResidency {
     let fetchPromise: Promise<unknown>;
     if (handlerEntry) {
       const fullConfig = { source, ...extraOnly };
-      const context = this._decoder._buildHandlerContext(identityKey);
+      const context = this._decoder._buildHandlerContext(identityKey, handlerEntry.storageName);
       fetchPromise = this._decoder._fetchWithHandler(type, alias, source, fullConfig, handlerEntry.load, context);
     } else {
-      const options = Object.keys(extraOnly).length > 0 ? extraOnly : undefined;
-      fetchPromise = this._decoder._fetch(type, alias, source, options);
+      fetchPromise = Promise.reject(this._typeRegistry._missingHandlerError(type));
     }
 
     const tracked: Promise<unknown> = fetchPromise
@@ -685,8 +684,11 @@ export class AssetResidency {
               const faKey = this._typeRegistry._key(type, fa);
               this._aliasKeyToIdentityKey.delete(faKey);
               this._preventStoreKeys.delete(faKey);
+              this._onTrackedFailure(type, fa, faKey, error);
             }
             this._identityKeyToAliases.delete(identityKey);
+          } else {
+            this._onTrackedFailure(type, alias, aliasKey, error);
           }
           throw error;
         },
@@ -711,8 +713,8 @@ export class AssetResidency {
     });
 
     // Non-swallowing observer: fails deferred handles / value refs (fresh
-    // error each attempt) and dispatches onError for entry-backed fetches —
-    // regardless of which verb (get/load/background) started the attempt.
+    // error each attempt) and dispatches onError exactly once for the failed
+    // fetch, regardless of which verb (get/load/background) started it.
     trackedPromise.catch((error: unknown) => this._onTrackedFailure(type, alias, key, error));
     this._inFlight.set(key, trackedPromise);
 
@@ -731,21 +733,19 @@ export class AssetResidency {
       }
 
       this._warnMissingSource(alias, key, err);
-      this._signals.onError.dispatch(type, alias, err);
+    } else {
+      const refEntry = this._refs.get(key);
 
-      return;
-    }
+      if (refEntry !== undefined) {
+        for (const ref of refEntry.refs) {
+          ref._fail(err);
+        }
 
-    const refEntry = this._refs.get(key);
-
-    if (refEntry !== undefined) {
-      for (const ref of refEntry.refs) {
-        ref._fail(err);
+        this._warnMissingSource(alias, key, err);
       }
-
-      this._warnMissingSource(alias, key, err);
-      this._signals.onError.dispatch(type, alias, err);
     }
+
+    this._signals.onError.dispatch(type, alias, err);
   }
 
   /**
@@ -994,13 +994,8 @@ export class AssetResidency {
     this._backgroundActive++;
 
     this._trackInFlight(entry.type, entry.alias, this._decoder._dispatchFetch(entry.type, entry.alias, entry.path, entry.options))
-      .catch(error => {
-        const err = this._normalizeError(error);
-        const key2 = this._typeRegistry._key(entry.type, entry.alias);
-
-        if (!this._deferred.has(key2) && !this._refs.has(key2)) {
-          this._signals.onError.dispatch(entry.type, entry.alias, err);
-        }
+      .catch(() => {
+        /* Failure handled centrally in _onTrackedFailure. */
       })
       .finally(() => {
         this._backgroundActive--;
@@ -1188,8 +1183,8 @@ export class AssetResidency {
   /**
    * Non-throwing in-memory lookup: the resource stored under `(type, source)`,
    * or `null` if none is held. Backs `Loader._peekResource` (scene
-   * deserialization). For a lookup that preserves a legitimately-stored
-   * `undefined` instead of coalescing it to `null`, see {@link _getStored}.
+   * deserialization). Coalesces a legitimately-stored `null`/`undefined` to
+   * `null`; use {@link _hasStored} when the distinction matters.
    * @internal
    */
   public _peekResource(type: AssetConstructor, source: string): unknown {
@@ -1201,21 +1196,10 @@ export class AssetResidency {
    * the value is (including a legitimately-stored `null`/`undefined` from a
    * `bindAsset`-bound custom type). Unlike {@link _peekResource}, this
    * distinguishes "no entry" from "entry present with a nullish value" — the
-   * presence check `Loader._getClaimed`'s legacy-token branch needs. @internal
+   * presence check the load fast paths need. @internal
    */
   public _hasStored(type: AssetConstructor, source: string): boolean {
     return this._resources.get(type)?.has(source) ?? false;
-  }
-
-  /**
-   * The raw stored value under `(type, source)` — `undefined` both for absent
-   * and for a resource legitimately stored as `undefined` (unlike
-   * {@link _peekResource}, which normalizes both cases to `null`). Pair with
-   * {@link _hasStored} to distinguish "absent" from "present but nullish."
-   * @internal
-   */
-  public _getStored(type: AssetConstructor, source: string): unknown {
-    return this._resources.get(type)?.get(source);
   }
 
   /**

@@ -9,8 +9,17 @@ import type { Video } from '#rendering/video/Video';
 
 import type { Asset, ValueAsset } from './Asset';
 import type { AssetRef } from './AssetRef';
-import type { ExtensionTypeMap } from './Loader';
 
+/**
+ * Every asset type known to the engine, keyed by its `type` string.
+ *
+ * Extension packages add their own via declaration merging. An entry declares
+ * the runtime `resource` it produces and the `config` it accepts; it may also
+ * carry `isValue: true` to mirror a binding whose leaf is a deferred
+ * {@link AssetRef} rather than a heal-in-place handle — required whenever
+ * `defineAsset` is called without a `seamless` adapter (see
+ * {@link ValueAssetKind}).
+ */
 export interface AssetDefinitions {
   bmFont: { resource: BmFont; config: { source: string } };
   texture: { resource: Texture; config: { source: string; mimeType?: string; samplerOptions?: Partial<SamplerOptions> } };
@@ -47,23 +56,58 @@ export interface AssetDefinitions {
 }
 
 export type AnyAssetConfig = {
-  [K in keyof AssetDefinitions]: { kind: K } & AssetDefinitions[K]['config'] &
-    // `parse` is a value-kind-only, SYNCHRONOUS post-load transform (delta §4/§5):
+  [K in keyof AssetDefinitions]: { type: K } & AssetDefinitions[K]['config'] &
+    // `parse` is a value-type-only, SYNCHRONOUS post-load transform (delta §4/§5):
     // it maps the decoded raw value and may not return a Promise (async parse is a
     // follow-up — it would need the fill/store flow to await).
     (K extends ValueAssetKind ? { parse?: (raw: AssetDefinitions[K]['resource']) => unknown } : object);
 }[keyof AssetDefinitions];
 
 /**
- * Kinds whose catalog leaf is a deferred {@link AssetRef} rather than a
- * heal-in-place resource handle. This is the type-level mirror of the
- * `isValue: true` registrations in `seamless.ts` — keep the two in sync.
+ * The built-in types whose catalog leaf is a deferred {@link AssetRef} rather
+ * than a heal-in-place resource handle — the type-level mirror of the core
+ * `isValue: true` registrations in `coreAssetBindings.ts`.
  *
  * A structural `R extends object` heuristic cannot classify these, because
  * several value resources (`Document`, `VTTCue[]`, `ArrayBuffer`,
- * `WebAssembly.Module`) are object types; only an explicit kind list is correct.
+ * `WebAssembly.Module`) are object types; only an explicit type list is correct.
  */
-export type ValueAssetKind = 'json' | 'text' | 'csv' | 'xml' | 'srt' | 'vtt' | 'binary' | 'wasm';
+export type CoreValueAssetKind = 'json' | 'text' | 'csv' | 'xml' | 'srt' | 'vtt' | 'binary' | 'wasm';
+
+/**
+ * Types that a declaration-merged {@link AssetDefinitions} entry marks as value
+ * types with `isValue: true`.
+ *
+ * `defineAsset` decides this at RUNTIME as `isValue ?? seamless === undefined`,
+ * so a binding that ships no seamless adapter — the common case for a package
+ * type like `tileMap` or `ldtkMap` — is a value type and hands out an
+ * `AssetRef`. The type system cannot see seamless adapters, so an extension
+ * package that omits `seamless` must say so here, or `get(...)` would be typed
+ * as the bare resource while returning an `AssetRef` wrapper at runtime.
+ *
+ * ```ts
+ * declare module '@codexo/exojs' {
+ *   interface AssetDefinitions {
+ *     tileMap: { resource: TileMap; config: { source: string }; isValue: true };
+ *   }
+ * }
+ * ```
+ */
+type DeclaredValueAssetKind = {
+  [K in keyof AssetDefinitions]: AssetDefinitions[K] extends { isValue: true } ? K : never;
+}[keyof AssetDefinitions];
+
+/**
+ * Types whose catalog leaf is a deferred {@link AssetRef}: the built-in
+ * {@link CoreValueAssetKind}s plus every declaration-merged type that opts in
+ * with `isValue: true`.
+ */
+// `DeclaredValueAssetKind` collapses to `never` in a build that sees no
+// declaration-merged entries (the engine's own `tsc --noEmit`, which compiles
+// `src/` alone), which is exactly when the union member is redundant — but it is
+// load-bearing for any consumer build that DOES see a package augmentation.
+// eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
+export type ValueAssetKind = CoreValueAssetKind | DeclaredValueAssetKind;
 
 export type AssetInput = AnyAssetConfig | Asset<unknown>;
 
@@ -72,7 +116,7 @@ export type InferAssetResource<I extends AssetInput> =
     ? T
     : I extends { parse: (raw: never) => infer R }
       ? R
-      : I extends { kind: infer K extends keyof AssetDefinitions }
+      : I extends { type: infer K extends keyof AssetDefinitions }
         ? AssetDefinitions[K]['resource']
         : never;
 
@@ -82,10 +126,10 @@ export type InferAssetResource<I extends AssetInput> =
 
 /**
  * Type-level twin of the runtime `extensionKindRegistry`: file suffix → asset
- * kind, for bare-string path inference in `Assets.from()`/`get()`/`load()`
- * (asset-system v2 §5). Restricted to LEAF-CAPABLE kinds, exactly mirroring the
- * runtime `registerExtensionKind` calls in `seamless.ts`. Extend by declaration
- * merging, like {@link ExtensionTypeMap}:
+ * type, for bare-string path inference in `Assets.from()`/`get()`/`load()`
+ * (asset-system v2 §5). Restricted to LEAF-CAPABLE types, exactly mirroring the
+ * runtime `registerExtensionKind` calls made by `defineAsset`. This is the
+ * single declaration-merging surface for bare-path suffix inference:
  * ```ts
  * declare module '@codexo/exojs' {
  *   interface ExtensionKindMap { 'atlas.json': 'spriteAtlas'; }
@@ -125,18 +169,21 @@ type MatchKind<S extends string> = S extends `${string}.${infer Rest}`
     : MatchKind<Rest>
   : never;
 
-/** The asset kind inferred from a path literal, or `never` when unregistered. */
+/** The asset type inferred from a path literal, or `never` when unregistered. */
 export type KindByPath<S extends string> = MatchKind<KindBasename<KindStripQuery<S>>>;
 
-/** The resource type of a kind. */
+/** The resource type of an asset type. */
 export type ResourceForKind<K extends keyof AssetDefinitions> = AssetDefinitions[K]['resource'];
 
-/** The per-kind option bag: that kind's config minus the `source` field. */
+/** Object-valued resource types that may appear as heal-in-place catalog leaves. @internal */
+export type ResourceAssetObject = Extract<AssetDefinitions[keyof AssetDefinitions]['resource'], object>;
+
+/** The per-type option bag: that type's config minus the `source` field. */
 export type OptionsForKind<K extends keyof AssetDefinitions> = Omit<AssetDefinitions[K]['config'], 'source'>;
 
 /**
  * The handle-hybrid leaf type a bare path string materializes as: a resource
- * kind yields its resource (`Texture`/`Sound`), a {@link ValueAssetKind} yields
+ * type yields its resource (`Texture`/`Sound`), a {@link ValueAssetKind} yields
  * a deferred `AssetRef<resource>`. `unknown` when the suffix is unregistered.
  */
 export type LeafForPath<S extends string> = [KindByPath<S>] extends [never]
@@ -145,14 +192,14 @@ export type LeafForPath<S extends string> = [KindByPath<S>] extends [never]
     ? AssetRef<ResourceForKind<KindByPath<S>>>
     : ResourceForKind<KindByPath<S>>;
 
-/** A single catalog field input: a bare path string, an `Asset.kind(...)` descriptor, or an explicit config. */
+/** A single catalog field input: a bare path string, an `Asset.type(...)` descriptor, or an explicit config. */
 export type CatalogEntry = string | Asset<unknown> | AnyAssetConfig;
 
 /**
  * The leaf type a {@link CatalogEntry} materializes as. A {@link ValueAsset}
- * brand (from `Asset.kind<T>('json', …)`) classifies as `AssetRef<T>` FIRST,
+ * brand (from `Asset.type<T>('json', …)`) classifies as `AssetRef<T>` FIRST,
  * before the `T extends object` heuristic that (only) the unbranded legacy
- * `Asset.kind(...)` descriptors still rely on.
+ * `Asset.type(...)` descriptors still rely on.
  */
 export type InferCatalogLeaf<E extends CatalogEntry> = E extends string
   ? LeafForPath<E>
@@ -162,7 +209,7 @@ export type InferCatalogLeaf<E extends CatalogEntry> = E extends string
       ? T extends object
         ? T
         : AssetRef<T>
-      : E extends { kind: infer K extends keyof AssetDefinitions }
+      : E extends { type: infer K extends keyof AssetDefinitions }
         ? E extends { parse: (raw: never) => infer R }
           ? K extends ValueAssetKind
             ? AssetRef<R>
@@ -172,23 +219,7 @@ export type InferCatalogLeaf<E extends CatalogEntry> = E extends string
             : AssetDefinitions[K]['resource']
         : never;
 
-// Compile-time guard: every ExtensionKindMap value is a real AssetDefinitions kind.
+// Compile-time guard: every ExtensionKindMap value is a real AssetDefinitions type.
 type AssertKindMapValid = ExtensionKindMap[keyof ExtensionKindMap] extends keyof AssetDefinitions ? true : never;
 const _extensionKindMapIsValid: AssertKindMapValid = true;
 void _extensionKindMapIsValid;
-
-// Compile-time cross-check: {@link ExtensionKindMap} (suffix→kind, this file) and
-// {@link ExtensionTypeMap} (suffix→resource, Loader.ts) are hand-maintained twins
-// of one runtime `defineAsset` binding. On every suffix they SHARE, the kind's
-// resource must be the type map's resource — otherwise `Assets.from('x.png')`
-// (kind-driven) and `loader.load('x.png')` (type-driven) would disagree. A drift
-// (e.g. mapping `png` to a non-Texture kind in one map only) turns the offending
-// entry to `false` and fails this assignment.
-type SharedSuffix = keyof ExtensionKindMap & keyof ExtensionTypeMap;
-type KindResourceForSuffix<K extends SharedSuffix> = AssetDefinitions[ExtensionKindMap[K]]['resource'];
-type KindTypeAgreement = {
-  [K in SharedSuffix]: [KindResourceForSuffix<K>, ExtensionTypeMap[K]] extends [ExtensionTypeMap[K], KindResourceForSuffix<K>] ? true : false;
-};
-type AssertKindTypeMapsAgree = KindTypeAgreement extends Record<SharedSuffix, true> ? true : never;
-const _kindTypeMapsAgree: AssertKindTypeMapsAgree = true;
-void _kindTypeMapsAgree;

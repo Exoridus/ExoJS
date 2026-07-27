@@ -45,8 +45,8 @@ describe('load(catalog) return value', () => {
     const loader = createCoreLoader();
 
     const assets = Assets.from({
-      ship: { kind: 'texture', source: 'ship.png' },
-      config: { kind: 'json', source: 'cfg.json' },
+      ship: { type: 'texture', source: 'ship.png' },
+      config: { type: 'json', source: 'cfg.json' },
     });
 
     const loaded = await loader.load(assets);

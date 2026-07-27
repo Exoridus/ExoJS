@@ -3,7 +3,7 @@ import { _stampMeta } from './assetMeta';
 import { AssetRef } from './AssetRef';
 import type { SeamlessAdapter } from './seamless';
 
-/** A kind's placeholder strategy: a resource kind carries a {@link SeamlessAdapter}; a value kind does not. */
+/** An asset type's placeholder strategy: a resource type carries a {@link SeamlessAdapter}; a value type does not. */
 export interface AssetKindEntry {
   readonly adapter?: SeamlessAdapter<unknown>;
   readonly isValue: boolean;
@@ -11,11 +11,11 @@ export interface AssetKindEntry {
 
 const kinds = new Map<string, AssetKindEntry>();
 
-/** Register a kind's placeholder strategy. Idempotent for the same entry; throws on a conflicting registration. @internal */
+/** Register an asset type's placeholder strategy. Idempotent for the same entry; throws on a conflicting registration. @internal */
 export function registerAssetKind(kind: keyof AssetDefinitions, entry: AssetKindEntry): void {
   const existing = kinds.get(kind);
   if (existing !== undefined && (existing.isValue !== entry.isValue || existing.adapter !== entry.adapter)) {
-    throw new Error(`assetKindRegistry: kind "${kind}" already registered with a conflicting entry.`);
+    throw new Error(`assetKindRegistry: type "${kind}" already registered with a conflicting entry.`);
   }
   kinds.set(kind, entry);
 }
@@ -29,7 +29,7 @@ export function getAssetKind(kind: string): AssetKindEntry | undefined {
 export function createLeaf(kind: keyof AssetDefinitions, src: string, opts?: unknown): object {
   const entry = kinds.get(kind);
   if (entry === undefined) {
-    throw new Error(`assetKindRegistry: no kind registered for "${kind}". Register it via registerAssetKind().`);
+    throw new Error(`assetKindRegistry: no type registered for "${kind}". Register it via registerAssetKind().`);
   }
 
   if (entry.isValue) {
@@ -44,7 +44,7 @@ export function createLeaf(kind: keyof AssetDefinitions, src: string, opts?: unk
   }
 
   if (entry.adapter === undefined) {
-    throw new Error(`assetKindRegistry: resource kind "${kind}" has no seamless adapter.`);
+    throw new Error(`assetKindRegistry: resource type "${kind}" has no seamless adapter.`);
   }
 
   const placeholder = entry.adapter.createPlaceholder(opts) as { _loadState: { markIdle(): void } };

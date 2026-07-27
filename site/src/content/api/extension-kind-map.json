@@ -1,16 +1,16 @@
 {
-  "title": "ExtensionTypeMap",
-  "description": "Maps file extensions (without leading dot, lower-case) to the asset type returned by Loader.load when called with a plain path string. Extend via declaration merging to register custom extension → type mappings: ```ts declare module 'exojs' { interface ExtensionTypeMap { tmj: TiledMap; } } ```",
-  "symbol": "ExtensionTypeMap",
+  "title": "ExtensionKindMap",
+  "description": "Type-level twin of the runtime `extensionKindRegistry`: file suffix → asset type, for bare-string path inference in `Assets.from()`/`get()`/`load()` (asset-system v2 §5). Restricted to LEAF-CAPABLE types, exactly mirroring the runtime `registerExtensionKind` calls made by `defineAsset`. This is the single declaration-merging surface for bare-path suffix inference: ```ts declare module '@codexo/exojs' { interface ExtensionKindMap { 'atlas.json': 'spriteAtlas'; } } ```",
+  "symbol": "ExtensionKindMap",
   "kind": "interface",
   "subsystem": "resources",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 16,
+  "memberCount": 19,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 16,
+    "properties": 19,
     "events": 0
   },
   "sections": [
@@ -19,10 +19,9 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Maps file extensions (without leading dot, lower-case) to the asset type returned by Loader.load when called with a plain path string.",
-        "Extend via declaration merging to register custom extension → type mappings: ```ts declare module 'exojs' { interface ExtensionTypeMap { tmj: TiledMap; } } ```"
+        "Type-level twin of the runtime `extensionKindRegistry`: file suffix → asset type, for bare-string path inference in `Assets.from()`/`get()`/`load()` (asset-system v2 §5). Restricted to LEAF-CAPABLE types, exactly mirroring the runtime `registerExtensionKind` calls made by `defineAsset`. This is the single declaration-merging surface for bare-path suffix inference: ```ts declare module '@codexo/exojs' { interface ExtensionKindMap { 'atlas.json': 'spriteAtlas'; } } ```"
       ],
-      "importLine": "import { ExtensionTypeMap } from '@codexo/exojs'",
+      "importLine": "import { ExtensionKindMap } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
@@ -31,7 +30,7 @@
       "members": [
         {
           "name": "aac",
-          "signature": "aac: Sound",
+          "signature": "aac: \"sound\"",
           "signatureTokens": [
             {
               "text": "aac",
@@ -42,8 +41,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "Sound",
-              "kind": "type"
+              "text": "\"sound\"",
+              "kind": "keyword"
             }
           ],
           "params": [],
@@ -52,7 +51,7 @@
         },
         {
           "name": "avif",
-          "signature": "avif: Texture",
+          "signature": "avif: \"texture\"",
           "signatureTokens": [
             {
               "text": "avif",
@@ -63,8 +62,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "Texture",
-              "kind": "type"
+              "text": "\"texture\"",
+              "kind": "keyword"
             }
           ],
           "params": [],
@@ -72,11 +71,11 @@
           "description": ""
         },
         {
-          "name": "fnt",
-          "signature": "fnt: BmFont",
+          "name": "bin",
+          "signature": "bin: \"binary\"",
           "signatureTokens": [
             {
-              "text": "fnt",
+              "text": "bin",
               "kind": "name"
             },
             {
@@ -84,8 +83,29 @@
               "kind": "punctuation"
             },
             {
-              "text": "BmFont",
-              "kind": "type"
+              "text": "\"binary\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "csv",
+          "signature": "csv: \"csv\"",
+          "signatureTokens": [
+            {
+              "text": "csv",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"csv\"",
+              "kind": "keyword"
             }
           ],
           "params": [],
@@ -94,7 +114,7 @@
         },
         {
           "name": "gif",
-          "signature": "gif: Texture",
+          "signature": "gif: \"texture\"",
           "signatureTokens": [
             {
               "text": "gif",
@@ -105,8 +125,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "Texture",
-              "kind": "type"
+              "text": "\"texture\"",
+              "kind": "keyword"
             }
           ],
           "params": [],
@@ -115,7 +135,7 @@
         },
         {
           "name": "jpeg",
-          "signature": "jpeg: Texture",
+          "signature": "jpeg: \"texture\"",
           "signatureTokens": [
             {
               "text": "jpeg",
@@ -126,8 +146,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "Texture",
-              "kind": "type"
+              "text": "\"texture\"",
+              "kind": "keyword"
             }
           ],
           "params": [],
@@ -136,7 +156,7 @@
         },
         {
           "name": "jpg",
-          "signature": "jpg: Texture",
+          "signature": "jpg: \"texture\"",
           "signatureTokens": [
             {
               "text": "jpg",
@@ -147,8 +167,29 @@
               "kind": "punctuation"
             },
             {
-              "text": "Texture",
-              "kind": "type"
+              "text": "\"texture\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "json",
+          "signature": "json: \"json\"",
+          "signatureTokens": [
+            {
+              "text": "json",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"json\"",
+              "kind": "keyword"
             }
           ],
           "params": [],
@@ -157,7 +198,7 @@
         },
         {
           "name": "m4a",
-          "signature": "m4a: Sound",
+          "signature": "m4a: \"sound\"",
           "signatureTokens": [
             {
               "text": "m4a",
@@ -168,8 +209,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "Sound",
-              "kind": "type"
+              "text": "\"sound\"",
+              "kind": "keyword"
             }
           ],
           "params": [],
@@ -178,7 +219,7 @@
         },
         {
           "name": "mp3",
-          "signature": "mp3: Sound",
+          "signature": "mp3: \"sound\"",
           "signatureTokens": [
             {
               "text": "mp3",
@@ -189,8 +230,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "Sound",
-              "kind": "type"
+              "text": "\"sound\"",
+              "kind": "keyword"
             }
           ],
           "params": [],
@@ -199,7 +240,7 @@
         },
         {
           "name": "ogg",
-          "signature": "ogg: Sound",
+          "signature": "ogg: \"sound\"",
           "signatureTokens": [
             {
               "text": "ogg",
@@ -210,29 +251,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "Sound",
-              "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
-        },
-        {
-          "name": "otf",
-          "signature": "otf: FontFace",
-          "signatureTokens": [
-            {
-              "text": "otf",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "FontFace",
-              "kind": "type"
+              "text": "\"sound\"",
+              "kind": "keyword"
             }
           ],
           "params": [],
@@ -241,7 +261,7 @@
         },
         {
           "name": "png",
-          "signature": "png: Texture",
+          "signature": "png: \"texture\"",
           "signatureTokens": [
             {
               "text": "png",
@@ -252,8 +272,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "Texture",
-              "kind": "type"
+              "text": "\"texture\"",
+              "kind": "keyword"
             }
           ],
           "params": [],
@@ -261,11 +281,11 @@
           "description": ""
         },
         {
-          "name": "ttf",
-          "signature": "ttf: FontFace",
+          "name": "srt",
+          "signature": "srt: \"srt\"",
           "signatureTokens": [
             {
-              "text": "ttf",
+              "text": "srt",
               "kind": "name"
             },
             {
@@ -273,8 +293,71 @@
               "kind": "punctuation"
             },
             {
-              "text": "FontFace",
-              "kind": "type"
+              "text": "\"srt\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "txt",
+          "signature": "txt: \"text\"",
+          "signatureTokens": [
+            {
+              "text": "txt",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"text\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "vtt",
+          "signature": "vtt: \"vtt\"",
+          "signatureTokens": [
+            {
+              "text": "vtt",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"vtt\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "wasm",
+          "signature": "wasm: \"wasm\"",
+          "signatureTokens": [
+            {
+              "text": "wasm",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"wasm\"",
+              "kind": "keyword"
             }
           ],
           "params": [],
@@ -283,7 +366,7 @@
         },
         {
           "name": "wav",
-          "signature": "wav: Sound",
+          "signature": "wav: \"sound\"",
           "signatureTokens": [
             {
               "text": "wav",
@@ -294,8 +377,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "Sound",
-              "kind": "type"
+              "text": "\"sound\"",
+              "kind": "keyword"
             }
           ],
           "params": [],
@@ -304,7 +387,7 @@
         },
         {
           "name": "webp",
-          "signature": "webp: Texture",
+          "signature": "webp: \"texture\"",
           "signatureTokens": [
             {
               "text": "webp",
@@ -315,8 +398,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "Texture",
-              "kind": "type"
+              "text": "\"texture\"",
+              "kind": "keyword"
             }
           ],
           "params": [],
@@ -324,11 +407,11 @@
           "description": ""
         },
         {
-          "name": "woff",
-          "signature": "woff: FontFace",
+          "name": "xml",
+          "signature": "xml: \"xml\"",
           "signatureTokens": [
             {
-              "text": "woff",
+              "text": "xml",
               "kind": "name"
             },
             {
@@ -336,29 +419,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "FontFace",
-              "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
-        },
-        {
-          "name": "woff2",
-          "signature": "woff2: FontFace",
-          "signatureTokens": [
-            {
-              "text": "woff2",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "FontFace",
-              "kind": "type"
+              "text": "\"xml\"",
+              "kind": "keyword"
             }
           ],
           "params": [],
@@ -377,11 +439,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/resources/Loader.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Loader.ts"
+        "label": "src/resources/AssetDefinitions.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/AssetDefinitions.ts"
       }
     }
   ],
-  "sourcePath": "src/resources/Loader.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Loader.ts"
+  "sourcePath": "src/resources/AssetDefinitions.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/AssetDefinitions.ts"
 }

@@ -16,7 +16,7 @@ const level = Assets.one('level.json');
 type _LevelIsRef = Expect<Equal<typeof level, AssetRef<unknown>>>;
 
 // resource-kind descriptor → the resource leaf
-const tex = Assets.one(Asset.kind('texture', 'x.png'));
+const tex = Assets.one(Asset.type('texture', 'x.png'));
 type _TexIsTexture = Expect<Equal<typeof tex, Texture>>;
 
 export type { _LevelIsRef, _ShipIsTexture, _TexIsTexture };

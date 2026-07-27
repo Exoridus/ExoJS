@@ -25,9 +25,9 @@ class MusicLoopScene extends Scene {
         // A single streaming track — the browser's media pipeline loops it
         // seamlessly when `loop` is on, so no duplicate/silent track is needed.
         // AudioStream is a non-leaf resource kind (no seamless placeholder), so it
-        // is loaded directly through `Asset.kind('music', ...)` and awaited rather
+        // is loaded directly through `Asset.type('music', ...)` and awaited rather
         // than adopted from an `Assets.from` catalog leaf.
-        this.music = await this.loader.load(Asset.kind('music', assets.demo.audio.musicLoop));
+        this.music = await this.loader.load(Asset.type('music', assets.demo.audio.musicLoop));
 
         // Core defers playback until the AudioContext unlocks on the first
         // gesture, then starts automatically — play() returns the Voice now,

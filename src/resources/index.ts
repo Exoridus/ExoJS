@@ -1,8 +1,7 @@
 export { AbstractAssetFactory } from './AbstractAssetFactory';
 export type { ValueAsset } from './Asset';
 export { Asset } from './Asset';
-export type { AnyAssetConfig, AssetDefinitions, AssetInput, InferAssetResource } from './AssetDefinitions';
-export type { AssetFactory } from './AssetFactory';
+export type { AnyAssetConfig, AssetDefinitions, AssetInput, ExtensionKindMap, InferAssetResource, KindByPath } from './AssetDefinitions';
 export { AssetRef } from './AssetRef';
 export type { InferAssetsEntries } from './Assets';
 export { Assets } from './Assets';
@@ -20,17 +19,7 @@ export { IndexedDbKeyValueStore } from './IndexedDbKeyValueStore';
 export type { IndexedDbStoreOptions } from './IndexedDbStore';
 export { IndexedDbStore } from './IndexedDbStore';
 export type { KeyValueStore } from './KeyValueStore';
-export type {
-  AssetLoaderContext,
-  ExtensionTypeMap,
-  InferLoadedMap,
-  Loadable,
-  LoadByPath,
-  LoaderOptions,
-  LoadOptions,
-  LoadReturn,
-  PathExtension,
-} from './Loader';
+export type { AssetLoaderContext, InferLoadedMap, Loadable, LoaderOptions, LoadOptions } from './Loader';
 export { Loader } from './Loader';
 export type { LoadingProgress } from './LoadingQueue';
 export { LoadingQueue } from './LoadingQueue';

@@ -90,7 +90,7 @@ export interface RendererBinding<Target extends Drawable = Drawable> {
  * The handler may hold loader-local state (Workers, WASM modules, parsed caches).
  *
  * `Result` is the produced asset instance type (e.g. `TileMap`). `Options` is the
- * typed options object, defaulting to `undefined` (no options). The runtime `type`
+ * typed options object, defaulting to `undefined` (no options). The runtime `ctor`
  * field must be a constructor that produces `Result`; the handler returned by
  * `create` must also produce `Result` — both relationships are enforced by TypeScript.
  *
@@ -99,25 +99,30 @@ export interface RendererBinding<Target extends Drawable = Drawable> {
  * @advanced
  */
 export interface AssetBinding<Result = unknown, Options = undefined> {
-  readonly type: AssetConstructor<Result>;
+  readonly ctor: AssetConstructor<Result>;
   /**
-   * Config-map type names that resolve to this handler, e.g. `['tiledMap']`.
+   * Descriptor type names that resolve to this handler, e.g. `['tiledMap']`.
    * Most bindings declare exactly one name; a binding may declare several when a
    * single asset type is reachable under multiple aliases (e.g. `['vtt', 'srt']`).
-   * Each name maps the config-map form `{ type: '<name>', source }` to this handler.
+   * Each name maps an `Asset.type(...)`/constructor descriptor's `type` field to
+   * this handler. `defineAsset` supplies the canonical name automatically.
    */
   readonly typeNames?: readonly string[];
   readonly extensions?: readonly string[];
   /**
    * The {@link AssetDefinitions} key this binding produces. When present, the
-   * binding was built by `defineAsset`, which registered the kind's placeholder
-   * strategy and suffix→kind inference GLOBALLY at import (so loader-free
-   * `Assets.from` resolves it). Purely informational on the binding itself —
-   * `materializeAssetBindings` does not consume it.
+   * binding was built by `defineAsset`, which registered the type's placeholder
+   * strategy and suffix→type inference GLOBALLY at import (so loader-free
+   * `Assets.from` resolves it). `materializeAssetBindings` forwards it into
+   * `Loader.bindAsset`, which records it as the binding-declared type for every
+   * declared extension — the middle tier of `AssetTypeRegistry.resolveExtensionType`,
+   * below an explicit `Loader.registerType` override and above the global default.
    */
-  readonly kind?: keyof AssetDefinitions;
+  readonly type?: keyof AssetDefinitions;
   /** Optional seamless-handle adapter (asset-system v2), registered alongside the handler. */
   readonly seamless?: SeamlessAdapter<Result>;
+  /** Optional per-type IDB namespace for `context.fetchX()` calls made by this binding's handler. Defaults to the shared `__ctx_binary`/`__ctx_text`/`__ctx_json` namespace. */
+  readonly storageName?: string;
   create(loader: Loader): AssetHandler<Result, Options>;
 }
 

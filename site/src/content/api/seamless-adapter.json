@@ -1,6 +1,6 @@
 {
   "title": "SeamlessAdapter",
-  "description": "Per-type strategy for seamless deferred asset handles (asset-system v2). A seamless type hands out a stable placeholder handle synchronously from `loader.get(Type, source)`; when the payload arrives, fill transplants it into the handle **in place** so every existing consumer \"pops up\" without re-wiring. fail swaps in a visible error payload instead. The handle's identity never changes across the whole lifecycle.",
+  "description": "Per-type strategy for seamless deferred asset handles (asset-system v2). A seamless type hands out a stable placeholder handle synchronously from `loader.get(source)`; when the payload arrives, fill transplants it into the handle **in place** so every existing consumer \"pops up\" without re-wiring. fail swaps in a visible error payload instead. The handle's identity never changes across the whole lifecycle.",
   "symbol": "SeamlessAdapter",
   "kind": "interface",
   "subsystem": "resources",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Per-type strategy for seamless deferred asset handles (asset-system v2).",
-        "A seamless type hands out a stable placeholder handle synchronously from `loader.get(Type, source)`; when the payload arrives, fill transplants it into the handle **in place** so every existing consumer \"pops up\" without re-wiring. fail swaps in a visible error payload instead. The handle's identity never changes across the whole lifecycle."
+        "A seamless type hands out a stable placeholder handle synchronously from `loader.get(source)`; when the payload arrives, fill transplants it into the handle **in place** so every existing consumer \"pops up\" without re-wiring. fail swaps in a visible error payload instead. The handle's identity never changes across the whole lifecycle."
       ],
       "importLine": "import { SeamlessAdapter } from '@codexo/exojs'",
       "sourceLink": null

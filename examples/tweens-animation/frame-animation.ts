@@ -15,7 +15,7 @@ class FrameAnimationScene extends Scene {
         if (app === null) throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const { width, height } = app.canvas;
         const texture = this.loader.get('image/platformer-characters.png');
-        const data = (await this.loader.load(Asset.kind('json', 'json/platformer-characters.json'))) as SpritesheetData;
+        const data = (await this.loader.load(Asset.type('json', 'json/platformer-characters.json'))) as SpritesheetData;
         const sheet = new Spritesheet(texture, data);
 
         const walkFrames = ['character_beige_walk_a', 'character_beige_walk_b'].map(name => sheet.getFrame(name));

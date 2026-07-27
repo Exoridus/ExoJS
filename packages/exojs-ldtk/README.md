@@ -14,7 +14,7 @@ installed transitively — you do not need to install it manually.
 
 ## What this package provides
 
-- `LdtkMap` — parsed LDtk world; the result of `loader.load(LdtkMap, url)`. Exposes the raw `data`,
+- `LdtkMap` — parsed LDtk world; the result of `loader.load('world.ldtk')`. Exposes the raw `data`,
   the converted runtime `levels` (`readonly TileMap[]`, in document order), and
   `getLevelByName(identifier)`
 - `ldtkToTileMap` — convert a single LDtk level to a `TileMap` (used internally; available for
@@ -39,7 +39,7 @@ import { LdtkMap, TileMapNode, ldtkExtension } from '@codexo/exojs-ldtk';
 
 const app = new Application({ extensions: [ldtkExtension] });
 
-const world = await app.loader.load(LdtkMap, 'levels/world.ldtk');
+const world = await app.loader.load('levels/world.ldtk');
 
 // Render the first level (each LDtk level is its own TileMap):
 const level = world.getLevelByName('Level_0') ?? world.levels[0];

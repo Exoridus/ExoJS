@@ -1,9 +1,9 @@
 import type { AssetHandler, AssetLoadRequest } from '#extensions/Extension';
 
 import type { Asset } from './Asset';
-import type { AssetFactory } from './AssetFactory';
+import type { AssetDefinitions } from './AssetDefinitions';
+import { getExtensionKind, normalizeExtension } from './extensionKindRegistry';
 import type { AssetConstructor } from './FactoryRegistry';
-import { FactoryRegistry } from './FactoryRegistry';
 import type { AssetLoaderContext } from './Loader';
 import type { SeamlessAdapter } from './seamless';
 
@@ -14,29 +14,35 @@ export interface HandlerEntry {
   getIdentityKey?: (config: unknown) => string;
   /** Optional byte-source constructor used by container loading (bypasses fetch). */
   createFromBytes?: (bytes: ArrayBuffer, options?: unknown) => Promise<unknown>;
+  /** Optional per-type IDB namespace for `context.fetchX()` calls made by this binding's handler. */
+  storageName?: string;
 }
 
 /**
  * Owns constructor-based asset type identification for a {@link Loader}
- * instance: registered factories, type-name and file-extension mappings,
- * `bindAsset` handlers, seamless-adapter bindings, and per-instance type IDs
- * / key derivation. Extracted from `Loader` (Loader split, Slice 1) — every
- * method here is a direct, behavior-preserving relocation.
+ * instance: type-name and file-extension mappings, `bindAsset` handlers,
+ * seamless-adapter bindings, and per-instance type IDs / key derivation.
+ *
+ * The bulk of it was extracted from `Loader` as a behavior-preserving
+ * relocation; the extension→type resolution surface ({@link registerType},
+ * {@link resolveExtensionType}, {@link _resolveTypeForPath}) was added here
+ * afterwards and has no `Loader` ancestor. That surface layers three tiers, in
+ * order: the explicit app-local {@link registerType} override, the type declared
+ * by the `bindAsset` binding that claimed the suffix, and the global
+ * `defineAsset` default.
  */
 export class AssetTypeRegistry {
-  private readonly _factories = new FactoryRegistry();
   private readonly _assetTypeMap = new Map<string, AssetConstructor>();
   private readonly _typeIds = new WeakMap<AssetConstructor, number>();
   private readonly _handlerFunctions = new Map<AssetConstructor, HandlerEntry>();
   private readonly _extensionMap = new Map<string, AssetConstructor>();
   private readonly _boundHandlers: AssetHandler[] = [];
   private readonly _seamlessAdapters = new Map<AssetConstructor, SeamlessAdapter<unknown>>();
+  /** Tier 1 — explicit app-local overrides, written only by {@link registerType}. */
+  private readonly _extensionOverrides = new Map<string, keyof AssetDefinitions>();
+  /** Tier 2 — binding-declared defaults, written only by {@link bindAsset}'s `type`. */
+  private readonly _bindingExtensionTypes = new Map<string, keyof AssetDefinitions>();
   private _nextTypeId = 1;
-
-  /** Registers a factory for `type`. Prototype-chain aware — see {@link FactoryRegistry}. */
-  public register<T>(type: AssetConstructor<T>, factory: AssetFactory<T>): void {
-    this._factories.register(type, factory);
-  }
 
   /** Registers the seamless-handle adapter for `type`. One adapter per type. */
   public registerSeamlessAdapter<T>(type: AssetConstructor<T>, adapter: SeamlessAdapter<T>): void {
@@ -49,11 +55,28 @@ export class AssetTypeRegistry {
 
   /**
    * Atomically bind all keys for one AssetBinding to a pre-created handler.
-   * Validates all keys BEFORE mutating any map. Any already-registered key
-   * throws before any mutation.
+   * Validates all binding-owned keys BEFORE mutating any map. A conflicting
+   * constructor, type name, or binding extension throws before any mutation.
+   *
+   * When `type` is given, each declared extension is also recorded in the
+   * binding-declared extension→type table read by {@link resolveExtensionType}
+   * (tier 2, below an explicit {@link registerType} override and above the
+   * global `defineAsset` default) — and only then does the suffix take part in
+   * bare-path resolution ({@link _resolveTypeForPath}). A binding that declares
+   * `extensions` without a `type` still reserves those suffixes (so a later
+   * conflicting binding throws), but its assets must be named with
+   * `Asset.type(...)`. An existing `registerType` override for one of these
+   * suffixes is not a conflict: the override simply keeps winning.
    */
   public bindAsset<Result = unknown, Options = undefined>(
-    keys: { type: AssetConstructor<Result>; typeNames?: readonly string[]; extensions?: readonly string[]; seamless?: SeamlessAdapter<Result> },
+    keys: {
+      ctor: AssetConstructor<Result>;
+      type?: keyof AssetDefinitions;
+      typeNames?: readonly string[];
+      extensions?: readonly string[];
+      seamless?: SeamlessAdapter<Result>;
+      storageName?: string;
+    },
     handler: AssetHandler<Result, Options>,
   ): void {
     const normalizedExts: string[] = [];
@@ -61,7 +84,7 @@ export class AssetTypeRegistry {
 
     // Normalise extension keys
     for (const ext of keys.extensions ?? []) {
-      normalizedExts.push(ext.replace(/^\./, '').toLowerCase());
+      normalizedExts.push(normalizeExtension(ext));
     }
 
     // Validate: detect duplicates within this binding
@@ -76,9 +99,11 @@ export class AssetTypeRegistry {
     }
 
     // Validate: detect conflicts with already-registered keys — throw before any mutation
-    if (this._handlerFunctions.has(keys.type)) {
-      throw new Error(`An asset handler is already registered for ${keys.type.name}.`);
+    if (this._handlerFunctions.has(keys.ctor)) {
+      throw new Error(`An asset handler is already registered for ${keys.ctor.name}.`);
     }
+
+    this._assertSeamlessAdapterAvailable(keys.ctor, keys.seamless);
 
     for (const name of resolvedNames) {
       if (this._assetTypeMap.has(name)) {
@@ -91,6 +116,11 @@ export class AssetTypeRegistry {
         throw new Error(`File extension ".${ext}" is already mapped to an asset type.`);
       }
     }
+
+    // No separate validation for the binding-declared extension→type table: it
+    // is keyed exactly like `_extensionMap`, whose check above already rejects a
+    // second binding claiming the same suffix. A `registerType` override for the
+    // suffix is deliberately NOT a conflict — it simply outranks this binding.
 
     // All validation passed — install atomically.
     // Localized type-erasure boundary: the internal registry uses a flat config
@@ -112,32 +142,35 @@ export class AssetTypeRegistry {
     const boundIdentityKey = handler.getIdentityKey?.bind(handler);
     const boundCreateFromBytes = handler.createFromBytes?.bind(handler);
 
-    this._handlerFunctions.set(keys.type, {
+    this._handlerFunctions.set(keys.ctor, {
       load: (config, ctx) => handler.load(toRequest(config), ctx),
       ...(boundIdentityKey && { getIdentityKey: (config: unknown) => boundIdentityKey(toRequest(config)) }),
       ...(boundCreateFromBytes && { createFromBytes: (bytes: ArrayBuffer, options?: unknown) => boundCreateFromBytes(bytes, options as Options) }),
+      ...(keys.storageName !== undefined && { storageName: keys.storageName }),
     });
 
     for (const name of resolvedNames) {
-      this._assetTypeMap.set(name, keys.type);
+      this._assetTypeMap.set(name, keys.ctor);
     }
 
     for (const ext of normalizedExts) {
-      this._extensionMap.set(ext, keys.type);
+      this._extensionMap.set(ext, keys.ctor);
     }
+
+    this._applyBindingExtensionTypes(normalizedExts, keys.type);
 
     // Own this handler for lifecycle management. Cast to the erased AssetHandler
     // for storage; destroy() is the only method called on entries in this array.
     this._boundHandlers.push(handler as AssetHandler);
 
     if (keys.seamless !== undefined) {
-      this.registerSeamlessAdapter(keys.type, keys.seamless);
+      this.registerSeamlessAdapter(keys.ctor, keys.seamless);
     }
   }
 
-  /** Returns true if a handler or factory is already registered for the given constructor. */
+  /** Returns true if a handler is already registered for the given constructor. */
   public hasLoadable(type: AssetConstructor): boolean {
-    return this._handlerFunctions.has(type) || this._factories.has(type);
+    return this._handlerFunctions.has(type);
   }
 
   /** Returns true if a type-name mapping is already registered. */
@@ -147,17 +180,7 @@ export class AssetTypeRegistry {
 
   /** Returns true if a file extension is already mapped to an asset type. Extension is normalised (leading dot stripped, lower-cased). */
   public hasExtension(ext: string): boolean {
-    return this._extensionMap.has(ext.replace(/^\./, '').toLowerCase());
-  }
-
-  /** Returns true if a plain `register()` factory exists for `type` (not a `bindAsset` handler). */
-  public hasFactory(type: AssetConstructor): boolean {
-    return this._factories.has(type);
-  }
-
-  /** Resolves the `register()`-based factory for `type`. Throws if none is registered — see {@link FactoryRegistry.resolve}. */
-  public resolveFactory<T>(type: AssetConstructor<T>): AssetFactory<T> {
-    return this._factories.resolve(type);
+    return this._extensionMap.has(normalizeExtension(ext));
   }
 
   /** The `bindAsset` handler entry for `type`, or `undefined`. */
@@ -217,25 +240,79 @@ export class AssetTypeRegistry {
   }
 
   /**
-   * Resolve the registered asset type for a path by matching the basename's
-   * dot-suffixes longest-first: `hero.aseprite.json` tries `aseprite.json`
-   * before `json`. Query/hash suffixes are ignored.
+   * Resolve the effective {@link AssetDefinitions} type for a whole path by
+   * matching the basename's dot-suffixes longest-first: `hero.aseprite.json`
+   * tries `aseprite.json` before `json`. Query/hash suffixes are ignored. Each
+   * candidate suffix goes through {@link resolveExtensionType}, so the app-local
+   * `registerType` override is consulted before the binding-declared type, which
+   * in turn is consulted before the global default.
+   *
+   * This is the single bare-path resolution funnel: a `bindAsset` binding feeds
+   * it only through its declared `type` (which `defineAsset` always sets), not
+   * through the constructor-keyed extension map — that map now only guards
+   * against duplicate extension registrations.
    * @internal
    */
-  public _resolveExtensionType(path: string): AssetConstructor | undefined {
+  public _resolveTypeForPath(path: string): keyof AssetDefinitions | undefined {
     const [withoutQueryHash = ''] = path.split(/[?#]/, 1);
     const basename = withoutQueryHash.split('/').pop() ?? '';
     const parts = basename.split('.');
 
     for (let i = 1; i < parts.length; i++) {
-      const ctor = this._extensionMap.get(parts.slice(i).join('.').toLowerCase());
+      const type = this.resolveExtensionType(parts.slice(i).join('.'));
 
-      if (ctor !== undefined) {
-        return ctor;
+      if (type !== undefined) {
+        return type;
       }
     }
 
     return undefined;
+  }
+
+  /** `bindAsset` install step: records `extensions` as this binding's declared default type; no-ops when `type` is absent. */
+  private _applyBindingExtensionTypes(extensions: readonly string[], type: keyof AssetDefinitions | undefined): void {
+    if (type === undefined) return;
+
+    for (const ext of extensions) {
+      this._bindingExtensionTypes.set(ext, type);
+    }
+  }
+
+  /**
+   * Registers an app-local extension→type override — the top tier of
+   * {@link resolveExtensionType}, ahead of both the binding-declared default and
+   * the global `defineAsset` table. Overriding a suffix a binding already claimed
+   * (`registerType('json', 'ldtkMap')`) is the intended use, not a conflict.
+   *
+   * Idempotent for the same (extension, type) pair; throws only when a DIFFERENT
+   * type was already registered here by an earlier `registerType` call — two
+   * competing app-wide overrides for one suffix are ambiguous.
+   */
+  public registerType(extension: string, type: keyof AssetDefinitions): void {
+    const key = normalizeExtension(extension);
+    const existing = this._extensionOverrides.get(key);
+
+    if (existing !== undefined && existing !== type) {
+      throw new Error(
+        `AssetTypeRegistry: extension ".${key}" is already registered to type "${existing}" on this ` +
+          `app, cannot also register it as "${type}". Use Asset.type(...) for a one-off exception ` +
+          `instead of a second app-wide override.`,
+      );
+    }
+
+    this._extensionOverrides.set(key, type);
+  }
+
+  /**
+   * Resolves an extension to its effective type for this app, in three tiers:
+   * the explicit {@link registerType} override, then the type declared by the
+   * `bindAsset` binding that claimed this suffix, then the global `defineAsset`
+   * default. `undefined` when no tier has an entry.
+   */
+  public resolveExtensionType(extension: string): keyof AssetDefinitions | undefined {
+    const key = normalizeExtension(extension);
+
+    return this._extensionOverrides.get(key) ?? this._bindingExtensionTypes.get(key) ?? getExtensionKind(key);
   }
 
   /** @internal */
@@ -243,9 +320,20 @@ export class AssetTypeRegistry {
     return type.name.length > 0 ? type.name : '(anonymous type)';
   }
 
-  /** Destroys the `register()`-based factory registry. */
-  public destroyFactories(): void {
-    this._factories.destroy();
+  private _assertSeamlessAdapterAvailable(type: AssetConstructor, adapter: SeamlessAdapter<unknown> | undefined): void {
+    if (adapter !== undefined && this._seamlessAdapters.has(type)) {
+      throw new Error(`A seamless adapter is already registered for ${this._describeType(type)}.`);
+    }
+  }
+
+  /**
+   * Builds the standard "no `bindAsset` handler registered" error for `type`,
+   * shared by every dispatch path (`AssetDecoder._dispatchFetch`,
+   * `AssetResidency._loadSingleAsset`) that requires one.
+   * @internal
+   */
+  public _missingHandlerError(type: AssetConstructor): Error {
+    return new Error(`No asset handler registered for ${this._describeType(type)}. Bind one via defineAsset()/bindAsset() first.`);
   }
 
   /** Destroys every bound `bindAsset` handler (deduplicated by identity) and clears handler/adapter maps. */
@@ -264,9 +352,8 @@ export class AssetTypeRegistry {
     this._seamlessAdapters.clear();
   }
 
-  /** Destroys the factory registry and every bound handler — see {@link destroyFactories}/{@link destroyHandlers}. */
+  /** Destroys every bound handler — see {@link destroyHandlers}. */
   public destroy(): void {
-    this.destroyFactories();
     this.destroyHandlers();
   }
 }

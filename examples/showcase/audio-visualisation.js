@@ -21,9 +21,9 @@ class AudioVisualisationScene extends Scene {
             throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const { width, height } = app.canvas;
         // AudioStream is a non-leaf resource kind (no seamless placeholder), so it
-        // is loaded directly through `Asset.kind('music', ...)` and awaited rather
+        // is loaded directly through `Asset.type('music', ...)` and awaited rather
         // than fetched synchronously via `get()`.
-        this.music = await this.loader.load(Asset.kind('music', assets.demo.audio.musicLoop));
+        this.music = await this.loader.load(Asset.type('music', assets.demo.audio.musicLoop));
         // One analyser tap for spectrum/waveform, one beat detector for the
         // beat-pulse ring. Both read the music bus the stream plays through,
         // without altering playback.

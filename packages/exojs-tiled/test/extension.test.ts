@@ -34,7 +34,7 @@ describe('@codexo/exojs-tiled extension descriptor', () => {
 
   // ── tiledRuntimeMapBinding
   it('runtime binding targets TileMap constructor', () => {
-    expect(tiledRuntimeMapBinding.type).toBe(TileMap);
+    expect(tiledRuntimeMapBinding.ctor).toBe(TileMap);
   });
 
   it('runtime binding has typeNames ["tileMap"]', () => {
@@ -47,7 +47,7 @@ describe('@codexo/exojs-tiled extension descriptor', () => {
 
   // ── tiledMapBinding (advanced/source)
   it('source binding targets TiledMap constructor', () => {
-    expect(tiledMapBinding.type).toBe(TiledMap);
+    expect(tiledMapBinding.ctor).toBe(TiledMap);
   });
 
   it('source binding has typeNames ["tiledMap"]', () => {

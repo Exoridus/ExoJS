@@ -97,7 +97,7 @@ describe('SoundFactory', () => {
     const promise = factory.create(new ArrayBuffer(8));
 
     await expect(promise).rejects.toThrow(
-      'Failed to decode audio data: corrupt audio data (if loaded with the wrong Asset.kind, this file may not be an audio format at all).',
+      'Failed to decode audio data: corrupt audio data (if loaded with the wrong Asset.type, this file may not be an audio format at all).',
     );
     await expect(promise).rejects.toMatchObject({ cause: decodeError });
   });

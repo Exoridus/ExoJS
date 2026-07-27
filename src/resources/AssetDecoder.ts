@@ -108,15 +108,21 @@ export class AssetDecoder {
    * The `fetch*` helpers on the returned context route through the loader's
    * configured cache strategy and IDB stores, using `source` as the IDB key
    * (so the same URL is never fetched twice regardless of the asset alias).
+   *
+   * `storageName`, when given (from the handler's `bindAsset`/`defineAsset`
+   * binding), replaces the shared `__ctx_binary`/`__ctx_text`/`__ctx_json`
+   * namespace for every `fetch*` call made through this context, giving the
+   * binding its own IDB namespace instead of sharing one with every other
+   * handler.
    * @internal
    */
-  public _buildHandlerContext(identityKey: string): AssetLoaderContext {
+  public _buildHandlerContext(identityKey: string, storageName?: string): AssetLoaderContext {
     const ctx: AssetLoaderContext = {
       loader: this._loader,
       identityKey,
-      fetchText: (source: string) => this._contextFetch<string>(source, '__ctx_text', r => r.text()),
-      fetchArrayBuffer: (source: string) => this._contextFetch<ArrayBuffer>(source, '__ctx_binary', r => r.arrayBuffer()),
-      fetchJson: <T = unknown>(source: string) => this._contextFetch<T>(source, '__ctx_json', r => r.json() as Promise<T>),
+      fetchText: (source: string) => this._contextFetch<string>(source, storageName ?? '__ctx_text', r => r.text()),
+      fetchArrayBuffer: (source: string) => this._contextFetch<ArrayBuffer>(source, storageName ?? '__ctx_binary', r => r.arrayBuffer()),
+      fetchJson: <T = unknown>(source: string) => this._contextFetch<T>(source, storageName ?? '__ctx_json', r => r.json() as Promise<T>),
     };
     return ctx;
   }
@@ -125,8 +131,8 @@ export class AssetDecoder {
    * Calls a handler-based custom asset loader and hands the result to the
    * `storeResource` callback.
    *
-   * Unlike {@link _fetch}, this does NOT automatically bypass caching — the
-   * handler controls caching by calling `context.fetchText` /
+   * This does NOT automatically bypass caching — the handler controls caching
+   * by calling `context.fetchText` /
    * `context.fetchArrayBuffer` / `context.fetchJson`, which route through
    * the loader's cache strategy.
    * @internal
@@ -150,46 +156,17 @@ export class AssetDecoder {
     }
   }
 
-  /** @internal */
-  public async _fetch(type: AssetConstructor, alias: string, path: string, options?: unknown): Promise<unknown> {
-    const factory = this._typeRegistry.resolveFactory(type);
-    const url = this._resolveUrl(path);
-
-    try {
-      const resource = await this._cacheStrategy.resolve(
-        {
-          storageName: factory.storageName,
-          key: path, // source-path as IDB key so same resource is not cached multiple times under different aliases
-          url,
-          requestOptions: this._fetchOptions,
-          factory,
-          options,
-        },
-        this._stores,
-      );
-
-      return this._storeResource(type, alias, resource);
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : String(error);
-
-      throw new Error(`Failed to load "${alias}" from "${url}": ${message}`, {
-        cause: error,
-      });
-    }
-  }
-
   /**
-   * Dispatches a load through the `bindAsset` handler path if one is
-   * registered for `type`, otherwise through the plain `register()`-based
-   * {@link _fetch}. Shared by the foreground and background fetch
-   * dispatchers on `Loader` so both honor `bindAsset` handlers identically.
+   * Dispatches a load through the `bindAsset` handler bound for `type`.
+   * Shared by the foreground and background fetch dispatchers on `Loader` so
+   * both honor `bindAsset` handlers identically.
    * @internal
    */
   public _dispatchFetch(type: AssetConstructor, alias: string, path: string, options?: unknown): Promise<unknown> {
     const handlerEntry = this._typeRegistry.getHandler(type);
 
     if (!handlerEntry) {
-      return this._fetch(type, alias, path, options);
+      return Promise.reject(this._typeRegistry._missingHandlerError(type));
     }
 
     const identityKey = this._typeRegistry._identityKey(type, path);
@@ -199,7 +176,7 @@ export class AssetDecoder {
       Object.assign(config, options as Record<string, unknown>);
     }
 
-    const context = this._buildHandlerContext(identityKey);
+    const context = this._buildHandlerContext(identityKey, handlerEntry.storageName);
 
     return this._fetchWithHandler(type, alias, path, config, handlerEntry.load, context);
   }
@@ -207,22 +184,19 @@ export class AssetDecoder {
   /**
    * Construct an asset from in-memory `bytes` (no fetch) and hand it to the
    * `storeResource` callback under `alias`. Uses the type's
-   * {@link AssetHandler.createFromBytes} when present, otherwise a
-   * `register()`-style factory; throws if neither can build from bytes. The
-   * backing path for `Loader.loadContainer`.
+   * {@link AssetHandler.createFromBytes} when present; throws if the bound
+   * handler does not support byte-source construction. The backing path for
+   * `Loader.loadContainer`.
    * @internal
    */
   public async _injectSource(type: AssetConstructor, alias: string, bytes: ArrayBuffer, options?: unknown): Promise<void> {
     const handlerEntry = this._typeRegistry.getHandler(type);
-    let resource: unknown;
 
-    if (handlerEntry?.createFromBytes) {
-      resource = await handlerEntry.createFromBytes(bytes, options);
-    } else if (this._typeRegistry.hasFactory(type)) {
-      resource = await this._typeRegistry.resolveFactory(type).create(bytes, options);
-    } else {
+    if (!handlerEntry?.createFromBytes) {
       throw new Error(`Asset type "${type.name}" cannot be built from container bytes (no createFromBytes handler).`);
     }
+
+    const resource = await handlerEntry.createFromBytes(bytes, options);
 
     this._storeResource(type, alias, resource);
   }

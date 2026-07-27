@@ -14,7 +14,7 @@ class GamepadScene extends Scene {
         const app = this.app;
         if (app === null)
             throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
-        const buttonsData = (await this.loader.load(Asset.kind('json', 'json/buttons.json')));
+        const buttonsData = (await this.loader.load(Asset.type('json', 'json/buttons.json')));
         this.buttons = new Spritesheet(this.loader.get('image/buttons.png'), buttonsData);
         const { width, height } = app.canvas;
         this.status = this.createStatus(width, height);

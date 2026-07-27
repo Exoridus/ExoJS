@@ -8,7 +8,7 @@ class ContainersScene extends Scene {
         if (app === null)
             throw new Error('Scene.app is unavailable before the scene is attached to an Application.');
         const { width, height } = app.canvas;
-        const { bunny, rainbow } = this.loader.get(Assets.from({ bunny: Asset.kind('texture', 'image/ship-a.png'), rainbow: Asset.kind('texture', 'image/hue-ramp.png') }));
+        const { bunny, rainbow } = this.loader.get(Assets.from({ bunny: Asset.type('texture', 'image/ship-a.png'), rainbow: Asset.type('texture', 'image/hue-ramp.png') }));
         this.rainbow = new Sprite(rainbow);
         this.bunnies = new Container();
         this.bunnies.setPosition((width / 2) | 0, (height / 2) | 0);

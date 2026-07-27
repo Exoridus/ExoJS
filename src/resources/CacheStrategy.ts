@@ -1,5 +1,10 @@
-import type { AssetFactory } from './AssetFactory';
 import type { CacheStore } from './CacheStore';
+
+/** Minimal internal factory protocol consumed by cache policies. */
+interface CacheRequestFactory {
+  process(response: Response): Promise<unknown>;
+  create(source: unknown, options?: unknown): Promise<unknown>;
+}
 
 /**
  * All the information a {@link CacheStrategy} needs to resolve a single asset.
@@ -9,15 +14,15 @@ import type { CacheStore } from './CacheStore';
  * remain stateless.
  */
 export interface CacheRequest {
-  /** The {@link AssetFactory.storageName} used as the cache namespace. */
+  /** The binding/factory storage namespace used for cache lookups. */
   readonly storageName: string;
   /** The per-asset lookup key (typically the alias). */
   readonly key: string;
   /** The fully resolved URL to fetch from the network if the cache misses. */
   readonly url: string;
   readonly requestOptions: RequestInit;
-  readonly factory: AssetFactory;
-  /** Factory-specific options forwarded to {@link AssetFactory.create}. */
+  readonly factory: CacheRequestFactory;
+  /** Type-specific options forwarded to `factory.create`. */
   readonly options?: unknown;
 }
 
@@ -25,9 +30,9 @@ export interface CacheRequest {
  * Strategy interface that decides how assets are fetched and cached.
  *
  * Implementations own the full pipeline: cache check (if applicable) →
- * network fetch (if needed) → factory.process → factory.create → cache
+ * network fetch (if needed) → `factory.process` → `factory.create` → cache
  * write (if applicable). The returned value is the fully constructed
- * resource (post-{@link AssetFactory.create}), not the intermediate source.
+ * resource, not the intermediate source.
  *
  * ExoJS ships {@link CacheFirstStrategy} (default) and {@link NetworkOnlyStrategy};
  * implement this interface to add custom policies such as network-first,

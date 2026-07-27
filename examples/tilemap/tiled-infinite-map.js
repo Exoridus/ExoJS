@@ -29,7 +29,7 @@ class TiledInfiniteMapScene extends Scene {
     hudTimer = 0;
     hud;
     async init() {
-        const source = await this.loader.load(Asset.kind('tiledMap', 'json/maps/drift-fields.tmj'));
+        const source = await this.loader.load(Asset.type('tiledMap', 'json/maps/drift-fields.tmj'));
         const runtimeMap = source.toTileMap();
         this.mapNode = new TileMapNode(runtimeMap);
         const ground = runtimeMap.getTileLayer('Ground');

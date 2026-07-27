@@ -20,15 +20,15 @@ const noopHandler = (): AssetHandler => ({
 describe('defineAsset', () => {
   it('returns a binding and registers a resource (seamless) kind + its extensions', () => {
     const binding = defineAsset({
-      type: Texture,
-      kind: 'texture',
+      ctor: Texture,
+      type: 'texture',
       extensions: ['png', 'jpg'],
       seamless: textureSeamlessAdapter,
       create: noopHandler,
     });
 
-    expect(binding.type).toBe(Texture);
-    expect(binding.kind).toBe('texture');
+    expect(binding.ctor).toBe(Texture);
+    expect(binding.type).toBe('texture');
     expect(binding.typeNames).toEqual(['texture']);
     expect(binding.extensions).toEqual(['png', 'jpg']);
     expect(binding.seamless).toBe(textureSeamlessAdapter);
@@ -40,8 +40,8 @@ describe('defineAsset', () => {
 
   it('defaults typeNames to [kind] and isValue to true for a value kind', () => {
     const binding = defineAsset({
-      type: Json as never,
-      kind: 'json',
+      ctor: Json as never,
+      type: 'json',
       extensions: ['json'],
       create: noopHandler,
     });
@@ -54,8 +54,8 @@ describe('defineAsset', () => {
 
   it('honours an explicit typeNames list', () => {
     const binding = defineAsset({
-      type: Json as never,
-      kind: 'vtt',
+      ctor: Json as never,
+      type: 'vtt',
       typeNames: ['vtt', 'srt'],
       extensions: ['vtt'],
       create: noopHandler,
@@ -67,8 +67,8 @@ describe('defineAsset', () => {
 
   it('does NOT globally register a non-leaf resource kind (isValue:false, no adapter)', () => {
     const binding = defineAsset({
-      type: BmFont,
-      kind: 'bmFont',
+      ctor: BmFont,
+      type: 'bmFont',
       extensions: ['fnt'],
       isValue: false,
       create: noopHandler,

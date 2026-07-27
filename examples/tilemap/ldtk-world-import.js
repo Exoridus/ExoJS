@@ -5,7 +5,7 @@ import { TileMapNode } from '@codexo/exojs-tilemap';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // Loading an LDtk world (`.ldtk`) through @codexo/exojs-ldtk.
 //
-//   - `loader.load(Asset.kind('ldtkMap', url))` fetches the world, loads every referenced
+//   - `loader.load(Asset.type('ldtkMap', url))` fetches the world, loads every referenced
 //     tileset image, and converts *every* level to its own runtime `TileMap`
 //     in one pass — `world.levels` (document order) or
 //     `world.getLevelByName(identifier)`.
@@ -34,7 +34,7 @@ class LdtkWorldImportScene extends Scene {
         // resolver). Resolve against the page URL until the adapter handles
         // relative bases itself.
         const worldUrl = new URL('assets/json/maps/harbor-world.ldtk', window.location.href).href;
-        this.world = await this.loader.load(Asset.kind('ldtkMap', worldUrl));
+        this.world = await this.loader.load(Asset.type('ldtkMap', worldUrl));
         this.hud = mountControls({
             title: 'LDtk World Import',
             controls: [{ keys: 'panel', action: 'switch level / toggle the IntGrid overlay' }],

@@ -23,7 +23,7 @@ class SvgDrawableScene extends Scene {
         // `typeof Json` overload — which is declared first and wins, typing
         // the result as `unknown` instead of `HTMLImageElement`. See the
         // flagged deviation in the migration report.
-        const mark = (await this.loader.load(Asset.kind('svg', 'svg/exo-wordmark.svg', { width: 850, height: 324 }))) as HTMLImageElement;
+        const mark = (await this.loader.load(Asset.type('svg', 'svg/exo-wordmark.svg', { width: 850, height: 324 }))) as HTMLImageElement;
 
         this.texture = new Texture(mark);
         this.sprite = new Sprite(this.texture);

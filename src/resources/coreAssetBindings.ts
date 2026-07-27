@@ -99,41 +99,41 @@ export function resolveSubAssetPath(ref: string, source: string): string {
 // ---------------------------------------------------------------------------
 
 const textureBinding = defineAsset({
-  type: Texture,
-  kind: 'texture',
+  ctor: Texture,
+  type: 'texture',
   extensions: ['png', 'jpg', 'jpeg', 'webp', 'avif', 'gif'],
   seamless: textureSeamlessAdapter,
   create: binaryFactoryHandler(() => new TextureFactory()),
 });
 
 const soundBinding = defineAsset({
-  type: Sound,
-  kind: 'sound',
+  ctor: Sound,
+  type: 'sound',
   extensions: ['ogg', 'mp3', 'wav', 'm4a', 'aac'],
   seamless: soundSeamlessAdapter,
   create: binaryFactoryHandler(() => new SoundFactory()),
 });
 
-// music/video/svg/font/image/bmFont are non-leaf resource kinds: no placeholder
-// strategy, so `isValue: false` keeps them OUT of the global kind/inference
-// registries (bare paths need `Asset.kind(...)`); their extensions still ride the binding.
+// music/video/svg/font/image/bmFont are non-leaf resource types: no placeholder
+// strategy, so `isValue: false` keeps them OUT of the global type/inference
+// registries (bare paths need `Asset.type(...)`); their extensions still ride the binding.
 const musicBinding = defineAsset({
-  type: AudioStream,
-  kind: 'music',
+  ctor: AudioStream,
+  type: 'music',
   isValue: false,
   create: binaryFactoryHandler(() => new MusicFactory()),
 });
 
 const videoBinding = defineAsset({
-  type: Video,
-  kind: 'video',
+  ctor: Video,
+  type: 'video',
   isValue: false,
   create: binaryFactoryHandler(() => new VideoFactory()),
 });
 
 const jsonBinding = defineAsset({
-  type: Json,
-  kind: 'json',
+  ctor: Json,
+  type: 'json',
   extensions: ['json'],
   create: () => ({
     async load({ source }: AssetLoadRequest, context: AssetLoaderContext): Promise<unknown> {
@@ -146,8 +146,8 @@ const jsonBinding = defineAsset({
 });
 
 const textBinding = defineAsset({
-  type: TextAsset as unknown as AssetConstructor<string>,
-  kind: 'text',
+  ctor: TextAsset as unknown as AssetConstructor<string>,
+  type: 'text',
   extensions: ['txt'],
   create: () => ({
     async load({ source }: AssetLoadRequest, context: AssetLoaderContext): Promise<string> {
@@ -160,20 +160,20 @@ const textBinding = defineAsset({
 });
 
 const svgBinding = defineAsset({
-  type: SvgAsset,
-  kind: 'svg',
+  ctor: SvgAsset,
+  type: 'svg',
   isValue: false,
   create: textFactoryHandler(() => new SvgFactory()),
 });
 
-// Subtitle serves two value kinds through one handler. `defineAsset` registers
-// its primary kind `vtt` (+ the `vtt` suffix); the `srt` alias kind — a distinct
+// Subtitle serves two value types through one handler. `defineAsset` registers
+// its primary type `vtt` (+ the `vtt` suffix); the `srt` alias type — a distinct
 // AssetDefinitions key sharing this handler — is registered explicitly so both
 // suffixes resolve to a value leaf and both load via the subtitle handler
 // (routed at runtime by `typeNames: ['vtt', 'srt']`).
 const subtitleBinding = defineAsset({
-  type: SubtitleAsset as unknown as AssetConstructor<VTTCue[]>,
-  kind: 'vtt',
+  ctor: SubtitleAsset as unknown as AssetConstructor<VTTCue[]>,
+  type: 'vtt',
   typeNames: ['vtt', 'srt'],
   extensions: ['vtt'],
   create: () => {
@@ -197,36 +197,36 @@ registerAssetKind('srt', { isValue: true });
 registerExtensionKind('srt', 'srt');
 
 const xmlBinding = defineAsset({
-  type: XmlAsset,
-  kind: 'xml',
+  ctor: XmlAsset,
+  type: 'xml',
   extensions: ['xml'],
   create: textFactoryHandler(() => new XmlFactory()),
 });
 
 const csvBinding = defineAsset({
-  type: CsvAsset,
-  kind: 'csv',
+  ctor: CsvAsset,
+  type: 'csv',
   extensions: ['csv'],
   create: textFactoryHandler(() => new CsvFactory()),
 });
 
 const binaryBinding = defineAsset({
-  type: BinaryAsset,
-  kind: 'binary',
+  ctor: BinaryAsset,
+  type: 'binary',
   extensions: ['bin'],
   create: binaryFactoryHandler(() => new BinaryFactory()),
 });
 
 const bmFontBinding = defineAsset({
-  type: BmFont,
-  kind: 'bmFont',
+  ctor: BmFont,
+  type: 'bmFont',
   extensions: ['fnt'],
   isValue: false,
   create: (loader: Loader) => ({
     async load({ source }: AssetLoadRequest, context: AssetLoaderContext): Promise<BmFont> {
       const text = await context.fetchText(source);
       const fontData = parseBmFontText(text);
-      const textures = await Promise.all(fontData.pages.map(page => loader.load(Asset.kind('texture', resolveSubAssetPath(page, source)))));
+      const textures = await Promise.all(fontData.pages.map(page => loader.load(Asset.type('texture', resolveSubAssetPath(page, source)))));
       return new BmFont(fontData, textures);
     },
   }),
@@ -238,8 +238,8 @@ const conditionalBindings: AssetBinding[] = [];
 if (typeof FontFace !== 'undefined') {
   conditionalBindings.push(
     defineAsset({
-      type: FontAsset,
-      kind: 'font',
+      ctor: FontAsset,
+      type: 'font',
       extensions: ['woff', 'woff2', 'ttf', 'otf'],
       isValue: false,
       create: binaryFactoryHandler(() => new FontFactory()),
@@ -250,8 +250,8 @@ if (typeof FontFace !== 'undefined') {
 if (typeof HTMLImageElement !== 'undefined') {
   conditionalBindings.push(
     defineAsset({
-      type: ImageAsset,
-      kind: 'image',
+      ctor: ImageAsset,
+      type: 'image',
       isValue: false,
       create: binaryFactoryHandler(() => new ImageFactory()),
     }),
@@ -261,8 +261,8 @@ if (typeof HTMLImageElement !== 'undefined') {
 if (typeof WebAssembly !== 'undefined') {
   conditionalBindings.push(
     defineAsset({
-      type: WasmAsset,
-      kind: 'wasm',
+      ctor: WasmAsset,
+      type: 'wasm',
       extensions: ['wasm'],
       create: binaryFactoryHandler(() => new WasmFactory()),
     }),

@@ -101,7 +101,7 @@ export class BmFontLoaderFactory extends AbstractAssetFactory<BmFont> {
   public async create(source: unknown): Promise<BmFont> {
     const { text, url } = source as { text: string; url: string };
     const fontData = parseBmFontText(text);
-    const textures = await Promise.all(fontData.pages.map(page => this._loader.load(Asset.kind('texture', new URL(page, url).href))));
+    const textures = await Promise.all(fontData.pages.map(page => this._loader.load(Asset.type('texture', new URL(page, url).href))));
     return new BmFont(fontData, textures);
   }
 }

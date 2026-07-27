@@ -185,7 +185,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "A pre-constructed FontFace to use as the font for this node. When passed to Text, the face is automatically registered with document.fonts. Load the face via FontFactory before constructing the node so glyphs render immediately. Takes precedence over fontFamily when both are set. ts const face = await loader.load(FontFactory, 'roboto.woff2', { family: 'Roboto' }); const label = new Text('Score: 0', { font: face, fontSize: 24 }); "
+          "description": "A pre-constructed FontFace to use as the font for this node. When passed to Text, the face is automatically registered with document.fonts. Load the face via FontFactory before constructing the node so glyphs render immediately. Takes precedence over fontFamily when both are set. ts const face = await loader.load(Asset.type('font', 'roboto.woff2', { family: 'Roboto' })); const label = new Text('Score: 0', { font: face, fontSize: 24 }); "
         },
         {
           "name": "fontFamily",

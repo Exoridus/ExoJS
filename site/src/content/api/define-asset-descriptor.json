@@ -1,16 +1,16 @@
 {
   "title": "DefineAssetDescriptor",
-  "description": "One descriptor for a built-in asset type. Feeds three consumers from a single source: the per-Loader AssetBinding returned for `materializeAssetBindings`, the global kind→placeholder strategy, and the global suffix→kind inference.",
+  "description": "One descriptor for a built-in asset type. Feeds three consumers from a single source: the per-Loader AssetBinding returned for `materializeAssetBindings`, the global type→placeholder strategy, and the global suffix→type inference.",
   "symbol": "DefineAssetDescriptor",
   "kind": "interface",
   "subsystem": "resources",
   "importPath": "@codexo/exojs",
   "tier": "advanced",
-  "memberCount": 6,
+  "memberCount": 7,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 6,
+    "properties": 7,
     "events": 0
   },
   "sections": [
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "One descriptor for a built-in asset type. Feeds three consumers from a single source: the per-Loader AssetBinding returned for `materializeAssetBindings`, the global kind→placeholder strategy, and the global suffix→kind inference."
+        "One descriptor for a built-in asset type. Feeds three consumers from a single source: the per-Loader AssetBinding returned for `materializeAssetBindings`, the global type→placeholder strategy, and the global suffix→type inference."
       ],
       "importLine": "import { DefineAssetDescriptor } from '@codexo/exojs'",
       "sourceLink": null
@@ -90,6 +90,39 @@
           "description": "Loader-local handler factory, called once per Loader by materializeAssetBindings."
         },
         {
+          "name": "ctor",
+          "signature": "ctor: AssetConstructor<Result>",
+          "signatureTokens": [
+            {
+              "text": "ctor",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetConstructor",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Result",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The runtime constructor the produced asset is an instance of."
+        },
+        {
           "name": "extensions",
           "signature": "extensions?: readonly string[]",
           "signatureTokens": [
@@ -124,7 +157,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "File suffixes that map to this type. Feeds the per-loader map and — for a leaf-capable kind — global bare-path inference."
+          "description": "File suffixes that map to this type. Feeds the per-loader map and — for a leaf-capable type — global bare-path inference."
         },
         {
           "name": "isValue",
@@ -149,36 +182,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Whether the catalog leaf is a deferred AssetRef (value kind). Defaults to seamless === undefined."
-        },
-        {
-          "name": "kind",
-          "signature": "kind: keyof AssetDefinitions",
-          "signatureTokens": [
-            {
-              "text": "kind",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "keyof",
-              "kind": "keyword"
-            },
-            {
-              "text": " ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "AssetDefinitions",
-              "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "The AssetDefinitions key this type registers under."
+          "description": "Whether the catalog leaf is a deferred AssetRef (value type). Defaults to seamless === undefined."
         },
         {
           "name": "seamless",
@@ -215,11 +219,36 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Seamless placeholder adapter for a resource kind that heals in place."
+          "description": "Seamless placeholder adapter for a resource type that heals in place."
+        },
+        {
+          "name": "storageName",
+          "signature": "storageName?: string",
+          "signatureTokens": [
+            {
+              "text": "storageName",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Optional per-type IDB namespace for context.fetchX() calls made by this binding's handler. Defaults to the shared __ctx_binary/__ctx_text/__ctx_json namespace."
         },
         {
           "name": "type",
-          "signature": "type: AssetConstructor<Result>",
+          "signature": "type: keyof AssetDefinitions",
           "signatureTokens": [
             {
               "text": "type",
@@ -230,25 +259,21 @@
               "kind": "punctuation"
             },
             {
-              "text": "AssetConstructor",
-              "kind": "type"
+              "text": "keyof",
+              "kind": "keyword"
             },
             {
-              "text": "<",
+              "text": " ",
               "kind": "punctuation"
             },
             {
-              "text": "Result",
+              "text": "AssetDefinitions",
               "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "The runtime constructor the produced asset is an instance of."
+          "description": "The AssetDefinitions key this type registers under."
         }
       ],
       "paragraphs": [],

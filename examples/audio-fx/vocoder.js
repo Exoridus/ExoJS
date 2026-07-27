@@ -30,7 +30,7 @@ class VocoderScene extends Scene {
             // phrase.asset is a widened `string` (not a path literal), so the
             // path-only get() overload can't infer Sound from the extension —
             // use the explicit Sound token form.
-            this.phrases.set(phrase.key, this.loader.get(Asset.kind('sound', phrase.asset)));
+            this.phrases.set(phrase.key, this.loader.get(Asset.type('sound', phrase.asset)));
         }
         this.vocoder = new VocoderEffect({ modulator: this.modulatorBus, numBands: 16, wet: 1 });
         app.audio.sound.addEffect(this.vocoder);

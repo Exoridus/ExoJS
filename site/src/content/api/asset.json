@@ -29,11 +29,32 @@
       "title": "Properties",
       "members": [
         {
-          "name": "kind",
-          "signature": "kind: keyof AssetDefinitions",
+          "name": "source",
+          "signature": "source: string",
           "signatureTokens": [
             {
-              "text": "kind",
+              "text": "source",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "type",
+          "signature": "type: keyof AssetDefinitions",
+          "signatureTokens": [
+            {
+              "text": "type",
               "kind": "name"
             },
             {
@@ -51,27 +72,6 @@
             {
               "text": "AssetDefinitions",
               "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
-        },
-        {
-          "name": "source",
-          "signature": "source: string",
-          "signatureTokens": [
-            {
-              "text": "source",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "string",
-              "kind": "keyword"
             }
           ],
           "params": [],

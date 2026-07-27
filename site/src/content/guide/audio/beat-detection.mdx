@@ -20,7 +20,7 @@ The detector taps a live audio source — an `AudioBus`, a `Voice`, an `AudioNod
 import { Asset, AudioStream } from '@codexo/exojs';
 import { BeatDetector } from '@codexo/exojs-audio-fx';
 
-const track = await loader.load(Asset.kind('music', 'audio/track.ogg'));
+const track = await loader.load(Asset.type('music', 'audio/track.ogg'));
 this.app.audio.play(track, { loop: true });
 
 const detector = new BeatDetector();

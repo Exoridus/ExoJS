@@ -8,18 +8,18 @@ import { loadLdtkMap } from './loadLdtkMap';
  * Declarative asset binding for {@link LdtkMap}.
  *
  * Claims the `ldtk` file extension so that:
- * - `loader.load(LdtkMap, 'world.ldtk')` — returns the parsed
+ * - `loader.load(Asset.type('ldtkMap', 'world.ldtk'))` — returns the parsed
  *   {@link LdtkMap} with all levels pre-converted to runtime
  *   {@link import('@codexo/exojs-tilemap').TileMap}s.
  * - `loader.load('world.ldtk')` — auto-routed to `LdtkMap` via
- *   the `ExtensionTypeMap` augmentation in `public.ts`.
+ *   the `ExtensionKindMap` augmentation in `public.ts` (suffix → `'ldtkMap'`).
  *
  * Each loaded level's TileMap is accessible via {@link LdtkMap.levels} or
  * {@link LdtkMap.getLevelByName}.
  */
 export const ldtkMapBinding = defineAsset({
-  type: LdtkMap,
-  kind: 'ldtkMap',
+  ctor: LdtkMap,
+  type: 'ldtkMap',
   extensions: ['ldtk'],
   create() {
     return {

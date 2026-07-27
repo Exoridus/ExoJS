@@ -35,7 +35,7 @@ const app = new Application({ extensions: [particlesExtension] });
 class AudioReactiveScene extends Scene {
     async load(loader) {
         const [music, particleTexture] = await Promise.all([
-            loader.load(Asset.kind('music', 'audio/track.ogg')),
+            loader.load(Asset.type('music', 'audio/track.ogg')),
             loader.load('image/particle.png'),
         ]);
         this.music = music;

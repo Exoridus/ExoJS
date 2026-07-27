@@ -22,7 +22,7 @@ class TempoTrackingScene extends Scene {
         const { width, height } = app.canvas;
         const marginX = width * 0.08;
         // AudioStream has no seamless adapter — await it explicitly.
-        const track = await this.loader.load(Asset.kind('music', 'audio/demo-loop-main.ogg'));
+        const track = await this.loader.load(Asset.type('music', 'audio/demo-loop-main.ogg'));
         this.music = track;
         this.detector = new BeatDetector();
         this.detector.source = app.audio.music;

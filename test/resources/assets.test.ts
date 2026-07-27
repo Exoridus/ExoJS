@@ -11,7 +11,7 @@ import { Assets } from '#resources/Assets';
 describe('Assets', () => {
   test('materializes plain configs into meta-stamped handle-hybrid leaves, exposed as direct properties and via entries', () => {
     const bag = new Assets({
-      logo: { kind: 'texture', source: '/logo.png' },
+      logo: { type: 'texture', source: '/logo.png' },
     });
 
     // The leaf IS a usable placeholder resource (heals in place once adopted),
@@ -23,14 +23,14 @@ describe('Assets', () => {
 
   test('carries extra config fields into the leaf meta opts', () => {
     const bag = new Assets({
-      logo: { kind: 'texture', source: '/logo.png', samplerOptions: { minFilter: 'nearest' } },
+      logo: { type: 'texture', source: '/logo.png', samplerOptions: { minFilter: 'nearest' } },
     });
 
     expect(_readMeta(bag.logo)).toEqual({ kind: 'texture', src: '/logo.png', opts: { samplerOptions: { minFilter: 'nearest' } } });
   });
 
   test('converts an already-constructed Asset into a fresh handle-hybrid leaf (no longer passed through by reference)', () => {
-    const existing = new Asset({ kind: 'texture', source: '/shared.png' });
+    const existing = new Asset({ type: 'texture', source: '/shared.png' });
     const bag = new Assets({ logo: existing });
 
     // Pre-1.0 breaking change: a catalog value is always materialized as a leaf.
@@ -41,7 +41,7 @@ describe('Assets', () => {
   });
 
   test('rejects a definition that defines a reserved "entries" key', () => {
-    expect(() => new Assets({ entries: { kind: 'texture', source: '/x.png' } } as never)).toThrow(/reserved/);
+    expect(() => new Assets({ entries: { type: 'texture', source: '/x.png' } } as never)).toThrow(/reserved/);
   });
 });
 
@@ -58,10 +58,10 @@ describe('Assets.from bare-string inference', () => {
     expect(Assets.from({ level: 'levels/1.json' }).level).toBeInstanceOf(AssetRef);
   });
   it('throws a guiding error for an unregistered suffix', () => {
-    expect(() => Assets.from({ x: 'a/b.zzz' })).toThrow(/no asset kind|X\.of\(\)/);
+    expect(() => Assets.from({ x: 'a/b.zzz' })).toThrow(/no asset type|Asset\.type\(\)/);
   });
   it('still accepts explicit configs (existing form) unchanged', () => {
-    expect(Assets.from({ ship: { kind: 'texture', source: 's.png' } }).ship).toBeInstanceOf(Texture);
+    expect(Assets.from({ ship: { type: 'texture', source: 's.png' } }).ship).toBeInstanceOf(Texture);
   });
 });
 

@@ -30,7 +30,7 @@ class BeatSyncPulseScene extends Scene {
         const { width, height } = app.canvas;
 
         // AudioStream has no seamless adapter — await it explicitly.
-        const track = await this.loader.load(Asset.kind('music', 'audio/demo-loop-main.ogg'));
+        const track = await this.loader.load(Asset.type('music', 'audio/demo-loop-main.ogg'));
         this.music = track;
         this.sprite = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(width / 2, height / 2);
 

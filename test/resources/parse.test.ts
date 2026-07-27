@@ -45,7 +45,7 @@ describe('parse post-load transform', () => {
 
     const assets = Assets.from({
       config: {
-        kind: 'json',
+        type: 'json',
         source: 'c.json',
         parse: (raw): Config => ({ hp: (raw as { hp: number }).hp, label: `hp:${(raw as { hp: number }).hp}` }),
       },
@@ -62,9 +62,9 @@ describe('parse post-load transform', () => {
     const loader = createCoreLoader();
 
     const assets = Assets.from({
-      good: { kind: 'json', source: 'c.json', parse: (raw): Config => ({ hp: (raw as { hp: number }).hp, label: 'ok' }) },
+      good: { type: 'json', source: 'c.json', parse: (raw): Config => ({ hp: (raw as { hp: number }).hp, label: 'ok' }) },
       bad: {
-        kind: 'json',
+        type: 'json',
         source: 'c.json',
         parse: (): Config => {
           throw new Error('bad parse');

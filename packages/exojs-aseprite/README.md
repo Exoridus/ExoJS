@@ -16,7 +16,8 @@ npm install @codexo/exojs @codexo/exojs-aseprite
 
 ## What this package provides
 
-- `AsepriteSheet` — parsed sprite sheet; the result of `loader.load(AsepriteSheet, url)`. Exposes
+- `AsepriteSheet` — parsed sprite sheet; the result of
+  `loader.load(Asset.type('asepriteSheet', url))`. Exposes
   the underlying `spritesheet`, a `clips` map (one `AnimatedSpriteClipDefinition` per frame tag),
   and `createAnimatedSprite()` for a ready-to-play `AnimatedSprite`
 - `asepriteExtension` — extension descriptor registering the Aseprite asset binding
@@ -31,12 +32,12 @@ Register the extension, load an Aseprite JSON export, and create an animated spr
 fetches the JSON, resolves and loads the packed texture, and builds one clip per frame tag:
 
 ```ts
-import { Application } from '@codexo/exojs';
+import { Application, Asset } from '@codexo/exojs';
 import { AsepriteSheet, asepriteExtension } from '@codexo/exojs-aseprite';
 
 const app = new Application({ extensions: [asepriteExtension] });
 
-const sheet = await app.loader.load(AsepriteSheet, 'sprites/hero.aseprite.json');
+const sheet = await app.loader.load(Asset.type('asepriteSheet', 'sprites/hero.aseprite.json'));
 
 const sprite = sheet.createAnimatedSprite();
 sprite.play('run'); // 'run' is an Aseprite frame-tag name

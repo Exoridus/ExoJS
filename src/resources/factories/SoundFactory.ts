@@ -54,7 +54,7 @@ export class SoundFactory extends AbstractAssetFactory<Sound> {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
 
-      throw new Error(`Failed to decode audio data: ${message} (if loaded with the wrong Asset.kind, this file may not be an audio format at all).`, {
+      throw new Error(`Failed to decode audio data: ${message} (if loaded with the wrong Asset.type, this file may not be an audio format at all).`, {
         cause: error,
       });
     }

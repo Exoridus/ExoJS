@@ -25,11 +25,11 @@ The loader offers several forms. Pick the smallest one that covers your case:
 | Form | Best for |
 |------|----------|
 | `loader.load('hero.png')` | One asset, path doubles as its identity — no alias needed |
-| `Asset.kind('texture', path)` / `Asset.kind('sound', path)` / `Asset.kind<T>('json', path)` | The path is computed at runtime (not a literal), or you want an explicit type |
+| `Asset.type('texture', path)` / `Asset.type('sound', path)` / `Asset.type<T>('json', path)` | The path is computed at runtime (not a literal), or you want an explicit type |
 | `Assets.from({ hero: 'hero.png', … })` | A reusable, named group of assets shared across scenes |
-| `loader.load({ hero: { kind: 'texture', … }, … })` | Mixed types in one call, config objects with type-specific options |
+| `Assets.from({ hero: 'hero.png', music: Asset.type('music', path) })` | Mixed types and type-specific options in one catalog |
 
-When in doubt, start with a bare path string. Reach for `Assets.from` when the same group of assets is referenced from more than one place, and `X.of(...)` whenever the path isn't a string literal.
+When in doubt, start with a bare path string. Reach for `Assets.from` when assets belong together, and `Asset.type(...)` whenever the path isn't a string literal or the type should be explicit.
 
 <Callout type="hint" title="Load different types together, not one await at a time">
 Awaiting loads sequentially makes each one wait for the previous download to finish. Group independent `loader.load(...)` calls in a single `Promise.all` so unrelated resource types fetch concurrently.
@@ -46,7 +46,7 @@ async load(loader) {
 }
 ```
 
-There's no separate alias step: call `loader.get('image/hero.png')` again anywhere later — same string, same `Texture` instance. `Texture`, `Sound`, and the data tokens (`Json`, `TextAsset`, `CsvAsset`, …) resolve this way from their file extension. Types that can't be inferred from a path (`AudioStream`, `Video`, `BmFont`, `FontAsset`, …) need an explicit token — see [`X.of(...)`](#dynamic-paths-and-non-seamless-types) below.
+There's no separate alias step: call `loader.get('image/hero.png')` again anywhere later — same string, same `Texture` instance. Leaf-capable types such as `texture`, `sound`, `json`, and `text` resolve this way from their file extension. Types that can't be inferred from a path (`music`, `video`, `bmFont`, `font`, …) need an explicit descriptor — see [`Asset.type(...)`](#dynamic-paths-and-non-seamless-types) below.
 
 ## Homogeneous batch
 
@@ -66,30 +66,29 @@ The `loader.basePath` option in `ApplicationOptions` prepends a base prefix to a
 
 Because the path is the identity, `loader.get('image/hero.png')` returns the very same `Texture` instance from anywhere else in your code — `init`, a later scene, a system — as long as the string matches.
 
-<Callout type="hint" title="get() never throws for seamless types">
-For `Texture`, `Sound`, and the data tokens, `loader.get(...)` always returns synchronously — even before the fetch finishes. Ask for a path you haven't loaded yet and you get a placeholder handle back immediately, which then heals in place once the network request resolves. Check `.ready` / `.state` (see [Status channel](#status-channel-instead-of-throwing) below) instead of an existence check or try/catch.
+<Callout type="hint" title="get() returns synchronously for a valid leaf type">
+For a registered seamless or value suffix, `loader.get(...)` returns synchronously — even before the fetch finishes. Ask for a valid path you haven't loaded yet and you get a placeholder handle/ref immediately, which then heals once the network request resolves. Invalid input or a missing type/handler still throws synchronously. Check `.ready` / `.state` for asynchronous fetch outcomes (see [Status channel](#status-channel-instead-of-throwing) below).
 </Callout>
 
 ## Dynamic paths and non-seamless types
 
-A bare string only works for a *literal* path — the type is inferred at compile time from the extension. When the path is computed at runtime, or the type can't be inferred from a path at all, use the type's `X.of(...)` factory:
+A bare string only works for a *literal* path — the type is inferred at compile time from the extension. When the path is computed at runtime, or the type can't be inferred from a path at all, use the canonical `Asset.type(...)` descriptor:
 
 ```ts
-import { Asset, Texture, AudioStream } from '@codexo/exojs';
+import { Asset } from '@codexo/exojs';
 
-// Dynamic path — not a string literal, so it needs an explicit token
+// Dynamic path — not a string literal, so it needs an explicit type
 async _changeLevel(levelName: string) {
-    const bg = await this.app.loader.load(Asset.kind('texture', `image/levels/${levelName}.png`));
+    const bg = await this.app.loader.load(Asset.type('texture', `image/levels/${levelName}.png`));
     this.background.setTexture(bg);
 }
 
-// AudioStream, Video, BmFont, FontAsset, ImageAsset don't have a bare-path
-// form at all — they always need .of(), even for a literal path
-const music = await loader.load(Asset.kind('music', 'audio/theme.ogg'));
+// Non-leaf types do not have a bare-path form, even for a literal path
+const music = await loader.load(Asset.type('music', 'audio/theme.ogg'));
 ```
 
-<Callout type="pitfall" title="Never call get(X.of(...))">
-`X.of(...)` produces a loadable reference, and only `loader.load(...)` accepts it. `loader.get(X.of(...))` is not a supported call — for a literal path use `loader.get('literal.png')` directly; for a dynamic path, `await loader.load(X.of(path))` and hold onto the resolved value instead of trying to `get()` it back out synchronously.
+<Callout type="hint" title="get(Asset.type(...)) is the dynamic-path escape hatch">
+For seamless and value types, `loader.get(Asset.type(type, dynamicPath))` returns a handle or `AssetRef` immediately and starts the asynchronous load. Capture that returned object: each descriptor call creates a fresh leaf, although the backend fetch is still deduplicated. Non-leaf types have no synchronous handle and must use `await loader.load(Asset.type(...))`.
 </Callout>
 
 ## Multiple resource types in parallel
@@ -100,7 +99,7 @@ When a scene needs different asset types, load them in parallel with `Promise.al
 async load(loader) {
     [this.sky, this.ambient, this.coin, this.jump, this.levels] = await Promise.all([
         loader.load('image/sky.png'),
-        loader.load(Asset.kind('music', 'audio/ambient.ogg')),
+        loader.load(Asset.type('music', 'audio/ambient.ogg')),
         loader.load('audio/coin.wav'),
         loader.load('audio/jump.wav'),
         loader.load('data/levels.json'),
@@ -116,22 +115,18 @@ Wrapping the calls in `Promise.all` lets unrelated asset categories load in para
 
 For value assets such as `Json` (and `TextAsset`, `CsvAsset`, and the other data tokens), `loader.load(...)` resolves directly to the parsed value. `loader.get(...)` on the same path hands back a lightweight `AssetRef` instead — read its `.value` once `.ready` is `true` (see below).
 
-## Mixed asset map
+## Mixed asset catalog
 
-To load different types in a single call and receive a single typed result object, pass an inline config map — a plain object whose values each have a `type` string:
+Build mixed groups with `Assets.from(...)`. This is the canonical catalog API; the old inline-record `loader.load({ alias: config })` call shape has been removed.
 
 ```js
+const SceneAssets = Assets.from({
+    hero: 'image/hero.png',
+    click: Asset.type('sound', 'audio/click.ogg'),
+});
+
 async load(loader) {
-    const { hero, click } = await loader.load({
-        hero: {
-            type:   'texture',
-            source: 'image/hero.png',
-        },
-        click: {
-            type:   'sound',
-            source: 'audio/click.ogg',
-        },
-    });
+    const { hero, click } = await loader.load(SceneAssets);
 
     this.hero  = new Sprite(hero);
     this.click = click;
@@ -145,12 +140,12 @@ The result is an object whose keys match the input and whose values are the reso
 For assets used in multiple scenes, define a named catalog with `Assets.from`:
 
 ```ts
-import { Asset, Assets, AudioStream, Json } from '@codexo/exojs';
+import { Asset, Assets } from '@codexo/exojs';
 
 export const TitleAssets = Assets.from({
-    logo:   'sprites/logo.png',                        // bare path → Texture
-    music:  Asset.kind('music', 'audio/title.ogg'),          // non-seamless → needs .of()
-    config: Asset.kind<{ startLevel: string }>('json', 'data/config.json'),
+    logo:   'sprites/logo.png',                                  // bare path → Texture
+    music:  Asset.type('music', 'audio/title.ogg'),               // explicit non-leaf type
+    config: Asset.type<{ startLevel: string }>('json', 'data/config.json'),
 });
 ```
 
@@ -173,13 +168,13 @@ TitleAssets.music;  // AudioStream
 TitleAssets.config; // AssetRef<{ startLevel: string }>
 ```
 
-`Assets` also exposes a `.entries` property for spread composition — useful when you want to merge several asset groups into a single load call without nesting them:
+`Assets` also exposes an `.entries` record for iteration and inspection. To load several existing catalogs concurrently, keep their types intact and start both queues:
 
 ```js
-await loader.load({
-    ...CommonAssets.entries,
-    ...TitleAssets.entries,
-});
+await Promise.all([
+    loader.load(CommonAssets),
+    loader.load(TitleAssets),
+]);
 ```
 
 The key `'entries'` is reserved and will throw if you try to use it as an asset name inside an `Assets` container.
@@ -337,7 +332,7 @@ class BootScene extends Scene {
 
 ## Status channel instead of throwing
 
-For `Texture`, `Sound`, and the data tokens, the path (or `X.of(...)` reference) *is* the identity — there's no separate alias to register or forget. Every handle and `AssetRef` exposes the same small status contract:
+For leaf-capable types, the path (or an `Asset.type(...)` descriptor) identifies the loaded payload — there's no separate alias to register or forget. Every handle and `AssetRef` exposes the same small status contract:
 
 ```ts
 interface AssetStatus {
@@ -348,7 +343,7 @@ interface AssetStatus {
 ```
 
 ```js
-const tex = loader.get('hero.png'); // synchronous, never throws
+const tex = loader.get('hero.png'); // synchronous for a valid, registered suffix
 
 if (tex.ready) {
     // draw it
@@ -359,13 +354,15 @@ if (tex.ready) {
 await tex.loaded; // Promise<this> — resolves once ready, rejects on failure
 ```
 
-The same `.state` / `.ready` / `.error` / `.loaded` contract applies to `AssetRef` (from `Json`, `TextAsset`, and the other value tokens) — read `.value` once `.ready` is `true`:
+The same `.state` / `.ready` / `.error` / `.loaded` contract applies to `AssetRef` values such as JSON or text — read `.value` once `.ready` is `true`:
 
 ```js
 const config = loader.get('data/config.json'); // AssetRef<unknown>
 await config.loaded;
 console.log(config.value.startLevel);
 ```
+
+`get()` returns before network work settles. A later load failure moves the handle/ref to `'failed'`, rejects its `.loaded` promise, and is reported through `loader.onError`; calling `get()` again retries and can heal that same source-keyed handle. By contrast, the awaitable returned by `load()` rejects at the call site on failure and reports the same `Error` through `loader.onError`. Invalid input or a missing type/handler is a synchronous configuration error for either API.
 
 `loader.unload(...)` releases a handle's claim; the object itself keeps its identity and heals back to `'loading'` if you `get()` the same source again:
 
@@ -374,7 +371,7 @@ loader.unload(TitleAssets); // releases every leaf in the catalog
 ```
 
 <Callout type="hint" title="Non-seamless types have no placeholder">
-Types that aren't seamless — `AudioStream`, `Video`, `BmFont`, `FontAsset`, and custom types — have no placeholder to hand back, so there's nothing to `get()` speculatively. Load them by reference and hold onto the resolved value: `const music = await loader.load(Asset.kind('music', 'audio/theme.ogg'))`. There is no `has()`/`peek()` guard — for a seamless handle read `.ready` / `.state`; for a non-seamless resource, `await` the load (or its returned handle's `.loaded` promise) before you use it.
+Types that aren't seamless — `AudioStream`, `Video`, `BmFont`, `FontAsset`, and custom types — have no placeholder to hand back, so there's nothing to `get()` speculatively. Load them by reference and hold onto the resolved value: `const music = await loader.load(Asset.type('music', 'audio/theme.ogg'))`. There is no `has()`/`peek()` guard — for a seamless handle read `.ready` / `.state`; for a non-seamless resource, `await` the load (or its returned handle's `.loaded` promise) before you use it.
 </Callout>
 
 ## When are resources available?
@@ -388,12 +385,12 @@ The lifecycle guarantees that:
 
 ## Loading on demand
 
-`loader.load(...)` works any time, not just inside the `load` hook. A computed path isn't a string literal, so use `Asset.kind('texture', ...)`:
+`loader.load(...)` works any time, not just inside the `load` hook. A computed path isn't a string literal, so use `Asset.type('texture', ...)`:
 
 ```js
 async _changeLevel(levelName) {
     const bg = await this.app.loader.load(
-        Asset.kind('texture', `image/levels/${levelName}.png`)
+        Asset.type('texture', `image/levels/${levelName}.png`)
     );
     this.background.setTexture(bg);
 }
@@ -406,16 +403,16 @@ The frame loop continues running while the promise is pending.
 Split a large project into per-phase catalogs and load each one as the player reaches it, instead of fetching everything up front. A catalog is just an `Assets.from(...)` group (see [Reusable asset references](#reusable-asset-references)):
 
 ```ts
-import { Asset, Assets, AudioStream, Json } from '@codexo/exojs';
+import { Asset, Assets } from '@codexo/exojs';
 
 export const MenuAssets = Assets.from({
     logo:  'image/logo.png',
-    music: Asset.kind('music', 'audio/theme.ogg'),
+    music: Asset.type('music', 'audio/theme.ogg'),
 });
 
 export const Level1Assets = Assets.from({
     tiles: 'image/level-1/tiles.png',
-    map:   Asset.kind<{ spawn: [number, number] }>('json', 'data/level-1.json'),
+    map:   Asset.type<{ spawn: [number, number] }>('json', 'data/level-1.json'),
 });
 ```
 
@@ -536,36 +533,30 @@ All three share one async interface, so swapping `WebStorageStore` for `IndexedD
 
 ## Custom asset types (advanced)
 
-Teach the loader about a domain-specific resource with `defineAsset`. One descriptor feeds three consumers: the loader-local handler, the kind's placeholder strategy, and — for leaf-capable kinds — bare-path inference.
+Teach the loader about a domain-specific resource with `defineAsset`. One descriptor feeds three consumers: the loader-local handler, the type's placeholder strategy, and — for leaf-capable types — bare-path inference.
 
-First extend `AssetDefinitions` via declaration merging so the type system knows the new kind, then call `defineAsset`:
+First extend `AssetDefinitions` via declaration merging so the type system knows the new type, then call `defineAsset`:
 
 ```ts
-import { Asset, defineAsset } from '@codexo/exojs';
+import { defineAsset } from '@codexo/exojs';
 import type { AssetHandler } from '@codexo/exojs/extensions';
 
 // 1. The resource your handler produces.
 export class HeightField {
     public constructor(public readonly rows: readonly number[][]) {}
-
-    // Annotation static — how the type is loaded by reference (a dynamic path,
-    // per-asset options, or a key inside `Assets.from({...})`).
-    public static of(source: string): Asset<HeightField> {
-        return new Asset({ kind: 'heightField', source }) as unknown as Asset<HeightField>;
-    }
 }
 
-// 2. Register the kind with the type system (declaration merging).
+// 2. Register the type with the type system (declaration merging).
 declare module '@codexo/exojs' {
     interface AssetDefinitions {
         heightField: { resource: HeightField; config: { source: string } };
     }
 }
 
-// 3. Bind the kind to a loader-local handler. Returns an AssetBinding.
+// 3. Bind the type to a loader-local handler. Returns an AssetBinding.
 export const heightFieldBinding = defineAsset({
-    type:    HeightField,
-    kind:    'heightField',
+    ctor:    HeightField,
+    type:    'heightField',
     isValue: false, // a resource loaded by reference — see the note below
     create() {
         return {
@@ -597,19 +588,19 @@ Install the binding by passing it on an [`Extension`](/ExoJS/en/api/extension/) 
 
 ```js
 // Dynamic path or explicit reference
-const field = await loader.load(HeightField.of('maps/level-1.hf'));
+const field = await loader.load(Asset.type('heightField', 'maps/level-1.hf'));
 
 // Or grouped in a catalog
-const World = Assets.from({ level1: HeightField.of('maps/level-1.hf') });
+const World = Assets.from({ level1: Asset.type('heightField', 'maps/level-1.hf') });
 ```
 
 <Callout type="hint" title="Bare-path inference is opt-in">
-`HeightField.of(...)` always works. To *also* allow a bare `loader.load('maps/level-1.hf')` (extension-inferred), the kind must be **leaf-capable** — either a value kind (`isValue: true`) or a resource with a `seamless` adapter that heals in place — and it must declare its file suffixes. Register them on the descriptor and mirror the suffix→kind mapping in the type system:
+`Asset.type('heightField', ...)` always works. To *also* allow a bare `loader.load('maps/level-1.hf')` (extension-inferred), the type must be **leaf-capable** — either a value type (`isValue: true`) or a resource with a `seamless` adapter that heals in place — and it must declare its file suffixes. Register them on the descriptor and mirror the suffix→type mapping in the type system:
 
 ```ts no-check
 export const heightFieldBinding = defineAsset({
-    type: HeightField,
-    kind: 'heightField',
+    ctor: HeightField,
+    type: 'heightField',
     seamless: heightFieldSeamlessAdapter, // heals in place, like Texture/Sound
     extensions: ['hf'],
     create() { /* … */ },
@@ -620,7 +611,7 @@ declare module '@codexo/exojs' {
 }
 ```
 
-The built-in `texture` and `sound` bindings are the reference for a seamless resource; `json` / `text` for a value kind.
+The built-in `texture` and `sound` bindings are the reference for a seamless resource; `json` / `text` for a value type.
 </Callout>
 
 ## Examples
