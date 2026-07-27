@@ -64,11 +64,16 @@ type _LdtkGetIsRef = Expect<Equal<typeof ldtkLeaf, AssetRef<LdtkMap>>>;
 // The same contract on the descriptor path, which was already reachable before
 // bare paths were (`Asset.type(...)` brands a value kind as `ValueAsset<T>`, and
 // both `get(descriptor)` and a catalog leaf resolve it to `AssetRef<T>`).
+// Unlike the bare-path results above, a descriptor leaf is minted by `createLeaf`
+// and therefore comes back BRANDED — still an `AssetRef` for a value kind.
 const tiledFromDescriptor = loader.get(Asset.type('tiledMap', 'world.tmj'));
-type _TiledDescriptorIsRef = Expect<Equal<typeof tiledFromDescriptor, AssetRef<TiledMap>>>;
+type _TiledDescriptorIsRef = Expect<Equal<typeof tiledFromDescriptor, CatalogValueLeaf<TiledMap>>>;
+const tiledPlainRef: AssetRef<TiledMap> = tiledFromDescriptor;
 
 const asepriteFromDescriptor = loader.get(Asset.type('asepriteSheet', 'hero.aseprite.json'));
-type _AsepriteDescriptorIsRef = Expect<Equal<typeof asepriteFromDescriptor, AssetRef<AsepriteSheet>>>;
+type _AsepriteDescriptorIsRef = Expect<Equal<typeof asepriteFromDescriptor, CatalogValueLeaf<AsepriteSheet>>>;
+
+void tiledPlainRef;
 
 const catalog = Assets.from({ map: Asset.type('tileMap', 'world.tmj'), sheet: Asset.type('asepriteSheet', 'hero.aseprite.json') });
 type _CatalogLeavesAreRefs = Expect<Equal<(typeof catalog)['map'], CatalogValueLeaf<TileMap>>>;

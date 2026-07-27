@@ -651,14 +651,18 @@ export class Loader {
    * does): a value-type descriptor (`Asset.type<T>('json', …)`) returns
    * `AssetRef<T>` — even for an object payload — while a resource-type descriptor
    * returns the resource itself, so the type always matches the runtime value.
+   * Both come back BRANDED, mirroring the `_assetMeta` stamp `createLeaf` applies,
+   * so the returned leaf can be fed straight back into a single-leaf `load(…)`.
    *
    * Unlike bare-path `get('x.png')`, this form is **not instance-deduped by
    * source**: each call builds a fresh leaf, so repeated `get(Asset.type(type, sameSrc))`
    * accumulates distinct handles (all healing to the same deduped backend
    * payload). It is the dynamic-source escape hatch — capture the handle once.
    */
-  public get<T>(asset: ValueAsset<T>): AssetRef<T>;
-  public get<T>(asset: Asset<T>): T;
+  // A materialized VALUE LEAF resolves exactly like a value descriptor — it is
+  // adopted and handed back unchanged — so both share one signature.
+  public get<T>(asset: ValueAsset<T> | CatalogValueLeaf<T>): CatalogValueLeaf<T>;
+  public get<T>(asset: Asset<T>): CatalogResourceLeaf<T>;
 
   /**
    * Adopts a single handle-hybrid leaf (an `Assets.from()` property) and returns
@@ -666,11 +670,10 @@ export class Loader {
    *
    * Matches on the catalog-leaf brand, so only a MATERIALIZED leaf is accepted;
    * a raw resource instance has no `_assetMeta` stamp and is rejected here as it
-   * is at runtime.
+   * is at runtime. The brand rides along on the result: the returned leaf is the
+   * very object that was passed in, stamp included, so it stays re-loadable.
    */
-  public get<T extends object>(leaf: CatalogResourceLeaf<T>): T;
-  /** Adopts a single value leaf and returns the ref itself — its payload arrives on the ref. */
-  public get<T>(leaf: CatalogValueLeaf<T>): AssetRef<T>;
+  public get<T extends object>(leaf: CatalogResourceLeaf<T>): CatalogResourceLeaf<T>;
   public get(input: string | object, options?: unknown): unknown {
     return this._getClaimed(this._rootClaimer, input, options);
   }

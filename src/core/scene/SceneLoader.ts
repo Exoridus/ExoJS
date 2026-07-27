@@ -3,7 +3,6 @@ import type { Destroyable } from '#core/types';
 import type { Asset, ValueAsset } from '#resources/Asset';
 import type { CatalogEntry, KindByPath, LeafForPath, ResourceForKind } from '#resources/AssetDefinitions';
 import type { CatalogResourceLeaf, CatalogValueLeaf } from '#resources/assetMeta';
-import type { AssetRef } from '#resources/AssetRef';
 import type { Assets, InferAssetsProperties } from '#resources/Assets';
 import type { InferLoadedMap, Loader, LoadOptions } from '#resources/Loader';
 import type { LoadingQueue } from '#resources/LoadingQueue';
@@ -28,15 +27,15 @@ export class SceneLoader implements Destroyable {
   // handle, a value suffix a stable AssetRef. Leaf-capable suffixes only.
   public get<S extends string>(path: [KindByPath<S>] extends [never] ? never : S, options?: unknown): LeafForPath<S>;
   // Seamless/value access from an `Asset.type()` descriptor (mirrors Loader.get(asset)):
-  // a value-kind descriptor returns AssetRef<T>, a resource-kind descriptor the resource.
-  // A materialized VALUE LEAF resolves the same way, so both share one signature.
-  public get<T>(asset: ValueAsset<T> | CatalogValueLeaf<T>): AssetRef<T>;
-  public get<T>(asset: Asset<T>): T;
+  // a value-kind descriptor returns a value leaf, a resource-kind descriptor a resource
+  // leaf. A materialized VALUE LEAF resolves the same way, so both share one signature.
+  public get<T>(asset: ValueAsset<T> | CatalogValueLeaf<T>): CatalogValueLeaf<T>;
+  public get<T>(asset: Asset<T>): CatalogResourceLeaf<T>;
   // Adopts an Assets catalog under the scene scope (mirrors Loader.get(catalog)).
   public get<M extends Record<string, CatalogEntry>>(catalog: Assets<M>): InferAssetsProperties<M>;
   // Adopts a single handle-hybrid leaf under the scene scope (mirrors Loader.get(leaf)).
   // Brand-matched: only a materialized catalog leaf, never a raw resource.
-  public get<T extends object>(leaf: CatalogResourceLeaf<T>): T;
+  public get<T extends object>(leaf: CatalogResourceLeaf<T>): CatalogResourceLeaf<T>;
   public get(input: string | object, options?: unknown): unknown {
     return this._loader._getClaimed(this._scope, input, options);
   }
