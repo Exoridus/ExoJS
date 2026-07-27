@@ -30,7 +30,7 @@ const myExtension: Extension = {
 Every field except `id` is optional, so the smallest possible extension is just an id. The three binding arrays are the interesting part:
 
 - **`renderers`** — a [`RendererBinding`](/ExoJS/en/api/extension/) maps one or more `Drawable` constructors to a renderer factory. This is the typesafe custom-renderer path (below).
-- **`assets`** — an `AssetBinding` maps an asset type and its lookup keys (file extensions, config-map type names) to a loader-local `AssetHandler` factory. This is how `@codexo/exojs-tiled` teaches the `Loader` about `.tmj` files.
+- **`assets`** — an `AssetBinding` maps an asset constructor, its `AssetDefinitions` type, and optional file suffixes to a loader-local `AssetHandler` factory. This is how `@codexo/exojs-tiled` teaches the `Loader` about `.tmj` files.
 - **`serializers`** — a `SerializerBinding` maps a custom `SceneNode` type to a `NodeSerializer`, so your node type survives [`Scene.serialize`/`deserialize`](/ExoJS/en/guide/runtime/serialization-and-prefabs/).
 
 Bindings are **pure descriptors** — no active renderer, no GPU resources, no side effects until their `create(...)` is called once per backend/loader during `Application` construction.

@@ -76,26 +76,21 @@ extension uses.
 
 ## Loading a map
 
-Once the extension is active, load a `.tmj` map the same way you load any asset — by type token,
-by path, or by config-map. All three resolve to the same handler.
+Once the extension is active, load a `.tmj` map with an explicit descriptor or by path. Both
+resolve to the same handler.
 
 <Callout type="invalid" title="Only orthogonal Tiled JSON loads — the rest throw by design">
 XML (`.tmx`/`.tsx`), isometric or hexagonal orientations, collection-of-images tilesets, and `zstd` compression each raise a clear error rather than loading. Export an orthogonal JSON map (`.tmj`) with CSV, gzip, or zlib data. Infinite (chunked) maps **are** supported: `toTileMap()` converts each chunked layer to an unbounded runtime layer whose data streams in on demand via `getChunkSource()` — see the [Infinite maps](/ExoJS/en/guide/rendering/infinite-maps/) chapter.
 </Callout>
 
 ```js no-check
-import { TiledMap } from '@codexo/exojs-tiled';
+import { Asset } from '@codexo/exojs';
 
-// By type token (most explicit)
+// Explicit type
 const map = await loader.load(Asset.type('tiledMap', 'levels/forest.tmj'));
 
 // By path — the `.tmj` extension is registered, so the type is inferred
 const sameMap = await loader.load('levels/forest.tmj');
-
-// By config-map type name — the public `'tiledMap'` lookup
-const fromConfig = await loader.load({
-    level: { type: 'tiledMap', source: 'levels/forest.tmj' },
-});
 ```
 
 The handler fetches the JSON (cache-routed), validates it, then loads every tileset image it
@@ -362,7 +357,7 @@ These raise a clear error or are intentionally absent from this release:
 
 - **Package README:** [`@codexo/exojs-tiled`](https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tiled/README.md)
   — install, entry points, and the supported-format matrix.
-- **API reference:** the [`Loader`](/ExoJS/en/api/loader/) page documents `load(...)`, the
-  `.tmj` extension lookup, and the `'tiledMap'` config-map type name.
+- **API reference:** the [`Loader`](/ExoJS/en/api/loader/) page documents `load(...)`, explicit
+  `Asset.type(...)` descriptors, and the `.tmj` extension lookup.
 - **Extension model:** the [Particles](/ExoJS/en/guide/effects/particles/) chapter walks through
   the same explicit-vs-`/register` activation for the sibling renderer extension.

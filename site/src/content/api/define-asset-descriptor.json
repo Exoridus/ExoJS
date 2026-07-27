@@ -1,6 +1,6 @@
 {
   "title": "DefineAssetDescriptor",
-  "description": "One descriptor for a built-in asset type. Feeds three consumers from a single source: the per-Loader AssetBinding returned for `materializeAssetBindings`, the global kind→placeholder strategy, and the global suffix→kind inference.",
+  "description": "One descriptor for a built-in asset type. Feeds three consumers from a single source: the per-Loader AssetBinding returned for `materializeAssetBindings`, the global type→placeholder strategy, and the global suffix→type inference.",
   "symbol": "DefineAssetDescriptor",
   "kind": "interface",
   "subsystem": "resources",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "One descriptor for a built-in asset type. Feeds three consumers from a single source: the per-Loader AssetBinding returned for `materializeAssetBindings`, the global kind→placeholder strategy, and the global suffix→kind inference."
+        "One descriptor for a built-in asset type. Feeds three consumers from a single source: the per-Loader AssetBinding returned for `materializeAssetBindings`, the global type→placeholder strategy, and the global suffix→type inference."
       ],
       "importLine": "import { DefineAssetDescriptor } from '@codexo/exojs'",
       "sourceLink": null
@@ -157,7 +157,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "File suffixes that map to this type. Feeds the per-loader map and — for a leaf-capable kind — global bare-path inference."
+          "description": "File suffixes that map to this type. Feeds the per-loader map and — for a leaf-capable type — global bare-path inference."
         },
         {
           "name": "isValue",
@@ -182,7 +182,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Whether the catalog leaf is a deferred AssetRef (value kind). Defaults to seamless === undefined."
+          "description": "Whether the catalog leaf is a deferred AssetRef (value type). Defaults to seamless === undefined."
         },
         {
           "name": "seamless",
@@ -219,7 +219,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Seamless placeholder adapter for a resource kind that heals in place."
+          "description": "Seamless placeholder adapter for a resource type that heals in place."
         },
         {
           "name": "storageName",

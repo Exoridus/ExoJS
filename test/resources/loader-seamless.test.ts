@@ -397,15 +397,36 @@ describe('Loader seamless get (Texture)', () => {
     expect(errors).toEqual(['gone.png']);
   });
 
-  test('plain load() failures do NOT dispatch onError (legacy semantics unchanged)', async () => {
+  test('plain load() rejects and dispatches the same failure through onError exactly once', async () => {
     mockFetch404();
     const loader = createCoreLoader();
-    const errors: string[] = [];
+    const errors: Array<{ alias: string; error: Error }> = [];
 
-    loader.onError.add((_type, alias) => errors.push(alias));
+    loader.onError.add((_type, alias, error) => errors.push({ alias, error }));
 
-    await expect(loader.load('gone.png')).rejects.toThrow();
-    expect(errors).toEqual([]);
+    let rejected: unknown;
+    await loader.load('gone.png').catch(error => {
+      rejected = error;
+    });
+
+    expect(rejected).toBeInstanceOf(Error);
+    expect(errors).toEqual([{ alias: 'gone.png', error: rejected }]);
+  });
+
+  test('an explicit Asset.type() load rejects and also dispatches onError', async () => {
+    mockFetch404();
+    const loader = createCoreLoader();
+    const errors: Array<{ alias: string; error: Error }> = [];
+
+    loader.onError.add((_type, alias, error) => errors.push({ alias, error }));
+
+    let rejected: unknown;
+    await loader.load(Asset.type('texture', 'explicit-gone.png')).catch(error => {
+      rejected = error;
+    });
+
+    expect(rejected).toBeInstanceOf(Error);
+    expect(errors).toEqual([{ alias: 'explicit-gone.png', error: rejected }]);
   });
 
   test('a load()-initiated retry that fails again refreshes the handle error', async () => {

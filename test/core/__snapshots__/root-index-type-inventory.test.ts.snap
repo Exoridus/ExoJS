@@ -125,7 +125,6 @@ exports[`root index type-level export inventory > all exported symbols with kind
   "EnvelopeOptions: interface",
   "Extension: interface",
   "ExtensionKindMap: interface",
-  "ExtensionTypeMap: interface",
   "FadeSceneTransition: class",
   "Filter: class",
   "Flags: class",

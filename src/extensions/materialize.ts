@@ -2,6 +2,7 @@ import type { Application } from '#core/Application';
 import type { SerializationRegistry } from '#core/serialization/SerializationRegistry';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { DrawableConstructor } from '#rendering/Renderer';
+import { normalizeExtension } from '#resources/extensionKindRegistry';
 import type { AssetConstructor } from '#resources/FactoryRegistry';
 import type { Loader } from '#resources/Loader';
 
@@ -52,6 +53,10 @@ export function materializeAssetBindings(loader: Loader, bindings: readonly Asse
       throw new Error(`An asset handler is already registered for ${binding.ctor.name}.`);
     }
 
+    if (binding.seamless !== undefined && loader._hasSeamlessAdapter(binding.ctor)) {
+      throw new Error(`A seamless adapter is already registered for ${binding.ctor.name}.`);
+    }
+
     for (const name of binding.typeNames ?? []) {
       if (seenNames.has(name) || loader.hasAssetType(name)) {
         throw new Error(`Asset type name "${name}" is already registered. Remove the conflicting binding.`);
@@ -61,7 +66,7 @@ export function materializeAssetBindings(loader: Loader, bindings: readonly Asse
     }
 
     for (const ext of binding.extensions ?? []) {
-      const key = ext.replace(/^\./, '').toLowerCase();
+      const key = normalizeExtension(ext);
 
       if (seenExts.has(key) || loader.hasExtension(key)) {
         throw new Error(`File extension ".${key}" is already mapped to an asset type. Remove the conflicting binding.`);

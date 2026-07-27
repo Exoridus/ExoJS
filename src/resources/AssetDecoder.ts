@@ -131,8 +131,8 @@ export class AssetDecoder {
    * Calls a handler-based custom asset loader and hands the result to the
    * `storeResource` callback.
    *
-   * Unlike {@link _fetch}, this does NOT automatically bypass caching — the
-   * handler controls caching by calling `context.fetchText` /
+   * This does NOT automatically bypass caching — the handler controls caching
+   * by calling `context.fetchText` /
    * `context.fetchArrayBuffer` / `context.fetchJson`, which route through
    * the loader's cache strategy.
    * @internal

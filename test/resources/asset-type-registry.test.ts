@@ -37,6 +37,19 @@ describe('AssetTypeRegistry', () => {
     expect(registry.getHandler(TypeA)).toBeDefined();
   });
 
+  test('bindings, explicit overrides, and lookups share one extension normalization rule', () => {
+    const registry = new AssetTypeRegistry();
+    const handler = { load: vi.fn(async () => ({})) };
+
+    registry.bindAsset({ ctor: TypeA, type: 'json', extensions: ['..MiXeD'] }, handler);
+
+    expect(registry.hasExtension('.mixed')).toBe(true);
+    expect(registry.resolveExtensionType('...MIXED')).toBe('json');
+
+    registry.registerType('....mixed', 'text');
+    expect(registry.resolveExtensionType('.mixed')).toBe('text');
+  });
+
   test('hasLoadable() reflects only bindAsset handler registration, not just any known constructor', () => {
     const registry = new AssetTypeRegistry();
     const handler = { load: vi.fn(async () => ({})) };
@@ -94,6 +107,21 @@ describe('AssetTypeRegistry', () => {
     registry.bindAsset({ ctor: TypeA, seamless: adapter as never }, handler);
 
     expect(registry.hasSeamlessAdapter(TypeA)).toBe(true);
+  });
+
+  test('bindAsset validates a seamless-adapter conflict before mutating any binding-owned map', () => {
+    const registry = new AssetTypeRegistry();
+    const adapter = { createPlaceholder: vi.fn(), stateOf: vi.fn(), begin: vi.fn(), fill: vi.fn(), fail: vi.fn(), evict: vi.fn() };
+    const handler = { load: vi.fn(async () => ({})) };
+
+    registry.registerSeamlessAdapter(TypeA, adapter as never);
+
+    expect(() => registry.bindAsset({ ctor: TypeA, typeNames: ['type-a'], extensions: ['ta'], seamless: adapter as never }, handler)).toThrow(
+      /seamless adapter is already registered/,
+    );
+    expect(registry.hasLoadable(TypeA)).toBe(false);
+    expect(registry.hasAssetType('type-a')).toBe(false);
+    expect(registry.hasExtension('ta')).toBe(false);
   });
 
   test('_key/_identityKey derive stable, distinct per-type-per-alias keys', () => {
@@ -157,7 +185,7 @@ describe('AssetTypeRegistry', () => {
     expect(registry.hasLoadable(TypeA)).toBe(false);
   });
 
-  test('bindAsset with a `type` writes its extensions into the registerType override table', () => {
+  test('bindAsset with a `type` records its extensions as the binding-declared default type', () => {
     _resetExtensionKindsForTest();
 
     const registry = new AssetTypeRegistry();
@@ -168,16 +196,60 @@ describe('AssetTypeRegistry', () => {
     expect(registry.resolveExtensionType('ldtk')).toBe('json');
   });
 
-  test('bindAsset throws when its `type` conflicts with an already-registered override, without mutating any state', () => {
+  test('bindAsset does NOT conflict with an existing registerType override — the override keeps winning', () => {
+    _resetExtensionKindsForTest();
+
     const registry = new AssetTypeRegistry();
     const handler = { load: vi.fn(async () => ({})) };
 
     registry.registerType('ldtk', 'text');
 
-    expect(() => registry.bindAsset({ ctor: TypeA, type: 'json', extensions: ['ldtk'] }, handler)).toThrow(/already registered/);
-    expect(registry.hasLoadable(TypeA)).toBe(false);
-    expect(registry.hasExtension('ldtk')).toBe(false);
+    expect(() => registry.bindAsset({ ctor: TypeA, type: 'json', extensions: ['ldtk'] }, handler)).not.toThrow();
+    expect(registry.hasLoadable(TypeA)).toBe(true);
+    expect(registry.hasExtension('ldtk')).toBe(true);
     expect(registry.resolveExtensionType('ldtk')).toBe('text');
+  });
+
+  test('a registerType override applied AFTER a binding still wins over the binding-declared type', () => {
+    _resetExtensionKindsForTest();
+
+    const registry = new AssetTypeRegistry();
+    const handler = { load: vi.fn(async () => ({})) };
+
+    registry.bindAsset({ ctor: TypeA, type: 'json', extensions: ['ldtk'] }, handler);
+
+    expect(registry.resolveExtensionType('ldtk')).toBe('json');
+    expect(() => registry.registerType('ldtk', 'text')).not.toThrow();
+    expect(registry.resolveExtensionType('ldtk')).toBe('text');
+    expect(registry._resolveTypeForPath('world.ldtk')).toBe('text');
+  });
+
+  test('the binding-declared type outranks the global default for the same suffix', () => {
+    _resetExtensionKindsForTest();
+    registerExtensionKind('ldtk', 'json'); // global default
+
+    const registry = new AssetTypeRegistry();
+    const handler = { load: vi.fn(async () => ({})) };
+
+    registry.bindAsset({ ctor: TypeA, type: 'text', extensions: ['ldtk'] }, handler);
+
+    expect(registry.resolveExtensionType('ldtk')).toBe('text');
+  });
+
+  test('the first binding owns a suffix and a second binding-declared default is rejected atomically', () => {
+    _resetExtensionKindsForTest();
+
+    const registry = new AssetTypeRegistry();
+    const handlerA = { load: vi.fn(async () => ({})) };
+    const handlerB = { load: vi.fn(async () => ({})) };
+
+    registry.bindAsset({ ctor: TypeA, type: 'json', extensions: ['shared'] }, handlerA);
+
+    expect(() => registry.bindAsset({ ctor: TypeB, type: 'text', extensions: ['shared'] }, handlerB)).toThrow(
+      'File extension ".shared" is already mapped to an asset type.',
+    );
+    expect(registry.resolveExtensionType('shared')).toBe('json');
+    expect(registry.hasLoadable(TypeB)).toBe(false);
   });
 });
 

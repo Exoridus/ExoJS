@@ -11,8 +11,8 @@ import { resolveKindByPath } from './extensionKindRegistry';
 
 /**
  * The handle-hybrid a catalog leaf materializes as, delegating to
- * {@link InferCatalogLeaf}: a resource kind's leaf IS the placeholder resource
- * (`Texture`, `Sound`, …) that heals in place, while a value kind's leaf is a
+ * {@link InferCatalogLeaf}: a resource type's leaf IS the placeholder resource
+ * (`Texture`, `Sound`, …) that heals in place, while a value type's leaf is a
  * deferred `AssetRef`. A bare path string is classified by its file suffix.
  */
 type InferLeaf<I extends CatalogEntry> = InferCatalogLeaf<I>;
@@ -31,7 +31,7 @@ export type InferAssetsProperties<M extends Record<string, CatalogEntry>> = {
 
 /**
  * Normalize a single catalog entry to a plain `{ type, source, ...opts }`
- * config. A bare path string is resolved to its asset kind by file suffix
+ * config. A bare path string is resolved to its asset type by file suffix
  * (asset-system v2 §5); an unregistered/ambiguous suffix throws a guiding
  * error pointing at `Asset.type(...)`, compound suffixes, or extension registration. An
  * already-constructed `Asset` contributes its `_config`; a plain config passes
@@ -39,14 +39,14 @@ export type InferAssetsProperties<M extends Record<string, CatalogEntry>> = {
  */
 export function _normalizeEntry(value: CatalogEntry): AnyAssetConfig {
   if (typeof value === 'string') {
-    const kind = resolveKindByPath(value);
-    if (kind === undefined) {
+    const type = resolveKindByPath(value);
+    if (type === undefined) {
       throw new Error(
-        `Assets: no asset kind is registered for the extension of "${value}". ` +
+        `Assets: no asset type is registered for the extension of "${value}". ` +
           `Annotate it with Asset.type(...), use a compound suffix, or register the type's extension (registerExtensionKind / an AssetBinding).`,
       );
     }
-    const config = { type: kind, source: value };
+    const config = { type, source: value };
     return config as AnyAssetConfig;
   }
   return value instanceof AssetImpl ? value._config : (value as AnyAssetConfig);
@@ -141,15 +141,15 @@ export class AssetsImpl<M extends Record<string, CatalogEntry>> {
 /**
  * A reusable, typed asset container.
  *
- * Each field is materialized as a handle-hybrid leaf: a resource kind's leaf IS
+ * Each field is materialized as a handle-hybrid leaf: a resource type's leaf IS
  * a usable placeholder resource (`Texture`/`Sound`) that heals in place once
- * adopted by a loader; a value kind's leaf is an `AssetRef`. The container
+ * adopted by a loader; a value type's leaf is an `AssetRef`. The container
  * exposes those leaves as direct typed properties and via an `entries` record.
  *
  * @example
  * ```ts
  * const TitleAssets = Assets.from({
- *   logo:   'sprites/logo.png', // bare path — kind inferred from suffix
+ *   logo:   'sprites/logo.png', // bare path — type inferred from suffix
  *   config: { type: 'json', source: '/title.json' },
  * });
  *
@@ -164,9 +164,9 @@ type AssetsConstructorFn = new <const M extends Record<string, CatalogEntry>>(de
 
 type AssetsFacade = AssetsConstructorFn & {
   /**
-   * Build a typed catalog. Each field may be a bare path string (kind inferred
+   * Build a typed catalog. Each field may be a bare path string (type inferred
    * from its suffix), an `Asset.type(...)` descriptor, or an explicit config. Bare
-   * strings only resolve for leaf-capable kinds; ambiguous/unregistered
+   * strings only resolve for leaf-capable types; ambiguous/unregistered
    * suffixes need `Asset.type(...)`. (asset-system v2 §4.1, §5)
    *
    * @remarks The `const` type parameter preserves each field's string LITERAL
@@ -205,7 +205,7 @@ type AssetsFacade = AssetsConstructorFn & {
    * `type` passed here. An entry may therefore NOT carry its own `type` — the
    * type forbids it (`type?: never`) and the runtime rejects it with a guiding
    * error (A2). This closes the former silent-override hole where `{ type,
-   * ...shared, ...entry }` let an `entry.type` win. To COMBINE different kinds,
+   * ...shared, ...entry }` let an `entry.type` win. To COMBINE different types,
    * spread each group into {@link from} (as the example shows) — do not nest one
    * group's output inside another group's entries (nesting produces type-carrying
    * values and is rejected).
@@ -252,7 +252,7 @@ type AssetsFacade = AssetsConstructorFn & {
     if (typeof entry !== 'string' && Object.hasOwn(entry, 'type')) {
       throw new Error(
         `Assets.group('${String(type)}', …): entry "${key}" must not carry its own "type" — group() stamps a single type on every entry. ` +
-          `To combine different kinds, spread each Assets.group(...) into Assets.from({ ... }); do not nest one group inside another.`,
+          `To combine different types, spread each Assets.group(...) into Assets.from({ ... }); do not nest one group inside another.`,
       );
     }
 

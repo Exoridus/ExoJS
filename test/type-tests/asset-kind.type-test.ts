@@ -5,7 +5,7 @@
 // is a strongly typed builder, not a `string`-keyed helper — without it,
 // `Asset.type` would be a regression over the `.of()` statics it replaces.
 
-import { Asset, type Texture, type ValueAsset } from '@codexo/exojs';
+import { Asset, Json, Loader, type Texture, type ValueAsset } from '@codexo/exojs';
 
 // Compile-time exact-type assertion, independent of vitest/expectTypeOf so a bare
 // `tsc --noEmit` validates it (mirrors assets-strict-false.type-test.ts).
@@ -43,6 +43,29 @@ Asset.type('nope', 'x.bin');
 
 // @ts-expect-error — a wrong-kind option is rejected.
 Asset.type('texture', 'p.png', { delimiter: ',' });
+
+const loader = new Loader();
+
+// @ts-expect-error — per-asset options belong on Asset.type(), not load(path, options).
+loader.load('l.json', { background: true });
+
+// @ts-expect-error — descriptor options belong inside Asset.type(), not a second load() argument.
+loader.load(levelDesc, { background: true });
+
+// @ts-expect-error — descriptor options belong inside Asset.type(), not a second get() argument.
+loader.get(levelDesc, { delimiter: ',' });
+
+// @ts-expect-error — inline record catalogs were removed; use Assets.from(...).
+loader.load({ config: { type: 'json', source: 'l.json' } });
+
+// @ts-expect-error — the removed two-argument constructor form must stay gone.
+loader.get(Json, 'l.json');
+
+// @ts-expect-error — the removed two-argument constructor form must stay gone.
+loader.load(Json, 'l.json');
+
+// @ts-expect-error — registerType takes the string AssetDefinitions discriminator, not a constructor.
+loader.registerType('json', Json);
 
 export type { _LevelIsTyped, _RawJsonUnknown, _ShipIsTexture };
 void Asset;

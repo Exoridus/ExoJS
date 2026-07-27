@@ -1,11 +1,7 @@
 // Each dispatch token carries a distinct nominal brand (`_token`, `declare`-only,
 // never emitted). Without it these otherwise-empty marker classes are
-// structurally interchangeable, so `LoadReturn<T>`'s `T extends typeof Json` /
-// `… typeof WasmAsset` probes collapse — e.g. `Asset<WebAssembly.Module>` is
-// `Asset<{}>` (Module is an empty interface), which every resource class's
-// `Asset.type(...)` return is assignable to, making `LoadReturn<typeof Texture>` wrongly
-// resolve to `WebAssembly.Module`. The brand makes each token match only its own
-// `LoadReturn` branch and keeps resource classes out of all of them. (§5 typing bug.)
+// structurally interchangeable in constructor-based registry APIs and tests.
+// The brand keeps each token distinct from the others and from resource classes.
 
 /**
  * Dispatch token for generic JSON loading.

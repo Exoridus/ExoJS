@@ -24,7 +24,7 @@ function loadFixture(name: string): unknown {
 //
 // The runtime binding's handler calls ctx.loader.load(Asset.type('tiledMap', source, opts))
 // as a sub-load to share the Loader cache with the source binding. The mock
-// below handles both Texture and TiledMap sub-loads, both arriving as `.of(...)`
+// below handles both Texture and TiledMap sub-loads, both arriving as `Asset.type(...)`
 // asset descriptors (single-argument form).
 
 function makeContext(fixtures: Record<string, unknown>) {

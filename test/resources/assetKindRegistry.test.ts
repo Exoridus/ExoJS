@@ -48,6 +48,6 @@ describe('assetKindRegistry', () => {
 
   it('createLeaf throws for a kind that has no registration', () => {
     // 'bmFont' is a valid AssetDefinitions key that the core seamless registration does not register.
-    expect(() => createLeaf('bmFont', 'x.fnt')).toThrow(/no kind registered/);
+    expect(() => createLeaf('bmFont', 'x.fnt')).toThrow(/no type registered/);
   });
 });

@@ -213,7 +213,7 @@ class AssetBrowserScene extends Scene {
         const loader = this.assetLoader;
 
         // Every category below fetches its assets by real (dynamic, non-literal)
-        // path via `X.of(path)` + `load()` — the old alias-keyed batch-record form
+        // path via `Asset.type(type, path)` + `load()` — the old alias-keyed batch-record form
         // (`load(Type, { alias: path })` + `get(Type, alias)`) is gone; there is no
         // alias indirection to reconstruct, so each item is loaded directly and its
         // resolved handle/value is stored under the catalog's own key.

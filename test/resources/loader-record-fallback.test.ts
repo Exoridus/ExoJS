@@ -25,7 +25,7 @@ const mockFetchImage = (): void => {
   );
 };
 
-describe('Loader.load record fallback (A1)', () => {
+describe('Loader.load internal record fallback (A1)', () => {
   beforeEach(() => {
     vi.stubGlobal(
       'createImageBitmap',
@@ -39,7 +39,7 @@ describe('Loader.load record fallback (A1)', () => {
     global.fetch = originalFetch;
   });
 
-  test('bare-string record values load without a cryptic "asset type undefined" throw', async () => {
+  test('bare-string record values normalize without an undefined-type failure', async () => {
     const loader = createCoreLoader();
 
     const result = await loader.load({ a: 'a.png', b: 'b.png' } as never);
@@ -48,7 +48,7 @@ describe('Loader.load record fallback (A1)', () => {
     expect((result as { b: Texture }).b).toBeInstanceOf(Texture);
   });
 
-  test('full-config record values still load', async () => {
+  test('full-config record values still normalize', async () => {
     const loader = createCoreLoader();
 
     const result = await loader.load({
@@ -60,7 +60,7 @@ describe('Loader.load record fallback (A1)', () => {
     expect((result as { b: Texture }).b).toBeInstanceOf(Texture);
   });
 
-  test('mixed bare-string and Asset.type descriptor values load', async () => {
+  test('mixed bare-string and Asset.type descriptor values normalize', async () => {
     const loader = createCoreLoader();
 
     const result = await loader.load({

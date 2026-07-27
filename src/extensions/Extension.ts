@@ -101,10 +101,11 @@ export interface RendererBinding<Target extends Drawable = Drawable> {
 export interface AssetBinding<Result = unknown, Options = undefined> {
   readonly ctor: AssetConstructor<Result>;
   /**
-   * Config-map type names that resolve to this handler, e.g. `['tiledMap']`.
+   * Descriptor type names that resolve to this handler, e.g. `['tiledMap']`.
    * Most bindings declare exactly one name; a binding may declare several when a
    * single asset type is reachable under multiple aliases (e.g. `['vtt', 'srt']`).
-   * Each name maps the config-map form `{ type: '<name>', source }` to this handler.
+   * Each name maps an `Asset.type(...)`/constructor descriptor's `type` field to
+   * this handler. `defineAsset` supplies the canonical name automatically.
    */
   readonly typeNames?: readonly string[];
   readonly extensions?: readonly string[];
@@ -113,9 +114,9 @@ export interface AssetBinding<Result = unknown, Options = undefined> {
    * binding was built by `defineAsset`, which registered the type's placeholder
    * strategy and suffix→type inference GLOBALLY at import (so loader-free
    * `Assets.from` resolves it). `materializeAssetBindings` forwards it into
-   * `Loader.bindAsset`, which uses it to populate this Loader's app-local
-   * extension-override table (`AssetTypeRegistry.registerType`/`resolveExtensionType`)
-   * for every declared extension.
+   * `Loader.bindAsset`, which records it as the binding-declared type for every
+   * declared extension — the middle tier of `AssetTypeRegistry.resolveExtensionType`,
+   * below an explicit `Loader.registerType` override and above the global default.
    */
   readonly type?: keyof AssetDefinitions;
   /** Optional seamless-handle adapter (asset-system v2), registered alongside the handler. */

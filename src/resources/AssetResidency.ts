@@ -246,7 +246,7 @@ export class AssetResidency {
     const ctor = this._typeRegistry.resolveTypeName(meta.kind);
 
     if (ctor === undefined) {
-      throw new Error(`Loader._adopt: no constructor registered for kind "${meta.kind}".`);
+      throw new Error(`Loader._adopt: no constructor registered for type "${meta.kind}".`);
     }
 
     // A freshly-created catalog leaf is 'idle' until adopted; entering residency
@@ -684,8 +684,11 @@ export class AssetResidency {
               const faKey = this._typeRegistry._key(type, fa);
               this._aliasKeyToIdentityKey.delete(faKey);
               this._preventStoreKeys.delete(faKey);
+              this._onTrackedFailure(type, fa, faKey, error);
             }
             this._identityKeyToAliases.delete(identityKey);
+          } else {
+            this._onTrackedFailure(type, alias, aliasKey, error);
           }
           throw error;
         },
@@ -710,8 +713,8 @@ export class AssetResidency {
     });
 
     // Non-swallowing observer: fails deferred handles / value refs (fresh
-    // error each attempt) and dispatches onError for entry-backed fetches —
-    // regardless of which verb (get/load/background) started the attempt.
+    // error each attempt) and dispatches onError exactly once for the failed
+    // fetch, regardless of which verb (get/load/background) started it.
     trackedPromise.catch((error: unknown) => this._onTrackedFailure(type, alias, key, error));
     this._inFlight.set(key, trackedPromise);
 
@@ -730,21 +733,19 @@ export class AssetResidency {
       }
 
       this._warnMissingSource(alias, key, err);
-      this._signals.onError.dispatch(type, alias, err);
+    } else {
+      const refEntry = this._refs.get(key);
 
-      return;
-    }
+      if (refEntry !== undefined) {
+        for (const ref of refEntry.refs) {
+          ref._fail(err);
+        }
 
-    const refEntry = this._refs.get(key);
-
-    if (refEntry !== undefined) {
-      for (const ref of refEntry.refs) {
-        ref._fail(err);
+        this._warnMissingSource(alias, key, err);
       }
-
-      this._warnMissingSource(alias, key, err);
-      this._signals.onError.dispatch(type, alias, err);
     }
+
+    this._signals.onError.dispatch(type, alias, err);
   }
 
   /**
@@ -993,13 +994,8 @@ export class AssetResidency {
     this._backgroundActive++;
 
     this._trackInFlight(entry.type, entry.alias, this._decoder._dispatchFetch(entry.type, entry.alias, entry.path, entry.options))
-      .catch(error => {
-        const err = this._normalizeError(error);
-        const key2 = this._typeRegistry._key(entry.type, entry.alias);
-
-        if (!this._deferred.has(key2) && !this._refs.has(key2)) {
-          this._signals.onError.dispatch(entry.type, entry.alias, err);
-        }
+      .catch(() => {
+        /* Failure handled centrally in _onTrackedFailure. */
       })
       .finally(() => {
         this._backgroundActive--;

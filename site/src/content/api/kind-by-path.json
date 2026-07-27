@@ -1,6 +1,6 @@
 {
   "title": "KindByPath",
-  "description": "The asset kind inferred from a path literal, or `never` when unregistered.",
+  "description": "The asset type inferred from a path literal, or `never` when unregistered.",
   "symbol": "KindByPath",
   "kind": "type",
   "subsystem": "resources",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "The asset kind inferred from a path literal, or `never` when unregistered."
+        "The asset type inferred from a path literal, or `never` when unregistered."
       ],
       "importLine": "import { KindByPath } from '@codexo/exojs'",
       "sourceLink": null

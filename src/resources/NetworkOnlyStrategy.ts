@@ -10,7 +10,7 @@ import type { CacheRequest, CacheStrategy } from './CacheStrategy';
  * argument is accepted but intentionally ignored.
  *
  * Returns the fully constructed resource — callers do not need to call
- * {@link AssetFactory.create} again.
+ * `request.factory.create` again.
  */
 export class NetworkOnlyStrategy implements CacheStrategy {
   public async resolve(request: CacheRequest, _stores: readonly CacheStore[]): Promise<unknown> {

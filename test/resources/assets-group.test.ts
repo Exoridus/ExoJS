@@ -36,14 +36,14 @@ describe('Assets.group', () => {
     expect(group.boss).toEqual({ type: 'texture', source: 'b.png', mimeType: 'image/png' });
   });
 
-  it('rejects an entry that carries its own "kind" instead of silently overriding the group kind (A2)', () => {
+  it('rejects an entry that carries its own "type" instead of silently overriding the group type (A2)', () => {
     expect(() =>
       Assets.group('texture', {
         // A kind-carrying entry contradicts the same-kind contract — previously
         // { kind, ...base, ...entry } let entry.kind silently win.
         boss: { type: 'sound', source: 'b.png' } as never,
       }),
-    ).toThrow(/kind/);
+    ).toThrow(/type/);
   });
 
   it('rejects a nested group spread into another group (A2)', () => {
@@ -53,7 +53,7 @@ describe('Assets.group', () => {
         // guidance to spread groups into Assets.from(...) instead.
         ...(Assets.group('sound', { jump: 'jump.wav' }) as never),
       } as never),
-    ).toThrow(/kind/);
+    ).toThrow(/type/);
   });
 
   it('still composes multiple groups when spread into Assets.from()', () => {

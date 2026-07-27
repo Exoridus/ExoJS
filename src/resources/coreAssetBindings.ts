@@ -114,8 +114,8 @@ const soundBinding = defineAsset({
   create: binaryFactoryHandler(() => new SoundFactory()),
 });
 
-// music/video/svg/font/image/bmFont are non-leaf resource kinds: no placeholder
-// strategy, so `isValue: false` keeps them OUT of the global kind/inference
+// music/video/svg/font/image/bmFont are non-leaf resource types: no placeholder
+// strategy, so `isValue: false` keeps them OUT of the global type/inference
 // registries (bare paths need `Asset.type(...)`); their extensions still ride the binding.
 const musicBinding = defineAsset({
   ctor: AudioStream,
@@ -166,8 +166,8 @@ const svgBinding = defineAsset({
   create: textFactoryHandler(() => new SvgFactory()),
 });
 
-// Subtitle serves two value kinds through one handler. `defineAsset` registers
-// its primary kind `vtt` (+ the `vtt` suffix); the `srt` alias kind — a distinct
+// Subtitle serves two value types through one handler. `defineAsset` registers
+// its primary type `vtt` (+ the `vtt` suffix); the `srt` alias type — a distinct
 // AssetDefinitions key sharing this handler — is registered explicitly so both
 // suffixes resolve to a value leaf and both load via the subtitle handler
 // (routed at runtime by `typeNames: ['vtt', 'srt']`).

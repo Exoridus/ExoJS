@@ -1,6 +1,6 @@
 {
   "title": "ValueAsset",
-  "description": "A value/ref-kind asset descriptor (asset-system v2 delta §4). Structurally an Asset, but branded so a catalog classifies its leaf as a deferred `AssetRef<T>` — even when `T` is an object type (e.g. typed JSON), where the plain `T extends object` heuristic would otherwise misread it as a resource. The brand is a phantom (never present at runtime).",
+  "description": "A value/ref-type asset descriptor (asset-system v2 delta §4). Structurally an Asset, but branded so a catalog classifies its leaf as a deferred `AssetRef<T>` — even when `T` is an object type (e.g. typed JSON), where the plain `T extends object` heuristic would otherwise misread it as a resource. The brand is a phantom (never present at runtime).",
   "symbol": "ValueAsset",
   "kind": "type",
   "subsystem": "resources",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "A value/ref-kind asset descriptor (asset-system v2 delta §4). Structurally an Asset, but branded so a catalog classifies its leaf as a deferred `AssetRef<T>` — even when `T` is an object type (e.g. typed JSON), where the plain `T extends object` heuristic would otherwise misread it as a resource. The brand is a phantom (never present at runtime)."
+        "A value/ref-type asset descriptor (asset-system v2 delta §4). Structurally an Asset, but branded so a catalog classifies its leaf as a deferred `AssetRef<T>` — even when `T` is an object type (e.g. typed JSON), where the plain `T extends object` heuristic would otherwise misread it as a resource. The brand is a phantom (never present at runtime)."
       ],
       "importLine": "import { ValueAsset } from '@codexo/exojs'",
       "sourceLink": null

@@ -1,6 +1,6 @@
 {
   "title": "ExtensionKindMap",
-  "description": "Type-level twin of the runtime `extensionKindRegistry`: file suffix → asset kind, for bare-string path inference in `Assets.from()`/`get()`/`load()` (asset-system v2 §5). Restricted to LEAF-CAPABLE kinds, exactly mirroring the runtime `registerExtensionKind` calls in `seamless.ts`. Extend by declaration merging, like ExtensionTypeMap: ```ts declare module '@codexo/exojs' { interface ExtensionKindMap { 'atlas.json': 'spriteAtlas'; } } ```",
+  "description": "Type-level twin of the runtime `extensionKindRegistry`: file suffix → asset type, for bare-string path inference in `Assets.from()`/`get()`/`load()` (asset-system v2 §5). Restricted to LEAF-CAPABLE types, exactly mirroring the runtime `registerExtensionKind` calls made by `defineAsset`. This is the single declaration-merging surface for bare-path suffix inference: ```ts declare module '@codexo/exojs' { interface ExtensionKindMap { 'atlas.json': 'spriteAtlas'; } } ```",
   "symbol": "ExtensionKindMap",
   "kind": "interface",
   "subsystem": "resources",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Type-level twin of the runtime `extensionKindRegistry`: file suffix → asset kind, for bare-string path inference in `Assets.from()`/`get()`/`load()` (asset-system v2 §5). Restricted to LEAF-CAPABLE kinds, exactly mirroring the runtime `registerExtensionKind` calls in `seamless.ts`. Extend by declaration merging, like ExtensionTypeMap: ```ts declare module '@codexo/exojs' { interface ExtensionKindMap { 'atlas.json': 'spriteAtlas'; } } ```"
+        "Type-level twin of the runtime `extensionKindRegistry`: file suffix → asset type, for bare-string path inference in `Assets.from()`/`get()`/`load()` (asset-system v2 §5). Restricted to LEAF-CAPABLE types, exactly mirroring the runtime `registerExtensionKind` calls made by `defineAsset`. This is the single declaration-merging surface for bare-path suffix inference: ```ts declare module '@codexo/exojs' { interface ExtensionKindMap { 'atlas.json': 'spriteAtlas'; } } ```"
       ],
       "importLine": "import { ExtensionKindMap } from '@codexo/exojs'",
       "sourceLink": null

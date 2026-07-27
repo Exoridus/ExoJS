@@ -108,8 +108,8 @@ function validateAsepriteData(raw: unknown, source: string): AsepriteData {
  * (relative to the JSON source), loads the {@link Texture} via the Loader's
  * sub-load deduplication, and constructs a fully-parsed {@link AsepriteSheet}.
  *
- * The `aseprite` type name enables the asset-config shorthand:
- * `{ type: 'aseprite', source: 'hero.aseprite.json' }`.
+ * The `asepriteSheet` type name also enables the explicit config form:
+ * `{ type: 'asepriteSheet', source: 'hero.aseprite.json' }`.
  */
 export const asepriteBinding = defineAsset({
   ctor: AsepriteSheet,

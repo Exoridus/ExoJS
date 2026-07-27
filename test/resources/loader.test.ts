@@ -1708,17 +1708,15 @@ describe('bare-path descriptor normalization', () => {
     await expect(loader.load('config.json')).resolves.toBe('overridden');
   });
 
-  test('without an override the same bare path still resolves to the global default type', async () => {
+  test('without an override the same bare path resolves to the unbound global default and throws synchronously', () => {
     const loader = new Loader({ basePath: '/' });
 
     bindTextType(loader);
 
     // `.json` → the global `json` type, whose constructor has no handler here —
     // proving the path did NOT route to the bound `text` handler.
-    const ref = loader.get('config.json');
-
-    expect(ref).toBeInstanceOf(AssetRef);
-    await expect(ref.loaded).rejects.toThrow(/No asset handler registered/);
+    expect(() => loader.get('config.json')).toThrow(/no asset handler bound for type "json"/);
+    expect(() => loader.load('config.json')).toThrow(/no asset handler bound for type "json"/);
   });
 
   test('an unresolvable suffix names Asset.type() in its guidance', () => {
@@ -1737,6 +1735,27 @@ describe('bare-path descriptor normalization', () => {
     // `aseprite.json` beats `json`; a plain `.json` still takes the global default.
     await expect(loader.load('hero.aseprite.json' as never)).resolves.toBe('overridden');
     expect(loader._peekResource(TextAsset, 'plain.json')).toBeNull();
+  });
+
+  test('rejects the removed load(path, options) call shape instead of silently dropping options', () => {
+    const loader = new Loader({ basePath: '/' });
+    bindTextType(loader);
+    loader.registerType('txt', 'text');
+
+    const legacyLoad = loader.load as unknown as (path: string, options: object) => unknown;
+
+    expect(() => legacyLoad.call(loader, 'notes.txt', { background: true })).toThrow(/load\(path, options\) is not supported/);
+    expect(() => legacyLoad.call(loader, 'notes.txt', { background: true })).toThrow(/Asset\.type\(type, path, options\)/);
+  });
+
+  test('rejects second-argument options for Asset.type() descriptors instead of silently dropping them', () => {
+    const loader = new Loader();
+    const descriptor = Asset.type('json', 'config.json');
+    const descriptorLoad = loader.load as unknown as (asset: typeof descriptor, options: object) => unknown;
+    const descriptorGet = loader.get as unknown as (asset: typeof descriptor, options: object) => unknown;
+
+    expect(() => descriptorLoad.call(loader, descriptor, { background: true })).toThrow(/load\(Asset\.type\(\.\.\.\), options\) is not supported/);
+    expect(() => descriptorGet.call(loader, descriptor, { delimiter: ',' })).toThrow(/get\(Asset\.type\(\.\.\.\), options\) is not supported/);
   });
 });
 
@@ -1813,7 +1832,7 @@ describe('bare-path loading for non-leaf resource types', () => {
     const font = await loader.load('fonts/ui.fnt' as never);
 
     expect(font).toBeInstanceOf(BmFont);
-    // Resolved through `_resolveTypeForPath` → 'bmFont' → `_ctorForType` → BmFont,
+    // Resolved through `_resolveTypeForPath` → 'bmFont' → `_resolveBarePath` → BmFont,
     // not through any leaf/value channel.
     expect(loader._peekResource(BmFont, 'fonts/ui.fnt')).toBe(font);
   });

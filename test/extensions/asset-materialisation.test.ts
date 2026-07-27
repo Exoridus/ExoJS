@@ -167,6 +167,38 @@ describe('materializeAssetBindings', () => {
     loader.destroy();
   });
 
+  it('equivalent extension spellings are rejected during pre-validation, before any binding is materialized', () => {
+    const createA = vi.fn(() => createTestHandler());
+    const createB = vi.fn(() => createTestHandler());
+    const bindingA: AssetBinding = { ctor: TypeA as never, extensions: ['.TMJ'], create: createA };
+    const bindingB: AssetBinding = { ctor: TypeB as never, extensions: ['...tmj'], create: createB };
+    const loader = new Loader();
+
+    expect(() => materializeAssetBindings(loader, [bindingA, bindingB])).toThrow('File extension ".tmj" is already mapped');
+    expect(createA).not.toHaveBeenCalled();
+    expect(createB).not.toHaveBeenCalled();
+    expect(loader.hasLoadable(TypeA as never)).toBe(false);
+    expect(loader.hasLoadable(TypeB as never)).toBe(false);
+    loader.destroy();
+  });
+
+  it('an existing seamless adapter conflict is found before any binding is materialized', () => {
+    const adapter = { createPlaceholder: vi.fn(), stateOf: vi.fn(), begin: vi.fn(), fill: vi.fn(), fail: vi.fn(), evict: vi.fn() };
+    const createA = vi.fn(() => createTestHandler());
+    const createB = vi.fn(() => createTestHandler());
+    const bindingA: AssetBinding = { ctor: TypeA as never, create: createA };
+    const bindingB: AssetBinding = { ctor: TypeB as never, seamless: adapter as never, create: createB };
+    const loader = new Loader();
+    loader.registerSeamlessAdapter(TypeB as never, adapter as never);
+
+    expect(() => materializeAssetBindings(loader, [bindingA, bindingB])).toThrow(/seamless adapter is already registered/);
+    expect(createA).not.toHaveBeenCalled();
+    expect(createB).not.toHaveBeenCalled();
+    expect(loader.hasLoadable(TypeA as never)).toBe(false);
+    expect(loader.hasLoadable(TypeB as never)).toBe(false);
+    loader.destroy();
+  });
+
   it('extension keys are normalised (dot stripped, lowercased)', () => {
     const handler = createTestHandler();
     const binding: AssetBinding = { ctor: TypeA as never, extensions: ['.TMJ', '.PNG'], create: () => handler };

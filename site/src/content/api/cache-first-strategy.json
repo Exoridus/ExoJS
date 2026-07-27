@@ -1,6 +1,6 @@
 {
   "title": "CacheFirstStrategy",
-  "description": "CacheStrategy that checks every provided CacheStore before falling back to the network. On a cache hit the stored value is fed directly to AssetFactory.create | factory.create; if that throws (stale or corrupt entry) the entry is deleted and the next store is tried. Only once all stores miss does the strategy fetch from the network and write the processed source back to every store. Quota or serialisation errors during write are swallowed silently so that a full storage can never prevent an asset from loading. Returns the fully constructed resource — callers do not need to call AssetFactory.create again.",
+  "description": "CacheStrategy that checks every provided CacheStore before falling back to the network. On a cache hit the stored value is fed directly to `request.factory.create`; if that throws (stale or corrupt entry) the entry is deleted and the next store is tried. Only once all stores miss does the strategy fetch from the network and write the processed source back to every store. Quota or serialisation errors during write are swallowed silently so that a full storage can never prevent an asset from loading. Returns the fully constructed resource — callers do not need to call `request.factory.create` again.",
   "symbol": "CacheFirstStrategy",
   "kind": "class",
   "subsystem": "resources",
@@ -20,8 +20,8 @@
       "members": [],
       "paragraphs": [
         "CacheStrategy that checks every provided CacheStore before falling back to the network.",
-        "On a cache hit the stored value is fed directly to AssetFactory.create | factory.create; if that throws (stale or corrupt entry) the entry is deleted and the next store is tried. Only once all stores miss does the strategy fetch from the network and write the processed source back to every store. Quota or serialisation errors during write are swallowed silently so that a full storage can never prevent an asset from loading.",
-        "Returns the fully constructed resource — callers do not need to call AssetFactory.create again."
+        "On a cache hit the stored value is fed directly to `request.factory.create`; if that throws (stale or corrupt entry) the entry is deleted and the next store is tried. Only once all stores miss does the strategy fetch from the network and write the processed source back to every store. Quota or serialisation errors during write are swallowed silently so that a full storage can never prevent an asset from loading.",
+        "Returns the fully constructed resource — callers do not need to call `request.factory.create` again."
       ],
       "importLine": "import { CacheFirstStrategy } from '@codexo/exojs'",
       "sourceLink": null

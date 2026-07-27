@@ -446,7 +446,7 @@ describe('declarative bindAsset identity propagation', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Module-augmentation test: AssetDefinitions and ExtensionTypeMap are still augmentable
+// Module-augmentation test: AssetDefinitions remains augmentable
 // ---------------------------------------------------------------------------
 
 // Verify that external packages can augment AssetDefinitions without touching core.

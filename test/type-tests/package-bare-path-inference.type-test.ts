@@ -1,6 +1,6 @@
 // Type contract for the bare-path suffixes claimed by shipped extension
 // packages. `Loader.load(path)`/`Loader.get(path)` infer through
-// `ExtensionKindMap` (suffix → asset type) — NOT the legacy `ExtensionTypeMap`
+// `ExtensionKindMap` (suffix → asset type) — the sole bare-path inference map
 // (suffix → resource), which no longer drives any call signature. A package that
 // augments the wrong map still compiles, but leaves its documented bare-path
 // call resolving to `never` for consumers, so these assertions pin the map that

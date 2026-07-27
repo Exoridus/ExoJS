@@ -90,7 +90,7 @@ declare module '@codexo/exojs' {
       resource: LdtkMap;
       config: { source: string };
       // No `seamless` adapter on `ldtkMapBinding`, so `defineAsset` defaults
-      // this to a value kind: its leaf is an `AssetRef<LdtkMap>`.
+      // this to a value type: its leaf is an `AssetRef<LdtkMap>`.
       isValue: true;
     };
   }

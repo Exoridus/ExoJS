@@ -39,7 +39,7 @@ export interface Asset<T> {
 declare const VALUE_ASSET: unique symbol;
 
 /**
- * A value/ref-kind asset descriptor (asset-system v2 delta §4). Structurally an
+ * A value/ref-type asset descriptor (asset-system v2 delta §4). Structurally an
  * {@link Asset}, but branded so a catalog classifies its leaf as a deferred
  * `AssetRef<T>` — even when `T` is an object type (e.g. typed JSON), where the
  * plain `T extends object` heuristic would otherwise misread it as a resource.
@@ -54,8 +54,8 @@ type AssetFacade = AssetConstructorFn & {
    * The single typed descriptor builder (asset-system v2 delta §3). Replaces the
    * per-class `.of()` statics. `type` autocompletes from {@link AssetDefinitions};
    * the resource type is inferred from `type`; `options` is that type's option bag.
-   * The `<T>` generic is accepted ONLY for value/ref kinds, where it annotates the
-   * decoded value — passing `<T>` to a resource kind is a type error.
+   * The `<T>` generic is accepted ONLY for value/ref types, where it annotates the
+   * decoded value — passing `<T>` to a resource type is a type error.
    *
    * @example
    * ```ts

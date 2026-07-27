@@ -1,8 +1,5 @@
-import type { Sound } from '#audio/Sound';
 import { Signal } from '#core/Signal';
 import type { AssetHandler } from '#extensions/Extension';
-import { type BmFont } from '#rendering/text/BmFont';
-import type { Texture } from '#rendering/texture/Texture';
 
 import { type Asset, AssetImpl, type ValueAsset } from './Asset';
 import { parseContainer } from './AssetContainer';
@@ -15,6 +12,7 @@ import type {
   InferAssetResource,
   KindByPath,
   LeafForPath,
+  ResourceAssetObject,
   ResourceForKind,
 } from './AssetDefinitions';
 import { createLeaf, getAssetKind } from './assetKindRegistry';
@@ -46,37 +44,6 @@ export type Loadable = abstract new (...args: any[]) => unknown;
 export type InferLoadedMap<M extends Record<string, AssetInput>> = {
   [K in keyof M]: InferAssetResource<M[K]>;
 };
-
-/**
- * Maps file extensions (without leading dot, lower-case) to the resource a
- * bare path with that suffix produces.
- *
- * This map no longer drives any call signature — bare-path inference for
- * {@link Loader.get}/{@link Loader.load} runs entirely through
- * `ExtensionKindMap`/`KindByPath` (suffix → {@link AssetDefinitions} type), which
- * is also the map to extend by declaration merging. What remains here is the
- * hand-maintained *twin* that `AssetDefinitions.ts`'s `AssertKindTypeMapsAgree`
- * cross-checks: on every shared suffix, the kind's resource and this map's
- * resource must agree, so a drift in either table fails to compile.
- */
-export interface ExtensionTypeMap {
-  fnt: BmFont;
-  woff: FontFace;
-  woff2: FontFace;
-  ttf: FontFace;
-  otf: FontFace;
-  png: Texture;
-  jpg: Texture;
-  jpeg: Texture;
-  webp: Texture;
-  avif: Texture;
-  gif: Texture;
-  ogg: Sound;
-  mp3: Sound;
-  wav: Sound;
-  m4a: Sound;
-  aac: Sound;
-}
 
 /**
  * Context object passed to custom asset-type load handlers bound via
@@ -178,14 +145,14 @@ export class Loader {
   private readonly _decoder: AssetDecoder;
   private readonly _residency: AssetResidency;
 
-  // Single source for the value kind ↔ dispatch token mapping, and the
-  // no-bindings fallback `_ctorForType` leans on. Keyed by
+  // Single source for the value type ↔ dispatch token mapping, and the
+  // no-bindings fallback in `_resolveBarePath` leans on. Keyed by
   // `CoreValueAssetKind`, NOT `ValueAssetKind`: only the built-in tokens exist
   // without a binding installed, and the wider union is extensible by
-  // declaration merging (a package's `isValue: true` kind has no built-in
+  // declaration merging (a package's `isValue: true` type has no built-in
   // token, and requiring one here would break any build that sees the
   // augmentation). The `Record<CoreValueAssetKind, …>` stays compile-checked to
-  // cover exactly the core value kinds (vtt + srt share the SubtitleAsset
+  // cover exactly the core value types (vtt + srt share the SubtitleAsset
   // token). @internal
   private readonly _valueTokenByKind: Readonly<Record<CoreValueAssetKind, AssetConstructor>> = {
     json: Json,
@@ -198,22 +165,22 @@ export class Loader {
     wasm: WasmAsset,
   };
 
-  /** The value-asset token for a value kind name, or `undefined` for non-value / extension kinds. @internal */
+  /** The value-asset token for a value type name, or `undefined` for non-value / extension types. @internal */
   private _valueTokenForKind(kind: keyof AssetDefinitions): AssetConstructor | undefined {
     return (this._valueTokenByKind as Partial<Record<string, AssetConstructor>>)[kind];
   }
 
   /**
-   * Normalize a bare path to the canonical descriptor shape every `get`/`load`
-   * input funnels through. The suffix is resolved basename-only and
-   * longest-suffix-first, consulting this app's {@link registerType} override
-   * before the global `defineAsset` default — so `Asset.type(type, path)` and a
-   * bare `path` reach the same type for the same suffix.
+   * Resolve a bare path once for both `get()` and `load()`: normalize it to the
+   * canonical descriptor fields, resolve the dispatch constructor, and verify
+   * that this Loader actually has a handler for it.
    *
-   * @throws when no layer knows the suffix — a dynamic string can only be
-   * resolved by naming its type explicitly.
+   * These are synchronous input/configuration checks. Once this method returns,
+   * an actual handler failure is asynchronous: `get()` exposes it through the
+   * returned handle plus {@link onError}; `load()` rejects and also dispatches
+   * {@link onError}.
    */
-  private _normalizeToDescriptor(input: string): { type: keyof AssetDefinitions; source: string } {
+  private _resolveBarePath(input: string): { type: keyof AssetDefinitions; source: string; ctor: AssetConstructor } {
     const type = this._typeRegistry._resolveTypeForPath(input);
 
     if (type === undefined) {
@@ -223,22 +190,15 @@ export class Loader {
       );
     }
 
-    return { type, source: input };
-  }
+    // A built-in value token exists even before core bindings are materialized,
+    // so constructor resolution alone is not proof that the Loader can fetch it.
+    const ctor = this._typeRegistry.resolveTypeName(type) ?? this._valueTokenForKind(type);
 
-  /**
-   * The constructor a descriptor type dispatches to: this loader's own
-   * `typeNames` binding first, then the built-in value token — which exists
-   * without any binding installed, so a value type still resolves on a loader
-   * that only registered a handler by constructor.
-   */
-  private _ctorForType(type: keyof AssetDefinitions): AssetConstructor | undefined {
-    return this._typeRegistry.resolveTypeName(type) ?? this._valueTokenForKind(type);
-  }
+    if (ctor === undefined || !this._typeRegistry.hasLoadable(ctor)) {
+      throw new Error(`Loader: no asset handler bound for type "${type}" (inferred from "${input}"). ` + `Bind it via defineAsset()/bindAsset() first.`);
+    }
 
-  /** Guidance for a suffix that resolved to a type no handler is bound to on this loader. */
-  private _unboundTypeMessage(type: keyof AssetDefinitions, path: string): string {
-    return `Loader: no asset handler bound for type "${type}" (inferred from "${path}"). Bind it via defineAsset()/bindAsset() first.`;
+    return { type, source: input, ctor };
   }
 
   // ── Refcount / claims (asset-system v2 §4.7) ──────────────────────────────
@@ -254,12 +214,17 @@ export class Loader {
   /** Dispatched when any asset finishes loading and is stored in memory. */
   public readonly onLoaded = new Signal<[type: AssetConstructor, alias: string, resource: unknown]>();
   /**
-   * Fires whenever a fetch fails for a resident or claimed asset — the
-   * production-safe way to observe seamless/value-ref failures. A failed
-   * `get()`/`load()` placeholder or `AssetRef` heals silently by design (no
-   * exception at the call site); this signal is the supported channel for
-   * surfacing that failure to application code, in both development and
+   * Fires whenever an asynchronous asset fetch fails, in both development and
    * production builds.
+   *
+   * `get()` returns its placeholder / {@link AssetRef} synchronously; a later
+   * fetch failure is reflected by that handle's state/`loaded` promise and by
+   * this signal, not by a delayed throw from the original call. `load()` remains
+   * awaitable and rejects with the same failure while also dispatching it here.
+   * A later retry may heal the existing handle in place.
+   *
+   * Invalid inputs and missing registrations are configuration errors and can
+   * still throw synchronously before either operation starts a fetch.
    */
   public readonly onError = new Signal<[type: AssetConstructor, alias: string, error: Error]>();
 
@@ -308,10 +273,32 @@ export class Loader {
     return this;
   }
 
+  /** Whether `type` already has a seamless adapter. Used for atomic binding pre-validation. @internal */
+  public _hasSeamlessAdapter(type: AssetConstructor): boolean {
+    return this._typeRegistry.hasSeamlessAdapter(type);
+  }
+
   /**
-   * Registers an app-local extension→type override for bare-path resolution
-   * (`get('level.json')`, `Assets.from('level.json')`), taking precedence over
-   * the global default for this Loader only. See `AssetTypeRegistry.registerType`.
+   * Registers an extension→type override for bare-path resolution, scoped to
+   * **this Loader instance only**: it applies to bare paths passed to this
+   * loader's `get(…)` / `load(…)`, and takes precedence over both the type
+   * declared by the `bindAsset` binding that claimed the suffix and the global
+   * `defineAsset` default.
+   *
+   * It does NOT affect loader-free catalog construction — `Assets.from('level.json')`
+   * has no loader to consult and always resolves through the global table. Use
+   * `Asset.type(type, source)` there instead.
+   *
+   * `type` is the string {@link AssetDefinitions} discriminator, not a
+   * constructor. This call does not install a handler; a core/extension binding
+   * must still provide the named type. Repeating the same pair is idempotent,
+   * while changing an existing explicit override to another type throws. Use
+   * `Asset.type(...)` for a one-off exception.
+   *
+   * @example
+   * ```ts
+   * app.loader.registerType('json', 'ldtkMap');
+   * ```
    */
   public registerType(extension: string, type: keyof AssetDefinitions): this {
     this._typeRegistry.registerType(extension, type);
@@ -360,7 +347,7 @@ export class Loader {
   }
 
   // -----------------------------------------------------------------------
-  // Loading — new Asset / Assets / config-map overloads
+  // Loading — canonical Asset / Assets descriptor forms
   // -----------------------------------------------------------------------
 
   /**
@@ -370,7 +357,8 @@ export class Loader {
    * (`{ type, source }`) before dispatch:
    *
    * - **Path string** — normalized by suffix through the app-local
-   *   {@link registerType} override and then the global `defineAsset` default
+   *   {@link registerType} override, then the binding-declared type, then the
+   *   global `defineAsset` default
    *   (basename-only, longest-suffix-first). Only *leaf-capable* suffixes are
    *   accepted at compile time; a non-leaf type (`bmFont`, `font`, `svg`,
    *   `image`, `music`, `video`) must be named explicitly with `Asset.type(...)`.
@@ -385,6 +373,9 @@ export class Loader {
    * In-flight and already-loaded assets are de-duplicated: calling `load`
    * for the same (type, alias) pair while a fetch is in progress attaches
    * to the existing promise rather than issuing a second request.
+   * Handler/fetch failures reject the returned queue and are also dispatched
+   * through {@link onError}. Invalid inputs or missing bindings throw
+   * synchronously before a queue is created.
    *
    * Per-asset options ride on the `Asset.type(type, source, options)` descriptor
    * (or the extra fields of a config object).
@@ -402,7 +393,7 @@ export class Loader {
   // to the raw value, not the ref — this overload must win over the generic leaf one below.
   public load<T>(leaf: AssetRef<T>, options?: LoadOptions): LoadingQueue<T>;
   // Single handle-hybrid leaf (an `Assets.from()` property): adopt + resolve its value.
-  public load<T extends object>(leaf: T, options?: LoadOptions): LoadingQueue<T>;
+  public load<T extends ResourceAssetObject>(leaf: T, options?: LoadOptions): LoadingQueue<T>;
 
   // -----------------------------------------------------------------------
   // Loading — bare path (type normalized from the file suffix)
@@ -412,8 +403,8 @@ export class Loader {
    * Fetches an asset by path, normalizing the suffix to an
    * {@link AssetDefinitions} type before dispatch. Resolution is basename-only
    * and longest-suffix-first (`hero.aseprite.json` tries `aseprite.json` before
-   * `json`), and consults the app-local {@link registerType} override before the
-   * global `defineAsset` default.
+   * `json`), and consults the app-local {@link registerType} override, then the
+   * binding-declared type, then the global `defineAsset` default.
    *
    * Only **leaf-capable** suffixes are accepted at compile time — those a
    * catalog can also materialize (`ExtensionKindMap`, the map to augment by
@@ -454,6 +445,13 @@ export class Loader {
   public _loadClaimed(claimer: symbol, arg0: unknown, arg1?: unknown): LoadingQueue<unknown> {
     // 1. Single Asset<T>
     if (arg0 instanceof AssetImpl) {
+      if (arg1 !== undefined) {
+        throw new Error(
+          'Loader: load(Asset.type(...), options) is not supported. Put per-asset options in Asset.type(type, path, options); ' +
+            'background LoadOptions apply only to Assets catalogs and their leaves.',
+        );
+      }
+
       const asset = arg0 as Asset<unknown>;
       const alias = asset._config.source;
 
@@ -495,12 +493,14 @@ export class Loader {
     // 2b. Bare path string — normalize it to a `{ type, source }` descriptor and
     // dispatch on the type's bound constructor.
     if (typeof arg0 === 'string') {
-      const { type, source: path } = this._normalizeToDescriptor(arg0);
-      const ctor = this._ctorForType(type);
-
-      if (ctor === undefined) {
-        throw new Error(this._unboundTypeMessage(type, path));
+      if (arg1 !== undefined) {
+        throw new Error(
+          'Loader: load(path, options) is not supported. Put per-asset options on ' +
+            'Asset.type(type, path, options), or pass LoadOptions with an Assets catalog/leaf.',
+        );
       }
+
+      const { type, source: path, ctor } = this._resolveBarePath(arg0);
 
       // The font type requires a family option — infer it from the filename when not provided
       const options: unknown = type === 'font' ? { family: (path.split('/').pop()?.split(/[?#]/)[0] ?? '').replace(/\.[^.]+$/, '') } : undefined;
@@ -525,17 +525,15 @@ export class Loader {
       return queue;
     }
 
-    // Internal/legacy record fallback: `Record<string, AssetInput>`. The TYPED
-    // inline record-catalog overload was removed (asset-system v2 delta §5/§14) —
-    // typed callers go through `Assets.from({...})` — but the runtime path is kept
-    // for internal multi-alias/identity plumbing and its coverage.
+    // Internal record fallback: `Record<string, AssetInput>`. The TYPED inline
+    // record-catalog overload is deliberately absent — public callers go through
+    // `Assets.from({...})` — but this path preserves the Loader's internal
+    // multi-alias/identity plumbing and its regression coverage.
     //
     // Every value is routed through the SAME `_normalizeEntry` used by
     // `Assets.from(...)`: a bare path string (`{ a: 'a.png' }`) is resolved to a
-    // `{ kind, source }` config by its suffix instead of being wrapped raw as
-    // `new Asset('a.png')` (which left `kind === undefined` and threw the cryptic
-    // "No constructor registered for asset type undefined"). An already-built
-    // `Asset` and a full config pass through unchanged (A1).
+    // `{ type, source }` config by its suffix. An already-built `Asset` and a
+    // full config pass through unchanged.
     const configMap = arg0 as Record<string, AssetInput>;
     const items = Object.entries(configMap).map(([alias, value]) => ({
       alias,
@@ -585,17 +583,19 @@ export class Loader {
   // -----------------------------------------------------------------------
 
   /**
-   * Seamless deferred access by path (asset-system v2). Returns SYNCHRONOUSLY
-   * and never throws: an already-loaded source returns the stored resource; an
-   * unknown source returns a placeholder handle immediately, starts the
-   * fetch, and fills the handle in place when the payload arrives (track it
-   * via {@link Texture.loadState} / {@link Texture.loaded}). Failed loads
-   * show the {@link Texture.missing} checker; calling `get` again for a
-   * `'failed'` source retries and heals the same handle in place.
+   * Seamless deferred access by path (asset-system v2). Returns SYNCHRONOUSLY:
+   * an already-loaded source returns the stored resource; an unknown source
+   * returns a placeholder handle immediately, starts the fetch, and fills the
+   * handle in place when the payload arrives (track it via `loadState` /
+   * `loaded`). Failed loads switch the handle to its failed representation;
+   * calling `get` again for a `'failed'` source retries and heals the same
+   * handle in place. Invalid inputs and missing bindings throw synchronously
+   * before a fetch starts.
    *
    * The path is normalized to an {@link AssetDefinitions} type by its suffix
    * (basename-only, longest-suffix-first), consulting the app-local
-   * {@link registerType} override before the global `defineAsset` default. A
+   * {@link registerType} override, then the binding-declared type, then the
+   * global `defineAsset` default. A
    * resource suffix yields its heal-in-place handle; a value suffix (`json`,
    * `txt`, `csv`, …) yields a stable {@link AssetRef}. Only leaf-capable
    * suffixes are accepted at compile time (`ExtensionKindMap`); dynamic strings
@@ -628,14 +628,14 @@ export class Loader {
   /**
    * Seamless/value access from an `Asset.type(...)` descriptor (asset-system v2 §4.2) —
    * the replacement for the removed `get(Type, dynamicSource)` form. Builds and
-   * adopts the descriptor's handle-hybrid leaf: a resource kind yields its
-   * heal-in-place handle, a value kind a stable {@link AssetRef}. A kind with
+   * adopts the descriptor's handle-hybrid leaf: a resource type yields its
+   * heal-in-place handle, a value type a stable {@link AssetRef}. A type with
    * neither a seamless adapter nor a value channel throws with guidance to use
    * `load(Asset.type(...))`.
    *
    * The return type follows the {@link ValueAsset} brand (as {@link InferCatalogLeaf}
-   * does): a value-kind descriptor (`Asset.type<T>('json', …)`) returns
-   * `AssetRef<T>` — even for an object payload — while a resource-kind descriptor
+   * does): a value-type descriptor (`Asset.type<T>('json', …)`) returns
+   * `AssetRef<T>` — even for an object payload — while a resource-type descriptor
    * returns the resource itself, so the type always matches the runtime value.
    *
    * Unlike bare-path `get('x.png')`, this form is **not instance-deduped by
@@ -650,7 +650,7 @@ export class Loader {
    * Adopts a single handle-hybrid leaf (an `Assets.from()` property) and returns
    * it — the same object, healing in place once its payload arrives.
    */
-  public get<T extends object>(leaf: T): T;
+  public get<T extends ResourceAssetObject>(leaf: T): T;
   public get(input: string | object, options?: unknown): unknown {
     return this._getClaimed(this._rootClaimer, input, options);
   }
@@ -681,11 +681,15 @@ export class Loader {
 
     // Single `Asset.type(...)` descriptor (e.g. `get(Asset.type('json', 'x.json'))` /
     // `get(Asset.type('texture', dynamicPath))`) — build its handle-hybrid leaf from the
-    // config, adopt it, and return it. A value kind yields an AssetRef, a
-    // resource kind the seamless placeholder handle. Mirrors `load`'s AssetImpl
+    // config, adopt it, and return it. A value type yields an AssetRef, a
+    // resource type the seamless placeholder handle. Mirrors `load`'s AssetImpl
     // branch and the single-meta-leaf path below. Must precede the string branch
     // (an AssetImpl carries no stamped meta, so the guard above misses it).
     if (input instanceof AssetImpl) {
+      if (options !== undefined) {
+        throw new Error('Loader: get(Asset.type(...), options) is not supported. Put per-asset options in Asset.type(type, path, options).');
+      }
+
       const { type, source: src, ...rest } = input._config;
       const opts = Object.keys(rest).length > 0 ? rest : undefined;
 
@@ -693,7 +697,7 @@ export class Loader {
       try {
         leaf = createLeaf(type, src, opts);
       } catch {
-        throw new Error(`Loader: get() is for seamless/value assets; the "${type}" kind has neither — use load(Asset.type('${type}', ...)) instead.`);
+        throw new Error(`Loader: get() is for seamless/value assets; the "${type}" type has neither — use load(Asset.type('${type}', ...)) instead.`);
       }
 
       this._adopt(leaf, claimer);
@@ -720,12 +724,7 @@ export class Loader {
     // AssetRef. (This is deliberately NOT routed through `createLeaf` like the
     // `Asset.type(...)` branch above — a bare path is instance-deduped by
     // source, and `createLeaf` mints a fresh leaf per call.)
-    const { type, source: path } = this._normalizeToDescriptor(input);
-    const ctor = this._ctorForType(type);
-
-    if (ctor === undefined) {
-      throw new Error(this._unboundTypeMessage(type, path));
-    }
+    const { type, source: path, ctor } = this._resolveBarePath(input);
 
     const adapter = this._typeRegistry.getSeamlessAdapter(ctor);
 
@@ -895,7 +894,7 @@ export class Loader {
 
   /**
    * Default `RequestInit` options merged into every `fetch` call.
-   * Override per-load with the `options` argument of {@link load}.
+   * Assign a new value to change the defaults for subsequent loads.
    */
   public get fetchOptions(): RequestInit {
     return this._decoder.fetchOptions;
@@ -911,8 +910,10 @@ export class Loader {
 
   /**
    * Atomically bind all keys for one AssetBinding to a pre-created handler.
-   * Validates all keys BEFORE mutating any map. Any already-registered key
-   * throws before any mutation (no override in 0.12).
+   * Validates binding-owned keys BEFORE mutating any map. A conflicting
+   * constructor, type name, or binding extension throws before any mutation.
+   * An explicit app-local {@link registerType} override is a separate,
+   * higher-precedence decision and may coexist with the binding default.
    *
    * `Result` and `Options` are inferred from the binding's `AssetBinding<Result, Options>`
    * contract. A declarative handler's optional `getIdentityKey` is forwarded into
@@ -966,10 +967,9 @@ export class Loader {
   /**
    * Tears down the loader and all resources it owns.
    *
-   * Destroys the factory registry (releasing object URLs), destroys every
-   * cache store, clears all in-memory assets and in-flight tracking, and
-   * disconnects all signals. Also calls `destroy?.()` on every handler
-   * registered via `bindAsset`.
+   * Destroys every cache store, clears all in-memory assets and in-flight
+   * tracking, and disconnects all signals. Also calls `destroy?.()` on every
+   * handler registered via `bindAsset`.
    */
   public destroy(): void {
     // Order matters: bound-handler destroy must run after store destroy (via

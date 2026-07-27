@@ -33,7 +33,7 @@ const mockFetchMixed = (jsonPayload: unknown): void => {
 };
 
 // End-to-end acceptance gate for the S2 asset-access surface: bare-string
-// inference + X.of() descriptors in Assets.from, loader-free usable leaves, the
+// inference + Asset.type() descriptors in Assets.from, loader-free usable leaves, the
 // status channel, heal-in-place on adopt+load, and bare-path get() for a value
 // kind — all together on one loader.
 describe('S2 asset-access surface (integration)', () => {
@@ -49,7 +49,7 @@ describe('S2 asset-access surface (integration)', () => {
     global.fetch = originalFetch;
   });
 
-  test('Assets.from mixes a bare path + a bare value path + an X.of() descriptor, all usable loader-free', () => {
+  test('Assets.from mixes a bare path + a bare value path + an Asset.type() descriptor, all usable loader-free', () => {
     const assets = Assets.from({
       ship: 'sprites/ship.png', // bare → Texture (resource leaf)
       config: 'data/config.json', // bare → AssetRef (value leaf)

@@ -2,27 +2,28 @@ import type { AssetDefinitions } from './AssetDefinitions';
 
 const extToKind = new Map<string, keyof AssetDefinitions>();
 
-function normalizeExt(ext: string): string {
+/** Canonical extension key shared by global defaults, bindings, overrides, and lookups. @internal */
+export function normalizeExtension(ext: string): string {
   return ext.replace(/^\.+/, '').toLowerCase();
 }
 
 /**
- * Map a file suffix to an asset kind for bare-string path inference in
+ * Map a file suffix to an asset type for bare-string path inference in
  * `Assets.from()` / `get()` / `load()` (asset-system v2 §5).
  *
  * Compound suffixes (`atlas.json`) are allowed and win over their bare tail
  * (`json`) via longest-suffix-first resolution. Registering a **bare** suffix
- * already claimed by a *different* kind is a **loud conflict** (§5.1): it throws
- * naming both kinds and pointing to the compound-suffix / `Asset.type(...)` escape
+ * already claimed by a *different* type is a **loud conflict** (§5.1): it throws
+ * naming both types and pointing to the compound-suffix / `Asset.type(...)` escape
  * hatches, replacing the old silent clobber. Idempotent for the same
- * `(ext, kind)` pair.
+ * `(ext, type)` pair.
  */
 export function registerExtensionKind(ext: string, kind: keyof AssetDefinitions): void {
-  const key = normalizeExt(ext);
+  const key = normalizeExtension(ext);
   const existing = extToKind.get(key);
   if (existing !== undefined && existing !== kind) {
     throw new Error(
-      `extensionKindRegistry: suffix ".${key}" is already registered as kind "${existing}", ` +
+      `extensionKindRegistry: suffix ".${key}" is already registered as type "${existing}", ` +
         `cannot also register it as "${kind}". Use a compound suffix (e.g. "${kind}.${key}") ` +
         `or annotate individual assets with Asset.type(...) instead of a bare path.`,
     );
@@ -30,13 +31,13 @@ export function registerExtensionKind(ext: string, kind: keyof AssetDefinitions)
   extToKind.set(key, kind);
 }
 
-/** The kind registered for a bare/compound suffix, or `undefined`. @internal */
+/** The type registered for a bare/compound suffix, or `undefined`. @internal */
 export function getExtensionKind(ext: string): keyof AssetDefinitions | undefined {
-  return extToKind.get(normalizeExt(ext));
+  return extToKind.get(normalizeExtension(ext));
 }
 
 /**
- * Resolve a path string to its asset kind — basename-only, longest-suffix-first
+ * Resolve a path string to its asset type — basename-only, longest-suffix-first
  * (mirrors the type-level `MatchKind`/`KindByPath`). Query/hash are stripped. Returns
  * `undefined` when no dot-suffix of the basename is registered. @internal
  */

@@ -121,7 +121,7 @@ declare module '@codexo/exojs' {
       resource: TileMap;
       config: { source: string; format?: 'tiled' };
       // No `seamless` adapter on `tiledRuntimeMapBinding`, so `defineAsset`
-      // defaults this to a value kind: its leaf is an `AssetRef<TileMap>`.
+      // defaults this to a value type: its leaf is an `AssetRef<TileMap>`.
       isValue: true;
     };
     tiledMap: {
