@@ -1,0 +1,20 @@
+{
+  // Engine-strict lane for the loader/catalog type contract.
+  //
+  // `tsconfig.type-tests.json` inherits the EXAMPLE project's settings, which
+  // are strict but stop short of the engine's own profile. This config extends
+  // the engine tsconfig instead, so the catalog-input overloads are also
+  // validated under `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes` and
+  // `noUnusedLocals`. Scope is deliberately one file — it guards those
+  // overloads, not the whole type-test suite (which is not written against
+  // `noUnusedLocals`).
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDir": ".",
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false
+  },
+  "include": ["test/type-tests/loader-catalog-input.type-test.ts", "src/typings.d.ts"]
+}
