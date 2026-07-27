@@ -1,0 +1,107 @@
+{
+  "title": "ExtendResult",
+  "description": "The derived catalog type produced by AssetsFacade.extend.",
+  "symbol": "ExtendResult",
+  "kind": "type",
+  "subsystem": "resources",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "The derived catalog type produced by AssetsFacade.extend."
+      ],
+      "importLine": "import { ExtendResult } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "ExtendResult",
+          "signature": "Assets<AsDefinition<ExtendDefinition<M, E>>>",
+          "signatureTokens": [
+            {
+              "text": "Assets",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AsDefinition",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ExtendDefinition",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "M",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "E",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/resources/Assets.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Assets.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/resources/Assets.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/resources/Assets.ts"
+}

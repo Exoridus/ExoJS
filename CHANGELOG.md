@@ -115,6 +115,16 @@ transition: sharedFade }` or a per-phase `{ enter, exit }` pair). Data and
 - **Scene-less applications.** `new Application({ /* no scenes */ })` +
   `app.start()` runs the frame loop with no active scene at all —
   `app.systems` still ticks and draws.
+- **`Assets.compose(...catalogs)` and `Assets.extend(base, entries)`.** Typed
+  catalog composition. `compose()` merges existing catalogs into an ordinary,
+  directly typed `Assets` object that SHARES its inputs' handles (so
+  `Forest.logo === Shared.logo` and loading the composition heals the handles
+  the input catalogs already handed out); it adds no ownership and no claims.
+  Two different catalogs may not declare the same key — a duplicate resolves to
+  a message type naming the key at compile time and throws at runtime — while
+  the same catalog reaching a composition twice (a diamond) deduplicates.
+  `extend()` derives a catalog from a base, adding keys and deliberately
+  overriding existing ones without mutating the base.
 
 ### Changed
 
