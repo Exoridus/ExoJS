@@ -43,8 +43,8 @@ A TypeScript-first 2D engine for games and interactive apps. Explicit scene grap
 
 **Scene & UI**
 
-- `Application`, `Scene`, `SceneDirector` — one active scene with `setScene`, fade transitions, and `pause`/`resume`
-- `scene.ui` — screen-fixed widget layer with `Label`, `Panel`, `Button`, `ProgressBar`, `Stack`, anchoring, and a `FocusManager` with keyboard and gamepad navigation
+- `Application`, `Scene`, `SceneDirector` — one active scene with `change`/`restore`/`preload`/`unload` navigation, `pause`/`resume`, and fade, slide, or cross-fade transitions (or your own `SceneTransition`)
+- `scene.ui` — screen-fixed widget layer with `Label`, `Panel`, `Button`, `ProgressBar`, `Stack`, anchoring, and a `FocusManager` with keyboard navigation
 
 **Physics** (`@codexo/exojs-physics`)
 
@@ -56,12 +56,12 @@ A TypeScript-first 2D engine for games and interactive apps. Explicit scene grap
 **Audio**
 
 - Voice capability matrix across `Sound`, `AudioStream`, and `AudioGenerator`
-- Spatial panning, audio sprites, frequency and waveform analysis
-- `@codexo/exojs-audio-fx`: `BiquadEffect`, `AudioAnalyser`, `BeatDetector`, worklets, and DSP helpers
+- Spatial panning, audio sprites, frequency and waveform analysis, `BiquadEffect` filters
+- `@codexo/exojs-audio-fx`: `AudioAnalyser`, `BeatDetector`, worklets, and DSP helpers
 
 **Assets & Storage**
 
-- Typed `Loader` with manifest/bundle workflow (`defineAssetManifest`, `loadBundle`)
+- Typed `Loader` with a declarative asset catalog (`Assets.from`, `Asset.type`, `defineAsset`) and a de-duplicating `LoadingQueue`
 - Binary asset containers (`loader.loadContainer`) for bundled distribution
 - Key-value persistence: `WebStorageStore` (localStorage/sessionStorage), `IndexedDbKeyValueStore` (structured-clone, binary-safe), `MemoryStore` (tests/ephemeral)
 
@@ -106,7 +106,7 @@ npm run dev
 npm install @codexo/exojs
 ```
 
-ExoJS is ESM-only. Use `import` syntax with a modern bundler or runtime.
+ExoJS ships as ESM — use `import` syntax with a modern bundler or runtime. A prebuilt IIFE bundle (`dist/exo.iife.js`, global `Exo`) is included for CDN and script-tag usage.
 Optional packages install independently — add only what your project needs:
 
 ```bash
@@ -121,12 +121,12 @@ npm install @codexo/exojs-react
 ## Quickstart
 
 ```ts
-import { Application, Scene, Graphics, Color, Loader, type RenderingContext, type Time } from '@codexo/exojs';
+import { Application, Scene, Graphics, Color, type RenderingContext, type Time } from '@codexo/exojs';
 
 class HelloScene extends Scene {
   private readonly box = new Graphics();
 
-  public override init(loader: Loader): void {
+  public override init(): void {
     this.box.fillColor = Color.white;
     this.box.drawRectangle(-32, -32, 64, 64);
     this.box.setPosition(400, 300);
@@ -145,11 +145,12 @@ class HelloScene extends Scene {
 }
 
 const app = new Application({
+  scenes: { HelloScene },
   canvas: { element: document.querySelector('canvas')!, width: 800, height: 600 },
   clearColor: Color.cornflowerBlue,
 });
 
-await app.start(new HelloScene());
+await app.start(HelloScene);
 ```
 
 See the [Guide](https://exoridus.github.io/ExoJS/en/guide/) for physics, audio, UI, and more, or browse the [live examples](https://exoridus.github.io/ExoJS/).
@@ -158,14 +159,10 @@ See the [Guide](https://exoridus.github.io/ExoJS/en/guide/) for physics, audio, 
 
 Directional work toward the `1.0.0` API freeze. Priorities may shift — nothing here is a release commitment.
 
-- Physics joints, sleeping, and CCD (ragdolls, vehicles, ropes, fast projectiles)
-- W3C blend mode suite — multiply, screen, overlay, and the full non-separable set
-- Additional scene transitions (slide, crossfade, custom)
+- Platform adapters for DOM, Worker, and headless runtimes
 - Screen-level post-processing (bloom, CRT, vignette, chromatic aberration)
 - Path following with Bézier and Catmull-Rom splines
-- Tween sequencer and coroutine helpers
-- Aseprite and LDtk first-party adapters
-- CDN/IIFE bundle for script-tag usage
+- Coroutine helpers
 - Localization primitive
 - Final pre-1.0 API audit and stabilization pass
 
