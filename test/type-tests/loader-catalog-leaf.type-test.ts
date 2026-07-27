@@ -19,7 +19,19 @@
 // example project's settings, the engine's own strict profile and
 // `strictNullChecks: false`.
 
-import { Asset, AssetRef, Assets, type AudioStream, type BmFont, type Loader, type LoadingQueue, type Scene, type Sound, type Texture } from '@codexo/exojs';
+import {
+  Asset,
+  AssetRef,
+  Assets,
+  type AudioStream,
+  type BmFont,
+  type Loader,
+  type LoadingQueue,
+  type Scene,
+  type Sound,
+  type Texture,
+  type Video,
+} from '@codexo/exojs';
 
 import type { CatalogResourceLeaf, CatalogValueLeaf } from './helpers/catalog-leaf';
 
@@ -181,6 +193,7 @@ declare const rawAtlas: SpriteAtlas;
 // Non-leaf resource types: these have no seamless adapter, so the runtime never
 // hands them out as a catalog leaf either.
 declare const audioStream: AudioStream;
+declare const video: Video;
 declare const bmFont: BmFont;
 declare const image: HTMLImageElement;
 declare const fontFace: FontFace;
@@ -200,6 +213,8 @@ export function negatives(): void {
   // Non-leaf resource types must not sneak in through the leaf overloads.
   // @ts-expect-error — AudioStream is not a catalog leaf.
   loader.load(audioStream);
+  // @ts-expect-error — Video is not a catalog leaf.
+  loader.load(video);
   // @ts-expect-error — BmFont is not a catalog leaf.
   loader.load(bmFont);
   // @ts-expect-error — HTMLImageElement is not a catalog leaf.
