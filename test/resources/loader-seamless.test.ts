@@ -269,13 +269,15 @@ describe('Loader seamless get (Texture)', () => {
     }
   });
 
-  test('unload() while the fetch is in flight fails the handle; a later get() heals it', async () => {
+  test('an internal reset while the fetch is in flight fails the handle; a later get() heals it', async () => {
     mockFetchImage();
     const loader = createCoreLoader();
 
     const handle = loader.get('ship.png');
 
-    loader.unload(Texture, 'ship.png');
+    // The hard reset path is internal-only: it forgets every scope's claim, so
+    // it is deliberately not reachable through the public surface.
+    (loader as unknown as { _residency: { _unloadOne(type: unknown, alias: string): void } })._residency._unloadOne(Texture, 'ship.png');
 
     await expect(handle.loaded).rejects.toThrow('unloaded while');
     expect(handle.loadState).toBe('failed');
