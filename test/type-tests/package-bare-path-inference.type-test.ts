@@ -20,6 +20,8 @@ import type { LdtkMap } from '@codexo/exojs-ldtk';
 import type { TiledMap } from '@codexo/exojs-tiled';
 import type { TileMap } from '@codexo/exojs-tilemap';
 
+import type { CatalogValueLeaf } from './helpers/catalog-leaf';
+
 type Equal<A, B> = (<G>() => G extends A ? 1 : 2) extends <G>() => G extends B ? 1 : 2 ? true : false;
 type Expect<T extends true> = T;
 
@@ -69,8 +71,8 @@ const asepriteFromDescriptor = loader.get(Asset.type('asepriteSheet', 'hero.asep
 type _AsepriteDescriptorIsRef = Expect<Equal<typeof asepriteFromDescriptor, AssetRef<AsepriteSheet>>>;
 
 const catalog = Assets.from({ map: Asset.type('tileMap', 'world.tmj'), sheet: Asset.type('asepriteSheet', 'hero.aseprite.json') });
-type _CatalogLeavesAreRefs = Expect<Equal<(typeof catalog)['map'], AssetRef<TileMap>>>;
-type _CatalogSheetIsRef = Expect<Equal<(typeof catalog)['sheet'], AssetRef<AsepriteSheet>>>;
+type _CatalogLeavesAreRefs = Expect<Equal<(typeof catalog)['map'], CatalogValueLeaf<TileMap>>>;
+type _CatalogSheetIsRef = Expect<Equal<(typeof catalog)['sheet'], CatalogValueLeaf<AsepriteSheet>>>;
 
 // A resource kind with a seamless adapter still resolves unwrapped — the marker
 // must not turn every package kind into a ref.

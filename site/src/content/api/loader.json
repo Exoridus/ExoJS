@@ -6,10 +6,10 @@
   "subsystem": "resources",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 34,
+  "memberCount": 35,
   "counts": {
     "constructors": 1,
-    "methods": 24,
+    "methods": 25,
     "properties": 2,
     "events": 7
   },
@@ -504,7 +504,7 @@
         },
         {
           "name": "get",
-          "signature": "get(leaf: T): T",
+          "signature": "get(leaf: CatalogResourceLeaf<T>): T",
           "signatureTokens": [
             {
               "text": "get",
@@ -523,8 +523,20 @@
               "kind": "punctuation"
             },
             {
+              "text": "CatalogResourceLeaf",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
               "text": "T",
               "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             },
             {
               "text": ")",
@@ -542,12 +554,83 @@
           "params": [
             {
               "name": "leaf",
-              "type": "T",
+              "type": "CatalogResourceLeaf<T>",
               "optional": false
             }
           ],
           "returnType": "T",
-          "description": "Adopts a single handle-hybrid leaf (an Assets.from() property) and returns it — the same object, healing in place once its payload arrives."
+          "description": "Adopts a single handle-hybrid leaf (an Assets.from() property) and returns it — the same object, healing in place once its payload arrives. Matches on the catalog-leaf brand, so only a MATERIALIZED leaf is accepted; a raw resource instance has no _assetMeta stamp and is rejected here as it is at runtime."
+        },
+        {
+          "name": "get",
+          "signature": "get(leaf: CatalogValueLeaf<T>): AssetRef<T>",
+          "signatureTokens": [
+            {
+              "text": "get",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "leaf",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CatalogValueLeaf",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetRef",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "leaf",
+              "type": "CatalogValueLeaf<T>",
+              "optional": false
+            }
+          ],
+          "returnType": "AssetRef<T>",
+          "description": "Adopts a single value leaf and returns the ref itself — its payload arrives on the ref."
         },
         {
           "name": "hasAssetType",
@@ -958,7 +1041,7 @@
         },
         {
           "name": "load",
-          "signature": "load(leaf: AssetRef<T>, options?: LoadOptions): LoadingQueue<T>",
+          "signature": "load(leaf: CatalogValueLeaf<T>, options?: LoadOptions): LoadingQueue<T>",
           "signatureTokens": [
             {
               "text": "load",
@@ -977,7 +1060,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "AssetRef",
+              "text": "CatalogValueLeaf",
               "kind": "type"
             },
             {
@@ -1040,7 +1123,7 @@
           "params": [
             {
               "name": "leaf",
-              "type": "AssetRef<T>",
+              "type": "CatalogValueLeaf<T>",
               "optional": false
             },
             {
@@ -1054,7 +1137,7 @@
         },
         {
           "name": "load",
-          "signature": "load(leaf: T, options?: LoadOptions): LoadingQueue<T>",
+          "signature": "load(leaf: CatalogResourceLeaf<T>, options?: LoadOptions): LoadingQueue<T>",
           "signatureTokens": [
             {
               "text": "load",
@@ -1073,8 +1156,20 @@
               "kind": "punctuation"
             },
             {
+              "text": "CatalogResourceLeaf",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
               "text": "T",
               "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             },
             {
               "text": ", ",
@@ -1124,7 +1219,7 @@
           "params": [
             {
               "name": "leaf",
-              "type": "T",
+              "type": "CatalogResourceLeaf<T>",
               "optional": false
             },
             {

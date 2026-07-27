@@ -14,5 +14,10 @@
     "strict": false,
     "strictNullChecks": false
   },
-  "include": ["test/type-tests/loader-catalog-input.type-test.ts", "test/type-tests/assets-strict-false.type-test.ts", "src/typings.d.ts"]
+  "include": [
+    "test/type-tests/loader-catalog-input.type-test.ts",
+    "test/type-tests/loader-catalog-leaf.type-test.ts",
+    "test/type-tests/assets-strict-false.type-test.ts",
+    "src/typings.d.ts"
+  ]
 }

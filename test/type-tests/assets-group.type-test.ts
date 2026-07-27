@@ -3,6 +3,8 @@
 
 import { Assets, type Texture } from '@codexo/exojs';
 
+import type { CatalogResourceLeaf } from './helpers/catalog-leaf';
+
 type Equal<A, B> = (<G>() => G extends A ? 1 : 2) extends <G>() => G extends B ? 1 : 2 ? true : false;
 type Expect<T extends true> = T;
 
@@ -10,7 +12,7 @@ const assets = Assets.from({
   ...Assets.group('texture', { player: 'player.png', enemy: 'enemy.png' }, { mimeType: 'image/png' }),
 });
 
-type _PlayerIsTexture = Expect<Equal<typeof assets.player, Texture>>;
-type _EnemyIsTexture = Expect<Equal<typeof assets.enemy, Texture>>;
+type _PlayerIsTexture = Expect<Equal<typeof assets.player, CatalogResourceLeaf<Texture>>>;
+type _EnemyIsTexture = Expect<Equal<typeof assets.enemy, CatalogResourceLeaf<Texture>>>;
 
 export type { _EnemyIsTexture, _PlayerIsTexture };

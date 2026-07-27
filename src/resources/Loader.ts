@@ -12,11 +12,10 @@ import type {
   InferLoadedEntry,
   KindByPath,
   LeafForPath,
-  ResourceAssetObject,
   ResourceForKind,
 } from './AssetDefinitions';
 import { createLeaf, getAssetKind } from './assetKindRegistry';
-import { _readMeta } from './assetMeta';
+import { _readMeta, type CatalogResourceLeaf, type CatalogValueLeaf } from './assetMeta';
 import type { AssetRef } from './AssetRef';
 import { AssetResidency, type AssetResidencySignals } from './AssetResidency';
 import { _normalizeEntry, type Assets, AssetsImpl, type InferAssetsProperties } from './Assets';
@@ -399,9 +398,16 @@ export class Loader {
   public load<M extends Record<string, CatalogEntry>>(assets: Assets<M>, options?: LoadOptions): LoadingQueue<InferLoadedMap<M>>;
   // Single value-leaf (an `Assets.from()` AssetRef property): `AssetRef.loaded` resolves
   // to the raw value, not the ref — this overload must win over the generic leaf one below.
-  public load<T>(leaf: AssetRef<T>, options?: LoadOptions): LoadingQueue<T>;
+  public load<T>(leaf: CatalogValueLeaf<T>, options?: LoadOptions): LoadingQueue<T>;
   // Single handle-hybrid leaf (an `Assets.from()` property): adopt + resolve its value.
-  public load<T extends ResourceAssetObject>(leaf: T, options?: LoadOptions): LoadingQueue<T>;
+  //
+  // Both leaf overloads match on the CATALOG-LEAF BRAND — the type-level mirror
+  // of the runtime `_assetMeta` stamp that `_loadClaimed` dispatches on — so a
+  // raw `new Texture()` / `new AssetRef()`, or a non-leaf resource like an
+  // `AudioStream`, is rejected here exactly as the runtime rejects it. `T` is
+  // recovered from the brand's phantom field, so the queue resolves to the plain
+  // resource rather than to the branded leaf type.
+  public load<T extends object>(leaf: CatalogResourceLeaf<T>, options?: LoadOptions): LoadingQueue<T>;
 
   // -----------------------------------------------------------------------
   // Loading — bare path (type normalized from the file suffix)
@@ -657,8 +663,14 @@ export class Loader {
   /**
    * Adopts a single handle-hybrid leaf (an `Assets.from()` property) and returns
    * it — the same object, healing in place once its payload arrives.
+   *
+   * Matches on the catalog-leaf brand, so only a MATERIALIZED leaf is accepted;
+   * a raw resource instance has no `_assetMeta` stamp and is rejected here as it
+   * is at runtime.
    */
-  public get<T extends ResourceAssetObject>(leaf: T): T;
+  public get<T extends object>(leaf: CatalogResourceLeaf<T>): T;
+  /** Adopts a single value leaf and returns the ref itself — its payload arrives on the ref. */
+  public get<T>(leaf: CatalogValueLeaf<T>): AssetRef<T>;
   public get(input: string | object, options?: unknown): unknown {
     return this._getClaimed(this._rootClaimer, input, options);
   }

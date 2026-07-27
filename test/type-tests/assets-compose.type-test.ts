@@ -4,7 +4,9 @@
 // `never` — and, unlike a message string, matching no loader input.
 // Compiled by `tsconfig.type-tests.json` via `pnpm typecheck:type-tests`.
 
-import { type AnyAssets, type AssetRef, Assets, type Loader, type Texture } from '@codexo/exojs';
+import { type AnyAssets, Assets, type Loader, type Texture } from '@codexo/exojs';
+
+import type { CatalogResourceLeaf, CatalogValueLeaf } from './helpers/catalog-leaf';
 
 type Equal<A, B> = (<G>() => G extends A ? 1 : 2) extends <G>() => G extends B ? 1 : 2 ? true : false;
 type Expect<T extends true> = T;
@@ -22,10 +24,10 @@ const forest = Assets.from({ tree: 'sprites/tree.png' });
 
 const composed = Assets.compose(shared, forest);
 
-type _ComposedLogo = Expect<Equal<typeof composed.logo, Texture>>;
-type _ComposedConfig = Expect<Equal<typeof composed.config, AssetRef<unknown>>>;
-type _ComposedTree = Expect<Equal<typeof composed.tree, Texture>>;
-type _ComposedEntries = Expect<Equal<(typeof composed.entries)['tree'], Texture>>;
+type _ComposedLogo = Expect<Equal<typeof composed.logo, CatalogResourceLeaf<Texture>>>;
+type _ComposedConfig = Expect<Equal<typeof composed.config, CatalogValueLeaf<unknown>>>;
+type _ComposedTree = Expect<Equal<typeof composed.tree, CatalogResourceLeaf<Texture>>>;
+type _ComposedEntries = Expect<Equal<(typeof composed.entries)['tree'], CatalogResourceLeaf<Texture>>>;
 
 declare const loader: Loader;
 
@@ -35,8 +37,8 @@ const left = Assets.compose(shared, forest);
 const right = Assets.compose(shared, Assets.from({ rock: 'sprites/rock.png' }));
 const diamond = Assets.compose(left, right);
 
-type _DiamondLogo = Expect<Equal<typeof diamond.logo, Texture>>;
-type _DiamondRock = Expect<Equal<typeof diamond.rock, Texture>>;
+type _DiamondLogo = Expect<Equal<typeof diamond.logo, CatalogResourceLeaf<Texture>>>;
+type _DiamondRock = Expect<Equal<typeof diamond.rock, CatalogResourceLeaf<Texture>>>;
 
 // --- conflicts --------------------------------------------------------------
 
@@ -73,10 +75,10 @@ loader.load(multiConflicted);
 
 const derived = Assets.extend(shared, { tree: 'sprites/tree.png', config: 'sprites/config.png' });
 
-type _DerivedKept = Expect<Equal<typeof derived.logo, Texture>>;
-type _DerivedAdded = Expect<Equal<typeof derived.tree, Texture>>;
+type _DerivedKept = Expect<Equal<typeof derived.logo, CatalogResourceLeaf<Texture>>>;
+type _DerivedAdded = Expect<Equal<typeof derived.tree, CatalogResourceLeaf<Texture>>>;
 // A deliberate override re-types the key: `config` was an AssetRef, now a Texture.
-type _DerivedOverridden = Expect<Equal<typeof derived.config, Texture>>;
+type _DerivedOverridden = Expect<Equal<typeof derived.config, CatalogResourceLeaf<Texture>>>;
 
 export type {
   _ComposedConfig,

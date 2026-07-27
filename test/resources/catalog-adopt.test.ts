@@ -3,6 +3,7 @@ import { materializeAssetBindings } from '#extensions/materialize';
 import { Texture } from '#rendering/texture/Texture';
 import { ScaleModes } from '#rendering/types';
 import { createLeaf } from '#resources/assetKindRegistry';
+import { _readMeta } from '#resources/assetMeta';
 import { type AssetRef } from '#resources/AssetRef';
 import { Assets } from '#resources/Assets';
 import { coreAssetBindings } from '#resources/coreAssetBindings';
@@ -446,5 +447,26 @@ describe('Loader.get / load — Assets catalog adoption (end-to-end)', () => {
     expect(warnSpy).not.toHaveBeenCalled();
 
     warnSpy.mockRestore();
+  });
+
+  // The runtime contract the loader's single-leaf TYPE overloads mirror: a leaf
+  // is exactly an object carrying the `_assetMeta` stamp. A catalog property is
+  // stamped (it comes from `createLeaf`); a bare-path `get(path)` handle is NOT
+  // — that branch resolves through the source-keyed dedup instead. This is why
+  // `LeafForPath` (the `get(path)` result) stays unbranded while the catalog
+  // twin is branded: branding both would let `load(loader.get('x.png'))`
+  // compile into the record fallback.
+  test('catalog leaves carry the meta stamp; a bare-path get() handle does not', async () => {
+    mockFetchImage();
+    const loader = createCoreLoader();
+    const catalog = new Assets({ ship: 'ship.png' });
+
+    const catalogLeaf = loader.get(catalog).ship;
+    const barePathHandle = loader.get('other.png');
+
+    expect(_readMeta(catalogLeaf)).toEqual({ kind: 'texture', src: 'ship.png', opts: undefined });
+    expect(_readMeta(barePathHandle)).toBeUndefined();
+
+    await Promise.all([catalog.ship.loaded, (barePathHandle as Texture).loaded]);
   });
 });

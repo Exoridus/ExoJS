@@ -1,7 +1,8 @@
 import type { Application } from '#core/Application';
 import type { Destroyable } from '#core/types';
 import type { Asset, ValueAsset } from '#resources/Asset';
-import type { CatalogEntry, KindByPath, LeafForPath, ResourceAssetObject, ResourceForKind } from '#resources/AssetDefinitions';
+import type { CatalogEntry, KindByPath, LeafForPath, ResourceForKind } from '#resources/AssetDefinitions';
+import type { CatalogResourceLeaf, CatalogValueLeaf } from '#resources/assetMeta';
 import type { AssetRef } from '#resources/AssetRef';
 import type { Assets, InferAssetsProperties } from '#resources/Assets';
 import type { InferLoadedMap, Loader, LoadOptions } from '#resources/Loader';
@@ -28,12 +29,14 @@ export class SceneLoader implements Destroyable {
   public get<S extends string>(path: [KindByPath<S>] extends [never] ? never : S, options?: unknown): LeafForPath<S>;
   // Seamless/value access from an `Asset.type()` descriptor (mirrors Loader.get(asset)):
   // a value-kind descriptor returns AssetRef<T>, a resource-kind descriptor the resource.
-  public get<T>(asset: ValueAsset<T>): AssetRef<T>;
+  // A materialized VALUE LEAF resolves the same way, so both share one signature.
+  public get<T>(asset: ValueAsset<T> | CatalogValueLeaf<T>): AssetRef<T>;
   public get<T>(asset: Asset<T>): T;
   // Adopts an Assets catalog under the scene scope (mirrors Loader.get(catalog)).
   public get<M extends Record<string, CatalogEntry>>(catalog: Assets<M>): InferAssetsProperties<M>;
   // Adopts a single handle-hybrid leaf under the scene scope (mirrors Loader.get(leaf)).
-  public get<T extends ResourceAssetObject>(leaf: T): T;
+  // Brand-matched: only a materialized catalog leaf, never a raw resource.
+  public get<T extends object>(leaf: CatalogResourceLeaf<T>): T;
   public get(input: string | object, options?: unknown): unknown {
     return this._loader._getClaimed(this._scope, input, options);
   }
@@ -41,9 +44,9 @@ export class SceneLoader implements Destroyable {
   public load<T>(asset: Asset<T>): LoadingQueue<T>;
   public load<M extends Record<string, CatalogEntry>>(assets: Assets<M>, options?: LoadOptions): LoadingQueue<InferLoadedMap<M>>;
   // Single value-leaf (an `Assets.from()` AssetRef property): mirrors Loader.load(leaf).
-  public load<T>(leaf: AssetRef<T>, options?: LoadOptions): LoadingQueue<T>;
+  public load<T>(leaf: CatalogValueLeaf<T>, options?: LoadOptions): LoadingQueue<T>;
   // Single handle-hybrid leaf (an `Assets.from()` property): mirrors Loader.load(leaf).
-  public load<T extends ResourceAssetObject>(leaf: T, options?: LoadOptions): LoadingQueue<T>;
+  public load<T extends object>(leaf: CatalogResourceLeaf<T>, options?: LoadOptions): LoadingQueue<T>;
   // Bare path (mirrors Loader.load(path)): leaf-capable suffixes only.
   public load<S extends string>(path: [KindByPath<S>] extends [never] ? never : S): LoadingQueue<ResourceForKind<KindByPath<S>>>;
   public load(arg0: unknown, arg1?: unknown): LoadingQueue<unknown> {
