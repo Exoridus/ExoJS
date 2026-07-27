@@ -10,6 +10,8 @@
 
 import { AssetRef, Assets, type Texture } from '@codexo/exojs';
 
+import type { CatalogResourceLeaf, CatalogValueLeaf } from './helpers/catalog-leaf';
+
 // Compile-time exact-type assertion, independent of vitest/expectTypeOf so it can
 // be validated by a bare `tsc --noEmit`.
 type Equal<A, B> = (<G>() => G extends A ? 1 : 2) extends <G>() => G extends B ? 1 : 2 ? true : false;
@@ -22,8 +24,8 @@ const catalog = Assets.from({
 
 // Before the fix these both degraded to `{}` under strict:false. The literal path
 // strings must survive inference so their file suffix classifies the leaf.
-type _ShipIsTexture = Expect<Equal<typeof catalog.ship, Texture>>;
-type _LevelIsAssetRef = Expect<Equal<typeof catalog.level, AssetRef<unknown>>>;
+type _ShipIsTexture = Expect<Equal<typeof catalog.ship, CatalogResourceLeaf<Texture>>>;
+type _LevelIsAssetRef = Expect<Equal<typeof catalog.level, CatalogValueLeaf<unknown>>>;
 
 // Reference the aliases so `noUnusedLocals`-style checks and eslint stay quiet.
 export type { _LevelIsAssetRef, _ShipIsTexture };

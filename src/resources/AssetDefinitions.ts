@@ -8,6 +8,7 @@ import type { Texture } from '#rendering/texture/Texture';
 import type { Video } from '#rendering/video/Video';
 
 import type { Asset, ValueAsset } from './Asset';
+import type { CatalogResourceLeaf, CatalogValueLeaf } from './assetMeta';
 import type { AssetRef } from './AssetRef';
 
 /**
@@ -175,16 +176,37 @@ export type KindByPath<S extends string> = MatchKind<KindBasename<KindStripQuery
 /** The resource type of an asset type. */
 export type ResourceForKind<K extends keyof AssetDefinitions> = AssetDefinitions[K]['resource'];
 
-/** Object-valued resource types that may appear as heal-in-place catalog leaves. @internal */
-export type ResourceAssetObject = Extract<AssetDefinitions[keyof AssetDefinitions]['resource'], object>;
+/**
+ * The leaf type an asset type materializes as inside a CATALOG: a value type
+ * yields a branded `AssetRef` over its resource, a resource type the branded
+ * placeholder resource itself.
+ *
+ * The brand is what the loader's single-leaf overloads match on — it mirrors the
+ * runtime `_assetMeta` stamp `createLeaf` applies, so a raw `new Texture()` (or
+ * an `AudioStream`, a `BmFont`, …) is correctly rejected where a materialized
+ * leaf is required.
+ *
+ * Deliberately NOT the type of a bare-path `loader.get(path)` result (that is
+ * {@link LeafForPath}): the bare-path branch resolves through the source-keyed
+ * dedup rather than `createLeaf`, so a freshly minted handle there carries no
+ * stamp — and claiming otherwise would let `load(loader.get('x.png'))` compile
+ * into the record fallback at runtime.
+ */
+export type CatalogLeafForKind<K extends keyof AssetDefinitions> = K extends ValueAssetKind
+  ? CatalogValueLeaf<ResourceForKind<K>>
+  : CatalogResourceLeaf<ResourceForKind<K>>;
 
 /** The per-type option bag: that type's config minus the `source` field. */
 export type OptionsForKind<K extends keyof AssetDefinitions> = Omit<AssetDefinitions[K]['config'], 'source'>;
 
 /**
- * The handle-hybrid leaf type a bare path string materializes as: a resource
- * type yields its resource (`Texture`/`Sound`), a {@link ValueAssetKind} yields
- * a deferred `AssetRef<resource>`. `unknown` when the suffix is unregistered.
+ * The handle-hybrid type a bare path resolves to through `loader.get(path)`: a
+ * resource type yields its resource (`Texture`/`Sound`), a
+ * {@link ValueAssetKind} a deferred `AssetRef<resource>`. `unknown` when the
+ * suffix is unregistered.
+ *
+ * Unbranded on purpose — see {@link CatalogLeafForKind}. The CATALOG twin (what
+ * `Assets.from({ ship: 'ship.png' }).ship` is) is {@link CatalogLeafForPath}.
  */
 export type LeafForPath<S extends string> = [KindByPath<S>] extends [never]
   ? unknown
@@ -192,31 +214,34 @@ export type LeafForPath<S extends string> = [KindByPath<S>] extends [never]
     ? AssetRef<ResourceForKind<KindByPath<S>>>
     : ResourceForKind<KindByPath<S>>;
 
+/** {@link LeafForPath}, branded — the leaf a bare path materializes as inside a catalog. */
+export type CatalogLeafForPath<S extends string> = [KindByPath<S>] extends [never] ? unknown : CatalogLeafForKind<KindByPath<S>>;
+
 /** A single catalog field input: a bare path string, an `Asset.type(...)` descriptor, or an explicit config. */
 export type CatalogEntry = string | Asset<unknown> | AnyAssetConfig;
 
 /**
- * The leaf type a {@link CatalogEntry} materializes as. A {@link ValueAsset}
+ * The leaf type a {@link CatalogEntry} materializes as — always BRANDED (see
+ * {@link LeafForKind}), because every one of these is produced by `createLeaf`
+ * and therefore carries the runtime `_assetMeta` stamp. A {@link ValueAsset}
  * brand (from `Asset.type<T>('json', …)`) classifies as `AssetRef<T>` FIRST,
  * before the `T extends object` heuristic that (only) the unbranded legacy
  * `Asset.type(...)` descriptors still rely on.
  */
 export type InferCatalogLeaf<E extends CatalogEntry> = E extends string
-  ? LeafForPath<E>
+  ? CatalogLeafForPath<E>
   : E extends ValueAsset<infer V>
-    ? AssetRef<V>
+    ? CatalogValueLeaf<V>
     : E extends Asset<infer T>
       ? T extends object
-        ? T
-        : AssetRef<T>
+        ? CatalogResourceLeaf<T>
+        : CatalogValueLeaf<T>
       : E extends { type: infer K extends keyof AssetDefinitions }
         ? E extends { parse: (raw: never) => infer R }
           ? K extends ValueAssetKind
-            ? AssetRef<R>
-            : AssetDefinitions[K]['resource']
-          : K extends ValueAssetKind
-            ? AssetRef<AssetDefinitions[K]['resource']>
-            : AssetDefinitions[K]['resource']
+            ? CatalogValueLeaf<R>
+            : CatalogResourceLeaf<AssetDefinitions[K]['resource']>
+          : CatalogLeafForKind<K>
         : never;
 
 /**

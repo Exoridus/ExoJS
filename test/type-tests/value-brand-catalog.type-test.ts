@@ -5,6 +5,8 @@
 
 import { Asset, type AssetRef, Assets, type Loader, type Texture } from '@codexo/exojs';
 
+import type { CatalogResourceLeaf, CatalogValueLeaf } from './helpers/catalog-leaf';
+
 type Equal<A, B> = (<G>() => G extends A ? 1 : 2) extends <G>() => G extends B ? 1 : 2 ? true : false;
 type Expect<T extends true> = T;
 
@@ -18,10 +20,10 @@ const catalog = Assets.from({
 });
 
 // resource-kind descriptor → the resource leaf
-type _ShipIsTexture = Expect<Equal<typeof catalog.ship, Texture>>;
+type _ShipIsTexture = Expect<Equal<typeof catalog.ship, CatalogResourceLeaf<Texture>>>;
 
 // value-kind descriptor with object value → AssetRef<Config> (NOT Config)
-type _ConfigIsRef = Expect<Equal<typeof catalog.config, AssetRef<Config>>>;
+type _ConfigIsRef = Expect<Equal<typeof catalog.config, CatalogValueLeaf<Config>>>;
 
 // `.value` is well-typed on the ref leaf
 type _ConfigValue = Expect<Equal<typeof catalog.config.value, Config>>;

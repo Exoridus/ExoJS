@@ -3,7 +3,9 @@
 // catalog, and the resolved map from `load(catalog)` unwraps to R. Compiled by
 // `tsconfig.type-tests.json` via `pnpm typecheck:type-tests`.
 
-import { type AssetRef, Assets, type Loader } from '@codexo/exojs';
+import { Assets, type Loader } from '@codexo/exojs';
+
+import type { CatalogValueLeaf } from './helpers/catalog-leaf';
 
 type Equal<A, B> = (<G>() => G extends A ? 1 : 2) extends <G>() => G extends B ? 1 : 2 ? true : false;
 type Expect<T extends true> = T;
@@ -17,7 +19,7 @@ const catalog = Assets.from({
 });
 
 // value config with `parse` → AssetRef<R>
-type _ConfigIsRef = Expect<Equal<typeof catalog.config, AssetRef<Config>>>;
+type _ConfigIsRef = Expect<Equal<typeof catalog.config, CatalogValueLeaf<Config>>>;
 type _ConfigValue = Expect<Equal<typeof catalog.config.value, Config>>;
 
 // resolved map from load(catalog) unwraps to the parsed value

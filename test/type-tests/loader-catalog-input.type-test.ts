@@ -15,7 +15,9 @@
 // and `tsconfig.type-tests-loose.json` (`strictNullChecks: false`). Every
 // assertion below must hold identically in all three.
 
-import { Asset, type AssetRef, Assets, type Loader, type Scene, type Texture } from '@codexo/exojs';
+import { Asset, Assets, type Loader, type Scene, type Texture } from '@codexo/exojs';
+
+import type { CatalogResourceLeaf, CatalogValueLeaf } from './helpers/catalog-leaf';
 
 type Equal<A, B> = (<G>() => G extends A ? 1 : 2) extends <G>() => G extends B ? 1 : 2 ? true : false;
 type Expect<T extends true> = T;
@@ -62,9 +64,9 @@ const extended = Assets.extend(bare, { enemy: 'sprites/enemy.png' });
 
 // The catalog LEAVES are unchanged by this fix — asserted so a regression in the
 // loaded-map inference can't be mistaken for a leaf-inference regression.
-type _BareLeafPlayer = Expect<Equal<typeof bare.player, Texture>>;
-type _BareLeafConfig = Expect<Equal<typeof bare.config, AssetRef<unknown>>>;
-type _ExplicitLeafConfig = Expect<Equal<typeof explicit.config, AssetRef<LevelData>>>;
+type _BareLeafPlayer = Expect<Equal<typeof bare.player, CatalogResourceLeaf<Texture>>>;
+type _BareLeafConfig = Expect<Equal<typeof bare.config, CatalogValueLeaf<unknown>>>;
+type _ExplicitLeafConfig = Expect<Equal<typeof explicit.config, CatalogValueLeaf<LevelData>>>;
 
 // --- loading them -----------------------------------------------------------
 
@@ -105,7 +107,7 @@ export async function loads(): Promise<void> {
 
   // `get()`/`release()` take the very same catalogs — same root cause, same fix.
   const held = loader.get(bare);
-  expectType<Equal<typeof held.player, Texture>>();
+  expectType<Equal<typeof held.player, CatalogResourceLeaf<Texture>>>();
   loader.release(bare);
   scene.loader.get(composed);
 }
@@ -121,14 +123,10 @@ export async function neighbours(): Promise<void> {
   const leafValue = await loader.load(mixed.level);
   expectType<Equal<typeof leafValue, LevelData>>();
 
-  // Single handle-hybrid leaf. PRE-EXISTING and untouched by this fix: that
-  // overload is keyed on `ResourceAssetObject`, which collapses to `never`
-  // because `json`'s `resource: unknown` swallows the resource union it is
-  // extracted from — so a resource leaf matches no overload today. The runtime
-  // accepts it (the meta-stamped-leaf branch of `_loadClaimed`). Asserted as-is
-  // so this file fails loudly the day the overload is repaired.
-  // @ts-expect-error — see above; tracked separately, not part of this change.
-  await loader.load(bare.player);
+  // Single handle-hybrid leaf. Full coverage of the brand-matched leaf overloads
+  // lives in `loader-catalog-leaf.type-test.ts`.
+  const leafHandle = await loader.load(bare.player);
+  expectType<Equal<typeof leafHandle, Texture>>();
 
   // Bare path.
   const path = await loader.load('sprites/solo.png');
