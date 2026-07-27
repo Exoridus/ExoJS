@@ -26,6 +26,104 @@ export type InferAssetsProperties<M extends Record<string, CatalogEntry>> = {
 };
 
 // ---------------------------------------------------------------------------
+// Composition helper types
+// ---------------------------------------------------------------------------
+
+/**
+ * Any typed catalog, whatever its definition record — the constraint
+ * {@link Assets.compose} accepts its arguments under.
+ */
+export type AnyAssets = AssetsImpl<Record<string, CatalogEntry>>;
+
+/**
+ * The definition record a catalog was built from. Recovered by inference
+ * through {@link Assets} — its mapped-property half makes `M` inferable, which
+ * the bare `AssetsImpl<infer M>` class reference alone is not.
+ */
+type DefinitionOf<C> = C extends Assets<infer M> ? M : never;
+
+/** The per-catalog definition records of a composition argument tuple. */
+type DefinitionsOf<Cs extends readonly AnyAssets[]> = { [I in keyof Cs]: DefinitionOf<Cs[I]> };
+
+/** Left-to-right intersection of every definition record in a tuple. */
+type MergeDefinitions<Ms extends readonly unknown[]> = Ms extends readonly [infer H, ...infer R] ? H & MergeDefinitions<R> : unknown;
+
+/** Collapse an intersection into a single flat object type (hover/error readability). */
+type FlattenDefinition<T> = { [K in keyof T]: T[K] };
+
+/**
+ * Re-assert a computed definition record against the `Assets` type parameter
+ * constraint. Both branches satisfy `Record<string, CatalogEntry>`, so TS
+ * accepts this where it cannot verify a computed mapped/intersection type
+ * directly.
+ */
+type AsDefinition<T> = T extends Record<string, CatalogEntry> ? T : never;
+
+/** Keys defined by more than one catalog in a composition tuple. */
+type SharedKeys<Ms extends readonly unknown[]> = Ms extends readonly [infer H, ...infer R]
+  ? Extract<Extract<keyof H, string>, keyof MergeDefinitions<R>> | SharedKeys<R>
+  : never;
+
+type IsIdentical<X, Y> = (<G>() => G extends X ? 1 : 2) extends <G>() => G extends Y ? 1 : 2 ? true : false;
+
+/**
+ * The shared keys that actually CONFLICT: a key contributed by several catalogs
+ * is fine only while every one of them declares an identical entry — the
+ * type-level approximation of a diamond, where the same catalog reaches the
+ * composition twice. Keys whose declarations differ are a genuine ambiguity and
+ * are reported. Two DIFFERENT catalogs declaring an identical entry are
+ * indistinguishable here; the runtime, which compares catalog identity rather
+ * than declaration shape, rejects those.
+ */
+type ConflictingKeys<Ms extends readonly unknown[]> = {
+  [K in SharedKeys<Ms>]: IsIdentical<Extract<Ms[number], Record<K, unknown>>[K], MergeDefinitions<Ms>[K & keyof MergeDefinitions<Ms>]> extends true ? never : K;
+}[SharedKeys<Ms>];
+
+/**
+ * The result of a conflicting {@link AssetsFacade.compose} call: a message type
+ * naming the offending key, so the failure reads as an explanation at every use
+ * site of the result instead of collapsing to `never`.
+ */
+// The key is interpolated ONCE: a template literal distributes over every union
+// occurrence independently, so a second `${K}` would blow a two-key conflict up
+// into a four-message cross product.
+type ComposeConflict<K extends string> =
+  `Assets.compose(): duplicate catalog key "${K}" — two catalogs define it, use Assets.extend() to override it deliberately.`;
+
+/** The composed catalog type, or the {@link ComposeConflict} message type. */
+export type ComposeResult<Cs extends readonly AnyAssets[]> = [ConflictingKeys<DefinitionsOf<Cs>>] extends [never]
+  ? Assets<AsDefinition<FlattenDefinition<MergeDefinitions<DefinitionsOf<Cs>>>>>
+  : ComposeConflict<ConflictingKeys<DefinitionsOf<Cs>>>;
+
+/** A base definition record with `E`'s entries added, deliberately overriding same-named keys. */
+type ExtendDefinition<M, E> = { [K in keyof M | keyof E]: K extends keyof E ? E[K] : K extends keyof M ? M[K] : never };
+
+/** The derived catalog type produced by {@link AssetsFacade.extend}. */
+export type ExtendResult<M extends Record<string, CatalogEntry>, E extends Record<string, CatalogEntry>> = Assets<AsDefinition<ExtendDefinition<M, E>>>;
+
+// ---------------------------------------------------------------------------
+// Provenance
+// ---------------------------------------------------------------------------
+
+/**
+ * How a catalog came to be. Purely descriptive: it carries no ownership, no
+ * claims and no residency state, and exists so composition stays traceable —
+ * `keyOrigins` is what lets a diamond (the same catalog reaching a composition
+ * along two paths) be told apart from two catalogs racing for one key.
+ * @internal
+ */
+export interface AssetsProvenance {
+  /** The facade call that produced the catalog. */
+  readonly kind: 'from' | 'compose' | 'extend';
+  /** The catalogs this one was built from, in argument order. Empty for `from`. */
+  readonly sources: readonly AnyAssets[];
+  /** Keys `extend()` deliberately re-declared over its base. */
+  readonly overrides: readonly string[];
+  /** Key → the catalog that originally DECLARED it (never a catalog that merely re-exports it). */
+  readonly keyOrigins: ReadonlyMap<string, AnyAssets>;
+}
+
+// ---------------------------------------------------------------------------
 // Internal implementation
 // ---------------------------------------------------------------------------
 
@@ -52,6 +150,31 @@ export function _normalizeEntry(value: CatalogEntry): AnyAssetConfig {
   return value instanceof AssetImpl ? value._config : (value as AnyAssetConfig);
 }
 
+/** Materialize one catalog entry into its meta-stamped handle-hybrid leaf. */
+function createEntryLeaf(value: CatalogEntry): object {
+  const { type, source, ...rest } = _normalizeEntry(value);
+  const opts = Object.keys(rest).length > 0 ? rest : undefined;
+
+  return createLeaf(type, source, opts);
+}
+
+/**
+ * Property names an `Assets` container owns itself, and which a catalog key may
+ * therefore not shadow.
+ */
+const RESERVED_ASSETS_KEYS: Record<string, string> = {
+  entries: 'that name is reserved for the spread-composition helper',
+  _provenance: 'that name is reserved for internal composition provenance',
+};
+
+function assertUnreservedKey(key: string): void {
+  const reason = RESERVED_ASSETS_KEYS[key];
+
+  if (reason !== undefined) {
+    throw new Error(`An Assets container may not define an asset named "${key}": ${reason}.`);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Dev-mode typo guard
 // ---------------------------------------------------------------------------
@@ -76,61 +199,131 @@ let assetsDevProxyInstanceCounter = 0;
 
 /** @internal */
 export class AssetsImpl<M extends Record<string, CatalogEntry>> {
-  public readonly entries: InferAssetsEntries<M>;
+  public readonly entries!: InferAssetsEntries<M>;
+
+  /** @internal */
+  public readonly _provenance!: AssetsProvenance;
 
   public constructor(definition: M) {
-    if (Object.hasOwn(definition, 'entries')) {
-      throw new Error('An Assets container may not define an asset named "entries": ' + 'that name is reserved for the spread-composition helper.');
-    }
-
     const entries: Record<string, object> = {};
 
     for (const [key, value] of Object.entries(definition)) {
+      assertUnreservedKey(key);
+
       // A bare path string, an already-constructed Asset (which carries its
       // `_config`), or a plain config all normalize to `{ type, source, ...opts }`,
       // then to a meta-stamped handle-hybrid leaf. An already-constructed Asset is
       // CONVERTED to a leaf — it is no longer passed through by reference (pre-1.0
       // breaking change).
-      const config = _normalizeEntry(value);
-      const { type, source, ...rest } = config;
-      const opts = Object.keys(rest).length > 0 ? rest : undefined;
-      const leaf = createLeaf(type, source, opts);
-
-      entries[key] = leaf;
-
-      Object.defineProperty(this, key, {
-        value: leaf,
-        enumerable: true,
-        configurable: false,
-        writable: false,
-      });
+      entries[key] = createEntryLeaf(value);
     }
 
-    this.entries = entries as InferAssetsEntries<M>;
+    return installCatalog(this, entries, 'from', [], [], new Map());
+  }
+}
 
-    // A typo'd or dynamic catalog-key read (`bag.logoo`, `bag[computedKey]`)
-    // is otherwise a silent `undefined` — warn once per key in dev instead.
-    // __DEV__-gated: zero cost and no Proxy indirection in production.
-    if (__DEV__) {
-      const instanceId = assetsDevProxyInstanceCounter++;
+/**
+ * Install materialized leaves on a catalog instance: direct typed properties,
+ * the `entries` record, and the composition provenance. Every catalog — built
+ * by `new Assets(...)`/`from()`, `compose()` or `extend()` — goes through here,
+ * so all three shapes are indistinguishable to the loader.
+ *
+ * `keyOrigins` carries the origins inherited from the input catalogs; any key
+ * without one is declared HERE and is stamped with this instance.
+ */
+function installCatalog<M extends Record<string, CatalogEntry>>(
+  instance: AssetsImpl<M>,
+  leaves: Record<string, object>,
+  kind: AssetsProvenance['kind'],
+  sources: readonly AnyAssets[],
+  overrides: readonly string[],
+  keyOrigins: Map<string, AnyAssets>,
+): Assets<M> {
+  for (const [key, leaf] of Object.entries(leaves)) {
+    Object.defineProperty(instance, key, {
+      value: leaf,
+      enumerable: true,
+      configurable: false,
+      writable: false,
+    });
+  }
 
-      return new Proxy(this, {
-        get(target, key, receiver) {
-          const value = Reflect.get(target, key, receiver);
+  Object.defineProperty(instance, 'entries', {
+    value: leaves,
+    enumerable: true,
+    configurable: false,
+    writable: false,
+  });
 
-          if (typeof key === 'string' && !ASSETS_DEV_PROXY_DUCK_TYPING_KEYS.has(key) && !Reflect.has(target, key)) {
-            const definedKeys = Object.keys(target).filter(k => k !== 'entries');
+  // A typo'd or dynamic catalog-key read (`bag.logoo`, `bag[computedKey]`)
+  // is otherwise a silent `undefined` — warn once per key in dev instead.
+  // __DEV__-gated: zero cost and no Proxy indirection in production.
+  let catalog = instance as Assets<M>;
 
-            logger.warn(`Assets: "${key}" is not a defined catalog key. Defined keys: ${definedKeys.join(', ')}.`, {
-              source: 'Assets',
-              once: `assets:missing-key:${instanceId}:${key}`,
-            });
-          }
+  if (__DEV__) {
+    const instanceId = assetsDevProxyInstanceCounter++;
 
-          return value;
-        },
-      });
+    catalog = new Proxy(instance, {
+      get(target, key, receiver): unknown {
+        const value: unknown = Reflect.get(target, key, receiver);
+
+        if (typeof key === 'string' && !ASSETS_DEV_PROXY_DUCK_TYPING_KEYS.has(key) && !Reflect.has(target, key)) {
+          const definedKeys = Object.keys(target).filter(k => k !== 'entries');
+
+          logger.warn(`Assets: "${key}" is not a defined catalog key. Defined keys: ${definedKeys.join(', ')}.`, {
+            source: 'Assets',
+            once: `assets:missing-key:${instanceId}:${key}`,
+          });
+        }
+
+        return value;
+      },
+    }) as Assets<M>;
+  }
+
+  // Origins name the catalog CALLERS hold — the dev Proxy, where there is one —
+  // so identity comparisons against a passed-in catalog line up. Any key without
+  // an inherited origin is declared here.
+  for (const key of Object.keys(leaves)) {
+    if (!keyOrigins.has(key)) {
+      keyOrigins.set(key, catalog);
     }
+  }
+
+  // Non-enumerable: provenance is bookkeeping, not a catalog key, and must stay
+  // out of `Object.keys(catalog)` (the loader iterates `entries`, and the dev
+  // typo guard lists the defined keys).
+  Object.defineProperty(instance, '_provenance', {
+    value: Object.freeze({ kind, sources, overrides, keyOrigins }) satisfies AssetsProvenance,
+    enumerable: false,
+    configurable: false,
+    writable: false,
+  });
+
+  return catalog;
+}
+
+/** Build a catalog from ALREADY materialized leaves, bypassing entry normalization. */
+function adoptCatalog(
+  leaves: Record<string, object>,
+  kind: AssetsProvenance['kind'],
+  sources: readonly AnyAssets[],
+  overrides: readonly string[],
+  keyOrigins: Map<string, AnyAssets>,
+): AnyAssets {
+  const instance = Object.create(AssetsImpl.prototype) as AssetsImpl<Record<string, CatalogEntry>>;
+
+  return installCatalog(instance, leaves, kind, sources, overrides, keyOrigins);
+}
+
+/** The catalog a key was originally declared by — itself, for a `from()` catalog. */
+function originOf(catalog: AnyAssets, key: string): AnyAssets {
+  return catalog._provenance.keyOrigins.get(key) ?? catalog;
+}
+
+function assertIsCatalog(value: unknown, context: string): asserts value is AnyAssets {
+  if (!(value instanceof AssetsImpl)) {
+    throw new Error(`${context} expects an Assets catalog (Assets.from(...), Assets.compose(...) or Assets.extend(...)).`);
   }
 }
 
@@ -223,6 +416,48 @@ type AssetsFacade = AssetsConstructorFn & {
     entries: E,
     shared?: OptionsForKind<K>,
   ): { readonly [P in keyof E]: { type: K } & AssetDefinitions[K]['config'] };
+
+  /**
+   * Combine several existing catalogs into one typed catalog. The result is an
+   * ordinary `Assets` object — same direct typed properties, same `entries`,
+   * same load/release behaviour — that SHARES its inputs' leaves rather than
+   * re-materializing them: `Forest.logo === Shared.logo`, so loading the
+   * composition heals the very handles the input catalogs already handed out.
+   * Composition is descriptive only; it introduces no ownership and no claims.
+   *
+   * Two DIFFERENT catalogs may not declare the same key — that ambiguity is
+   * rejected as a {@link ComposeConflict} message type at compile time (for keys
+   * whose declarations differ) and always as a throw at runtime. The same
+   * catalog reaching the composition twice along different paths (a diamond) is
+   * NOT a conflict and deduplicates. To re-declare a key on purpose, derive with
+   * {@link extend} instead.
+   *
+   * @example
+   * ```ts
+   * const ForestAssets = Assets.compose(SharedAssets, ForestLocalAssets);
+   * loader.load(ForestAssets);
+   * ```
+   */
+  compose<const Cs extends readonly AnyAssets[]>(...catalogs: Cs): ComposeResult<Cs>;
+
+  /**
+   * Derive a catalog from `base`: `entries` adds new keys and DELIBERATELY
+   * re-declares existing ones. The result is an ordinary `Assets` object; `base`
+   * is never mutated, and the keys it keeps stay the same leaf instances.
+   *
+   * An overridden key is re-declared BY the derived catalog — composing the
+   * derived catalog back together with its base therefore conflicts on that key,
+   * exactly as two independent declarations would.
+   *
+   * @example
+   * ```ts
+   * const CustomizedAssets = Assets.extend(SharedAssets, {
+   *   theme: 'audio/forest.ogg',                                    // overrides the shared theme
+   *   tree:  Asset.type('texture', 'sprites/tree.png', { mimeType: 'image/png' }),
+   * });
+   * ```
+   */
+  extend<M extends Record<string, CatalogEntry>, const E extends Record<string, CatalogEntry>>(base: Assets<M>, entries: E): ExtendResult<M, E>;
 };
 
 (AssetsImpl as unknown as { from: unknown }).from = function from<const M extends Record<string, CatalogEntry>>(definition: M): Assets<M> {
@@ -230,9 +465,71 @@ type AssetsFacade = AssetsConstructorFn & {
 };
 
 (AssetsImpl as unknown as { one: unknown }).one = function one<const E extends CatalogEntry>(entry: E): InferCatalogLeaf<E> {
-  const { type, source, ...rest } = _normalizeEntry(entry);
-  const opts = Object.keys(rest).length > 0 ? rest : undefined;
-  return createLeaf(type, source, opts) as unknown as InferCatalogLeaf<E>;
+  return createEntryLeaf(entry) as unknown as InferCatalogLeaf<E>;
+};
+
+(AssetsImpl as unknown as { compose: unknown }).compose = function compose(...catalogs: readonly AnyAssets[]): AnyAssets {
+  const leaves: Record<string, object> = {};
+  const keyOrigins = new Map<string, AnyAssets>();
+  const conflicts = new Set<string>();
+
+  for (const catalog of catalogs) {
+    assertIsCatalog(catalog, 'Assets.compose(...)');
+
+    for (const [key, leaf] of Object.entries(catalog.entries as Record<string, object>)) {
+      const origin = originOf(catalog, key);
+      const claimed = keyOrigins.get(key);
+
+      // Same declaring catalog reaching the composition twice (a diamond) —
+      // dedup instead of colliding with itself. Identity, not shape: two
+      // catalogs that happen to declare the same source are still two
+      // declarations, and stay a conflict.
+      if (claimed !== undefined && claimed !== origin) {
+        conflicts.add(key);
+        continue;
+      }
+
+      keyOrigins.set(key, origin);
+      leaves[key] = leaf;
+    }
+  }
+
+  if (conflicts.size > 0) {
+    const keys = [...conflicts];
+
+    throw new Error(
+      `Assets.compose(): duplicate catalog key${keys.length > 1 ? 's' : ''} ${keys.map(key => `"${key}"`).join(', ')} — ` +
+        'two catalogs define the same key, use Assets.extend(base, { ... }) to override it deliberately.',
+    );
+  }
+
+  return adoptCatalog(leaves, 'compose', catalogs, [], keyOrigins);
+};
+
+(AssetsImpl as unknown as { extend: unknown }).extend = function extend(base: AnyAssets, entries: Record<string, CatalogEntry>): AnyAssets {
+  assertIsCatalog(base, 'Assets.extend(base, ...)');
+
+  // Copy — the base catalog is never mutated, and the keys it keeps stay the
+  // SAME leaf instances (a derived catalog is a view, not a re-materialization).
+  const leaves: Record<string, object> = { ...(base.entries as Record<string, object>) };
+  const keyOrigins = new Map<string, AnyAssets>(base._provenance.keyOrigins);
+  const overrides: string[] = [];
+
+  for (const [key, value] of Object.entries(entries)) {
+    assertUnreservedKey(key);
+
+    if (Object.hasOwn(leaves, key)) {
+      overrides.push(key);
+      // A deliberate override is a NEW declaration: drop the inherited origin so
+      // the derived catalog becomes this key's declaring catalog, and composing
+      // it back with its base conflicts like any other double declaration.
+      keyOrigins.delete(key);
+    }
+
+    leaves[key] = createEntryLeaf(value);
+  }
+
+  return adoptCatalog(leaves, 'extend', [base], overrides, keyOrigins);
 };
 
 (AssetsImpl as unknown as { group: unknown }).group = function group(

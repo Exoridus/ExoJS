@@ -179,6 +179,52 @@ await Promise.all([
 
 The key `'entries'` is reserved and will throw if you try to use it as an asset name inside an `Assets` container.
 
+## Combining and deriving catalogs
+
+Catalogs compose. `Assets.compose(...)` merges several existing catalogs into one — the result is an ordinary, fully typed `Assets` object, so it loads, releases, and autocompletes exactly like a hand-written one:
+
+```ts
+import { Assets } from '@codexo/exojs';
+
+const SharedAssets = Assets.from({ logo: 'sprites/logo.png' });
+const ForestLocalAssets = Assets.from({ tree: 'sprites/tree.png' });
+
+export const ForestAssets = Assets.compose(SharedAssets, ForestLocalAssets);
+
+ForestAssets.logo; // Texture — the very same handle as SharedAssets.logo
+ForestAssets.tree; // Texture
+```
+
+A composition **shares** its inputs' handles instead of copying them: `ForestAssets.logo === SharedAssets.logo`, so loading the composition heals the handles the shared catalog already handed out. It adds no ownership of its own — loading and releasing behave exactly as they would for the underlying keys.
+
+Two *different* catalogs may not define the same key. That ambiguity is caught at compile time (the result types as a message naming the key) and always throws at runtime:
+
+```ts
+// Assets.compose(): duplicate catalog key "logo" — two catalogs define it,
+// use Assets.extend() to override it deliberately.
+Assets.compose(SharedAssets, Assets.from({ logo: 'sprites/other.png' }));
+```
+
+The same catalog arriving twice along different paths — a diamond — is not a conflict and deduplicates:
+
+```ts
+const Left = Assets.compose(SharedAssets, Assets.from({ tree: 'sprites/tree.png' }));
+const Right = Assets.compose(SharedAssets, Assets.from({ rock: 'sprites/rock.png' }));
+
+Assets.compose(Left, Right); // { logo, tree, rock } — `logo` counted once
+```
+
+To re-declare a key on purpose, derive with `Assets.extend(base, entries)`. New keys are added, existing keys are deliberately overridden, and the base catalog is never mutated:
+
+```ts
+export const CustomizedAssets = Assets.extend(SharedAssets, {
+    logo: 'sprites/forest-logo.png',   // deliberate override — SharedAssets keeps its own
+    tree: 'sprites/tree.png',          // new key
+});
+```
+
+An override is a new declaration, so composing a derived catalog back together with the base it overrode conflicts on that key — as two independent declarations should.
+
 ## Progress and parallel loading
 
 Every `loader.load(...)` call returns a `LoadingQueue<T>`. It implements `PromiseLike<T>`, so `await` and `Promise.all` both work. It also exposes per-queue progress via `onProgress`:
