@@ -250,6 +250,11 @@ export class WebGl2Backend implements RenderBackend {
   private _transformTexture: DataTexture<'rgba32f'> | null = null;
   private _transformTextureHash = 0;
   private _transformTextureCount = -1;
+  // Tint's own rgba8 texture (see TransformBuffer's class doc for why it's
+  // split out of the fp32 transform texture): created/uploaded alongside the
+  // transform texture in bindTransformBufferTexture (same dirty-range
+  // consumption), bound separately by renderers that read tint.
+  private _tintTexture: DataTexture<'rgba8'> | null = null;
   private _activeDrawCommand: DrawCommand | null = null;
   private _drawPlanDepth = 0;
   private readonly _planBaseStack: number[] = [];
@@ -952,7 +957,7 @@ export class WebGl2Backend implements RenderBackend {
       transformTexture?.destroy();
 
       this._transformTexture = new DataTexture({
-        width: 3,
+        width: 2,
         height: this._transformBuffer.capacity,
         format: 'rgba32f',
         data: this._transformBuffer.data,
@@ -961,10 +966,28 @@ export class WebGl2Backend implements RenderBackend {
       this._transformTextureCount = -1;
     }
 
+    // Tint's capacity always grows in lockstep with the transform buffer (see
+    // TransformBuffer._ensureCapacity), so the same capacity check catches
+    // both a first bind and a growth — no separate dirty-hash tracking needed;
+    // both textures upload from the one dirty-range consumption below.
+    const tintTexture = this._tintTexture;
+
+    if (tintTexture?.height !== this._transformBuffer.capacity || tintTexture.buffer !== this._transformBuffer.tintData) {
+      tintTexture?.destroy();
+
+      this._tintTexture = new DataTexture({
+        width: 1,
+        height: this._transformBuffer.capacity,
+        format: 'rgba8',
+        data: this._transformBuffer.tintData,
+      });
+    }
+
     const snapshot = this._transformBuffer.commitSnapshot(requiredCount);
     const nextTransformTexture = this._transformTexture;
+    const nextTintTexture = this._tintTexture;
 
-    if (nextTransformTexture === null) {
+    if (nextTransformTexture === null || nextTintTexture === null) {
       throw new Error('Transform texture must be initialized before binding.');
     }
 
@@ -976,10 +999,13 @@ export class WebGl2Backend implements RenderBackend {
       // Upload only the rows actually written since the last upload (delta), so
       // barrier-heavy frames don't re-upload the whole growing buffer. A reused
       // slot below the high-water mark is in the dirty range, so it re-uploads.
+      // Single consumption feeds BOTH textures — consumeDirtyRange clears the
+      // range as a side effect, so it must only be called once per flush.
       const { firstRow, rowCount } = this._transformBuffer.consumeDirtyRange(snapshot.count);
 
       if (rowCount > 0) {
-        nextTransformTexture.commitRect(0, firstRow, 3, rowCount);
+        nextTransformTexture.commitRect(0, firstRow, 2, rowCount);
+        nextTintTexture.commitRect(0, firstRow, 1, rowCount);
         this._transformBuffer.recordUpload(rowCount);
       }
 
@@ -988,6 +1014,22 @@ export class WebGl2Backend implements RenderBackend {
     }
 
     return this.bindTexture(nextTransformTexture, unit);
+  }
+
+  /**
+   * Bind the tint texture (uploaded as part of {@link bindTransformBufferTexture},
+   * which must be called first this flush) to `unit`. Only renderers that read
+   * per-node tint from the shared buffer (sprite, mesh) call this.
+   * @internal
+   */
+  public bindTintBufferTexture(unit: number): this {
+    const tintTexture = this._tintTexture;
+
+    if (tintTexture === null) {
+      throw new Error('Tint texture must be initialized (via bindTransformBufferTexture) before binding.');
+    }
+
+    return this.bindTexture(tintTexture, unit);
   }
 
   public setBlendMode(blendMode: BlendModes | null): this {
@@ -1215,7 +1257,7 @@ export class WebGl2Backend implements RenderBackend {
         payload.replayer._rebaseRetainedNodeIndices(payload, range.min);
       }
 
-      frame.bundle._storeTransformRows(this._transformBuffer.data, range.min, range.max - range.min + 1);
+      frame.bundle._storeTransformRows(this._transformBuffer.data, this._transformBuffer.tintData, range.min, range.max - range.min + 1);
     }
 
     frame.bundle._connectDevice(this._context, this._accountant);
@@ -1485,6 +1527,11 @@ export class WebGl2Backend implements RenderBackend {
       this._transformTexture = null;
     }
 
+    if (this._tintTexture !== null) {
+      this._tintTexture.destroy();
+      this._tintTexture = null;
+    }
+
     this._vao = null;
     this._renderer = null;
     this._shader = null;
@@ -1602,12 +1649,14 @@ export class WebGl2Backend implements RenderBackend {
     // dropped when its render target is evicted).
     this._destroyManagedResources();
 
-    // The shared transform texture's handle died with the context. Drop the
-    // wrapper (its GL handle was just evicted above) and reset the upload
-    // bookkeeping so a fresh DataTexture + full re-upload happens on next bind.
+    // The shared transform (+ tint) texture handles died with the context. Drop
+    // the wrappers (their GL handles were just evicted above) and reset the
+    // upload bookkeeping so fresh DataTextures + a full re-upload happen on the
+    // next bind.
     this._transformTexture = null;
     this._transformTextureCount = -1;
     this._transformTextureHash = 0;
+    this._tintTexture = null;
 
     // Disconnect renderers so they release their (dead) buffers / VAOs / shader
     // programs, then reconnect to rebuild them against the fresh context. This

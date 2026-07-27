@@ -63,6 +63,11 @@ const maxBatchTextures = 16;
 // binds on the next unit (16). That needs 17 combined units, well within the
 // WebGL2 >= 32 MAX_COMBINED_TEXTURE_IMAGE_UNITS guarantee.
 const transformTextureUnit = 16;
+// One above the transform unit; the backend's render-target sync scratch unit
+// (17) is only live transiently during a render-to-texture sync, never while a
+// sprite draw's shader is active, so units stay disjoint in practice, but this
+// still sits clear of it.
+const transformTintTextureUnit = 18;
 // Custom-material texture bindings (base texture on unit 0 + material textures
 // on units 1..7) keep the pre-16-slot cap: the material CONTRACT stays at 7
 // extra textures, matching WebGl2MeshRenderer and the WebGPU sprite renderer.
@@ -112,6 +117,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
   private readonly _slotScratches: Int32Array[] = Array.from({ length: maxBatchTextures }, (_, i) => new Int32Array([i]));
   // Pinned unit index for the shared transform buffer sampler.
   private readonly _transformUnitScratch: Int32Array = new Int32Array([transformTextureUnit]);
+  private readonly _tintUnitScratch: Int32Array = new Int32Array([transformTintTextureUnit]);
   private _currentMaterial: SpriteMaterial | null = null;
   private _currentBaseTexture: Texture | RenderTexture | null = null;
   // Local bounds resolved for the sprite currently being packed. Geometry-mode
@@ -244,6 +250,12 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
 
     if (shader.uniforms.has('u_transforms')) {
       shader.getUniform('u_transforms').setValue(this._transformUnitScratch);
+    }
+
+    backend.bindTintBufferTexture(transformTintTextureUnit);
+
+    if (shader.uniforms.has('u_tintTexture')) {
+      shader.getUniform('u_tintTexture').setValue(this._tintUnitScratch);
     }
 
     shader.sync();
@@ -379,8 +391,9 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     const backend = this.getBackendOrNull();
     const vao = payload.vao;
     const transformTexture = payload.bundle.transformTexture;
+    const tintTexture = payload.bundle.tintTexture;
 
-    if (backend === null || vao === null || transformTexture === null) {
+    if (backend === null || vao === null || transformTexture === null || tintTexture === null) {
       // Defensive: a bundle in this state never validates (generation), so a
       // spliced replay cannot reach here; skip rather than crash mid-frame.
       return;
@@ -409,6 +422,12 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
 
     if (this._shader.uniforms.has('u_transforms')) {
       this._shader.getUniform('u_transforms').setValue(this._transformUnitScratch);
+    }
+
+    backend.bindTexture(tintTexture, transformTintTextureUnit);
+
+    if (this._shader.uniforms.has('u_tintTexture')) {
+      this._shader.getUniform('u_tintTexture').setValue(this._tintUnitScratch);
     }
 
     this._shader.sync();

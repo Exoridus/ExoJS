@@ -487,7 +487,10 @@ export class RetainedContainer extends Container {
       return false;
     }
 
-    packTransformRow(patchRowScratch, 0, node.getGlobalTransform(), drawable.tint, drawable.pixelSnapMode);
+    // Transform-only patch (spec §3): tint is not part of this row anymore (it
+    // lives in the bundle's separate tint texture) and a moved node's tint
+    // doesn't change, so there is nothing to patch there.
+    packTransformRow(patchRowScratch, 0, node.getGlobalTransform(), drawable.pixelSnapMode);
     bundle._patchTransformRow(nodeIndex - base, patchRowScratch);
 
     return true;

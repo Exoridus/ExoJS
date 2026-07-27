@@ -391,7 +391,7 @@ describe('WebGPU retained record/replay: fallback ladder + B-06 submit collapse'
       expect(instanceWrites).toHaveLength(1);
 
       // Two 32-byte instances (8 words each); the last word of each is the
-      // (rebased) node index — tint is read from the shared transform slot.
+      // (rebased) node index — tint is read from its own shared buffer.
       const words = new Uint32Array(instanceWrites[0]!.bytes.buffer, instanceWrites[0]!.bytes.byteOffset, instanceWrites[0]!.bytes.byteLength / 4);
 
       expect(words).toHaveLength(16);
@@ -403,7 +403,7 @@ describe('WebGPU retained record/replay: fallback ladder + B-06 submit collapse'
 
       expect(transformWrites).toHaveLength(1);
       expect(transformWrites[0]!.bufferOffset).toBe(0);
-      expect(transformWrites[0]!.bytes.byteLength).toBe(2 * 48);
+      expect(transformWrites[0]!.bytes.byteLength).toBe(2 * 32);
 
       root.destroy();
       texture.destroy();
@@ -505,7 +505,7 @@ describe('WebGPU retained record/replay: fallback ladder + B-06 submit collapse'
       // The group matrix did not change, so its UBO is not rewritten either.
       expect(countLabel(environment.writes(), retainedUniformLabel, mark)).toBe(0);
 
-      // Exactly one 48-byte transform sub-range write (a single TransformSlot),
+      // Exactly one 32-byte transform sub-range write (a single TransformSlot),
       // aligned to a slot boundary — the headline O(k) property vs. the O(rows)
       // full-range re-upload of a recapture.
       const patchWrites = environment
@@ -514,9 +514,9 @@ describe('WebGPU retained record/replay: fallback ladder + B-06 submit collapse'
         .filter(write => write.label === retainedTransformLabel);
 
       expect(patchWrites).toHaveLength(1);
-      expect(patchWrites[0]!.bytes.byteLength).toBe(48);
-      expect(patchWrites[0]!.bufferOffset % 48).toBe(0);
-      expect(patchWrites[0]!.bufferOffset).toBeLessThan(2 * 48);
+      expect(patchWrites[0]!.bytes.byteLength).toBe(32);
+      expect(patchWrites[0]!.bufferOffset % 32).toBe(0);
+      expect(patchWrites[0]!.bufferOffset).toBeLessThan(2 * 32);
 
       // Recording stayed valid (no generation bump) and still replays in one submit.
       expect(bundle.generation).toBe(generation);
@@ -737,7 +737,7 @@ describe('WebGpuRetainedGroupBundle: resource lifecycle', () => {
     const bundle = new WebGpuRetainedGroupBundle(accountant, () => {});
     const { device, destroyed } = createFakeDevice();
 
-    bundle.ensureCapacity(device, 100, 96);
+    bundle.ensureCapacity(device, 100, 96, 12);
 
     const generation = bundle.generation;
 
@@ -761,13 +761,13 @@ describe('WebGpuRetainedGroupBundle: resource lifecycle', () => {
     });
     const { device, destroyed } = createFakeDevice();
 
-    bundle.ensureCapacity(device, 100, 96);
+    bundle.ensureCapacity(device, 100, 96, 12);
 
     const generation = bundle.generation;
 
     bundle.destroy();
 
-    expect(destroyed).toHaveLength(3); // instance + transform + uniform
+    expect(destroyed).toHaveLength(4); // instance + transform + tint + uniform
     expect(bundle.generation).toBeGreaterThan(generation);
     expect(released).toBe(1);
     expect(stats.gpuMemoryBytes).toBe(0);
@@ -783,19 +783,19 @@ describe('WebGpuRetainedGroupBundle: resource lifecycle', () => {
     const bundle = new WebGpuRetainedGroupBundle(accountant, () => {});
     const { device, created } = createFakeDevice();
 
-    bundle.ensureCapacity(device, 100, 96);
+    bundle.ensureCapacity(device, 100, 96, 12);
 
     const generation = bundle.generation;
     const createdAfterFirst = created.length;
 
     // Within capacity: nothing recreated, generation stable.
-    bundle.ensureCapacity(device, 200, 96);
+    bundle.ensureCapacity(device, 200, 96, 12);
 
     expect(created.length).toBe(createdAfterFirst);
     expect(bundle.generation).toBe(generation);
 
     // Instance growth only: one new buffer, one generation bump.
-    bundle.ensureCapacity(device, 4096, 96);
+    bundle.ensureCapacity(device, 4096, 96, 12);
 
     expect(created.length).toBe(createdAfterFirst + 1);
     expect(bundle.generation).toBe(generation + 1);
@@ -809,21 +809,21 @@ describe('WebGpuRetainedGroupBundle: resource lifecycle', () => {
     expect(bundle.transformRowBase).toBe(0);
   });
 
-  test('patch writes one 48-byte slot at localRow*48 and does NOT bump the generation (Slice 4c)', () => {
+  test('patch writes one 32-byte slot at localRow*32 and does NOT bump the generation (Slice 4c)', () => {
     const stats = createRenderStats();
     const accountant = new GpuResourceAccountant(stats);
     const bundle = new WebGpuRetainedGroupBundle(accountant, () => {});
     const { device, writes } = createFakeDevice();
 
     // Finalize a 3-row transform range rebased from shared row 5.
-    bundle.ensureCapacity(device, 256, 3 * 48);
+    bundle.ensureCapacity(device, 256, 3 * 32, 3 * 4);
     bundle._recordTransformRowRange(device, 5, 3);
 
     expect(bundle.transformRowBase).toBe(5);
 
     const generation = bundle.generation;
     const mark = writes.length;
-    const floats = new Float32Array(12);
+    const floats = new Float32Array(8);
 
     floats[4] = 42; // tx
 
@@ -832,8 +832,8 @@ describe('WebGpuRetainedGroupBundle: resource lifecycle', () => {
     const patchWrites = writes.slice(mark).filter(write => write.label === 'sprite:retained-transform-buffer');
 
     expect(patchWrites).toHaveLength(1);
-    expect(patchWrites[0]!.bufferOffset).toBe(48); // localRow 1 * 48
-    expect(patchWrites[0]!.bytes.byteLength).toBe(48);
+    expect(patchWrites[0]!.bufferOffset).toBe(32); // localRow 1 * 32
+    expect(patchWrites[0]!.bytes.byteLength).toBe(32);
     expect(new Float32Array(patchWrites[0]!.bytes.buffer)[4]).toBe(42);
     // A patch keeps the recorded instance bytes valid: never bump.
     expect(bundle.generation).toBe(generation);
@@ -846,17 +846,17 @@ describe('WebGpuRetainedGroupBundle: resource lifecycle', () => {
     const { device, writes } = createFakeDevice();
 
     // Before any range is recorded: row count is 0 → every patch is a no-op.
-    bundle._patchTransformRow!(0, new Float32Array(12));
+    bundle._patchTransformRow!(0, new Float32Array(8));
 
     expect(writes).toHaveLength(0);
 
-    bundle.ensureCapacity(device, 256, 2 * 48);
+    bundle.ensureCapacity(device, 256, 2 * 32, 2 * 4);
     bundle._recordTransformRowRange(device, 0, 2);
 
     const mark = writes.length;
 
-    bundle._patchTransformRow!(2, new Float32Array(12)); // == rowCount, out of range
-    bundle._patchTransformRow!(-1, new Float32Array(12));
+    bundle._patchTransformRow!(2, new Float32Array(8)); // == rowCount, out of range
+    bundle._patchTransformRow!(-1, new Float32Array(8));
 
     expect(writes.slice(mark)).toHaveLength(0);
   });
@@ -867,13 +867,13 @@ describe('WebGpuRetainedGroupBundle: resource lifecycle', () => {
     const bundle = new WebGpuRetainedGroupBundle(accountant, () => {});
     const { device, writes } = createFakeDevice();
 
-    bundle.ensureCapacity(device, 256, 2 * 48);
+    bundle.ensureCapacity(device, 256, 2 * 32, 2 * 4);
     bundle._recordTransformRowRange(device, 0, 2);
     bundle.invalidateDeviceState(false);
 
     const mark = writes.length;
 
-    bundle._patchTransformRow!(0, new Float32Array(12));
+    bundle._patchTransformRow!(0, new Float32Array(8));
 
     expect(bundle.transformRowBase).toBe(0);
     expect(writes.slice(mark)).toHaveLength(0);

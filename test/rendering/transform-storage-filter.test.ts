@@ -4,11 +4,11 @@ import { type DrawCommand, drawCommandUsesSharedTransform, type MaterialKey, Ren
 import { RenderPlanPlayer } from '#rendering/plan/RenderPlanPlayer';
 import type { DrawScopeEntry, GroupScope, ScopeEntry } from '#rendering/plan/RenderScope';
 import type { RenderBackend } from '#rendering/RenderBackend';
-import { TransformBuffer } from '#rendering/TransformBuffer';
+import { TRANSFORM_FLOATS_PER_ROW, TransformBuffer } from '#rendering/TransformBuffer';
 
 import { forEachGroupCommand } from './helpers/collectRenderGroups';
 
-const floatsPerSlot = 12;
+const floatsPerSlot = TRANSFORM_FLOATS_PER_ROW;
 
 // A drawable whose renderer reads the shared transform storage (Sprite/Mesh-like).
 class ConsumingDrawable extends Drawable {

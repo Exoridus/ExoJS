@@ -138,13 +138,16 @@ struct ProjectionUniforms {
 struct TransformSlot {
     m0: vec4<f32>,
     m1: vec4<f32>,
-    m2: vec4<f32>,
 };
 
 @group(0) @binding(0)
 var<uniform> projection: ProjectionUniforms;
 @group(0) @binding(1)
 var<storage, read> transforms: array<TransformSlot>;
+// Packed rgba8 tint (r|g|b|a, 8 bits each, unpacked via unpack4x8unorm), one
+// u32 per instance.
+@group(0) @binding(2)
+var<storage, read> tints: array<u32>;
 
 ${textureBindings}
 
@@ -193,12 +196,13 @@ fn vertexMain(input: VertexInput, @builtin(vertex_index) vid: u32) -> VertexOutp
     var localX = select(input.localBounds.x, input.localBounds.z, cornerX == 1u);
     var localY = select(input.localBounds.y, input.localBounds.w, cornerY == 1u);
 
-    // Fetch this instance's world transform and tint from the shared storage
-    // buffer, keyed by nodeIndex: m0 = (a, b, c, d), m1 = (tx, ty, snapMode, 0),
-    // m2 = tint (rgb 0..1, a). The node tint is this sprite's own tint, so
-    // reading it here unifies with the mesh path and drops the per-instance
-    // color stream.
+    // Fetch this instance's world transform and tint, keyed by nodeIndex:
+    // m0 = (a, b, c, d), m1 = (tx, ty, snapMode, 0); tint is its own packed
+    // rgba8 word, unpacked to 0..1 by the GPU. The node tint is this sprite's
+    // own tint, so reading it here unifies with the mesh path and drops the
+    // per-instance color stream.
     let slot = transforms[input.nodeIndex];
+    let tint = unpack4x8unorm(tints[input.nodeIndex]);
 
     // Geometry boundary snap (slot.m1.z == 2.0, axis-aligned only): round each
     // local corner to the device grid so the quad edges land on whole device
@@ -243,7 +247,7 @@ fn vertexMain(input: VertexInput, @builtin(vertex_index) vid: u32) -> VertexOutp
     let v = select(input.uvBounds.y, input.uvBounds.w, cornerY == 1u);
     output.texcoord = vec2<f32>(u, v);
 
-    output.color = vec4(slot.m2.rgb * slot.m2.a, slot.m2.a);
+    output.color = vec4(tint.rgb * tint.a, tint.a);
     output.textureSlot = input.packedSlotFlags & 0xFFu;
     output.premultiplySample = (input.packedSlotFlags >> 8u) & 1u;
 
@@ -360,6 +364,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
   // Recreated whenever the storage buffer identity changes (capacity growth).
   private _transformBindGroup: GPUBindGroup | null = null;
   private _transformStorageBuffer: GPUBuffer | null = null;
+  private _tintStorageBuffer: GPUBuffer | null = null;
   private _indexBuffer: GPUBuffer | null = null;
   // Frame-scoped append arena for the per-batch instance stream: consecutive
   // batch flushes accumulate into one open pass at distinct byte offsets, so the
@@ -427,6 +432,13 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
         },
         {
           binding: 1,
+          visibility: GPUShaderStage.VERTEX,
+          buffer: {
+            type: 'read-only-storage',
+          },
+        },
+        {
+          binding: 2,
           visibility: GPUShaderStage.VERTEX,
           buffer: {
             type: 'read-only-storage',
@@ -501,6 +513,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     this._indexBuffer = null;
     this._transformBindGroup = null;
     this._transformStorageBuffer = null;
+    this._tintStorageBuffer = null;
     // Bind groups and the projection UBO belong to the (possibly lost) device;
     // drop the caches so reconnect rebuilds them against the fresh device.
     this._textureSetBindGroups = new WeakMap<Texture | RenderTexture, TextureSetBindGroupEntry[]>();
@@ -755,7 +768,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
       // projection UBO on group(0). Both the default and custom programs fetch
       // the world transform from it via nodeIndex.
       const storage = backend.getTransformStorageBuffer(needCount);
-      const transformBindGroup = this._getOrCreateTransformBindGroup(device, uniformBuffer, storage.buffer);
+      const transformBindGroup = this._getOrCreateTransformBindGroup(device, uniformBuffer, storage.buffer, storage.tintBuffer);
 
       const material = this._currentMaterial;
       const stencil = backend._passCoordinator.stencilActive;
@@ -892,18 +905,20 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
    * with the shared transform storage buffer. Cached against the storage buffer
    * identity, which changes only when its capacity grows.
    */
-  private _getOrCreateTransformBindGroup(device: GPUDevice, uniformBuffer: GPUBuffer, storageBuffer: GPUBuffer): GPUBindGroup {
-    if (this._transformBindGroup !== null && this._transformStorageBuffer === storageBuffer) {
+  private _getOrCreateTransformBindGroup(device: GPUDevice, uniformBuffer: GPUBuffer, storageBuffer: GPUBuffer, tintBuffer: GPUBuffer): GPUBindGroup {
+    if (this._transformBindGroup !== null && this._transformStorageBuffer === storageBuffer && this._tintStorageBuffer === tintBuffer) {
       return this._transformBindGroup;
     }
 
     this._transformStorageBuffer = storageBuffer;
+    this._tintStorageBuffer = tintBuffer;
     this._transformBindGroup = device.createBindGroup({
       label: 'sprite:transform-bind-group',
       layout: this._uniformBindGroupLayout!,
       entries: [
         { binding: 0, resource: { buffer: uniformBuffer } },
         { binding: 1, resource: { buffer: storageBuffer } },
+        { binding: 2, resource: { buffer: tintBuffer } },
       ],
     });
 
@@ -1059,7 +1074,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     const pass = active.pass;
 
     pass.setPipeline(this._getPipeline(payload.blendMode, backend.renderTargetFormat, coordinator.stencilActive));
-    pass.setBindGroup(0, bundle.getBindGroup(device, this._uniformBindGroupLayout!));
+    pass.setBindGroup(0, bundle.getBindGroup(device, this._uniformBindGroupLayout!, true));
     pass.setBindGroup(1, textureBindGroup);
     pass.setVertexBuffer(0, bundle.instanceBuffer, payload.byteOffset);
     pass.setIndexBuffer(this._indexBuffer, 'uint16');

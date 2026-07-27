@@ -29,6 +29,7 @@ const initialNodeIndexCapacity = 64;
 const defaultVertexColor = 0xffffffff; // white, full alpha
 const maxCustomTextureSlots = 8;
 const transformTextureUnit = 8;
+const transformTintTextureUnit = 9;
 const identityGroupMat3 = new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]);
 
 interface MeshRendererConnection {
@@ -81,10 +82,11 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
   private readonly _compatibilityCache = new Map<Shader, boolean>();
   private readonly _textureUnitScratch: Int32Array = new Int32Array([0]);
   private readonly _transformUnitScratch: Int32Array = new Int32Array([transformTextureUnit]);
+  private readonly _tintUnitScratch: Int32Array = new Int32Array([transformTintTextureUnit]);
   // Pre-built texture-unit indices used for custom-shader sampler bindings;
   // pre-allocated so the per-frame uniform path stays allocation-free.
   private readonly _slotScratches: Int32Array[] = Array.from(
-    { length: Math.max(transformTextureUnit + 1, maxCustomTextureSlots + 1) },
+    { length: Math.max(transformTextureUnit + 1, transformTintTextureUnit + 1, maxCustomTextureSlots + 1) },
     (_, i) => new Int32Array([i]),
   );
   private readonly _groupComposeScratch = new Matrix();
@@ -532,6 +534,11 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
       shader.getUniform('u_transforms').setValue(this._transformUnitScratch);
     }
 
+    if (shader.uniforms.has('u_tintTexture')) {
+      backend.bindTintBufferTexture(transformTintTextureUnit);
+      shader.getUniform('u_tintTexture').setValue(this._tintUnitScratch);
+    }
+
     if (shader.uniforms.has('u_texture')) {
       shader.getUniform('u_texture').setValue(this._textureUnitScratch);
       backend.bindTexture(texture, 0);
@@ -628,8 +635,9 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     const vao = payload.vao;
     const geometry = payload.geometry;
     const transformTexture = payload.bundle.transformTexture;
+    const tintTexture = payload.bundle.tintTexture;
 
-    if (backend === null || vao === null || geometry === null || geometry === undefined || transformTexture === null) {
+    if (backend === null || vao === null || geometry === null || geometry === undefined || transformTexture === null || tintTexture === null) {
       // Defensive: a bundle in this state never validates (generation), so a
       // spliced replay cannot reach here; skip rather than crash mid-frame.
       return;
@@ -667,6 +675,12 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
 
     if (shader.uniforms.has('u_transforms')) {
       shader.getUniform('u_transforms').setValue(this._transformUnitScratch);
+    }
+
+    backend.bindTexture(tintTexture, transformTintTextureUnit);
+
+    if (shader.uniforms.has('u_tintTexture')) {
+      shader.getUniform('u_tintTexture').setValue(this._tintUnitScratch);
     }
 
     shader.sync();

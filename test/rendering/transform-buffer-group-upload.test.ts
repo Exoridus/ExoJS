@@ -4,11 +4,12 @@ import { type DrawCommand, type MaterialKey, RenderEntryKind } from '#rendering/
 import { RenderPlanPlayer } from '#rendering/plan/RenderPlanPlayer';
 import type { DrawScopeEntry, GroupScope, GroupScopeEntry, ScopeEntry } from '#rendering/plan/RenderScope';
 import type { RenderBackend } from '#rendering/RenderBackend';
-import { TransformBuffer } from '#rendering/TransformBuffer';
+import { TRANSFORM_FLOATS_PER_ROW, TRANSFORM_TINT_BYTES_PER_ROW, TransformBuffer } from '#rendering/TransformBuffer';
 
 import { forEachGroupCommand } from './helpers/collectRenderGroups';
 
-const floatsPerSlot = 12;
+const floatsPerSlot = TRANSFORM_FLOATS_PER_ROW;
+const tintBytesPerSlot = TRANSFORM_TINT_BYTES_PER_ROW;
 
 class BoxDrawable extends Drawable {
   public constructor(
@@ -158,8 +159,8 @@ describe('transform buffer render-group upload wiring', () => {
     expect(buffer.data[3]).toBe(1); // d
     expect(buffer.data[4]).toBe(10); // tx
     expect(buffer.data[5]).toBe(20); // ty
-    expect(buffer.data[8]).toBeCloseTo(10 / 255, 6);
-    expect(buffer.data[11]).toBeCloseTo(0.1, 6);
+    expect(buffer.tintData[0]).toBe(10);
+    expect(buffer.tintData[3]).toBe(Math.round(0.1 * 255));
 
     // Node 'd' lives inside the nested group at nodeIndex 3, position (70, 80).
     const dOffset = 3 * floatsPerSlot;

@@ -51,6 +51,7 @@ const auxShaderSources = vi.hoisted(() => ({
 precision highp float;
 in vec4 a_localBounds; in vec4 a_uvBounds; in vec4 a_color; in uint a_textureSlot; in uint a_nodeIndex;
 uniform mat3 u_projection; uniform mat3 u_group; uniform sampler2D u_transforms;
+uniform sampler2D u_tintTexture;
 out vec2 v_uv; out vec4 v_color; flat out uint v_textureSlot;
 void main() {
   vec2 local = vec2(a_localBounds.x, a_localBounds.y);
@@ -65,6 +66,7 @@ void main() {
 precision highp float;
 in vec2 a_position; in vec2 a_texcoord; in vec4 a_color; in uint a_nodeIndex;
 uniform mat3 u_projection; uniform sampler2D u_transforms;
+uniform sampler2D u_tintTexture;
 out vec2 v_uv; out vec4 v_color; out vec4 v_tint;
 void main() {
   int row = int(a_nodeIndex);
@@ -72,7 +74,7 @@ void main() {
   vec4 m1 = texelFetch(u_transforms, ivec2(1, row), 0);
   mat3 t = mat3(m0.x,m0.z,0.0, m0.y,m0.w,0.0, m1.x,m1.y,1.0);
   gl_Position = vec4((u_projection * t * vec3(a_position, 1.0)).xy, 0.0, 1.0);
-  v_uv = a_texcoord; v_color = a_color; v_tint = texelFetch(u_transforms, ivec2(2, row), 0);
+  v_uv = a_texcoord; v_color = a_color; v_tint = texelFetch(u_tintTexture, ivec2(0, row), 0);
 }`,
   meshFrag: `#version 300 es
 precision mediump float;

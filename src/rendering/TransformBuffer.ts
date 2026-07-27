@@ -3,13 +3,34 @@ import type { Matrix } from '#math/Matrix';
 import { PixelSnapMode } from '#rendering/pixelSnap';
 
 /**
- * Floats per transform+tint row (3 rgba32f texels): the single source of truth
- * for the layout shared by {@link TransformBuffer}, the retained group transform
- * store, and the Slice-4b in-place row patch.
+ * Floats per transform row (2 rgba32f texels): the single source of truth for
+ * the layout shared by {@link TransformBuffer}, the retained group transform
+ * store, and the Slice-4b in-place row patch. Tint lives in a separate,
+ * natively-8-bit-per-channel row (see {@link TRANSFORM_TINT_BYTES_PER_ROW} /
+ * {@link packTintRow}) — GPU texture/buffer uploads round up to whole
+ * texels/vec4s regardless of how few of a slot's floats are "real" data, so a
+ * layout that keeps tint's 4 float32 channels inline never crosses the
+ * 3-texel -> 2-texel boundary that actually reduces upload bandwidth and GPU
+ * memory footprint. Splitting tint into its own rgba8 texture/buffer does,
+ * without quantizing anything the engine doesn't already store at that
+ * precision (r/g/b are already 0..255 integer channels on {@link Color}; only
+ * alpha's continuous float precision would be lost if it were packed into a
+ * shared float32 slot, which is why it isn't).
  */
-export const TRANSFORM_FLOATS_PER_ROW = 12;
+export const TRANSFORM_FLOATS_PER_ROW = 8;
+
+/**
+ * Bytes per tint row (one rgba8 texel / one packed `u32`): r, g, b (0..255,
+ * {@link Color}'s native integer channels — exact, not quantized) and alpha
+ * rounded to 0..255 (the only lossy step, and it matches the precision every
+ * mainstream 2D/WebGPU renderer already uses for a per-instance blend color,
+ * via a native normalized 8-bit-per-channel vertex/texture format).
+ * @internal
+ */
+export const TRANSFORM_TINT_BYTES_PER_ROW = 4;
 
 const floatsPerSlot = TRANSFORM_FLOATS_PER_ROW;
+const tintBytesPerSlot = TRANSFORM_TINT_BYTES_PER_ROW;
 const initialCapacity = 16;
 const hashPrime = 0x01000193;
 const hashOffset = 0x811c9dc5;
@@ -18,8 +39,8 @@ const hashFloatScratch = new Float32Array(1);
 const hashUintScratch = new Uint32Array(hashFloatScratch.buffer);
 
 /**
- * Write one transform+tint row into `target` at `offset` in the canonical layout
- * (a,b,c,d, tx,ty, snapMode,0, r/255,g/255,b/255,a). The single packer shared by
+ * Write one transform row into `target` at `offset` in the canonical layout
+ * (a,b,c,d, tx,ty, snapMode,0). The single packer shared by
  * {@link TransformBuffer.write} and the Slice-4b row patch, so the frame buffer
  * and a patched retained row stay bit-identical by construction — a layout change
  * lands in exactly one place.
@@ -29,7 +50,7 @@ const hashUintScratch = new Uint32Array(hashFloatScratch.buffer);
  * vertex stage, gated on this flag (spec D3-D5).
  * @internal
  */
-export const packTransformRow = (target: Float32Array, offset: number, transform: Matrix, tint: Color, snapMode: PixelSnapMode = PixelSnapMode.None): void => {
+export const packTransformRow = (target: Float32Array, offset: number, transform: Matrix, snapMode: PixelSnapMode = PixelSnapMode.None): void => {
   target[offset + 0] = transform.a;
   target[offset + 1] = transform.b;
   target[offset + 2] = transform.c;
@@ -38,10 +59,20 @@ export const packTransformRow = (target: Float32Array, offset: number, transform
   target[offset + 5] = transform.y;
   target[offset + 6] = snapMode;
   target[offset + 7] = 0;
-  target[offset + 8] = tint.r / 255;
-  target[offset + 9] = tint.g / 255;
-  target[offset + 10] = tint.b / 255;
-  target[offset + 11] = tint.a;
+};
+
+/**
+ * Write one tint row into `target` (a `Uint8Array`) at byte `offset`, as
+ * `(r, g, b, a)` — r/g/b are {@link Color}'s native 0..255 integer channels
+ * (copied exactly), alpha is `Color.a` (0..1 float) rounded to 0..255. Shares
+ * the {@link packTransformRow} write-site, so the two rows stay in lockstep.
+ * @internal
+ */
+export const packTintRow = (target: Uint8Array, offset: number, tint: Color): void => {
+  target[offset + 0] = tint.r;
+  target[offset + 1] = tint.g;
+  target[offset + 2] = tint.b;
+  target[offset + 3] = Math.round(tint.a * 255);
 };
 
 /** @internal */
@@ -55,15 +86,18 @@ export interface TransformBufferFrameSnapshot {
 /**
  * Internal per-frame transform+tint storage for draw-command node indices.
  *
- * Slot layout (12 floats):
+ * Transform slot layout (8 floats):
  * - 0..3:  (a, b, c, d)
  * - 4..7:  (tx, ty, snapMode, 0)
- * - 8..11: (tintR, tintG, tintB, tintA) with RGB in 0..1
+ *
+ * Tint row layout ({@link tintData}, parallel array, one rgba8 texel/row):
+ * - (r, g, b, a) as 0..255 bytes.
  *
  * @internal
  */
 export class TransformBuffer {
   private _data: Float32Array = new Float32Array(initialCapacity * floatsPerSlot);
+  private _tintData: Uint8Array = new Uint8Array(initialCapacity * tintBytesPerSlot);
   private _count = 0;
   private _version = 0;
   private _frameHash = hashOffset >>> 0;
@@ -129,6 +163,11 @@ export class TransformBuffer {
 
   public get data(): Float32Array {
     return this._data;
+  }
+
+  /** Parallel per-row tint bytes (rgba, 0..255) — see {@link packTintRow}. @internal */
+  public get tintData(): Uint8Array {
+    return this._tintData;
   }
 
   public get version(): number {
@@ -215,7 +254,8 @@ export class TransformBuffer {
 
     const offset = slot * floatsPerSlot;
 
-    packTransformRow(this._data, offset, transform, tint, snapMode);
+    packTransformRow(this._data, offset, transform, snapMode);
+    packTintRow(this._tintData, slot * tintBytesPerSlot, tint);
 
     if (slot >= this._count) {
       this._count = slot + 1;
@@ -239,6 +279,16 @@ export class TransformBuffer {
       // In-bounds: offset..offset+floatsPerSlot-1 is the just-written slot.
       this._frameHash = this._mix(this._frameHash, this._hashFloat(data[offset + i]!));
     }
+
+    // Tint lives in a separate byte array (see the class doc) — fold it into the
+    // same content hash, otherwise a frame that only changes tint (identical
+    // transform) would hash identically to the previous frame and commitSnapshot
+    // would wrongly report `changed: false`, skipping the tint texture's upload.
+    const tintOffset = slot * tintBytesPerSlot;
+    const tintData = this._tintData;
+    const packedTint = (tintData[tintOffset]! << 24) | (tintData[tintOffset + 1]! << 16) | (tintData[tintOffset + 2]! << 8) | tintData[tintOffset + 3]!;
+
+    this._frameHash = this._mix(this._frameHash, packedTint >>> 0);
 
     this._writeCount++;
 
@@ -302,9 +352,12 @@ export class TransformBuffer {
     }
 
     const nextData = new Float32Array(next * floatsPerSlot);
+    const nextTintData = new Uint8Array(next * tintBytesPerSlot);
 
     nextData.set(this._data);
+    nextTintData.set(this._tintData);
     this._data = nextData;
+    this._tintData = nextTintData;
   }
 
   private _hashFloat(value: number): number {

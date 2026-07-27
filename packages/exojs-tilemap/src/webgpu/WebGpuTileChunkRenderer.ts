@@ -44,7 +44,6 @@ struct ProjectionUniforms {
 struct TransformSlot {
     m0: vec4<f32>,
     m1: vec4<f32>,
-    m2: vec4<f32>,
 };
 
 @group(0) @binding(0)
@@ -647,7 +646,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     const pass = active.pass;
 
     pass.setPipeline(this._getPipeline(payload.blendMode, backend.renderTargetFormat, coordinator.stencilActive));
-    pass.setBindGroup(0, bundle.getBindGroup(device, this._uniformBindGroupLayout!));
+    pass.setBindGroup(0, bundle.getBindGroup(device, this._uniformBindGroupLayout!, false));
     pass.setBindGroup(1, textureBindGroup);
     pass.setVertexBuffer(0, bundle.instanceBuffer, payload.byteOffset);
     pass.setIndexBuffer(this._indexBuffer, 'uint16');
