@@ -1,14 +1,19 @@
 // Type contract for `Assets.compose()` / `Assets.extend()`: a conflict-free
 // composition types like an ordinary catalog, while a duplicate key resolves to
-// a message type naming the offending key(s) instead of collapsing to `never`.
+// a diagnostic OBJECT type naming the offending key(s) instead of collapsing to
+// `never` — and, unlike a message string, matching no loader input.
 // Compiled by `tsconfig.type-tests.json` via `pnpm typecheck:type-tests`.
 
-import { type AssetRef, Assets, type Loader, type Texture } from '@codexo/exojs';
+import { type AnyAssets, type AssetRef, Assets, type Loader, type Texture } from '@codexo/exojs';
 
 type Equal<A, B> = (<G>() => G extends A ? 1 : 2) extends <G>() => G extends B ? 1 : 2 ? true : false;
 type Expect<T extends true> = T;
 
-type Conflict<K extends string> = `Assets.compose(): duplicate catalog key "${K}" — two catalogs define it, use Assets.extend() to override it deliberately.`;
+// Mirrors the (deliberately non-exported) diagnostic type in src/resources/Assets.ts.
+interface Conflict<K extends string> {
+  readonly _assetsComposeError: `Assets.compose(): duplicate catalog key "${K}" — two catalogs define it, use Assets.extend() to override it deliberately.`;
+  readonly _conflictingKeys: K;
+}
 
 const shared = Assets.from({ logo: 'sprites/logo.png', config: 'game.json' });
 const forest = Assets.from({ tree: 'sprites/tree.png' });
@@ -39,14 +44,30 @@ const other = Assets.from({ logo: 'sprites/other.png' });
 const conflicted = Assets.compose(shared, other);
 
 type _Conflicted = Expect<Equal<typeof conflicted, Conflict<'logo'>>>;
+// The single offending key shows up in the diagnostic.
+type _ConflictedKey = Expect<Equal<(typeof conflicted)['_conflictingKeys'], 'logo'>>;
 
-// @ts-expect-error — a conflicting composition is a message type, not a catalog.
+// A conflict is a diagnostic, not a value the engine accepts anywhere: not
+// `never` (which would erase the explanation), not a string (which the loader's
+// bare-path overloads take), and not a catalog.
+type _ConflictedNotNever = Expect<Equal<[typeof conflicted] extends [never] ? true : false, false>>;
+type _ConflictedNotString = Expect<Equal<typeof conflicted extends string ? true : false, false>>;
+type _ConflictedNotCatalog = Expect<Equal<typeof conflicted extends AnyAssets ? true : false, false>>;
+
+// @ts-expect-error — a conflicting composition is a diagnostic type, not a catalog.
 loader.load(conflicted);
+// @ts-expect-error — and it is no readable catalog either.
+loader.get(conflicted);
 
 const twoOff = Assets.from({ logo: 'sprites/other.png', config: 'other.json' });
 const multiConflicted = Assets.compose(shared, twoOff);
 
-type _MultiConflicted = Expect<Equal<typeof multiConflicted, Conflict<'logo'> | Conflict<'config'>>>;
+// Several duplicates keep the FULL union of keys — no collapse to one key.
+type _MultiConflicted = Expect<Equal<typeof multiConflicted, Conflict<'logo' | 'config'>>>;
+type _MultiConflictedKeys = Expect<Equal<(typeof multiConflicted)['_conflictingKeys'], 'logo' | 'config'>>;
+
+// @ts-expect-error — a multi-key conflict is rejected at the use site just the same.
+loader.load(multiConflicted);
 
 // --- extend -----------------------------------------------------------------
 
@@ -63,10 +84,15 @@ export type {
   _ComposedLogo,
   _ComposedTree,
   _Conflicted,
+  _ConflictedKey,
+  _ConflictedNotCatalog,
+  _ConflictedNotNever,
+  _ConflictedNotString,
   _DerivedAdded,
   _DerivedKept,
   _DerivedOverridden,
   _DiamondLogo,
   _DiamondRock,
   _MultiConflicted,
+  _MultiConflictedKeys,
 };

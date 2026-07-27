@@ -31,7 +31,9 @@ export type InferAssetsProperties<M extends Record<string, CatalogEntry>> = {
 
 /**
  * Any typed catalog, whatever its definition record — the constraint
- * {@link Assets.compose} accepts its arguments under.
+ * {@link Assets.compose} accepts its arguments under, and the one to write when
+ * a generic API of your own takes an arbitrary catalog (`<C extends AnyAssets>`)
+ * without pinning its definition record.
  */
 export type AnyAssets = AssetsImpl<Record<string, CatalogEntry>>;
 
@@ -80,18 +82,26 @@ type ConflictingKeys<Ms extends readonly unknown[]> = {
 }[SharedKeys<Ms>];
 
 /**
- * The result of a conflicting {@link AssetsFacade.compose} call: a message type
- * naming the offending key, so the failure reads as an explanation at every use
- * site of the result instead of collapsing to `never`.
+ * The result of a conflicting {@link AssetsFacade.compose} call: a diagnostic
+ * OBJECT type naming the offending keys, so the failure reads as an explanation
+ * at every use site of the result instead of collapsing to `never`.
+ *
+ * Deliberately not a string: a message string is assignable to the loader's
+ * bare-path parameters, which would let a conflicting composition slip into
+ * `loader.load(...)`/`loader.get(...)` as if it were an asset path. An object
+ * shape matches no loader input, so a conflict is rejected wherever it is used.
  */
-// The key is interpolated ONCE: a template literal distributes over every union
-// occurrence independently, so a second `${K}` would blow a two-key conflict up
-// into a four-message cross product.
-type ComposeConflict<K extends string> =
-  `Assets.compose(): duplicate catalog key "${K}" — two catalogs define it, use Assets.extend() to override it deliberately.`;
+interface ComposeConflict<K extends string> {
+  // The key is interpolated ONCE: a template literal distributes over every
+  // union occurrence independently, so a second `${K}` would blow a two-key
+  // conflict up into a four-message cross product.
+  readonly _assetsComposeError: `Assets.compose(): duplicate catalog key "${K}" — two catalogs define it, use Assets.extend() to override it deliberately.`;
+  /** The colliding keys, as the full union — one member per duplicated key. */
+  readonly _conflictingKeys: K;
+}
 
-/** The composed catalog type, or the {@link ComposeConflict} message type. */
-export type ComposeResult<Cs extends readonly AnyAssets[]> = [ConflictingKeys<DefinitionsOf<Cs>>] extends [never]
+/** The composed catalog type, or the {@link ComposeConflict} diagnostic type. */
+type ComposeResult<Cs extends readonly AnyAssets[]> = [ConflictingKeys<DefinitionsOf<Cs>>] extends [never]
   ? Assets<AsDefinition<FlattenDefinition<MergeDefinitions<DefinitionsOf<Cs>>>>>
   : ComposeConflict<ConflictingKeys<DefinitionsOf<Cs>>>;
 
@@ -99,7 +109,7 @@ export type ComposeResult<Cs extends readonly AnyAssets[]> = [ConflictingKeys<De
 type ExtendDefinition<M, E> = { [K in keyof M | keyof E]: K extends keyof E ? E[K] : K extends keyof M ? M[K] : never };
 
 /** The derived catalog type produced by {@link AssetsFacade.extend}. */
-export type ExtendResult<M extends Record<string, CatalogEntry>, E extends Record<string, CatalogEntry>> = Assets<AsDefinition<ExtendDefinition<M, E>>>;
+type ExtendResult<M extends Record<string, CatalogEntry>, E extends Record<string, CatalogEntry>> = Assets<AsDefinition<ExtendDefinition<M, E>>>;
 
 // ---------------------------------------------------------------------------
 // Provenance
@@ -121,6 +131,24 @@ export interface AssetsProvenance {
   readonly overrides: readonly string[];
   /** Key → the catalog that originally DECLARED it (never a catalog that merely re-exports it). */
   readonly keyOrigins: ReadonlyMap<string, AnyAssets>;
+}
+
+/**
+ * Provenance store, keyed by the catalog CALLERS hold (the dev Proxy, where
+ * there is one). Module-private on purpose: provenance is bookkeeping, not part
+ * of the catalog's surface, so it lives beside the catalog rather than on it —
+ * nothing reachable from a catalog object exposes `keyOrigins`, and a user
+ * cannot mutate it.
+ */
+const catalogProvenance = new WeakMap<AnyAssets, AssetsProvenance>();
+
+/**
+ * Read a catalog's composition provenance. The single internal accessor —
+ * anything that needs to introspect composition goes through here.
+ * @internal
+ */
+export function _readProvenance(catalog: AnyAssets): AssetsProvenance | undefined {
+  return catalogProvenance.get(catalog);
 }
 
 // ---------------------------------------------------------------------------
@@ -164,7 +192,6 @@ function createEntryLeaf(value: CatalogEntry): object {
  */
 const RESERVED_ASSETS_KEYS: Record<string, string> = {
   entries: 'that name is reserved for the spread-composition helper',
-  _provenance: 'that name is reserved for internal composition provenance',
 };
 
 function assertUnreservedKey(key: string): void {
@@ -200,9 +227,6 @@ let assetsDevProxyInstanceCounter = 0;
 /** @internal */
 export class AssetsImpl<M extends Record<string, CatalogEntry>> {
   public readonly entries!: InferAssetsEntries<M>;
-
-  /** @internal */
-  public readonly _provenance!: AssetsProvenance;
 
   public constructor(definition: M) {
     const entries: Record<string, object> = {};
@@ -290,15 +314,10 @@ function installCatalog<M extends Record<string, CatalogEntry>>(
     }
   }
 
-  // Non-enumerable: provenance is bookkeeping, not a catalog key, and must stay
-  // out of `Object.keys(catalog)` (the loader iterates `entries`, and the dev
-  // typo guard lists the defined keys).
-  Object.defineProperty(instance, '_provenance', {
-    value: Object.freeze({ kind, sources, overrides, keyOrigins }) satisfies AssetsProvenance,
-    enumerable: false,
-    configurable: false,
-    writable: false,
-  });
+  // Stored beside the catalog, keyed by the object callers hold: provenance is
+  // not a catalog key and not a property, so `Object.keys(catalog)` and
+  // `catalog.entries` stay exactly what the catalog declared.
+  catalogProvenance.set(catalog, Object.freeze({ kind, sources, overrides, keyOrigins }) satisfies AssetsProvenance);
 
   return catalog;
 }
@@ -318,7 +337,7 @@ function adoptCatalog(
 
 /** The catalog a key was originally declared by — itself, for a `from()` catalog. */
 function originOf(catalog: AnyAssets, key: string): AnyAssets {
-  return catalog._provenance.keyOrigins.get(key) ?? catalog;
+  return catalogProvenance.get(catalog)?.keyOrigins.get(key) ?? catalog;
 }
 
 function assertIsCatalog(value: unknown, context: string): asserts value is AnyAssets {
@@ -426,11 +445,11 @@ type AssetsFacade = AssetsConstructorFn & {
    * Composition is descriptive only; it introduces no ownership and no claims.
    *
    * Two DIFFERENT catalogs may not declare the same key — that ambiguity is
-   * rejected as a {@link ComposeConflict} message type at compile time (for keys
-   * whose declarations differ) and always as a throw at runtime. The same
-   * catalog reaching the composition twice along different paths (a diamond) is
-   * NOT a conflict and deduplicates. To re-declare a key on purpose, derive with
-   * {@link extend} instead.
+   * rejected at compile time (for keys whose declarations differ) as a
+   * diagnostic type naming them — which no loader input accepts — and always as
+   * a throw at runtime. The same catalog reaching the composition twice along
+   * different paths (a diamond) is NOT a conflict and deduplicates. To
+   * re-declare a key on purpose, derive with {@link extend} instead.
    *
    * @example
    * ```ts
@@ -512,7 +531,7 @@ type AssetsFacade = AssetsConstructorFn & {
   // Copy — the base catalog is never mutated, and the keys it keeps stay the
   // SAME leaf instances (a derived catalog is a view, not a re-materialization).
   const leaves: Record<string, object> = { ...(base.entries as Record<string, object>) };
-  const keyOrigins = new Map<string, AnyAssets>(base._provenance.keyOrigins);
+  const keyOrigins = new Map<string, AnyAssets>(catalogProvenance.get(base)?.keyOrigins);
   const overrides: string[] = [];
 
   for (const [key, value] of Object.entries(entries)) {

@@ -8,7 +8,7 @@ import { Texture } from '#rendering/texture/Texture';
 import { Asset } from '#resources/Asset';
 import { _readMeta } from '#resources/assetMeta';
 import { AssetRef } from '#resources/AssetRef';
-import { Assets } from '#resources/Assets';
+import { _readProvenance, Assets } from '#resources/Assets';
 import { coreAssetBindings } from '#resources/coreAssetBindings';
 import { Loader } from '#resources/Loader';
 
@@ -121,7 +121,7 @@ describe('Assets.compose', () => {
     const forest = Assets.from({ tree: 'sprites/tree.png' });
 
     const composed = Assets.compose(shared, forest);
-    const provenance = composed._provenance;
+    const provenance = _readProvenance(composed)!;
 
     expect(provenance.kind).toBe('compose');
     expect(provenance.sources).toHaveLength(2);
@@ -130,8 +130,27 @@ describe('Assets.compose', () => {
     expect(provenance.overrides).toEqual([]);
     expect(provenance.keyOrigins.get('logo')).toBe(shared);
     expect(provenance.keyOrigins.get('tree')).toBe(forest);
-    // Provenance is bookkeeping — never a catalog key.
-    expect(Object.keys(composed)).not.toContain('_provenance');
+  });
+
+  it('keeps provenance off the catalog itself', () => {
+    const shared = Assets.from({ logo: 'sprites/logo.png' });
+    const composed = Assets.compose(shared, Assets.from({ tree: 'sprites/tree.png' }));
+
+    // Provenance lives in a module-private store, not on the object: no property,
+    // no symbol, nothing a user can reach `keyOrigins` (a mutable Map) through.
+    expect(Object.keys(composed).sort()).toEqual(['entries', 'logo', 'tree']);
+    expect((composed as unknown as Record<string, unknown>)._provenance).toBeUndefined();
+    expect(Object.getOwnPropertyNames(composed)).not.toContain('_provenance');
+    expect(Object.getOwnPropertySymbols(composed)).toEqual([]);
+  });
+
+  it('reads provenance through the catalog callers hold, dev proxy included', () => {
+    const shared = Assets.from({ logo: 'sprites/logo.png' });
+
+    // The dev typo guard hands out a Proxy; provenance must be keyed by THAT
+    // object, or composing a composed catalog would lose every inherited origin.
+    expect(_readProvenance(shared)?.kind).toBe('from');
+    expect(_readProvenance(shared)?.keyOrigins.get('logo')).toBe(shared);
   });
 
   it('rejects a non-catalog argument', () => {
@@ -176,12 +195,14 @@ describe('Assets.extend', () => {
 
     const derived = Assets.extend(base, { theme: 'audio/forest.ogg', tree: 'sprites/tree.png' });
 
-    expect(derived._provenance.kind).toBe('extend');
-    expect(derived._provenance.sources[0]).toBe(base);
-    expect(derived._provenance.overrides).toEqual(['theme']);
+    const provenance = _readProvenance(derived)!;
+
+    expect(provenance.kind).toBe('extend');
+    expect(provenance.sources[0]).toBe(base);
+    expect(provenance.overrides).toEqual(['theme']);
     // An untouched key still belongs to the base; an override is a NEW declaration.
-    expect(derived._provenance.keyOrigins.get('logo')).toBe(base);
-    expect(derived._provenance.keyOrigins.get('theme')).not.toBe(base);
+    expect(provenance.keyOrigins.get('logo')).toBe(base);
+    expect(provenance.keyOrigins.get('theme')).not.toBe(base);
   });
 
   it('conflicts when a derived catalog is composed back with the base it overrode', () => {
@@ -202,7 +223,14 @@ describe('Assets.extend', () => {
     const base = Assets.from({ logo: 'sprites/logo.png' });
 
     expect(() => Assets.extend(base, { entries: 'sprites/x.png' } as never)).toThrow(/reserved/);
-    expect(() => Assets.extend(base, { _provenance: 'sprites/x.png' } as never)).toThrow(/reserved/);
+  });
+
+  it('accepts "_provenance" as an ordinary key now that provenance is off the object', () => {
+    const base = Assets.from({ logo: 'sprites/logo.png' });
+    const derived = Assets.extend(base, { _provenance: 'sprites/x.png' });
+
+    expect(derived._provenance).toBeInstanceOf(Texture);
+    expect(_readProvenance(derived)?.kind).toBe('extend');
   });
 
   it('rejects a non-catalog base', () => {

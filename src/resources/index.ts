@@ -3,7 +3,7 @@ export type { ValueAsset } from './Asset';
 export { Asset } from './Asset';
 export type { AnyAssetConfig, AssetDefinitions, AssetInput, ExtensionKindMap, InferAssetResource, KindByPath } from './AssetDefinitions';
 export { AssetRef } from './AssetRef';
-export type { AnyAssets, ComposeResult, ExtendResult, InferAssetsEntries } from './Assets';
+export type { AnyAssets, InferAssetsEntries } from './Assets';
 export { Assets } from './Assets';
 export type { AssetStatus } from './AssetStatus';
 export { CacheFirstStrategy } from './CacheFirstStrategy';
