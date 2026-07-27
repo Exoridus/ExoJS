@@ -1072,11 +1072,15 @@ export class AssetResidency {
   }
 
   /**
-   * Removes loaded assets from the resident store. If `type` is provided,
+   * Hard, claim-forgetting reset of the resident store. If `type` is provided,
    * only that type's assets are cleared; otherwise all types are flushed.
    * Does not cancel in-flight fetches — but forgets each key's claim/handle
-   * bookkeeping so repeated load→unloadAll cycles cannot accumulate stale
-   * entries.
+   * bookkeeping so repeated load→reset cycles cannot accumulate stale entries.
+   *
+   * Deliberately NOT public on {@link Loader}: it discards every scope's claim,
+   * so a caller could free assets another scope still owns. Scope-aware release
+   * goes through `Loader.release` / `_releaseScope` instead.
+   * @internal
    */
   public unloadAll(type?: AssetConstructor): void {
     if (type) {

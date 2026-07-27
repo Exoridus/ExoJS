@@ -19,6 +19,46 @@ function createCoreLoader(options?: ConstructorParameters<typeof Loader>[0]): Lo
   return loader;
 }
 
+interface ResidencyInternals {
+  _unloadOne(type: unknown, alias: string): void;
+  unloadAll(type?: unknown): void;
+  _getAliasesForIdentity(identityKey: string): Set<string> | undefined;
+}
+
+/** The internal hard-reset path. Not public on `Loader`: it forgets every scope's
+ *  claim, so only scope-aware `release()` is exposed to users. */
+function residencyOf(loader: Loader): ResidencyInternals {
+  return (loader as unknown as { _residency: ResidencyInternals })._residency;
+}
+
+/**
+ * Hard-removes an asset and every alias sharing its identity — the internal
+ * reset behaviour that `Loader.unload(asset)` used to expose publicly. Kept as a
+ * test helper so the identity/alias bookkeeping stays covered now that no public
+ * verb reaches it.
+ */
+function hardUnloadAsset(loader: Loader, asset: Asset<unknown>): void {
+  const registry = (
+    loader as unknown as { _typeRegistry: { resolveTypeName(name: string): unknown; _resolveAssetIdentityKey(type: unknown, asset: Asset<unknown>): string } }
+  )._typeRegistry;
+  const ctor = registry.resolveTypeName(asset.type);
+
+  if (!ctor) return;
+
+  const residency = residencyOf(loader);
+  const aliases = residency._getAliasesForIdentity(registry._resolveAssetIdentityKey(ctor, asset));
+
+  if (aliases && aliases.size > 0) {
+    for (const alias of [...aliases]) {
+      residency._unloadOne(ctor, alias);
+    }
+
+    return;
+  }
+
+  residency._unloadOne(ctor, asset.source);
+}
+
 // Declaration merges for test-only asset types
 declare module '#resources/AssetDefinitions' {
   interface AssetDefinitions {
@@ -211,7 +251,7 @@ describe('Loader', () => {
     expect(() => ref.value).toThrow("'loading'");
   });
 
-  test('unload() removes a resource, unloadAll() clears type', async () => {
+  test('the internal reset path removes a single resource, and clears a whole type', async () => {
     const loader = new Loader({ basePath: '/' });
 
     bindTextAsset(loader);
@@ -221,11 +261,11 @@ describe('Loader', () => {
     await loader.load('b.txt');
 
     expect(loader._peekResource(TextAsset, 'a.txt')).not.toBeNull();
-    loader.unload(TextAsset, 'a.txt');
+    residencyOf(loader)._unloadOne(TextAsset, 'a.txt');
     expect(loader._peekResource(TextAsset, 'a.txt')).toBeNull();
     expect(loader._peekResource(TextAsset, 'b.txt')).not.toBeNull();
 
-    loader.unloadAll(TextAsset);
+    residencyOf(loader).unloadAll(TextAsset);
     expect(loader._peekResource(TextAsset, 'b.txt')).toBeNull();
   });
 
@@ -311,7 +351,7 @@ describe('Loader', () => {
     expect(result).toBe(42);
   });
 
-  test('does not reinsert a resource when unload() is called during in-flight fetch', async () => {
+  test('does not reinsert a resource when the internal reset runs during an in-flight fetch', async () => {
     const loader = new Loader({ basePath: '/' });
     const deferredFetch = createDeferred<Response>();
 
@@ -321,7 +361,7 @@ describe('Loader', () => {
 
     const loadPromise = loader.load('inflight.txt');
 
-    loader.unload(TextAsset, 'inflight.txt');
+    residencyOf(loader)._unloadOne(TextAsset, 'inflight.txt');
 
     deferredFetch.resolve({
       ok: true,
@@ -530,7 +570,7 @@ describe('Asset / Assets identity and alias semantics', () => {
     expect(loader._peekResource(MockAssetType, 'heroA')).not.toBeNull();
   });
 
-  test('unload(asset) removes asset loaded by source-as-alias (single Asset load)', async () => {
+  test('internal reset removes an asset loaded by source-as-alias (single Asset load)', async () => {
     const loader = new Loader({ basePath: '/' });
 
     bindMockAsset(loader);
@@ -542,12 +582,12 @@ describe('Asset / Assets identity and alias semantics', () => {
 
     expect(loader._peekResource(MockAssetType, 'images/hero.dat')).not.toBeNull();
 
-    loader.unload(hero);
+    hardUnloadAsset(loader, hero);
 
     expect(loader._peekResource(MockAssetType, 'images/hero.dat')).toBeNull();
   });
 
-  test('unload(asset) removes all aliases after keyed-map load', async () => {
+  test('internal reset removes all aliases after keyed-map load', async () => {
     const loader = new Loader({ basePath: '/' });
 
     bindMockAsset(loader);
@@ -560,15 +600,15 @@ describe('Asset / Assets identity and alias semantics', () => {
     expect(loader._peekResource(MockAssetType, 'heroA')).not.toBeNull();
     expect(loader._peekResource(MockAssetType, 'heroB')).not.toBeNull();
 
-    loader.unload(hero);
+    hardUnloadAsset(loader, hero);
 
     expect(loader._peekResource(MockAssetType, 'heroA')).toBeNull();
     expect(loader._peekResource(MockAssetType, 'heroB')).toBeNull();
   });
 
-  test('unload(assets) releases every leaf claim, evicting the adopted resources', async () => {
-    // Intent preserved: unloading a container drops all of its entries. Under
-    // adoption this means releasing each leaf's root claim → last-claim eviction.
+  test('release(assets) releases every leaf claim, evicting the adopted resources', async () => {
+    // Releasing a container drops all of its entries: each leaf's root claim is
+    // released → last-claim eviction.
     vi.stubGlobal(
       'createImageBitmap',
       vi.fn(async () => ({ width: 4, height: 4 })),
@@ -589,7 +629,7 @@ describe('Asset / Assets identity and alias semantics', () => {
     expect(loader._peekResource(Texture, 'logo.png')).not.toBeNull();
     expect((container.hero as Texture).loadState).toBe('ready');
 
-    loader.unload(container);
+    loader.release(container);
 
     // Last claim released → payload evicted; the leaves heal back to 'loading'.
     expect(loader._peekResource(Texture, 'hero.png')).toBeNull();
@@ -599,7 +639,7 @@ describe('Asset / Assets identity and alias semantics', () => {
     vi.unstubAllGlobals();
   });
 
-  test('aliases are cleared from tracking when underlying asset unloads', async () => {
+  test('aliases are cleared from tracking when the underlying asset is reset', async () => {
     const loader = new Loader({ basePath: '/' });
 
     bindMockAsset(loader);
@@ -609,9 +649,9 @@ describe('Asset / Assets identity and alias semantics', () => {
 
     await loader.load({ a: hero, b: hero, c: hero });
 
-    loader.unload(hero);
+    hardUnloadAsset(loader, hero);
 
-    // Re-load under a single alias — should work cleanly after unload
+    // Re-load under a single alias — should work cleanly after the reset
     await loader.load({ a: hero });
 
     expect(loader._peekResource(MockAssetType, 'a')).not.toBeNull();
@@ -938,14 +978,14 @@ describe('unload(asset) + getIdentityKey — identity discrimination (Fix 2 regr
     expect(loader._peekResource(ctor, 'tmxB')).not.toBeNull();
     expect(loader._peekResource(ctor, 'rpgA')).not.toBeNull();
 
-    loader.unload(tmxMap);
+    hardUnloadAsset(loader, tmxMap);
 
     expect(loader._peekResource(ctor, 'tmxA')).toBeNull();
     expect(loader._peekResource(ctor, 'tmxB')).toBeNull();
     expect(loader._peekResource(ctor, 'rpgA')).not.toBeNull(); // unaffected — different identity
   });
 
-  test('unload(asset) without getIdentityKey still removes all source-based aliases', async () => {
+  test('internal reset without getIdentityKey still removes all source-based aliases', async () => {
     const loader = new Loader({ basePath: '/' });
 
     loader.bindAsset<string>({ ctor: RichAsset, typeNames: ['richAsset'] }, { load: async request => `result:${request.source}` });
@@ -959,13 +999,13 @@ describe('unload(asset) + getIdentityKey — identity discrimination (Fix 2 regr
     expect(loader._peekResource(ctor, 'a')).not.toBeNull();
     expect(loader._peekResource(ctor, 'b')).not.toBeNull();
 
-    loader.unload(asset);
+    hardUnloadAsset(loader, asset);
 
     expect(loader._peekResource(ctor, 'a')).toBeNull();
     expect(loader._peekResource(ctor, 'b')).toBeNull();
   });
 
-  test('unload(asset) with getIdentityKey does not affect a different format identity', async () => {
+  test('internal reset with getIdentityKey does not affect a different format identity', async () => {
     const loader = new Loader({ basePath: '/' });
 
     loader.bindAsset<string, { format: string }>(
@@ -983,7 +1023,7 @@ describe('unload(asset) + getIdentityKey — identity discrimination (Fix 2 regr
 
     const ctor = loader['_typeRegistry']['resolveTypeName']('richAsset')!;
 
-    loader.unload(rpgMap);
+    hardUnloadAsset(loader, rpgMap);
 
     expect(loader._peekResource(ctor, 'tmxA')).not.toBeNull(); // untouched
     expect(loader._peekResource(ctor, 'rpgA')).toBeNull();
@@ -1063,44 +1103,45 @@ describe('keyFor()', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Coverage sweep — unload() edge cases: unregistered type, never-loaded fallback
+// Coverage sweep — release() edge cases: unregistered type, never-loaded fallback
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe('unload() edge cases', () => {
-  test('unload(asset) is a no-op when the asset type was never registered', () => {
+describe('release() edge cases', () => {
+  test('release(asset) is a no-op when the asset type was never registered', () => {
     const loader = new Loader({ basePath: '/' });
     const orphan = new Asset({ type: 'mockAsset', source: 'x.dat' });
 
-    expect(() => loader.unload(orphan)).not.toThrow();
+    expect(() => loader.release(orphan)).not.toThrow();
   });
 
-  test('unload(asset) falls back to source-as-alias when the asset was never loaded', () => {
+  test('release(asset) is a no-op when the asset was never loaded, and is idempotent', () => {
     const loader = new Loader({ basePath: '/' });
 
     loader.bindAsset<string>({ ctor: MockAssetType, typeNames: ['mockAsset'] }, { load: async request => `loaded:${request.source}` });
 
     const neverLoaded = new Asset({ type: 'mockAsset', source: 'never.dat' });
 
-    expect(() => loader.unload(neverLoaded)).not.toThrow();
+    expect(() => loader.release(neverLoaded)).not.toThrow();
+    expect(() => loader.release(neverLoaded)).not.toThrow();
     expect(loader._peekResource(MockAssetType, 'never.dat')).toBeNull();
   });
 
-  test('unload(assets) is a silent no-op for a leaf whose kind this loader never bound', () => {
+  test('release(assets) is a silent no-op for a leaf whose kind this loader never bound', () => {
     // Intent preserved: a catalog entry the loader doesn't know is skipped, not
     // thrown. A bare loader (no core bindings) never adopted the leaf, so its
     // release finds no registered key and does nothing.
     const loader = new Loader({ basePath: '/' });
     const container = new Assets({ orphan: { type: 'texture', source: 'x.png' } });
 
-    expect(() => loader.unload(container)).not.toThrow();
+    expect(() => loader.release(container)).not.toThrow();
   });
 
-  test('unload(assets) is a silent no-op when the container was never adopted/loaded', () => {
-    // Intent preserved: unloading entries that were never tracked does nothing.
+  test('release(assets) is a silent no-op when the container was never adopted/loaded', () => {
+    // Releasing entries that were never tracked does nothing.
     const loader = createCoreLoader({ basePath: '/' });
     const container = new Assets({ orphan: { type: 'texture', source: 'never.png' } });
 
-    expect(() => loader.unload(container)).not.toThrow();
+    expect(() => loader.release(container)).not.toThrow();
     expect(loader._peekResource(Texture, 'never.png')).toBeNull();
   });
 });
@@ -1584,7 +1625,7 @@ describe('Loader constructor — cache option as an array of stores', () => {
   });
 });
 
-describe('unload()-during-in-flight identity cleanup on rejection', () => {
+describe('internal-reset-during-in-flight identity cleanup on rejection', () => {
   class RichAsset {}
 
   test('does not throw when the identity tracking was already cleared before the fetch rejects', async () => {
@@ -1596,9 +1637,9 @@ describe('unload()-during-in-flight identity cleanup on rejection', () => {
     const asset = new Asset({ type: 'richAsset', source: 'x.dat', format: 'x' });
     const pending = loader.load(asset);
 
-    // Unload while still in flight: this clears `_identityKeyToAliases` for this
+    // Reset while still in flight: this clears `_identityKeyToAliases` for this
     // identity synchronously, before the underlying load settles.
-    loader.unload(asset);
+    hardUnloadAsset(loader, asset);
 
     deferred.reject(new Error('boom'));
 
@@ -1606,7 +1647,7 @@ describe('unload()-during-in-flight identity cleanup on rejection', () => {
   });
 });
 
-describe('unloadAll() with no type argument', () => {
+describe('internal unloadAll() with no type argument', () => {
   test('clears every loaded type', async () => {
     const loader = new Loader({ basePath: '/' });
 
@@ -1631,7 +1672,7 @@ describe('unloadAll() with no type argument', () => {
     expect(loader._peekResource(TextAsset, 'a.txt')).not.toBeNull();
     expect(loader._peekResource(DummyAsset, 'b.dat')).not.toBeNull();
 
-    loader.unloadAll();
+    residencyOf(loader).unloadAll();
 
     expect(loader._peekResource(TextAsset, 'a.txt')).toBeNull();
     expect(loader._peekResource(DummyAsset, 'b.dat')).toBeNull();

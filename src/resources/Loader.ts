@@ -755,21 +755,57 @@ export class Loader {
    * `'loading'`) so a later {@link get} heals every dangling consumer, and a
    * not-yet-started background entry is dropped from the queue.
    *
-   * Accepts either the deferred handle / value-ref returned by {@link get}, or
-   * the `(type, source)` pair. Releasing an unclaimed or unknown asset is a
-   * no-op.
+   * Accepts the deferred handle / value-ref returned by {@link get}, an
+   * {@link Asset} descriptor, a whole {@link Assets} catalog, or the
+   * `(type, source)` pair. Releasing an unclaimed or unknown asset is a no-op,
+   * and releasing twice is idempotent.
+   *
+   * Only this loader's app-lifetime claim is dropped. A claim held by another
+   * scope — a scene's `scene.loader`, which releases on scene teardown — is
+   * never touched, so one owner can never free another owner's assets.
    *
    * @remarks The `release(handle)` form resolves the key via an internal handle
    * → key map that is populated ONLY for seamless handles and value-refs. A
    * non-leaf asset (one loaded with `load(Asset.type('bmFont', …))`, or unpacked
    * by {@link loadContainer}) has no such entry, so `release(handle)` silently
-   * can't find its key and won't drop the claim — use the `release(type, source)`
-   * form for those.
+   * can't find its key and won't drop the claim — use the `release(asset)` or
+   * `release(type, source)` form for those.
    */
   public release(handle: object): void;
+  public release<T>(asset: Asset<T>): void;
+  public release<M extends Record<string, AssetInput>>(assets: Assets<M>): void;
   public release(type: AssetConstructor, source: string): void;
   public release(handleOrType: object | AssetConstructor, source?: string): void {
-    const key = typeof source === 'string' ? this._typeRegistry._key(handleOrType as AssetConstructor, source) : this._residency._getHandleKey(handleOrType);
+    if (typeof source === 'string') {
+      this._release(this._typeRegistry._key(handleOrType as AssetConstructor, source), this._rootClaimer);
+
+      return;
+    }
+
+    // A catalog releases each of its leaves. A never-adopted leaf has no
+    // registered key, so its release is a silent no-op.
+    if (handleOrType instanceof AssetsImpl) {
+      for (const leaf of Object.values((handleOrType as AssetsImpl<Record<string, AssetInput>>).entries)) {
+        this.release(leaf as object);
+      }
+
+      return;
+    }
+
+    // A descriptor resolves to the same `(type, source)` key the load path
+    // claimed it under (see `_createLoadingQueue`).
+    if (handleOrType instanceof AssetImpl) {
+      const asset = handleOrType as Asset<unknown>;
+      const ctor = this._typeRegistry.resolveTypeName(asset.type);
+
+      if (ctor) {
+        this._release(this._typeRegistry._key(ctor, asset._config.source), this._rootClaimer);
+      }
+
+      return;
+    }
+
+    const key = this._residency._getHandleKey(handleOrType);
 
     if (key !== undefined) {
       this._release(key, this._rootClaimer);
@@ -800,79 +836,6 @@ export class Loader {
    */
   public _peekResource(type: AssetConstructor, source: string): unknown {
     return this._residency._peekResource(type, source);
-  }
-
-  // -----------------------------------------------------------------------
-  // Unload
-  // -----------------------------------------------------------------------
-
-  /**
-   * Removes a single asset from the in-memory resource store.
-   *
-   * If a fetch for this asset is still in flight, the result will be
-   * discarded once it arrives rather than written to the store, preventing
-   * a stale value from being committed after an explicit unload.
-   */
-  public unload<T>(asset: Asset<T>): this;
-  public unload<M extends Record<string, AssetInput>>(assets: Assets<M>): this;
-  public unload(type: Loadable, alias: string): this;
-  public unload(arg0: unknown, arg1?: unknown): this {
-    if (arg0 instanceof AssetImpl) {
-      const asset = arg0 as Asset<unknown>;
-      const ctor = this._typeRegistry.resolveTypeName(asset.type);
-
-      if (!ctor) return this;
-
-      const identityKey = this._typeRegistry._resolveAssetIdentityKey(ctor, asset);
-      const aliasSet = this._residency._getAliasesForIdentity(identityKey);
-
-      if (aliasSet && aliasSet.size > 0) {
-        // Snapshot the set because _unloadOne modifies it during iteration
-        for (const alias of [...aliasSet]) {
-          this._residency._unloadOne(ctor, alias);
-        }
-      } else {
-        // Asset was loaded without alias-map tracking (e.g. single-asset load).
-        // Fall back to using the source as the alias.
-        this._residency._unloadOne(ctor, asset._config.source);
-      }
-
-      return this;
-    }
-
-    if (arg0 instanceof AssetsImpl) {
-      // Under adoption a catalog no longer maps to legacy alias entries: its
-      // leaves are handle-hybrids claimed under the app-lifetime root scope by
-      // `get`/`load`. Unloading a catalog therefore RELEASES each leaf's root
-      // claim — the last release evicts the payload in place (resource handles
-      // heal to 'loading'). A never-adopted leaf has no registered key, so its
-      // release is a silent no-op.
-      const container = arg0 as AssetsImpl<Record<string, AssetInput>>;
-
-      for (const leaf of Object.values(container.entries)) {
-        this.release(leaf as object);
-      }
-
-      return this;
-    }
-
-    this._residency._unloadOne(arg0 as AssetConstructor, arg1 as string);
-
-    return this;
-  }
-
-  /**
-   * Removes loaded assets from the in-memory store.
-   *
-   * If `type` is provided, only that type's assets are cleared; otherwise all
-   * types are flushed. Does not cancel in-flight fetches — but, like
-   * {@link unload}, it forgets each key's claim/handle bookkeeping so repeated
-   * load→unloadAll cycles cannot accumulate stale entries (A3).
-   */
-  public unloadAll(type?: Loadable): this {
-    this._residency.unloadAll(type);
-
-    return this;
   }
 
   // -----------------------------------------------------------------------

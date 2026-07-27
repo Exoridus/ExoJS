@@ -191,6 +191,14 @@ c.removeChild(x); kids` still contains `x`) — it does not update
 - **BREAKING — `super.destroy()` in a `Scene` subclass is no longer
   necessary.** The base `Scene.destroy()` is now empty — existing
   `super.destroy()` calls are harmless but can be deleted.
+- **BREAKING — `Loader.unload()`/`Loader.unloadAll()` removed.** Both ignored
+  claim ownership: they forgot every scope's claim, so an app-level call could
+  free assets a scene still held. Use `Loader.release()`, which now also accepts
+  an `Asset` descriptor and a whole `Assets` catalog (`release(handle)`,
+  `release(asset)`, `release(catalog)`, `release(type, source)`) and drops only
+  the caller's own claim — the payload is evicted when the last owner releases.
+  `unload(catalog)` was already just a release of each leaf and maps directly to
+  `release(catalog)`; the hard, claim-forgetting reset is now internal-only.
 
 ### Fixed
 

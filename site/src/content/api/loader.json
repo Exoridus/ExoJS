@@ -6,10 +6,10 @@
   "subsystem": "resources",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 36,
+  "memberCount": 34,
   "counts": {
     "constructors": 1,
-    "methods": 26,
+    "methods": 24,
     "properties": 2,
     "events": 7
   },
@@ -1551,7 +1551,125 @@
             }
           ],
           "returnType": "void",
-          "description": "Releases the app-lifetime claim on an asset. When the released claim is the last one on that key, the payload is evicted immediately: a seamless handle's payload is dropped in place (identity preserved, loadState → 'loading') so a later get heals every dangling consumer, and a not-yet-started background entry is dropped from the queue. Accepts either the deferred handle / value-ref returned by get, or the (type, source) pair. Releasing an unclaimed or unknown asset is a no-op."
+          "description": "Releases the app-lifetime claim on an asset. When the released claim is the last one on that key, the payload is evicted immediately: a seamless handle's payload is dropped in place (identity preserved, loadState → 'loading') so a later get heals every dangling consumer, and a not-yet-started background entry is dropped from the queue. Accepts the deferred handle / value-ref returned by get, an Asset descriptor, a whole Assets catalog, or the (type, source) pair. Releasing an unclaimed or unknown asset is a no-op, and releasing twice is idempotent. Only this loader's app-lifetime claim is dropped. A claim held by another scope — a scene's scene.loader, which releases on scene teardown — is never touched, so one owner can never free another owner's assets."
+        },
+        {
+          "name": "release",
+          "signature": "release(asset: Asset<T>): void",
+          "signatureTokens": [
+            {
+              "text": "release",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "asset",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Asset",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "asset",
+              "type": "Asset<T>",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Releases the app-lifetime claim on an asset. When the released claim is the last one on that key, the payload is evicted immediately: a seamless handle's payload is dropped in place (identity preserved, loadState → 'loading') so a later get heals every dangling consumer, and a not-yet-started background entry is dropped from the queue. Accepts the deferred handle / value-ref returned by get, an Asset descriptor, a whole Assets catalog, or the (type, source) pair. Releasing an unclaimed or unknown asset is a no-op, and releasing twice is idempotent. Only this loader's app-lifetime claim is dropped. A claim held by another scope — a scene's scene.loader, which releases on scene teardown — is never touched, so one owner can never free another owner's assets."
+        },
+        {
+          "name": "release",
+          "signature": "release(assets: Assets<M>): void",
+          "signatureTokens": [
+            {
+              "text": "release",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "assets",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Assets",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "M",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "assets",
+              "type": "Assets<M>",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Releases the app-lifetime claim on an asset. When the released claim is the last one on that key, the payload is evicted immediately: a seamless handle's payload is dropped in place (identity preserved, loadState → 'loading') so a later get heals every dangling consumer, and a not-yet-started background entry is dropped from the queue. Accepts the deferred handle / value-ref returned by get, an Asset descriptor, a whole Assets catalog, or the (type, source) pair. Releasing an unclaimed or unknown asset is a no-op, and releasing twice is idempotent. Only this loader's app-lifetime claim is dropped. A claim held by another scope — a scene's scene.loader, which releases on scene teardown — is never touched, so one owner can never free another owner's assets."
         },
         {
           "name": "release",
@@ -1619,7 +1737,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Releases the app-lifetime claim on an asset. When the released claim is the last one on that key, the payload is evicted immediately: a seamless handle's payload is dropped in place (identity preserved, loadState → 'loading') so a later get heals every dangling consumer, and a not-yet-started background entry is dropped from the queue. Accepts either the deferred handle / value-ref returned by get, or the (type, source) pair. Releasing an unclaimed or unknown asset is a no-op."
+          "description": "Releases the app-lifetime claim on an asset. When the released claim is the last one on that key, the payload is evicted immediately: a seamless handle's payload is dropped in place (identity preserved, loadState → 'loading') so a later get heals every dangling consumer, and a not-yet-started background entry is dropped from the queue. Accepts the deferred handle / value-ref returned by get, an Asset descriptor, a whole Assets catalog, or the (type, source) pair. Releasing an unclaimed or unknown asset is a no-op, and releasing twice is idempotent. Only this loader's app-lifetime claim is dropped. A claim held by another scope — a scene's scene.loader, which releases on scene teardown — is never touched, so one owner can never free another owner's assets."
         },
         {
           "name": "setConcurrency",
@@ -1667,243 +1785,6 @@
           ],
           "returnType": "this",
           "description": "Sets the maximum number of simultaneous background-queue fetches. Takes effect on the next awaitBackground call or load(…, { background })."
-        },
-        {
-          "name": "unload",
-          "signature": "unload(asset: Asset<T>): this",
-          "signatureTokens": [
-            {
-              "text": "unload",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "asset",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Asset",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "T",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "this",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "asset",
-              "type": "Asset<T>",
-              "optional": false
-            }
-          ],
-          "returnType": "this",
-          "description": "Removes a single asset from the in-memory resource store. If a fetch for this asset is still in flight, the result will be discarded once it arrives rather than written to the store, preventing a stale value from being committed after an explicit unload."
-        },
-        {
-          "name": "unload",
-          "signature": "unload(assets: Assets<M>): this",
-          "signatureTokens": [
-            {
-              "text": "unload",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "assets",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Assets",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "M",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "this",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "assets",
-              "type": "Assets<M>",
-              "optional": false
-            }
-          ],
-          "returnType": "this",
-          "description": "Removes a single asset from the in-memory resource store. If a fetch for this asset is still in flight, the result will be discarded once it arrives rather than written to the store, preventing a stale value from being committed after an explicit unload."
-        },
-        {
-          "name": "unload",
-          "signature": "unload(type: Loadable, alias: string): this",
-          "signatureTokens": [
-            {
-              "text": "unload",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "type",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Loadable",
-              "kind": "type"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "alias",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "string",
-              "kind": "keyword"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "this",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "type",
-              "type": "Loadable",
-              "optional": false
-            },
-            {
-              "name": "alias",
-              "type": "string",
-              "optional": false
-            }
-          ],
-          "returnType": "this",
-          "description": "Removes a single asset from the in-memory resource store. If a fetch for this asset is still in flight, the result will be discarded once it arrives rather than written to the store, preventing a stale value from being committed after an explicit unload."
-        },
-        {
-          "name": "unloadAll",
-          "signature": "unloadAll(type?: Loadable): this",
-          "signatureTokens": [
-            {
-              "text": "unloadAll",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "type",
-              "kind": "param"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Loadable",
-              "kind": "type"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "this",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "type",
-              "type": "Loadable",
-              "optional": true
-            }
-          ],
-          "returnType": "this",
-          "description": "Removes loaded assets from the in-memory store. If type is provided, only that type's assets are cleared; otherwise all types are flushed. Does not cancel in-flight fetches — but, like unload, it forgets each key's claim/handle bookkeeping so repeated load→unloadAll cycles cannot accumulate stale entries (A3)."
         }
       ],
       "paragraphs": [],

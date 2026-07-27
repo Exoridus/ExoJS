@@ -364,11 +364,14 @@ console.log(config.value.startLevel);
 
 `get()` returns before network work settles. A later load failure moves the handle/ref to `'failed'`, rejects its `.loaded` promise, and is reported through `loader.onError`; calling `get()` again retries and can heal that same source-keyed handle. By contrast, the awaitable returned by `load()` rejects at the call site on failure and reports the same `Error` through `loader.onError`. Invalid input or a missing type/handler is a synchronous configuration error for either API.
 
-`loader.unload(...)` releases a handle's claim; the object itself keeps its identity and heals back to `'loading'` if you `get()` the same source again:
+`loader.release(...)` drops your claim on an asset; the object itself keeps its identity and heals back to `'loading'` if you `get()` the same source again. It accepts a handle, an `Asset` descriptor, a whole catalog, or a `(type, source)` pair:
 
 ```js
-loader.unload(TitleAssets); // releases every leaf in the catalog
+loader.release(TitleAssets); // releases every leaf in the catalog
+loader.release(logo); // a single handle from get()
 ```
+
+Releasing only ever drops *your* claim. Assets loaded through `scene.loader` belong to that scene and are released when it ends, so releasing at app level can never pull an asset out from under a scene that still needs it. The payload is evicted once the last owner lets go.
 
 <Callout type="hint" title="Non-seamless types have no placeholder">
 Types that aren't seamless — `AudioStream`, `Video`, `BmFont`, `FontAsset`, and custom types — have no placeholder to hand back, so there's nothing to `get()` speculatively. Load them by reference and hold onto the resolved value: `const music = await loader.load(Asset.type('music', 'audio/theme.ogg'))`. There is no `has()`/`peek()` guard — for a seamless handle read `.ready` / `.state`; for a non-seamless resource, `await` the load (or its returned handle's `.loaded` promise) before you use it.
