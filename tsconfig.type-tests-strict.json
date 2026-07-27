@@ -8,13 +8,21 @@
   // `noUnusedLocals`. Scope is deliberately one file — it guards those
   // overloads, not the whole type-test suite (which is not written against
   // `noUnusedLocals`).
+  //
+  // `paths` is explicit on purpose: the engine tsconfig has none (it compiles
+  // `src/` only, which never imports the package by name). Without it, the
+  // `@codexo/exojs` import here resolves only through a BUILT `dist/` — green on
+  // a machine that has built, TS2307 on a clean CI checkout.
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "noEmit": true,
     "rootDir": ".",
     "declaration": false,
     "declarationMap": false,
-    "sourceMap": false
+    "sourceMap": false,
+    "paths": {
+      "@codexo/exojs": ["./src/index.ts"]
+    }
   },
   "include": ["test/type-tests/loader-catalog-input.type-test.ts", "src/typings.d.ts"]
 }
