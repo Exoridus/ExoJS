@@ -2,6 +2,7 @@ import { Signal } from '#core/Signal';
 import { Time } from '#core/Time';
 import { Timer } from '#core/Timer';
 
+import type { ChannelEventBatch } from './actions/types';
 import type { GamepadAxisChannel } from './GamepadAxis';
 import type { GamepadButtonChannel } from './GamepadButton';
 import type { PointerChannel } from './Pointer';
@@ -63,6 +64,10 @@ export class InputBinding {
 
   private readonly _triggerTimer: Timer;
   private readonly _detacher: InternalChannelDetacher | null;
+  /** Last known value of each bound channel, in `channels` order — the replay baseline `update` advances. */
+  private readonly _channelValues: Float32Array;
+  /** `false` until the first `update()` call, which always baselines from the live buffer directly — see `update`'s doc comment. */
+  private _seeded = false;
   private _value = 0;
   private _unbound = false;
 
@@ -70,6 +75,7 @@ export class InputBinding {
     this.channels = channels;
     this._triggerTimer = new Timer(Time.fromMilliseconds(options.threshold ?? InputBinding.defaultTriggerThreshold));
     this._detacher = detacher;
+    this._channelValues = new Float32Array(channels.length);
   }
 
   /** Last value sampled this frame. 0 when inactive. */
@@ -83,23 +89,73 @@ export class InputBinding {
   }
 
   /**
-   * Read the latest values from the unified channel buffer and dispatch
-   * the appropriate Signals. Called once per frame by the owning manager.
+   * Read the latest channel state and dispatch the appropriate Signals.
+   * Called once per frame by the owning manager.
+   *
+   * `batches` — when supplied and this binding has already seeded itself
+   * once before — is replayed in true order, evaluating the aggregate value
+   * once per whole batch (see {@link ChannelEventBatch}'s doc comment), so a
+   * full activate-then-release within a single frame still fires
+   * `onStart`/`onStop`/`onTrigger` instead of being invisible to a
+   * once-per-frame snapshot of `channels`. Omitted entirely by callers with
+   * no ordered history of their own (e.g. {@link Gamepad}'s per-slot
+   * bindings) — falls back to reading `channels` directly, exactly as
+   * before, which is also what the very FIRST call ever does regardless of
+   * `batches`: a fresh binding baselines from the live buffer with no
+   * synthetic edge, then only reports real transitions relative to that
+   * baseline as later batches replay — a channel already active before this
+   * binding started observing correctly reports `onStart` immediately on
+   * that first call, exactly as the previous once-per-frame design always
+   * did, not a regression to guard against here.
    *
    * @internal
    */
-  public update(channels: Float32Array): void {
+  public update(channels: Float32Array, batches?: readonly ChannelEventBatch[]): void {
     if (this._unbound) {
       return;
     }
 
+    if (!this._seeded || batches === undefined || batches.length === 0) {
+      this._seeded = true;
+
+      for (let i = 0; i < this.channels.length; i++) {
+        this._channelValues[i] = channels[this.channels[i]!] ?? 0;
+      }
+
+      this._evaluateTransition();
+
+      return;
+    }
+
+    for (const batch of batches) {
+      let touchedBoundChannel = false;
+
+      for (const event of batch.channels) {
+        const index = this.channels.indexOf(event.channel);
+
+        if (index === -1) {
+          continue;
+        }
+
+        this._channelValues[index] = event.value;
+        touchedBoundChannel = true;
+      }
+
+      if (touchedBoundChannel) {
+        this._evaluateTransition();
+      }
+    }
+  }
+
+  /** Recompute the aggregate value from `_channelValues` and dispatch a transition if the active/inactive state changed. */
+  private _evaluateTransition(): void {
     let value = 0;
 
-    for (const channel of this.channels) {
-      const sample = channels[channel];
+    for (let i = 0; i < this._channelValues.length; i++) {
+      const channelValue = this._channelValues[i] ?? 0;
 
-      if (sample !== undefined && Math.abs(sample) > Math.abs(value)) {
-        value = sample;
+      if (Math.abs(channelValue) > Math.abs(value)) {
+        value = channelValue;
       }
     }
 

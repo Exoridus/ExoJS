@@ -7,7 +7,7 @@ import { Vector } from '#math/Vector';
 import type { PlatformAdapter, PlatformSubscription } from '#platform/PlatformAdapter';
 
 import type { ActionMap, ActionRecord } from './actions/ActionMap';
-import type { ActionSample, ChannelEvent } from './actions/types';
+import type { ActionSample, ChannelEvent, ChannelEventBatch } from './actions/types';
 import type { ContextMenuRequest } from './ContextMenuRequest';
 import { Gamepad } from './Gamepad';
 import type { GamepadAxis } from './GamepadAxis';
@@ -78,14 +78,17 @@ export class InputManager {
    */
   private readonly channelsLast: Float32Array = new Float32Array(ChannelSize.Container);
   /**
-   * Every channel write since the frame closed, in true chronological order.
-   * Set as platform events arrive, read by actions once per frame, and
-   * cleared only when the frame closes — the ordered record that lets an
-   * action replay its bound channels' real transition sequence instead of
-   * reconstructing it from independent, unordered per-channel bits. See
-   * {@link ActionSample}'s doc comment.
+   * Every atomic channel-write batch since the frame closed, in true
+   * chronological order — one entry per real-world source event (one
+   * keyboard key, one pointer event's co-written slot, one gamepad poll's
+   * changed channels), never one entry per individual channel. Set as
+   * platform events arrive, read by actions once per frame, and cleared only
+   * when the frame closes — the ordered record that lets an action replay
+   * its bound channels' real transition sequence, whole batch by whole
+   * batch, instead of reconstructing it from independent, unordered
+   * per-channel bits. See {@link ActionSample}'s doc comment.
    */
-  private readonly frameEvents: ChannelEvent[] = [];
+  private readonly frameBatches: ChannelEventBatch[] = [];
   private readonly pointers = new Map<number, Pointer>();
   private readonly _gamepads: readonly [Gamepad, Gamepad, Gamepad, Gamepad];
   private readonly gamepadsByBrowserIndex = new Map<number, Gamepad>();
@@ -234,7 +237,7 @@ export class InputManager {
 
     this.actionSample = {
       values: this.channels,
-      events: this.frameEvents,
+      batches: this.frameBatches,
       frameId: 0,
     };
     this.gestureRecognizer = new GestureRecognizer(pointerDistanceThreshold, this.onPinch, this.onRotate, this.onLongPress);
@@ -388,15 +391,20 @@ export class InputManager {
   }
 
   /**
-   * Resync `map` against this frame's real channel state without treating a
-   * still-held source as a fresh press. Used by {@link SceneInputs.resume} so
-   * a key held across a suspend does not surface as a synthetic press the
-   * moment the scene resumes sampling it again.
+   * Eagerly re-baseline `map` against this frame's real channel state,
+   * without treating a still-held source as a fresh press. Used by
+   * {@link SceneInputs.resume}, immediately after a preceding
+   * {@link ActionMap._reset} (from the matching suspend), so code running
+   * right after resume — not only the next real frame — already observes
+   * the correct state. `_update` forwards straight through here: with the
+   * map's ownership tracker already reset, it resolves to the SAME baseline
+   * path a fresh attach or a genuine handoff would (see
+   * {@link ButtonAction._update}'s doc comment).
    *
    * @internal
    */
   public _resyncActionMap(map: ActionMap): void {
-    map._resync(this.actionSample);
+    map._update(this.actionSample);
   }
 
   /**
@@ -448,7 +456,7 @@ export class InputManager {
     this._recordChannelChanges(ChannelOffset.Gamepads, ChannelSize.Category);
 
     for (const binding of this.bindings) {
-      binding.update(this.channels);
+      binding.update(this.channels, this.frameBatches);
     }
 
     // A fresh id per real frame — the guard an action shared by two attached
@@ -463,10 +471,10 @@ export class InputManager {
       this.updateEvents();
     }
 
-    // Close the frame: the ordered event log is cleared here rather than
+    // Close the frame: the ordered batch log is cleared here rather than
     // where it is read — every action within the frame must see the same
     // sequence, and the next frame starts from an empty log.
-    this.frameEvents.length = 0;
+    this.frameBatches.length = 0;
   }
 
   /**
@@ -505,7 +513,7 @@ export class InputManager {
     this.capturedKeyChannels.clear();
     this.gamepadsByBrowserIndex.clear();
     this.keyEvents.length = 0;
-    this.frameEvents.length = 0;
+    this.frameBatches.length = 0;
     this.pointerSlots.clear();
     this.freeSlots.length = 0;
     this.wheelOffset.destroy();
@@ -582,26 +590,37 @@ export class InputManager {
   }
 
   /**
-   * Append an ordered event for every channel in `[base, base + length)`
-   * that actually changed since the last check. Called right after a
-   * platform handler wrote into those channels, which is the only moment a
-   * sub-frame change is still observable — a frame-boundary diff could not
-   * tell true order or intermediate values apart from a single net change.
+   * Append ONE atomic batch covering every channel in `[base, base + length)`
+   * that actually changed since the last check — never one entry per
+   * individual channel, so co-written channels from a SINGLE real-world
+   * event (a pointer's whole slot, one gamepad poll) are applied together
+   * before any action/binding evaluates its aggregate state, rather than as
+   * a sequence of independent steps with a transient, never-actually-true
+   * state in between. Called right after a platform handler wrote into
+   * those channels, which is the only moment a sub-frame change is still
+   * observable — a frame-boundary diff could not tell true order or
+   * intermediate values apart from a single net change. No batch is
+   * appended at all when nothing in the range changed.
    */
   private _recordChannelChanges(base: number, length: number): void {
-    const { channels, channelsLast, frameEvents } = this;
+    const { channels, channelsLast, frameBatches } = this;
+    let batch: ChannelEvent[] | null = null;
 
     for (let i = base, end = base + length; i < end; i++) {
       const value = channels[i] ?? 0;
 
       if ((channelsLast[i] ?? 0) !== value) {
         channelsLast[i] = value;
-        frameEvents.push({ channel: i, value });
+        (batch ??= []).push({ channel: i, value });
       }
+    }
+
+    if (batch !== null) {
+      frameBatches.push({ channels: batch });
     }
   }
 
-  /** Fold a pointer's whole 16-channel slot into the ordered event log. */
+  /** Fold a pointer's whole 16-channel slot into ONE atomic batch — every field a single real-world pointer event wrote together. */
   private _recordPointerChanges(pointer: Pointer): void {
     this._recordChannelChanges(ChannelOffset.Pointers + pointer.slotIndex * pointerSlotSize, pointerSlotSize);
   }

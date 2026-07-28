@@ -1,4 +1,3 @@
-import { logger } from '#core/logging';
 import type { InputChannel } from '#input/InputBinding';
 
 /**
@@ -29,48 +28,66 @@ export interface ActionOptions {
   readonly gamepadSlot?: 0 | 1 | 2 | 3;
 }
 
-/** One channel write, in the exact order it happened. @internal */
+/** One channel write within a {@link ChannelEventBatch}. @internal */
 export interface ChannelEvent {
   readonly channel: number;
   readonly value: number;
 }
 
 /**
+ * Every channel a single real-world source event wrote TOGETHER, in one
+ * atomic group — one keyboard key, one pointer event's co-written slot
+ * channels, or one gamepad poll's changed buttons/axes. An action evaluates
+ * its aggregate state only once per batch, after every channel in it has
+ * been applied — never mid-batch — so two channels that changed as part of
+ * the SAME real event can never be observed as two sequential, independent
+ * transitions with a transient (never-actually-true) state in between. See
+ * {@link ButtonAction._update}.
+ *
+ * @internal
+ */
+export interface ChannelEventBatch {
+  readonly channels: readonly ChannelEvent[];
+}
+
+/**
  * Per-frame channel state an action samples.
  *
- * `values` holds what the channels read right now. `events` is the ordered
- * log of every channel write since the previous frame closed — the smallest
- * representation that lets an action replay its bound channels' true
- * transition order rather than reconstructing it from independent,
- * unordered per-channel bits. Without true order, a source that oscillates
- * (a tap on a second alternative while a first stays held, or a value that
- * crosses an action's own threshold twice) cannot be told apart from one
- * that simply changed once — see {@link ButtonAction._update}.
+ * `values` holds what the channels read right now. `batches` is the ordered
+ * log of every atomic channel-write batch since the previous frame closed —
+ * the smallest representation that lets an action replay its bound
+ * channels' true transition order, batch by whole batch, rather than
+ * reconstructing it from independent, unordered per-channel bits. Without
+ * true order, a source that oscillates (a tap on a second alternative while
+ * a first stays held, or a value that crosses an action's own threshold
+ * twice) cannot be told apart from one that simply changed once.
  *
  * `frameId` is bumped once per real frame by the owning {@link InputManager}.
  * Combined with this very `ActionSample` object's own identity — one
- * instance per manager, reused for its entire lifetime — it lets an action
- * tell apart three cases: the same owner's same frame reached twice (two
- * attached maps sharing this action — sample once, skip the repeat), the
- * same owner's next frame (process normally), and a genuinely different
- * owner (a different `InputManager`/`Application` — re-baseline instead of
- * replaying events that belong to an unrelated channel buffer). Two
- * DIFFERENT managers' `frameId` counters can coincidentally read the same
- * number; their sample objects never can, which is why identity — not the
- * number alone — decides ownership.
+ * instance per manager, reused for its entire lifetime — {@link ActionOwnership}
+ * (held once per {@link ActionMap}, not per action — each action belongs to
+ * exactly one map) uses it to tell apart the same owner's next real frame
+ * (replay this frame's batches normally) from a genuinely different owner
+ * (a map that just moved to a different `InputManager`/`SceneInputs` — its
+ * channel buffer is unrelated to the old owner's, so baseline against the
+ * live values instead of replaying batches that belong to someone else's
+ * buffer). Two DIFFERENT managers' `frameId` counters can coincidentally
+ * read the same number; their sample objects never can, which is why
+ * identity — not the number alone — decides ownership.
  *
  * @internal
  */
 export interface ActionSample {
   readonly values: Float32Array;
-  readonly events: readonly ChannelEvent[];
+  readonly batches: readonly ChannelEventBatch[];
   frameId: number;
 }
 
 /**
- * Shared ownership bookkeeping for every action kind — see
- * {@link ActionSample}'s doc comment for why identity, not a bare frame
- * number, is what has to decide ownership.
+ * Ownership bookkeeping held once per {@link ActionMap} — not per action,
+ * since every action now belongs to exactly one map (enforced at
+ * construction; see `ActionMap`'s own doc comment) and therefore always
+ * shares its owning map's sample identity.
  *
  * @internal
  */
@@ -79,17 +96,20 @@ export class ActionOwnership {
   private _frameId = -1;
 
   /**
-   * Resolve `sample` against whichever owner last drove this action.
+   * Resolve `sample` against whichever owner last drove this map.
    * `'duplicate'` — this exact owner's this exact frame was already
-   * processed (a sibling {@link ActionMap} reached the same action instance);
-   * the caller should skip. `'handoff'` — a DIFFERENT, previously-established
-   * owner is now driving this action; its channel buffer is unrelated to the
-   * old owner's, so the caller should re-baseline rather than replay this
-   * frame's events. `'frame'` — a fresh frame from the same owner as before,
-   * or the very first update this action has ever seen; the caller should
-   * process normally.
+   * processed; the caller should skip. `'baseline'` — either the very first
+   * sample this map has ever seen, or a different, previously-established
+   * owner is now driving it (the map moved to a different `InputManager`/
+   * `SceneInputs`, a legitimate operation — see {@link ActionMap}'s doc
+   * comment). Either way the caller should baseline against the live
+   * channel state rather than replay batches: a first-ever attach has no
+   * batch recording a channel's already-current value, and a genuinely
+   * different owner's channel buffer is unrelated to the old one's.
+   * `'frame'` — a fresh real frame from the same owner as before; the
+   * caller should replay this frame's batches normally.
    */
-  public resolve(sample: ActionSample): 'duplicate' | 'handoff' | 'frame' {
+  public resolve(sample: ActionSample): 'duplicate' | 'baseline' | 'frame' {
     if (sample === this._sample) {
       if (sample.frameId === this._frameId) {
         return 'duplicate';
@@ -100,24 +120,13 @@ export class ActionOwnership {
       return 'frame';
     }
 
-    const isHandoff = this._sample !== null;
-
     this._sample = sample;
     this._frameId = sample.frameId;
 
-    if (isHandoff && __DEV__) {
-      logger.warn(
-        'An action instance is now being driven by a different InputManager than before. ' +
-          'Sharing one Action across two Applications (or two InputManagers) is not supported — ' +
-          'each Application should own distinct Action instances.',
-        { source: 'input' },
-      );
-    }
-
-    return isHandoff ? 'handoff' : 'frame';
+    return 'baseline';
   }
 
-  /** Forget the current owner, as if this action had never been sampled. */
+  /** Forget the current owner, as if this map had never been sampled. */
   public reset(): void {
     this._sample = null;
     this._frameId = -1;

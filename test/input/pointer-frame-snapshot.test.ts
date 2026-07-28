@@ -312,9 +312,14 @@ describe('ordered channel event log', () => {
     readonly value: number;
   }
 
-  const frameEvents = (manager: InputManager): RawChannelEvent[] => (manager as unknown as { frameEvents: RawChannelEvent[] }).frameEvents;
+  interface RawChannelEventBatch {
+    readonly channels: readonly RawChannelEvent[];
+  }
+
+  const frameBatches = (manager: InputManager): RawChannelEventBatch[] => (manager as unknown as { frameBatches: RawChannelEventBatch[] }).frameBatches;
   const forSpace = (manager: InputManager): number[] =>
-    frameEvents(manager)
+    frameBatches(manager)
+      .flatMap(batch => batch.channels)
       .filter(e => e.channel === (Keyboard.Space as number))
       .map(e => e.value);
 

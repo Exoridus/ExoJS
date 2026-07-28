@@ -4,27 +4,27 @@ import { SceneState } from '#core/SceneState';
 import { Signal } from '#core/Signal';
 import { ActionMap } from '#input/actions/ActionMap';
 import { ButtonAction } from '#input/actions/ButtonAction';
-import type { ActionSample, ChannelEvent } from '#input/actions/types';
+import type { ActionSample, ChannelEventBatch } from '#input/actions/types';
 import type { InputBinding } from '#input/InputBinding';
 import { ChannelSize, Keyboard } from '#input/types';
 
 /** A zeroed sample with a mutable `frameId`, for tests that only need a valid shape. */
 const createEmptySample = (): ActionSample => ({
   values: new Float32Array(ChannelSize.Container),
-  events: [],
+  batches: [],
   frameId: 1,
 });
 
 /**
- * Write `value` to `channel` on `sample`, also logging it as an ordered
- * `ChannelEvent` — mirrors what `InputManager._recordChannelChanges` does for
- * a real channel write. A bare `sample.values[channel] = value` is not
- * enough: `ButtonAction._update` replays `sample.events`, not `values`,
- * to detect its threshold-crossing edges in true order.
+ * Write `value` to `channel` on `sample`, also logging it as its own atomic
+ * `ChannelEventBatch` — mirrors what `InputManager._recordChannelChanges`
+ * does for a single-channel real write. A bare `sample.values[channel] =
+ * value` is not enough: `ButtonAction._update` replays `sample.batches`, not
+ * `values`, to detect its threshold-crossing edges in true order.
  */
 const setChannel = (sample: ActionSample, channel: number, value: number): void => {
   sample.values[channel] = value;
-  (sample.events as ChannelEvent[]).push({ channel, value });
+  (sample.batches as ChannelEventBatch[]).push({ channels: [{ channel, value }] });
 };
 
 interface StubBinding {
@@ -383,7 +383,7 @@ describe('SceneInputs action maps', () => {
       input: {
         _trackActionMap: vi.fn((map: unknown) => void tracked.add(map)),
         _detachActionMap: vi.fn((map: unknown) => void tracked.delete(map)),
-        _resyncActionMap: vi.fn((map: ActionMap) => void map._resync(resyncSample)),
+        _resyncActionMap: vi.fn((map: ActionMap) => void map._update(resyncSample)),
       },
       scenes: {
         get _transitionGateOpen(): boolean {

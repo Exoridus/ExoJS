@@ -3,7 +3,7 @@ import { resolveGamepadSlotChannel } from '#input/types';
 import { Vector } from '#math/Vector';
 
 import type { ActionOptions, ActionSample, AtLeastOne, OneOrMany } from './types';
-import { ActionOwnership, sampleStrongest, toChannels } from './types';
+import { sampleStrongest, toChannels } from './types';
 
 /**
  * Sources for one two-dimensional binding. `x`/`y` take directly signed
@@ -73,7 +73,6 @@ export class VectorAction {
 
   private readonly _bindings: readonly ResolvedVectorBinding[];
   private readonly _threshold: number;
-  private readonly _ownership = new ActionOwnership();
 
   public constructor(binding: OneOrMany<VectorBinding>, options: ActionOptions = {}) {
     const slot = options.gamepadSlot ?? 0;
@@ -91,31 +90,14 @@ export class VectorAction {
   }
 
   /**
-   * Sample the channel buffers for this frame. Skips a repeat call for the
-   * same owner's already-processed frame (two attached maps sharing this
-   * instance); a genuinely different owner is still sampled normally — a
-   * vector has no frame-to-frame edge memory to protect during a handoff,
-   * unlike {@link ButtonAction}. See {@link ActionSample}'s doc comment.
+   * Sample the channel buffers for this frame. A vector has no
+   * frame-to-frame edge memory to protect, unlike {@link ButtonAction} — a
+   * suspend/resume cycle or an ownership handoff is just a normal sample, so
+   * there is nothing more to decide here.
    *
    * @internal
    */
   public _update(sample: ActionSample): void {
-    if (this._ownership.resolve(sample) === 'duplicate') {
-      return;
-    }
-
-    this._computeFrom(sample);
-  }
-
-  /**
-   * Recompute against `sample`. Identical to {@link _update} — unlike
-   * {@link ButtonAction}, a vector carries no frame-to-frame edge memory to
-   * desync, so resyncing after a suspend is just a normal sample.
-   *
-   * @internal
-   */
-  public _resync(sample: ActionSample): void {
-    this._ownership.resolve(sample);
     this._computeFrom(sample);
   }
 
@@ -148,6 +130,5 @@ export class VectorAction {
   /** Clear all state, as if no source had ever been touched. @internal */
   public _reset(): void {
     this.value.set(0, 0);
-    this._ownership.reset();
   }
 }

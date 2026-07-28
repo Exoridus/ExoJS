@@ -5,7 +5,6 @@
  */
 
 import type { Application } from '#core/Application';
-import { logger } from '#core/logging';
 import { ActionMap } from '#input/actions/ActionMap';
 import { AxisAction } from '#input/actions/AxisAction';
 import { ButtonAction } from '#input/actions/ButtonAction';
@@ -18,16 +17,25 @@ import { ChannelSize, Keyboard, PointerButton } from '#input/types';
 import { BrowserPlatform } from '#platform/BrowserPlatform';
 
 /**
- * Builds an `ActionSample` and the two operations a test drives it with:
- * `set()` mimics a platform write mid-frame, appending an ordered
- * `ChannelEvent` exactly like `InputManager._recordChannelChanges` does, and
- * `frame()` closes the frame (clearing the event log and bumping `frameId`,
+ * Builds an `ActionSample` and the operations a test drives it with:
+ * `set()` mimics a single-channel platform write (one keyboard event, or one
+ * standalone channel of a pointer/gamepad write) as its own atomic
+ * `ChannelEventBatch`, exactly like `InputManager._recordChannelChanges`
+ * does for a single-channel range. `setBatch()` mimics several channels
+ * written TOGETHER by one real-world event (e.g. a pointer's whole slot) as
+ * ONE batch — for tests specifically about batch-vs-per-channel evaluation.
+ * `frame()` closes the frame (clearing the batch log and bumping `frameId`,
  * mirroring `InputManager.update`).
  */
-const createSample = (): { sample: ActionSample; set: (channel: number, value: number) => void; frame: () => void } => {
+const createSample = (): {
+  sample: ActionSample;
+  set: (channel: number, value: number) => void;
+  setBatch: (writes: ReadonlyArray<readonly [channel: number, value: number]>) => void;
+  frame: () => void;
+} => {
   const values = new Float32Array(ChannelSize.Container);
-  const events: ChannelEvent[] = [];
-  const sample: ActionSample = { values, events, frameId: 1 };
+  const batches: Array<{ channels: ChannelEvent[] }> = [];
+  const sample: ActionSample = { values, batches, frameId: 1 };
 
   return {
     sample,
@@ -37,10 +45,26 @@ const createSample = (): { sample: ActionSample; set: (channel: number, value: n
       }
 
       values[channel] = value;
-      events.push({ channel, value });
+      batches.push({ channels: [{ channel, value }] });
+    },
+    setBatch: (writes: ReadonlyArray<readonly [channel: number, value: number]>): void => {
+      const channels: ChannelEvent[] = [];
+
+      for (const [channel, value] of writes) {
+        if (values[channel] === value) {
+          continue;
+        }
+
+        values[channel] = value;
+        channels.push({ channel, value });
+      }
+
+      if (channels.length > 0) {
+        batches.push({ channels });
+      }
     },
     frame: (): void => {
-      events.length = 0;
+      batches.length = 0;
       sample.frameId++;
     },
   };
@@ -213,38 +237,32 @@ describe('ButtonAction', () => {
     expect(action.value).toBe(1);
   });
 
-  it('a legitimate ownership handoff re-baselines without a synthetic edge, skips no frame, and warns once in dev', () => {
-    const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => undefined);
-    const first = createSample();
-    const second = createSample();
-    const action = new ButtonAction(Keyboard.Space);
+  it('evaluates the aggregate only once a whole batch has applied, never mid-batch', () => {
+    const { sample, setBatch } = createSample();
+    // Alternative sources bound to the SAME action, so a plain per-channel
+    // replay (rather than a per-BATCH one) would see the aggregate dip to 0
+    // between the two writes below, even though both changed together as
+    // part of a single real-world event and the aggregate never actually
+    // left the active source's coverage.
+    const action = new ButtonAction([Keyboard.Space, GamepadButton.South]);
 
-    first.set(Keyboard.Space, 1);
-    action._update(first.sample);
+    setBatch([[Keyboard.Space, 1]]);
+    action._update(sample);
     expect(action.pressed).toBe(true);
     expect(action.active).toBe(true);
 
-    // A different owner's sample — an independent channel buffer, e.g. a
-    // second Application's InputManager — now drives this same action.
-    second.set(Keyboard.Space, 1);
-    action._update(second.sample);
+    // One real event writes BOTH channels together: Space releases and
+    // GamepadButton.South presses in the very same atomic batch.
+    setBatch([
+      [Keyboard.Space, 0],
+      [GamepadButton.South, 1],
+    ]);
+    action._update(sample);
 
-    expect(warnSpy).toHaveBeenCalledTimes(1);
-    // The frame is not skipped: state re-baselines to the new owner's data...
-    expect(action.active).toBe(true);
-    // ...but it does not fabricate an edge off the unrelated previous owner.
     expect(action.pressed).toBe(false);
     expect(action.released).toBe(false);
-
-    // Normal edge detection resumes on the new owner's very next real frame.
-    second.frame();
-    second.set(Keyboard.Space, 0);
-    action._update(second.sample);
-
-    expect(action.released).toBe(true);
-    expect(action.active).toBe(false);
-
-    warnSpy.mockRestore();
+    expect(action.active).toBe(true);
+    expect(action.value).toBe(1);
   });
 });
 
@@ -447,25 +465,22 @@ describe('ActionMap', () => {
     expect(controls.jump.pressed).toBe(false);
   });
 
-  it.each(['actions', 'attached', 'detach', '_owner', '_attach', '_update', '_resync', '_reset'])('rejects a reserved action name: "%s"', name => {
+  it.each(['actions', 'attached', 'detach', '_owner', '_attach', '_update', '_reset'])('rejects a reserved action name: "%s"', name => {
     expect(() => new ActionMap({ [name]: new ButtonAction(Keyboard.Space) })).toThrow(/reserved/i);
   });
 
-  it('does not update the same action instance twice in one frame across two maps', () => {
-    const { sample, set } = createSample();
+  it('rejects reusing the same action instance across two different maps', () => {
     const jump = new ButtonAction(Keyboard.Space);
-    const first = new ActionMap({ jump });
-    const second = new ActionMap({ jump });
 
-    set(Keyboard.Space, 1);
-    first._update(sample);
-    // A second map sharing the same underlying action, reached within the
-    // same real frame — must not re-derive `pressed` off its own just-written
-    // `active` state and erase the edge it correctly saw a moment ago.
-    second._update(sample);
+    new ActionMap({ jump });
 
-    expect(jump.pressed).toBe(true);
-    expect(jump.active).toBe(true);
+    expect(() => new ActionMap({ jump })).toThrow(/already belongs to another ActionMap/i);
+  });
+
+  it('rejects reusing the same action instance twice, or under another name, within one map', () => {
+    const jump = new ButtonAction(Keyboard.Space);
+
+    expect(() => new ActionMap({ jump, alias: jump })).toThrow(/already belongs to another ActionMap/i);
   });
 
   it('resync leaves a still-held action active without a synthetic press', () => {
@@ -480,7 +495,7 @@ describe('ActionMap', () => {
     expect(jump.active).toBe(false);
 
     frame(); // real time passes while suspended
-    jump._resync(sample); // scene resume: key is still 1 in the sample
+    jump._update(sample); // scene resume: key is still 1 in the sample, no batch this frame — baselines instead of replaying
 
     expect(jump.active).toBe(true);
     expect(jump.pressed).toBe(false);
@@ -495,7 +510,7 @@ describe('ActionMap', () => {
     jump._update(sample);
     jump._reset();
     frame();
-    jump._resync(sample); // still held, active=true, no edge
+    jump._update(sample); // still held, active=true, no edge
 
     frame();
     set(Keyboard.Space, 0);
@@ -574,6 +589,35 @@ describe('ActionMap × InputManager lifecycle', () => {
     // Still tracked by `other` only — `im` must have let go of it.
     im.update(0 as never);
     other.update(0 as never);
+
+    im.destroy();
+    other.destroy();
+  });
+
+  it('moving an attached map to a different InputManager re-baselines its actions against the new owner, with no synthetic edge', () => {
+    const im = createManager();
+    const other = createManager();
+    const map = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
+
+    im.attach(map);
+
+    const imCanvas = (im as unknown as { platform: BrowserPlatform }).platform.surface;
+
+    imCanvas.dispatchEvent(new FocusEvent('focus'));
+    window.dispatchEvent(new KeyboardEvent('keydown', { keyCode: Keyboard.Space } as KeyboardEventInit));
+    im.update(0 as never);
+
+    expect(map.jump.active).toBe(true);
+    expect(map.jump.pressed).toBe(true);
+
+    // The map moves to a different manager — an entirely unrelated channel
+    // buffer, where Space was never pressed.
+    other.attach(map);
+    other.update(0 as never);
+
+    expect(map.jump.active).toBe(false);
+    expect(map.jump.pressed).toBe(false);
+    expect(map.jump.released).toBe(false);
 
     im.destroy();
     other.destroy();

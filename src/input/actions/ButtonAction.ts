@@ -2,7 +2,7 @@ import type { InputChannel } from '#input/InputBinding';
 import { resolveGamepadSlotChannel } from '#input/types';
 
 import type { ActionOptions, ActionSample, OneOrMany } from './types';
-import { ActionOwnership, toChannels } from './types';
+import { toChannels } from './types';
 
 /** Strongest absolute value across every entry, sign-preserving. */
 function strongestOf(values: Float32Array): number {
@@ -35,7 +35,14 @@ export class ButtonAction {
   private readonly _threshold: number;
   /** Last known value of each bound channel, in `_channels` order — the replay baseline `_update` advances. */
   private readonly _channelValues: Float32Array;
-  private readonly _ownership = new ActionOwnership();
+  /**
+   * `false` until this action has established an initial baseline for every
+   * bound channel — see `_update`'s doc comment. Reset by `_reset()`, and
+   * implicitly by the owning {@link ActionMap} on a legitimate ownership
+   * handoff (a fresh reset forces the next `_update` to re-baseline against
+   * the new owner's live state).
+   */
+  private _seeded = false;
   private _value = 0;
   private _active = false;
   private _pressedThisFrame = false;
@@ -66,13 +73,16 @@ export class ButtonAction {
   /**
    * `true` on the frame the AGGREGATE value — the strongest of every bound
    * source — crossed above the action's own threshold. Bound sources are
-   * replayed in the true order their channels changed, so a value that
-   * crosses the threshold twice within one frame (0.4 → 0.7 → 0.4 at
-   * threshold 0.5) sets both {@link pressed} and {@link released} on that
-   * same frame, while a source that never actually reaches the threshold
-   * (0 → 0.1 → 0 at threshold 0.5) sets neither. A second, alternative
-   * source tapping while a first stays continuously active never manufactures
-   * an edge either, because the aggregate itself never drops below threshold.
+   * replayed in the true order their channels changed, batch by whole batch
+   * (see {@link ChannelEventBatch}'s doc comment — every channel a single
+   * real-world event wrote together is applied before the aggregate is
+   * evaluated even once), so a value that crosses the threshold twice within
+   * one frame (0.4 → 0.7 → 0.4 at threshold 0.5) sets both {@link pressed}
+   * and {@link released} on that same frame, while a source that never
+   * actually reaches the threshold (0 → 0.1 → 0 at threshold 0.5) sets
+   * neither. A second, alternative source tapping while a first stays
+   * continuously active never manufactures an edge either, because the
+   * aggregate itself never drops below threshold.
    */
   public get pressed(): boolean {
     return this._pressedThisFrame;
@@ -83,18 +93,30 @@ export class ButtonAction {
     return this._releasedThisFrame;
   }
 
-  /** Sample the channel buffers for this frame. @internal */
+  /**
+   * Replay this frame's ordered batches, evaluating the aggregate state once
+   * per batch rather than once per individual channel within it.
+   *
+   * The very first call ever (or the first call after `_reset()` — see that
+   * method's doc comment) additionally seeds every bound channel that has NO
+   * batch entry THIS SAME call directly from `sample.values`, with no edge —
+   * a channel already active before this action started watching correctly
+   * contributes to the aggregate without a synthetic press. A channel that
+   * DOES have a batch entry this call is deliberately left unseeded: it was
+   * necessarily `0` a moment ago (a batch entry only exists where the value
+   * actually changed), so replaying it below detects a real, legitimate edge
+   * instead of being masked by a seed that jumped straight to the final
+   * value — seeding every bound channel unconditionally from `sample.values`
+   * (the frame's FINAL state) and then still replaying the very batches that
+   * led there would silently erase whatever edge those batches represent.
+   *
+   * @internal
+   */
   public _update(sample: ActionSample): void {
-    const resolution = this._ownership.resolve(sample);
-
-    if (resolution === 'duplicate') {
-      return;
-    }
-
-    if (resolution === 'handoff') {
-      this._resyncFrom(sample);
-
-      return;
+    if (!this._seeded) {
+      this._seeded = true;
+      this._seedUntouchedChannels(sample);
+      this._active = Math.abs(strongestOf(this._channelValues)) > this._threshold;
     }
 
     this._pressedThisFrame = false;
@@ -102,14 +124,23 @@ export class ButtonAction {
 
     let wasActive = this._active;
 
-    for (const event of sample.events) {
-      const index = this._channels.indexOf(event.channel);
+    for (const batch of sample.batches) {
+      let touchedBoundChannel = false;
 
-      if (index === -1) {
-        continue;
+      for (const event of batch.channels) {
+        const index = this._channels.indexOf(event.channel);
+
+        if (index === -1) {
+          continue;
+        }
+
+        this._channelValues[index] = event.value;
+        touchedBoundChannel = true;
       }
 
-      this._channelValues[index] = event.value;
+      if (!touchedBoundChannel) {
+        continue;
+      }
 
       const isActive = Math.abs(strongestOf(this._channelValues)) > this._threshold;
 
@@ -126,41 +157,40 @@ export class ButtonAction {
     this._active = wasActive;
   }
 
+  /** Seed every bound channel with no batch entry this call directly from `sample.values` — see `_update`'s doc comment. */
+  private _seedUntouchedChannels(sample: ActionSample): void {
+    const touched = new Set<number>();
+
+    for (const batch of sample.batches) {
+      for (const event of batch.channels) {
+        touched.add(event.channel);
+      }
+    }
+
+    for (let i = 0; i < this._channels.length; i++) {
+      const channel = this._channels[i]!;
+
+      if (!touched.has(channel)) {
+        this._channelValues[i] = sample.values[channel] ?? 0;
+      }
+    }
+  }
+
   /**
-   * Recompute against `sample` without treating a source that is still held
-   * as a fresh press — used to resync a suspended scene's actions on resume,
-   * so a key held across the suspend does not surface as a synthetic press.
-   * Also the re-baseline step for a legitimate ownership handoff (see
-   * {@link ActionSample}'s doc comment): the new owner's channel buffer is
-   * unrelated to whatever this action was previously reading from, so this
-   * transitional frame reports no edge either — normal edge detection
-   * resumes on the owner's next real frame.
+   * Clear all state, as if no source had ever been touched — used when an
+   * owner stops feeding this action (a scene suspend), and by the owning
+   * {@link ActionMap} to force a fresh baseline on a legitimate ownership
+   * handoff, since the new owner's channel buffer is unrelated to the old
+   * one's.
    *
    * @internal
    */
-  public _resync(sample: ActionSample): void {
-    this._ownership.resolve(sample);
-    this._resyncFrom(sample);
-  }
-
-  private _resyncFrom(sample: ActionSample): void {
-    for (let i = 0; i < this._channels.length; i++) {
-      this._channelValues[i] = sample.values[this._channels[i]!] ?? 0;
-    }
-
-    this._value = strongestOf(this._channelValues);
-    this._active = Math.abs(this._value) > this._threshold;
-    this._pressedThisFrame = false;
-    this._releasedThisFrame = false;
-  }
-
-  /** Clear all state, as if no source had ever been touched. @internal */
   public _reset(): void {
     this._channelValues.fill(0);
     this._value = 0;
     this._active = false;
     this._pressedThisFrame = false;
     this._releasedThisFrame = false;
-    this._ownership.reset();
+    this._seeded = false;
   }
 }
