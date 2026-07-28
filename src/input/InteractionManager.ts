@@ -48,7 +48,6 @@ interface DragState {
 
 interface IndexedNode {
   node: RenderNode;
-  order: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -90,12 +89,16 @@ export class InteractionManager implements InteractionHooks {
   // invalidation reaching them. They are deliberately kept OUT of the
   // world-space tree (whose bounds would go stale on every group move —
   // the camera-pan flagship case) and hit-tested by a linear scan through
-  // `_containsWorldPoint`, which reads the live group matrix. Maps node ->
-  // insertion order (shared counter with the tree for z-tiebreaks).
-  private readonly _anchoredNodes = new Map<RenderNode, number>();
+  // `_containsWorldPoint`, which reads the live group matrix.
+  private readonly _anchoredNodes = new Set<RenderNode>();
 
   // Scratch for inverting a group's world matrix during hit-testing.
   private readonly _anchorInverse = new Matrix();
+
+  // Scratch ancestor paths for `_comparePaintOrder`, reused across comparisons
+  // so picking allocates nothing per pointer event.
+  private readonly _pathA: RenderNode[] = [];
+  private readonly _pathB: RenderNode[] = [];
 
   // One-shot dev diagnostic: interactive nodes under an engaged boundary.
   private _devAnchoredWarned = false;
@@ -121,9 +124,6 @@ export class InteractionManager implements InteractionHooks {
   // Reverse index: a world-space indexed node -> the boundary group it is filed
   // under in `_groupWorldDescendants` (for O(1) removal on re-index/unregister).
   private readonly _nodeBoundaryGroup = new Map<RenderNode, RenderNode>();
-
-  // Running insertion-order counter used to break hit-test ties.
-  private _orderCounter = 0;
 
   /** This manager's service bundle, installed on a scene root via {@link attachRoot}. */
   private readonly _stage: Stage;
@@ -775,30 +775,125 @@ export class InteractionManager implements InteractionHooks {
   }
 
   private _hitTestIndexed(x: number, y: number): RenderNode | null {
-    let bestOrder = -1;
     let bestNode: RenderNode | null = null;
 
-    // Track the best (highest-order) hit directly in the query callback, so no
-    // intermediate candidate array is needed. World-aware contains, not the raw
-    // group-local one: a node indexed in world space could have gained a
-    // boundary ancestor since insertion.
+    // Keep only the topmost candidate as the query walks, so no intermediate
+    // array is needed. World-aware contains, not the raw group-local one: a
+    // node indexed in world space could have gained a boundary ancestor since
+    // insertion.
     this._tree!.queryPoint(x, y, indexed => {
-      if (indexed.order > bestOrder && this._containsWorldPoint(indexed.node, x, y)) {
-        bestOrder = indexed.order;
-        bestNode = indexed.node;
+      const node = indexed.node;
+
+      if (this._beatsBest(node, bestNode, x, y)) {
+        bestNode = node;
       }
     });
 
     // Group-anchored nodes live outside the tree (see `_anchoredNodes`):
-    // exact hit-test through the live group matrix, same z-tiebreak.
-    for (const [node, order] of this._anchoredNodes) {
-      if (order > bestOrder && this._containsWorldPoint(node, x, y)) {
-        bestOrder = order;
+    // exact hit-test through the live group matrix, same ordering rule.
+    for (const node of this._anchoredNodes) {
+      if (this._beatsBest(node, bestNode, x, y)) {
         bestNode = node;
       }
     }
 
     return bestNode;
+  }
+
+  /** Whether `candidate` is a hit that paints above the best node found so far. */
+  private _beatsBest(candidate: RenderNode, best: RenderNode | null, x: number, y: number): boolean {
+    if (best !== null && this._comparePaintOrder(candidate, best) <= 0) {
+      return false;
+    }
+
+    return this._isHittable(candidate) && this._containsWorldPoint(candidate, x, y);
+  }
+
+  /**
+   * A node is only a hit target while it and every ancestor up to the root is
+   * visible. The spatial index deliberately keeps hidden nodes registered —
+   * `visible = false` does not unregister — so the check has to happen here.
+   */
+  private _isHittable(node: RenderNode): boolean {
+    let current: RenderNode | null = node;
+
+    while (current !== null) {
+      if (!current.visible) {
+        return false;
+      }
+
+      current = current.parent;
+    }
+
+    return true;
+  }
+
+  /**
+   * Order two nodes the way the renderer paints them: positive when `a` is
+   * drawn after (visually above) `b`, negative when before, `0` when the two
+   * are the same node or live in unrelated trees.
+   *
+   * The comparison is hierarchical, matching how the render plan is built:
+   * find the nearest common ancestor, then compare the two branches that
+   * diverge there by local `zIndex` and, on a tie, document order. A deeply
+   * nested node therefore cannot escape the scope of its ancestors no matter
+   * how high its own `zIndex` — exactly the constraint the renderer imposes,
+   * and the reason a single comparison needs no global sort.
+   *
+   * When one node is an ancestor of the other, the descendant paints later: a
+   * container renders its own content before its children.
+   */
+  private _comparePaintOrder(a: RenderNode, b: RenderNode): number {
+    if (a === b) {
+      return 0;
+    }
+
+    const pathA = this._collectAncestorPath(a, this._pathA);
+    const pathB = this._collectAncestorPath(b, this._pathB);
+    const shared = Math.min(pathA.length, pathB.length);
+    let depth = 0;
+
+    while (depth < shared && pathA[depth] === pathB[depth]) {
+      depth++;
+    }
+
+    if (depth === pathA.length) {
+      return -1;
+    }
+
+    if (depth === pathB.length) {
+      return 1;
+    }
+
+    const branchA = pathA[depth]!;
+    const branchB = pathB[depth]!;
+
+    if (branchA.zIndex !== branchB.zIndex) {
+      return branchA.zIndex - branchB.zIndex;
+    }
+
+    // Same z within the same scope — document order decides, as it does in
+    // `RenderPlanOptimizer`'s `seq` tiebreak. A null parent means the two nodes
+    // sit in unrelated trees and are not comparable.
+    const parent = branchA.parent;
+
+    return parent === null ? 0 : parent.getChildIndex(branchA) - parent.getChildIndex(branchB);
+  }
+
+  /** Fill `out` with the root-to-node ancestor chain and return it. */
+  private _collectAncestorPath(node: RenderNode, out: RenderNode[]): RenderNode[] {
+    out.length = 0;
+
+    let current: RenderNode | null = node;
+
+    while (current !== null) {
+      out.push(current);
+      current = current.parent;
+    }
+
+    out.reverse();
+
+    return out;
   }
 
   /**
@@ -826,16 +921,19 @@ export class InteractionManager implements InteractionHooks {
     return node.contains(groupX, groupY);
   }
 
-  // Walk children in REVERSE order (top z-order first). Recurse into Container children even
-  // when the container itself isn't interactive (so children can be hit through a non-interactive parent).
-  // Return the FIRST (deepest, top-most) interactive node whose contains(x, y) returns true.
+  /**
+   * Walk children back-to-front in paint order (topmost first) and return the
+   * first interactive node containing the point. Recurses into containers that
+   * are not interactive themselves, so a child can still be hit through a
+   * plain layout parent.
+   */
   private _hitTestNode(node: RenderNode, x: number, y: number): RenderNode | null {
     if (!node.visible) {
       return null;
     }
 
     if (node instanceof Container) {
-      const children = node.children;
+      const children = this._childrenInPaintOrder(node);
 
       for (let i = children.length - 1; i >= 0; i--) {
         const child = children[i];
@@ -856,6 +954,30 @@ export class InteractionManager implements InteractionHooks {
     }
 
     return null;
+  }
+
+  /**
+   * Children in the order the renderer paints them. Returns the live child list
+   * untouched in the common case where every sibling shares a `zIndex` — the
+   * same shortcut `RenderPlanOptimizer` takes with `hasMixedZ` — and allocates
+   * a sorted copy only when the z values actually differ. The sort is stable,
+   * so equal z keeps document order.
+   */
+  private _childrenInPaintOrder(container: Container): readonly RenderNode[] {
+    const children = container.children;
+    const first = children[0];
+
+    if (first === undefined) {
+      return children;
+    }
+
+    for (let i = 1; i < children.length; i++) {
+      if (children[i]!.zIndex !== first.zIndex) {
+        return [...children].sort((left, right) => left.zIndex - right.zIndex);
+      }
+    }
+
+    return children;
   }
 
   // ---------------------------------------------------------------------------
@@ -906,7 +1028,6 @@ export class InteractionManager implements InteractionHooks {
     if (this._interactiveNodes.size === 0 && this._tree !== null) {
       this._tree.destroy();
       this._tree = null;
-      this._orderCounter = 0;
     }
   }
 
@@ -915,7 +1036,7 @@ export class InteractionManager implements InteractionHooks {
    * (their group-local bounds are useless as world-space tree keys and
    * would go stale on every group move), everything else into the tree.
    */
-  private _insertNode(node: RenderNode, order: number = this._orderCounter++): void {
+  private _insertNode(node: RenderNode): void {
     if (this._tree === null) {
       return;
     }
@@ -925,7 +1046,7 @@ export class InteractionManager implements InteractionHooks {
     this._clearGroupMembership(node);
 
     if (node._resolveTransformGroupAnchor() !== null) {
-      this._anchoredNodes.set(node, order);
+      this._anchoredNodes.add(node);
 
       if (__DEV__) {
         this._warnAnchoredInteractive(node);
@@ -935,7 +1056,7 @@ export class InteractionManager implements InteractionHooks {
     }
 
     const bounds = node.getBounds();
-    const proxy = this._tree.insert(bounds.left, bounds.top, bounds.right, bounds.bottom, { node, order });
+    const proxy = this._tree.insert(bounds.left, bounds.top, bounds.right, bounds.bottom, { node });
 
     this._proxies.set(node, proxy);
 
@@ -1016,7 +1137,6 @@ export class InteractionManager implements InteractionHooks {
 
     for (const node of this._staleNodes) {
       const proxy = this._proxies.get(node);
-      const order = this._orderFor(node, proxy);
 
       if (proxy !== undefined) {
         this._tree.remove(proxy);
@@ -1025,19 +1145,10 @@ export class InteractionManager implements InteractionHooks {
       this._proxies.delete(node);
       this._anchoredNodes.delete(node);
 
-      this._insertNode(node, order);
+      this._insertNode(node);
     }
 
     this._staleNodes.clear();
-  }
-
-  /** Insertion order to preserve on re-index: tree payload, else anchored, else fresh. */
-  private _orderFor(node: RenderNode, proxy: number | undefined): number {
-    if (proxy !== undefined && this._tree !== null) {
-      return this._tree.payloadOf(proxy).order;
-    }
-
-    return this._anchoredNodes.get(node) ?? this._orderCounter++;
   }
 
   /**
