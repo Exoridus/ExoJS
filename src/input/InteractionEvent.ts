@@ -7,7 +7,17 @@ import type { Pointer } from './Pointer';
  * {@link InteractionManager} can deliver to a {@link RenderNode}.
  * Handlers attach via the node's `interactive*` API.
  */
-export type InteractionEventType = 'pointerdown' | 'pointerup' | 'pointermove' | 'pointerover' | 'pointerout' | 'pointertap' | 'dragstart' | 'drag' | 'dragend';
+export type InteractionEventType =
+  | 'pointerdown'
+  | 'pointerup'
+  | 'pointermove'
+  | 'pointerover'
+  | 'pointerout'
+  | 'pointertap'
+  | 'contextmenu'
+  | 'dragstart'
+  | 'drag'
+  | 'dragend';
 
 /**
  * DOM-Event-shaped envelope dispatched by {@link InteractionManager} to

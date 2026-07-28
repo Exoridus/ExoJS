@@ -290,3 +290,87 @@ describe('channel peak buffer', () => {
     expect(peak(im, Keyboard.Space)).toBe(1);
   });
 });
+
+describe('context menu policy', () => {
+  const createManager = (input?: { allowNativeContextMenu?: boolean; allowTextSelection?: boolean }): { im: InputManager; canvas: HTMLCanvasElement } => {
+    const c = createCanvas();
+    const app = {
+      canvas: c,
+      width: c.width,
+      height: c.height,
+      pixelRatio: 1,
+      options: { input: { gamepadDefinitions: [], pointerDistanceThreshold: 10, ...input } },
+      _backingStoreToDesign: (x: number, y: number): { x: number; y: number } => ({ x, y }),
+    } as unknown as Application;
+
+    return { im: new InputManager(app), canvas: c };
+  };
+
+  it('suppresses the browser menu by default', () => {
+    const { im: manager, canvas: c } = createManager();
+    const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+
+    c.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(true);
+    manager.destroy();
+  });
+
+  it('leaves the browser menu alone when the application opted in', () => {
+    const { im: manager, canvas: c } = createManager({ allowNativeContextMenu: true });
+    const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true });
+
+    c.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(false);
+    manager.destroy();
+  });
+
+  it('routes a semantic engine event either way', () => {
+    const { im: manager, canvas: c } = createManager({ allowNativeContextMenu: true });
+    const seen = vi.fn();
+
+    manager.onContextMenu.add(seen);
+    c.dispatchEvent(new PointerEvent('pointerover', { bubbles: true, pointerId: 1, isPrimary: true, clientX: 40, clientY: 50 }));
+    manager.update(0 as never);
+
+    c.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+    manager.update(0 as never);
+
+    expect(seen).toHaveBeenCalledTimes(1);
+    expect(seen.mock.calls[0]![0].x).toBe(40);
+    manager.destroy();
+  });
+
+  it('dispatches the engine event once per request', () => {
+    const { im: manager, canvas: c } = createManager();
+    const seen = vi.fn();
+
+    manager.onContextMenu.add(seen);
+    c.dispatchEvent(new PointerEvent('pointerover', { bubbles: true, pointerId: 1, isPrimary: true, clientX: 10, clientY: 10 }));
+    manager.update(0 as never);
+
+    c.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
+    manager.update(0 as never);
+    manager.update(0 as never);
+
+    expect(seen).toHaveBeenCalledTimes(1);
+    manager.destroy();
+  });
+
+  it('suppresses text selection by default and honours the opt-in', () => {
+    const suppressed = createManager();
+    const blocked = new Event('selectstart', { bubbles: true, cancelable: true });
+
+    suppressed.canvas.dispatchEvent(blocked);
+    expect(blocked.defaultPrevented).toBe(true);
+    suppressed.im.destroy();
+
+    const allowed = createManager({ allowTextSelection: true });
+    const passed = new Event('selectstart', { bubbles: true, cancelable: true });
+
+    allowed.canvas.dispatchEvent(passed);
+    expect(passed.defaultPrevented).toBe(false);
+    allowed.im.destroy();
+  });
+});

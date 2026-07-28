@@ -80,6 +80,7 @@ const createApp = (): {
     onPointerTap: new Signal<[Pointer]>(),
     onPointerCancel: new Signal<[Pointer]>(),
     onPointerLeave: new Signal<[Pointer]>(),
+    onContextMenu: new Signal<[Pointer]>(),
     // InteractionManager owns the focus controller, which listens for keys.
     onKeyDown: new Signal<[number]>(),
     onKeyUp: new Signal<[number]>(),

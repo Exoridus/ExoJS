@@ -27,6 +27,7 @@ const enum PointerEventFlag {
   Tap = 1 << 3,
   Cancel = 1 << 4,
   Leave = 1 << 5,
+  ContextMenu = 1 << 6,
 }
 
 interface PointerQueue {
@@ -175,6 +176,7 @@ export class InteractionManager implements InteractionHooks {
   private readonly _onPointerTapHandler: (pointer: Pointer) => void;
   private readonly _onPointerCancelHandler: (pointer: Pointer) => void;
   private readonly _onPointerLeaveHandler: (pointer: Pointer) => void;
+  private readonly _onContextMenuHandler: (pointer: Pointer) => void;
 
   public constructor(app: Application) {
     this._app = app;
@@ -188,6 +190,7 @@ export class InteractionManager implements InteractionHooks {
     this._onPointerTapHandler = this._handlePointerTap.bind(this);
     this._onPointerCancelHandler = this._handlePointerCancel.bind(this);
     this._onPointerLeaveHandler = this._handlePointerLeave.bind(this);
+    this._onContextMenuHandler = this._handleContextMenu.bind(this);
 
     app.input.onPointerDown.add(this._onPointerDownHandler);
     app.input.onPointerMove.add(this._onPointerMoveHandler);
@@ -195,6 +198,7 @@ export class InteractionManager implements InteractionHooks {
     app.input.onPointerTap.add(this._onPointerTapHandler);
     app.input.onPointerCancel.add(this._onPointerCancelHandler);
     app.input.onPointerLeave.add(this._onPointerLeaveHandler);
+    app.input.onContextMenu.add(this._onContextMenuHandler);
   }
 
   /**
@@ -302,6 +306,7 @@ export class InteractionManager implements InteractionHooks {
     this._app.input.onPointerTap.remove(this._onPointerTapHandler);
     this._app.input.onPointerCancel.remove(this._onPointerCancelHandler);
     this._app.input.onPointerLeave.remove(this._onPointerLeaveHandler);
+    this._app.input.onContextMenu.remove(this._onContextMenuHandler);
     this._lastHit.clear();
     this._pending.clear();
     this._capturedPointers.clear();
@@ -522,6 +527,10 @@ export class InteractionManager implements InteractionHooks {
     this._enqueue(pointer, PointerEventFlag.Tap);
   }
 
+  private _handleContextMenu(pointer: Pointer): void {
+    this._enqueue(pointer, PointerEventFlag.ContextMenu);
+  }
+
   private _handlePointerCancel(pointer: Pointer): void {
     this._enqueue(pointer, PointerEventFlag.Cancel);
   }
@@ -654,6 +663,13 @@ export class InteractionManager implements InteractionHooks {
     if ((events & PointerEventFlag.Tap) !== 0) {
       if (hit !== null) {
         this._dispatchBubble(new InteractionEvent('pointertap', hit, pointer, x, y));
+      }
+    }
+
+    // --- Context menu ---
+    if ((events & PointerEventFlag.ContextMenu) !== 0) {
+      if (hit !== null) {
+        this._dispatchBubble(new InteractionEvent('contextmenu', hit, pointer, x, y));
       }
     }
 

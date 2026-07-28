@@ -359,10 +359,22 @@ describe('SceneInputs action maps', () => {
         _trackActionMap: vi.fn((map: unknown) => void tracked.add(map)),
         _detachActionMap: vi.fn((map: unknown) => void tracked.delete(map)),
       },
-      scenes: { get _transitionGateOpen(): boolean { return false; } },
+      scenes: {
+        get _transitionGateOpen(): boolean {
+          return false;
+        },
+      },
     } as unknown as Application;
 
-    return { app, tracked, inputs: new SceneInputs(app, () => SceneState.Active, () => false) };
+    return {
+      app,
+      tracked,
+      inputs: new SceneInputs(
+        app,
+        () => SceneState.Active,
+        () => false,
+      ),
+    };
   };
 
   test('attaching a map registers it with the application input clock', () => {

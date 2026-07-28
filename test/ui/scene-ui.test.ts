@@ -51,6 +51,7 @@ const createUIApp = (): {
     onPointerTap: new Signal<[Pointer]>(),
     onPointerCancel: new Signal<[Pointer]>(),
     onPointerLeave: new Signal<[Pointer]>(),
+    onContextMenu: new Signal<[Pointer]>(),
     onKeyDown: new Signal<[number]>(),
     onKeyUp: new Signal<[number]>(),
   };

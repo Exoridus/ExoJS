@@ -113,6 +113,19 @@ export interface InputApplicationOptions {
   gamepadDefinitions?: GamepadDefinition[];
   gamepadSlotStrategy?: GamepadSlotStrategy;
   pointerDistanceThreshold?: number;
+  /**
+   * Let the browser show its own context menu over the canvas. Default
+   * `false` — a right-click is normally a game input, not a request for the
+   * browser's menu. Independent of the engine's own `contextmenu` event,
+   * which is routed through the scene graph either way.
+   */
+  allowNativeContextMenu?: boolean;
+  /**
+   * Let the browser start a text selection from a drag on the canvas. Default
+   * `false` — a drag is normally a game gesture, and a stray selection
+   * highlight over the canvas is almost never wanted.
+   */
+  allowTextSelection?: boolean;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- empty registry is a valid default
@@ -261,6 +274,8 @@ const defaultInputSettings: Required<InputApplicationOptions> = {
   gamepadDefinitions: [],
   gamepadSlotStrategy: 'sticky',
   pointerDistanceThreshold: 10,
+  allowNativeContextMenu: false,
+  allowTextSelection: false,
 };
 
 /**
@@ -439,6 +454,8 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
         gamepadDefinitions: inputOptions.gamepadDefinitions ?? [...defaultInputSettings.gamepadDefinitions],
         gamepadSlotStrategy: inputOptions.gamepadSlotStrategy ?? defaultInputSettings.gamepadSlotStrategy,
         pointerDistanceThreshold: inputOptions.pointerDistanceThreshold ?? defaultInputSettings.pointerDistanceThreshold,
+        allowNativeContextMenu: inputOptions.allowNativeContextMenu ?? defaultInputSettings.allowNativeContextMenu,
+        allowTextSelection: inputOptions.allowTextSelection ?? defaultInputSettings.allowTextSelection,
       },
       hello: appSettings.hello ?? true,
       ...(appSettings.seed !== undefined && { seed: appSettings.seed }),

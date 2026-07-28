@@ -214,6 +214,17 @@ export abstract class RenderNode extends SceneNode {
     return this._interactionSignal('pointertap');
   }
 
+  /**
+   * Fired when a pointer requests a context menu over this node (right-click,
+   * long-press, context-menu key). Bubbles like the other pointer events, so a
+   * scene-wide fallback can listen on an ancestor. Carries no native event —
+   * whether the browser's own menu appears is decided by
+   * `ApplicationOptions.input.allowNativeContextMenu`, independently of this.
+   */
+  public get onContextMenu(): Signal<[InteractionEvent]> {
+    return this._interactionSignal('contextmenu');
+  }
+
   /** Fired once when a drag gesture begins on this node. Does not bubble. */
   public get onDragStart(): Signal<[InteractionEvent]> {
     return this._interactionSignal('dragstart');

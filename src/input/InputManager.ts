@@ -39,6 +39,7 @@ enum InputManagerFlag {
   KeyUp = 1 << 1,
   MouseWheel = 1 << 2,
   PointerUpdate = 1 << 3,
+  ContextMenu = 1 << 4,
 }
 
 /**
@@ -112,6 +113,10 @@ export class InputManager {
 
   private canvasFocusedValue: boolean;
   private pointerDistanceThreshold: number;
+  private readonly allowNativeContextMenu: boolean;
+  private readonly allowTextSelection: boolean;
+  /** Pointer that requested a context menu since the last frame, if any. */
+  private contextMenuPointer: Pointer | null = null;
 
   private readonly keyDownHandler = this.handleKeyDown.bind(this);
   private readonly keyUpHandler = this.handleKeyUp.bind(this);
@@ -125,6 +130,7 @@ export class InputManager {
   private readonly pointerMoveHandler = this.handlePointerMove.bind(this);
   private readonly pointerUpHandler = this.handlePointerUp.bind(this);
   private readonly pointerCancelHandler = this.handlePointerCancel.bind(this);
+  private readonly contextMenuHandler = this.handleContextMenu.bind(this);
 
   public readonly onCanvasFocusChange = new Signal<[focused: boolean]>();
   public readonly onPointerEnter = new Signal<[Pointer]>();
@@ -138,6 +144,12 @@ export class InputManager {
   public readonly onMouseWheel = new Signal<[Vector]>();
   public readonly onKeyDown = new Signal<[number]>();
   public readonly onKeyUp = new Signal<[number]>();
+  /**
+   * Fires when a pointer requests a context menu (right-click, long-press,
+   * context-menu key). Independent of whether the browser's own menu was
+   * suppressed — see {@link InputApplicationOptions.allowNativeContextMenu}.
+   */
+  public readonly onContextMenu = new Signal<[Pointer]>();
 
   /** Fires when a physical pad connects to any slot. */
   public readonly onGamepadConnected = new Signal<[Gamepad]>();
@@ -174,6 +186,8 @@ export class InputManager {
     this.canvas = app.canvas;
     this.canvasFocusedValue = document.activeElement === this.canvas;
     this.pointerDistanceThreshold = pointerDistanceThreshold;
+    this.allowNativeContextMenu = inputOptions.allowNativeContextMenu ?? false;
+    this.allowTextSelection = inputOptions.allowTextSelection ?? false;
     this.gamepadDefinitions = [...gamepadDefinitions, ...builtInGamepadDefinitions];
     this.slotStrategy = gamepadSlotStrategy;
 
@@ -452,6 +466,7 @@ export class InputManager {
     this.onMouseWheel.destroy();
     this.onKeyDown.destroy();
     this.onKeyUp.destroy();
+    this.onContextMenu.destroy();
     this.onGamepadConnected.destroy();
     this.onGamepadDisconnected.destroy();
     this.onAnyGamepadReassigned.destroy();
@@ -662,6 +677,45 @@ export class InputManager {
     this.flags.push(InputManagerFlag.PointerUpdate);
   }
 
+  /**
+   * Suppress the browser's own menu unless the application opted in — that
+   * decision must happen synchronously, here — and separately queue a
+   * semantic engine event for the frame boundary, where it is routed through
+   * the scene graph. The two are independent: an application may want its own
+   * in-game menu and the native one, or neither.
+   */
+  private handleContextMenu(event: MouseEvent): void {
+    if (!this.allowNativeContextMenu) {
+      stopEvent(event);
+    }
+
+    const pointer = this._primaryPointer();
+
+    if (pointer === null) {
+      return;
+    }
+
+    this.contextMenuPointer = pointer;
+    this.flags.push(InputManagerFlag.ContextMenu);
+  }
+
+  /** The pointer a canvas-level event without a pointerId should be attributed to. */
+  private _primaryPointer(): Pointer | null {
+    for (const pointer of this.pointers.values()) {
+      if (pointer.isPrimary && pointer.currentState !== PointerState.Cancelled) {
+        return pointer;
+      }
+    }
+
+    for (const pointer of this.pointers.values()) {
+      if (pointer.currentState !== PointerState.Cancelled) {
+        return pointer;
+      }
+    }
+
+    return null;
+  }
+
   private handleMouseWheel(event: WheelEvent): void {
     if (!this.canvasFocusedValue) {
       return;
@@ -725,8 +779,11 @@ export class InputManager {
     this.canvas.addEventListener('pointermove', this.pointerMoveHandler, passiveListenerOption);
     this.canvas.addEventListener('pointerup', this.pointerUpHandler, activeListenerOption);
     this.canvas.addEventListener('pointercancel', this.pointerCancelHandler, passiveListenerOption);
-    this.canvas.addEventListener('contextmenu', stopEvent, activeListenerOption);
-    this.canvas.addEventListener('selectstart', stopEvent, activeListenerOption);
+    this.canvas.addEventListener('contextmenu', this.contextMenuHandler, activeListenerOption);
+
+    if (!this.allowTextSelection) {
+      this.canvas.addEventListener('selectstart', stopEvent, activeListenerOption);
+    }
   }
 
   private removeEventListeners(): void {
@@ -745,7 +802,7 @@ export class InputManager {
     this.canvas.removeEventListener('pointermove', this.pointerMoveHandler, passiveListenerOption);
     this.canvas.removeEventListener('pointerup', this.pointerUpHandler, activeListenerOption);
     this.canvas.removeEventListener('pointercancel', this.pointerCancelHandler, passiveListenerOption);
-    this.canvas.removeEventListener('contextmenu', stopEvent, activeListenerOption);
+    this.canvas.removeEventListener('contextmenu', this.contextMenuHandler, activeListenerOption);
     this.canvas.removeEventListener('selectstart', stopEvent, activeListenerOption);
   }
 
@@ -914,6 +971,16 @@ export class InputManager {
 
     if (this.flags.pop(InputManagerFlag.PointerUpdate)) {
       this.updatePointerEvents();
+    }
+
+    if (this.flags.pop(InputManagerFlag.ContextMenu)) {
+      const pointer = this.contextMenuPointer;
+
+      this.contextMenuPointer = null;
+
+      if (pointer !== null) {
+        this.onContextMenu.dispatch(pointer);
+      }
     }
 
     return this;
