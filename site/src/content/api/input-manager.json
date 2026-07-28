@@ -6,12 +6,12 @@
   "subsystem": "input",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 38,
+  "memberCount": 40,
   "counts": {
     "constructors": 1,
-    "methods": 8,
+    "methods": 9,
     "properties": 8,
-    "events": 21
+    "events": 22
   },
   "sections": [
     {
@@ -86,6 +86,77 @@
       "id": "methods",
       "title": "Methods",
       "members": [
+        {
+          "name": "attach",
+          "signature": "attach(map: ActionMap<T>): ActionMap<T>",
+          "signatureTokens": [
+            {
+              "text": "attach",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "map",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ActionMap",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ActionMap",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "map",
+              "type": "ActionMap<T>",
+              "optional": false
+            }
+          ],
+          "returnType": "ActionMap<T>",
+          "description": "Start updating map every frame for the application's lifetime. Attaching a map that is already attached elsewhere moves it here. Call ActionMap.detach to stop, or use scene.inputs.attach for a map that should die with its scene."
+        },
         {
           "name": "destroy",
           "signature": "destroy(): void",
@@ -1340,6 +1411,47 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "onContextMenu",
+          "signature": "onContextMenu: Signal<[Pointer]>",
+          "signatureTokens": [
+            {
+              "text": "onContextMenu",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Pointer",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fires when a pointer requests a context menu (right-click, long-press, context-menu key). Independent of whether the browser's own menu was suppressed — see InputApplicationOptions.allowNativeContextMenu."
         },
         {
           "name": "onGamepadConnected",

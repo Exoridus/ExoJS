@@ -1,0 +1,348 @@
+{
+  "title": "InputHost",
+  "description": "The host-platform surface the input pipeline touches outside of event listeners: focus, cursor and touch-action on the drawing surface, gamepad polling, and pointer capture. These are the calls that were otherwise scattered as bare `document.`, `navigator.` and `canvas.style.` references across the input and interaction managers. Collecting them behind one DOM-free interface gives a future platform adapter a single seam to implement, and lets a test substitute the host instead of monkey-patching globals. Deliberately narrow: this is not a platform kernel. Event *delivery* still belongs to the managers, because which platform events are intercepted — and whether one is suppressed — is an input-policy decision, not a host one.",
+  "symbol": "InputHost",
+  "kind": "interface",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 7,
+  "counts": {
+    "constructors": 0,
+    "methods": 6,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "The host-platform surface the input pipeline touches outside of event listeners: focus, cursor and touch-action on the drawing surface, gamepad polling, and pointer capture.",
+        "These are the calls that were otherwise scattered as bare `document.`, `navigator.` and `canvas.style.` references across the input and interaction managers. Collecting them behind one DOM-free interface gives a future platform adapter a single seam to implement, and lets a test substitute the host instead of monkey-patching globals.",
+        "Deliberately narrow: this is not a platform kernel. Event *delivery* still belongs to the managers, because which platform events are intercepted — and whether one is suppressed — is an input-policy decision, not a host one."
+      ],
+      "importLine": "import { InputHost } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "capturePointer",
+          "signature": "capturePointer(pointerId: number): void",
+          "signatureTokens": [
+            {
+              "text": "capturePointer",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "pointerId",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "pointerId",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Route all further events for pointerId to the surface, best-effort."
+        },
+        {
+          "name": "focus",
+          "signature": "focus(): void",
+          "signatureTokens": [
+            {
+              "text": "focus",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Give the drawing surface host focus, so it starts receiving keyboard input."
+        },
+        {
+          "name": "pollGamepads",
+          "signature": "pollGamepads(): readonly Gamepad | null[]",
+          "signatureTokens": [
+            {
+              "text": "pollGamepads",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Gamepad",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": "readonly Gamepad | null[]",
+          "description": "Sample every connected gamepad. Entries may be null for vacated slots."
+        },
+        {
+          "name": "releasePointer",
+          "signature": "releasePointer(pointerId: number): void",
+          "signatureTokens": [
+            {
+              "text": "releasePointer",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "pointerId",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "pointerId",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Undo capturePointer, best-effort."
+        },
+        {
+          "name": "setCursor",
+          "signature": "setCursor(value: string): void",
+          "signatureTokens": [
+            {
+              "text": "setCursor",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "value",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "value",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Set the cursor shown over the surface. Empty string restores the default."
+        },
+        {
+          "name": "setTouchAction",
+          "signature": "setTouchAction(value: string): void",
+          "signatureTokens": [
+            {
+              "text": "setTouchAction",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "value",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "value",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Set the surface's touch-action policy — 'none' keeps native pan/zoom out of the way."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "focused",
+          "signature": "focused: boolean",
+          "signatureTokens": [
+            {
+              "text": "focused",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether the drawing surface currently holds host focus."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/InputHost.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/InputHost.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/InputHost.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/InputHost.ts"
+}

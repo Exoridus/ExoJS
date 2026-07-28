@@ -1,7 +1,7 @@
 {
-  "title": "InputChannel",
-  "description": "Channel a single InputBinding can subscribe to.",
-  "symbol": "InputChannel",
+  "title": "AxisBinding",
+  "description": "A directly signed source (a stick axis) or a composite built from two button groups.",
+  "symbol": "AxisBinding",
   "kind": "type",
   "subsystem": "input",
   "importPath": "@codexo/exojs",
@@ -19,9 +19,9 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Channel a single InputBinding can subscribe to."
+        "A directly signed source (a stick axis) or a composite built from two button groups."
       ],
-      "importLine": "import { InputChannel } from '@codexo/exojs'",
+      "importLine": "import { AxisBinding } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
@@ -29,11 +29,11 @@
       "title": "Definition",
       "members": [
         {
-          "name": "InputChannel",
-          "signature": "GamepadButtonChannel | GamepadAxisChannel | PointerChannel | Keyboard | PointerButton",
+          "name": "AxisBinding",
+          "signature": "InputChannel | AtLeastOne<AxisCompositeBinding>",
           "signatureTokens": [
             {
-              "text": "GamepadButtonChannel",
+              "text": "InputChannel",
               "kind": "type"
             },
             {
@@ -41,32 +41,20 @@
               "kind": "punctuation"
             },
             {
-              "text": "GamepadAxisChannel",
+              "text": "AtLeastOne",
               "kind": "type"
             },
             {
-              "text": " | ",
+              "text": "<",
               "kind": "punctuation"
             },
             {
-              "text": "PointerChannel",
+              "text": "AxisCompositeBinding",
               "kind": "type"
             },
             {
-              "text": " | ",
+              "text": ">",
               "kind": "punctuation"
-            },
-            {
-              "text": "Keyboard",
-              "kind": "type"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "PointerButton",
-              "kind": "type"
             }
           ],
           "params": [],
@@ -85,11 +73,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/input/InputBinding.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/InputBinding.ts"
+        "label": "src/input/actions/AxisAction.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/AxisAction.ts"
       }
     }
   ],
-  "sourcePath": "src/input/InputBinding.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/InputBinding.ts"
+  "sourcePath": "src/input/actions/AxisAction.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/AxisAction.ts"
 }

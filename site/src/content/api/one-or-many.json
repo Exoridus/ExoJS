@@ -1,7 +1,7 @@
 {
-  "title": "InputChannel",
-  "description": "Channel a single InputBinding can subscribe to.",
-  "symbol": "InputChannel",
+  "title": "OneOrMany",
+  "description": "A single value or a list of alternatives. Actions accept one binding directly and several as an array — there are no variadic constructors, so the options object always stays an unambiguous second parameter.",
+  "symbol": "OneOrMany",
   "kind": "type",
   "subsystem": "input",
   "importPath": "@codexo/exojs",
@@ -19,9 +19,9 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Channel a single InputBinding can subscribe to."
+        "A single value or a list of alternatives. Actions accept one binding directly and several as an array — there are no variadic constructors, so the options object always stays an unambiguous second parameter."
       ],
-      "importLine": "import { InputChannel } from '@codexo/exojs'",
+      "importLine": "import { OneOrMany } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
@@ -29,11 +29,11 @@
       "title": "Definition",
       "members": [
         {
-          "name": "InputChannel",
-          "signature": "GamepadButtonChannel | GamepadAxisChannel | PointerChannel | Keyboard | PointerButton",
+          "name": "OneOrMany",
+          "signature": "T | readonly T[]",
           "signatureTokens": [
             {
-              "text": "GamepadButtonChannel",
+              "text": "T",
               "kind": "type"
             },
             {
@@ -41,32 +41,20 @@
               "kind": "punctuation"
             },
             {
-              "text": "GamepadAxisChannel",
-              "kind": "type"
+              "text": "readonly",
+              "kind": "keyword"
             },
             {
-              "text": " | ",
+              "text": " ",
               "kind": "punctuation"
             },
             {
-              "text": "PointerChannel",
+              "text": "T",
               "kind": "type"
             },
             {
-              "text": " | ",
+              "text": "[]",
               "kind": "punctuation"
-            },
-            {
-              "text": "Keyboard",
-              "kind": "type"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "PointerButton",
-              "kind": "type"
             }
           ],
           "params": [],
@@ -85,11 +73,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/input/InputBinding.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/InputBinding.ts"
+        "label": "src/input/actions/types.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/types.ts"
       }
     }
   ],
-  "sourcePath": "src/input/InputBinding.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/InputBinding.ts"
+  "sourcePath": "src/input/actions/types.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/types.ts"
 }

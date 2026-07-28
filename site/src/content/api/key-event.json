@@ -1,6 +1,6 @@
 {
   "title": "KeyEvent",
-  "description": "Envelope dispatched by FocusManager to the focused RenderNode for keyboard input. `channel` is the input channel of the key — compare it with the `Keyboard` constants (e.g. `event.channel === Keyboard.Enter`). A handler may call KeyEvent.preventDefault to suppress the FocusManager's built-in handling for this key (currently `Tab` focus traversal), letting the focused widget consume the key itself.",
+  "description": "Envelope dispatched by `app.interaction` to the focused RenderNode for keyboard input. `channel` is the input channel of the key — compare it with the `Keyboard` constants (e.g. `event.channel === Keyboard.Enter`). A handler may call KeyEvent.preventDefault to suppress ExoJS's own built-in handling for this key (currently `Tab` focus traversal), letting the focused widget consume the key itself. It affects engine behaviour only — the browser's own default was already decided synchronously when the platform event arrived, long before this envelope was dispatched.",
   "symbol": "KeyEvent",
   "kind": "class",
   "subsystem": "input",
@@ -19,8 +19,8 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Envelope dispatched by FocusManager to the focused RenderNode for keyboard input. `channel` is the input channel of the key — compare it with the `Keyboard` constants (e.g. `event.channel === Keyboard.Enter`).",
-        "A handler may call KeyEvent.preventDefault to suppress the FocusManager's built-in handling for this key (currently `Tab` focus traversal), letting the focused widget consume the key itself."
+        "Envelope dispatched by `app.interaction` to the focused RenderNode for keyboard input. `channel` is the input channel of the key — compare it with the `Keyboard` constants (e.g. `event.channel === Keyboard.Enter`).",
+        "A handler may call KeyEvent.preventDefault to suppress ExoJS's own built-in handling for this key (currently `Tab` focus traversal), letting the focused widget consume the key itself. It affects engine behaviour only — the browser's own default was already decided synchronously when the platform event arrived, long before this envelope was dispatched."
       ],
       "importLine": "import { KeyEvent } from '@codexo/exojs'",
       "sourceLink": null
@@ -154,7 +154,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Suppress the FocusManager's built-in handling (e.g. Tab traversal) for this key."
+          "description": "Suppress ExoJS's built-in handling (e.g. Tab traversal) for this key. Never affects the browser."
         }
       ],
       "paragraphs": [],

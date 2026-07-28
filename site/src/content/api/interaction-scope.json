@@ -1,7 +1,7 @@
 {
-  "title": "InteractionCapture",
-  "description": "Handle returned by SceneInteraction.capture. While active, pointer hit-testing is confined to the captured root's subtree. Call InteractionCapture.release (or InteractionCapture.destroy, an alias) to end the capture — nested captures restore whichever capture was active before this one, regardless of release order. Idempotent; also released automatically when the owning scene ends permanently.",
-  "symbol": "InteractionCapture",
+  "title": "InteractionScope",
+  "description": "Handle returned by SceneInteraction.scope. While active, pointer hit-testing and Tab traversal are confined to the scoped root's subtree. Call InteractionScope.release (or InteractionScope.destroy, an alias) to end the scope — nested scopes restore whichever scope was active before this one, regardless of release order. Idempotent; also released automatically when the owning scene ends permanently.",
+  "symbol": "InteractionScope",
   "kind": "interface",
   "subsystem": "core",
   "importPath": "@codexo/exojs",
@@ -19,9 +19,9 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Handle returned by SceneInteraction.capture. While active, pointer hit-testing is confined to the captured root's subtree. Call InteractionCapture.release (or InteractionCapture.destroy, an alias) to end the capture — nested captures restore whichever capture was active before this one, regardless of release order. Idempotent; also released automatically when the owning scene ends permanently."
+        "Handle returned by SceneInteraction.scope. While active, pointer hit-testing and Tab traversal are confined to the scoped root's subtree. Call InteractionScope.release (or InteractionScope.destroy, an alias) to end the scope — nested scopes restore whichever scope was active before this one, regardless of release order. Idempotent; also released automatically when the owning scene ends permanently."
       ],
-      "importLine": "import { InteractionCapture } from '@codexo/exojs'",
+      "importLine": "import { InteractionScope } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
@@ -84,7 +84,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "End this capture. Idempotent alias for InteractionCapture.destroy."
+          "description": "End this scope. Idempotent alias for InteractionScope.destroy."
         }
       ],
       "paragraphs": [],
@@ -114,7 +114,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "true until this capture is released."
+          "description": "true until this scope is released."
         }
       ],
       "paragraphs": [],

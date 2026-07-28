@@ -1,16 +1,16 @@
 {
   "title": "InteractionManager",
-  "description": "Routes pointer events from the InputManager to interactive scene-graph nodes via DOM-style event bubbling. Maintains a persistent dynamic-AABB-tree spatial index of interactive RenderNodes for hit-testing and updates it incrementally — nodes notify the manager via the `_notify*` hooks when they enter/leave the scene, change interactivity, or move (causing bounds to dirty). Dispatches InteractionEvents of every type in InteractionEventType: `pointerdown` / `pointerup` / `pointermove` / `pointerover` / `pointerout` / `pointertap` / `dragstart` / `drag` / `dragend`. Drag events are derived from threshold-based pointer movement after a `pointerdown`. Constructed automatically by Application; you do not instantiate this class yourself.",
+  "description": "Routes pointer events from the InputManager to interactive scene-graph nodes via DOM-style event bubbling. Maintains a persistent dynamic-AABB-tree spatial index of interactive RenderNodes for hit-testing and updates it incrementally — nodes notify the manager via the `_notify*` hooks when they enter/leave the scene, change interactivity, or move (causing bounds to dirty). Dispatches InteractionEvents of every type in InteractionEventType: `pointerdown` / `pointerup` / `pointermove` / `pointerover` / `pointerout` / `pointertap` / `contextmenu` / `dragstart` / `drag` / `dragend`. A `pointerdown` on a draggable node only marks a drag candidate; the drag begins once the pointer travels past `ApplicationOptions.input.dragThreshold`. Constructed automatically by Application; you do not instantiate this class yourself.",
   "symbol": "InteractionManager",
   "kind": "class",
   "subsystem": "input",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 7,
+  "memberCount": 12,
   "counts": {
     "constructors": 1,
-    "methods": 6,
-    "properties": 0,
+    "methods": 10,
+    "properties": 1,
     "events": 0
   },
   "sections": [
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Routes pointer events from the InputManager to interactive scene-graph nodes via DOM-style event bubbling. Maintains a persistent dynamic-AABB-tree spatial index of interactive RenderNodes for hit-testing and updates it incrementally — nodes notify the manager via the `_notify*` hooks when they enter/leave the scene, change interactivity, or move (causing bounds to dirty).",
-        "Dispatches InteractionEvents of every type in InteractionEventType: `pointerdown` / `pointerup` / `pointermove` / `pointerover` / `pointerout` / `pointertap` / `dragstart` / `drag` / `dragend`. Drag events are derived from threshold-based pointer movement after a `pointerdown`.",
+        "Dispatches InteractionEvents of every type in InteractionEventType: `pointerdown` / `pointerup` / `pointermove` / `pointerover` / `pointerout` / `pointertap` / `contextmenu` / `dragstart` / `drag` / `dragend`. A `pointerdown` on a draggable node only marks a drag candidate; the drag begins once the pointer travels past `ApplicationOptions.input.dragThreshold`.",
         "Constructed automatically by Application; you do not instantiate this class yourself."
       ],
       "importLine": "import { InteractionManager } from '@codexo/exojs'",
@@ -87,6 +87,57 @@
       "title": "Methods",
       "members": [
         {
+          "name": "blur",
+          "signature": "blur(node?: RenderNode): void",
+          "signatureTokens": [
+            {
+              "text": "blur",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "node",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderNode",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "node",
+              "type": "RenderNode",
+              "optional": true
+            }
+          ],
+          "returnType": "void",
+          "description": "Clear keyboard focus, or only clear it when node currently holds it."
+        },
+        {
           "name": "destroy",
           "signature": "destroy(): void",
           "signatureTokens": [
@@ -114,6 +165,111 @@
           "params": [],
           "returnType": "void",
           "description": ""
+        },
+        {
+          "name": "focus",
+          "signature": "focus(node: RenderNode): void",
+          "signatureTokens": [
+            {
+              "text": "focus",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "node",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderNode",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "node",
+              "type": "RenderNode",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Move keyboard focus to node. No-op when node is already focused or is not RenderNode.focusable. Fires onBlur on the previously focused node, then onFocus on node."
+        },
+        {
+          "name": "focusNext",
+          "signature": "focusNext(): void",
+          "signatureTokens": [
+            {
+              "text": "focusNext",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Move focus to the next focusable node of the active scope, in Tab order."
+        },
+        {
+          "name": "focusPrevious",
+          "signature": "focusPrevious(): void",
+          "signatureTokens": [
+            {
+              "text": "focusPrevious",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Move focus to the previous focusable node of the active scope, in Tab order."
         },
         {
           "name": "getCapturedNodes",
@@ -216,11 +372,11 @@
           "description": "Return the deepest interactive node currently under the given pointer, or under any active pointer when pointerId is omitted (the first pointer with a hit wins). null when no pointer is hovering an interactive node."
         },
         {
-          "name": "popInputCapture",
-          "signature": "popInputCapture(): void",
+          "name": "popScope",
+          "signature": "popScope(): void",
           "signatureTokens": [
             {
-              "text": "popInputCapture",
+              "text": "popScope",
               "kind": "name"
             },
             {
@@ -242,14 +398,14 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Release the most recently pushed input capture (see pushInputCapture)."
+          "description": "Release the most recently pushed interaction scope (see pushScope)."
         },
         {
-          "name": "pushInputCapture",
-          "signature": "pushInputCapture(root: RenderNode): void",
+          "name": "pushScope",
+          "signature": "pushScope(root: RenderNode): void",
           "signatureTokens": [
             {
-              "text": "pushInputCapture",
+              "text": "pushScope",
               "kind": "name"
             },
             {
@@ -289,7 +445,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Confine pointer hit-testing to root's subtree until a matching popInputCapture. Pointer events outside the subtree hit nothing, so a modal dialog (optionally with a full-screen backdrop to swallow clicks) shields the interactive nodes beneath it. Captures stack — the most recently pushed root wins."
+          "description": "Confine interaction to root's subtree until a matching popScope. Pointer events outside the subtree hit nothing and Tab traversal stays inside it, so a modal dialog (optionally with a full-screen backdrop to swallow clicks) shields everything beneath it. Scopes stack — the most recently pushed root wins. A scope is not what makes a node interactive; node.interactive = true alone does that. Nor is it the browser pointer-capture taken during a drag, which is a private implementation detail. Prefer scene.interaction.scope() when the scope should end with its scene."
         },
         {
           "name": "update",
@@ -337,6 +493,44 @@
           ],
           "returnType": "void",
           "description": "Process all pending pointer events accumulated since the last frame. Must be called once per frame from Application.update, after input.update() has run (so signals are already dispatched and queued here) and before game-state updates so that user listeners on onPointerDown etc. fire before per-frame logic mutates state. The dirty flag ensures this is a no-op on frames with no pointer activity; every signal handler that enqueues an event sets _dirty = true, and update() clears it at the top before draining the queue. Gated by the active scope's SceneState (only Active dispatches — pause does not gate interaction; Preparing/Suspended/Destroying/ Destroyed/no-scene do not dispatch) and by the director's transition gate (definition §13.6) — gated frames discard the pending queue rather than deferring it, so a pointer-down queued before a transition never replays once it clears."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "focused",
+          "signature": "focused: RenderNode | null",
+          "signatureTokens": [
+            {
+              "text": "focused",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderNode",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The node that currently holds keyboard focus, or null."
         }
       ],
       "paragraphs": [],

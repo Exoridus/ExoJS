@@ -6,11 +6,11 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 51,
+  "memberCount": 50,
   "counts": {
     "constructors": 1,
     "methods": 10,
-    "properties": 32,
+    "properties": 31,
     "events": 8
   },
   "sections": [
@@ -793,27 +793,6 @@
             },
             {
               "text": "HTMLCanvasElement",
-              "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
-        },
-        {
-          "name": "focus",
-          "signature": "focus: FocusManager",
-          "signatureTokens": [
-            {
-              "text": "focus",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "FocusManager",
               "kind": "type"
             }
           ],

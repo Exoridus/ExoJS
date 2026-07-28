@@ -6,10 +6,10 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 24,
+  "memberCount": 25,
   "counts": {
     "constructors": 0,
-    "methods": 17,
+    "methods": 18,
     "properties": 7,
     "events": 0
   },
@@ -116,6 +116,53 @@
           ],
           "returnType": "number",
           "description": "Clamp value to the closed interval [min, max]."
+        },
+        {
+          "name": "createBrowserInputHost",
+          "signature": "createBrowserInputHost(canvas: HTMLCanvasElement): InputHost",
+          "signatureTokens": [
+            {
+              "text": "createBrowserInputHost",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "canvas",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "HTMLCanvasElement",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "InputHost",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "canvas",
+              "type": "HTMLCanvasElement",
+              "optional": false
+            }
+          ],
+          "returnType": "InputHost",
+          "description": "The InputHost backed by the browser: a canvas element, navigator and the DOM pointer-capture API. Capture calls are best-effort — jsdom and some browsers reject releasing a pointer that was never captured."
         },
         {
           "name": "createRenderStats",

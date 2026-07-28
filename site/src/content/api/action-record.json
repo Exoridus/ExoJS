@@ -1,7 +1,7 @@
 {
-  "title": "InputChannel",
-  "description": "Channel a single InputBinding can subscribe to.",
-  "symbol": "InputChannel",
+  "title": "ActionRecord",
+  "description": "The shape an ActionMap is built from.",
+  "symbol": "ActionRecord",
   "kind": "type",
   "subsystem": "input",
   "importPath": "@codexo/exojs",
@@ -19,9 +19,9 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Channel a single InputBinding can subscribe to."
+        "The shape an ActionMap is built from."
       ],
-      "importLine": "import { InputChannel } from '@codexo/exojs'",
+      "importLine": "import { ActionRecord } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
@@ -29,44 +29,44 @@
       "title": "Definition",
       "members": [
         {
-          "name": "InputChannel",
-          "signature": "GamepadButtonChannel | GamepadAxisChannel | PointerChannel | Keyboard | PointerButton",
+          "name": "ActionRecord",
+          "signature": "Readonly<Record<string, Action>>",
           "signatureTokens": [
             {
-              "text": "GamepadButtonChannel",
+              "text": "Readonly",
               "kind": "type"
             },
             {
-              "text": " | ",
+              "text": "<",
               "kind": "punctuation"
             },
             {
-              "text": "GamepadAxisChannel",
+              "text": "Record",
               "kind": "type"
             },
             {
-              "text": " | ",
+              "text": "<",
               "kind": "punctuation"
             },
             {
-              "text": "PointerChannel",
-              "kind": "type"
+              "text": "string",
+              "kind": "keyword"
             },
             {
-              "text": " | ",
+              "text": ", ",
               "kind": "punctuation"
             },
             {
-              "text": "Keyboard",
+              "text": "Action",
               "kind": "type"
             },
             {
-              "text": " | ",
+              "text": ">",
               "kind": "punctuation"
             },
             {
-              "text": "PointerButton",
-              "kind": "type"
+              "text": ">",
+              "kind": "punctuation"
             }
           ],
           "params": [],
@@ -85,11 +85,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/input/InputBinding.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/InputBinding.ts"
+        "label": "src/input/actions/ActionMap.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/ActionMap.ts"
       }
     }
   ],
-  "sourcePath": "src/input/InputBinding.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/InputBinding.ts"
+  "sourcePath": "src/input/actions/ActionMap.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/ActionMap.ts"
 }

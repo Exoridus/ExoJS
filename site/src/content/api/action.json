@@ -1,7 +1,7 @@
 {
-  "title": "InputChannel",
-  "description": "Channel a single InputBinding can subscribe to.",
-  "symbol": "InputChannel",
+  "title": "Action",
+  "description": "Any of the three action kinds an ActionMap can hold.",
+  "symbol": "Action",
   "kind": "type",
   "subsystem": "input",
   "importPath": "@codexo/exojs",
@@ -19,9 +19,9 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Channel a single InputBinding can subscribe to."
+        "Any of the three action kinds an ActionMap can hold."
       ],
-      "importLine": "import { InputChannel } from '@codexo/exojs'",
+      "importLine": "import { Action } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
@@ -29,11 +29,11 @@
       "title": "Definition",
       "members": [
         {
-          "name": "InputChannel",
-          "signature": "GamepadButtonChannel | GamepadAxisChannel | PointerChannel | Keyboard | PointerButton",
+          "name": "Action",
+          "signature": "ButtonAction | AxisAction | VectorAction",
           "signatureTokens": [
             {
-              "text": "GamepadButtonChannel",
+              "text": "ButtonAction",
               "kind": "type"
             },
             {
@@ -41,7 +41,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "GamepadAxisChannel",
+              "text": "AxisAction",
               "kind": "type"
             },
             {
@@ -49,23 +49,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "PointerChannel",
-              "kind": "type"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Keyboard",
-              "kind": "type"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "PointerButton",
+              "text": "VectorAction",
               "kind": "type"
             }
           ],
@@ -85,11 +69,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/input/InputBinding.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/InputBinding.ts"
+        "label": "src/input/actions/ActionMap.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/ActionMap.ts"
       }
     }
   ],
-  "sourcePath": "src/input/InputBinding.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/InputBinding.ts"
+  "sourcePath": "src/input/actions/ActionMap.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/ActionMap.ts"
 }
