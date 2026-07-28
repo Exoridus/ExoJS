@@ -15,6 +15,8 @@ import { builtInGamepadDefinitions, resolveGamepadDefinition } from './GamepadDe
 import { GestureRecognizer } from './GestureRecognizer';
 import type { InputBindingOptions, InputChannel } from './InputBinding';
 import { InputBinding } from './InputBinding';
+import type { InputHost } from './InputHost';
+import { createBrowserInputHost } from './InputHost';
 import { Pointer, PointerState, PointerStateFlag } from './Pointer';
 import { ChannelOffset, ChannelSize, maxPointers, pointerSlotSize, resolveGamepadSlotChannel } from './types';
 
@@ -63,6 +65,8 @@ enum InputManagerFlag {
 export class InputManager {
   private readonly _app: Application;
   private readonly canvas: HTMLCanvasElement;
+  /** Everything this manager needs from the host platform beyond event delivery. */
+  private readonly host: InputHost;
   private readonly channels: Float32Array = new Float32Array(ChannelSize.Container);
   /**
    * Per-channel strongest value seen since the previous frame boundary,
@@ -184,7 +188,8 @@ export class InputManager {
 
     this._app = app;
     this.canvas = app.canvas;
-    this.canvasFocusedValue = document.activeElement === this.canvas;
+    this.host = createBrowserInputHost(app.canvas);
+    this.canvasFocusedValue = this.host.focused;
     this.pointerDistanceThreshold = pointerDistanceThreshold;
     this.allowNativeContextMenu = inputOptions.allowNativeContextMenu ?? false;
     this.allowTextSelection = inputOptions.allowTextSelection ?? false;
@@ -194,7 +199,7 @@ export class InputManager {
     // Disable the browser's default pan/zoom/double-tap-zoom on touch devices so
     // pointer events reach the canvas without being swallowed by the browser's
     // native touch gestures.
-    this.canvas.style.touchAction = 'none';
+    this.host.setTouchAction('none');
 
     this.actionSample = { values: this.channels, peaks: this.channelsPeak };
     this.gestureRecognizer = new GestureRecognizer(pointerDistanceThreshold, this.onPinch, this.onRotate, this.onLongPress);
@@ -345,6 +350,11 @@ export class InputManager {
   /** Stop updating `map`. Called by {@link ActionMap.detach}. @internal */
   public _detachActionMap(map: ActionMap): void {
     this.actionMaps.delete(map);
+  }
+
+  /** The platform seam this application's input runs on. @internal */
+  public get _host(): InputHost {
+    return this.host;
   }
 
   /**
@@ -618,7 +628,7 @@ export class InputManager {
   }
 
   private handlePointerDown(event: PointerEvent): void {
-    this.canvas.focus();
+    this.host.focus();
     this.canvasFocusedValue = true;
 
     const pointer = this.pointers.get(event.pointerId);
@@ -807,7 +817,7 @@ export class InputManager {
   }
 
   private updateGamepads(): this {
-    const browserGamepads = window.navigator.getGamepads();
+    const browserGamepads = this.host.pollGamepads();
     const seenBrowserIndices = new Set<number>();
 
     for (const browserGamepad of browserGamepads) {

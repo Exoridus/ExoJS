@@ -11,6 +11,8 @@ import { Container } from '#rendering/Container';
 import type { RenderNode } from '#rendering/RenderNode';
 
 import { FocusController } from './FocusController';
+import type { InputHost } from './InputHost';
+import { createBrowserInputHost } from './InputHost';
 import type { InteractionEventType } from './InteractionEvent';
 import { InteractionEvent } from './InteractionEvent';
 import type { Pointer } from './Pointer';
@@ -186,6 +188,9 @@ export class InteractionManager implements InteractionHooks {
   /** Scratch for inverting a parent's world matrix while positioning a dragged node. */
   private readonly _dragInverse = new Matrix();
 
+  /** Platform seam for cursor and pointer capture. Shared with `app.input` where available. */
+  private readonly _host: InputHost;
+
   /** Whether any pointer enqueued events since the last update(). */
   private _dirty = false;
 
@@ -201,6 +206,7 @@ export class InteractionManager implements InteractionHooks {
     this._app = app;
     this._focus = new FocusController(app);
     this._dragThreshold = app.options?.input?.dragThreshold ?? defaultDragThreshold;
+    this._host = app.input._host ?? createBrowserInputHost(app.canvas);
     this._stage = { interaction: this, focus: this._focus, app };
     this._uiStage = { interaction: this._uiInteraction, focus: this._focus, app };
 
@@ -745,12 +751,7 @@ export class InteractionManager implements InteractionHooks {
     drag.active = true;
     drag.started = true;
     this._capturedPointers.set(id, drag.node);
-
-    try {
-      this._app.canvas.setPointerCapture(id);
-    } catch {
-      // Best-effort — jsdom and some browsers may not support this.
-    }
+    this._host.capturePointer(id);
   }
 
   /**
@@ -790,12 +791,7 @@ export class InteractionManager implements InteractionHooks {
   private _endDrag(pointerId: number): void {
     this._drags.delete(pointerId);
     this._capturedPointers.delete(pointerId);
-
-    try {
-      this._app.canvas.releasePointerCapture(pointerId);
-    } catch {
-      // Releasing an already-released pointer throws in some browsers; swallow it.
-    }
+    this._host.releasePointer(pointerId);
   }
 
   // ---------------------------------------------------------------------------
@@ -1370,6 +1366,6 @@ export class InteractionManager implements InteractionHooks {
       }
     }
 
-    this._app.canvas.style.cursor = cursor ?? '';
+    this._host.setCursor(cursor ?? '');
   }
 }
