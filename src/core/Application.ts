@@ -114,6 +114,12 @@ export interface InputApplicationOptions {
   gamepadSlotStrategy?: GamepadSlotStrategy;
   pointerDistanceThreshold?: number;
   /**
+   * Distance in design pixels a press must travel before it turns into a drag
+   * on a `draggable` node. Default `8`. Below it the press stays a click, so a
+   * draggable node can still be tapped without jittering.
+   */
+  dragThreshold?: number;
+  /**
    * Let the browser show its own context menu over the canvas. Default
    * `false` — a right-click is normally a game input, not a request for the
    * browser's menu. Independent of the engine's own `contextmenu` event,
@@ -274,6 +280,7 @@ const defaultInputSettings: Required<InputApplicationOptions> = {
   gamepadDefinitions: [],
   gamepadSlotStrategy: 'sticky',
   pointerDistanceThreshold: 10,
+  dragThreshold: 8,
   allowNativeContextMenu: false,
   allowTextSelection: false,
 };
@@ -454,6 +461,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
         gamepadDefinitions: inputOptions.gamepadDefinitions ?? [...defaultInputSettings.gamepadDefinitions],
         gamepadSlotStrategy: inputOptions.gamepadSlotStrategy ?? defaultInputSettings.gamepadSlotStrategy,
         pointerDistanceThreshold: inputOptions.pointerDistanceThreshold ?? defaultInputSettings.pointerDistanceThreshold,
+        dragThreshold: inputOptions.dragThreshold ?? defaultInputSettings.dragThreshold,
         allowNativeContextMenu: inputOptions.allowNativeContextMenu ?? defaultInputSettings.allowNativeContextMenu,
         allowTextSelection: inputOptions.allowTextSelection ?? defaultInputSettings.allowTextSelection,
       },

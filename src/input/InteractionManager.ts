@@ -19,6 +19,9 @@ import type { Pointer } from './Pointer';
 // Internal types
 // ---------------------------------------------------------------------------
 
+/** Fallback drag threshold in design pixels, used when the application did not set one. */
+const defaultDragThreshold = 8;
+
 const enum PointerEventFlag {
   None = 0,
   Down = 1 << 0,
@@ -38,8 +41,17 @@ interface PointerQueue {
 interface DragState {
   pointerId: number;
   node: RenderNode;
+  /** Grab offset in the node's PARENT-LOCAL space, so dragging survives a transformed parent. */
   offsetX: number;
   offsetY: number;
+  /**
+   * `false` while the press is only a drag candidate — the pointer has not
+   * travelled past the drag threshold yet, so no `dragstart` fired, no pointer
+   * capture is held, and a release still counts as a tap.
+   */
+  active: boolean;
+  /** Set for the one frame the drag was promoted, so `dragstart` fires exactly once. */
+  started: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -63,8 +75,9 @@ interface IndexedNode {
  * Dispatches {@link InteractionEvent}s of every type in
  * {@link InteractionEventType}: `pointerdown` / `pointerup` /
  * `pointermove` / `pointerover` / `pointerout` / `pointertap` /
- * `dragstart` / `drag` / `dragend`. Drag events are derived from
- * threshold-based pointer movement after a `pointerdown`.
+ * `contextmenu` / `dragstart` / `drag` / `dragend`. A `pointerdown` on a
+ * draggable node only marks a drag candidate; the drag begins once the
+ * pointer travels past `ApplicationOptions.input.dragThreshold`.
  *
  * Constructed automatically by {@link Application}; you do not instantiate
  * this class yourself.
@@ -167,6 +180,12 @@ export class InteractionManager implements InteractionHooks {
   /** Keyboard focus for this application. Public access goes through this manager. */
   private readonly _focus: FocusController;
 
+  /** Distance in design pixels a press must travel before it becomes a drag. */
+  private readonly _dragThreshold: number;
+
+  /** Scratch for inverting a parent's world matrix while positioning a dragged node. */
+  private readonly _dragInverse = new Matrix();
+
   /** Whether any pointer enqueued events since the last update(). */
   private _dirty = false;
 
@@ -181,6 +200,7 @@ export class InteractionManager implements InteractionHooks {
   public constructor(app: Application) {
     this._app = app;
     this._focus = new FocusController(app);
+    this._dragThreshold = app.options?.input?.dragThreshold ?? defaultDragThreshold;
     this._stage = { interaction: this, focus: this._focus, app };
     this._uiStage = { interaction: this._uiInteraction, focus: this._focus, app };
 
@@ -562,6 +582,11 @@ export class InteractionManager implements InteractionHooks {
     const { pointer, events } = queue;
     const { id } = pointer;
 
+    // Commit a pending drag candidate before anything else: the very frame a
+    // drag starts must already route through the captured node, or a fast
+    // first move would land pointerover on whatever it swept across.
+    this._promoteDragCandidate(id, pointer, events);
+
     // Resolve the hit node and the coordinate space it lives in. A captured
     // pointer short-circuits hit-testing; otherwise the screen-fixed UI layer
     // is tried before the camera-space world (see _resolveHit). Coordinates
@@ -611,56 +636,68 @@ export class InteractionManager implements InteractionHooks {
       if (hit !== null) {
         this._dispatchBubble(new InteractionEvent('pointerdown', hit, pointer, x, y));
 
-        // Start drag if node is draggable and no existing drag for this pointer.
+        // Only note the candidate. A press is not yet a drag — committing here
+        // would make every click on a draggable node jitter it and swallow the tap.
         if (hit.draggable && !this._drags.has(id)) {
-          const offsetX = hit.position.x - x;
-          const offsetY = hit.position.y - y;
+          const local = this._toParentLocal(hit, x, y);
 
-          this._drags.set(id, { pointerId: id, node: hit, offsetX, offsetY });
-          this._capturedPointers.set(id, hit);
-
-          try {
-            this._app.canvas.setPointerCapture(id);
-          } catch {
-            // Best-effort — jsdom and some browsers may not support this.
-          }
-
-          this._dispatchDirect(new InteractionEvent('dragstart', hit, pointer, x, y), hit._peekInteractionSignal('dragstart'));
+          this._drags.set(id, {
+            pointerId: id,
+            node: hit,
+            offsetX: hit.position.x - local.x,
+            offsetY: hit.position.y - local.y,
+            active: false,
+            started: false,
+          });
         }
       }
     }
 
     // --- Move ---
     if ((events & PointerEventFlag.Move) !== 0) {
-      if (drag !== null) {
-        // Auto-position the dragged node, preserving the grab offset.
-        drag.node.position.x = x + drag.offsetX;
-        drag.node.position.y = y + drag.offsetY;
+      if (drag !== null && drag.started) {
+        drag.started = false;
+        this._dispatchDirect(new InteractionEvent('dragstart', drag.node, pointer, x, y), drag.node._peekInteractionSignal('dragstart'));
+      }
+
+      if (drag !== null && drag.active) {
+        // Auto-position the dragged node, preserving the grab offset. `position`
+        // is parent-local, so the pointer has to be mapped there first.
+        const local = this._toParentLocal(drag.node, x, y);
+
+        drag.node.position.x = local.x + drag.offsetX;
+        drag.node.position.y = local.y + drag.offsetY;
       }
 
       if (hit !== null) {
         this._dispatchBubble(new InteractionEvent('pointermove', hit, pointer, x, y));
       }
 
-      if (drag !== null) {
+      if (drag !== null && drag.active) {
         this._dispatchDirect(new InteractionEvent('drag', drag.node, pointer, x, y), drag.node._peekInteractionSignal('drag'));
       }
     }
 
     // --- Up ---
+    const completedDrag = drag !== null && drag.active && (events & (PointerEventFlag.Up | PointerEventFlag.Cancel | PointerEventFlag.Leave)) !== 0;
+
     if ((events & PointerEventFlag.Up) !== 0) {
       if (hit !== null) {
         this._dispatchBubble(new InteractionEvent('pointerup', hit, pointer, x, y));
       }
 
       if (drag !== null) {
-        this._dispatchDirect(new InteractionEvent('dragend', drag.node, pointer, x, y), drag.node._peekInteractionSignal('dragend'));
+        if (drag.active) {
+          this._dispatchDirect(new InteractionEvent('dragend', drag.node, pointer, x, y), drag.node._peekInteractionSignal('dragend'));
+        }
+
         this._endDrag(id);
       }
     }
 
     // --- Tap ---
-    if ((events & PointerEventFlag.Tap) !== 0) {
+    // A press that turned into a drag is not also a tap.
+    if ((events & PointerEventFlag.Tap) !== 0 && !completedDrag) {
       if (hit !== null) {
         this._dispatchBubble(new InteractionEvent('pointertap', hit, pointer, x, y));
       }
@@ -676,7 +713,10 @@ export class InteractionManager implements InteractionHooks {
     // --- Cancel / Leave ---
     if (isExitEvent) {
       if (drag !== null) {
-        this._dispatchDirect(new InteractionEvent('dragend', drag.node, pointer, x, y), drag.node._peekInteractionSignal('dragend'));
+        if (drag.active) {
+          this._dispatchDirect(new InteractionEvent('dragend', drag.node, pointer, x, y), drag.node._peekInteractionSignal('dragend'));
+        }
+
         this._endDrag(id);
       } else if (last !== null) {
         this._dispatchBubble(new InteractionEvent('pointerout', last, pointer, x, y));
@@ -684,6 +724,67 @@ export class InteractionManager implements InteractionHooks {
 
       this._lastHit.delete(id);
     }
+  }
+
+  /**
+   * Turn a drag candidate into a real drag once the press has travelled past
+   * the threshold. Uses the pointer's accumulated excursion rather than its
+   * current distance, so a drag that wanders out and back still counts.
+   */
+  private _promoteDragCandidate(id: number, pointer: Pointer, events: number): void {
+    if ((events & PointerEventFlag.Move) === 0) {
+      return;
+    }
+
+    const drag = this._drags.get(id) ?? null;
+
+    if (drag === null || drag.active || pointer.maxDistanceFromPress <= this._dragThreshold) {
+      return;
+    }
+
+    drag.active = true;
+    drag.started = true;
+    this._capturedPointers.set(id, drag.node);
+
+    try {
+      this._app.canvas.setPointerCapture(id);
+    } catch {
+      // Best-effort — jsdom and some browsers may not support this.
+    }
+  }
+
+  /**
+   * Map a pointer position into the space `node.position` is expressed in.
+   * The dragged node's coordinates are parent-local, while the pointer arrives
+   * in world (or screen, for UI) space; without this a node under a scaled,
+   * rotated or offset parent drifts away from the cursor. Under an engaged
+   * transform group the chain is group-local, so the point is rebased through
+   * the anchor first, exactly as {@link _containsWorldPoint} does.
+   */
+  private _toParentLocal(node: RenderNode, x: number, y: number): { x: number; y: number } {
+    const parent = node.parent;
+
+    if (parent === null) {
+      return { x, y };
+    }
+
+    let localX = x;
+    let localY = y;
+    const anchor = node._resolveTransformGroupAnchor();
+
+    if (anchor !== null) {
+      const toGroup = anchor.getWorldTransform().getInverse(this._anchorInverse);
+
+      localX = toGroup.a * x + toGroup.b * y + toGroup.x;
+      localY = toGroup.c * x + toGroup.d * y + toGroup.y;
+    }
+
+    const inverse = parent.getWorldTransform().getInverse(this._dragInverse);
+
+    return {
+      x: inverse.a * localX + inverse.b * localY + inverse.x,
+      y: inverse.c * localX + inverse.d * localY + inverse.y,
+    };
   }
 
   private _endDrag(pointerId: number): void {

@@ -49,16 +49,22 @@ interface MockPointerOptions {
   id?: number;
   x?: number;
   y?: number;
+  /** Press excursion so far — what the drag threshold is compared against. */
+  travelled?: number;
 }
 
-const makePointer = ({ id = 1, x = 0, y = 0 }: MockPointerOptions = {}): Pointer =>
+const makePointer = ({ id = 1, x = 0, y = 0, travelled = 0 }: MockPointerOptions = {}): Pointer =>
   ({
     id,
     x,
     y,
     type: 'mouse',
     isPrimary: true,
+    maxDistanceFromPress: travelled,
   }) as unknown as Pointer;
+
+/** Distance comfortably past the default 8px drag threshold. */
+const pastThreshold = 40;
 
 interface MockSignals {
   onPointerDown: Signal<[Pointer]>;
@@ -722,7 +728,7 @@ describe('InteractionManager — drag and drop', () => {
     });
   };
 
-  test('dragstart fires on pointerdown; pointermove updates position; dragend fires on pointerup', () => {
+  test('dragstart waits for the threshold; pointermove drags; dragend fires on pointerup', () => {
     const { app, scene, signals, canvas } = createApp();
     mockPointerCapture(canvas);
     const im = new InteractionManager(app);
@@ -741,23 +747,24 @@ describe('InteractionManager — drag and drop', () => {
     sprite.onDrag.add(dragHandler);
     sprite.onDragEnd.add(dragEndHandler);
 
-    // Pointer down starts drag
+    // Pointer down only notes a candidate — no drag yet.
     signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
     flushInteractions(im);
-    expect(dragStartHandler).toHaveBeenCalledTimes(1);
+    expect(dragStartHandler).not.toHaveBeenCalled();
 
-    // Pointer move drags
-    signals.onPointerMove.dispatch(makePointer({ x: 70, y: 60 }));
+    // The first move past the threshold starts the drag and drags in one go.
+    signals.onPointerMove.dispatch(makePointer({ x: 70, y: 60, travelled: pastThreshold }));
     flushInteractions(im);
+    expect(dragStartHandler).toHaveBeenCalledTimes(1);
     expect(dragHandler).toHaveBeenCalledTimes(1);
 
     // Pointer up ends drag
-    signals.onPointerUp.dispatch(makePointer({ x: 70, y: 60 }));
+    signals.onPointerUp.dispatch(makePointer({ x: 70, y: 60, travelled: pastThreshold }));
     flushInteractions(im);
     expect(dragEndHandler).toHaveBeenCalledTimes(1);
 
     // Further move should NOT fire drag events
-    signals.onPointerMove.dispatch(makePointer({ x: 90, y: 90 }));
+    signals.onPointerMove.dispatch(makePointer({ x: 90, y: 90, travelled: pastThreshold }));
     flushInteractions(im);
     expect(dragHandler).toHaveBeenCalledTimes(1);
 
@@ -785,7 +792,7 @@ describe('InteractionManager — drag and drop', () => {
     flushInteractions(im);
 
     // Move pointer to (100, 80) — expected node position: (100-10, 80-10) = (90, 70)
-    signals.onPointerMove.dispatch(makePointer({ x: 100, y: 80 }));
+    signals.onPointerMove.dispatch(makePointer({ x: 100, y: 80, travelled: pastThreshold }));
     flushInteractions(im);
 
     expect(sprite.position.x).toBe(90);
@@ -818,7 +825,7 @@ describe('InteractionManager — drag and drop', () => {
     flushInteractions(im);
 
     // Move pointer into other sprite's bounds — should NOT fire pointerover on other
-    signals.onPointerMove.dispatch(makePointer({ x: 250, y: 50 }));
+    signals.onPointerMove.dispatch(makePointer({ x: 250, y: 50, travelled: pastThreshold }));
     flushInteractions(im);
 
     expect(otherOverHandler).not.toHaveBeenCalled();
@@ -899,15 +906,19 @@ describe('InteractionManager — drag and drop', () => {
     signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
     flushInteractions(im);
 
-    signals.onPointerCancel.dispatch(makePointer({ x: 50, y: 50 }));
+    signals.onPointerMove.dispatch(makePointer({ x: 50, y: 90, travelled: pastThreshold }));
+    flushInteractions(im);
+    expect(dragHandler).toHaveBeenCalledTimes(1);
+
+    signals.onPointerCancel.dispatch(makePointer({ x: 50, y: 90, travelled: pastThreshold }));
     flushInteractions(im);
 
     expect(dragEndHandler).toHaveBeenCalledTimes(1);
 
     // Further move after cancel should NOT fire drag
-    signals.onPointerMove.dispatch(makePointer({ x: 60, y: 60 }));
+    signals.onPointerMove.dispatch(makePointer({ x: 60, y: 60, travelled: pastThreshold }));
     flushInteractions(im);
-    expect(dragHandler).not.toHaveBeenCalled();
+    expect(dragHandler).toHaveBeenCalledTimes(1);
 
     im.destroy();
     sprite.destroy();
@@ -933,10 +944,10 @@ describe('InteractionManager — drag and drop', () => {
     signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
     flushInteractions(im);
 
-    signals.onPointerMove.dispatch(makePointer({ x: 55, y: 55 }));
+    signals.onPointerMove.dispatch(makePointer({ x: 55, y: 55, travelled: pastThreshold }));
     flushInteractions(im);
 
-    signals.onPointerMove.dispatch(makePointer({ x: 60, y: 60 }));
+    signals.onPointerMove.dispatch(makePointer({ x: 60, y: 60, travelled: pastThreshold }));
     flushInteractions(im);
 
     expect(dragTargets).toHaveLength(2);
@@ -972,10 +983,10 @@ describe('InteractionManager — drag and drop', () => {
     signals.onPointerDown.dispatch(makePointer({ x: 25, y: 25 }));
     flushInteractions(im);
 
-    signals.onPointerMove.dispatch(makePointer({ x: 30, y: 30 }));
+    signals.onPointerMove.dispatch(makePointer({ x: 30, y: 30, travelled: pastThreshold }));
     flushInteractions(im);
 
-    signals.onPointerUp.dispatch(makePointer({ x: 30, y: 30 }));
+    signals.onPointerUp.dispatch(makePointer({ x: 30, y: 30, travelled: pastThreshold }));
     flushInteractions(im);
 
     expect(parentDragStart).not.toHaveBeenCalled();
@@ -1018,7 +1029,7 @@ describe('InteractionManager — drag and drop', () => {
     expect(bDown).toHaveBeenCalledTimes(1);
 
     // Move pointer 1 — only A's drag fires
-    signals.onPointerMove.dispatch(makePointer({ id: 1, x: 30, y: 30 }));
+    signals.onPointerMove.dispatch(makePointer({ id: 1, x: 30, y: 30, travelled: pastThreshold }));
     flushInteractions(im);
 
     expect(aDrag).toHaveBeenCalledTimes(1);
@@ -1243,6 +1254,12 @@ describe('InteractionManager — getCapturedNodes', () => {
     signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
     flushInteractions(im);
 
+    // A press alone is only a candidate — capture starts with the drag.
+    expect(im.getCapturedNodes()).toEqual([]);
+
+    signals.onPointerMove.dispatch(makePointer({ x: 90, y: 50, travelled: pastThreshold }));
+    flushInteractions(im);
+
     expect(im.getCapturedNodes()).toEqual([sprite]);
 
     im.destroy();
@@ -1403,7 +1420,7 @@ describe('InteractionManager — UI layer', () => {
     signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
     flushInteractions(im);
 
-    signals.onPointerMove.dispatch(makePointer({ x: 60, y: 60 }));
+    signals.onPointerMove.dispatch(makePointer({ x: 60, y: 60, travelled: pastThreshold }));
     flushInteractions(im);
 
     expect(dragHandler).toHaveBeenCalledTimes(1);
@@ -1436,7 +1453,7 @@ describe('InteractionManager — UI layer', () => {
     signals.onPointerDown.dispatch(makePointer({ x: 50, y: 50 }));
     flushInteractions(im);
 
-    signals.onPointerMove.dispatch(makePointer({ x: 60, y: 60 }));
+    signals.onPointerMove.dispatch(makePointer({ x: 60, y: 60, travelled: pastThreshold }));
     flushInteractions(im);
 
     expect(dragHandler).toHaveBeenCalledTimes(1);
