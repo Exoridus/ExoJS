@@ -1277,7 +1277,7 @@ describe('InteractionManager — interaction scope', () => {
     modal.destroy();
   });
 
-  test('a scope root belonging to a different Application is skipped: hit-testing falls through to this Application\'s own real scene graph', () => {
+  test("a scope root belonging to a different Application is skipped: hit-testing falls through to this Application's own real scene graph", () => {
     const a = createApp();
     const b = createApp();
     const imA = new InteractionManager(a.app);

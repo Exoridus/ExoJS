@@ -47,7 +47,6 @@ const fire = (canvas: HTMLCanvasElement, type: string, init: PointerEventInit): 
   canvas.dispatchEvent(new PointerEvent(type, { bubbles: true, pointerId: 1, isPrimary: true, pointerType: 'mouse', ...init }));
 };
 
-
 let canvas: HTMLCanvasElement;
 let im: InputManager;
 
@@ -313,8 +312,7 @@ describe('ordered channel event log', () => {
     readonly value: number;
   }
 
-  const frameEvents = (manager: InputManager): RawChannelEvent[] =>
-    (manager as unknown as { frameEvents: RawChannelEvent[] }).frameEvents;
+  const frameEvents = (manager: InputManager): RawChannelEvent[] => (manager as unknown as { frameEvents: RawChannelEvent[] }).frameEvents;
   const forSpace = (manager: InputManager): number[] =>
     frameEvents(manager)
       .filter(e => e.channel === (Keyboard.Space as number))
