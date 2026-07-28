@@ -4,17 +4,28 @@ import { SceneState } from '#core/SceneState';
 import { Signal } from '#core/Signal';
 import { ActionMap } from '#input/actions/ActionMap';
 import { ButtonAction } from '#input/actions/ButtonAction';
-import type { ActionSample } from '#input/actions/types';
+import type { ActionSample, ChannelEvent } from '#input/actions/types';
 import type { InputBinding } from '#input/InputBinding';
 import { ChannelSize, Keyboard } from '#input/types';
 
 /** A zeroed sample with a mutable `frameId`, for tests that only need a valid shape. */
 const createEmptySample = (): ActionSample => ({
   values: new Float32Array(ChannelSize.Container),
-  pressed: new Uint8Array(ChannelSize.Container),
-  released: new Uint8Array(ChannelSize.Container),
+  events: [],
   frameId: 1,
 });
+
+/**
+ * Write `value` to `channel` on `sample`, also logging it as an ordered
+ * `ChannelEvent` — mirrors what `InputManager._recordChannelChanges` does for
+ * a real channel write. A bare `sample.values[channel] = value` is not
+ * enough: `ButtonAction._update` replays `sample.events`, not `values`,
+ * to detect its threshold-crossing edges in true order.
+ */
+const setChannel = (sample: ActionSample, channel: number, value: number): void => {
+  sample.values[channel] = value;
+  (sample.events as ChannelEvent[]).push({ channel, value });
+};
 
 interface StubBinding {
   onStart: Signal<[number]>;
@@ -408,7 +419,7 @@ describe('SceneInputs action maps', () => {
     const sample = createEmptySample();
 
     inputs.attach(map);
-    sample.values[Keyboard.Space] = 1;
+    setChannel(sample, Keyboard.Space, 1);
     map._update(sample);
     expect(map.jump.active).toBe(true);
 
@@ -436,7 +447,7 @@ describe('SceneInputs action maps', () => {
     const sample = createEmptySample();
 
     inputs.attach(map);
-    sample.values[Keyboard.Space] = 1; // key goes down
+    setChannel(sample, Keyboard.Space, 1); // key goes down
     map._update(sample);
     expect(map.jump.pressed).toBe(true);
 
@@ -458,7 +469,7 @@ describe('SceneInputs action maps', () => {
     const sample = createEmptySample();
 
     inputs.attach(map);
-    sample.values[Keyboard.Space] = 1;
+    setChannel(sample, Keyboard.Space, 1);
     map._update(sample);
 
     inputs.suspend(); // key is released while suspended

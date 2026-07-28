@@ -1240,6 +1240,77 @@ describe('InteractionManager — interaction scope', () => {
     outside.destroy();
     modal.destroy();
   });
+
+  test('a scope root removed via removeChild without popping the scope is skipped: hit-testing falls through to the real scene graph instead of staying confined to the detached subtree', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+    im.attachRoot(scene.root);
+
+    const modal = new Container();
+    const inside = new TestSprite().setBounds(0, 0, 100, 100);
+    const outside = new TestSprite().setBounds(200, 0, 100, 100);
+
+    inside.interactive = true;
+    outside.interactive = true;
+    modal.addChild(inside);
+    scene.addChild(modal);
+    scene.addChild(outside);
+
+    const outsideHandler = vi.fn();
+
+    outside.onPointerDown.add(outsideHandler);
+    im.pushScope(modal);
+
+    // Detach the scope root itself — without popping the scope.
+    scene.removeChild(modal);
+
+    dispatchPointer(signals.onPointerDown, { x: 250, y: 50 });
+    flushInteractions(im);
+
+    // The dead scope no longer hit-tests its own (now detached) subtree, nor
+    // does it keep blocking the real scene graph — `outside` is reachable.
+    expect(outsideHandler).toHaveBeenCalledTimes(1);
+
+    im.destroy();
+    inside.destroy();
+    outside.destroy();
+    modal.destroy();
+  });
+
+  test('a scope root belonging to a different Application is skipped: hit-testing falls through to this Application\'s own real scene graph', () => {
+    const a = createApp();
+    const b = createApp();
+    const imA = new InteractionManager(a.app);
+    const imB = new InteractionManager(b.app);
+
+    imA.attachRoot(a.scene.root);
+    imB.attachRoot(b.scene.root);
+
+    // A caller mistake: app A's manager is scoped to a root that only ever
+    // had a stage installed by app B.
+    imA.pushScope(b.scene.root);
+
+    const sprite = new TestSprite().setBounds(0, 0, 50, 50);
+
+    sprite.interactive = true;
+    a.scene.addChild(sprite);
+
+    const down = vi.fn();
+
+    sprite.onPointerDown.add(down);
+
+    // The cross-Application scope root is dead from app A's perspective, so
+    // it neither hit-tests app B's subtree through app A's manager nor blocks
+    // app A's own real scene graph.
+    dispatchPointer(a.signals.onPointerDown, { x: 25, y: 25 });
+    flushInteractions(imA);
+
+    expect(down).toHaveBeenCalledTimes(1);
+
+    imA.destroy();
+    imB.destroy();
+    sprite.destroy();
+  });
 });
 
 // ---------------------------------------------------------------------------

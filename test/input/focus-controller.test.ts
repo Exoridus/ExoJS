@@ -21,8 +21,15 @@ const noopInteraction: InteractionHooks = {
   _notifyTransformGroupMoved() {},
 };
 
-/** Build a minimal Application mock wired to a real Scene root + a FocusController. */
+/**
+ * Build a minimal Application mock wired to a real Scene root + a
+ * FocusController. Sets `Stage.app`, like every production stage does (see
+ * that field's own doc comment) — needed for the ownership tests below to
+ * tell two Applications' nodes apart; harmless for every other test here,
+ * which only ever deals with one.
+ */
 const createFocusApp = (): {
+  app: Application;
   scene: Scene;
   focus: FocusController;
   onKeyDown: Signal<[number]>;
@@ -40,11 +47,11 @@ const createFocusApp = (): {
     },
   } as unknown as Application;
   const focus = new FocusController(app);
-  const stage: Stage = { interaction: noopInteraction, focus };
+  const stage: Stage = { interaction: noopInteraction, focus, app };
 
   scene.root._setStage(stage);
 
-  return { scene, focus, onKeyDown, onKeyUp };
+  return { app, scene, focus, onKeyDown, onKeyUp };
 };
 
 const focusable = (tabIndex = 0): Container => {
@@ -395,5 +402,160 @@ describe('FocusController', () => {
     // exactly that — not whatever Tab happened to land on inside the scope.
     focus.popScope(token);
     expect(focus.focused).toBeNull();
+  });
+});
+
+describe('FocusController — ownership hardening', () => {
+  test('focus() rejects a node that belongs to a different Application', () => {
+    const a = createFocusApp();
+    const b = createFocusApp();
+    const nodeFromB = focusable();
+
+    b.scene.root.addChild(nodeFromB);
+
+    a.focus.focus(nodeFromB);
+
+    expect(a.focus.focused).toBeNull();
+    expect(b.focus.focused).toBeNull();
+  });
+
+  test('focus() rejects a node never attached to any stage', () => {
+    const { focus } = createFocusApp();
+    const node = focusable(); // constructed, but never added to a scene
+
+    focus.focus(node);
+
+    expect(focus.focused).toBeNull();
+  });
+
+  test('focus() rejects a node already removed from the tree', () => {
+    const { scene, focus } = createFocusApp();
+    const node = focusable();
+
+    scene.root.addChild(node);
+    scene.root.removeChild(node);
+
+    focus.focus(node);
+
+    expect(focus.focused).toBeNull();
+  });
+
+  test('a bare destroy() (no removeChild) on the focused node is noticed on the next key event, without dispatching onKeyDown on it', () => {
+    const { scene, focus, onKeyDown } = createFocusApp();
+    const node = focusable();
+    const handler = vi.fn();
+
+    node.onKeyDown.add(handler);
+    scene.root.addChild(node);
+    focus.focus(node);
+
+    node.destroy(); // no removeChild first — still attached, structurally
+
+    expect(() => onKeyDown.dispatch(Keyboard.Enter)).not.toThrow();
+    expect(handler).not.toHaveBeenCalled();
+    expect(focus.focused).toBeNull();
+  });
+
+  test('a node removed via removeChild (not destroyed) is not re-focused when the scope that remembered it pops', () => {
+    const { scene, focus } = createFocusApp();
+    const modal = new Container();
+    const outside = focusable();
+
+    scene.root.addChild(outside).addChild(modal);
+    focus.focus(outside);
+
+    const token = createScopeToken();
+
+    // `outside` sits outside `modal`'s subtree, so pushing the scope blurs it
+    // and remembers it as this scope's previousFocus.
+    focus.pushScope(token, modal);
+    expect(focus.focused).toBeNull();
+
+    // `outside` is removed (not destroyed) while the scope is still active.
+    scene.root.removeChild(outside);
+
+    focus.popScope(token);
+
+    expect(focus.focused).toBeNull();
+  });
+
+  test('nested scopes: a previousFocus destroyed while a scope above it is active is not resurrected, regardless of pop order', () => {
+    const { scene, focus } = createFocusApp();
+    const x = focusable();
+    const y = focusable();
+    const modalA = new Container();
+    const modalB = new Container();
+
+    modalA.addChild(y);
+    scene.root.addChild(x).addChild(modalA).addChild(modalB);
+
+    const tokenA = createScopeToken();
+    const tokenB = createScopeToken();
+
+    focus.focus(x);
+    focus.pushScope(tokenA, modalA); // remembers previousFocus = x
+    focus.focus(y);
+    focus.pushScope(tokenB, modalB); // remembers previousFocus = y
+
+    // x — scope A's remembered previousFocus — is destroyed while scope B
+    // (unrelated to x) is the active one.
+    x.destroy();
+
+    // Popping the unrelated, still-active scope B first must not touch
+    // scope A's bookkeeping.
+    focus.popScope(tokenB);
+    expect(focus.focused).toBe(y);
+
+    // Now scope A pops and tries to restore x — already destroyed.
+    focus.popScope(tokenA);
+    expect(focus.focused).toBeNull();
+  });
+
+  test('a scope root removed via removeChild is skipped: Tab traversal falls through to the real (unscoped) scene graph instead of staying confined to the detached subtree', () => {
+    const { scene, focus, onKeyDown } = createFocusApp();
+    const modal = new Container();
+    const inModal = focusable();
+    const inScene = focusable();
+
+    modal.addChild(inModal);
+    scene.root.addChild(modal).addChild(inScene);
+
+    const token = createScopeToken();
+
+    focus.pushScope(token, modal);
+
+    // Detach the scope root itself without popping the scope.
+    scene.root.removeChild(modal);
+
+    onKeyDown.dispatch(Keyboard.Tab);
+
+    // The dead scope no longer confines traversal to its own (now detached)
+    // subtree — `inScene`, part of the real graph, is reachable again.
+    expect(focus.focused).toBe(inScene);
+
+    focus.popScope(token);
+  });
+
+  test('focus() rejects a scope-confined target once the scope root itself has been destroyed', () => {
+    const { scene, focus } = createFocusApp();
+    const modal = new Container();
+    const inModal = focusable();
+    const inScene = focusable();
+
+    modal.addChild(inModal);
+    scene.root.addChild(modal).addChild(inScene);
+
+    const token = createScopeToken();
+
+    focus.pushScope(token, modal);
+    modal.destroy(); // no removeChild — the harder case, see `_isOwned`'s doc comment
+
+    // The scope is now dead; focus is no longer confined to its subtree, so
+    // a node from the real scene graph outside it can be focused again.
+    focus.focus(inScene);
+
+    expect(focus.focused).toBe(inScene);
+
+    focus.popScope(token);
   });
 });

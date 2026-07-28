@@ -1047,21 +1047,52 @@ export class InteractionManager implements InteractionHooks {
   }
 
   /**
-   * Whether `node` is still safe to act on — not destroyed, and still
-   * attached to a live stage. A user handler run synchronously during THIS
-   * flush's own dispatch may have destroyed or detached (`removeChild`) the
-   * very node an earlier-resolved `hit`/drag reference points at; every
-   * dispatch site re-checks this immediately before acting on such a
-   * reference rather than trusting it for the rest of the flush.
+   * Whether `node` is still safe to act on — not destroyed, and currently
+   * attached to a stage — one installed by THIS Application, or (per
+   * {@link Stage.app}'s own doc comment) a lightweight stub stage that does
+   * not declare an owner at all, which every production stage does. Rejects
+   * a different Application's node, one never attached to any stage, and one
+   * already removed, exactly like {@link FocusController._isOwned}. A user
+   * handler run synchronously during THIS flush's own dispatch may have
+   * destroyed or detached (`removeChild`) the very node an earlier-resolved
+   * `hit`/drag reference points at; every dispatch site re-checks this
+   * immediately before acting on such a reference rather than trusting it
+   * for the rest of the flush.
    *
    * `removeChild` alone already unregisters a node synchronously (see
    * {@link _unregisterNode}), but `destroy()` without a prior `removeChild`
    * does not — the node stays fully hit-testable and its bare presence in
    * `_interactiveNodes` would not catch that case, so this checks
-   * `destroyed` and stage attachment directly instead.
+   * `destroyed` and stage ownership directly instead.
    */
   private _isLive(node: RenderNode): boolean {
-    return !node.destroyed && node._getStage() !== null;
+    const stage = node._getStage();
+
+    return !node.destroyed && stage !== null && (stage.app === undefined || stage.app === this._app);
+  }
+
+  /**
+   * The nearest active scope root that is still live — walking down the
+   * stack skips any entry whose root died (destroyed or detached) since it
+   * was pushed, rather than either continuing to hit-test its now-detached
+   * subtree or letting it permanently block the real scene graph once the
+   * live entry beneath it (or none at all) should take over. Entries are not
+   * eagerly removed from the stack here: a root only temporarily detached
+   * (e.g. mid-reparent within the same Application) is revalidated fresh on
+   * the next call rather than being discarded — see
+   * {@link FocusController._activeScopeRoot}, which mirrors this exactly for
+   * focus/traversal.
+   */
+  private _activeScopeRoot(): RenderNode | null {
+    for (let i = this._scopeStack.length - 1; i >= 0; i--) {
+      const root = this._scopeStack[i]!.root;
+
+      if (this._isLive(root)) {
+        return root;
+      }
+    }
+
+    return null;
   }
 
   /**
@@ -1104,9 +1135,9 @@ export class InteractionManager implements InteractionHooks {
    * at — see {@link PointerQueue}'s doc comment.
    */
   private _resolveHit(x: number, y: number): { node: RenderNode | null; x: number; y: number } {
-    const scope = this._scopeStack.at(-1)?.root;
+    const scope = this._activeScopeRoot();
 
-    if (scope !== undefined) {
+    if (scope !== null) {
       const coords = this._designToLayerSpace(x, y, this._isUINode(scope));
 
       if (!this._isHittable(scope)) {

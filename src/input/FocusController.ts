@@ -1,5 +1,5 @@
 import type { Application } from '#core/Application';
-import type { FocusHooks } from '#core/Stage';
+import type { FocusHooks, Stage } from '#core/Stage';
 import { Container } from '#rendering/Container';
 import type { RenderNode } from '#rendering/RenderNode';
 
@@ -63,17 +63,20 @@ export class FocusController implements FocusHooks {
 
   /**
    * Move keyboard focus to `node`. No-op when `node` is already focused, is
-   * not {@link RenderNode.focusable}, or — while a scope is active — sits
-   * outside that scope's subtree: an active scope is a real focus trap, not
-   * only a Tab-order boundary, so programmatic focus cannot escape it either.
-   * Fires `onBlur` on the previously focused node, then `onFocus` on `node`.
+   * not {@link RenderNode.focusable}, does not belong to this
+   * {@link Application} (a different Application's node, one never attached
+   * to any stage, or one already removed — see {@link _isOwned}'s doc
+   * comment), or — while a scope is active — sits outside that scope's
+   * subtree: an active scope is a real focus trap, not only a Tab-order
+   * boundary, so programmatic focus cannot escape it either. Fires `onBlur`
+   * on the previously focused node, then `onFocus` on `node`.
    */
   public focus(node: RenderNode): void {
-    if (node === this._focused || !node.focusable) {
+    if (node === this._focused || !node.focusable || !this._isOwned(node)) {
       return;
     }
 
-    const activeScope = this._scopeStack.at(-1)?.root ?? null;
+    const activeScope = this._activeScopeRoot();
 
     if (activeScope !== null && !this._isInsideScope(node, activeScope)) {
       return;
@@ -84,7 +87,13 @@ export class FocusController implements FocusHooks {
     node._peekFocusSignal('focus')?.dispatch(node);
   }
 
-  /** Clear focus, or only clear it when `node` currently holds it. Fires `onBlur`. */
+  /**
+   * Clear focus, or only clear it when `node` currently holds it. Fires
+   * `onBlur` — unless the previously focused node is already destroyed (a
+   * bare `destroy()` with no prior `removeChild()` never reaches
+   * {@link _notifyNodeRemoved}, so this can be the first place that notices),
+   * in which case no event is dispatched on it.
+   */
   public blur(node?: RenderNode): void {
     const previous = this._focused;
 
@@ -93,7 +102,10 @@ export class FocusController implements FocusHooks {
     }
 
     this._focused = null;
-    previous._peekFocusSignal('blur')?.dispatch(previous);
+
+    if (!previous.destroyed) {
+      previous._peekFocusSignal('blur')?.dispatch(previous);
+    }
   }
 
   /**
@@ -116,6 +128,47 @@ export class FocusController implements FocusHooks {
     }
 
     this._scopeStack.push({ token, root, previousFocus });
+  }
+
+  /**
+   * Whether `node` belongs to this controller's {@link Application}: not
+   * destroyed, and currently attached to a stage — one installed by THIS
+   * Application, or (per {@link Stage.app}'s own doc comment) a lightweight
+   * stub stage that does not declare an owner at all, which every production
+   * stage does. Rejects a different Application's node, one never attached
+   * to any stage, and one already removed alike. `destroyed` alone is not
+   * enough: `removeChild()` detaches a node from its stage without
+   * destroying it, and a node merely reparented elsewhere within the SAME
+   * Application (a temporary state, not a removal) still passes here, which
+   * is the point — ownership is what matters at the point of use, not
+   * whether the node briefly changed parents.
+   */
+  private _isOwned(node: RenderNode): boolean {
+    const stage = node._getStage();
+
+    return !node.destroyed && stage !== null && (stage.app === undefined || stage.app === this._app);
+  }
+
+  /**
+   * The nearest active scope root that is still owned by this Application —
+   * walking down the stack skips any entry whose root died (destroyed or
+   * detached) since it was pushed, rather than either trusting a stale root
+   * or letting it permanently block the real scene graph once the live entry
+   * beneath it (or none at all) should take over. Entries are not eagerly
+   * removed from the stack here: a root only temporarily detached (e.g.
+   * mid-reparent within the same Application) is revalidated fresh on the
+   * next call rather than being discarded.
+   */
+  private _activeScopeRoot(): RenderNode | null {
+    for (let i = this._scopeStack.length - 1; i >= 0; i--) {
+      const root = this._scopeStack[i]!.root;
+
+      if (this._isOwned(root)) {
+        return root;
+      }
+    }
+
+    return null;
   }
 
   /**
@@ -182,7 +235,7 @@ export class FocusController implements FocusHooks {
       this._shiftDown = true;
     }
 
-    const focused = this._focused;
+    const focused = this._liveFocused();
     let defaultPrevented = false;
 
     if (focused !== null) {
@@ -206,11 +259,34 @@ export class FocusController implements FocusHooks {
       this._shiftDown = false;
     }
 
-    const focused = this._focused;
+    const focused = this._liveFocused();
 
     if (focused !== null) {
       this._dispatchKeyBubble(new KeyEvent('keyup', channel, focused), 'keyup');
     }
+  }
+
+  /**
+   * The currently focused node, or `null` — blurring first (silently, since
+   * {@link blur} itself skips the event for an already-destroyed node) if
+   * the focused node died since it was last checked, so a stale target never
+   * receives a key event. See {@link blur}'s doc comment for why this can be
+   * the first place that notices a bare `destroy()`.
+   */
+  private _liveFocused(): RenderNode | null {
+    const focused = this._focused;
+
+    if (focused === null) {
+      return null;
+    }
+
+    if (!this._isOwned(focused)) {
+      this.blur();
+
+      return null;
+    }
+
+    return focused;
   }
 
   /**
@@ -281,10 +357,10 @@ export class FocusController implements FocusHooks {
    * on a node the newly-active scope doesn't own would break its trap.
    */
   private _restoreFocusAfterPop(previousFocus: RenderNode | null): void {
-    const activeScope = this._scopeStack.at(-1)?.root ?? null;
+    const activeScope = this._activeScopeRoot();
     const canRestore =
       previousFocus !== null &&
-      !previousFocus.destroyed &&
+      this._isOwned(previousFocus) &&
       previousFocus.focusable &&
       (activeScope === null || this._isInsideScope(previousFocus, activeScope));
 
@@ -301,7 +377,7 @@ export class FocusController implements FocusHooks {
    * by document (tree) order.
    */
   private _collectFocusables(): RenderNode[] {
-    const root: RenderNode | null = this._scopeStack.at(-1)?.root ?? this._app.scenes.currentScene?.root ?? null;
+    const root: RenderNode | null = this._activeScopeRoot() ?? this._app.scenes.currentScene?.root ?? null;
 
     if (root === null) {
       return [];
