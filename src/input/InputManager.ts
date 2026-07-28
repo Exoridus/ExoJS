@@ -615,6 +615,27 @@ export class InputManager {
     }
   }
 
+  /**
+   * Fully retire a pointer whose FINAL state this flush is terminal (left
+   * the canvas, or was cancelled): drop its map entry and slot TOGETHER, and
+   * `destroy()` it. Checked once per pointer, after its entire phase list
+   * has dispatched (see {@link updatePointerEvents}) — never mid-dispatch,
+   * and never at the raw platform-event handler that first observed the
+   * Leave/Cancel. Releasing the slot any earlier would let a DIFFERENT
+   * pointerId's `pointerover` claim it later the SAME flush while this
+   * pointer's own Leave/Cancel phase is still sitting undispatched in its
+   * phase list — corrupting the shared channel slot both would then be
+   * writing into. A same-flush re-entry (see {@link handlePointerOver}'s doc
+   * comment) leaves this pointer's final state something other than
+   * terminal, so it is correctly skipped here rather than retired out from
+   * under its own fresh `Over` phase.
+   */
+  private _retirePointer(pointer: Pointer): void {
+    this.pointers.delete(pointer.id);
+    this._releaseSlot(pointer.id);
+    pointer.destroy();
+  }
+
   private handleKeyDown(event: KeyboardEvent): void {
     if (!this.canvasFocusedValue) {
       return;
@@ -649,7 +670,31 @@ export class InputManager {
     }
   }
 
+  /**
+   * A pointer that left or was cancelled earlier THIS SAME flush stays fully
+   * alive — map entry, slot, and channel data — until its own Leave/Cancel
+   * phase has actually dispatched (see {@link _retirePointer}'s doc
+   * comment), specifically so a re-entry arriving before that dispatch has
+   * an existing, still-tracked pointer to reuse instead of one silently
+   * discarded mid-flush. Re-entry with the same `pointerId` (routine for a
+   * mouse leaving and re-entering the canvas) therefore extends that SAME
+   * pointer's own ordered phase list with a fresh `Over` entry rather than
+   * constructing a new object and overwriting the map entry out from under
+   * the old one's still-undispatched phases — which would both lose the
+   * pending Leave/Cancel phase and leak the discarded `Pointer` (nothing else
+   * ever reaches or destroys it once the map no longer points to it).
+   */
   private handlePointerOver(event: PointerEvent): void {
+    const existing = this.pointers.get(event.pointerId);
+
+    if (existing !== undefined) {
+      existing.handleEnter(event);
+      this._recordPointerChanges(existing);
+      this.flags.push(InputManagerFlag.PointerUpdate);
+
+      return;
+    }
+
     const slot = this._assignSlot(event.pointerId);
 
     if (slot === null) {
@@ -673,7 +718,6 @@ export class InputManager {
     pointer.handleLeave(event);
     this._recordPointerChanges(pointer);
     this.gestureRecognizer.onPointerLeave(pointer);
-    this._releaseSlot(event.pointerId);
     this.flags.push(InputManagerFlag.PointerUpdate);
   }
 
@@ -733,7 +777,6 @@ export class InputManager {
     pointer.handleCancel(event);
     this._recordPointerChanges(pointer);
     this.gestureRecognizer.onPointerCancel(pointer);
-    this._releaseSlot(event.pointerId);
     this.flags.push(InputManagerFlag.PointerUpdate);
   }
 
@@ -1051,6 +1094,13 @@ export class InputManager {
    * an Up followed by a Down within one frame dispatches in that same order
    * rather than always Down-before-Up, and two discrete presses in one frame
    * each get their own `onPointerDown` instead of collapsing into one.
+   *
+   * Retirement (see {@link _retirePointer}'s doc comment) is checked in a
+   * SEPARATE pass afterward, once per pointer, keyed on that pointer's FINAL
+   * state for the flush — never mid-phase-list. A Leave phase sitting
+   * anywhere but last in the list (a same-flush re-entry followed it) must
+   * not have its object/slot torn down while a later `Over` phase for that
+   * SAME pointer is still waiting to dispatch.
    */
   private updatePointerEvents(): void {
     for (const pointer of this.pointers.values()) {
@@ -1088,12 +1138,17 @@ export class InputManager {
 
           case PointerStateFlag.Leave:
             this.onPointerLeave.dispatch(pointer, phase.x, phase.y);
-            this.pointers.delete(pointer.id);
             break;
 
           default:
             break;
         }
+      }
+    }
+
+    for (const pointer of [...this.pointers.values()]) {
+      if (pointer.currentState === PointerState.OutsideCanvas || pointer.currentState === PointerState.Cancelled) {
+        this._retirePointer(pointer);
       }
     }
   }

@@ -1034,10 +1034,14 @@ describe('InteractionManager — drag and drop', () => {
     dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
     flushInteractions(im);
 
-    dispatchPointer(signals.onPointerMove, { x: 55, y: 55, travelled: pastThreshold });
+    // 40 design pixels from the press position — comfortably past the
+    // default 8px drag threshold, which InteractionManager now measures as
+    // real geometric distance from its own recorded press position rather
+    // than trusting a declared `travelled` value decoupled from x/y.
+    dispatchPointer(signals.onPointerMove, { x: 90, y: 50 });
     flushInteractions(im);
 
-    dispatchPointer(signals.onPointerMove, { x: 60, y: 60, travelled: pastThreshold });
+    dispatchPointer(signals.onPointerMove, { x: 120, y: 50 });
     flushInteractions(im);
 
     expect(dragTargets).toHaveLength(2);
@@ -1118,8 +1122,10 @@ describe('InteractionManager — drag and drop', () => {
 
     expect(bDown).toHaveBeenCalledTimes(1);
 
-    // Move pointer 1 — only A's drag fires
-    dispatchPointer(signals.onPointerMove, { id: 1, x: 30, y: 30, travelled: pastThreshold });
+    // Move pointer 1 — only A's drag fires. 45 design pixels from the press
+    // position, past the default 8px drag threshold (see the drag-target
+    // test above for why this needs real geometric distance now).
+    dispatchPointer(signals.onPointerMove, { id: 1, x: 70, y: 25 });
     flushInteractions(im);
 
     expect(aDrag).toHaveBeenCalledTimes(1);
@@ -1127,6 +1133,47 @@ describe('InteractionManager — drag and drop', () => {
     im.destroy();
     spriteA.destroy();
     spriteB.destroy();
+  });
+
+  test('a first drag cycle followed by a new press in the same flush starts a fresh, independent second cycle', () => {
+    const { app, scene, signals, canvas } = createApp();
+    mockPointerCapture(canvas);
+    const im = new InteractionManager(app);
+
+    im.attachRoot(scene.root);
+
+    const sprite = new TestSprite().setBounds(0, 0, 200, 200);
+
+    sprite.interactive = true;
+    sprite.draggable = true;
+    scene.addChild(sprite);
+
+    const dragStarts = vi.fn();
+    const dragEnds = vi.fn();
+
+    sprite.onDragStart.add(dragStarts);
+    sprite.onDragEnd.add(dragEnds);
+
+    // Cycle 1: press, move 40px past the default 8px threshold (starts the
+    // drag), release (ends it).
+    dispatchPointer(signals.onPointerDown, { x: 10, y: 10 });
+    dispatchPointer(signals.onPointerMove, { x: 50, y: 10 });
+    dispatchPointer(signals.onPointerUp, { x: 50, y: 10 });
+
+    // Cycle 2: a brand-new press sharing the SAME flush — must register its
+    // own fresh candidate rather than being confused with cycle 1's
+    // just-ended drag, and its own move must promote its own independent
+    // second drag.
+    dispatchPointer(signals.onPointerDown, { x: 10, y: 10 });
+    dispatchPointer(signals.onPointerMove, { x: 50, y: 10 });
+    flushInteractions(im);
+
+    expect(dragStarts).toHaveBeenCalledTimes(2);
+    expect(dragEnds).toHaveBeenCalledTimes(1);
+    expect(im.getCapturedNodes()).toEqual([sprite]);
+
+    im.destroy();
+    sprite.destroy();
   });
 });
 
@@ -1803,6 +1850,124 @@ describe('InteractionManager — coalesced events', () => {
     im.destroy();
     left.destroy();
     right.destroy();
+  });
+});
+
+describe('InteractionManager — ordered phase processing', () => {
+  test('an Up dispatched before a Down in one flush fires in that true order, not always Down-before-Up', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+
+    im.attachRoot(scene.root);
+
+    const sprite = new TestSprite().setBounds(0, 0, 100, 100);
+
+    sprite.interactive = true;
+    scene.addChild(sprite);
+
+    const order: string[] = [];
+
+    sprite.onPointerUp.add(() => order.push('up'));
+    sprite.onPointerDown.add(() => order.push('down'));
+
+    // Signal dispatch order is the source of truth InteractionManager must
+    // preserve end-to-end — an aggregated bitmask cannot represent this at
+    // all, since it always processed Down before Up regardless.
+    dispatchPointer(signals.onPointerUp, { x: 50, y: 50 });
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
+    flushInteractions(im);
+
+    expect(order).toEqual(['up', 'down']);
+
+    im.destroy();
+    sprite.destroy();
+  });
+
+  test('Down→Up→Down in one flush fires all three in that order, not collapsed to one Down', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+
+    im.attachRoot(scene.root);
+
+    const sprite = new TestSprite().setBounds(0, 0, 100, 100);
+
+    sprite.interactive = true;
+    scene.addChild(sprite);
+
+    const order: string[] = [];
+
+    sprite.onPointerDown.add(() => order.push('down'));
+    sprite.onPointerUp.add(() => order.push('up'));
+
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
+    dispatchPointer(signals.onPointerUp, { x: 50, y: 50 });
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
+    flushInteractions(im);
+
+    expect(order).toEqual(['down', 'up', 'down']);
+
+    im.destroy();
+    sprite.destroy();
+  });
+
+  test('two full press/release cycles in one flush stay two cycles, not one aggregated pair', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+
+    im.attachRoot(scene.root);
+
+    const sprite = new TestSprite().setBounds(0, 0, 100, 100);
+
+    sprite.interactive = true;
+    scene.addChild(sprite);
+
+    const downs = vi.fn();
+    const ups = vi.fn();
+
+    sprite.onPointerDown.add(downs);
+    sprite.onPointerUp.add(ups);
+
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
+    dispatchPointer(signals.onPointerUp, { x: 50, y: 50 });
+    dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
+    dispatchPointer(signals.onPointerUp, { x: 50, y: 50 });
+    flushInteractions(im);
+
+    expect(downs).toHaveBeenCalledTimes(2);
+    expect(ups).toHaveBeenCalledTimes(2);
+
+    im.destroy();
+    sprite.destroy();
+  });
+
+  test('a context-menu request between two pointer phases keeps its position relative to them', () => {
+    const { app, scene, signals } = createApp();
+    const im = new InteractionManager(app);
+
+    im.attachRoot(scene.root);
+
+    const sprite = new TestSprite().setBounds(0, 0, 100, 100);
+
+    sprite.interactive = true;
+    scene.addChild(sprite);
+
+    const order: string[] = [];
+
+    sprite.onPointerDown.add(() => order.push('down'));
+    sprite.onContextMenu.add(() => order.push('contextmenu'));
+    sprite.onPointerMove.add(() => order.push('move'));
+
+    const pointer = makePointer({ x: 50, y: 50 });
+
+    signals.onPointerDown.dispatch(pointer, 50, 50);
+    signals.onContextMenu.dispatch({ x: 50, y: 50, pointer });
+    signals.onPointerMove.dispatch(pointer, 50, 50);
+    flushInteractions(im);
+
+    expect(order).toEqual(['down', 'contextmenu', 'move']);
+
+    im.destroy();
+    sprite.destroy();
   });
 });
 

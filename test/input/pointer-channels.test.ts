@@ -194,11 +194,17 @@ describe('Pointer channel buffer — slot reuse', () => {
     pointerDown(canvas, { pointerId: 1, pointerType: 'touch', clientX: 10, clientY: 10, isPrimary: true });
     expect(ch(im, Pointer.Slot0Active)).toBe(1);
 
-    // Pointer 1 leaves → slot 0 freed.
+    // Pointer 1 leaves → its channel slot zeroes immediately, but the slot
+    // itself (and the Pointer object) stays reserved until update() actually
+    // dispatches the Leave phase and retires it — releasing it any earlier
+    // would let a same-flush pointerover for a DIFFERENT pointerId steal the
+    // slot while this one's Leave is still undispatched.
     pointerLeave(canvas, { pointerId: 1, pointerType: 'touch', clientX: 10, clientY: 10, isPrimary: true });
     expect(ch(im, Pointer.Slot0Active)).toBe(0);
+    im.update(0 as never);
 
-    // Pointer 2 should land in slot 0 again (front of free-list).
+    // Pointer 2 should land in slot 0 again (front of free-list), now that
+    // pointer 1 has been retired.
     pointerOver(canvas, { pointerId: 2, pointerType: 'touch', clientX: 20, clientY: 20, isPrimary: true });
     pointerDown(canvas, { pointerId: 2, pointerType: 'touch', clientX: 20, clientY: 20, isPrimary: true });
     expect(ch(im, Pointer.Slot0Active)).toBe(1);

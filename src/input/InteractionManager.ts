@@ -7,6 +7,7 @@ import type { Time } from '#core/Time';
 import { DynamicAabbTree } from '#math/DynamicAabbTree';
 import { Matrix } from '#math/Matrix';
 import type { PointLike } from '#math/PointLike';
+import { getDistance } from '#math/utils';
 import type { PlatformAdapter } from '#platform/PlatformAdapter';
 import { Container } from '#rendering/Container';
 import type { RenderNode } from '#rendering/RenderNode';
@@ -25,38 +26,51 @@ import { createScopeToken, type ScopeToken } from './ScopeToken';
 /** Fallback drag threshold in design pixels, used when the application did not set one. */
 const defaultDragThreshold = 8;
 
-const enum PointerEventFlag {
-  None = 0,
-  Down = 1 << 0,
-  Move = 1 << 1,
-  Up = 1 << 2,
-  Tap = 1 << 3,
-  Cancel = 1 << 4,
-  Leave = 1 << 5,
-  ContextMenu = 1 << 6,
+/**
+ * Which discrete signal a queued {@link InteractionPhaseEntry} corresponds
+ * to — the same shape {@link InputManager}'s own per-pointer signals
+ * dispatch in, appended to one ordered per-pointer list exactly as its
+ * signal handler fires rather than folded into a bitmask (see
+ * {@link PointerQueue}'s doc comment for why that distinction matters).
+ */
+const enum InteractionPhaseKind {
+  Down,
+  Move,
+  Up,
+  Tap,
+  ContextMenu,
+  Cancel,
+  Leave,
 }
 
 /**
- * Pending events for one pointer, accumulated between two flushes. Several
- * platform phases can collapse into one frame (a fast down-move-up sequence),
- * so each phase's own design-space coordinates are captured at enqueue time —
- * when `pointer.x`/`pointer.y` are still that phase's own, per
- * {@link InputManager}'s per-phase dispatch — rather than read back later from
- * whatever the pointer's position has since become. `pointertap` and
- * `pointerout` on exit share `upX`/`upY` and the pointer's live position
- * respectively; they need no dedicated fields.
+ * One queued phase, in the exact position {@link InteractionManager}'s own
+ * signal handler appended it — mirroring {@link Pointer._phaseList}'s
+ * ordering guarantee one layer up. `x`/`y` are design-space, captured at
+ * enqueue time (the phase's own coordinates, per {@link InputManager}'s
+ * per-phase dispatch) rather than read back later from whichever position
+ * the pointer has since moved to.
+ */
+interface InteractionPhaseEntry {
+  readonly kind: InteractionPhaseKind;
+  readonly x: number;
+  readonly y: number;
+}
+
+/**
+ * Pending phases for one pointer, accumulated between two flushes as an
+ * ordered list rather than a bitmask — a bitmask can only say "did Down
+ * happen at all", collapsing an Up→Down within one flush into the same
+ * shape as a Down→Up, and collapsing two full press/release cycles into one.
+ * `_processQueue` walks `phases` sequentially, running the full drag/hit-test
+ * state machine once per ENTRY rather than once per aggregated queue — the
+ * only way two cycles in one flush stay two cycles, and a same-flush
+ * Up-before-Down dispatches in that true order instead of always
+ * Down-before-Up.
  */
 interface PointerQueue {
   pointer: Pointer;
-  events: number; // bitfield of PointerEventFlag
-  downX: number;
-  downY: number;
-  moveX: number;
-  moveY: number;
-  upX: number;
-  upY: number;
-  contextMenuX: number;
-  contextMenuY: number;
+  readonly phases: InteractionPhaseEntry[];
 }
 
 interface DragState {
@@ -73,6 +87,19 @@ interface DragState {
   active: boolean;
   /** Set for the one frame the drag was promoted, so `dragstart` fires exactly once. */
   started: boolean;
+  /**
+   * Design-space position of the Down that registered this candidate —
+   * THIS press cycle's own origin, in the same coordinate space
+   * {@link Pointer.maxDistanceFromPress} is measured in. Excursion is
+   * tracked here rather than read off the live pointer: two press/release
+   * cycles can share one flush, and by the time this candidate's own Move
+   * entries are processed, `pointer.maxDistanceFromPress` may already
+   * reflect a LATER cycle's excursion instead of this one's.
+   */
+  pressX: number;
+  pressY: number;
+  /** Largest distance from `pressX`/`pressY` reached by a Move entry processed for THIS candidate so far — this cycle's own excursion. */
+  maxDistance: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -613,19 +640,19 @@ export class InteractionManager implements InteractionHooks {
   // ---------------------------------------------------------------------------
 
   private _handlePointerDown(pointer: Pointer, x: number, y: number): void {
-    this._enqueue(pointer, PointerEventFlag.Down, x, y);
+    this._enqueuePhase(pointer, InteractionPhaseKind.Down, x, y);
   }
 
   private _handlePointerMove(pointer: Pointer, x: number, y: number): void {
-    this._enqueue(pointer, PointerEventFlag.Move, x, y);
+    this._enqueuePhase(pointer, InteractionPhaseKind.Move, x, y);
   }
 
   private _handlePointerUp(pointer: Pointer, x: number, y: number): void {
-    this._enqueue(pointer, PointerEventFlag.Up, x, y);
+    this._enqueuePhase(pointer, InteractionPhaseKind.Up, x, y);
   }
 
   private _handlePointerTap(pointer: Pointer, x: number, y: number): void {
-    this._enqueue(pointer, PointerEventFlag.Tap, x, y);
+    this._enqueuePhase(pointer, InteractionPhaseKind.Tap, x, y);
   }
 
   /**
@@ -636,65 +663,64 @@ export class InteractionManager implements InteractionHooks {
    * dispatch. `app.input.onContextMenu`, the scene-graph-independent
    * fallback, still fires unconditionally regardless — see that Signal's own
    * doc comment.
+   *
+   * Enqueued into the SAME ordered list as this pointer's other phases —
+   * fired here means it is appended right where `InputManager` dispatched it
+   * relative to any pointer phase already queued this flush, preserving
+   * their true relative order rather than routing context-menu requests
+   * through a separate, disconnected slot.
    */
   private _handleContextMenu(request: ContextMenuRequest): void {
     if (request.pointer === null) {
       return;
     }
 
-    this._enqueue(request.pointer, PointerEventFlag.ContextMenu, request.x, request.y);
+    this._enqueuePhase(request.pointer, InteractionPhaseKind.ContextMenu, request.x, request.y);
   }
 
   private _handlePointerCancel(pointer: Pointer, x: number, y: number): void {
-    this._enqueue(pointer, PointerEventFlag.Cancel, x, y);
+    this._enqueuePhase(pointer, InteractionPhaseKind.Cancel, x, y);
   }
 
   private _handlePointerLeave(pointer: Pointer, x: number, y: number): void {
-    this._enqueue(pointer, PointerEventFlag.Leave, x, y);
+    this._enqueuePhase(pointer, InteractionPhaseKind.Leave, x, y);
   }
 
   /**
-   * Record that `flag` happened at `(x, y)` — passed explicitly by the
-   * `InputManager` signal for that exact phase, an immutable snapshot rather
-   * than a value read back off the pointer (which now always reads live;
-   * see {@link Pointer.position}'s doc comment).
+   * Append `kind` at `(x, y)` to this pointer's ordered phase list — passed
+   * explicitly by the `InputManager` signal for that exact phase, an
+   * immutable snapshot rather than a value read back off the pointer (which
+   * always reads live; see {@link Pointer.position}'s doc comment). Two
+   * immediately adjacent `Move` entries coalesce into the latest, mirroring
+   * {@link Pointer._pushPhase}'s own rule, so a caller dispatching two raw
+   * moves back to back cannot desync InteractionManager's list from what a
+   * real `InputManager` would ever actually produce; every other phase, or a
+   * `Move` separated from the last one by any other kind, is its own entry.
    */
-  private _enqueue(pointer: Pointer, flag: PointerEventFlag, x: number, y: number): void {
+  private _enqueuePhase(pointer: Pointer, kind: InteractionPhaseKind, x: number, y: number): void {
     let q = this._pending.get(pointer.id);
 
     if (!q) {
-      q = { pointer, events: 0, downX: 0, downY: 0, moveX: 0, moveY: 0, upX: 0, upY: 0, contextMenuX: 0, contextMenuY: 0 };
+      q = { pointer, phases: [] };
       this._pending.set(pointer.id, q);
     } else {
       // Refresh to latest pointer ref (same object usually, but be defensive).
       q.pointer = pointer;
     }
 
-    switch (flag) {
-      case PointerEventFlag.Down:
-        q.downX = x;
-        q.downY = y;
-        break;
-      case PointerEventFlag.Move:
-        q.moveX = x;
-        q.moveY = y;
-        break;
-      case PointerEventFlag.Up:
-        q.upX = x;
-        q.upY = y;
-        break;
-      case PointerEventFlag.ContextMenu:
-        q.contextMenuX = x;
-        q.contextMenuY = y;
-        break;
-      // Tap dispatches inside InputManager's own release-phase bracket, so it
-      // shares upX/upY; Cancel/Leave use the pointer's live position (see
-      // _processQueue) — neither needs a dedicated field.
-      default:
-        break;
+    if (kind === InteractionPhaseKind.Move) {
+      const lastIndex = q.phases.length - 1;
+      const last = q.phases[lastIndex];
+
+      if (last !== undefined && last.kind === InteractionPhaseKind.Move) {
+        q.phases[lastIndex] = { kind, x, y };
+        this._dirty = true;
+
+        return;
+      }
     }
 
-    q.events |= flag;
+    q.phases.push({ kind, x, y });
     this._dirty = true;
   }
 
@@ -703,68 +729,145 @@ export class InteractionManager implements InteractionHooks {
   // ---------------------------------------------------------------------------
 
   /**
-   * Process one pointer's pending events for this flush. Each discrete phase
-   * (press / move / release / context menu) hit-tests and dispatches at its
-   * OWN coordinates — captured by {@link _enqueue} at the moment that phase
-   * actually happened — rather than a single position shared across every
-   * phase, so a fast down-move-up collapsed into one frame still lands each
-   * event on the node that was actually there when it happened. Hover
-   * tracking is the one exception: it deliberately follows the pointer's
-   * live, end-of-frame position, since "what is currently hovered" has no
-   * per-phase meaning.
+   * Process one pointer's pending phases for this flush, strictly in the
+   * order {@link InputManager} dispatched them — the true fix for the
+   * defect the aggregated-bitmask design had: an Up→Down within one flush
+   * dispatched Down-before-Up regardless (bitmasks cannot represent order),
+   * and two full press/release cycles in one flush collapsed onto a single
+   * shared position (only one `x`/`y` per phase TYPE existed). Each entry
+   * runs the FULL drag/hit-test state machine for itself — hit-testing and
+   * dispatching at its OWN coordinates, captured by {@link _enqueuePhase} at
+   * the moment that phase actually happened — so a fast down-move-up
+   * collapsed into one flush still lands each event on the node that was
+   * actually there, and two cycles sharing a flush stay two independent
+   * cycles: the second Down starts a fresh candidate only once the first's
+   * Up has completed the first (`_drags`/`_capturedPointers` are cleared by
+   * then), and a Move's drag-threshold excursion is measured from ITS OWN
+   * candidate's press position (see {@link DragState.pressX}'s doc comment),
+   * never the live pointer's, which could already reflect a later cycle
+   * sharing the same flush.
    *
-   * The drag lifecycle (candidate → promotion → dragstart → drag → dragend)
-   * runs as one sequential state machine spread across the phases below: a
-   * press registers a candidate first, promotion runs right after — so a
-   * Down and a past-threshold Move colliding in the very same flush still
-   * promotes on its first evaluation instead of silently waiting a frame for
-   * a candidate that already exists — a move then advances the state
-   * machine, and a release or exit completes it, each step depending only on
-   * the state the previous step left behind.
-   *
-   * Down and promotion run BEFORE hover tracking specifically so that hover
-   * always sees this frame's true, final drag state: a Move that promotes a
-   * drag on its own (the candidate came from an earlier frame) must not let
-   * hover retarget onto whatever the pointer swept over on the way, and a
-   * stale pre-promotion snapshot would do exactly that.
+   * Hover tracking is the one exception to per-phase processing: it
+   * deliberately follows the pointer's live, end-of-flush position — "what
+   * is currently hovered" has no per-phase meaning — so it runs once, after
+   * every queued phase has been processed, reflecting this flush's true
+   * final state (skipped entirely if the flush ended in a Cancel/Leave,
+   * which dispatches its own `pointerout` fallback instead, or while a drag
+   * is active, since the dragged node stays "hovered" by definition).
    */
   private _processQueue(queue: PointerQueue): void {
-    const { pointer, events, downX, downY, moveX, moveY, upX, upY, contextMenuX, contextMenuY } = queue;
+    const { pointer, phases } = queue;
     const { id } = pointer;
-    const isExitEvent = (events & (PointerEventFlag.Cancel | PointerEventFlag.Leave)) !== 0;
+    let completedDragForTap = false;
+    let sawExit = false;
 
-    // --- Down: drag state machine step 1 (register candidate) ---
-    // A pointer cannot already be captured before its own Down has had a
-    // chance to register a candidate, so reading capture here (whatever it
-    // is — realistically always null) is safe regardless of ordering.
-    if ((events & PointerEventFlag.Down) !== 0) {
-      const { node: hit, x, y } = this._resolvePhase(downX, downY, this._currentCapture(id));
+    for (const phase of phases) {
+      switch (phase.kind) {
+        case InteractionPhaseKind.Down: {
+          const { node: hit, x, y } = this._resolvePhase(phase.x, phase.y, this._currentCapture(id));
 
-      if (hit !== null) {
-        this._dispatchBubble(new InteractionEvent('pointerdown', hit, pointer, x, y));
+          if (hit !== null) {
+            this._dispatchBubble(new InteractionEvent('pointerdown', hit, pointer, x, y));
 
-        // The handler just run may have destroyed or detached `hit` itself —
-        // see `_isLive`'s doc comment — so a drag candidate must not be
-        // created on a node that is already gone.
-        if (this._isLive(hit)) {
-          this._registerDragCandidate(id, hit, x, y);
+            // The handler just run may have destroyed or detached `hit`
+            // itself — see `_isLive`'s doc comment — so a drag candidate
+            // must not be created on a node that is already gone.
+            if (this._isLive(hit)) {
+              this._registerDragCandidate(id, hit, x, y, phase.x, phase.y);
+            }
+          }
+
+          break;
         }
+
+        case InteractionPhaseKind.Move: {
+          // Excursion and promotion run BEFORE hit-testing THIS move, so a
+          // Down and a past-threshold Move colliding in the very same entry
+          // sequence still promotes on this same evaluation — the pointermove
+          // dispatched below, and the reposition in `_advanceDragOnMove`,
+          // already see the captured node rather than waiting a step behind.
+          this._advanceDragExcursion(id, phase.x, phase.y);
+          this._promoteDragCandidate(id);
+
+          const captured = this._currentCapture(id);
+          const { node: hit, x, y } = this._resolvePhase(phase.x, phase.y, captured);
+
+          this._advanceDragOnMove(id, pointer, x, y);
+
+          // dragstart, just dispatched by _advanceDragOnMove, may have
+          // destroyed the dragged node — which IS `hit` while a drag is
+          // active, since _resolvePhase short-circuits to the captured node.
+          if (hit !== null && this._isLive(hit)) {
+            this._dispatchBubble(new InteractionEvent('pointermove', hit, pointer, x, y));
+          }
+
+          this._dispatchDragTick(id, pointer, x, y);
+          break;
+        }
+
+        case InteractionPhaseKind.Up: {
+          const { node: hit, x, y } = this._resolvePhase(phase.x, phase.y, this._currentCapture(id));
+
+          if (hit !== null && this._isLive(hit)) {
+            this._dispatchBubble(new InteractionEvent('pointerup', hit, pointer, x, y));
+          }
+
+          completedDragForTap = this._completeDrag(id, pointer, x, y);
+          break;
+        }
+
+        // InputManager dispatches Tap immediately after the Up that closed
+        // it, so this entry is always this cycle's own — no independent
+        // reset is needed between cycles sharing a flush. A press that
+        // turned into a real drag is not also a tap.
+        case InteractionPhaseKind.Tap: {
+          if (completedDragForTap) {
+            break;
+          }
+
+          const { node: hit, x, y } = this._resolvePhase(phase.x, phase.y, this._currentCapture(id));
+
+          if (hit !== null && this._isLive(hit)) {
+            this._dispatchBubble(new InteractionEvent('pointertap', hit, pointer, x, y));
+          }
+
+          break;
+        }
+
+        case InteractionPhaseKind.ContextMenu: {
+          const { node: hit, x, y } = this._resolvePhase(phase.x, phase.y, this._currentCapture(id));
+
+          if (hit !== null && this._isLive(hit)) {
+            this._dispatchBubble(new InteractionEvent('contextmenu', hit, pointer, x, y));
+          }
+
+          break;
+        }
+
+        case InteractionPhaseKind.Cancel:
+        case InteractionPhaseKind.Leave: {
+          sawExit = true;
+
+          const { x, y } = this._resolvePhase(phase.x, phase.y, this._currentCapture(id));
+
+          if (!this._completeDrag(id, pointer, x, y)) {
+            const last = this._lastHit.get(id) ?? null;
+
+            if (last !== null && this._isLive(last)) {
+              this._dispatchBubble(new InteractionEvent('pointerout', last, pointer, x, y));
+            }
+          }
+
+          this._lastHit.delete(id);
+          break;
+        }
+
+        default:
+          break;
       }
     }
 
-    // Drag state machine step 2: promote right after Down, so a candidate it
-    // just registered is visible to this same evaluation.
-    this._promoteDragCandidate(id, pointer, events);
-
-    // --- Over / Out transitions ---
-    // Tracks the pointer's live, current position — not any specific phase —
-    // and is skipped entirely on an exit event, which dispatches its own
-    // pointerout below instead (no "entered" state survives a cancel/leave).
-    // Also skipped while a drag is active: the dragged node stays "hovered"
-    // by definition, so retargeting hover onto whatever it swept over would
-    // be spurious. Reads capture fresh — this frame's true, final drag state
-    // after any promotion just above.
-    if (!isExitEvent && this._currentCapture(id) === null) {
+    if (!sawExit && this._currentCapture(id) === null) {
       const { node: hit, x, y } = this._resolvePhase(pointer.x, pointer.y, null);
       const last = this._lastHit.get(id) ?? null;
 
@@ -782,87 +885,42 @@ export class InteractionManager implements InteractionHooks {
         this._setLastHit(id, hit);
       }
     }
+  }
 
-    // --- Move: drag state machine steps 3-4 (dragstart, reposition, drag) around pointermove ---
-    if ((events & PointerEventFlag.Move) !== 0) {
-      const { node: hit, x, y } = this._resolvePhase(moveX, moveY, this._currentCapture(id));
+  /**
+   * Drag state machine, step 1.5: fold one Move entry's design-space
+   * position into its candidate's own excursion (see
+   * {@link DragState.pressX}'s doc comment for why this cannot be read off
+   * the live pointer). No-ops once a candidate is already an active drag —
+   * the threshold was already crossed, and design-space excursion beyond
+   * that point has no further effect on the state machine.
+   */
+  private _advanceDragExcursion(id: number, x: number, y: number): void {
+    const drag = this._drags.get(id) ?? null;
 
-      this._advanceDragOnMove(id, pointer, x, y);
-
-      // dragstart, just dispatched by _advanceDragOnMove, may have destroyed
-      // the dragged node — which IS `hit` while a drag is active, since
-      // _resolvePhase short-circuits to the captured node.
-      if (hit !== null && this._isLive(hit)) {
-        this._dispatchBubble(new InteractionEvent('pointermove', hit, pointer, x, y));
-      }
-
-      this._dispatchDragTick(id, pointer, x, y);
+    if (drag === null || drag.active) {
+      return;
     }
 
-    // --- Up: drag state machine step 4 (dragend) ---
-    let completedDrag = false;
+    const distance = getDistance(drag.pressX, drag.pressY, x, y);
 
-    if ((events & PointerEventFlag.Up) !== 0) {
-      const { node: hit, x, y } = this._resolvePhase(upX, upY, this._currentCapture(id));
-
-      if (hit !== null && this._isLive(hit)) {
-        this._dispatchBubble(new InteractionEvent('pointerup', hit, pointer, x, y));
-      }
-
-      completedDrag = this._completeDrag(id, pointer, x, y);
-    }
-
-    // --- Tap --- (dispatched inside InputManager's own release-phase bracket, so it shares Up's coordinates)
-    // A press that turned into a real drag is not also a tap.
-    if ((events & PointerEventFlag.Tap) !== 0 && !completedDrag) {
-      const { node: hit, x, y } = this._resolvePhase(upX, upY, this._currentCapture(id));
-
-      if (hit !== null && this._isLive(hit)) {
-        this._dispatchBubble(new InteractionEvent('pointertap', hit, pointer, x, y));
-      }
-    }
-
-    // --- Context menu ---
-    if ((events & PointerEventFlag.ContextMenu) !== 0) {
-      const { node: hit, x, y } = this._resolvePhase(contextMenuX, contextMenuY, this._currentCapture(id));
-
-      if (hit !== null && this._isLive(hit)) {
-        this._dispatchBubble(new InteractionEvent('contextmenu', hit, pointer, x, y));
-      }
-    }
-
-    // --- Cancel / Leave: drag state machine step 4, alternate ending ---
-    if (isExitEvent) {
-      const { x, y } = this._resolvePhase(pointer.x, pointer.y, this._currentCapture(id));
-
-      if (!this._completeDrag(id, pointer, x, y)) {
-        const last = this._lastHit.get(id) ?? null;
-
-        if (last !== null && this._isLive(last)) {
-          this._dispatchBubble(new InteractionEvent('pointerout', last, pointer, x, y));
-        }
-      }
-
-      this._lastHit.delete(id);
+    if (distance > drag.maxDistance) {
+      drag.maxDistance = distance;
     }
   }
 
   /**
-   * Drag state machine, step 2: turn a candidate into a real drag once the
-   * press has travelled past the threshold. Uses the pointer's accumulated
-   * excursion rather than its current distance, so a drag that wanders out
-   * and back still counts. Runs right after Down (it no-ops without a Move
-   * event) so a candidate {@link _registerDragCandidate} just registered
-   * this same flush is already visible to it — a Down and a past-threshold
-   * Move colliding in one flush must still promote on the first evaluation,
-   * not silently wait for a following frame because no candidate existed yet
-   * when promotion was checked.
+   * Drag state machine, step 2: turn a candidate into a real drag once ITS
+   * OWN accumulated excursion (see {@link _advanceDragExcursion}) has passed
+   * the threshold. Uses the candidate's accumulated excursion rather than
+   * its current distance, so a drag that wanders out and back still counts.
+   * Called once per Move entry, immediately after `_advanceDragExcursion`
+   * folds that same entry's position in — so a Down and a past-threshold
+   * Move sharing one flush still promote on that Move's own evaluation,
+   * never waiting for a later flush because no candidate existed yet when
+   * promotion was checked.
    */
-  private _promoteDragCandidate(id: number, pointer: Pointer, events: number): void {
-    if ((events & PointerEventFlag.Move) === 0) {
-      return;
-    }
-
+  private _promoteDragCandidate(id: number): void {
     const drag = this._drags.get(id) ?? null;
 
     if (drag === null) {
@@ -878,7 +936,7 @@ export class InteractionManager implements InteractionHooks {
       return;
     }
 
-    if (drag.active || pointer.maxDistanceFromPress <= this._dragThreshold) {
+    if (drag.active || drag.maxDistance <= this._dragThreshold) {
       return;
     }
 
@@ -889,16 +947,21 @@ export class InteractionManager implements InteractionHooks {
   }
 
   /**
-   * Drag state machine, step 1: note a fresh candidate on a qualifying press.
-   * Not yet a drag — committing here would jitter every click on a draggable
-   * node and swallow its tap; see {@link _promoteDragCandidate} for that.
+   * Drag state machine, step 1: note a fresh candidate on a qualifying
+   * press. Not yet a drag — committing here would jitter every click on a
+   * draggable node and swallow its tap; see {@link _promoteDragCandidate}
+   * for that. `layerX`/`layerY` (this Down's resolved hit-test coordinates)
+   * seed the parent-local grab offset; `designX`/`designY` (this Down's own
+   * raw design-space position) seed this candidate's own excursion origin —
+   * see {@link DragState.pressX}'s doc comment for why that must be
+   * design-space and specific to THIS press cycle.
    */
-  private _registerDragCandidate(id: number, hit: RenderNode, x: number, y: number): void {
+  private _registerDragCandidate(id: number, hit: RenderNode, layerX: number, layerY: number, designX: number, designY: number): void {
     if (!hit.draggable || this._drags.has(id)) {
       return;
     }
 
-    const local = this._toParentLocal(hit, x, y);
+    const local = this._toParentLocal(hit, layerX, layerY);
 
     this._drags.set(id, {
       pointerId: id,
@@ -907,6 +970,9 @@ export class InteractionManager implements InteractionHooks {
       offsetY: hit.position.y - local.y,
       active: false,
       started: false,
+      pressX: designX,
+      pressY: designY,
+      maxDistance: 0,
     });
   }
 
